@@ -99,6 +99,20 @@ internal sealed class XPScriptSpreadsheet
         _path = requested;
     }
 
+    public void FromBytes(object? value)
+    {
+        var bytes = RequireBytes(value);
+        if (bytes.LongLength > MaxPackageBytes)
+            throw new InvalidOperationException($"XPSpreadsheet refuses XLSX packages larger than {MaxPackageBytes} bytes.");
+
+        using var stream = new System.IO.MemoryStream(bytes, writable: false);
+        using var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read, false);
+        ValidateArchive(archive);
+        ReadXPScriptMarker(archive);
+        LoadArchive(archive);
+        _path = null;
+    }
+
     public void Save()
     {
         if (string.IsNullOrEmpty(_path))
@@ -206,6 +220,32 @@ internal sealed class XPScriptSpreadsheet
         if (!System.IO.Path.GetExtension(raw).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("XPSpreadsheet supports only .xlsx files. Other spreadsheet formats are not supported by this basic implementation.");
         return XPScriptFileSystemRuntime.ResolvePath(raw);
+    }
+
+    private static byte[] RequireBytes(object? value)
+    {
+        if (value is byte[] bytes) return bytes;
+        if (value is ILSObjectReference reference)
+        {
+            if (reference.IsNothing) return [];
+            value = reference.ObjectValue;
+            if (value is byte[] referencedBytes) return referencedBytes;
+        }
+        if (value is System.Collections.IEnumerable enumerable && value is not string)
+        {
+            var result = new System.Collections.Generic.List<byte>();
+            foreach (var item in enumerable)
+            {
+                var number = XPScriptRuntime.CInt(item);
+                if (number < 0 || number > 255)
+                    throw new InvalidOperationException("XPSpreadsheet byte value must be between 0 and 255.");
+                result.Add((byte)number);
+                if (result.Count > MaxPackageBytes)
+                    throw new InvalidOperationException($"XPSpreadsheet refuses XLSX packages larger than {MaxPackageBytes} bytes.");
+            }
+            return result.ToArray();
+        }
+        throw new InvalidOperationException("XPSpreadsheet.FromBytes requires a byte array or enumerable byte values.");
     }
 
     private static void ValidateArchive(System.IO.Compression.ZipArchive archive)
