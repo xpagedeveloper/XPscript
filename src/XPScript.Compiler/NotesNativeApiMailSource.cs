@@ -11,7 +11,7 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort MailSendSign = 0x0002;
     private const ushort MailSendSeal = 0x0004;
 
-    internal void SendNote(nint note, string[]? recipients)
+    internal void SendNote(uint note, string[]? recipients)
     {
         EnsureInitialized();
         Check(Resolve<NSFNoteCopySendDelegate>("NSFNoteCopy")(note, out var copy), "NSFNoteCopy(send)");
@@ -41,7 +41,7 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
-    private void SetMailTextList(nint note, string itemName, IReadOnlyList<string> values)
+    private void SetMailTextList(uint note, string itemName, IReadOnlyList<string> values)
     {
         var cleaned = values.Select(value => value?.Trim() ?? "").Where(value => value.Length != 0).ToArray();
         if (cleaned.Length == 0)
@@ -61,19 +61,19 @@ internal sealed partial class XPScriptNotesNativeApi
     }
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    internal delegate ushort NSFNoteCopySendDelegate(nint source, out nint destination);
+    internal delegate ushort NSFNoteCopySendDelegate(uint source, out uint destination);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    internal delegate int NSFNoteIsSignedOrSealedSendDelegate(nint note, out byte signed, out byte sealedValue);
+    internal delegate int NSFNoteIsSignedOrSealedSendDelegate(uint note, out byte signed, out byte sealedValue);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    internal delegate ushort NSFItemCreateTextListSendDelegate(nint note, nint itemName, nint text, ushort textLength);
+    internal delegate ushort NSFItemCreateTextListSendDelegate(uint note, nint itemName, nint text, ushort textLength);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    internal delegate ushort NSFItemAppendTextListSendDelegate(nint note, nint itemName, nint text, ushort textLength, int allowDuplicates);
+    internal delegate ushort NSFItemAppendTextListSendDelegate(uint note, nint itemName, nint text, ushort textLength, int allowDuplicates);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    internal delegate ushort MailNoteJitEx2SendDelegate(nint runContext, nint note, ushort mailFlags, nint recipients, ushort jitFlag, ushort mailNoteFlags, nint callback, nint callbackContext);
+    internal delegate ushort MailNoteJitEx2SendDelegate(nint runContext, uint note, ushort mailFlags, nint recipients, ushort jitFlag, ushort mailNoteFlags, nint callback, nint callbackContext);
 }
 """;
 }
