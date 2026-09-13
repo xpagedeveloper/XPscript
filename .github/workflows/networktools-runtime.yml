@@ -5,9 +5,10 @@ on:
     branches: [main]
     paths:
       - .github/workflows/networktools-runtime.yml
-      - samples/networktools-native-*.xps
-      - docs/networktools.md
+      - samples/networktools-*.xps
+      - docs/networktools*.md
       - src/XPScript.Compiler/NetworkTools*.cs
+      - src/XPScript.Compiler/BrowserWasmHttpCsrfPostProcessor.cs
       - src/XPScript.Compiler/XPScriptTranspiler.cs
   push:
     branches: [main]
@@ -44,26 +45,28 @@ jobs:
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/networktools-native-runtime-test.xps -o ./out/networktools-surface --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/networktools-phase2-runtime-test.xps -o ./out/networktools-phase2-surface --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Compile NetworkTools local smoke
         shell: pwsh
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/networktools-native-local-smoke.xps -o ./out/networktools-local-smoke --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/networktools-phase2-local-smoke.xps -o ./out/networktools-phase2-local-smoke --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Run NetworkTools local smoke
         shell: pwsh
         run: |
-          $plain = './out/networktools-local-smoke'
-          $windows = './out/networktools-local-smoke.exe'
-          if (Test-Path $plain -PathType Leaf) {
-            $exe = (Resolve-Path $plain).Path
+          function Run-XPScript([string] $basePath) {
+            $plain = $basePath
+            $windows = "$basePath.exe"
+            if (Test-Path $plain -PathType Leaf) { $exe = (Resolve-Path $plain).Path }
+            elseif (Test-Path $windows -PathType Leaf) { $exe = (Resolve-Path $windows).Path }
+            else { throw "Compiled NetworkTools executable was not found: $basePath" }
+            & $exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-          elseif (Test-Path $windows -PathType Leaf) {
-            $exe = (Resolve-Path $windows).Path
-          }
-          else {
-            throw 'Compiled NetworkTools local smoke executable was not found.'
-          }
-          & $exe
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Run-XPScript './out/networktools-local-smoke'
+          Run-XPScript './out/networktools-phase2-local-smoke'
