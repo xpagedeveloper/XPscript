@@ -1,0 +1,27 @@
+' SystemInventory local-only runtime smoke test.
+Option Declare
+
+Sub Main()
+    Dim inventory As New SystemInventory
+    Dim systemInfo As SystemInventorySystemInfo
+    Dim cpu As SystemInventoryCpuInfo
+    Dim memory As SystemInventoryMemoryInfo
+    Dim values As Variant
+
+    Set systemInfo = inventory.GetSystemInfo()
+    If systemInfo.MachineName = "" Then Error 1101, "MachineName is empty"
+    If systemInfo.OperatingSystem = "" Then Error 1102, "OperatingSystem is empty"
+
+    Set cpu = inventory.GetCpuInfo()
+    If cpu.LogicalProcessors < 1 Then Error 1103, "LogicalProcessors must be at least 1"
+
+    Set memory = inventory.GetMemoryInfo()
+    If memory.TotalPhysicalMemory <= 0 Then Error 1104, "TotalPhysicalMemory must be greater than zero"
+
+    values = inventory.GetVolumes()
+    values = inventory.GetNetworkAdapters()
+    values = inventory.GetInstalledApplications()
+    values = inventory.GetInstalledPackages()
+
+    Print "SYSTEMINVENTORY_LOCAL_SMOKE_PASS"
+End Sub
