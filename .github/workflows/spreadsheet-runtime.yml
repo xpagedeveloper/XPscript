@@ -52,10 +52,25 @@ jobs:
           & $exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          if (-not (Test-Path './out/xpspreadsheet-basic.xlsx') -and -not (Test-Path './demo/xpspreadsheet-basic.xlsx')) {
+          $xlsx = if (Test-Path './out/xpspreadsheet-basic.xlsx') { './out/xpspreadsheet-basic.xlsx' } else { './demo/xpspreadsheet-basic.xlsx' }
+          if (-not (Test-Path $xlsx)) {
             Write-Error 'XPSpreadsheet round-trip did not create the expected XLSX file.'
             exit 1
           }
+
+          Add-Type -AssemblyName System.IO.Compression
+          $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $xlsx))
+          try {
+            $marker = $zip.GetEntry('docProps/custom.xml')
+            if ($null -eq $marker) { Write-Error 'XPSpreadsheet workbook marker is missing.'; exit 1 }
+            $reader = [System.IO.StreamReader]::new($marker.Open())
+            try { $markerText = $reader.ReadToEnd() } finally { $reader.Dispose() }
+            if ($markerText -notmatch 'XPScriptWorkbookVersion' -or $markerText -notmatch '>1<') {
+              Write-Error "XPSpreadsheet workbook marker is invalid: $markerText"
+              exit 1
+            }
+          }
+          finally { $zip.Dispose() }
 
       - name: Verify unsupported format error
         shell: pwsh
