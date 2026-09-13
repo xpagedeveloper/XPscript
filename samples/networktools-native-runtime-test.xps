@@ -1,0 +1,94 @@
+' NetworkTools native .NET 10 compile-surface regression.
+Option Declare
+
+Sub Main()
+    Dim net As New NetworkTools
+    Dim pingResult As NetworkPingResult
+    Dim reverseResult As NetworkDnsResult
+    Dim portResult As NetworkPortResult
+    Dim udpResult As NetworkUdpResult
+    Dim httpResult As NetworkHttpResult
+    Dim tlsResult As NetworkTlsResult
+    Dim values As Variant
+
+    Set pingResult = net.Ping("127.0.0.1")
+    Print pingResult.Success
+    Print pingResult.Host
+    Print pingResult.Address
+    Print pingResult.Status
+    Print pingResult.RoundTripTime
+    Print pingResult.Ttl
+    Print pingResult.Error
+
+    values = net.TraceRoute("127.0.0.1", 4, 500)
+    Forall hopEntry In values
+        Print hopEntry.Hop & ":" & hopEntry.Address & ":" & hopEntry.Status & ":" & hopEntry.RoundTripTime & ":" & hopEntry.Error
+    End Forall
+
+    values = net.DnsLookup("localhost")
+    Forall dnsEntry In values
+        Print dnsEntry.Query & ":" & dnsEntry.Type & ":" & dnsEntry.Value & ":" & dnsEntry.Error
+    End Forall
+
+    Set reverseResult = net.ReverseDns("127.0.0.1")
+    Print reverseResult.Value
+
+    Set portResult = net.CheckTcpPort("127.0.0.1", 9, 100)
+    Print portResult.Host & ":" & portResult.Address & ":" & portResult.Port & ":" & portResult.Open & ":" & portResult.RoundTripTime & ":" & portResult.Error
+
+    Set udpResult = net.SendUdp("127.0.0.1", 9, "xpscript")
+    Print udpResult.Host & ":" & udpResult.Port & ":" & udpResult.BytesSent & ":" & udpResult.Success & ":" & udpResult.Error
+
+    Set httpResult = net.CheckHttp("https://example.com", 1000)
+    Print httpResult.Url & ":" & httpResult.FinalUrl & ":" & httpResult.StatusCode & ":" & httpResult.ReasonPhrase & ":" & httpResult.Success & ":" & httpResult.RoundTripTime & ":" & httpResult.ContentType & ":" & httpResult.Error
+
+    Set tlsResult = net.CheckTls("example.com", 443, 1000)
+    Print tlsResult.Host & ":" & tlsResult.Port & ":" & tlsResult.Success & ":" & tlsResult.Protocol & ":" & tlsResult.CipherSuite
+    Print tlsResult.CertificateValid & ":" & tlsResult.CertificateSubject & ":" & tlsResult.CertificateIssuer & ":" & tlsResult.CertificateThumbprint
+    Print tlsResult.CertificateNotBefore & ":" & tlsResult.CertificateNotAfter & ":" & tlsResult.RoundTripTime & ":" & tlsResult.CertificateErrors & ":" & tlsResult.Error
+
+    values = net.GetLocalAddresses()
+    Forall localAddress In values
+        Print localAddress
+    End Forall
+
+    values = net.GetDnsServers()
+    Forall dnsAddress In values
+        Print dnsAddress
+    End Forall
+
+    values = net.GetDefaultGateways()
+    Forall gatewayAddress In values
+        Print gatewayAddress
+    End Forall
+
+    values = net.GetInterfaces()
+    Forall interfaceEntry In values
+        Print interfaceEntry.Name & ":" & interfaceEntry.Description & ":" & interfaceEntry.Id & ":" & interfaceEntry.Type & ":" & interfaceEntry.Status & ":" & interfaceEntry.Speed & ":" & interfaceEntry.MacAddress
+        Print interfaceEntry.SupportsIPv4 & ":" & interfaceEntry.SupportsIPv6
+        Forall interfaceAddress In interfaceEntry.Addresses
+            Print interfaceAddress
+        End Forall
+        Forall interfaceGateway In interfaceEntry.Gateways
+            Print interfaceGateway
+        End Forall
+        Forall interfaceDns In interfaceEntry.DnsServers
+            Print interfaceDns
+        End Forall
+    End Forall
+
+    values = net.GetTcpConnections()
+    Forall connectionEntry In values
+        Print connectionEntry.Protocol & ":" & connectionEntry.LocalAddress & ":" & connectionEntry.LocalPort & ":" & connectionEntry.RemoteAddress & ":" & connectionEntry.RemotePort & ":" & connectionEntry.State
+    End Forall
+
+    values = net.GetTcpListeners()
+    Forall tcpListener In values
+        Print tcpListener.LocalAddress & ":" & tcpListener.LocalPort
+    End Forall
+
+    values = net.GetUdpListeners()
+    Forall udpListener In values
+        Print udpListener.LocalAddress & ":" & udpListener.LocalPort
+    End Forall
+End Sub

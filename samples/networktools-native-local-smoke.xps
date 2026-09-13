@@ -1,0 +1,41 @@
+' NetworkTools local-only runtime smoke test. No external host is required.
+Option Declare
+
+Sub Main()
+    Dim net As New NetworkTools
+    Dim pingResult As NetworkPingResult
+    Dim reverseResult As NetworkDnsResult
+    Dim portResult As NetworkPortResult
+    Dim udpResult As NetworkUdpResult
+    Dim values As Variant
+    Dim count As Integer
+
+    Set pingResult = net.Ping("127.0.0.1", 1000, 16)
+    If pingResult.Host <> "127.0.0.1" Then Error 1001, "Ping result did not retain host"
+
+    values = net.DnsLookup("localhost")
+    count = 0
+    Forall dnsEntry In values
+        count = count + 1
+    End Forall
+    If count = 0 Then Error 1002, "DnsLookup localhost returned no addresses"
+
+    Set reverseResult = net.ReverseDns("127.0.0.1")
+    If reverseResult.Type <> "PTR" Then Error 1003, "ReverseDns did not return PTR result"
+
+    Set portResult = net.CheckTcpPort("127.0.0.1", 9, 250)
+    If portResult.Port <> 9 Then Error 1004, "CheckTcpPort result port mismatch"
+
+    Set udpResult = net.SendUdp("127.0.0.1", 9, "xpscript")
+    If udpResult.Port <> 9 Then Error 1005, "SendUdp result port mismatch"
+
+    values = net.GetLocalAddresses()
+    values = net.GetDnsServers()
+    values = net.GetDefaultGateways()
+    values = net.GetInterfaces()
+    values = net.GetTcpConnections()
+    values = net.GetTcpListeners()
+    values = net.GetUdpListeners()
+
+    Print "NETWORKTOOLS_LOCAL_SMOKE_PASS"
+End Sub
