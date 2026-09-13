@@ -32,6 +32,12 @@ internal static class NotesMailSenderSemanticsPostProcessor
 
         source = ReplaceRequired(
             source,
+            "        if (_sendTo.Length + _copyTo.Length + _blindCopyTo.Length == 0)\n            throw new XPScriptRuntimeException(5, \"NotesMail requires at least one recipient in SendTo, CopyTo, or BlindCopyTo.\");",
+            "        if (_sendTo.Length == 0)\n            throw new XPScriptRuntimeException(5, \"NotesMail requires at least one primary recipient in SendTo.\");",
+            "require-sendto");
+
+        source = ReplaceRequired(
+            source,
             "        if (_blindCopyTo.Length > 0) document.ReplaceItemValue(\"BlindCopyTo\", ToItemValue(_blindCopyTo));\n        if (_from.Length > 0) document.ReplaceItemValue(\"From\", _from);\n        if (_replyTo.Length > 0) document.ReplaceItemValue(\"ReplyTo\", _replyTo);",
             "        if (_blindCopyTo.Length > 0) document.ReplaceItemValue(\"BlindCopyTo\", ToItemValue(_blindCopyTo));\n        if (_replyTo.Length > 0) document.ReplaceItemValue(\"ReplyTo\", _replyTo);",
             "router-controls-from");
