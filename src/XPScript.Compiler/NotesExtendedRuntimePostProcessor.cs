@@ -37,7 +37,10 @@ internal static class NotesExtendedRuntimePostProcessor
         }
 
         if (features.Mail)
+        {
             source = NotesMailPostProcessor.ApplyBuiltSurface(source);
+            source = NotesMailSenderSemanticsPostProcessor.ApplyBuiltSurface(source);
+        }
 
         source = NotesDocumentMetadataPostProcessor.ApplyBuiltSurface(source);
         source = NotesDocumentAuthorsPostProcessor.ApplyBuiltSurface(source);
