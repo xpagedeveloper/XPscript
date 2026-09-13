@@ -10,11 +10,13 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort MailNoteMimeBody = 0x0080;
     private const ushort MailSendSign = 0x0002;
     private const ushort MailSendSeal = 0x0004;
-    private const ushort NoteClassFormForMail = 0x0004;
 
-    internal void SendNote(nint note, nint database, bool attachForm, string[]? recipients)
+    internal void SendNote(nint note, bool attachForm, string[]? recipients)
     {
         EnsureInitialized();
+        if (attachForm)
+            throw new XPScriptRuntimeException(5, "NotesDocument.Send attachForm=True is not supported. Use Send(False) or omit attachForm.");
+
         Check(Resolve<NSFNoteCopySendDelegate>("NSFNoteCopy")(note, out var copy), "NSFNoteCopy(send)");
         try
         {
@@ -26,11 +28,8 @@ internal sealed partial class XPScriptNotesNativeApi
 
             ushort mailFlags = 0;
             _ = Resolve<NSFNoteIsSignedOrSealedSendDelegate>("NSFNoteIsSignedOrSealed")(copy, out var signed, out var sealedValue);
-            if (signed != 0 || attachForm) mailFlags |= MailSendSign;
+            if (signed != 0) mailFlags |= MailSendSign;
             if (sealedValue != 0) mailFlags |= MailSendSeal;
-
-            if (attachForm)
-                AttachFormForMail(copy, database);
 
             ushort mailNoteFlags = MailNoteAnyRecipient;
             if (HasItem(copy, "$NoteHasNativeMIME"))
@@ -64,27 +63,6 @@ internal sealed partial class XPScriptNotesNativeApi
         }
     }
 
-    private void AttachFormForMail(nint note, nint database)
-    {
-        var formName = GetItemText(note, "Form").Trim();
-        if (formName.Length == 0)
-            throw new XPScriptRuntimeException(5, "NotesDocument.Send(True) requires a Form item.");
-
-        using var form = ToLmbcs(formName);
-        Check(Resolve<NIFFindDesignNoteDelegate>("NIFFindDesignNote")(database, form.Pointer, NoteClassFormForMail, out var formNoteId), "NIFFindDesignNote(form)");
-        var formNote = OpenNote(database, formNoteId);
-        try
-        {
-            Check(Resolve<StoredFormRemoveItemsSendDelegate>("StoredFormRemoveItems")(note, 0), "StoredFormRemoveItems");
-            if (HasItem(note, "Form")) DeleteItem(note, "Form");
-            Check(Resolve<StoredFormAddItemsSendDelegate>("StoredFormAddItems")(database, formNote, note, 1, 0), "StoredFormAddItems");
-        }
-        finally
-        {
-            CloseNote(formNote);
-        }
-    }
-
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort NSFNoteCopySendDelegate(nint source, out nint destination);
 
@@ -96,12 +74,6 @@ internal sealed partial class XPScriptNotesNativeApi
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort NSFItemAppendTextListSendDelegate(nint note, nint itemName, nint text, ushort textLength, int allowDuplicates);
-
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    internal delegate ushort StoredFormRemoveItemsSendDelegate(nint note, uint flags);
-
-    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
-    internal delegate ushort StoredFormAddItemsSendDelegate(nint database, nint formNote, nint targetNote, int includeSubforms, uint flags);
 
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)]
     internal delegate ushort MailNoteJitEx2SendDelegate(nint runContext, nint note, ushort mailFlags, nint recipients, ushort jitFlag, ushort mailNoteFlags, nint callback, nint callbackContext);
