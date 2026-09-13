@@ -54,7 +54,16 @@ jobs:
       - name: Run NetworkTools local smoke
         shell: pwsh
         run: |
-          $exe = './out/networktools-local-smoke'
-          if ($IsWindows) { $exe = './out/networktools-local-smoke.exe' }
+          $plain = './out/networktools-local-smoke'
+          $windows = './out/networktools-local-smoke.exe'
+          if (Test-Path $plain -PathType Leaf) {
+            $exe = (Resolve-Path $plain).Path
+          }
+          elseif (Test-Path $windows -PathType Leaf) {
+            $exe = (Resolve-Path $windows).Path
+          }
+          else {
+            throw 'Compiled NetworkTools local smoke executable was not found.'
+          }
           & $exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
