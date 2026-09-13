@@ -11,6 +11,9 @@ Sub Main()
     Set sheet = book.aDdWoRkShEeT("Sales")
     Set cell = sheet.cElL("A1")
     cell.vAlUe = "Hello"
+    Print CStr(book.cReAtEdByXpScRiPt)
+    Print CStr(book.xPsCrIpTfOrMaTvErSiOn)
+    Print CStr(book.cAnUpDaTe)
     book.sAvEaS("probe.xlsx")
 End Sub
 """;
@@ -23,8 +26,16 @@ if (!generated.Contains("internal sealed class XPScriptSpreadsheet", StringCompa
 if (!generated.Contains(".AddWorksheet(", StringComparison.Ordinal)
     || !generated.Contains(".Cell(", StringComparison.Ordinal)
     || !generated.Contains(".Value", StringComparison.Ordinal)
+    || !generated.Contains(".CreatedByXPScript", StringComparison.Ordinal)
+    || !generated.Contains(".XPScriptFormatVersion", StringComparison.Ordinal)
+    || !generated.Contains(".CanUpdate", StringComparison.Ordinal)
     || !generated.Contains(".SaveAs(", StringComparison.Ordinal))
     throw new Exception("XPSpreadsheet members were not normalized case-insensitively.");
+
+if (!generated.Contains("XPScriptWorkbookVersion", StringComparison.Ordinal)
+    || !generated.Contains("docProps/custom.xml", StringComparison.Ordinal)
+    || !generated.Contains("SaveAsSimple", StringComparison.Ordinal))
+    throw new Exception("XPSpreadsheet origin marker or safe conversion support was not emitted.");
 
 const string unrelated = """
 Option Declare
