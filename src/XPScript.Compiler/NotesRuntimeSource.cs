@@ -39,6 +39,7 @@ internal static class NotesRuntimeSource
         source = NotesSessionEnvironmentPostProcessor.Apply(source);
         source = NotesSessionPasswordPostProcessor.Apply(source);
         source = NotesSessionAddressBooksPostProcessor.Apply(source);
+        source = NotesDocumentSendPostProcessor.Apply(source);
         source = NotesDocumentRemovePostProcessor.Apply(source);
         source = NotesDocumentLotusScriptSurfacePostProcessor.Apply(source);
         source = NotesDocumentComputeWithFormPostProcessor.Apply(source);
