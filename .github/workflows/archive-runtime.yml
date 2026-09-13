@@ -49,7 +49,8 @@ jobs:
         shell: pwsh
         run: |
           $runtimeTimeoutMilliseconds = 30000
-          $compileTimeoutMilliseconds = 60000
+          $compileTimeoutMilliseconds = if ($IsWindows) { 120000 } else { 60000 }
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
 
           function Invoke-ProcessWithTimeout([string] $fileName, [string[]] $arguments, [int] $timeoutMilliseconds, [string] $label) {
             $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
@@ -82,7 +83,7 @@ jobs:
 
           function Compile-XPScript([string] $source, [string] $name) {
             Write-Host "ARCHIVE_CI_COMPILE=$name"
-            $arguments = @('run','--project','./src/XPScript.Compiler/XPScript.Compiler.csproj','-c','Release','--no-build','--',$source,'-o',"./out/$name",'--runtime=false')
+            $arguments = @($compilerDll,$source,'-o',"./out/$name",'--runtime=false')
             $result = Invoke-ProcessWithTimeout 'dotnet' $arguments $compileTimeoutMilliseconds "compile: $name"
             if ($result.ExitCode -ne 0) {
               Write-Error "Archive compilation failed with exit code $($result.ExitCode): $name"
