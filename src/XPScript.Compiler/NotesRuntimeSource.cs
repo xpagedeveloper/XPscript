@@ -3,6 +3,7 @@ namespace XPScript.Compiler;
 internal static class NotesRuntimeSource
 {
     internal const string MimeFeatureMarker = "// XPSCRIPT_NOTES_MIME_FEATURE";
+    internal const string MailFeatureMarker = "// XPSCRIPT_NOTES_MAIL_FEATURE";
 
     public static string Code => Build(NotesRuntimeFeatures.Full);
 
@@ -17,6 +18,8 @@ internal static class NotesRuntimeSource
 
         if (features.Mime)
             source += "\n" + MimeFeatureMarker + "\n";
+        if (features.Mail)
+            source += "\n" + MailFeatureMarker + "\n";
 
         source = NotesConstPostProcessor.Apply(source);
         source = NotesDocumentCollectionPostProcessor.Apply(source);
