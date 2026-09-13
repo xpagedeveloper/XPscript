@@ -11,7 +11,7 @@ Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", "1");
 
 const string adversarial = "\"\\ </script><script>alert('x')</script> åäö 漢字 😀 {\"nested\":[1,true,null]}";
 const string optionPayload = "\"\\ <img src=x onerror=alert(1)> åäö 漢字 😀 {\"role\":\"admin\"}";
-const string emailPayload = "qa+\"\\åäö@example.test";
+const string emailPayload = "qa+uiform.adversarial@example.test";
 const string urlPayload = "https://example.test/a/%22%5C?q=%7B%22x%22%3A1%7D";
 
 var parent = Path.Combine(Path.GetTempPath(), "xps-uiform-adversarial-" + Guid.NewGuid().ToString("N"));
