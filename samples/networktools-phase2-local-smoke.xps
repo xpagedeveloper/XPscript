@@ -1,0 +1,46 @@
+' NetworkTools Phase 2 local-only smoke test.
+Option Declare
+
+Sub Main()
+    Dim net As New NetworkTools
+    Dim host As NetworkHostResult
+    Dim subnet As NetworkSubnetInfo
+    Dim values As Variant
+    Dim ports As Variant
+    Dim count As Integer
+
+    Set host = net.ResolveHost("localhost")
+    If host.Error <> "" Then Error 1101, "ResolveHost localhost failed: " & host.Error
+
+    If Not net.IsPrivateAddress("10.1.2.3") Then Error 1102, "RFC1918 address not detected"
+    If net.IsPrivateAddress("8.8.8.8") Then Error 1103, "Public IPv4 address detected as private"
+    If Not net.IsLoopbackAddress("127.0.0.1") Then Error 1104, "IPv4 loopback not detected"
+    If Not net.IsLoopbackAddress("::1") Then Error 1105, "IPv6 loopback not detected"
+    If Not net.IsLinkLocalAddress("169.254.10.20") Then Error 1106, "IPv4 link-local not detected"
+    If Not net.IsLinkLocalAddress("fe80::1") Then Error 1107, "IPv6 link-local not detected"
+    If Not net.IsMulticastAddress("239.1.1.1") Then Error 1108, "IPv4 multicast not detected"
+    If Not net.IsMulticastAddress("ff02::1") Then Error 1109, "IPv6 multicast not detected"
+    If net.GetAddressFamily("127.0.0.1") <> "IPv4" Then Error 1110, "IPv4 address family mismatch"
+    If net.GetAddressFamily("::1") <> "IPv6" Then Error 1111, "IPv6 address family mismatch"
+    If Not net.IsInSubnet("10.20.30.40", "10.20.0.0/16") Then Error 1112, "IPv4 subnet membership failed"
+    If net.IsInSubnet("10.21.30.40", "10.20.0.0/16") Then Error 1113, "IPv4 subnet mismatch failed"
+    If Not net.IsInSubnet("2001:db8::1234", "2001:db8::/32") Then Error 1114, "IPv6 subnet membership failed"
+
+    Set subnet = net.ParseSubnet("192.168.10.42/24")
+    If subnet.NetworkAddress <> "192.168.10.0" Then Error 1115, "Network address mismatch"
+    If subnet.BroadcastAddress <> "192.168.10.255" Then Error 1116, "Broadcast address mismatch"
+    If subnet.SubnetMask <> "255.255.255.0" Then Error 1117, "Subnet mask mismatch"
+    If subnet.AddressCount <> "256" Then Error 1118, "Address count mismatch"
+    If Not subnet.Contains("192.168.10.200") Then Error 1119, "Subnet Contains failed"
+
+    ports = Array(1, 9)
+    values = net.CheckTcpPorts("127.0.0.1", ports, 100, 2)
+    count = 0
+    Forall portResult In values
+        count = count + 1
+    End Forall
+    If count <> 2 Then Error 1120, "CheckTcpPorts did not return one result per requested port"
+
+    values = net.GetLocalPortExposure()
+    Print "NETWORKTOOLS_PHASE2_LOCAL_SMOKE_PASS"
+End Sub
