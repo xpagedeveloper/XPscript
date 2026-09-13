@@ -13,12 +13,18 @@ internal sealed class XPScriptSpreadsheet
     private const string SpreadsheetNs = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
     private const string OfficeRelNs = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
     private const string PackageRelNs = "http://schemas.openxmlformats.org/package/2006/relationships";
+    private const string CustomPropsNs = "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties";
+    private const string CustomVtNs = "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes";
+    private const string XPScriptVersionProperty = "XPScriptWorkbookVersion";
+    private const int CurrentFormatVersion = 1;
     private const long MaxPackageBytes = 64L * 1024 * 1024;
     private const long MaxPartBytes = 16L * 1024 * 1024;
     private const int MaxEntries = 4096;
 
     private readonly System.Collections.Generic.List<XPScriptSpreadsheetWorksheet> _worksheets = [];
     private string? _path;
+    private bool _createdByXPScript = true;
+    private int _xpscriptFormatVersion = CurrentFormatVersion;
 
     public XPScriptSpreadsheet(object? path = null)
     {
@@ -29,6 +35,9 @@ internal sealed class XPScriptSpreadsheet
 
     public string Path => _path ?? "";
     public int WorksheetCount => _worksheets.Count;
+    public bool CreatedByXPScript => _createdByXPScript;
+    public int XPScriptFormatVersion => _xpscriptFormatVersion;
+    public bool CanUpdate => _createdByXPScript && _xpscriptFormatVersion == CurrentFormatVersion;
 
     public XPScriptSpreadsheetWorksheet AddWorksheet(object? name = null)
     {
@@ -85,6 +94,7 @@ internal sealed class XPScriptSpreadsheet
         using var stream = new System.IO.FileStream(requested, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read);
         using var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read, false);
         ValidateArchive(archive);
+        ReadXPScriptMarker(archive);
         LoadArchive(archive);
         _path = requested;
     }
@@ -93,18 +103,30 @@ internal sealed class XPScriptSpreadsheet
     {
         if (string.IsNullOrEmpty(_path))
             throw new InvalidOperationException("XPSpreadsheet.Save requires a filename. Use SaveAs(\"file.xlsx\") first.");
-        WriteFile(_path);
+        EnsureCanUpdate();
+        WriteFile(_path, allowExternalConversion: false);
     }
 
     public void SaveAs(object? filename)
     {
+        EnsureCanUpdate();
         var target = ResolveXlsxPath(filename);
-        WriteFile(target);
+        WriteFile(target, allowExternalConversion: false);
         _path = target;
+    }
+
+    public void SaveAsSimple(object? filename)
+    {
+        var target = ResolveXlsxPath(filename);
+        WriteFile(target, allowExternalConversion: true);
+        _path = target;
+        _createdByXPScript = true;
+        _xpscriptFormatVersion = CurrentFormatVersion;
     }
 
     public byte[] ToBytes()
     {
+        EnsureCanUpdate();
         EnsureAtLeastOneWorksheet();
         using var stream = new System.IO.MemoryStream();
         WriteArchive(stream);
@@ -121,6 +143,43 @@ internal sealed class XPScriptSpreadsheet
             throw new InvalidOperationException("XPSpreadsheet worksheet names cannot contain : \\ / ? * [ or ].");
         if (_worksheets.Any(x => !ReferenceEquals(x, current) && x.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException($"XPSpreadsheet already contains a worksheet named '{name}'.");
+    }
+
+    private void EnsureCanUpdate()
+    {
+        if (!_createdByXPScript)
+            throw new InvalidOperationException("XPSpreadsheet cannot update this workbook because it was not created by XPScript. The workbook may contain spreadsheet features that this basic implementation does not preserve. Use SaveAsSimple(\"file.xlsx\") only when you intentionally want to create a simplified XPScript workbook containing the supported data.");
+        if (_xpscriptFormatVersion != CurrentFormatVersion)
+            throw new InvalidOperationException($"XPSpreadsheet cannot update this workbook because its XPScript workbook version is {_xpscriptFormatVersion}, while this runtime supports version {CurrentFormatVersion}. Open it read-only with this runtime or use a compatible XPScript version.");
+    }
+
+    private void ReadXPScriptMarker(System.IO.Compression.ZipArchive archive)
+    {
+        _createdByXPScript = false;
+        _xpscriptFormatVersion = 0;
+        var entry = archive.GetEntry("docProps/custom.xml");
+        if (entry is null) return;
+        if (entry.Length > MaxPartBytes) return;
+
+        try
+        {
+            using var input = entry.Open();
+            using var reader = System.Xml.XmlReader.Create(input, SafeXmlSettings());
+            var doc = System.Xml.Linq.XDocument.Load(reader, System.Xml.Linq.LoadOptions.None);
+            var customNs = (System.Xml.Linq.XNamespace)CustomPropsNs;
+            var property = doc.Root?.Elements(customNs + "property")
+                .FirstOrDefault(x => string.Equals((string?)x.Attribute("name"), XPScriptVersionProperty, StringComparison.Ordinal));
+            if (property is null) return;
+            var raw = property.Elements().FirstOrDefault()?.Value;
+            if (!int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var version) || version < 1) return;
+            _createdByXPScript = true;
+            _xpscriptFormatVersion = version;
+        }
+        catch
+        {
+            _createdByXPScript = false;
+            _xpscriptFormatVersion = 0;
+        }
     }
 
     private string NextWorksheetName()
@@ -202,7 +261,8 @@ internal sealed class XPScriptSpreadsheet
         var entry = archive.GetEntry("xl/sharedStrings.xml");
         if (entry is null) return result;
         using var input = entry.Open();
-        var doc = System.Xml.Linq.XDocument.Load(input, System.Xml.Linq.LoadOptions.None);
+        using var reader = System.Xml.XmlReader.Create(input, SafeXmlSettings());
+        var doc = System.Xml.Linq.XDocument.Load(reader, System.Xml.Linq.LoadOptions.None);
         var ns = (System.Xml.Linq.XNamespace)SpreadsheetNs;
         foreach (var item in doc.Root?.Elements(ns + "si") ?? [])
             result.Add(string.Concat(item.Descendants(ns + "t").Select(x => x.Value)));
@@ -215,7 +275,8 @@ internal sealed class XPScriptSpreadsheet
         var entry = archive.GetEntry("xl/_rels/workbook.xml.rels")
             ?? throw new InvalidOperationException("XPSpreadsheet could not open the workbook because xl/_rels/workbook.xml.rels is missing.");
         using var input = entry.Open();
-        var doc = System.Xml.Linq.XDocument.Load(input, System.Xml.Linq.LoadOptions.None);
+        using var reader = System.Xml.XmlReader.Create(input, SafeXmlSettings());
+        var doc = System.Xml.Linq.XDocument.Load(reader, System.Xml.Linq.LoadOptions.None);
         var ns = (System.Xml.Linq.XNamespace)PackageRelNs;
         foreach (var rel in doc.Root?.Elements(ns + "Relationship") ?? [])
         {
@@ -300,8 +361,9 @@ internal sealed class XPScriptSpreadsheet
         }
     }
 
-    private void WriteFile(string target)
+    private void WriteFile(string target, bool allowExternalConversion)
     {
+        if (!allowExternalConversion) EnsureCanUpdate();
         EnsureAtLeastOneWorksheet();
         var parent = System.IO.Path.GetDirectoryName(target);
         if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
@@ -323,6 +385,7 @@ internal sealed class XPScriptSpreadsheet
         using var archive = new System.IO.Compression.ZipArchive(output, System.IO.Compression.ZipArchiveMode.Create, true);
         WriteXml(archive, "[Content_Types].xml", BuildContentTypes());
         WriteXml(archive, "_rels/.rels", BuildRootRelationships());
+        WriteXml(archive, "docProps/custom.xml", BuildCustomProperties());
         WriteXml(archive, "xl/workbook.xml", BuildWorkbook());
         WriteXml(archive, "xl/_rels/workbook.xml.rels", BuildWorkbookRelationships());
         for (var i = 0; i < _worksheets.Count; i++)
@@ -335,6 +398,7 @@ internal sealed class XPScriptSpreadsheet
         var root = new System.Xml.Linq.XElement(ns + "Types",
             new System.Xml.Linq.XElement(ns + "Default", new System.Xml.Linq.XAttribute("Extension", "rels"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.openxmlformats-package.relationships+xml")),
             new System.Xml.Linq.XElement(ns + "Default", new System.Xml.Linq.XAttribute("Extension", "xml"), new System.Xml.Linq.XAttribute("ContentType", "application/xml")),
+            new System.Xml.Linq.XElement(ns + "Override", new System.Xml.Linq.XAttribute("PartName", "/docProps/custom.xml"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.custom-properties+xml")),
             new System.Xml.Linq.XElement(ns + "Override", new System.Xml.Linq.XAttribute("PartName", "/xl/workbook.xml"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml")));
         for (var i = 0; i < _worksheets.Count; i++)
             root.Add(new System.Xml.Linq.XElement(ns + "Override", new System.Xml.Linq.XAttribute("PartName", $"/xl/worksheets/sheet{i + 1}.xml"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml")));
@@ -349,7 +413,25 @@ internal sealed class XPScriptSpreadsheet
                 new System.Xml.Linq.XElement(ns + "Relationship",
                     new System.Xml.Linq.XAttribute("Id", "rId1"),
                     new System.Xml.Linq.XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"),
-                    new System.Xml.Linq.XAttribute("Target", "xl/workbook.xml"))));
+                    new System.Xml.Linq.XAttribute("Target", "xl/workbook.xml")),
+                new System.Xml.Linq.XElement(ns + "Relationship",
+                    new System.Xml.Linq.XAttribute("Id", "rId2"),
+                    new System.Xml.Linq.XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties"),
+                    new System.Xml.Linq.XAttribute("Target", "docProps/custom.xml"))));
+    }
+
+    private static System.Xml.Linq.XDocument BuildCustomProperties()
+    {
+        var customNs = (System.Xml.Linq.XNamespace)CustomPropsNs;
+        var vtNs = (System.Xml.Linq.XNamespace)CustomVtNs;
+        var root = new System.Xml.Linq.XElement(customNs + "Properties",
+            new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "vt", vtNs),
+            new System.Xml.Linq.XElement(customNs + "property",
+                new System.Xml.Linq.XAttribute("fmtid", "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}"),
+                new System.Xml.Linq.XAttribute("pid", "2"),
+                new System.Xml.Linq.XAttribute("name", XPScriptVersionProperty),
+                new System.Xml.Linq.XElement(vtNs + "i4", CurrentFormatVersion)));
+        return new System.Xml.Linq.XDocument(new System.Xml.Linq.XDeclaration("1.0", "UTF-8", "yes"), root);
     }
 
     private System.Xml.Linq.XDocument BuildWorkbook()
