@@ -1,0 +1,27 @@
+name: IntelliSense API documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'samples/**'
+      - 'demo/**'
+      - 'scripts/validate-intellisense-api-docs.ps1'
+      - '.github/workflows/intellisense-api-docs.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate machine-readable API documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate IntelliSense API contract
+        shell: pwsh
+        run: ./scripts/validate-intellisense-api-docs.ps1
