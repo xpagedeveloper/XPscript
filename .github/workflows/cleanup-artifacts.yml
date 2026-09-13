@@ -30,7 +30,7 @@ jobs:
               }
             )) {
               for (const artifact of response.data) {
-                const createdAt = Date.parse(artifact.created_at);
+                const createdAt = new Date(artifact.created_at).getTime();
                 if (createdAt < cutoff) {
                   core.info(`Deleting artifact ${artifact.name} (${artifact.id}), created ${artifact.created_at}`);
                   await github.rest.actions.deleteArtifact({
