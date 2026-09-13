@@ -39,6 +39,8 @@ internal static class NotesExtendedRuntimePostProcessor
         if (features.Mail)
         {
             source = NotesMailPostProcessor.ApplyBuiltSurface(source);
+            if (!features.Mime)
+                source = NotesMailMimePruningPostProcessor.ApplyBuiltSurface(source);
             source = NotesMailSenderSemanticsPostProcessor.ApplyBuiltSurface(source);
         }
 
