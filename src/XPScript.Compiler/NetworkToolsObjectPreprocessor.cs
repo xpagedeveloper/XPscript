@@ -15,6 +15,7 @@ internal sealed class NetworkToolsObjectPreprocessor
 
     public string Transform(string source)
     {
+        source = new SystemInventoryObjectPreprocessor().Transform(source);
         var codeOnly = PreprocessorFeatureGate.CodeOnly(source);
         if (!PreprocessorFeatureGate.ContainsTypeReference(codeOnly, Types)) return source;
 
