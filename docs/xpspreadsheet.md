@@ -2,7 +2,7 @@
 
 `XPSpreadsheet` is XPScript's basic native spreadsheet API for simple `.xlsx` workbooks.
 
-> **Basic implementation:** this first version is intentionally limited to simple workbook data. It can create, read, and update `.xlsx` files, including multiple worksheets/tabs and basic cell values. It is not intended to preserve or edit every advanced spreadsheet feature.
+> **Basic implementation:** this first version is intentionally limited to simple workbook data. It can create, read, and update `.xlsx` files created by XPScript, including multiple worksheets/tabs and basic cell values. Existing external `.xlsx` files can be opened and read, but are read-only by default so XPSpreadsheet does not accidentally remove spreadsheet features it does not understand.
 
 The implementation uses the .NET runtime's built-in ZIP and XML support. It does not require Microsoft Excel, Office, LibreOffice, or an external spreadsheet NuGet package.
 
@@ -10,7 +10,33 @@ The implementation uses the .NET runtime's built-in ZIP and XML support. It does
 
 Only `.xlsx` is supported. Opening or saving `.xls`, `.xlsm`, `.ods`, `.csv`, or another spreadsheet format returns an explicit error.
 
-When an existing `.xlsx` workbook is opened and saved, XPSpreadsheet rewrites the workbook from the supported model. Advanced features that this basic implementation does not understand may therefore be removed. Do not use this version to round-trip complex workbooks that must retain charts, macros, styling, pivot tables, external links, or similar features.
+## Safe update model
+
+XPSpreadsheet marks every workbook it creates with the custom OOXML document property `XPScriptWorkbookVersion`. Version 1 of XPSpreadsheet writes `XPScriptWorkbookVersion=1`.
+
+When a workbook is opened, XPSpreadsheet exposes:
+
+- `CreatedByXPScript` - `True` when the XPScript workbook marker is present.
+- `XPScriptFormatVersion` - the marker version, or `0` for an external/unmarked workbook.
+- `CanUpdate` - `True` only when the workbook was created by XPScript and the marker version is supported by the current runtime.
+
+External `.xlsx` files are readable, but `Save()`, `SaveAs()`, and `ToBytes()` refuse to rewrite them. This prevents a basic XPSpreadsheet round trip from silently removing unsupported charts, styles, images, pivot tables, named ranges, external links, or other OOXML parts.
+
+If you intentionally want to convert an external workbook to the simple XPSpreadsheet model, use `SaveAsSimple()`:
+
+```xpscript
+Dim book As New XPSpreadsheet("external.xlsx")
+
+Print CStr(book.CreatedByXPScript)     ' False
+Print CStr(book.CanUpdate)             ' False
+
+' Explicitly creates a new simplified workbook containing supported data only.
+book.SaveAsSimple("converted.xlsx")
+```
+
+`SaveAsSimple()` is intentionally explicit because unsupported workbook content may be removed. The resulting workbook is marked as an XPScript workbook and can subsequently be updated with normal `Save()` and `SaveAs()` calls.
+
+A workbook marked with a newer `XPScriptWorkbookVersion` than the current runtime supports is also opened read-only rather than being rewritten by an older runtime.
 
 ## Create a workbook
 
@@ -89,11 +115,17 @@ Print CStr(sheet.Cell("B2").Value)
 
 The reader accepts normal XLSX string storage forms, including shared strings and inline strings.
 
-## Update an XLSX file
+Reading does not require the workbook to have been created by XPScript.
+
+## Update an XPScript workbook
 
 ```xpscript
 Dim book As New XPSpreadsheet("sales.xlsx")
 Dim sheet As XPWorksheet
+
+If Not book.CanUpdate Then
+    Error 1000, "Workbook is read-only in XPSpreadsheet"
+End If
 
 Set sheet = book.Worksheet("Sales")
 sheet.Cell("B2").Value = 15000
@@ -103,7 +135,9 @@ sheet.Cell("B3").Value = 9000
 book.Save()
 ```
 
-`Save()` updates the file that was opened. `SaveAs()` writes to another `.xlsx` file and makes that file the workbook's current path.
+`Save()` updates the XPScript-created file that was opened. `SaveAs()` writes an XPScript-created workbook to another `.xlsx` file and makes that file the workbook's current path.
+
+For external/unmarked workbooks, use `SaveAsSimple()` only when intentional simplification is acceptable.
 
 ## Main objects
 
@@ -113,6 +147,9 @@ Properties:
 
 - `Path`
 - `WorksheetCount`
+- `CreatedByXPScript`
+- `XPScriptFormatVersion`
+- `CanUpdate`
 
 Methods:
 
@@ -123,6 +160,7 @@ Methods:
 - `Open(filename)`
 - `Save()`
 - `SaveAs(filename)`
+- `SaveAsSimple(filename)`
 - `ToBytes()`
 - `Close()`
 
@@ -147,6 +185,7 @@ Properties:
 
 - `Value`
 - `Text`
+- `Formula`
 - `Address`
 - `Row`
 - `Column`
@@ -157,6 +196,8 @@ Methods:
 
 ## Current limitations
 
-This is a simple basic implementation. The first version does not provide a full spreadsheet application or calculation engine. In particular, do not rely on it to preserve or edit advanced formatting, charts, images, macros/VBA, pivot tables, conditional formatting, named ranges, external data connections, embedded objects, or other advanced XLSX parts.
+This is a simple basic implementation. The first version does not provide a full spreadsheet application or calculation engine. In particular, it does not preserve or edit advanced formatting, charts, images, macros/VBA, pivot tables, conditional formatting, named ranges, external data connections, embedded objects, or other advanced XLSX parts.
+
+Because of that limitation, XPSpreadsheet deliberately refuses to overwrite external/unmarked XLSX workbooks. `SaveAsSimple()` is the explicit opt-in operation for creating a simplified XPScript workbook from data that XPSpreadsheet can read.
 
 The file-based API is not available for `browser-wasm` targets in this version.
