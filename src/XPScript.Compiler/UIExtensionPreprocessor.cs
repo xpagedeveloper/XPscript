@@ -65,6 +65,7 @@ internal sealed class UIExtensionPreprocessor
 
     private static string TransformNotesAndAttachments(string source)
     {
+        source = new NotesDocumentSendWarningPreprocessor().Transform(source);
         var notesPrepared = new NotesSessionAutoDetectPreprocessor().Transform(source);
         notesPrepared = new NotesMimeTypePreprocessor().Transform(notesPrepared);
         var notes = new NotesRuntimePreprocessor().Transform(notesPrepared);
