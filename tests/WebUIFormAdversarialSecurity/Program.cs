@@ -1,5 +1,4 @@
 using System.Net;
-using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -10,68 +9,74 @@ using XPScript.Web.Runtime;
 
 Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", "1");
 
-const string adversarial = ""\\ </script><script>alert('x')</script> åäö 漢字 😀 {\"nested\":[1,true,null]}";
-const string optionPayload = ""\\ <img src=x onerror=alert(1)> åäö 漢字 😀 {\"role\":\"admin\"}";
+const string adversarial = "\"\\ </script><script>alert('x')</script> åäö 漢字 😀 {\"nested\":[1,true,null]}";
+const string optionPayload = "\"\\ <img src=x onerror=alert(1)> åäö 漢字 😀 {\"role\":\"admin\"}";
+const string emailPayload = "qa+\"\\åäö@example.test";
+const string urlPayload = "https://example.test/a/%22%5C?q=%7B%22x%22%3A1%7D";
 
 var parent = Path.Combine(Path.GetTempPath(), "xps-uiform-adversarial-" + Guid.NewGuid().ToString("N"));
 var root = Path.Combine(parent, "site");
 Directory.CreateDirectory(root);
 var scriptPath = Path.Combine(root, "form.xps");
-await File.WriteAllTextAsync(scriptPath, """
-[Anonymous]
-[Get]
-[Post]
-Sub Index()
-    Dim data As New JsonObject
-    Dim form As New UIForm("Security <script>alert(""title"")</script> "" \\ åäö 漢字 😀")
-    Dim result As String
 
-    Call data.Set("text", "seed")
-    Call data.Set("textarea", "seed")
-    Call data.Set("hidden", "seed")
-    Call data.Set("email", "seed@example.test")
-    Call data.Set("url", "https://example.test/")
-    Call data.Set("select", "safe")
-    Call data.Set("listbox", "safe")
-    Call data.Set("radio", "safe")
-    Call data.Set("multi", "safe")
-    Call data.Set("multiselect", "safe")
-    Call data.Set("checkboxgroup", "safe")
-    Call form.BindData(data)
+var script = string.Join(Environment.NewLine,
+[
+    "[Anonymous]",
+    "[Get]",
+    "[Post]",
+    "Sub Index()",
+    "    Dim data As New JsonObject",
+    "    Dim form As New UIForm(" + XpsString("Security <script>alert(\"title\")</script> \" \\ åäö 漢字 😀") + ")",
+    "    Dim result As String",
+    "",
+    "    Call data.Set(\"text\", \"seed\")",
+    "    Call data.Set(\"textarea\", \"seed\")",
+    "    Call data.Set(\"hidden\", \"seed\")",
+    "    Call data.Set(\"email\", \"seed@example.test\")",
+    "    Call data.Set(\"url\", \"https://example.test/\")",
+    "    Call data.Set(\"select\", \"safe\")",
+    "    Call data.Set(\"listbox\", \"safe\")",
+    "    Call data.Set(\"radio\", \"safe\")",
+    "    Call data.Set(\"multi\", \"safe\")",
+    "    Call data.Set(\"multiselect\", \"safe\")",
+    "    Call data.Set(\"checkboxgroup\", \"safe\")",
+    "    Call form.BindData(data)",
+    "",
+    "    Call form.AddTextField(\"text\", " + XpsString("Text <script>alert(\"label\")</script>") + ")",
+    "    Call form.AddTextArea(\"textarea\", " + XpsString("Area <img src=x onerror=alert(1)>") + ")",
+    "    Call form.AddPasswordField(\"password\", " + XpsString("Password <script>alert(\"pw\")</script>") + ")",
+    "    Call form.AddEmailField(\"email\", " + XpsString("Email <script>alert(\"email\")</script>") + ")",
+    "    Call form.AddUrlField(\"url\", " + XpsString("URL <script>alert(\"url\")</script>") + ")",
+    "    Call form.AddHiddenField(\"hidden\")",
+    "    Call form.AddCheckBox(\"checkbox\", " + XpsString("Check <script>alert(\"check\")</script>") + ")",
+    "    Call form.AddSelect(\"select\", " + XpsString("Select <script>alert(\"select\")</script>") + ")",
+    "    Call form.AddOption(\"select\", \"safe\")",
+    "    Call form.AddOption(\"select\", " + XpsString(optionPayload) + ")",
+    "    Call form.AddListBox(\"listbox\", " + XpsString("List <script>alert(\"list\")</script>") + ")",
+    "    Call form.AddOption(\"listbox\", \"safe\")",
+    "    Call form.AddOption(\"listbox\", " + XpsString(optionPayload) + ")",
+    "    Call form.AddRadioGroup(\"radio\", " + XpsString("Radio <script>alert(\"radio\")</script>") + ")",
+    "    Call form.AddOption(\"radio\", \"safe\")",
+    "    Call form.AddOption(\"radio\", " + XpsString(optionPayload) + ")",
+    "    Call form.AddMultiListBox(\"multi\", " + XpsString("Multi <script>alert(\"multi\")</script>") + ")",
+    "    Call form.AddOption(\"multi\", \"safe\")",
+    "    Call form.AddOption(\"multi\", " + XpsString(optionPayload) + ")",
+    "    Call form.AddMultiSelect(\"multiselect\", " + XpsString("MultiSelect <script>alert(\"ms\")</script>") + ")",
+    "    Call form.AddOption(\"multiselect\", \"safe\")",
+    "    Call form.AddOption(\"multiselect\", " + XpsString(optionPayload) + ")",
+    "    Call form.AddCheckBoxGroup(\"checkboxgroup\", " + XpsString("Group <script>alert(\"group\")</script>") + ")",
+    "    Call form.AddOption(\"checkboxgroup\", \"safe\")",
+    "    Call form.AddOption(\"checkboxgroup\", " + XpsString(optionPayload) + ")",
+    "",
+    "    result = form.ShowDialog()",
+    "    If result = \"OK\" Then",
+    "        Response.ContentType = \"application/json; charset=utf-8\"",
+    "        Response.Write(data.Stringify())",
+    "    End If",
+    "End Sub"
+]);
 
-    Call form.AddTextField("text", "Text <script>alert(""label"")</script>")
-    Call form.AddTextArea("textarea", "Area <img src=x onerror=alert(1)>")
-    Call form.AddPasswordField("password", "Password <script>alert(""pw"")</script>")
-    Call form.AddEmailField("email", "Email <script>alert(""email"")</script>")
-    Call form.AddUrlField("url", "URL <script>alert(""url"")</script>")
-    Call form.AddHiddenField("hidden")
-    Call form.AddCheckBox("checkbox", "Check <script>alert(""check"")</script>")
-    Call form.AddSelect("select", "Select <script>alert(""select"")</script>")
-    Call form.AddOption("select", "safe")
-    Call form.AddOption("select", """ + optionPayload.Replace(""", """") + """)
-    Call form.AddListBox("listbox", "List <script>alert(""list"")</script>")
-    Call form.AddOption("listbox", "safe")
-    Call form.AddOption("listbox", """ + optionPayload.Replace(""", """") + """)
-    Call form.AddRadioGroup("radio", "Radio <script>alert(""radio"")</script>")
-    Call form.AddOption("radio", "safe")
-    Call form.AddOption("radio", """ + optionPayload.Replace(""", """") + """)
-    Call form.AddMultiListBox("multi", "Multi <script>alert(""multi"")</script>")
-    Call form.AddOption("multi", "safe")
-    Call form.AddOption("multi", """ + optionPayload.Replace(""", """") + """)
-    Call form.AddMultiSelect("multiselect", "MultiSelect <script>alert(""ms"")</script>")
-    Call form.AddOption("multiselect", "safe")
-    Call form.AddOption("multiselect", """ + optionPayload.Replace(""", """") + """)
-    Call form.AddCheckBoxGroup("checkboxgroup", "Group <script>alert(""group"")</script>")
-    Call form.AddOption("checkboxgroup", "safe")
-    Call form.AddOption("checkboxgroup", """ + optionPayload.Replace(""", """") + """)
-
-    result = form.ShowDialog()
-    If result = "OK" Then
-        Response.ContentType = "application/json; charset=utf-8"
-        Response.Write(data.Stringify())
-    End If
-End Sub
-""");
+await File.WriteAllTextAsync(scriptPath, script);
 
 await using var cache = new XpsWebCompilationCache(new XpsWebCompiler());
 await using var dispatcher = new XpsWebDispatcher(root, cache);
@@ -95,17 +100,21 @@ try
 
     using (var response = await client.GetAsync("/form.xps"))
     {
-        if ((int)response.StatusCode != 200) throw new Exception($"UIForm adversarial GET expected 200, got {(int)response.StatusCode}.");
-        var html = await response.Content.ReadAsStringAsync();
+        if ((int)response.StatusCode != 200)
+            throw new Exception($"UIForm adversarial GET expected 200, got {(int)response.StatusCode}.");
 
-        AssertEncoded(html, "<script>alert("title")</script>");
-        AssertEncoded(html, "<script>alert("label")</script>");
+        var html = await response.Content.ReadAsStringAsync();
+        AssertEncoded(html, "<script>alert(\"title\")</script>");
+        AssertEncoded(html, "<script>alert(\"label\")</script>");
         AssertEncoded(html, "<img src=x onerror=alert(1)>");
         AssertEncoded(html, optionPayload);
-        if (html.Contains("<script>alert("title")</script>", StringComparison.Ordinal)
-            || html.Contains("<script>alert("label")</script>", StringComparison.Ordinal)
+
+        if (html.Contains("<script>alert(\"title\")</script>", StringComparison.Ordinal)
+            || html.Contains("<script>alert(\"label\")</script>", StringComparison.Ordinal)
             || html.Contains("<img src=x onerror=alert(1)>", StringComparison.Ordinal))
+        {
             throw new Exception("UIForm adversarial GET emitted unencoded attacker-controlled HTML.");
+        }
     }
 
     using var content = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -113,8 +122,8 @@ try
         ["text"] = adversarial,
         ["textarea"] = adversarial,
         ["password"] = adversarial,
-        ["email"] = "qa+"\\åäö@example.test",
-        ["url"] = "https://example.test/a/%22%5C?q=%7B%22x%22%3A1%7D",
+        ["email"] = emailPayload,
+        ["url"] = urlPayload,
         ["hidden"] = adversarial,
         ["checkbox"] = "on",
         ["select"] = optionPayload,
@@ -124,21 +133,26 @@ try
         ["multiselect"] = optionPayload,
         ["checkboxgroup"] = optionPayload
     });
+
     using (var response = await client.PostAsync("/form.xps", content))
     {
-        if ((int)response.StatusCode != 200) throw new Exception($"UIForm adversarial POST expected 200, got {(int)response.StatusCode}.");
-        var body = await response.Content.ReadAsStringAsync();
+        if ((int)response.StatusCode != 200)
+            throw new Exception($"UIForm adversarial POST expected 200, got {(int)response.StatusCode}.");
 
+        var body = await response.Content.ReadAsStringAsync();
         using var json = JsonDocument.Parse(body);
         var rootJson = json.RootElement;
+
         AssertJsonString(rootJson, "text", adversarial);
         AssertJsonString(rootJson, "textarea", adversarial);
         AssertJsonString(rootJson, "password", adversarial);
-        AssertJsonString(rootJson, "email", "qa+"\\åäö@example.test");
-        AssertJsonString(rootJson, "url", "https://example.test/a/%22%5C?q=%7B%22x%22%3A1%7D");
+        AssertJsonString(rootJson, "email", emailPayload);
+        AssertJsonString(rootJson, "url", urlPayload);
         AssertJsonString(rootJson, "hidden", adversarial);
+
         if (!rootJson.GetProperty("checkbox").GetBoolean())
             throw new Exception("UIForm adversarial checkbox did not preserve Boolean typing.");
+
         AssertContains(rootJson, "select", optionPayload);
         AssertContains(rootJson, "listbox", optionPayload);
         AssertContains(rootJson, "radio", optionPayload);
@@ -157,6 +171,8 @@ finally
     await app.DisposeAsync();
     if (Directory.Exists(parent)) Directory.Delete(parent, recursive: true);
 }
+
+static string XpsString(string value) => "\"" + value.Replace("\"", "\"\"") + "\"";
 
 static void AssertEncoded(string html, string raw)
 {
@@ -182,8 +198,11 @@ static void AssertContains(JsonElement root, string name, string expected)
         return;
     }
 
-    if (value.ValueKind == JsonValueKind.Array && value.EnumerateArray().Any(item => item.ValueKind == JsonValueKind.String && item.GetString() == expected))
+    if (value.ValueKind == JsonValueKind.Array
+        && value.EnumerateArray().Any(item => item.ValueKind == JsonValueKind.String && item.GetString() == expected))
+    {
         return;
+    }
 
     throw new Exception($"UIForm option field '{name}' did not contain the adversarial option.");
 }
