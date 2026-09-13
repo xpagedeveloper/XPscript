@@ -15,9 +15,9 @@ Sub Main()
     mail.CopyTo = "copy@example.com"
     mail.BlindCopyTo = "blind@example.com"
     mail.Subject = "NotesMail surface"
-    mail.From = "sender@example.com"
+    Print mail.Sender
     mail.ReplyTo = "reply@example.com"
-    mail.Principal = "CN=Sender/O=Example"
+    mail.OnBehalfOf = "CN=Sender/O=Example"
     mail.DeliveryPriority = "High"
     mail.DeliveryReport = "Failure"
     mail.ReturnReceipt = True
