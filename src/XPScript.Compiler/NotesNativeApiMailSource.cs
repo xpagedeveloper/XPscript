@@ -11,12 +11,9 @@ internal sealed partial class XPScriptNotesNativeApi
     private const ushort MailSendSign = 0x0002;
     private const ushort MailSendSeal = 0x0004;
 
-    internal void SendNote(nint note, bool attachForm, string[]? recipients)
+    internal void SendNote(nint note, string[]? recipients)
     {
         EnsureInitialized();
-        if (attachForm)
-            throw new XPScriptRuntimeException(5, "NotesDocument.Send attachForm=True is not supported. Use Send(False) or omit attachForm.");
-
         Check(Resolve<NSFNoteCopySendDelegate>("NSFNoteCopy")(note, out var copy), "NSFNoteCopy(send)");
         try
         {
