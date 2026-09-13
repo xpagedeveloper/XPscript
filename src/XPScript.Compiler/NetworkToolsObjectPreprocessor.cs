@@ -7,7 +7,10 @@ internal sealed class NetworkToolsObjectPreprocessor
     private static readonly string[] Types =
     [
         "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult",
-        "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo"
+        "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo",
+        "NetworkHostResult", "NetworkSubnetInfo", "NetworkTlsVersionResult", "NetworkCertificateResult",
+        "NetworkHttpHeadersResult", "NetworkHttpSecurityHeadersResult", "NetworkRedirectResult", "NetworkBannerResult",
+        "NetworkPortExposureInfo"
     ];
 
     public string Transform(string source)
