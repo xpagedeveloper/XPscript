@@ -1,0 +1,115 @@
+' Additional compile coverage for Notes APIs added after the original full Domino sample.
+' This module is included by notes-full-domino-runtime-test.xps. It deliberately
+' does not define Main so the existing executable regression remains unchanged.
+'
+Sub NotesRecentSurfaceCompileCoverage()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim access As NotesDatabaseAccess
+    Dim doc As NotesDocument
+    Dim rich As NotesRichTextItem
+    Dim mime As NotesMIMEEntity
+    Dim child As NotesMIMEEntity
+    Dim header As NotesMIMEHeader
+    Dim stream As NotesStream
+    Dim mail As NotesMail
+    Dim recipients(1) As String
+    Dim value As Variant
+
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", "xpscript.nsf")
+
+    ' NotesSession environment surface added to the native C API mapping.
+    value = session.GetEnvironmentString("XPScriptFullSurface")
+    value = session.GetEnvironmentValue("XPScriptFullSurface")
+    Call session.SetEnvironmentVar("XPScriptFullSurface", "probe")
+    Call session.SetEnvironmentVar("XPScriptFullSurface", "probe", False)
+
+    ' NotesDatabase.QueryAccess / NotesDatabaseAccess.
+    Set access = db.QueryAccess()
+    Set access = db.QueryAccess(session.UserName)
+    Print access.UserName
+    Print CStr(access.Level)
+    Print access.LevelName
+    Print CStr(access.AccessFlags)
+    Print CStr(access.CannotCreateDocuments)
+    Print CStr(access.CannotDeleteDocuments)
+    Print CStr(access.CanCreatePersonalAgents)
+    Print CStr(access.CanCreatePersonalFolders)
+    Print CStr(access.CanCreateSharedFolders)
+    Print CStr(access.CanCreateLotusScriptAgents)
+    Print CStr(access.IsPublicReader)
+    Print CStr(access.IsPublicWriter)
+    Print CStr(access.CannotReplicateOrCopy)
+    Print CStr(access.IsPersonEntry)
+    Print CStr(access.IsGroupEntry)
+    Print CStr(access.IsServerEntry)
+    value = access.NamesList
+    value = access.Groups
+    value = access.Roles
+    Print access.Parent.FilePath
+
+    ' NotesDocument.Send. Calls remain compile-only so this regression never sends mail.
+    Set doc = db.CreateDocument()
+    Call doc.ReplaceItemValue("SendTo", "nobody@example.invalid")
+    If False Then
+        Call doc.Send()
+        Call doc.Send(False)
+        Call doc.Send(False, "nobody@example.invalid")
+        recipients(0) = "one@example.invalid"
+        recipients(1) = "two@example.invalid"
+        Call doc.Send(False, recipients)
+    End If
+
+    ' Native MIME root/child/header surface and RichText handoff used by NotesMail.
+    Set rich = doc.CreateRichTextItem("RichBody")
+    Call rich.AppendText("NotesMail rich text compile coverage")
+    Set mime = doc.CreateMIMEEntity("Body")
+    Set stream = session.CreateStream()
+    stream.Charset = "UTF-8"
+    Call stream.WriteText("MIME body")
+    stream.Position = 0
+    Call mime.SetContentFromText(stream, "text/plain; charset=UTF-8", 1725)
+    Set child = mime.CreateChildEntity()
+    Set header = child.CreateHeader("X-XPScript-Full-Surface", "covered")
+    Call header.SetHeaderVal("covered")
+    Print header.GetHeaderVal()
+    Call doc.CloseMIMEEntities()
+
+    ' NotesMail is created from NotesSession. Sending is compile-only by design.
+    Set mail = session.CreateMail()
+    recipients(0) = "one@example.invalid"
+    recipients(1) = "two@example.invalid"
+    mail.SendTo = recipients
+    mail.CopyTo = "copy@example.invalid"
+    mail.BlindCopyTo = recipients
+    mail.Subject = "XPscript Notes full surface"
+    Print mail.Sender
+    mail.ReplyTo = "reply@example.invalid"
+    mail.OnBehalfOf = "CN=XPscript/O=Example"
+    mail.DeliveryPriority = "High"
+    mail.DeliveryReport = "Failure"
+    mail.ReturnReceipt = True
+    mail.Body = "Plain text body"
+    Call mail.SetBodyText("Plain text body 2")
+    Call mail.SetBodyRichText(rich)
+    Call mail.SetBodyHTML("<html><body>HTML body</body></html>")
+    stream.Position = 0
+    Call mail.SetMIME(stream, "text/plain; charset=UTF-8")
+    Call mail.SetMIMEBody("<p>MIME HTML</p>", "text/html; charset=UTF-8")
+    Call mail.AddAttachment("missing-full-surface-attachment.txt")
+    Call mail.AddAttachment("missing-full-surface-attachment.txt", "renamed.txt")
+    Call mail.AddAttachment("missing-full-surface-attachment.txt", "renamed.txt", "text/plain")
+    Call mail.ClearAttachments()
+    Print CStr(mail.IsMIME)
+    Print CStr(mail.AttachmentCount)
+    If False Then Call mail.Send()
+
+    Call mail.Recycle()
+    Call stream.Recycle()
+    Call rich.Recycle()
+    Call doc.Recycle()
+    Call access.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub
