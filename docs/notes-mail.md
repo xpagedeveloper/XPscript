@@ -27,7 +27,7 @@ recipients(1) = "two@example.com"
 mail.SendTo = recipients
 ```
 
-`Send()` requires at least one recipient across the three recipient properties.
+`Send()` requires at least one primary recipient in `SendTo`. `CopyTo` and `BlindCopyTo` add recipients but do not replace the required `SendTo` item when `NotesMail` invokes the underlying document send without an explicit recipient argument.
 
 ## Sender and delegated mail
 
