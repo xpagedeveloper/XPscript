@@ -13,9 +13,13 @@ internal readonly record struct NotesRuntimeFeatures(bool RichText, bool Mime, b
                    PreprocessorFeatureGate.ContainsCall(
                        code,
                        "CreateMail", "SetBodyText", "SetBodyRichText", "SetBodyHTML",
-                       "SetMIME", "SetMIMEBody", "AddAttachment");
+                       "SetMIME", "SetMIMEBody", "AddAttachment", "ClearAttachments");
 
-        var mime = mail ||
+        var mailMime = PreprocessorFeatureGate.ContainsCall(
+            code,
+            "SetBodyHTML", "SetMIME", "SetMIMEBody", "AddAttachment");
+
+        var mime = mailMime ||
                    PreprocessorFeatureGate.ContainsTypeReference(
                        code,
                        "NotesMIMEEntity", "NotesMIMEHeader") ||
