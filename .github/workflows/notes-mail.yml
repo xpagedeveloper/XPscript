@@ -30,3 +30,9 @@ jobs:
           $output = & dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/notes-mail-surface.xps -o ./out/notes-mail --runtime=false 2>&1 | Out-String
           Write-Host $output
           if ($LASTEXITCODE -ne 0) { throw "NotesMail compile failed with exit code $LASTEXITCODE" }
+      - name: Compile full Notes surface
+        shell: pwsh
+        run: |
+          $output = & dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/notes-full-domino-runtime-test.xps -o ./out/notes-full --runtime=false 2>&1 | Out-String
+          Write-Host $output
+          if ($LASTEXITCODE -ne 0) { throw "Full Notes surface compile failed with exit code $LASTEXITCODE" }
