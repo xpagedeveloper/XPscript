@@ -1,0 +1,35 @@
+name: NotesDocument Send
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  send-surface:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Compile NotesDocument.Send surface and verify attachForm warning
+        shell: pwsh
+        run: |
+          $output = & dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/notes-document-send-surface.xps -o ./out/notes-send --runtime=false 2>&1 | Out-String
+          Write-Host $output
+          if ($LASTEXITCODE -ne 0) { throw "NotesDocument.Send compile failed with exit code $LASTEXITCODE" }
+          if ($output -notmatch 'warning: NotesDocument\.Send attachForm=True is not supported') {
+            throw 'Expected NotesDocument.Send attachForm compiler warning was not emitted.'
+          }

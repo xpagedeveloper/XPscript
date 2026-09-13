@@ -1,0 +1,21 @@
+Sub Main()
+    Dim session As New NotesSession
+    Dim db As NotesDatabase
+    Dim doc As NotesDocument
+    Dim recipients(0 To 1) As String
+
+    Set db = session.GetDatabase("", "mail/test.nsf")
+    Set doc = db.GetDocumentByUNID("0123456789ABCDEF0123456789ABCDEF")
+
+    Call doc.Send()
+    Call doc.Send(False)
+    Call doc.Send(False, "user@example.com")
+
+    recipients(0) = "first@example.com"
+    recipients(1) = "second@example.com"
+    Call doc.Send(False, recipients)
+
+    ' attachForm=True is accepted for compatibility but intentionally ignored.
+    ' The compiler emits a warning for this statically visible call.
+    Call doc.Send(True)
+End Sub
