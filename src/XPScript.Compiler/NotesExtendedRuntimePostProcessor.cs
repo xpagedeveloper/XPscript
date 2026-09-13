@@ -8,7 +8,8 @@ internal static class NotesExtendedRuntimePostProcessor
         var mime = source.Contains(NotesRuntimeSource.MimeFeatureMarker, StringComparison.Ordinal) ||
                    source.Contains("XPScriptNotesMIMEEntity", StringComparison.Ordinal);
         var richText = source.Contains("public XPScriptNotesRichTextItem? GetRichTextItem()", StringComparison.Ordinal);
-        return ApplyBuiltSurface(source, new NotesRuntimeFeatures(richText, mime));
+        var mail = source.Contains(NotesRuntimeSource.MailFeatureMarker, StringComparison.Ordinal);
+        return ApplyBuiltSurface(source, new NotesRuntimeFeatures(richText, mime, mail));
     }
 
     public static string ApplyBuiltSurface(string source, NotesRuntimeFeatures features)
@@ -34,6 +35,9 @@ internal static class NotesExtendedRuntimePostProcessor
             source = NotesMimeChildHeaderReadPostProcessor.ApplyBuiltSurface(source);
             source = NotesMimeEntityDataHeaderPostProcessor.ApplyBuiltSurface(source);
         }
+
+        if (features.Mail)
+            source = NotesMailPostProcessor.ApplyBuiltSurface(source);
 
         source = NotesDocumentMetadataPostProcessor.ApplyBuiltSurface(source);
         source = NotesDocumentAuthorsPostProcessor.ApplyBuiltSurface(source);
