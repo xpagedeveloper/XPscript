@@ -24,16 +24,24 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
-      - name: Compile NotesMail surface
+      - name: Compile NotesMail MIME surface
         shell: pwsh
         run: |
-          $output = & dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/notes-mail-surface.xps -o ./out/notes-mail --runtime=false 2>&1 | Out-String
+          $output = & dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/notes-mail-surface.xps -o ./out/mime/notes-mail --runtime=false 2>&1 | Out-String
           Write-Host $output
-          if ($LASTEXITCODE -ne 0) { throw "NotesMail compile failed with exit code $LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw "NotesMail MIME compile failed with exit code $LASTEXITCODE" }
+          if (-not (Test-Path ./out/mime/MimeKit.dll)) { throw "NotesMail MIME build did not stage MimeKit.dll" }
+      - name: Compile NotesMail without MIME
+        shell: pwsh
+        run: |
+          $output = & dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/notes-mail-no-mime-surface.xps -o ./out/no-mime/notes-mail --runtime=false 2>&1 | Out-String
+          Write-Host $output
+          if ($LASTEXITCODE -ne 0) { throw "NotesMail no-MIME compile failed with exit code $LASTEXITCODE" }
+          if (Test-Path ./out/no-mime/MimeKit.dll) { throw "NotesMail no-MIME build unexpectedly staged MimeKit.dll" }
       - name: Compile full Notes surface
         shell: pwsh
         run: |
-          $output = & dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/notes-full-domino-runtime-test.xps -o ./out/notes-full --runtime=false 2>&1 | Out-String
+          $output = & dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/notes-full-domino-runtime-test.xps -o ./out/full/notes-full --runtime=false 2>&1 | Out-String
           Write-Host $output
           if ($LASTEXITCODE -ne 0) { throw "Full Notes surface compile failed with exit code $LASTEXITCODE" }
       - name: Audit recent Notes core surface coverage
