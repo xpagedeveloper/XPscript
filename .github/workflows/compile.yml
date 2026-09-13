@@ -88,6 +88,8 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom --runtime=false
       - name: Run native XML DOM regression
         run: ./out/native-xml-dom
+      - name: Verify UIForm adversarial input security
+        run: dotnet run --project ./tests/WebUIFormAdversarialSecurity/WebUIFormAdversarialSecurity.csproj -c Release
       - name: Verify UIForm asset packaging
         shell: bash
         run: |
