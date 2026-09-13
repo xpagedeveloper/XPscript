@@ -1,5 +1,3 @@
-Option Explicit
-
 Sub Main()
     Dim session As New NotesSession
     Dim db As NotesDatabase
