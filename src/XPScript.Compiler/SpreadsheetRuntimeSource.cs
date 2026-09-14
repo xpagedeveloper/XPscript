@@ -8,6 +8,11 @@ internal static class XPScriptSpreadsheetFactory
     public static XPScriptSpreadsheet Create(object? path = null) => new(path);
 }
 
+internal readonly record struct XPScriptSpreadsheetCellStyle(bool Bold, bool Italic, string BackgroundColor)
+{
+    public bool HasStyle => Bold || Italic || !string.IsNullOrEmpty(BackgroundColor);
+}
+
 internal sealed class XPScriptSpreadsheet
 {
     private const string SpreadsheetNs = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
@@ -52,7 +57,6 @@ internal sealed class XPScriptSpreadsheet
     public XPScriptSpreadsheetWorksheet Worksheet(object? nameOrIndex)
     {
         if (nameOrIndex is null) throw new InvalidOperationException("XPSpreadsheet.Worksheet requires a worksheet name or 1-based index.");
-
         if (nameOrIndex is byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal)
         {
             var index = System.Convert.ToInt32(nameOrIndex, System.Globalization.CultureInfo.InvariantCulture);
@@ -60,7 +64,6 @@ internal sealed class XPScriptSpreadsheet
                 throw new InvalidOperationException($"XPSpreadsheet worksheet index {index} is out of range. Valid indexes are 1 to {_worksheets.Count}.");
             return _worksheets[index - 1];
         }
-
         var name = XPScriptRuntime.CStr(nameOrIndex);
         var match = _worksheets.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         return match ?? throw new InvalidOperationException($"XPSpreadsheet worksheet '{name}' was not found.");
@@ -86,11 +89,9 @@ internal sealed class XPScriptSpreadsheet
         var requested = ResolveXlsxPath(filename);
         if (!System.IO.File.Exists(requested))
             throw new InvalidOperationException($"XPSpreadsheet file was not found: {requested}");
-
         var info = new System.IO.FileInfo(requested);
         if (info.Length > MaxPackageBytes)
             throw new InvalidOperationException($"XPSpreadsheet refuses XLSX packages larger than {MaxPackageBytes} bytes.");
-
         using var stream = new System.IO.FileStream(requested, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read);
         using var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read, false);
         ValidateArchive(archive);
@@ -104,7 +105,6 @@ internal sealed class XPScriptSpreadsheet
         var bytes = RequireBytes(value);
         if (bytes.LongLength > MaxPackageBytes)
             throw new InvalidOperationException($"XPSpreadsheet refuses XLSX packages larger than {MaxPackageBytes} bytes.");
-
         using var stream = new System.IO.MemoryStream(bytes, writable: false);
         using var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read, false);
         ValidateArchive(archive);
@@ -172,9 +172,7 @@ internal sealed class XPScriptSpreadsheet
         _createdByXPScript = false;
         _xpscriptFormatVersion = 0;
         var entry = archive.GetEntry("docProps/custom.xml");
-        if (entry is null) return;
-        if (entry.Length > MaxPartBytes) return;
-
+        if (entry is null || entry.Length > MaxPartBytes) return;
         try
         {
             using var input = entry.Open();
@@ -252,7 +250,6 @@ internal sealed class XPScriptSpreadsheet
     {
         if (archive.Entries.Count > MaxEntries)
             throw new InvalidOperationException($"XPSpreadsheet XLSX package contains too many parts ({archive.Entries.Count}; maximum {MaxEntries}).");
-
         long total = 0;
         foreach (var entry in archive.Entries)
         {
@@ -262,7 +259,6 @@ internal sealed class XPScriptSpreadsheet
             if (total > MaxPackageBytes)
                 throw new InvalidOperationException("XPSpreadsheet XLSX package expands beyond the maximum supported size.");
         }
-
         if (archive.GetEntry("xl/workbook.xml") is null)
             throw new InvalidOperationException("XPSpreadsheet could not open the file because it is not a valid .xlsx workbook (xl/workbook.xml is missing).");
         if (archive.GetEntry("[Content_Types].xml") is null)
@@ -272,11 +268,11 @@ internal sealed class XPScriptSpreadsheet
     private void LoadArchive(System.IO.Compression.ZipArchive archive)
     {
         var sharedStrings = ReadSharedStrings(archive);
+        var styles = ReadCellStyles(archive);
         var rels = ReadWorkbookRelationships(archive);
         var workbook = LoadXml(archive, "xl/workbook.xml");
         var ns = (System.Xml.Linq.XNamespace)SpreadsheetNs;
         var relNs = (System.Xml.Linq.XNamespace)OfficeRelNs;
-
         _worksheets.Clear();
         var sheets = workbook.Root?.Element(ns + "sheets")?.Elements(ns + "sheet") ?? [];
         foreach (var sheetElement in sheets)
@@ -285,11 +281,10 @@ internal sealed class XPScriptSpreadsheet
             var relId = (string?)sheetElement.Attribute(relNs + "id");
             if (string.IsNullOrEmpty(relId) || !rels.TryGetValue(relId, out var target))
                 throw new InvalidOperationException($"XPSpreadsheet worksheet '{name}' has an invalid workbook relationship.");
-
             var partName = NormalizeWorkbookTarget(target);
             var worksheetXml = LoadXml(archive, partName);
             var worksheet = new XPScriptSpreadsheetWorksheet(this, name);
-            LoadWorksheetCells(worksheet, worksheetXml, sharedStrings);
+            LoadWorksheetCells(worksheet, worksheetXml, sharedStrings, styles);
             _worksheets.Add(worksheet);
         }
         Reindex();
@@ -308,6 +303,45 @@ internal sealed class XPScriptSpreadsheet
             result.Add(string.Concat(item.Descendants(ns + "t").Select(x => x.Value)));
         return result;
     }
+
+    private static System.Collections.Generic.IReadOnlyList<XPScriptSpreadsheetCellStyle> ReadCellStyles(System.IO.Compression.ZipArchive archive)
+    {
+        var result = new System.Collections.Generic.List<XPScriptSpreadsheetCellStyle> { new(false, false, "") };
+        var entry = archive.GetEntry("xl/styles.xml");
+        if (entry is null) return result;
+        using var input = entry.Open();
+        using var reader = System.Xml.XmlReader.Create(input, SafeXmlSettings());
+        var doc = System.Xml.Linq.XDocument.Load(reader, System.Xml.Linq.LoadOptions.None);
+        var ns = (System.Xml.Linq.XNamespace)SpreadsheetNs;
+        var fonts = doc.Root?.Element(ns + "fonts")?.Elements(ns + "font").ToList() ?? [];
+        var fills = doc.Root?.Element(ns + "fills")?.Elements(ns + "fill").ToList() ?? [];
+        var xfs = doc.Root?.Element(ns + "cellXfs")?.Elements(ns + "xf").ToList() ?? [];
+        result.Clear();
+        foreach (var xf in xfs)
+        {
+            var fontId = ParseIndex((string?)xf.Attribute("fontId"));
+            var fillId = ParseIndex((string?)xf.Attribute("fillId"));
+            var bold = fontId >= 0 && fontId < fonts.Count && fonts[fontId].Element(ns + "b") is not null;
+            var italic = fontId >= 0 && fontId < fonts.Count && fonts[fontId].Element(ns + "i") is not null;
+            var color = "";
+            if (fillId >= 0 && fillId < fills.Count)
+            {
+                var rgb = (string?)fills[fillId].Element(ns + "patternFill")?.Element(ns + "fgColor")?.Attribute("rgb");
+                if (!string.IsNullOrWhiteSpace(rgb))
+                {
+                    var normalized = rgb.Trim().ToUpperInvariant();
+                    if (normalized.Length == 8) normalized = normalized[2..];
+                    if (normalized.Length == 6) color = "#" + normalized;
+                }
+            }
+            result.Add(new XPScriptSpreadsheetCellStyle(bold, italic, color));
+        }
+        if (result.Count == 0) result.Add(new(false, false, ""));
+        return result;
+    }
+
+    private static int ParseIndex(string? value)
+        => int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var index) ? index : 0;
 
     private static System.Collections.Generic.Dictionary<string, string> ReadWorkbookRelationships(System.IO.Compression.ZipArchive archive)
     {
@@ -355,7 +389,9 @@ internal sealed class XPScriptSpreadsheet
         MaxCharactersFromEntities = 0
     };
 
-    private static void LoadWorksheetCells(XPScriptSpreadsheetWorksheet worksheet, System.Xml.Linq.XDocument doc, System.Collections.Generic.IReadOnlyList<string> sharedStrings)
+    private static void LoadWorksheetCells(XPScriptSpreadsheetWorksheet worksheet, System.Xml.Linq.XDocument doc,
+        System.Collections.Generic.IReadOnlyList<string> sharedStrings,
+        System.Collections.Generic.IReadOnlyList<XPScriptSpreadsheetCellStyle> styles)
     {
         var ns = (System.Xml.Linq.XNamespace)SpreadsheetNs;
         foreach (var cell in doc.Descendants(ns + "c"))
@@ -363,16 +399,16 @@ internal sealed class XPScriptSpreadsheet
             var address = (string?)cell.Attribute("r");
             if (string.IsNullOrEmpty(address)) continue;
             var target = worksheet.Cell(address);
+            var styleIndex = ParseIndex((string?)cell.Attribute("s"));
+            if (styleIndex >= 0 && styleIndex < styles.Count) target.ApplyStyleFromFile(styles[styleIndex]);
             var type = (string?)cell.Attribute("t") ?? "";
             var formula = cell.Element(ns + "f")?.Value;
             if (!string.IsNullOrEmpty(formula)) target.SetFormulaFromFile("=" + formula);
-
             if (type.Equals("inlineStr", StringComparison.Ordinal))
             {
                 target.SetValueFromFile(string.Concat(cell.Descendants(ns + "t").Select(x => x.Value)));
                 continue;
             }
-
             var raw = cell.Element(ns + "v")?.Value;
             if (raw is null) continue;
             if (type.Equals("s", StringComparison.Ordinal))
@@ -382,22 +418,10 @@ internal sealed class XPScriptSpreadsheet
                     throw new InvalidOperationException($"XPSpreadsheet cell {address} contains an invalid shared-string index.");
                 target.SetValueFromFile(sharedStrings[index]);
             }
-            else if (type.Equals("b", StringComparison.Ordinal))
-            {
-                target.SetValueFromFile(raw == "1" || raw.Equals("true", StringComparison.OrdinalIgnoreCase));
-            }
-            else if (type.Equals("str", StringComparison.Ordinal))
-            {
-                target.SetValueFromFile(raw);
-            }
-            else if (double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number))
-            {
-                target.SetValueFromFile(number);
-            }
-            else
-            {
-                target.SetValueFromFile(raw);
-            }
+            else if (type.Equals("b", StringComparison.Ordinal)) target.SetValueFromFile(raw == "1" || raw.Equals("true", StringComparison.OrdinalIgnoreCase));
+            else if (type.Equals("str", StringComparison.Ordinal)) target.SetValueFromFile(raw);
+            else if (double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number)) target.SetValueFromFile(number);
+            else target.SetValueFromFile(raw);
         }
     }
 
@@ -422,14 +446,25 @@ internal sealed class XPScriptSpreadsheet
 
     private void WriteArchive(System.IO.Stream output)
     {
+        var styleMap = BuildStyleMap();
         using var archive = new System.IO.Compression.ZipArchive(output, System.IO.Compression.ZipArchiveMode.Create, true);
         WriteXml(archive, "[Content_Types].xml", BuildContentTypes());
         WriteXml(archive, "_rels/.rels", BuildRootRelationships());
         WriteXml(archive, "docProps/custom.xml", BuildCustomProperties());
         WriteXml(archive, "xl/workbook.xml", BuildWorkbook());
         WriteXml(archive, "xl/_rels/workbook.xml.rels", BuildWorkbookRelationships());
+        WriteXml(archive, "xl/styles.xml", BuildStyles(styleMap));
         for (var i = 0; i < _worksheets.Count; i++)
-            WriteXml(archive, $"xl/worksheets/sheet{i + 1}.xml", BuildWorksheet(_worksheets[i]));
+            WriteXml(archive, $"xl/worksheets/sheet{i + 1}.xml", BuildWorksheet(_worksheets[i], styleMap));
+    }
+
+    private System.Collections.Generic.Dictionary<XPScriptSpreadsheetCellStyle, int> BuildStyleMap()
+    {
+        var styles = _worksheets.SelectMany(x => x.Cells).Select(x => x.Style).Where(x => x.HasStyle).Distinct()
+            .OrderBy(x => x.BackgroundColor, StringComparer.Ordinal).ThenBy(x => x.Bold).ThenBy(x => x.Italic).ToList();
+        var result = new System.Collections.Generic.Dictionary<XPScriptSpreadsheetCellStyle, int>();
+        for (var i = 0; i < styles.Count; i++) result[styles[i]] = i + 1;
+        return result;
     }
 
     private System.Xml.Linq.XDocument BuildContentTypes()
@@ -439,7 +474,8 @@ internal sealed class XPScriptSpreadsheet
             new System.Xml.Linq.XElement(ns + "Default", new System.Xml.Linq.XAttribute("Extension", "rels"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.openxmlformats-package.relationships+xml")),
             new System.Xml.Linq.XElement(ns + "Default", new System.Xml.Linq.XAttribute("Extension", "xml"), new System.Xml.Linq.XAttribute("ContentType", "application/xml")),
             new System.Xml.Linq.XElement(ns + "Override", new System.Xml.Linq.XAttribute("PartName", "/docProps/custom.xml"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.custom-properties+xml")),
-            new System.Xml.Linq.XElement(ns + "Override", new System.Xml.Linq.XAttribute("PartName", "/xl/workbook.xml"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml")));
+            new System.Xml.Linq.XElement(ns + "Override", new System.Xml.Linq.XAttribute("PartName", "/xl/workbook.xml"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml")),
+            new System.Xml.Linq.XElement(ns + "Override", new System.Xml.Linq.XAttribute("PartName", "/xl/styles.xml"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml")));
         for (var i = 0; i < _worksheets.Count; i++)
             root.Add(new System.Xml.Linq.XElement(ns + "Override", new System.Xml.Linq.XAttribute("PartName", $"/xl/worksheets/sheet{i + 1}.xml"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml")));
         return new System.Xml.Linq.XDocument(new System.Xml.Linq.XDeclaration("1.0", "UTF-8", "yes"), root);
@@ -450,14 +486,8 @@ internal sealed class XPScriptSpreadsheet
         var ns = (System.Xml.Linq.XNamespace)PackageRelNs;
         return new System.Xml.Linq.XDocument(new System.Xml.Linq.XDeclaration("1.0", "UTF-8", "yes"),
             new System.Xml.Linq.XElement(ns + "Relationships",
-                new System.Xml.Linq.XElement(ns + "Relationship",
-                    new System.Xml.Linq.XAttribute("Id", "rId1"),
-                    new System.Xml.Linq.XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"),
-                    new System.Xml.Linq.XAttribute("Target", "xl/workbook.xml")),
-                new System.Xml.Linq.XElement(ns + "Relationship",
-                    new System.Xml.Linq.XAttribute("Id", "rId2"),
-                    new System.Xml.Linq.XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties"),
-                    new System.Xml.Linq.XAttribute("Target", "docProps/custom.xml"))));
+                new System.Xml.Linq.XElement(ns + "Relationship", new System.Xml.Linq.XAttribute("Id", "rId1"), new System.Xml.Linq.XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"), new System.Xml.Linq.XAttribute("Target", "xl/workbook.xml")),
+                new System.Xml.Linq.XElement(ns + "Relationship", new System.Xml.Linq.XAttribute("Id", "rId2"), new System.Xml.Linq.XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties"), new System.Xml.Linq.XAttribute("Target", "docProps/custom.xml"))));
     }
 
     private static System.Xml.Linq.XDocument BuildCustomProperties()
@@ -480,10 +510,7 @@ internal sealed class XPScriptSpreadsheet
         var relNs = (System.Xml.Linq.XNamespace)OfficeRelNs;
         var sheets = new System.Xml.Linq.XElement(ns + "sheets");
         for (var i = 0; i < _worksheets.Count; i++)
-            sheets.Add(new System.Xml.Linq.XElement(ns + "sheet",
-                new System.Xml.Linq.XAttribute("name", _worksheets[i].Name),
-                new System.Xml.Linq.XAttribute("sheetId", i + 1),
-                new System.Xml.Linq.XAttribute(relNs + "id", "rId" + (i + 1))));
+            sheets.Add(new System.Xml.Linq.XElement(ns + "sheet", new System.Xml.Linq.XAttribute("name", _worksheets[i].Name), new System.Xml.Linq.XAttribute("sheetId", i + 1), new System.Xml.Linq.XAttribute(relNs + "id", "rId" + (i + 1))));
         var root = new System.Xml.Linq.XElement(ns + "workbook", new System.Xml.Linq.XAttribute(System.Xml.Linq.XNamespace.Xmlns + "r", relNs), sheets,
             new System.Xml.Linq.XElement(ns + "calcPr", new System.Xml.Linq.XAttribute("calcMode", "auto"), new System.Xml.Linq.XAttribute("fullCalcOnLoad", "1")));
         return new System.Xml.Linq.XDocument(new System.Xml.Linq.XDeclaration("1.0", "UTF-8", "yes"), root);
@@ -494,14 +521,50 @@ internal sealed class XPScriptSpreadsheet
         var ns = (System.Xml.Linq.XNamespace)PackageRelNs;
         var root = new System.Xml.Linq.XElement(ns + "Relationships");
         for (var i = 0; i < _worksheets.Count; i++)
-            root.Add(new System.Xml.Linq.XElement(ns + "Relationship",
-                new System.Xml.Linq.XAttribute("Id", "rId" + (i + 1)),
-                new System.Xml.Linq.XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"),
-                new System.Xml.Linq.XAttribute("Target", $"worksheets/sheet{i + 1}.xml")));
+            root.Add(new System.Xml.Linq.XElement(ns + "Relationship", new System.Xml.Linq.XAttribute("Id", "rId" + (i + 1)), new System.Xml.Linq.XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"), new System.Xml.Linq.XAttribute("Target", $"worksheets/sheet{i + 1}.xml")));
+        root.Add(new System.Xml.Linq.XElement(ns + "Relationship", new System.Xml.Linq.XAttribute("Id", "rId" + (_worksheets.Count + 1)), new System.Xml.Linq.XAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"), new System.Xml.Linq.XAttribute("Target", "styles.xml")));
         return new System.Xml.Linq.XDocument(new System.Xml.Linq.XDeclaration("1.0", "UTF-8", "yes"), root);
     }
 
-    private static System.Xml.Linq.XDocument BuildWorksheet(XPScriptSpreadsheetWorksheet worksheet)
+    private static System.Xml.Linq.XDocument BuildStyles(System.Collections.Generic.IReadOnlyDictionary<XPScriptSpreadsheetCellStyle, int> styleMap)
+    {
+        var ns = (System.Xml.Linq.XNamespace)SpreadsheetNs;
+        var ordered = styleMap.OrderBy(x => x.Value).Select(x => x.Key).ToList();
+        var fonts = new System.Xml.Linq.XElement(ns + "fonts", new System.Xml.Linq.XAttribute("count", ordered.Count + 1),
+            new System.Xml.Linq.XElement(ns + "font", new System.Xml.Linq.XElement(ns + "sz", new System.Xml.Linq.XAttribute("val", "11")), new System.Xml.Linq.XElement(ns + "name", new System.Xml.Linq.XAttribute("val", "Calibri"))));
+        var fills = new System.Xml.Linq.XElement(ns + "fills", new System.Xml.Linq.XAttribute("count", ordered.Count + 2),
+            new System.Xml.Linq.XElement(ns + "fill", new System.Xml.Linq.XElement(ns + "patternFill", new System.Xml.Linq.XAttribute("patternType", "none"))),
+            new System.Xml.Linq.XElement(ns + "fill", new System.Xml.Linq.XElement(ns + "patternFill", new System.Xml.Linq.XAttribute("patternType", "gray125"))));
+        var borders = new System.Xml.Linq.XElement(ns + "borders", new System.Xml.Linq.XAttribute("count", "1"), new System.Xml.Linq.XElement(ns + "border", new System.Xml.Linq.XElement(ns + "left"), new System.Xml.Linq.XElement(ns + "right"), new System.Xml.Linq.XElement(ns + "top"), new System.Xml.Linq.XElement(ns + "bottom"), new System.Xml.Linq.XElement(ns + "diagonal")));
+        var cellStyleXfs = new System.Xml.Linq.XElement(ns + "cellStyleXfs", new System.Xml.Linq.XAttribute("count", "1"), new System.Xml.Linq.XElement(ns + "xf", new System.Xml.Linq.XAttribute("numFmtId", "0"), new System.Xml.Linq.XAttribute("fontId", "0"), new System.Xml.Linq.XAttribute("fillId", "0"), new System.Xml.Linq.XAttribute("borderId", "0")));
+        var cellXfs = new System.Xml.Linq.XElement(ns + "cellXfs", new System.Xml.Linq.XAttribute("count", ordered.Count + 1),
+            new System.Xml.Linq.XElement(ns + "xf", new System.Xml.Linq.XAttribute("numFmtId", "0"), new System.Xml.Linq.XAttribute("fontId", "0"), new System.Xml.Linq.XAttribute("fillId", "0"), new System.Xml.Linq.XAttribute("borderId", "0"), new System.Xml.Linq.XAttribute("xfId", "0")));
+        foreach (var style in ordered)
+        {
+            var font = new System.Xml.Linq.XElement(ns + "font");
+            if (style.Bold) font.Add(new System.Xml.Linq.XElement(ns + "b"));
+            if (style.Italic) font.Add(new System.Xml.Linq.XElement(ns + "i"));
+            font.Add(new System.Xml.Linq.XElement(ns + "sz", new System.Xml.Linq.XAttribute("val", "11")), new System.Xml.Linq.XElement(ns + "name", new System.Xml.Linq.XAttribute("val", "Calibri")));
+            fonts.Add(font);
+            var pattern = new System.Xml.Linq.XElement(ns + "patternFill", new System.Xml.Linq.XAttribute("patternType", string.IsNullOrEmpty(style.BackgroundColor) ? "none" : "solid"));
+            if (!string.IsNullOrEmpty(style.BackgroundColor))
+            {
+                pattern.Add(new System.Xml.Linq.XElement(ns + "fgColor", new System.Xml.Linq.XAttribute("rgb", "FF" + style.BackgroundColor.TrimStart('#'))));
+                pattern.Add(new System.Xml.Linq.XElement(ns + "bgColor", new System.Xml.Linq.XAttribute("indexed", "64")));
+            }
+            fills.Add(new System.Xml.Linq.XElement(ns + "fill", pattern));
+            var index = styleMap[style];
+            var xf = new System.Xml.Linq.XElement(ns + "xf", new System.Xml.Linq.XAttribute("numFmtId", "0"), new System.Xml.Linq.XAttribute("fontId", index), new System.Xml.Linq.XAttribute("fillId", index + 1), new System.Xml.Linq.XAttribute("borderId", "0"), new System.Xml.Linq.XAttribute("xfId", "0"));
+            if (style.Bold || style.Italic) xf.SetAttributeValue("applyFont", "1");
+            if (!string.IsNullOrEmpty(style.BackgroundColor)) xf.SetAttributeValue("applyFill", "1");
+            cellXfs.Add(xf);
+        }
+        var cellStyles = new System.Xml.Linq.XElement(ns + "cellStyles", new System.Xml.Linq.XAttribute("count", "1"), new System.Xml.Linq.XElement(ns + "cellStyle", new System.Xml.Linq.XAttribute("name", "Normal"), new System.Xml.Linq.XAttribute("xfId", "0"), new System.Xml.Linq.XAttribute("builtinId", "0")));
+        var root = new System.Xml.Linq.XElement(ns + "styleSheet", fonts, fills, borders, cellStyleXfs, cellXfs, cellStyles);
+        return new System.Xml.Linq.XDocument(new System.Xml.Linq.XDeclaration("1.0", "UTF-8", "yes"), root);
+    }
+
+    private static System.Xml.Linq.XDocument BuildWorksheet(XPScriptSpreadsheetWorksheet worksheet, System.Collections.Generic.IReadOnlyDictionary<XPScriptSpreadsheetCellStyle, int> styleMap)
     {
         var ns = (System.Xml.Linq.XNamespace)SpreadsheetNs;
         var sheetData = new System.Xml.Linq.XElement(ns + "sheetData");
@@ -511,9 +574,8 @@ internal sealed class XPScriptSpreadsheet
             foreach (var cell in rowGroup)
             {
                 var cellElement = new System.Xml.Linq.XElement(ns + "c", new System.Xml.Linq.XAttribute("r", cell.Address));
-                if (!string.IsNullOrWhiteSpace(cell.Formula))
-                    cellElement.Add(new System.Xml.Linq.XElement(ns + "f", cell.Formula.Trim().TrimStart('=')));
-
+                if (cell.Style.HasStyle && styleMap.TryGetValue(cell.Style, out var styleIndex)) cellElement.SetAttributeValue("s", styleIndex);
+                if (!string.IsNullOrWhiteSpace(cell.Formula)) cellElement.Add(new System.Xml.Linq.XElement(ns + "f", cell.Formula.Trim().TrimStart('=')));
                 if (cell.Value is string text)
                 {
                     cellElement.SetAttributeValue("t", "inlineStr");
@@ -527,9 +589,7 @@ internal sealed class XPScriptSpreadsheet
                     cellElement.Add(new System.Xml.Linq.XElement(ns + "v", boolean ? "1" : "0"));
                 }
                 else if (cell.Value is not null)
-                {
                     cellElement.Add(new System.Xml.Linq.XElement(ns + "v", System.Convert.ToString(cell.Value, System.Globalization.CultureInfo.InvariantCulture)));
-                }
                 row.Add(cellElement);
             }
             sheetData.Add(row);
@@ -562,7 +622,7 @@ internal sealed class XPScriptSpreadsheetWorksheet
     public int Index { get; private set; }
     public int UsedRowCount => _cells.Count == 0 ? 0 : _cells.Keys.Max(x => x.Row);
     public int UsedColumnCount => _cells.Count == 0 ? 0 : _cells.Keys.Max(x => x.Column);
-    internal System.Collections.Generic.IEnumerable<XPScriptSpreadsheetCell> Cells => _cells.Values.Where(x => x.Value is not null || !string.IsNullOrWhiteSpace(x.Formula));
+    internal System.Collections.Generic.IEnumerable<XPScriptSpreadsheetCell> Cells => _cells.Values.Where(x => x.Value is not null || !string.IsNullOrWhiteSpace(x.Formula) || x.Style.HasStyle);
 
     public XPScriptSpreadsheetCell Cell(object? address)
     {
@@ -579,7 +639,6 @@ internal sealed class XPScriptSpreadsheetWorksheet
     }
 
     public void Clear() => _cells.Clear();
-
     internal void SetName(string name) => Name = name;
     internal void SetIndex(int index) => Index = index;
 
@@ -597,6 +656,8 @@ internal sealed class XPScriptSpreadsheetWorksheet
 
 internal sealed class XPScriptSpreadsheetCell
 {
+    private string _backgroundColor = "";
+
     public XPScriptSpreadsheetCell(int row, int column)
     {
         Row = row;
@@ -607,18 +668,53 @@ internal sealed class XPScriptSpreadsheetCell
     public object? Value { get; set; }
     public string Text => Value is null ? "" : System.Convert.ToString(Value, System.Globalization.CultureInfo.InvariantCulture) ?? "";
     public string Formula { get; set; } = "";
+    public string BackgroundColor
+    {
+        get => _backgroundColor;
+        set => _backgroundColor = NormalizeColor(value);
+    }
+    public bool Bold { get; set; }
+    public bool Italic { get; set; }
     public string Address { get; }
     public int Row { get; }
     public int Column { get; }
+    internal XPScriptSpreadsheetCellStyle Style => new(Bold, Italic, _backgroundColor);
 
     public void Clear()
     {
         Value = null;
         Formula = "";
+        _backgroundColor = "";
+        Bold = false;
+        Italic = false;
     }
 
     internal void SetValueFromFile(object? value) => Value = value;
     internal void SetFormulaFromFile(string value) => Formula = value;
+    internal void ApplyStyleFromFile(XPScriptSpreadsheetCellStyle style)
+    {
+        Bold = style.Bold;
+        Italic = style.Italic;
+        _backgroundColor = style.BackgroundColor;
+    }
+
+    private static string NormalizeColor(string? value)
+    {
+        var raw = (value ?? "").Trim();
+        if (raw.Length == 0) return "";
+        var named = raw.ToLowerInvariant() switch
+        {
+            "black" => "000000", "white" => "FFFFFF", "red" => "FF0000", "green" => "008000",
+            "blue" => "0000FF", "yellow" => "FFFF00", "gray" or "grey" => "808080",
+            "orange" => "FFA500", "purple" => "800080", _ => ""
+        };
+        if (named.Length > 0) return "#" + named;
+        var hex = raw.TrimStart('#').ToUpperInvariant();
+        if (hex.Length == 8) hex = hex[2..];
+        if (hex.Length != 6 || hex.Any(ch => !((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F'))))
+            throw new InvalidOperationException("XPSpreadsheet BackgroundColor must be empty, a #RRGGBB/RRGGBB hex color, or a supported color name (black, white, red, green, blue, yellow, gray, orange, purple).");
+        return "#" + hex;
+    }
 
     internal static (int Row, int Column) ParseAddress(string address)
     {
