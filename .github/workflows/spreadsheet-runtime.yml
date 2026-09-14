@@ -45,20 +45,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path ./out | Out-Null
           $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
 
-          dotnet $compilerDll ./demo/xpspreadsheet-basic.xps -o ./out/xpspreadsheet-basic --runtime=false
+          dotnet $compilerDll ./demo/spreadsheet/xpspreadsheet-basic.xps -o ./out/xpspreadsheet-basic --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           $exe = if (Test-Path './out/xpspreadsheet-basic.exe') { './out/xpspreadsheet-basic.exe' } else { './out/xpspreadsheet-basic' }
           & $exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          # The sample itself reopens the workbook, verifies updates, checks the
-          # XPScript marker through the public API, and validates ToBytes/FromBytes.
-          # On Windows single-file execution, the runtime's script-directory base
-          # can place the physical XLSX outside the checkout tree. Do the direct
-          # OOXML custom-property inspection on Unix runners where the artifact is
-          # discoverable inside the checkout, while still running the full sample
-          # on all three platforms.
           if (-not $IsWindows) {
             $xlsx = Get-ChildItem -Path . -Filter 'xpspreadsheet-basic.xlsx' -File -Recurse | Select-Object -First 1
             if ($null -eq $xlsx) {
@@ -85,10 +78,21 @@ jobs:
         shell: pwsh
         run: |
           $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
-          dotnet $compilerDll ./demo/xpspreadsheet-worksheets.xps -o ./out/xpspreadsheet-worksheets --runtime=false
+          dotnet $compilerDll ./demo/spreadsheet/xpspreadsheet-worksheets.xps -o ./out/xpspreadsheet-worksheets --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           $exe = if (Test-Path './out/xpspreadsheet-worksheets.exe') { './out/xpspreadsheet-worksheets.exe' } else { './out/xpspreadsheet-worksheets' }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Compile and run XPSpreadsheet style sample
+        shell: pwsh
+        run: |
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          dotnet $compilerDll ./demo/spreadsheet/xpspreadsheet-styles.xps -o ./out/xpspreadsheet-styles --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $exe = if (Test-Path './out/xpspreadsheet-styles.exe') { './out/xpspreadsheet-styles.exe' } else { './out/xpspreadsheet-styles' }
           & $exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -96,7 +100,7 @@ jobs:
         shell: pwsh
         run: |
           $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
-          dotnet $compilerDll ./demo/xpspreadsheet-invalid-format.xps -o ./out/xpspreadsheet-invalid-format --runtime=false
+          dotnet $compilerDll ./demo/spreadsheet/xpspreadsheet-invalid-format.xps -o ./out/xpspreadsheet-invalid-format --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           $exe = if (Test-Path './out/xpspreadsheet-invalid-format.exe') { './out/xpspreadsheet-invalid-format.exe' } else { './out/xpspreadsheet-invalid-format' }
@@ -121,6 +125,4 @@ jobs:
             exit 1
           }
 
-          # The non-zero exit above is expected and has been asserted. Reset the
-          # process exit state so the Actions pwsh wrapper does not fail the step.
           $global:LASTEXITCODE = 0
