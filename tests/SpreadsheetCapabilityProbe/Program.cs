@@ -11,6 +11,8 @@ Sub Main()
     Set sheet = book.aDdWoRkShEeT("Sales")
     Set cell = sheet.cElL("A1")
     cell.vAlUe = "Hello"
+    sheet.cElL("B1").vAlUe = "Direct"
+    sheet.cElL("C1").fOrMuLa = "=1+1"
     Print CStr(book.cReAtEdByXpScRiPt)
     Print CStr(book.xPsCrIpTfOrMaTvErSiOn)
     Print CStr(book.cAnUpDaTe)
@@ -29,13 +31,15 @@ if (!generated.Contains("internal sealed class XPScriptSpreadsheet", StringCompa
 if (!generated.Contains(".AddWorksheet(", StringComparison.Ordinal)
     || !generated.Contains(".Cell(", StringComparison.Ordinal)
     || !generated.Contains(".Value", StringComparison.Ordinal)
+    || !generated.Contains(".Formula", StringComparison.Ordinal)
+    || !generated.Contains("__xpsSpreadsheetCell", StringComparison.Ordinal)
     || !generated.Contains(".CreatedByXPScript", StringComparison.Ordinal)
     || !generated.Contains(".XPScriptFormatVersion", StringComparison.Ordinal)
     || !generated.Contains(".CanUpdate", StringComparison.Ordinal)
     || !generated.Contains(".ToBytes(", StringComparison.Ordinal)
     || !generated.Contains(".FromBytes(", StringComparison.Ordinal)
     || !generated.Contains(".SaveAs(", StringComparison.Ordinal))
-    throw new Exception("XPSpreadsheet members were not normalized case-insensitively.");
+    throw new Exception("XPSpreadsheet members or direct cell assignments were not lowered correctly.");
 
 if (!generated.Contains("XPScriptWorkbookVersion", StringComparison.Ordinal)
     || !generated.Contains("docProps/custom.xml", StringComparison.Ordinal)
