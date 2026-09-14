@@ -48,11 +48,17 @@ jobs:
           dotnet $compilerDll ./demo/xpspreadsheet-basic.xps -o ./out/xpspreadsheet-basic --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          $exe = if (Test-Path './out/xpspreadsheet-basic.exe') { './out/xpspreadsheet-basic.exe' } else { './out/xpspreadsheet-basic' }
-          & $exe
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $exe = if (Test-Path './out/xpspreadsheet-basic.exe') { (Resolve-Path './out/xpspreadsheet-basic.exe').Path } else { (Resolve-Path './out/xpspreadsheet-basic').Path }
+          Push-Location ./out
+          try {
+            & $exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          finally {
+            Pop-Location
+          }
 
-          $xlsx = if (Test-Path './out/xpspreadsheet-basic.xlsx') { './out/xpspreadsheet-basic.xlsx' } else { './demo/xpspreadsheet-basic.xlsx' }
+          $xlsx = './out/xpspreadsheet-basic.xlsx'
           if (-not (Test-Path $xlsx)) {
             Write-Error 'XPSpreadsheet round-trip did not create the expected XLSX file.'
             exit 1
@@ -79,9 +85,15 @@ jobs:
           dotnet $compilerDll ./demo/xpspreadsheet-worksheets.xps -o ./out/xpspreadsheet-worksheets --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          $exe = if (Test-Path './out/xpspreadsheet-worksheets.exe') { './out/xpspreadsheet-worksheets.exe' } else { './out/xpspreadsheet-worksheets' }
-          & $exe
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $exe = if (Test-Path './out/xpspreadsheet-worksheets.exe') { (Resolve-Path './out/xpspreadsheet-worksheets.exe').Path } else { (Resolve-Path './out/xpspreadsheet-worksheets').Path }
+          Push-Location ./out
+          try {
+            & $exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          finally {
+            Pop-Location
+          }
 
       - name: Verify unsupported format error
         shell: pwsh
