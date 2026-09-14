@@ -31,6 +31,7 @@ internal sealed class SpreadsheetObjectPreprocessor
         var spreadsheets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var worksheets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var cells = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var temporaryCellId = 0;
 
         foreach (var raw in lines)
         {
@@ -86,6 +87,27 @@ internal sealed class SpreadsheetObjectPreprocessor
             {
                 var escaped = Regex.Escape(worksheet);
                 rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*Cell\s*\(", worksheet + ".Cell(", RegexOptions.IgnoreCase);
+            }
+
+            // The core statement parser does not accept a property assignment directly on a
+            // method result (sheet.Cell("A1").Value = ...). Lower that public convenience
+            // syntax through a temporary Variant so it behaves exactly like an explicit XPCell.
+            var directCellAssignment = Regex.Match(
+                rewritten,
+                @"^([A-Za-z_]\w*)\.Cell\((.*)\)\.(Value|Formula)\s*=\s*(.+)$",
+                RegexOptions.IgnoreCase);
+            if (directCellAssignment.Success && worksheets.Contains(directCellAssignment.Groups[1].Value))
+            {
+                var worksheet = directCellAssignment.Groups[1].Value;
+                var arguments = directCellAssignment.Groups[2].Value;
+                var member = directCellAssignment.Groups[3].Value.Equals("Formula", StringComparison.OrdinalIgnoreCase) ? "Formula" : "Value";
+                var value = directCellAssignment.Groups[4].Value;
+                var temporary = "__xpsSpreadsheetCell" + (++temporaryCellId).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                cells.Add(temporary);
+                output.Add(indent + $"Dim {temporary} As Variant");
+                output.Add(indent + $"{temporary} = {worksheet}.Cell({arguments})");
+                output.Add(indent + $"{temporary}.{member} = {value}");
+                continue;
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
