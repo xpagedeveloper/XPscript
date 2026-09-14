@@ -81,7 +81,8 @@ jobs:
 
           $exe = if (Test-Path './out/xpspreadsheet-invalid-format.exe') { './out/xpspreadsheet-invalid-format.exe' } else { './out/xpspreadsheet-invalid-format' }
           $output = (& $exe 2>&1 | Out-String)
-          if ($LASTEXITCODE -eq 0) {
+          $invalidFormatExitCode = $LASTEXITCODE
+          if ($invalidFormatExitCode -eq 0) {
             Write-Error 'XPSpreadsheet unexpectedly accepted a non-XLSX format.'
             exit 1
           }
@@ -89,3 +90,7 @@ jobs:
             Write-Error "XPSpreadsheet returned the wrong unsupported-format diagnostic: $output"
             exit 1
           }
+
+          # The non-zero exit above is expected and has been asserted. Reset the
+          # process exit state so the Actions pwsh wrapper does not fail the step.
+          $global:LASTEXITCODE = 0
