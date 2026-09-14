@@ -48,24 +48,18 @@ jobs:
           dotnet $compilerDll ./demo/xpspreadsheet-basic.xps -o ./out/xpspreadsheet-basic --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          $exe = if (Test-Path './out/xpspreadsheet-basic.exe') { (Resolve-Path './out/xpspreadsheet-basic.exe').Path } else { (Resolve-Path './out/xpspreadsheet-basic').Path }
-          Push-Location ./out
-          try {
-            & $exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-          finally {
-            Pop-Location
-          }
+          $exe = if (Test-Path './out/xpspreadsheet-basic.exe') { './out/xpspreadsheet-basic.exe' } else { './out/xpspreadsheet-basic' }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          $xlsx = './out/xpspreadsheet-basic.xlsx'
-          if (-not (Test-Path $xlsx)) {
+          $xlsx = Get-ChildItem -Path . -Filter 'xpspreadsheet-basic.xlsx' -File -Recurse | Select-Object -First 1
+          if ($null -eq $xlsx) {
             Write-Error 'XPSpreadsheet round-trip did not create the expected XLSX file.'
             exit 1
           }
 
           Add-Type -AssemblyName System.IO.Compression
-          $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $xlsx))
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($xlsx.FullName)
           try {
             $marker = $zip.GetEntry('docProps/custom.xml')
             if ($null -eq $marker) { Write-Error 'XPSpreadsheet workbook marker is missing.'; exit 1 }
@@ -85,15 +79,9 @@ jobs:
           dotnet $compilerDll ./demo/xpspreadsheet-worksheets.xps -o ./out/xpspreadsheet-worksheets --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          $exe = if (Test-Path './out/xpspreadsheet-worksheets.exe') { (Resolve-Path './out/xpspreadsheet-worksheets.exe').Path } else { (Resolve-Path './out/xpspreadsheet-worksheets').Path }
-          Push-Location ./out
-          try {
-            & $exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-          finally {
-            Pop-Location
-          }
+          $exe = if (Test-Path './out/xpspreadsheet-worksheets.exe') { './out/xpspreadsheet-worksheets.exe' } else { './out/xpspreadsheet-worksheets' }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify unsupported format error
         shell: pwsh
