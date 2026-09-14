@@ -1,0 +1,48 @@
+Option Declare
+
+Sub Main()
+    Dim book As New XPSpreadsheet()
+    Dim sheet As XPWorksheet
+    Dim cell As XPCell
+
+    Set sheet = book.AddWorksheet("Styles")
+
+    sheet.Cell("A1").Value = "Normal"
+    sheet.Cell("A2").Value = "Bold"
+    sheet.Cell("A2").Bold = True
+    sheet.Cell("A3").Value = "Italic"
+    sheet.Cell("A3").Italic = True
+    sheet.Cell("A4").Value = "Bold italic"
+    sheet.Cell("A4").Bold = True
+    sheet.Cell("A4").Italic = True
+    sheet.Cell("A5").Value = "Yellow background"
+    sheet.Cell("A5").BackgroundColor = "#FFFF00"
+    sheet.Cell("A6").Value = "Named red background"
+    sheet.Cell("A6").BackgroundColor = "red"
+
+    book.SaveAs("xpspreadsheet-styles.xlsx")
+
+    Dim verify As New XPSpreadsheet("xpspreadsheet-styles.xlsx")
+    Dim verifySheet As XPWorksheet
+    Set verifySheet = verify.Worksheet("Styles")
+
+    Set cell = verifySheet.Cell("A1")
+    If cell.Bold Or cell.Italic Then Error 5, "Normal style round-trip failed"
+
+    Set cell = verifySheet.Cell("A2")
+    If Not cell.Bold Then Error 5, "Bold style round-trip failed"
+
+    Set cell = verifySheet.Cell("A3")
+    If Not cell.Italic Then Error 5, "Italic style round-trip failed"
+
+    Set cell = verifySheet.Cell("A4")
+    If Not cell.Bold Or Not cell.Italic Then Error 5, "Bold italic style round-trip failed"
+
+    Set cell = verifySheet.Cell("A5")
+    If cell.BackgroundColor <> "#FFFF00" Then Error 5, "Background color round-trip failed"
+
+    Set cell = verifySheet.Cell("A6")
+    If cell.BackgroundColor <> "#FF0000" Then Error 5, "Named background color round-trip failed"
+
+    Print "XPSPREADSHEET-STYLES=OK"
+End Sub

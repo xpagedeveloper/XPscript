@@ -18,7 +18,7 @@ internal sealed class SpreadsheetObjectPreprocessor
 
     private static readonly string[] CellMembers =
     [
-        "Value", "Text", "Formula", "Address", "Row", "Column", "Clear"
+        "Value", "Text", "Formula", "BackgroundColor", "Bold", "Italic", "Address", "Row", "Column", "Clear"
     ];
 
     public string Transform(string source)
@@ -94,13 +94,14 @@ internal sealed class SpreadsheetObjectPreprocessor
             // syntax through a temporary Variant so it behaves exactly like an explicit XPCell.
             var directCellAssignment = Regex.Match(
                 rewritten,
-                @"^([A-Za-z_]\w*)\.Cell\((.*)\)\.(Value|Formula)\s*=\s*(.+)$",
+                @"^([A-Za-z_]\w*)\.Cell\((.*)\)\.(Value|Formula|BackgroundColor|Bold|Italic)\s*=\s*(.+)$",
                 RegexOptions.IgnoreCase);
             if (directCellAssignment.Success && worksheets.Contains(directCellAssignment.Groups[1].Value))
             {
                 var worksheet = directCellAssignment.Groups[1].Value;
                 var arguments = directCellAssignment.Groups[2].Value;
-                var member = directCellAssignment.Groups[3].Value.Equals("Formula", StringComparison.OrdinalIgnoreCase) ? "Formula" : "Value";
+                var requestedMember = directCellAssignment.Groups[3].Value;
+                var member = CellMembers.First(x => x.Equals(requestedMember, StringComparison.OrdinalIgnoreCase));
                 var value = directCellAssignment.Groups[4].Value;
                 var temporary = "__xpsSpreadsheetCell" + (++temporaryCellId).ToString(System.Globalization.CultureInfo.InvariantCulture);
                 cells.Add(temporary);

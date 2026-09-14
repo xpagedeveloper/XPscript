@@ -2,7 +2,7 @@
 
 `XPSpreadsheet` is XPScript's basic native spreadsheet API for simple `.xlsx` workbooks.
 
-> **Basic implementation:** this first version is intentionally limited to simple workbook data. It can create, read, and update `.xlsx` files created by XPScript, including multiple worksheets/tabs and basic cell values. Existing external `.xlsx` files can be opened and read, but are read-only by default so XPSpreadsheet does not accidentally remove spreadsheet features it does not understand.
+> **Basic implementation:** this version supports simple workbook data, multiple worksheets/tabs, basic formulas, and basic cell styling. Existing external `.xlsx` files can be opened and read, but are read-only by default so XPSpreadsheet does not accidentally remove spreadsheet features it does not understand.
 
 The implementation uses the .NET runtime's built-in ZIP and XML support. It does not require Microsoft Excel, Office, LibreOffice, or an external spreadsheet NuGet package.
 
@@ -12,7 +12,7 @@ Only `.xlsx` is supported. Opening or saving `.xls`, `.xlsm`, `.ods`, `.csv`, or
 
 ## Safe update model
 
-XPSpreadsheet marks every workbook it creates with the custom OOXML document property `XPScriptWorkbookVersion`. Version 1 of XPSpreadsheet writes `XPScriptWorkbookVersion=1`.
+XPSpreadsheet marks every workbook it creates with the custom OOXML document property `XPScriptWorkbookVersion`. Version 1 writes `XPScriptWorkbookVersion=1`.
 
 When a workbook is opened, XPSpreadsheet exposes:
 
@@ -27,16 +27,11 @@ If you intentionally want to convert an external workbook to the simple XPSpread
 ```xpscript
 Dim book As New XPSpreadsheet("external.xlsx")
 
-Print CStr(book.CreatedByXPScript)     ' False
-Print CStr(book.CanUpdate)             ' False
+Print CStr(book.CreatedByXPScript)
+Print CStr(book.CanUpdate)
 
-' Explicitly creates a new simplified workbook containing supported data only.
 book.SaveAsSimple("converted.xlsx")
 ```
-
-`SaveAsSimple()` is intentionally explicit because unsupported workbook content may be removed. The resulting workbook is marked as an XPScript workbook and can subsequently be updated with normal `Save()` and `SaveAs()` calls.
-
-A workbook marked with a newer `XPScriptWorkbookVersion` than the current runtime supports is also opened read-only rather than being rewritten by an older runtime.
 
 ## Create a workbook
 
@@ -79,7 +74,7 @@ book.RenameWorksheet("Notes", "Comments")
 book.RemoveWorksheet("Comments")
 ```
 
-Worksheet names must follow normal XLSX naming rules: they cannot be empty, cannot exceed 31 characters, cannot contain `: \\ / ? * [ ]`, and must be unique within the workbook.
+Worksheet names cannot be empty, cannot exceed 31 characters, cannot contain `: \\ / ? * [ ]`, and must be unique within the workbook.
 
 ## Cells
 
@@ -90,7 +85,7 @@ sheet.Cell("C4").Value = "Hello"
 sheet.Cell(4, 3).Value = "Hello"
 ```
 
-Basic values supported by this version are strings, numbers, and Boolean values. Empty cells are represented by an empty value. `Text` returns a string representation of the current cell value.
+Basic values are strings, numbers, and Boolean values. `Text` returns a string representation of the current cell value.
 
 ```xpscript
 Dim cell As XPCell
@@ -100,7 +95,46 @@ Print cell.Text
 cell.Clear()
 ```
 
-`UsedRowCount` and `UsedColumnCount` report the largest populated row and column indexes in the supported in-memory model.
+`UsedRowCount` and `UsedColumnCount` report the largest populated or styled row and column indexes in the supported in-memory model.
+
+## Cell styling
+
+XPSpreadsheet supports basic cell fill and font emphasis using normal OOXML styles.
+
+```xpscript
+sheet.Cell("A1").BackgroundColor = "#FFFF00"
+sheet.Cell("A1").Bold = True
+sheet.Cell("A1").Italic = True
+```
+
+`BackgroundColor` accepts:
+
+- `#RRGGBB` or `RRGGBB` hex colors.
+- 8-digit ARGB values, where the alpha prefix is ignored and the RGB part is used.
+- the color names `black`, `white`, `red`, `green`, `blue`, `yellow`, `gray`/`grey`, `orange`, and `purple`.
+- an empty string to remove the background fill.
+
+`Bold` and `Italic` are independent Boolean properties and can be combined. A normal font is represented by both properties being `False`.
+
+```xpscript
+Dim cell As XPCell
+Set cell = sheet.Cell("A1")
+cell.Bold = False
+cell.Italic = False
+```
+
+These supported styles are written to `xl/styles.xml` and are restored when an XPScript workbook is reopened or loaded through `FromBytes()`.
+
+## Formulas
+
+Formula text is stored in the workbook and calculated by Excel, LibreOffice, or another compatible spreadsheet application.
+
+```xpscript
+sheet.Cell("A3").Formula = "=A1+A2"
+sheet.Cell("A8").Formula = "=SUM(A1:A7)"
+```
+
+XPSpreadsheet does not include its own formula calculation engine.
 
 ## Read an XLSX file
 
@@ -113,9 +147,7 @@ Print sheet.Cell("A2").Text
 Print CStr(sheet.Cell("B2").Value)
 ```
 
-The reader accepts normal XLSX string storage forms, including shared strings and inline strings.
-
-Reading does not require the workbook to have been created by XPScript.
+The reader accepts normal XLSX string storage forms, including shared strings and inline strings. Reading does not require the workbook to have been created by XPScript.
 
 ## Read and write XLSX bytes
 
@@ -133,11 +165,7 @@ copy.FromBytes(data)
 Print copy.Worksheet("Sales").Cell("A2").Text
 ```
 
-`FromBytes()` runs the same XLSX package validation and reads the same `XPScriptWorkbookVersion` marker as `Open()`. The resulting workbook has an empty `Path`, because it was not loaded from a file.
-
-An external/unmarked XLSX can also be loaded with `FromBytes()` for reading. The same safety rule applies: `CanUpdate` is `False`, and normal `Save()`, `SaveAs()`, and `ToBytes()` are blocked until the workbook is intentionally converted with `SaveAsSimple()`.
-
-The in-memory XLSX input is subject to the same package and part size limits as file input.
+`FromBytes()` uses the same validation and XPScript workbook marker rules as `Open()`.
 
 ## Update an XPScript workbook
 
@@ -156,10 +184,6 @@ sheet.Cell("B3").Value = 9000
 
 book.Save()
 ```
-
-`Save()` updates the XPScript-created file that was opened. `SaveAs()` writes an XPScript-created workbook to another `.xlsx` file and makes that file the workbook's current path.
-
-For external/unmarked workbooks, use `SaveAsSimple()` only when intentional simplification is acceptable.
 
 ## Main objects
 
@@ -209,6 +233,9 @@ Properties:
 - `Value`
 - `Text`
 - `Formula`
+- `BackgroundColor`
+- `Bold`
+- `Italic`
 - `Address`
 - `Row`
 - `Column`
@@ -217,9 +244,18 @@ Methods:
 
 - `Clear()`
 
+## Demos
+
+Spreadsheet demos are under `demo/spreadsheet/`:
+
+- `xpspreadsheet-basic.xps`
+- `xpspreadsheet-worksheets.xps`
+- `xpspreadsheet-styles.xps`
+- `xpspreadsheet-invalid-format.xps`
+
 ## Current limitations
 
-This is a simple basic implementation. The first version does not provide a full spreadsheet application or calculation engine. In particular, it does not preserve or edit advanced formatting, charts, images, macros/VBA, pivot tables, conditional formatting, named ranges, external data connections, embedded objects, or other advanced XLSX parts.
+XPSpreadsheet still does not provide a full spreadsheet application or calculation engine. It does not preserve or edit advanced formatting, charts, images, macros/VBA, pivot tables, conditional formatting, named ranges, external data connections, embedded objects, or other advanced XLSX parts.
 
 Because of that limitation, XPSpreadsheet deliberately refuses to overwrite external/unmarked XLSX workbooks. `SaveAsSimple()` is the explicit opt-in operation for creating a simplified XPScript workbook from data that XPSpreadsheet can read.
 
