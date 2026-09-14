@@ -1,0 +1,23 @@
+Option Declare
+
+Sub Main()
+    Dim text As String
+    Dim csv As XPCsvDocument
+    Dim row As XPCsvRow
+
+    text = "id;name;city" & Chr(10) & _
+           "2;item10;Stockholm" & Chr(10) & _
+           "1;item2;Malmö" & Chr(10) & _
+           "3;Item1;Linköping"
+
+    Set csv = CsvParse(text, ";")
+
+    Print "Rows=" & CStr(csv.RowCount)
+    Print "Columns=" & CStr(csv.ColumnCount)
+
+    Call csv.Sort("name")
+
+    ForAll row In csv.Rows
+        Print row.Get("id") & " " & row.Get("name") & " " & row.Get("city")
+    End ForAll
+End Sub
