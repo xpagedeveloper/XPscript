@@ -55,6 +55,12 @@ internal sealed class NativeCsvPreprocessor
                 continue;
             }
 
+            if (TryRewriteFromBytes(line, documentVariables, out var fromBytes))
+            {
+                output.Add(indent + fromBytes);
+                continue;
+            }
+
             var rewritten = line;
             rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.ParseBytes\s*\(", "XPScriptNativeCsv.ParseBytes(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.Parse\s*\(", "XPScriptNativeCsv.Parse(", RegexOptions.IgnoreCase);
@@ -158,6 +164,31 @@ internal sealed class NativeCsvPreprocessor
         return false;
     }
 
+    private static bool TryRewriteFromBytes(string line, HashSet<string> documentVariables, out string rewritten)
+    {
+        rewritten = "";
+
+        foreach (var documentVariable in documentVariables)
+        {
+            var method = Regex.Match(
+                line,
+                $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.FromBytes\s*\((.*)\)\s*$",
+                RegexOptions.IgnoreCase);
+            if (!method.Success) continue;
+
+            var args = SplitTopLevelArguments(method.Groups[1].Value);
+            if (args.Count is < 1 or > 2)
+                throw new CompilerException("XPCsvDocument.FromBytes requires bytes and an optional encoding argument.");
+
+            var encoding = args.Count == 1 ? documentVariable + ".Encoding" : args[1];
+            rewritten = documentVariable + " = XPScriptNativeCsv.ParseBytes(" + args[0] + ", " + encoding + ", "
+                + documentVariable + ".Delimiter, " + documentVariable + ".HasHeaders)";
+            return true;
+        }
+
+        return false;
+    }
+
     private static List<string> SplitTopLevelArguments(string text)
     {
         var result = new List<string>();
@@ -195,10 +226,10 @@ internal sealed class NativeCsvPreprocessor
         }
 
         if (quoted || depth != 0)
-            throw new CompilerException("Invalid CSV file-write argument list.");
+            throw new CompilerException("Invalid CSV argument list.");
         result.Add(current.ToString().Trim());
         if (result.Any(string.IsNullOrWhiteSpace))
-            throw new CompilerException("CSV file-write arguments cannot be empty.");
+            throw new CompilerException("CSV arguments cannot be empty.");
         return result;
     }
 

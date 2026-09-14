@@ -1,0 +1,126 @@
+name: XPSpreadsheet Runtime
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xpspreadsheet-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  spreadsheet-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Verify XPSpreadsheet compiler probes
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/SpreadsheetCapabilityProbe/SpreadsheetCapabilityProbe.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Compile and run XPSpreadsheet round-trip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path ./out | Out-Null
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+
+          dotnet $compilerDll ./demo/xpspreadsheet-basic.xps -o ./out/xpspreadsheet-basic --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $exe = if (Test-Path './out/xpspreadsheet-basic.exe') { './out/xpspreadsheet-basic.exe' } else { './out/xpspreadsheet-basic' }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # The sample itself reopens the workbook, verifies updates, checks the
+          # XPScript marker through the public API, and validates ToBytes/FromBytes.
+          # On Windows single-file execution, the runtime's script-directory base
+          # can place the physical XLSX outside the checkout tree. Do the direct
+          # OOXML custom-property inspection on Unix runners where the artifact is
+          # discoverable inside the checkout, while still running the full sample
+          # on all three platforms.
+          if (-not $IsWindows) {
+            $xlsx = Get-ChildItem -Path . -Filter 'xpspreadsheet-basic.xlsx' -File -Recurse | Select-Object -First 1
+            if ($null -eq $xlsx) {
+              Write-Error 'XPSpreadsheet round-trip did not create the expected XLSX file.'
+              exit 1
+            }
+
+            Add-Type -AssemblyName System.IO.Compression
+            $zip = [System.IO.Compression.ZipFile]::OpenRead($xlsx.FullName)
+            try {
+              $marker = $zip.GetEntry('docProps/custom.xml')
+              if ($null -eq $marker) { Write-Error 'XPSpreadsheet workbook marker is missing.'; exit 1 }
+              $reader = [System.IO.StreamReader]::new($marker.Open())
+              try { $markerText = $reader.ReadToEnd() } finally { $reader.Dispose() }
+              if ($markerText -notmatch 'XPScriptWorkbookVersion' -or $markerText -notmatch '>1<') {
+                Write-Error "XPSpreadsheet workbook marker is invalid: $markerText"
+                exit 1
+              }
+            }
+            finally { $zip.Dispose() }
+          }
+
+      - name: Compile and run XPSpreadsheet worksheet sample
+        shell: pwsh
+        run: |
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          dotnet $compilerDll ./demo/xpspreadsheet-worksheets.xps -o ./out/xpspreadsheet-worksheets --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $exe = if (Test-Path './out/xpspreadsheet-worksheets.exe') { './out/xpspreadsheet-worksheets.exe' } else { './out/xpspreadsheet-worksheets' }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify unsupported format error
+        shell: pwsh
+        run: |
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          dotnet $compilerDll ./demo/xpspreadsheet-invalid-format.xps -o ./out/xpspreadsheet-invalid-format --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $exe = if (Test-Path './out/xpspreadsheet-invalid-format.exe') { './out/xpspreadsheet-invalid-format.exe' } else { './out/xpspreadsheet-invalid-format' }
+          if ($IsWindows) {
+            $stdoutFile = Join-Path $env:RUNNER_TEMP 'xpspreadsheet-invalid-format.stdout.txt'
+            $stderrFile = Join-Path $env:RUNNER_TEMP 'xpspreadsheet-invalid-format.stderr.txt'
+            $process = Start-Process -FilePath $exe -Wait -PassThru -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
+            $invalidFormatExitCode = $process.ExitCode
+            $output = ((Get-Content $stdoutFile -Raw -ErrorAction SilentlyContinue) + (Get-Content $stderrFile -Raw -ErrorAction SilentlyContinue))
+          }
+          else {
+            $output = (& $exe 2>&1 | Out-String)
+            $invalidFormatExitCode = $LASTEXITCODE
+          }
+
+          if ($invalidFormatExitCode -eq 0) {
+            Write-Error 'XPSpreadsheet unexpectedly accepted a non-XLSX format.'
+            exit 1
+          }
+          if ($output -notmatch 'supports only \.xlsx files') {
+            Write-Error "XPSpreadsheet returned the wrong unsupported-format diagnostic: $output"
+            exit 1
+          }
+
+          # The non-zero exit above is expected and has been asserted. Reset the
+          # process exit state so the Actions pwsh wrapper does not fail the step.
+          $global:LASTEXITCODE = 0
