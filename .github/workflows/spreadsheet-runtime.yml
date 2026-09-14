@@ -66,7 +66,7 @@ jobs:
               if ($null -eq $marker) { Write-Error 'XPSpreadsheet workbook marker is missing.'; exit 1 }
               $reader = [System.IO.StreamReader]::new($marker.Open())
               try { $markerText = $reader.ReadToEnd() } finally { $reader.Dispose() }
-              if ($markerText -notmatch 'XPScriptWorkbookVersion' -or $markerText -notmatch '>1<') {
+              if ($markerText -notmatch 'XPScriptWorkbookVersion' -or $markerText -notmatch '>2<') {
                 Write-Error "XPSpreadsheet workbook marker is invalid: $markerText"
                 exit 1
               }
@@ -74,27 +74,31 @@ jobs:
             finally { $zip.Dispose() }
           }
 
-      - name: Compile and run XPSpreadsheet worksheet sample
+      - name: Compile and run existing XPSpreadsheet demos
         shell: pwsh
         run: |
           $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
-          dotnet $compilerDll ./demo/spreadsheet/xpspreadsheet-worksheets.xps -o ./out/xpspreadsheet-worksheets --runtime=false
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $samples = @('xpspreadsheet-worksheets', 'xpspreadsheet-styles')
+          foreach ($sample in $samples) {
+            dotnet $compilerDll "./demo/spreadsheet/$sample.xps" -o "./out/$sample" --runtime=false
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $exe = if (Test-Path "./out/$sample.exe") { "./out/$sample.exe" } else { "./out/$sample" }
+            & $exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
-          $exe = if (Test-Path './out/xpspreadsheet-worksheets.exe') { './out/xpspreadsheet-worksheets.exe' } else { './out/xpspreadsheet-worksheets' }
-          & $exe
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Compile and run XPSpreadsheet style sample
+      - name: Compile and run XPRange and formatting demos
         shell: pwsh
         run: |
           $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
-          dotnet $compilerDll ./demo/spreadsheet/xpspreadsheet-styles.xps -o ./out/xpspreadsheet-styles --runtime=false
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-          $exe = if (Test-Path './out/xpspreadsheet-styles.exe') { './out/xpspreadsheet-styles.exe' } else { './out/xpspreadsheet-styles' }
-          & $exe
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $samples = @('xpspreadsheet-ranges', 'xpspreadsheet-formatting', 'xpspreadsheet-autofilter')
+          foreach ($sample in $samples) {
+            dotnet $compilerDll "./demo/spreadsheet/$sample.xps" -o "./out/$sample" --runtime=false
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $exe = if (Test-Path "./out/$sample.exe") { "./out/$sample.exe" } else { "./out/$sample" }
+            & $exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Verify unsupported format error
         shell: pwsh
