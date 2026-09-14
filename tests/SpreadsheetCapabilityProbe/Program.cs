@@ -11,8 +11,13 @@ Sub Main()
     Set sheet = book.aDdWoRkShEeT("Sales")
     Set cell = sheet.cElL("A1")
     cell.vAlUe = "Hello"
+    cell.bAcKgRoUnDcOlOr = "#FFFF00"
+    cell.bOlD = True
+    cell.iTaLiC = True
     sheet.cElL("B1").vAlUe = "Direct"
+    sheet.cElL("B1").bOlD = True
     sheet.cElL("C1").fOrMuLa = "=1+1"
+    sheet.cElL("C1").bAcKgRoUnDcOlOr = "red"
     Print CStr(book.cReAtEdByXpScRiPt)
     Print CStr(book.xPsCrIpTfOrMaTvErSiOn)
     Print CStr(book.cAnUpDaTe)
@@ -32,6 +37,9 @@ if (!generated.Contains(".AddWorksheet(", StringComparison.Ordinal)
     || !generated.Contains(".Cell(", StringComparison.Ordinal)
     || !generated.Contains(".Value", StringComparison.Ordinal)
     || !generated.Contains(".Formula", StringComparison.Ordinal)
+    || !generated.Contains(".BackgroundColor", StringComparison.Ordinal)
+    || !generated.Contains(".Bold", StringComparison.Ordinal)
+    || !generated.Contains(".Italic", StringComparison.Ordinal)
     || !generated.Contains("__xpsSpreadsheetCell", StringComparison.Ordinal)
     || !generated.Contains(".CreatedByXPScript", StringComparison.Ordinal)
     || !generated.Contains(".XPScriptFormatVersion", StringComparison.Ordinal)
@@ -43,8 +51,9 @@ if (!generated.Contains(".AddWorksheet(", StringComparison.Ordinal)
 
 if (!generated.Contains("XPScriptWorkbookVersion", StringComparison.Ordinal)
     || !generated.Contains("docProps/custom.xml", StringComparison.Ordinal)
+    || !generated.Contains("xl/styles.xml", StringComparison.Ordinal)
     || !generated.Contains("SaveAsSimple", StringComparison.Ordinal))
-    throw new Exception("XPSpreadsheet origin marker or safe conversion support was not emitted.");
+    throw new Exception("XPSpreadsheet marker, styles, or safe conversion support was not emitted.");
 
 const string csvSource = """
 Option Declare
