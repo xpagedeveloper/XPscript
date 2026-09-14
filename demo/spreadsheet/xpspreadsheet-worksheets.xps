@@ -1,0 +1,43 @@
+Option Declare
+
+Sub Main()
+    Dim book As New XPSpreadsheet()
+    Dim sales As XPWorksheet
+    Dim summary As XPWorksheet
+    Dim temp As XPWorksheet
+    Dim verifySales As XPWorksheet
+
+    Set sales = book.AddWorksheet("Sales")
+    Set summary = book.AddWorksheet("Summary")
+    Set temp = book.AddWorksheet("Temporary")
+
+    Set sales = book.Worksheet("Sales")
+    sales.Cell("A1").Value = "Amount"
+    sales.Cell("A2").Value = 100
+    sales.Cell("A3").Value = 200
+    sales.Cell("A4").Value = 300
+    sales.Cell("A5").Formula = "=A2+A3"
+    sales.Cell("A6").Formula = "=SUM(A2:A4)"
+
+    Set sales = book.Worksheet(1)
+    If sales.Name <> "Sales" Then Error 5, "Worksheet index lookup failed"
+    Set summary = book.Worksheet(2)
+    If summary.Name <> "Summary" Then Error 5, "Worksheet index lookup failed"
+
+    book.RemoveWorksheet("Temporary")
+    If book.WorksheetCount <> 2 Then Error 5, "Worksheet remove failed"
+
+    summary.Cell("A1").Value = "Worksheet count"
+    summary.Cell("B1").Value = book.WorksheetCount
+
+    book.SaveAs("xpspreadsheet-worksheets.xlsx")
+
+    Dim verify As New XPSpreadsheet("xpspreadsheet-worksheets.xlsx")
+    If verify.WorksheetCount <> 2 Then Error 5, "Worksheet count round-trip failed"
+    Set verifySales = verify.Worksheet("Sales")
+    If verifySales.Cell("A2").Text <> "100" Then Error 5, "Worksheet name lookup round-trip failed"
+    Set verifySales = verify.Worksheet(1)
+    If verifySales.Name <> "Sales" Then Error 5, "Worksheet index round-trip failed"
+
+    Print "XPSPREADSHEET-WORKSHEETS=OK"
+End Sub
