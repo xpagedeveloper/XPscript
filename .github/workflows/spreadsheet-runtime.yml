@@ -100,8 +100,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           $exe = if (Test-Path './out/xpspreadsheet-invalid-format.exe') { './out/xpspreadsheet-invalid-format.exe' } else { './out/xpspreadsheet-invalid-format' }
-          $output = (& $exe 2>&1 | Out-String)
-          $invalidFormatExitCode = $LASTEXITCODE
+          if ($IsWindows) {
+            $stdoutFile = Join-Path $env:RUNNER_TEMP 'xpspreadsheet-invalid-format.stdout.txt'
+            $stderrFile = Join-Path $env:RUNNER_TEMP 'xpspreadsheet-invalid-format.stderr.txt'
+            $process = Start-Process -FilePath $exe -Wait -PassThru -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
+            $invalidFormatExitCode = $process.ExitCode
+            $output = ((Get-Content $stdoutFile -Raw -ErrorAction SilentlyContinue) + (Get-Content $stderrFile -Raw -ErrorAction SilentlyContinue))
+          }
+          else {
+            $output = (& $exe 2>&1 | Out-String)
+            $invalidFormatExitCode = $LASTEXITCODE
+          }
+
           if ($invalidFormatExitCode -eq 0) {
             Write-Error 'XPSpreadsheet unexpectedly accepted a non-XLSX format.'
             exit 1
