@@ -1,0 +1,27 @@
+Option Declare
+
+Sub Main()
+    Dim csv As New XPCsvDocument
+    Dim copy As New XPCsvDocument
+    Dim row As XPCsvRow
+    Dim data As Variant
+
+    csv.Delimiter = ","
+    Call csv.Headers.Add("id")
+    Call csv.Headers.Add("name")
+
+    Set row = csv.AddRow()
+    Call row.Set("id", "1")
+    Call row.Set("name", "Anna")
+
+    data = csv.ToBytes("utf-8")
+
+    copy.Delimiter = ","
+    copy.FromBytes(data, "utf-8")
+
+    If copy.RowCount <> 1 Then Error 5, "CSV byte round-trip row count failed"
+    Set row = copy.Rows[0]
+    If row.Get("name") <> "Anna" Then Error 5, "CSV byte round-trip value failed"
+
+    Print "CSV-BYTES=OK"
+End Sub
