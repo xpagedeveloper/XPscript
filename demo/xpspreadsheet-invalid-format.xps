@@ -1,6 +1,0 @@
-Option Declare
-
-Sub Main()
-    Dim book As New XPSpreadsheet()
-    book.SaveAs("not-supported.xls")
-End Sub
