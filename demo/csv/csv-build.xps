@@ -1,0 +1,25 @@
+Option Declare
+
+Sub Main()
+    Dim csv As New XPCsvDocument
+    Dim row As XPCsvRow
+
+    csv.Delimiter = ";"
+
+    Call csv.Headers.Add("id")
+    Call csv.Headers.Add("name")
+    Call csv.Headers.Add("city")
+
+    Set row = csv.AddRow()
+    Call row.Set("id", "00123")
+    Call row.Set("name", "Åsa")
+    Call row.Set("city", "Malmö; Sweden")
+
+    Set row = csv.AddRow()
+    Call row.Set("id", "00124")
+    Call row.Set("name", "Erik")
+    Call row.Set("city", "Linköping")
+
+    Print csv.Stringify()
+    csv.Save("csv-build-output.csv", "utf-8")
+End Sub
