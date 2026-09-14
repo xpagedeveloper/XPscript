@@ -1,0 +1,52 @@
+Option Declare
+
+Sub Main()
+    Dim book As New XPSpreadsheet()
+    Dim sheet As XPWorksheet
+    Dim vertical As XPRange
+    Dim horizontal As XPRange
+    Dim rectangle As XPRange
+    Dim values As Variant
+
+    Set sheet = book.AddWorksheet("Ranges")
+
+    sheet.Cell("A1").Value = "one"
+    sheet.Cell("A2").Value = "two"
+    sheet.Cell("A3").Value = "three"
+    sheet.Cell("B1").Value = 10
+    sheet.Cell("C1").Value = 20
+    sheet.Cell("D1").Value = 30
+
+    ' A single-column range returns a zero-based one-dimensional array.
+    Set vertical = sheet.Range("A1:A3")
+    values = vertical.Values
+    If LBound(values) <> 0 Or UBound(values) <> 2 Then Error 5, "Vertical XPRange.Values bounds failed"
+    If CStr(values(0)) <> "one" Or CStr(values(2)) <> "three" Then Error 5, "Vertical XPRange.Values content failed"
+
+    ' A single-row range also returns a one-dimensional array.
+    Set horizontal = sheet.Range("B1:D1")
+    values = horizontal.Values
+    If LBound(values) <> 0 Or UBound(values) <> 2 Then Error 5, "Horizontal XPRange.Values bounds failed"
+    If CDbl(values(0)) <> 10 Or CDbl(values(2)) <> 30 Then Error 5, "Horizontal XPRange.Values content failed"
+
+    ' Formatting properties are allowed on multidimensional ranges.
+    Set rectangle = sheet.Range("A1:D3")
+    rectangle.BackgroundColor = "#EAF2F8"
+    rectangle.BorderBottom = "thin"
+    rectangle.BorderColor = "#808080"
+
+    ' Values is intentionally rejected for a multidimensional range and is a normal trappable XPScript error.
+    On Error Resume Next
+    values = rectangle.Values
+    If Err = 0 Then Error 5, "Multidimensional XPRange.Values should raise an error"
+    On Error GoTo 0
+
+    book.SaveAs("xpspreadsheet-ranges.xlsx")
+
+    Dim verify As New XPSpreadsheet("xpspreadsheet-ranges.xlsx")
+    Dim verifyRange As XPRange
+    Set verifyRange = verify.Worksheet("Ranges").Range("A1:D3")
+    If verifyRange.BackgroundColor <> "#EAF2F8" Then Error 5, "Multidimensional range formatting round-trip failed"
+
+    Print "XPSPREADSHEET-RANGES=OK"
+End Sub
