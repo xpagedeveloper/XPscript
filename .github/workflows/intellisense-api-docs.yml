@@ -4,10 +4,12 @@ on:
   push:
     branches: [main]
     paths:
+      - 'src/XPScript.Compiler/**'
       - 'docs/**'
       - 'samples/**'
       - 'demo/**'
       - 'scripts/validate-intellisense-api-docs.ps1'
+      - 'scripts/validate-runtime-api-doc-sync.ps1'
       - '.github/workflows/intellisense-api-docs.yml'
   pull_request:
     branches: [main]
@@ -22,9 +24,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Validate IntelliSense API contract
         shell: pwsh
         run: ./scripts/validate-intellisense-api-docs.ps1
+      - name: Validate runtime API source/documentation synchronization
+        env:
+          API_SYNC_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        shell: pwsh
+        run: ./scripts/validate-runtime-api-doc-sync.ps1 -BaseRef "$env:API_SYNC_BASE_REF"
 
   trigger-plugin-sync:
     name: Trigger VS Code IntelliSense synchronization
@@ -40,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error::Repository secret PLUGIN_SYNC_TOKEN is required. Use a fine-grained token with Actions write access to xpagedeveloper/XPScript-visual-code-plugin."
+            echo "::error::Repository secret PLUGIN_SYNC_TOKEN is required. Use a fine-grained token with access to dispatch workflows in xpagedeveloper/XPScript-visual-code-plugin."
             exit 1
           fi
           gh api \
