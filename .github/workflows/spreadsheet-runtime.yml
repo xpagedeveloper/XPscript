@@ -72,6 +72,17 @@ jobs:
           }
           finally { $zip.Dispose() }
 
+      - name: Compile and run XPSpreadsheet worksheet sample
+        shell: pwsh
+        run: |
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          dotnet $compilerDll ./demo/xpspreadsheet-worksheets.xps -o ./out/xpspreadsheet-worksheets --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $exe = if (Test-Path './out/xpspreadsheet-worksheets.exe') { './out/xpspreadsheet-worksheets.exe' } else { './out/xpspreadsheet-worksheets' }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Verify unsupported format error
         shell: pwsh
         run: |
