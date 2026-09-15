@@ -68,6 +68,8 @@ For every new command, language statement, built-in function or operator family,
 
 For every new public runtime object, method, property, route/binding rule or response/state helper, update `api-reference.md` using the five-field format. Also update the relevant topical page for behavior that needs more explanation, limits, security guidance or platform boundaries.
 
+For compiler-emitted runtime classes and members, the same change must also add or update the corresponding row in `intellisense-api-reference.md`. CI compares changed `XPScript...` runtime declarations in `src/XPScript.Compiler` with changed machine-readable rows and rejects a PR when a new or changed runtime object, method or property is not synchronized. This source-to-documentation gate is intentionally diff-based so existing legacy implementation helpers do not become public API by accident.
+
 Examples:
 
 - HTTP/JSON: `http-client.md` plus `api-reference.md`.
