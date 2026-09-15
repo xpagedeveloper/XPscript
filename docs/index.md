@@ -6,6 +6,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 
 ## Start here
 
+- [XPScript cheat sheet](cheatsheet.md): compact copy/paste reference for core syntax, CLI, UIForm, web/REST, Browser-WASM, HTTP, databases, secrets, XPAi and Notes/Domino.
 - [Runnable demo catalog](../demo/README.md): small programs for console, desktop UI, browser WebAssembly, web/REST, Kestrel, FastCGI, CGI, WebIIS, SQLite, SQL Server, HTTP databases, HTTP client and XPAi/AITool.
 - [Language and built-in command reference](language-reference.md): statements, operators, scalar/built-in functions and process commands. Every row has syntax, parameters, behavior and a complete `.xps` example.
 - [Application and state reference](application-reference.md): complete `Application` runtime aliases/UI metadata plus `Application.State`, `Process.State`, `Session.State` and `Request.State`.
@@ -22,7 +23,8 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 
 ## Documentation map
 
-1. [Getting started](getting-started.md), install/build, compile, run, CGI, FastCGI, Kestrel, test hosting and command-line parameters.
+1. [XPScript cheat sheet](cheatsheet.md), compact syntax and runtime patterns for day-to-day development.
+2. [Getting started](getting-started.md), install/build, compile, run, CGI, FastCGI, Kestrel, test hosting and command-line parameters.
 2. [Programming language](language.md), syntax, variables, procedures, control flow, types and coding rules.
 3. [Language and built-in command reference](language-reference.md), the primary language/built-in catalog with parameters and executable examples.
 4. [Application and state reference](application-reference.md), complete executable/runtime path aliases, UI metadata and state-scope API.
