@@ -122,7 +122,7 @@ public sealed class CompilerDriver
                 selfContained,
                 stagedManagedReferences,
                 publishSingleFile: CompilePublishLayoutContext.IsConfigured ? CompilePublishLayoutContext.SingleFile : true,
-                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal),
+                usesMimeKit: generatedSource.Contains("MimeKit.", StringComparison.Ordinal),
                 assemblyName: OutputAssemblyName(outputPath));
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
@@ -228,7 +228,7 @@ public sealed class CompilerDriver
                 selfContained: false,
                 stagedManagedReferences,
                 publishSingleFile: false,
-                usesMimeKit: source.Contains("NotesMIMEEntity", StringComparison.Ordinal),
+                usesMimeKit: generatedSource.Contains("MimeKit.", StringComparison.Ordinal),
                 assemblyName: "Generated");
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);

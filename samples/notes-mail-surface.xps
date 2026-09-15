@@ -1,0 +1,48 @@
+Sub Main()
+    Dim session As NotesSession
+    Dim mail As NotesMail
+    Dim richText As NotesRichTextItem
+    Dim stream As NotesStream
+    Dim recipients(1) As String
+
+    Set session = New NotesSession(".")
+    Set mail = session.CreateMail()
+
+    recipients(0) = "one@example.com"
+    recipients(1) = "two@example.com"
+
+    mail.SendTo = recipients
+    mail.CopyTo = "copy@example.com"
+    mail.BlindCopyTo = "blind@example.com"
+    mail.Subject = "NotesMail surface"
+    Print mail.Sender
+    mail.ReplyTo = "reply@example.com"
+    mail.OnBehalfOf = "CN=Sender/O=Example"
+    mail.DeliveryPriority = "High"
+    mail.DeliveryReport = "Failure"
+    mail.ReturnReceipt = True
+
+    mail.Body = "Plain text body"
+    Call mail.SetBodyText("Second text body")
+    Call mail.SetBodyRichText(richText)
+    Call mail.SetBodyHTML("<html><body><strong>Hello</strong></body></html>")
+
+    Set stream = session.CreateStream()
+    stream.Charset = "UTF-8"
+    Call stream.WriteText("MIME body")
+    stream.Position = 0
+    Call mail.SetMIME(stream, "text/plain; charset=UTF-8")
+    Call mail.SetMIMEBody("<p>MIME HTML</p>", "text/html; charset=UTF-8")
+
+    Call mail.AddAttachment("attachment.txt")
+    Call mail.AddAttachment("attachment.txt", "renamed.txt")
+    Call mail.AddAttachment("attachment.txt", "renamed.txt", "text/plain")
+    Call mail.ClearAttachments()
+
+    Print mail.IsMIME
+    Print mail.AttachmentCount
+
+    Call mail.Recycle()
+    Call stream.Recycle()
+    Call session.Recycle()
+End Sub

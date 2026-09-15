@@ -8,6 +8,8 @@ var repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../..
 var samplePaths = new[]
 {
     Path.Combine(repoRoot, "samples", "notes-full-domino-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-full-domino-runtime-base.xps"),
+    Path.Combine(repoRoot, "samples", "notes-full-domino-recent-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-document-metadata-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-session-database-open-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-session-full-runtime-test.xps"),
@@ -85,6 +87,16 @@ var ignoredMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     "Dispose", "TryGetMember", "TrySetMember", "TryInvokeMember"
 };
 
+// These methods are implemented for the native Body MIME item but contain an
+// intentional runtime guard rejecting document-level MIME item names other than Body.
+// The guard text is not a placeholder and must not make the surface audit fail.
+var allowedGuardedMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+{
+    "NotesDocument.CreateMIMEEntity",
+    "NotesDocument.GetMIMEEntity",
+    "NotesItem.GetMIMEEntity"
+};
+
 var missing = new List<string>();
 var placeholders = new List<string>();
 var suspiciousConstants = new List<string>();
@@ -118,10 +130,12 @@ foreach (var item in selectedClasses)
             if (string.IsNullOrEmpty(name) || ignoredMembers.Contains(name)) continue;
             members.Add(name);
             var memberText = member.ToFullString();
-            if (Regex.IsMatch(memberText, @"NotImplementedException|NotSupportedException|Unsupported|not supported", RegexOptions.IgnoreCase))
-                placeholders.Add(item.Surface + "." + name);
+            var qualifiedName = item.Surface + "." + name;
+            if (!allowedGuardedMembers.Contains(qualifiedName) &&
+                Regex.IsMatch(memberText, @"NotImplementedException|NotSupportedException|Unsupported|not supported", RegexOptions.IgnoreCase))
+                placeholders.Add(qualifiedName);
             if (Regex.IsMatch(memberText, "=>\\s*(?:false|true|0|\"\")\\s*;", RegexOptions.IgnoreCase))
-                suspiciousConstants.Add(item.Surface + "." + name);
+                suspiciousConstants.Add(qualifiedName);
         }
     }
 
