@@ -3,6 +3,7 @@ namespace XPScript.Compiler;
 internal readonly record struct RuntimeFeatures(
     bool Http,
     bool Json,
+    bool JsonSchema,
     bool Xml,
     bool Csv,
     bool Database,
@@ -13,7 +14,7 @@ internal readonly record struct RuntimeFeatures(
     bool Ui)
 {
     public bool RequiresHttp => Http || HttpDatabase || Attachments || Ui;
-    public bool RequiresJson => Json || RequiresHttp || Database || Attachments || Ui;
+    public bool RequiresJson => Json || JsonSchema || RequiresHttp || Database || Attachments || Ui;
     public bool RequiresHttpDatabaseTypes => HttpDatabase || Attachments;
 
     public static RuntimeFeatures Detect(string source)
@@ -28,6 +29,8 @@ internal readonly record struct RuntimeFeatures(
         // database runtime when they are added.
         var database = httpDatabase || PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPDB");
         var attachments = database && PreprocessorFeatureGate.ContainsCall(code, "Attachments");
+        var jsonSchema = PreprocessorFeatureGate.ContainsTypeReference(code, "XPJsonSchema", "XPJsonValidationResult") ||
+                         PreprocessorFeatureGate.ContainsCall(code, "XPJsonSchema.Parse", "XPJsonSchema.FromJson");
 
         return new RuntimeFeatures(
             Http: PreprocessorFeatureGate.ContainsTypeReference(code, "XPHttpClient", "XPHttpResponse", "NotesHTTPRequest"),
@@ -36,6 +39,7 @@ internal readonly record struct RuntimeFeatures(
                       "NotesJSONObject", "NotesJSONArray", "NotesJSONElement") ||
                   PreprocessorFeatureGate.ContainsCall(
                       code, "XPJsonDocument.Parse", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode"),
+            JsonSchema: jsonSchema,
             Xml: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPXml") ||
                  PreprocessorFeatureGate.ContainsCall(code, "XPXmlDocument.Parse", "XmlParse", "XmlStringify", "XmlEscape"),
             Csv: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPCsv") ||

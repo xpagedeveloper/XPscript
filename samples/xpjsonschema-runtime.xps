@@ -1,0 +1,33 @@
+Dim schema As New XPJsonSchema
+schema.Type = "object"
+schema.Title = "Person"
+schema.Description = "Person validation schema"
+schema.AddString("name", True)
+schema.AddInteger("age", True)
+schema.AddBoolean("active", False)
+schema.AdditionalProperties = False
+
+Dim validJson As XPJsonDocument
+Set validJson = XPJsonDocument.Parse("{""name"":""Ada"",""age"":37,""active"":true}")
+Dim validResult As XPJsonValidationResult
+Set validResult = schema.Validate(validJson)
+Print "Valid=" & CStr(validResult.Valid)
+Print "Errors=" & CStr(validResult.ErrorCount)
+
+Dim invalidJson As XPJsonDocument
+Set invalidJson = XPJsonDocument.Parse("{""name"":""Ada""}")
+Dim invalidResult As XPJsonValidationResult
+Set invalidResult = schema.Validate(invalidJson)
+Print "Invalid valid=" & CStr(invalidResult.Valid)
+Print invalidResult.Json.Text
+
+' FromJson infers a schema from XPJson data.
+Dim inferred As XPJsonSchema
+Set inferred = XPJsonSchema.FromJson(validJson)
+Print inferred.Text
+Print CStr(inferred.IsValid(validJson))
+
+' Parse reads an existing JSON Schema document.
+Dim parsed As XPJsonSchema
+Set parsed = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string""}},""required"":[""name""],""additionalProperties"":false}")
+Print CStr(parsed.IsValid(validJson))
