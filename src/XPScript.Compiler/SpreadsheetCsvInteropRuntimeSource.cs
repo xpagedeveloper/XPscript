@@ -9,9 +9,28 @@ internal static class XPScriptSpreadsheetCsvInterop
     {
         var csvRuntime = System.Reflection.Assembly.GetExecutingAssembly().GetType("XPScriptNativeCsv", throwOnError: false)
             ?? throw new XPScriptRuntimeException(5, "CSV runtime is not available.");
-        var bytesValue = XPCrossPlatformRuntime.ReadBytes(path);
-        var requireBytes = csvRuntime.GetMethod("RequireBytes", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)!;
-        var bytes = (byte[])requireBytes.Invoke(null, [bytesValue])!;
+        byte[] bytes;
+        try
+        {
+            var file = System.IO.Path.GetFullPath(XPScriptRuntime.CStr(path));
+            bytes = System.IO.File.ReadAllBytes(file);
+        }
+        catch (System.UnauthorizedAccessException exception)
+        {
+            throw new XPScriptRuntimeException(70, exception.Message);
+        }
+        catch (System.IO.FileNotFoundException exception)
+        {
+            throw new XPScriptRuntimeException(53, exception.Message);
+        }
+        catch (System.IO.DirectoryNotFoundException exception)
+        {
+            throw new XPScriptRuntimeException(76, exception.Message);
+        }
+        catch (System.IO.IOException exception)
+        {
+            throw new XPScriptRuntimeException(75, exception.Message);
+        }
         var requested = encoding is null ? "auto" : XPScriptRuntime.CStr(encoding).Trim();
         string actualEncoding;
         if (requested.Length == 0 || requested.Equals("auto", StringComparison.OrdinalIgnoreCase))
