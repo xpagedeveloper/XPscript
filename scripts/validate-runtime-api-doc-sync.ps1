@@ -46,7 +46,10 @@ function Get-ChangedDeclarationKeys {
 
                 $classMatch = [regex]::Match($text, '\bclass\s+XPScript([A-Za-z_][A-Za-z0-9_]*)\b')
                 if ($classMatch.Success) {
-                    [void]$keys.Add($classMatch.Groups[1].Value)
+                    $className = $classMatch.Groups[1].Value
+                    # Compiler infrastructure such as XPScriptTranspiler is not an XPscript runtime API.
+                    if ($className -eq 'Transpiler') { continue }
+                    [void]$keys.Add($className)
                     continue
                 }
 
@@ -70,7 +73,7 @@ function Get-ChangedDeclarationKeys {
                     }
                 }
 
-                if ($owner) {
+                if ($owner -and $owner -ne 'Transpiler') {
                     [void]$keys.Add("$owner.$member")
                 }
                 continue
