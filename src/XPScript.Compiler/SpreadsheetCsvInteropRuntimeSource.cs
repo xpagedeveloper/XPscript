@@ -7,14 +7,26 @@ internal static class XPScriptSpreadsheetCsvInterop
 {
     public static object LoadCsv(object? path, object? encoding = null, object? delimiter = null, object? hasHeaders = null)
     {
-        var bytes = XPScriptNativeCsv.RequireBytes(XPCrossPlatformRuntime.ReadBytes(path));
+        var csvRuntime = System.Reflection.Assembly.GetExecutingAssembly().GetType("XPScriptNativeCsv", throwOnError: false)
+            ?? throw new XPScriptRuntimeException(5, "CSV runtime is not available.");
+        var bytesValue = XPCrossPlatformRuntime.ReadBytes(path);
+        var requireBytes = csvRuntime.GetMethod("RequireBytes", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)!;
+        var bytes = (byte[])requireBytes.Invoke(null, [bytesValue])!;
         var requested = encoding is null ? "auto" : XPScriptRuntime.CStr(encoding).Trim();
-        var actualEncoding = requested.Length == 0 || requested.Equals("auto", StringComparison.OrdinalIgnoreCase)
-            ? DetectCsvEncoding(bytes)
-            : XPScriptNativeCsv.NormalizeEncodingName(requested);
+        string actualEncoding;
+        if (requested.Length == 0 || requested.Equals("auto", StringComparison.OrdinalIgnoreCase))
+            actualEncoding = DetectCsvEncoding(bytes);
+        else
+        {
+            var normalize = csvRuntime.GetMethod("NormalizeEncodingName", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)!;
+            actualEncoding = (string)normalize.Invoke(null, [requested])!;
+        }
         var actualDelimiter = delimiter is null ? "," : delimiter;
         var actualHeaders = hasHeaders is null || XPScriptRuntime.CBool(hasHeaders);
-        return XPScriptNativeCsv.ParseBytes(bytes, actualEncoding, actualDelimiter, actualHeaders);
+        var parseBytes = csvRuntime.GetMethods(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+            .First(method => method.Name == "ParseBytes" && method.GetParameters().Length == 4);
+        return parseBytes.Invoke(null, [bytes, actualEncoding, actualDelimiter, actualHeaders])
+            ?? throw new XPScriptRuntimeException(5, "Unable to parse CSV file.");
     }
 
     public static XPScriptSpreadsheet ToSpreadsheet(object? csvValue, object? sheetName = null)
@@ -23,7 +35,6 @@ internal static class XPScriptSpreadsheetCsvInterop
         var type = csv.GetType();
         if (!type.Name.Equals("XPScriptCsvDocument", StringComparison.Ordinal))
             throw new XPScriptRuntimeException(13, "XPCsvDocument.ToSpreadsheet requires a CSV document.");
-
         var book = new XPScriptSpreadsheet();
         var name = sheetName is null ? "Sheet1" : XPScriptRuntime.CStr(sheetName);
         var sheet = book.AddWorksheet(name);
@@ -31,7 +42,6 @@ internal static class XPScriptSpreadsheetCsvInterop
         var columnCount = System.Convert.ToInt32(type.GetProperty("ColumnCount")?.GetValue(csv) ?? 0, System.Globalization.CultureInfo.InvariantCulture);
         var rowCount = System.Convert.ToInt32(type.GetProperty("RowCount")?.GetValue(csv) ?? 0, System.Globalization.CultureInfo.InvariantCulture);
         var outputRow = 1;
-
         if (hasHeaders)
         {
             var headers = type.GetProperty("Headers")?.GetValue(csv);
@@ -40,7 +50,6 @@ internal static class XPScriptSpreadsheetCsvInterop
                 sheet.GetCell(outputRow, column + 1).Value = XPScriptRuntime.CStr(getHeader!.Invoke(headers, [column]));
             outputRow++;
         }
-
         var rows = type.GetProperty("Rows")?.GetValue(csv);
         var getRow = rows?.GetType().GetMethod("Get");
         for (var rowIndex = 0; rowIndex < rowCount; rowIndex++)
@@ -59,8 +68,7 @@ internal static class XPScriptSpreadsheetCsvInterop
         var worksheet = Unwrap(worksheetValue) as XPScriptSpreadsheetWorksheet
             ?? throw new XPScriptRuntimeException(13, "XPCsvDocument.FromWorksheet requires an XPWorksheet.");
         var csvType = System.Reflection.Assembly.GetExecutingAssembly().GetType("XPScriptCsvDocument", throwOnError: false);
-        if (csvType is null)
-            throw new XPScriptRuntimeException(5, "CSV runtime is not available. Declare or use XPCsvDocument in the script.");
+        if (csvType is null) throw new XPScriptRuntimeException(5, "CSV runtime is not available. Declare or use XPCsvDocument in the script.");
         var csv = System.Activator.CreateInstance(csvType, nonPublic: true)
             ?? throw new XPScriptRuntimeException(5, "Unable to create CSV document.");
         var headers = hasHeaders is null || XPScriptRuntime.CBool(hasHeaders);
@@ -68,14 +76,12 @@ internal static class XPScriptSpreadsheetCsvInterop
         var addHeader = csvType.GetMethod("AddHeader")!;
         var addRow = csvType.GetMethod("AddRow", [typeof(object)])!;
         var firstDataRow = 1;
-
         if (headers && worksheet.UsedRowCount > 0)
         {
             for (var column = 1; column <= worksheet.UsedColumnCount; column++)
                 addHeader.Invoke(csv, [XPScriptRuntime.CStr(worksheet.GetCell(1, column).Value)]);
             firstDataRow = 2;
         }
-
         for (var row = firstDataRow; row <= worksheet.UsedRowCount; row++)
         {
             var values = new string[worksheet.UsedColumnCount];
@@ -91,9 +97,6 @@ internal static class XPScriptSpreadsheetCsvInterop
         if (StartsWith(bytes, [0xEF, 0xBB, 0xBF])) return "utf-8-bom";
         if (StartsWith(bytes, [0xFF, 0xFE])) return "utf-16";
         if (StartsWith(bytes, [0xFE, 0xFF])) return "utf-16be";
-
-        // Conservatively recognize BOM-less UTF-16 when ASCII-oriented CSV text has
-        // a strong alternating NUL pattern. Otherwise strict UTF-8 is preferred.
         if (bytes.Length >= 8)
         {
             var pairs = bytes.Length / 2;
@@ -107,7 +110,6 @@ internal static class XPScriptSpreadsheetCsvInterop
             if (oddNulls * 4 >= pairs * 3 && evenNulls * 4 <= pairs) return "utf-16";
             if (evenNulls * 4 >= pairs * 3 && oddNulls * 4 <= pairs) return "utf-16be";
         }
-
         try
         {
             _ = new System.Text.UTF8Encoding(false, true).GetString(bytes);
@@ -115,8 +117,6 @@ internal static class XPScriptSpreadsheetCsvInterop
         }
         catch (System.Text.DecoderFallbackException)
         {
-            // Windows-1252 is the practical Western legacy fallback. ISO-8859-1 is
-            // intentionally explicit because byte-only detection cannot distinguish it reliably.
             return "windows-1252";
         }
     }
