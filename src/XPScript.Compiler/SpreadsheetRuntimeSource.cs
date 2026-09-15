@@ -6,5 +6,6 @@ internal static class SpreadsheetRuntimeSource
         + SpreadsheetRuntimePart2Source.Code + "\n"
         + SpreadsheetRuntimePart3Source.Code + "\n"
         + SpreadsheetRuntimePart4Source.Code + "\n"
-        + SpreadsheetRuntimePart5Source.Code;
+        + SpreadsheetRuntimePart5Source.Code + "\n"
+        + SpreadsheetCsvInteropRuntimeSource.Code;
 }
