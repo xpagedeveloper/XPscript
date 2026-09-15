@@ -1,0 +1,77 @@
+Option Declare
+
+Sub Main()
+    Dim book As New XPSpreadsheet()
+    Dim sheet As XPWorksheet
+    Dim header As XPRange
+    Dim dataArea As XPRange
+
+    Set sheet = book.AddWorksheet("Report")
+
+    sheet.Cell("A1").Value = "Customer"
+    sheet.Cell("B1").Value = "Q1"
+    sheet.Cell("C1").Value = "Q2"
+    sheet.Cell("D1").Value = "Q3"
+    sheet.Cell("A2").Value = "ACME AB"
+    sheet.Cell("B2").Value = 12500.5
+    sheet.Cell("C2").Value = 13200
+    sheet.Cell("D2").Value = 14110.75
+    sheet.Cell("A3").Value = "Example Corporation with a longer name"
+    sheet.Cell("B3").Value = 9500
+    sheet.Cell("C3").Value = 10100.25
+    sheet.Cell("D3").Value = 11000
+
+    ' All formatting properties may be applied to multidimensional ranges.
+    Set header = sheet.Range("A1:D1")
+    header.Bold = True
+    header.FontName = "Arial"
+    header.FontSize = 12
+    header.FontColor = "white"
+    header.BackgroundColor = "#4472C4"
+    header.HorizontalAlignment = "center"
+    header.VerticalAlignment = "center"
+    header.WrapText = True
+    header.BorderTop = "thin"
+    header.BorderBottom = "thin"
+    header.BorderLeft = "thin"
+    header.BorderRight = "thin"
+    header.BorderColor = "#1F4E78"
+    header.RowHeight = 24
+
+    Set dataArea = sheet.Range("B2:D3")
+    dataArea.NumberFormat = "#,##0.00"
+    dataArea.BorderTop = "thin"
+    dataArea.BorderBottom = "thin"
+    dataArea.BorderLeft = "thin"
+    dataArea.BorderRight = "thin"
+    dataArea.BorderColor = "#BFBFBF"
+    dataArea.ColumnWidth = 16
+
+    ' AutoFit works across a rectangular range and adjusts every covered row/column.
+    Dim allData As XPRange
+    Set allData = sheet.Range("A1:D3")
+    allData.AutoFit()
+
+    book.SaveAs("xpspreadsheet-formatting.xlsx")
+
+    Dim verify As New XPSpreadsheet("xpspreadsheet-formatting.xlsx")
+    Dim verifySheet As XPWorksheet
+    Dim verifyHeader As XPRange
+    Dim verifyData As XPRange
+    Set verifySheet = verify.Worksheet("Report")
+    Set verifyHeader = verifySheet.Range("A1:D1")
+    Set verifyData = verifySheet.Range("B2:D3")
+
+    If Not verifyHeader.Bold Then Error 5, "Range bold round-trip failed"
+    If verifyHeader.FontName <> "Arial" Then Error 5, "Font name round-trip failed"
+    If CDbl(verifyHeader.FontSize) <> 12 Then Error 5, "Font size round-trip failed"
+    If verifyHeader.FontColor <> "#FFFFFF" Then Error 5, "Font color round-trip failed"
+    If verifyHeader.HorizontalAlignment <> "center" Then Error 5, "Horizontal alignment round-trip failed"
+    If Not verifyHeader.WrapText Then Error 5, "WrapText round-trip failed"
+    If verifyData.NumberFormat <> "#,##0.00" Then Error 5, "Number format round-trip failed"
+    If verifyData.BorderBottom <> "thin" Or verifyData.BorderColor <> "#BFBFBF" Then Error 5, "Border round-trip failed"
+    If verifySheet.Range("A1:D3").ColumnWidth <= 0 Then Error 5, "Column AutoFit round-trip failed"
+    If verifySheet.Range("A1:D3").RowHeight <= 0 Then Error 5, "Row AutoFit round-trip failed"
+
+    Print "XPSPREADSHEET-FORMATTING=OK"
+End Sub

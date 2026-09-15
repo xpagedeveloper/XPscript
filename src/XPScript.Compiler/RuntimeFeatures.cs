@@ -40,8 +40,8 @@ internal readonly record struct RuntimeFeatures(
                  PreprocessorFeatureGate.ContainsCall(code, "XPXmlDocument.Parse", "XmlParse", "XmlStringify", "XmlEscape"),
             Csv: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPCsv") ||
                  PreprocessorFeatureGate.ContainsCall(
-                     code, "XPCsvDocument.Parse", "XPCsvDocument.ParseBytes", "CsvParse", "CsvParseBytes",
-                     "CsvStringify", "CsvEscape"),
+                     code, "XPCsvDocument.Parse", "XPCsvDocument.ParseBytes", "XPCsvDocument.Load", "CsvParse", "CsvParseBytes",
+                     "CsvStringify", "CsvEscape", "ToCsv"),
             Database: database,
             HttpDatabase: httpDatabase,
             Sqlite: PreprocessorFeatureGate.ContainsTypeReference(code, "XPDBSQLite"),

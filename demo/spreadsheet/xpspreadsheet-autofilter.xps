@@ -1,0 +1,35 @@
+Option Declare
+
+Sub Main()
+    Dim book As New XPSpreadsheet()
+    Dim sheet As XPWorksheet
+
+    Set sheet = book.AddWorksheet("Data")
+    sheet.Cell("A1").Value = "Name"
+    sheet.Cell("B1").Value = "Status"
+    sheet.Cell("C1").Value = "Amount"
+    sheet.Cell("A2").Value = "ACME AB"
+    sheet.Cell("B2").Value = "Open"
+    sheet.Cell("C2").Value = 100
+    sheet.Cell("A3").Value = "Example Ltd"
+    sheet.Cell("B3").Value = "Closed"
+    sheet.Cell("C3").Value = 200
+
+    sheet.AutoFilter("A1:C3")
+    If sheet.AutoFilterRange <> "A1:C3" Then Error 5, "AutoFilter range was not assigned"
+    book.SaveAs("xpspreadsheet-autofilter.xlsx")
+
+    Dim verify As New XPSpreadsheet("xpspreadsheet-autofilter.xlsx")
+    Dim verifySheet As XPWorksheet
+    Set verifySheet = verify.Worksheet("Data")
+    If verifySheet.AutoFilterRange <> "A1:C3" Then Error 5, "AutoFilter round-trip failed"
+
+    verifySheet.ClearAutoFilter()
+    If verifySheet.AutoFilterRange <> "" Then Error 5, "ClearAutoFilter failed"
+    verify.Save()
+
+    Dim cleared As New XPSpreadsheet("xpspreadsheet-autofilter.xlsx")
+    If cleared.Worksheet("Data").AutoFilterRange <> "" Then Error 5, "Cleared AutoFilter round-trip failed"
+
+    Print "XPSPREADSHEET-AUTOFILTER=OK"
+End Sub

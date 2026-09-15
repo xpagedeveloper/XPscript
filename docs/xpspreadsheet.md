@@ -1,8 +1,8 @@
 # XPSpreadsheet
 
-`XPSpreadsheet` is XPScript's basic native spreadsheet API for simple `.xlsx` workbooks.
+`XPSpreadsheet` is XPScript's native API for creating and working with simple `.xlsx` workbooks.
 
-> **Basic implementation:** this version supports simple workbook data, multiple worksheets/tabs, basic formulas, and basic cell styling. Existing external `.xlsx` files can be opened and read, but are read-only by default so XPSpreadsheet does not accidentally remove spreadsheet features it does not understand.
+> **Supported model:** XPSpreadsheet supports workbook data, multiple worksheets/tabs, formulas, ranges, AutoFilter, cell/range formatting, row heights, column widths, and AutoFit. Existing external `.xlsx` files can be opened and read, but are read-only by default so XPSpreadsheet does not accidentally remove spreadsheet features it does not understand.
 
 The implementation uses the .NET runtime's built-in ZIP and XML support. It does not require Microsoft Excel, Office, LibreOffice, or an external spreadsheet NuGet package.
 
@@ -12,17 +12,19 @@ Only `.xlsx` is supported. Opening or saving `.xls`, `.xlsm`, `.ods`, `.csv`, or
 
 ## Safe update model
 
-XPSpreadsheet marks every workbook it creates with the custom OOXML document property `XPScriptWorkbookVersion`. Version 1 writes `XPScriptWorkbookVersion=1`.
+XPSpreadsheet marks every workbook it creates with the custom OOXML document property `XPScriptWorkbookVersion`. The current format writes `XPScriptWorkbookVersion=2`.
+
+Version 2 adds the richer formatting, range, sizing, and filter model. The current runtime can still open and update version 1 XPScript workbooks; when they are saved they are upgraded to version 2. A workbook marked with a newer unsupported version is opened read-only rather than rewritten by an older runtime.
 
 When a workbook is opened, XPSpreadsheet exposes:
 
 - `CreatedByXPScript` - `True` when the XPScript workbook marker is present.
 - `XPScriptFormatVersion` - the marker version, or `0` for an external/unmarked workbook.
-- `CanUpdate` - `True` only when the workbook was created by XPScript and the marker version is supported by the current runtime.
+- `CanUpdate` - `True` when the workbook was created by XPScript and its marker version is supported by the current runtime.
 
-External `.xlsx` files are readable, but `Save()`, `SaveAs()`, and `ToBytes()` refuse to rewrite them. This prevents a basic XPSpreadsheet round trip from silently removing unsupported charts, styles, images, pivot tables, named ranges, external links, or other OOXML parts.
+External `.xlsx` files are readable, but `Save()`, `SaveAs()`, and `ToBytes()` refuse to rewrite them. This prevents a supported-data round trip from silently removing charts, images, pivot tables, named ranges, external links, unsupported formatting, or other OOXML parts.
 
-If you intentionally want to convert an external workbook to the simple XPSpreadsheet model, use `SaveAsSimple()`:
+If you intentionally want to convert an external workbook to the XPSpreadsheet model, use `SaveAsSimple()`:
 
 ```xpscript
 Dim book As New XPSpreadsheet("external.xlsx")
@@ -97,33 +99,168 @@ cell.Clear()
 
 `UsedRowCount` and `UsedColumnCount` report the largest populated or styled row and column indexes in the supported in-memory model.
 
-## Cell styling
+## XPRange
 
-XPSpreadsheet supports basic cell fill and font emphasis using normal OOXML styles.
+Use `XPRange` when an operation should apply to several cells at once:
 
 ```xpscript
-sheet.Cell("A1").BackgroundColor = "#FFFF00"
-sheet.Cell("A1").Bold = True
-sheet.Cell("A1").Italic = True
+Dim area As XPRange
+Set area = sheet.Range("A1:D20")
+
+area.Bold = True
+area.BackgroundColor = "#EAF2F8"
+area.NumberFormat = "#,##0.00"
 ```
 
-`BackgroundColor` accepts:
+Ranges can be one-dimensional or multidimensional. All formatting and layout properties can be applied to rectangular multidimensional ranges such as `A1:G17`.
+
+### Range Values
+
+`Values` is intentionally different from the other range properties. It returns a zero-based one-dimensional XPScript array only when the range contains a single row or a single column.
+
+```xpscript
+Dim range As XPRange
+Dim values As Variant
+
+Set range = sheet.Range("A1:A10")
+values = range.Values
+Print CStr(LBound(values))
+Print CStr(UBound(values))
+Print CStr(values(0))
+
+Set range = sheet.Range("A1:H1")
+values = range.Values
+```
+
+Accessing `Values` on a multidimensional range such as `A1:G17` raises a normal XPScript runtime error. It can therefore be trapped with normal error handling:
+
+```xpscript
+Dim area As XPRange
+Dim values As Variant
+
+Set area = sheet.Range("A1:G17")
+
+On Error Resume Next
+values = area.Values
+If Err <> 0 Then
+    Print Error$
+End If
+On Error GoTo 0
+```
+
+The multidimensional restriction applies only to `Values`. For example, this is valid:
+
+```xpscript
+Dim area As XPRange
+Set area = sheet.Range("A1:G17")
+
+area.Bold = True
+area.BackgroundColor = "#FFFFCC"
+area.BorderBottom = "thin"
+area.ColumnWidth = 14
+area.RowHeight = 20
+```
+
+## Formatting
+
+Formatting properties are available on both `XPCell` and `XPRange`.
+
+### Font and fill
+
+```xpscript
+Dim area As XPRange
+Set area = sheet.Range("A1:D1")
+
+area.BackgroundColor = "#4472C4"
+area.FontColor = "white"
+area.FontName = "Arial"
+area.FontSize = 12
+area.Bold = True
+area.Italic = False
+```
+
+Color properties accept:
 
 - `#RRGGBB` or `RRGGBB` hex colors.
 - 8-digit ARGB values, where the alpha prefix is ignored and the RGB part is used.
 - the color names `black`, `white`, `red`, `green`, `blue`, `yellow`, `gray`/`grey`, `orange`, and `purple`.
-- an empty string to remove the background fill.
+- an empty string to remove the color.
 
-`Bold` and `Italic` are independent Boolean properties and can be combined. A normal font is represented by both properties being `False`.
+### Number formats
 
 ```xpscript
-Dim cell As XPCell
-Set cell = sheet.Cell("A1")
-cell.Bold = False
-cell.Italic = False
+sheet.Range("B2:D100").NumberFormat = "#,##0.00"
+sheet.Cell("E2").NumberFormat = "0.00%"
 ```
 
-These supported styles are written to `xl/styles.xml` and are restored when an XPScript workbook is reopened or loaded through `FromBytes()`.
+XPSpreadsheet stores the supplied number-format string in the XLSX style table. Excel, LibreOffice, and compatible applications perform the display formatting.
+
+### Alignment and wrapping
+
+```xpscript
+Dim header As XPRange
+Set header = sheet.Range("A1:D1")
+
+header.HorizontalAlignment = "center"
+header.VerticalAlignment = "center"
+header.WrapText = True
+```
+
+Horizontal alignment supports `general`, `left`, `center`, `right`, `fill`, `justify`, `centerContinuous`, and `distributed`.
+
+Vertical alignment supports `top`, `center`, `bottom`, `justify`, and `distributed`.
+
+### Borders
+
+```xpscript
+Dim area As XPRange
+Set area = sheet.Range("A1:D20")
+
+area.BorderTop = "thin"
+area.BorderBottom = "thin"
+area.BorderLeft = "thin"
+area.BorderRight = "thin"
+area.BorderColor = "#808080"
+```
+
+Supported border styles include `thin`, `medium`, `thick`, `dashed`, `dotted`, `double`, `hair`, `dashDot`, `mediumDashed`, `mediumDashDot`, and `slantDashDot`. Use an empty string or `none` to remove a border side.
+
+## Row height, column width, and AutoFit
+
+A range can set the width of every covered column and the height of every covered row:
+
+```xpscript
+Dim area As XPRange
+Set area = sheet.Range("A1:D20")
+
+area.ColumnWidth = 18
+area.RowHeight = 22
+```
+
+`AutoFit()` estimates suitable widths and heights from the supported in-memory cell text:
+
+```xpscript
+area.AutoFit()
+```
+
+AutoFit is intentionally lightweight and does not contain a full font-rendering/layout engine, so its sizing is an approximation rather than pixel-identical Excel AutoFit behavior.
+
+## AutoFilter
+
+A worksheet can persist an OOXML AutoFilter range:
+
+```xpscript
+sheet.AutoFilter("A1:F500")
+Print sheet.AutoFilterRange
+```
+
+Clear it with:
+
+```xpscript
+sheet.ClearAutoFilter()
+```
+
+`AutoFilterRange` is empty when no filter is active. XPSpreadsheet currently manages the worksheet AutoFilter range; advanced filter criteria are not yet part of the API.
 
 ## Formulas
 
@@ -167,24 +304,6 @@ Print copy.Worksheet("Sales").Cell("A2").Text
 
 `FromBytes()` uses the same validation and XPScript workbook marker rules as `Open()`.
 
-## Update an XPScript workbook
-
-```xpscript
-Dim book As New XPSpreadsheet("sales.xlsx")
-Dim sheet As XPWorksheet
-
-If Not book.CanUpdate Then
-    Error 1000, "Workbook is read-only in XPSpreadsheet"
-End If
-
-Set sheet = book.Worksheet("Sales")
-sheet.Cell("B2").Value = 15000
-sheet.Cell("A3").Value = "Example Ltd"
-sheet.Cell("B3").Value = 9000
-
-book.Save()
-```
-
 ## Main objects
 
 ### XPSpreadsheet
@@ -219,11 +338,46 @@ Properties:
 - `Index`
 - `UsedRowCount`
 - `UsedColumnCount`
+- `AutoFilterRange`
 
 Methods:
 
 - `Cell(address)`
 - `Cell(row, column)`
+- `Range(address)`
+- `AutoFilter(address)`
+- `ClearAutoFilter()`
+- `Clear()`
+
+### XPRange
+
+Properties:
+
+- `Address`
+- `RowCount`
+- `ColumnCount`
+- `Values` — only for one-dimensional ranges
+- `BackgroundColor`
+- `Bold`
+- `Italic`
+- `FontColor`
+- `FontSize`
+- `FontName`
+- `NumberFormat`
+- `HorizontalAlignment`
+- `VerticalAlignment`
+- `WrapText`
+- `BorderTop`
+- `BorderBottom`
+- `BorderLeft`
+- `BorderRight`
+- `BorderColor`
+- `ColumnWidth`
+- `RowHeight`
+
+Methods:
+
+- `AutoFit()`
 - `Clear()`
 
 ### XPCell
@@ -236,6 +390,18 @@ Properties:
 - `BackgroundColor`
 - `Bold`
 - `Italic`
+- `FontColor`
+- `FontSize`
+- `FontName`
+- `NumberFormat`
+- `HorizontalAlignment`
+- `VerticalAlignment`
+- `WrapText`
+- `BorderTop`
+- `BorderBottom`
+- `BorderLeft`
+- `BorderRight`
+- `BorderColor`
 - `Address`
 - `Row`
 - `Column`
@@ -251,11 +417,14 @@ Spreadsheet demos are under `demo/spreadsheet/`:
 - `xpspreadsheet-basic.xps`
 - `xpspreadsheet-worksheets.xps`
 - `xpspreadsheet-styles.xps`
+- `xpspreadsheet-ranges.xps`
+- `xpspreadsheet-formatting.xps`
+- `xpspreadsheet-autofilter.xps`
 - `xpspreadsheet-invalid-format.xps`
 
 ## Current limitations
 
-XPSpreadsheet still does not provide a full spreadsheet application or calculation engine. It does not preserve or edit advanced formatting, charts, images, macros/VBA, pivot tables, conditional formatting, named ranges, external data connections, embedded objects, or other advanced XLSX parts.
+XPSpreadsheet still does not provide a full spreadsheet application or calculation engine. It does not preserve or edit charts, images, macros/VBA, pivot tables, conditional formatting, named ranges, external data connections, embedded objects, or other unsupported XLSX parts.
 
 Because of that limitation, XPSpreadsheet deliberately refuses to overwrite external/unmarked XLSX workbooks. `SaveAsSimple()` is the explicit opt-in operation for creating a simplified XPScript workbook from data that XPSpreadsheet can read.
 
