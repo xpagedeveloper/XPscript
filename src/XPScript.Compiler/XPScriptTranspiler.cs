@@ -132,6 +132,7 @@ public sealed partial class XPScriptTranspiler
         if (usesArchive) { generated += "\n\n" + ArchiveRuntimeSource.Code + "\n"; generated += "\n\n" + ArchiveMemoryRuntimeSource.Code + "\n"; generated += "\n\n" + ArchiveIteratorRuntimeSource.Code + "\n"; }
         if (usesExtendedArchive) { generated += "\n\n" + ArchiveExtendedReaderRuntimeSource.Code + "\n"; generated += "\n\n" + ArchiveExtendedWriterRuntimeSource.Code + "\n"; generated += "\n\n" + ArchiveExtendedWriterFactoryRuntimeSource.Code + "\n"; }
         if (runtimeFeatures.RequiresJson || usesAi) { generated += "\n\n" + JsonHttpCompatibilityRuntimeSource.Code + "\n"; generated += "\n\n" + JsonNodesSerializerShimSource.ShimCode + "\n"; generated += "\n\n" + NativeJsonRuntimeSource.Code + "\n"; }
+        if (runtimeFeatures.JsonSchema) generated += "\n\n" + JsonSchemaRuntimeSource.Code + "\n";
         if (runtimeFeatures.Xml) generated += "\n\n" + NativeXmlRuntimeSource.Code + "\n";
         if (runtimeFeatures.Csv) generated += "\n\n" + NativeCsvRuntimeSource.Code + "\n";
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
