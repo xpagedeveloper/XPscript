@@ -1,0 +1,52 @@
+Option Declare
+
+Sub Main()
+    Dim source As New XPCsvDocument
+    Dim sourceRow As XPCsvRow
+    Dim book As XPSpreadsheet
+    Dim sheet As XPWorksheet
+    Dim exported As XPCsvDocument
+    Dim loaded As XPCsvDocument
+
+    source.Delimiter = ";"
+    source.Encoding = "windows-1252"
+    Call source.Headers.Add("id")
+    Call source.Headers.Add("name")
+    Call source.Headers.Add("city")
+    Set sourceRow = source.AddRow()
+    Call sourceRow.Set("id", "00123")
+    Call sourceRow.Set("name", "Åsa")
+    Call sourceRow.Set("city", "Malmö")
+
+    Call source.Save("xpspreadsheet-csv-interop-1252.csv", "windows-1252")
+    Set loaded = XPCsvDocument.Load("xpspreadsheet-csv-interop-1252.csv", "auto", ";", True)
+    If loaded.Encoding <> "windows-1252" Then Error 5, "CSV auto encoding detection failed"
+    If loaded.Rows[0].Get("name") <> "Åsa" Then Error 5, "CSV Windows-1252 Unicode decode failed"
+
+    Set book = loaded.ToSpreadsheet("Data")
+    Set sheet = book.Worksheet("Data")
+    If sheet.Cell("B2").Text <> "Åsa" Then Error 5, "CSV to XPSpreadsheet Unicode transfer failed"
+    If sheet.Cell("C2").Text <> "Malmö" Then Error 5, "CSV to XPSpreadsheet city transfer failed"
+
+    book.SaveAs("xpspreadsheet-csv-interop.xlsx")
+
+    Dim reopened As New XPSpreadsheet("xpspreadsheet-csv-interop.xlsx")
+    Dim reopenedSheet As XPWorksheet
+    Set reopenedSheet = reopened.Worksheet("Data")
+    If reopenedSheet.Cell("B2").Text <> "Åsa" Then Error 5, "XLSX UTF-8 Unicode round-trip failed"
+
+    Set exported = reopenedSheet.ToCsv(True)
+    exported.Delimiter = ";"
+    exported.Encoding = "utf-8"
+    Call exported.Save("xpspreadsheet-csv-interop-utf8.csv")
+
+    Set loaded = XPCsvDocument.Load("xpspreadsheet-csv-interop-utf8.csv", "auto", ";", True)
+    If loaded.Encoding <> "utf-8" Then Error 5, "UTF-8 CSV auto detection failed"
+    If loaded.Rows[0].Get("name") <> "Åsa" Then Error 5, "XPSpreadsheet to CSV Unicode transfer failed"
+    If loaded.Rows[0].Get("id") <> "00123" Then Error 5, "CSV leading zero round-trip failed"
+
+    Kill "xpspreadsheet-csv-interop-1252.csv"
+    Kill "xpspreadsheet-csv-interop-utf8.csv"
+    Kill "xpspreadsheet-csv-interop.xlsx"
+    Print "XPSPREADSHEET-CSV-INTEROP=OK"
+End Sub
