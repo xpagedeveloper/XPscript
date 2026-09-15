@@ -27,6 +27,19 @@ internal sealed class XPScriptJsonSchema
         return new XPScriptJsonSchema(obj);
     }
 
+    public static XPScriptJsonSchema Infer(object? value) => Infer(value, true);
+    public static XPScriptJsonSchema Infer(object? value, object? requiredValue)
+    {
+        var node = XPScriptNativeJson.ToNode(value);
+        if (node is null) throw new XPScriptRuntimeException(13, "XPJsonSchema.Infer requires an XPJson value.");
+        XPScriptNativeJson.ValidateBudget(node);
+        var schema = InferNode(node, requiredValue is null || XPScriptNullRuntime.IsNull(requiredValue) || XPScriptRuntime.CBool(requiredValue), 0);
+        return new XPScriptJsonSchema(schema);
+    }
+
+    public static XPScriptJsonSchema FromValue(object? value) => Infer(value);
+    public static XPScriptJsonSchema FromValue(object? value, object? requiredValue) => Infer(value, requiredValue);
+
     public XPScriptJsonDocument Json => new XPScriptJsonDocument(_schema.DeepClone());
     public string Text => _schema.ToJsonString();
     public string Type { get => ReadString("type"); set => SetKeyword("type", value); }
@@ -46,6 +59,8 @@ internal sealed class XPScriptJsonSchema
         if (requiredValue is not null && !XPScriptNullRuntime.IsNull(requiredValue) && XPScriptRuntime.CBool(requiredValue)) AddRequired(name);
         return this;
     }
+    public XPScriptJsonSchema AddJson(object? nameValue, object? value) => AddJson(nameValue, value, false);
+    public XPScriptJsonSchema AddJson(object? nameValue, object? value, object? requiredValue) => AddProperty(nameValue, Infer(value, true), requiredValue);
     public XPScriptJsonSchema AddString(object? nameValue) => AddString(nameValue, false);
     public XPScriptJsonSchema AddString(object? nameValue, object? requiredValue) => AddProperty(nameValue, TypeSchema("string"), requiredValue);
     public XPScriptJsonSchema AddInteger(object? nameValue) => AddInteger(nameValue, false);
@@ -64,6 +79,43 @@ internal sealed class XPScriptJsonSchema
     public XPScriptJsonSchema Clone() => new XPScriptJsonSchema(_schema);
     public override string ToString() => Text;
     internal System.Text.Json.Nodes.JsonObject ToJsonSchemaObject() => (System.Text.Json.Nodes.JsonObject)_schema.DeepClone();
+
+    private static System.Text.Json.Nodes.JsonObject InferNode(System.Text.Json.Nodes.JsonNode node, bool requiredProperties, int depth)
+    {
+        if (depth > 32) throw new XPScriptRuntimeException(5, "XPJsonSchema inferred schema nesting exceeds 32 levels.");
+        if (node is System.Text.Json.Nodes.JsonObject obj)
+        {
+            var properties = new System.Text.Json.Nodes.JsonObject();
+            var required = new System.Text.Json.Nodes.JsonArray();
+            foreach (var property in obj)
+            {
+                properties[property.Key] = property.Value is null ? new System.Text.Json.Nodes.JsonObject() : InferNode(property.Value, requiredProperties, depth + 1);
+                if (requiredProperties) required.Add(property.Key);
+            }
+            var result = new System.Text.Json.Nodes.JsonObject { ["type"] = "object", ["properties"] = properties, ["additionalProperties"] = false };
+            if (requiredProperties && required.Count > 0) result["required"] = required;
+            return result;
+        }
+        if (node is System.Text.Json.Nodes.JsonArray array)
+        {
+            System.Text.Json.Nodes.JsonObject items = new();
+            foreach (var item in array)
+            {
+                if (item is null) continue;
+                items = InferNode(item, requiredProperties, depth + 1);
+                break;
+            }
+            return new System.Text.Json.Nodes.JsonObject { ["type"] = "array", ["items"] = items };
+        }
+        if (node is System.Text.Json.Nodes.JsonValue value)
+        {
+            if (value.TryGetValue<bool>(out _)) return TypeSchema("boolean");
+            if (value.TryGetValue<int>(out _) || value.TryGetValue<long>(out _)) return TypeSchema("integer");
+            if (value.TryGetValue<double>(out _) || value.TryGetValue<decimal>(out _)) return TypeSchema("number");
+            if (value.TryGetValue<string>(out _)) return TypeSchema("string");
+        }
+        return new System.Text.Json.Nodes.JsonObject();
+    }
 
     private void AddRequired(string name)
     {
