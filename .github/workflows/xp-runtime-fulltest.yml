@@ -1,0 +1,70 @@
+name: XP Runtime FullTest
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xp-runtime-fulltest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  xp-runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify XPSpreadsheet compiler probes
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/SpreadsheetCapabilityProbe/SpreadsheetCapabilityProbe.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Compile and run XPSpreadsheet suite
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path ./out/xp-runtime | Out-Null
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          $samples = @('xpspreadsheet-basic','xpspreadsheet-worksheets','xpspreadsheet-styles','xpspreadsheet-ranges','xpspreadsheet-formatting','xpspreadsheet-autofilter','xpspreadsheet-csv-interop')
+          foreach ($sample in $samples) {
+            dotnet $compilerDll "./demo/spreadsheet/$sample.xps" -o "./out/xp-runtime/$sample" --runtime=false
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $exe = if (Test-Path "./out/xp-runtime/$sample.exe") { "./out/xp-runtime/$sample.exe" } else { "./out/xp-runtime/$sample" }
+            & $exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Compile and run JSON, CSV and XML regressions
+        shell: pwsh
+        run: |
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          $samples = @('xpjsonschema-runtime','native-csv-regression','native-xml-dom-regression')
+          foreach ($sample in $samples) {
+            dotnet $compilerDll "./samples/$sample.xps" -o "./out/xp-runtime/$sample" --runtime=false
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $exe = if (Test-Path "./out/xp-runtime/$sample.exe") { "./out/xp-runtime/$sample.exe" } else { "./out/xp-runtime/$sample" }
+            & $exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Compile XPAi structured output
+        shell: pwsh
+        run: |
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          dotnet $compilerDll ./samples/xpai-structured-output.xps -o ./out/xp-runtime/xpai-structured --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host 'XP_RUNTIME_FULLTEST: passed'

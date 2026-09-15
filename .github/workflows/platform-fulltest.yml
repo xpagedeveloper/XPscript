@@ -1,0 +1,82 @@
+name: Platform FullTest
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-fulltest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify Archive compiler probes
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Compile and run portable Archive regressions
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path ./out/platform | Out-Null
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          $samples = @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-extended-memory','archive-gzip','archive-targzip','archive-format-detection')
+          foreach ($sample in $samples) {
+            dotnet $compilerDll "./demo/archive/$sample.xps" -o "./out/platform/$sample" --runtime=false
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $exe = if (Test-Path "./out/platform/$sample.exe") { "./out/platform/$sample.exe" } else { "./out/platform/$sample" }
+            & $exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Compile and run Application runtime
+        shell: pwsh
+        run: |
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          dotnet $compilerDll ./samples/application-runtime.xps -o ./out/platform/application-runtime --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $exe = if (Test-Path './out/platform/application-runtime.exe') { './out/platform/application-runtime.exe' } else { './out/platform/application-runtime' }
+          & $exe fulltest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Compile and run NetworkTools local smoke
+        shell: pwsh
+        run: |
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          $samples = @('networktools-native-local-smoke','networktools-phase2-local-smoke')
+          foreach ($sample in $samples) {
+            dotnet $compilerDll "./samples/$sample.xps" -o "./out/platform/$sample" --runtime=false
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $exe = if (Test-Path "./out/platform/$sample.exe") { "./out/platform/$sample.exe" } else { "./out/platform/$sample" }
+            & $exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Compile and run SystemInventory local smoke
+        shell: pwsh
+        run: |
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          dotnet $compilerDll ./samples/systeminventory-local-smoke.xps -o ./out/platform/systeminventory-local-smoke --runtime=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $exe = if (Test-Path './out/platform/systeminventory-local-smoke.exe') { './out/platform/systeminventory-local-smoke.exe' } else { './out/platform/systeminventory-local-smoke' }
+          & $exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host 'PLATFORM_FULLTEST: passed'
