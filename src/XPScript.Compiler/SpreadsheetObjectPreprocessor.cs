@@ -14,7 +14,7 @@ internal sealed class SpreadsheetObjectPreprocessor
     private static readonly string[] WorksheetMembers =
     [
         "Name", "Index", "UsedRowCount", "UsedColumnCount", "Cell", "Range",
-        "AutoFilter", "ClearAutoFilter", "AutoFilterRange", "Clear"
+        "AutoFilter", "ClearAutoFilter", "AutoFilterRange", "Clear", "ToCsv"
     ];
 
     private static readonly string[] CellMembers =
@@ -115,6 +115,13 @@ internal sealed class SpreadsheetObjectPreprocessor
                 var escaped = Regex.Escape(worksheet);
                 rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*(Cell|Range|AutoFilter|ClearAutoFilter)\b", m =>
                     worksheet + "." + WorksheetMembers.First(x => x.Equals(m.Groups[1].Value, StringComparison.OrdinalIgnoreCase)), RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s*\.\s*ToCsv\s*\(([^)]*)\)", m =>
+                {
+                    var args = m.Groups[1].Value.Trim();
+                    return string.IsNullOrEmpty(args)
+                        ? $"XPScriptSpreadsheetCsvInterop.FromWorksheet({worksheet})"
+                        : $"XPScriptSpreadsheetCsvInterop.FromWorksheet({worksheet}, {args})";
+                }, RegexOptions.IgnoreCase);
             }
 
             var directCellAssignment = Regex.Match(rewritten,
