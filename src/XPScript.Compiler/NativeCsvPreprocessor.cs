@@ -62,6 +62,7 @@ internal sealed class NativeCsvPreprocessor
             }
 
             var rewritten = line;
+            rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.Load\s*\(([^)]*)\)", m => RewriteLoad(m.Groups[1].Value), RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.ParseBytes\s*\(", "XPScriptNativeCsv.ParseBytes(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.Parse\s*\(", "XPScriptNativeCsv.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bCsvParseBytes\s*\(", "XPScriptNativeCsv.ParseBytes(", RegexOptions.IgnoreCase);
@@ -72,39 +73,25 @@ internal sealed class NativeCsvPreprocessor
 
             foreach (var documentVariable in documentVariables)
             {
-                rewritten = Regex.Replace(
-                    rewritten,
-                    $@"\b{Regex.Escape(documentVariable)}\.FileEncoding\b",
-                    documentVariable + ".Encoding",
-                    RegexOptions.IgnoreCase);
-                rewritten = Regex.Replace(
-                    rewritten,
-                    $@"\b{Regex.Escape(documentVariable)}\.Headers\.Add\s*\(",
-                    documentVariable + ".AddHeader(",
-                    RegexOptions.IgnoreCase);
+                var escaped = Regex.Escape(documentVariable);
+                rewritten = Regex.Replace(rewritten, $@"\b{escaped}\.FileEncoding\b", documentVariable + ".Encoding", RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(rewritten, $@"\b{escaped}\.Headers\.Add\s*\(", documentVariable + ".AddHeader(", RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(rewritten, $@"\b{escaped}\.ToSpreadsheet\s*\(([^)]*)\)", m =>
+                {
+                    var args = m.Groups[1].Value.Trim();
+                    return string.IsNullOrEmpty(args)
+                        ? $"XPScriptSpreadsheetCsvInterop.ToSpreadsheet({documentVariable})"
+                        : $"XPScriptSpreadsheetCsvInterop.ToSpreadsheet({documentVariable}, {args})";
+                }, RegexOptions.IgnoreCase);
             }
 
-            // XPscript does not otherwise use square-bracket member indexing. CSV keeps this
-            // convenience surface by lowering collection/member index syntax to strict Get().
             rewritten = Regex.Replace(rewritten, @"\.Headers\s*\[([^\]]+)\]", ".Headers.Get($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\.Rows\s*\[([^\]]+)\]", ".Rows.Get($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\.Columns\s*\[([^\]]+)\]", ".Columns.Get($1)", RegexOptions.IgnoreCase);
             foreach (var rowVariable in rowVariables)
-            {
-                rewritten = Regex.Replace(
-                    rewritten,
-                    $@"\b{Regex.Escape(rowVariable)}\s*\[([^\]]+)\]",
-                    rowVariable + ".Get($1)",
-                    RegexOptions.IgnoreCase);
-            }
+                rewritten = Regex.Replace(rewritten, $@"\b{Regex.Escape(rowVariable)}\s*\[([^\]]+)\]", rowVariable + ".Get($1)", RegexOptions.IgnoreCase);
 
-            // The core ForAll grammar currently accepts an identifier after In. Preserve the
-            // public CSV surface `ForAll x In doc.Headers/Rows/row.Columns` by lowering the
-            // member expression to a temporary Variant before the core transpiler sees it.
-            var csvForAll = Regex.Match(
-                rewritten,
-                @"^ForAll\s+([A-Za-z_]\w*)\s+In\s+(.+\.(?:Headers|Rows|Columns))$",
-                RegexOptions.IgnoreCase);
+            var csvForAll = Regex.Match(rewritten, @"^ForAll\s+([A-Za-z_]\w*)\s+In\s+(.+\.(?:Headers|Rows|Columns))$", RegexOptions.IgnoreCase);
             if (csvForAll.Success)
             {
                 var temp = "__xpsCsvIterator" + (++iteratorId).ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -115,7 +102,8 @@ internal sealed class NativeCsvPreprocessor
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
-            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNativeCsv", StringComparison.Ordinal)))
+            if (set.Success && (nativeVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPScriptNativeCsv", StringComparison.Ordinal)
+                || set.Groups[2].Value.Contains("XPScriptSpreadsheetCsvInterop", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
             output.Add(indent + rewritten);
@@ -124,68 +112,52 @@ internal sealed class NativeCsvPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
+    private static string RewriteLoad(string rawArguments)
+    {
+        var args = SplitTopLevelArguments(rawArguments);
+        if (args.Count is < 1 or > 4)
+            throw new CompilerException("XPCsvDocument.Load requires path and optional encoding, delimiter, and hasHeaders arguments.");
+        return "XPScriptSpreadsheetCsvInterop.LoadCsv(" + string.Join(", ", args) + ")";
+    }
+
     private static void RejectRemovedFileWriteApis(string line, HashSet<string> documentVariables)
     {
         if (Regex.IsMatch(line, @"^(?:Call\s+)?(?:CsvSave|CsvWriteFile)\b", RegexOptions.IgnoreCase))
             throw new CompilerException("CSV file output is available only through XPCsvDocument.Save or XPCsvDocument.SaveFile.");
-
         foreach (var documentVariable in documentVariables)
-        {
-            if (Regex.IsMatch(
-                    line,
-                    $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.WriteFile\b",
-                    RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(line, $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.WriteFile\b", RegexOptions.IgnoreCase))
                 throw new CompilerException("XPCsvDocument.WriteFile was removed. Use Save or SaveFile.");
-        }
     }
 
     private static bool TryRewriteFileWrite(string line, HashSet<string> documentVariables, out string rewritten)
     {
         rewritten = "";
-
         foreach (var documentVariable in documentVariables)
         {
-            var method = Regex.Match(
-                line,
-                $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.(Save|SaveFile)\s*\((.*)\)\s*$",
-                RegexOptions.IgnoreCase);
+            var method = Regex.Match(line, $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.(Save|SaveFile)\s*\((.*)\)\s*$", RegexOptions.IgnoreCase);
             if (!method.Success) continue;
-
             var args = SplitTopLevelArguments(method.Groups[2].Value);
-            if (args.Count is < 1 or > 2)
-                throw new CompilerException("XPCsvDocument.Save requires path and optional encoding arguments.");
-            var bytes = args.Count == 1
-                ? documentVariable + ".ToBytes()"
-                : documentVariable + ".ToBytes(" + args[1] + ")";
+            if (args.Count is < 1 or > 2) throw new CompilerException("XPCsvDocument.Save requires path and optional encoding arguments.");
+            var bytes = args.Count == 1 ? documentVariable + ".ToBytes()" : documentVariable + ".ToBytes(" + args[1] + ")";
             rewritten = "Call XPCrossPlatformRuntime.WriteBytes(" + args[0] + ", " + bytes + ")";
             return true;
         }
-
         return false;
     }
 
     private static bool TryRewriteFromBytes(string line, HashSet<string> documentVariables, out string rewritten)
     {
         rewritten = "";
-
         foreach (var documentVariable in documentVariables)
         {
-            var method = Regex.Match(
-                line,
-                $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.FromBytes\s*\((.*)\)\s*$",
-                RegexOptions.IgnoreCase);
+            var method = Regex.Match(line, $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.FromBytes\s*\((.*)\)\s*$", RegexOptions.IgnoreCase);
             if (!method.Success) continue;
-
             var args = SplitTopLevelArguments(method.Groups[1].Value);
-            if (args.Count is < 1 or > 2)
-                throw new CompilerException("XPCsvDocument.FromBytes requires bytes and an optional encoding argument.");
-
+            if (args.Count is < 1 or > 2) throw new CompilerException("XPCsvDocument.FromBytes requires bytes and an optional encoding argument.");
             var encoding = args.Count == 1 ? documentVariable + ".Encoding" : args[1];
-            rewritten = documentVariable + " = XPScriptNativeCsv.ParseBytes(" + args[0] + ", " + encoding + ", "
-                + documentVariable + ".Delimiter, " + documentVariable + ".HasHeaders)";
+            rewritten = documentVariable + " = XPScriptNativeCsv.ParseBytes(" + args[0] + ", " + encoding + ", " + documentVariable + ".Delimiter, " + documentVariable + ".HasHeaders)";
             return true;
         }
-
         return false;
     }
 
@@ -195,41 +167,27 @@ internal sealed class NativeCsvPreprocessor
         var current = new System.Text.StringBuilder();
         var depth = 0;
         var quoted = false;
-
         for (var i = 0; i < text.Length; i++)
         {
             var ch = text[i];
             if (ch == '"')
             {
                 current.Append(ch);
-                if (quoted && i + 1 < text.Length && text[i + 1] == '"')
-                {
-                    current.Append(text[++i]);
-                    continue;
-                }
+                if (quoted && i + 1 < text.Length && text[i + 1] == '"') { current.Append(text[++i]); continue; }
                 quoted = !quoted;
                 continue;
             }
-
             if (!quoted)
             {
                 if (ch == '(') depth++;
                 else if (ch == ')') depth--;
-                else if (ch == ',' && depth == 0)
-                {
-                    result.Add(current.ToString().Trim());
-                    current.Clear();
-                    continue;
-                }
+                else if (ch == ',' && depth == 0) { result.Add(current.ToString().Trim()); current.Clear(); continue; }
             }
             current.Append(ch);
         }
-
-        if (quoted || depth != 0)
-            throw new CompilerException("Invalid CSV argument list.");
-        result.Add(current.ToString().Trim());
-        if (result.Any(string.IsNullOrWhiteSpace))
-            throw new CompilerException("CSV arguments cannot be empty.");
+        if (quoted || depth != 0) throw new CompilerException("Invalid CSV argument list.");
+        if (current.Length > 0 || result.Count > 0) result.Add(current.ToString().Trim());
+        if (result.Any(string.IsNullOrWhiteSpace)) throw new CompilerException("CSV arguments cannot be empty.");
         return result;
     }
 
