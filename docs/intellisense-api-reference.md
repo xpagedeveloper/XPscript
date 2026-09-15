@@ -73,3 +73,43 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `InstalledSoftwareInfo.Name` | `software.Name` | none | Returns the installed software name. | [systeminventory-runtime-test.xps](../samples/systeminventory-runtime-test.xps) |
 | `InstalledSoftwareInfo.Version` | `software.Version` | none | Returns the installed software version. | [systeminventory-runtime-test.xps](../samples/systeminventory-runtime-test.xps) |
 | `InstalledSoftwareInfo.Publisher` | `software.Publisher` | none | Returns the software publisher when available. | [systeminventory-runtime-test.xps](../samples/systeminventory-runtime-test.xps) |
+
+## XPJsonSchema
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `JsonSchema` | `Dim schema As New XPJsonSchema` | none | Creates a mutable JSON Schema object. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Parse` | `XPJsonSchema.Parse(text)` | JSON Schema `text`. | Parses a JSON Schema object from JSON text. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.FromJson` | `XPJsonSchema.FromJson(json)` | JSON object/document containing a schema. | Creates a schema from an existing JSON Schema object. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Infer` | `XPJsonSchema.Infer(json [, required])` | JSON value; optional required-property flag. | Infers a JSON Schema from an example JSON value. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.FromValue` | `XPJsonSchema.FromValue(json [, required])` | JSON value; optional required-property flag. | Alias for schema inference from an example value. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Json` | `schema.Json` | none | Returns the schema as an XPJsonDocument. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Text` | `schema.Text` | none | Returns compact JSON Schema text. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Type` | `schema.Type` | none | Gets or sets the JSON Schema type keyword. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Title` | `schema.Title` | none | Gets or sets the schema title. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Description` | `schema.Description` | none | Gets or sets the schema description. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.AdditionalProperties` | `schema.AdditionalProperties` | none | Gets or sets whether undeclared object properties are allowed. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Validate` | `schema.Validate(json)` | JSON value to validate. | Validates JSON and returns XPJsonValidationResult. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.IsValid` | `schema.IsValid(json)` | JSON value to validate. | Returns True when JSON satisfies the schema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Set` | `schema.Set(keyword, value)` | schema keyword and value. | Sets an arbitrary schema keyword. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Remove` | `schema.Remove(keyword)` | schema keyword. | Removes a schema keyword. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.AddProperty` | `schema.AddProperty(name, childSchema [, required])` | property name, child schema, optional required flag. | Adds an object property schema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.AddJson` | `schema.AddJson(name, json [, required])` | property name, example JSON, optional required flag. | Adds a property using an inferred schema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.AddString` | `schema.AddString(name [, required])` | property name, optional required flag. | Adds a string property. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.AddInteger` | `schema.AddInteger(name [, required])` | property name, optional required flag. | Adds an integer property. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.AddNumber` | `schema.AddNumber(name [, required])` | property name, optional required flag. | Adds a numeric property. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.AddBoolean` | `schema.AddBoolean(name [, required])` | property name, optional required flag. | Adds a boolean property. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.AddObject` | `schema.AddObject(name [, required])` | property name, optional required flag. | Adds an object property. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.AddArray` | `schema.AddArray(name, itemSchema [, required])` | property name, item schema, optional required flag. | Adds an array property. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Require` | `schema.Require(name)` | property name. | Marks an object property as required. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Enum` | `schema.Enum(values)` | JSON array of allowed values. | Sets the enum keyword. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Items` | `schema.Items(itemSchema)` | item schema. | Sets the array items schema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.Clone` | `schema.Clone()` | none | Returns an independent copy of the schema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.ToString` | `schema.ToString()` | none | Returns compact JSON Schema text. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchemaValidator` | `XPJsonSchemaValidator` | none | Runtime JSON Schema validator used by XPJsonSchema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchemaValidator.Validate` | `XPJsonSchemaValidator.Validate(schema, json)` | schema and JSON value. | Validates JSON against a schema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonValidationResult` | `Dim result As XPJsonValidationResult` | none | Represents JSON Schema validation output. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonValidationResult.Valid` | `result.Valid` | none | True when validation produced no errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonValidationResult.ErrorCount` | `result.ErrorCount` | none | Number of validation errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonValidationResult.Errors` | `result.Errors` | none | Returns validation errors as XPJsonArray. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonValidationResult.Json` | `result.Json` | none | Returns the complete validation result as XPJsonDocument. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
