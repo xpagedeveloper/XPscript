@@ -44,8 +44,10 @@ Sub Main()
     book.SaveAs("xpspreadsheet-ranges.xlsx")
 
     Dim verify As New XPSpreadsheet("xpspreadsheet-ranges.xlsx")
+    Dim verifySheet As XPWorksheet
     Dim verifyRange As XPRange
-    Set verifyRange = verify.Worksheet("Ranges").Range("A1:D3")
+    Set verifySheet = verify.Worksheet("Ranges")
+    Set verifyRange = verifySheet.Range("A1:D3")
     If verifyRange.BackgroundColor <> "#EAF2F8" Then Error 5, "Multidimensional range formatting round-trip failed"
 
     Print "XPSPREADSHEET-RANGES=OK"
