@@ -21,7 +21,13 @@ Set invalidResult = schema.Validate(invalidJson)
 Print "Invalid valid=" & CStr(invalidResult.Valid)
 Print invalidResult.Json.Text
 
+' FromJson infers a schema from XPJson data.
 Dim inferred As XPJsonSchema
-Set inferred = XPJsonSchema.Infer(validJson)
+Set inferred = XPJsonSchema.FromJson(validJson)
 Print inferred.Text
 Print CStr(inferred.IsValid(validJson))
+
+' Parse reads an existing JSON Schema document.
+Dim parsed As XPJsonSchema
+Set parsed = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string""}},""required"":[""name""],""additionalProperties"":false}")
+Print CStr(parsed.IsValid(validJson))
