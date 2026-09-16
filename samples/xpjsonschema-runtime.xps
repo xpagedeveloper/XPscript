@@ -10,26 +10,32 @@ Sub Main()
 
     Dim validJson As XPJsonDocument
     Set validJson = XPJsonDocument.Parse("{""name"":""Ada"",""age"":37,""active"":true}")
-    Dim validResult As XPJsonValidationResult
-    Set validResult = schema.Validate(validJson)
-    Print "Valid=" & CStr(validResult.Valid)
-    Print "Errors=" & CStr(validResult.ErrorCount)
+    If Not schema.IsValid(validJson) Then Error 5, "builder schema rejected valid JSON"
 
     Dim invalidJson As XPJsonDocument
     Set invalidJson = XPJsonDocument.Parse("{""name"":""Ada""}")
-    Dim invalidResult As XPJsonValidationResult
-    Set invalidResult = schema.Validate(invalidJson)
-    Print "Invalid valid=" & CStr(invalidResult.Valid)
-    Print invalidResult.Json.Text
+    If schema.IsValid(invalidJson) Then Error 5, "builder schema accepted missing required age"
 
-    ' FromJson infers a schema from XPJson data.
+    Dim schemaJson As XPJsonDocument
+    Set schemaJson = XPJsonDocument.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string""}},""required"":[""name""],""additionalProperties"":false}")
+
+    Dim fromJson As XPJsonSchema
+    Set fromJson = XPJsonSchema.FromJson(schemaJson)
+    If Not fromJson.IsValid(validJson) Then Error 5, "FromJson schema rejected valid JSON"
+    If fromJson.IsValid(XPJsonDocument.Parse("{""age"":37}")) Then Error 5, "FromJson schema accepted missing name"
+
     Dim inferred As XPJsonSchema
-    Set inferred = XPJsonSchema.FromJson(validJson)
-    Print inferred.Text
-    Print CStr(inferred.IsValid(validJson))
+    Set inferred = XPJsonSchema.Infer(validJson)
+    If Not inferred.IsValid(validJson) Then Error 5, "Infer schema rejected source JSON"
+    If inferred.IsValid(XPJsonDocument.Parse("{""name"":""Ada"",""age"":37,""extra"":1}")) Then Error 5, "Infer schema accepted additional property"
 
-    ' Parse reads an existing JSON Schema document.
+    Dim optionalInference As XPJsonSchema
+    Set optionalInference = XPJsonSchema.FromValue(validJson, False)
+    If Not optionalInference.IsValid(XPJsonDocument.Parse("{}")) Then Error 5, "FromValue required=False still required properties"
+
     Dim parsed As XPJsonSchema
-    Set parsed = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string""}},""required"":[""name""],""additionalProperties"":false}")
-    Print CStr(parsed.IsValid(validJson))
+    Set parsed = XPJsonSchema.Parse("{""type"":""object"",""required"":[""name""]}")
+    If Not parsed.IsValid(validJson) Then Error 5, "Parse schema rejected valid JSON"
+
+    Print "XPJSONSCHEMA_RUNTIME: passed"
 End Sub
