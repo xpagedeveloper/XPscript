@@ -8,13 +8,15 @@ Treat `docs/language-reference.md`, `docs/api-reference.md`, `docs/file-io-refer
 
 ## CI regression suites
 
-Permanent regression coverage belongs in one of four broad workflows: Language FullTest, Notes FullTest, XP Runtime FullTest, or Platform FullTest. A focused feature workflow may be added while a feature is under active development or while diagnosing a regression, but once that feature is stable its coverage must be moved into the appropriate FullTest and the focused workflow removed. Do not permanently add one workflow per runtime object or API feature.
+Permanent regression coverage belongs in the consolidated `.github/workflows/fulltest.yml` workflow. Its shared runner executes the Language, Notes, XP Runtime, and Platform FullTest areas on each supported operating system. Windows is the gate and must pass before Ubuntu and macOS start.
 
-Whenever a function, built-in, runtime object, API, language feature, Notes capability, XP runtime capability, or platform capability is added or its behavior is changed, update the relevant permanent FullTest in the same PR. Add or update the executable sample/regression used by that FullTest so the new or changed behavior is actually exercised. If a change spans multiple areas, update every affected FullTest. A feature change is not considered regression-complete merely because it compiles or has documentation; the appropriate FullTest coverage must also be updated.
+A focused feature workflow may be added while a feature is under active development or while diagnosing a regression, but once that feature is stable its coverage must move into the appropriate area of the consolidated FullTest and the focused workflow must be removed. Do not permanently add one workflow per runtime object or API feature.
 
-The permanent FullTest workflow files are `.github/workflows/language-fulltest.yml`, `.github/workflows/notes-fulltest.yml`, `.github/workflows/xp-runtime-fulltest.yml`, and `.github/workflows/platform-fulltest.yml`. Keep these workflows and their referenced executable regression/sample files synchronized with the functionality they cover.
+Whenever a function, built-in, runtime object, API, language feature, Notes capability, XP runtime capability, or platform capability is added or its behavior is changed, update the relevant FullTest area in the same PR. Add or update the executable sample/regression used by that FullTest so the new or changed behavior is actually exercised. If a change spans multiple areas, update every affected area. A feature change is not regression-complete merely because it compiles or has documentation.
 
-During migrations, keep the old focused workflow running until equivalent coverage in the destination FullTest is green. Compile, documentation, IntelliSense API documentation, security/placeholder guards, release, cleanup, and other build/meta workflows are not part of this consolidation rule.
+Keep `.github/workflows/fulltest.yml`, `.github/scripts/run-fulltests.ps1`, any referenced FullTest helper scripts, and their executable regression/sample files synchronized with the functionality they cover. Preserve the 20-minute per-platform timeout and Windows-first gate.
+
+During migrations, keep any old focused workflow running until equivalent coverage in the consolidated FullTest is green. Compile, documentation, IntelliSense API documentation, security/placeholder guards, release, cleanup, and other build/meta workflows are not part of this consolidation rule.
 
 ## graphify
 
