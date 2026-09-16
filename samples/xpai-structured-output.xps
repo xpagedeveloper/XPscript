@@ -11,6 +11,7 @@ End Class
 Sub Main()
     Dim ai As XPAi
     Dim contract As PrivacyAnswer
+    Dim schema As XPJsonSchema
 
     Set ai = New XPAi("https://api.example.com/v1/chat/completions", "test-key")
     ai.Model = "example-model"
@@ -21,6 +22,14 @@ Sub Main()
     ai.JsonSchemaName = "privacy_answer"
     ai.JsonSchemaStrict = True
     Call ai.SetResultClass(contract)
+
+    ' Keep direct XPJsonSchema/XPAi interop on the compile surface. This ensures
+    ' the JsonSchema runtime is injected when an XPAi program passes a schema.
+    Set schema = New XPJsonSchema
+    schema.Type = "object"
+    Call schema.AddString("answer", True)
+    schema.AdditionalProperties = False
+    Call ai.SetJsonSchema(schema)
 
     Print "SYSTEM=" & ai.SystemPrompt
     Print "USER=" & ai.UserPrompt
