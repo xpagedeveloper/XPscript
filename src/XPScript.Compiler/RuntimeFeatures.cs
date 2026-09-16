@@ -30,7 +30,7 @@ internal readonly record struct RuntimeFeatures(
         var database = httpDatabase || PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPDB");
         var attachments = database && PreprocessorFeatureGate.ContainsCall(code, "Attachments");
         var jsonSchema = PreprocessorFeatureGate.ContainsTypeReference(code, "XPJsonSchema", "XPJsonValidationResult") ||
-                         PreprocessorFeatureGate.ContainsCall(code, "XPJsonSchema.Parse", "XPJsonSchema.FromJson");
+                         PreprocessorFeatureGate.ContainsCall(code, "XPJsonSchema.Parse", "XPJsonSchema.FromJson", "XPJsonSchema.Infer", "XPJsonSchema.FromValue");
 
         return new RuntimeFeatures(
             Http: PreprocessorFeatureGate.ContainsTypeReference(code, "XPHttpClient", "XPHttpResponse", "NotesHTTPRequest"),
