@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   platform:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -38,16 +39,41 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Compile and run portable Archive regressions
         shell: pwsh
+        timeout-minutes: 10
         run: |
           New-Item -ItemType Directory -Force -Path ./out/platform | Out-Null
           $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          $compileTimeoutMilliseconds = if ($IsWindows) { 120000 } else { 60000 }
+          $runtimeTimeoutMilliseconds = 30000
+
+          function Invoke-ProcessWithTimeout([string] $fileName, [string[]] $arguments, [int] $timeoutMilliseconds, [string] $label) {
+            $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+            $startInfo.FileName = $fileName
+            $startInfo.UseShellExecute = $false
+            foreach ($argument in $arguments) { [void] $startInfo.ArgumentList.Add([string] $argument) }
+
+            $process = [System.Diagnostics.Process]::new()
+            $process.StartInfo = $startInfo
+            try {
+              if (-not $process.Start()) { throw "Unable to start process: $label" }
+              if (-not $process.WaitForExit($timeoutMilliseconds)) {
+                Write-Error "Platform FullTest process timed out: $label"
+                try { $process.Kill($true) } catch { Write-Warning "Failed to kill process tree for ${label}: $_" }
+                if (-not $process.WaitForExit(10000)) { Write-Warning "Process did not terminate within 10 seconds after kill: $label" }
+                exit 124
+              }
+              return $process.ExitCode
+            }
+            finally { $process.Dispose() }
+          }
+
           $samples = @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-extended-memory','archive-gzip','archive-targzip','archive-format-detection')
           foreach ($sample in $samples) {
-            dotnet $compilerDll "./demo/archive/$sample.xps" -o "./out/platform/$sample" --runtime=false
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            $exe = if (Test-Path "./out/platform/$sample.exe") { "./out/platform/$sample.exe" } else { "./out/platform/$sample" }
-            & $exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $compileExit = Invoke-ProcessWithTimeout 'dotnet' @($compilerDll,"./demo/archive/$sample.xps",'-o',"./out/platform/$sample",'--runtime=false') $compileTimeoutMilliseconds "compile $sample"
+            if ($compileExit -ne 0) { exit $compileExit }
+            $exe = if (Test-Path "./out/platform/$sample.exe") { (Resolve-Path "./out/platform/$sample.exe").Path } else { (Resolve-Path "./out/platform/$sample").Path }
+            $runExit = Invoke-ProcessWithTimeout $exe @() $runtimeTimeoutMilliseconds "run $sample"
+            if ($runExit -ne 0) { exit $runExit }
           }
       - name: Compile and run Application runtime
         shell: pwsh
