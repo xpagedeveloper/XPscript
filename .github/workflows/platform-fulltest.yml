@@ -15,7 +15,64 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  windows-gate:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify Archive compiler probes
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Windows Archive gate
+        shell: pwsh
+        timeout-minutes: 10
+        run: |
+          New-Item -ItemType Directory -Force -Path ./out/platform-gate | Out-Null
+          $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          $compileTimeoutMilliseconds = 120000
+          $runtimeTimeoutMilliseconds = 50000
+
+          function Invoke-ProcessWithTimeout([string] $fileName, [string[]] $arguments, [int] $timeoutMilliseconds, [string] $label) {
+            $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+            $startInfo.FileName = $fileName
+            $startInfo.UseShellExecute = $false
+            foreach ($argument in $arguments) { [void] $startInfo.ArgumentList.Add([string] $argument) }
+            $process = [System.Diagnostics.Process]::new()
+            $process.StartInfo = $startInfo
+            try {
+              if (-not $process.Start()) { throw "Unable to start process: $label" }
+              if (-not $process.WaitForExit($timeoutMilliseconds)) {
+                Write-Error "Windows gate process timed out: $label"
+                try { $process.Kill($true) } catch { Write-Warning "Failed to kill process tree for ${label}: $_" }
+                if (-not $process.WaitForExit(10000)) { Write-Warning "Process did not terminate within 10 seconds after kill: $label" }
+                exit 124
+              }
+              return $process.ExitCode
+            }
+            finally { $process.Dispose() }
+          }
+
+          $samples = @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-extended-memory','archive-gzip','archive-targzip','archive-format-detection')
+          foreach ($sample in $samples) {
+            $compileExit = Invoke-ProcessWithTimeout 'dotnet' @($compilerDll,"./demo/archive/$sample.xps",'-o',"./out/platform-gate/$sample",'--runtime=false') $compileTimeoutMilliseconds "compile $sample"
+            if ($compileExit -ne 0) { exit $compileExit }
+            $exe = if (Test-Path "./out/platform-gate/$sample.exe") { (Resolve-Path "./out/platform-gate/$sample.exe").Path } else { (Resolve-Path "./out/platform-gate/$sample").Path }
+            $runExit = Invoke-ProcessWithTimeout $exe @() $runtimeTimeoutMilliseconds "run $sample"
+            if ($runExit -ne 0) { exit $runExit }
+          }
+
   platform:
+    needs: windows-gate
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -51,7 +108,6 @@ jobs:
             $startInfo.FileName = $fileName
             $startInfo.UseShellExecute = $false
             foreach ($argument in $arguments) { [void] $startInfo.ArgumentList.Add([string] $argument) }
-
             $process = [System.Diagnostics.Process]::new()
             $process.StartInfo = $startInfo
             try {
