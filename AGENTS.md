@@ -6,6 +6,16 @@ If the change affects how an LLM should write XPscript programs, update that ski
 
 Treat `docs/language-reference.md`, `docs/api-reference.md`, `docs/file-io-reference.md`, database/AI-specific docs, and executable `samples/*.xps` / `demo/**/*.xps` as the source of truth. Do not update the skill with speculative or unimplemented syntax.
 
+## CI regression suites
+
+Permanent regression coverage belongs in one of four broad workflows: Language FullTest, Notes FullTest, XP Runtime FullTest, or Platform FullTest. A focused feature workflow may be added while a feature is under active development or while diagnosing a regression, but once that feature is stable its coverage must be moved into the appropriate FullTest and the focused workflow removed. Do not permanently add one workflow per runtime object or API feature.
+
+Whenever a function, built-in, runtime object, API, language feature, Notes capability, XP runtime capability, or platform capability is added or its behavior is changed, update the relevant permanent FullTest in the same PR. Add or update the executable sample/regression used by that FullTest so the new or changed behavior is actually exercised. If a change spans multiple areas, update every affected FullTest. A feature change is not considered regression-complete merely because it compiles or has documentation; the appropriate FullTest coverage must also be updated.
+
+The permanent FullTest workflow files are `.github/workflows/language-fulltest.yml`, `.github/workflows/notes-fulltest.yml`, `.github/workflows/xp-runtime-fulltest.yml`, and `.github/workflows/platform-fulltest.yml`. Keep these workflows and their referenced executable regression/sample files synchronized with the functionality they cover.
+
+During migrations, keep the old focused workflow running until equivalent coverage in the destination FullTest is green. Compile, documentation, IntelliSense API documentation, security/placeholder guards, release, cleanup, and other build/meta workflows are not part of this consolidation rule.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
