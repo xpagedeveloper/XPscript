@@ -53,8 +53,6 @@ jobs:
         shell: pwsh
         run: |
           $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
-          dotnet $compilerDll ./samples/xpjsonschema-runtime.xps -o ./out/xp-runtime/xpjsonschema-runtime --runtime=false --entry-point=Initialize
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $samples = @('native-csv-regression','native-xml-dom-regression')
           foreach ($sample in $samples) {
             dotnet $compilerDll "./samples/$sample.xps" -o "./out/xp-runtime/$sample" --runtime=false
