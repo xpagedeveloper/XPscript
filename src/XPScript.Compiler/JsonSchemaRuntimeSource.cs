@@ -3,7 +3,7 @@ namespace XPScript.Compiler;
 internal static class JsonSchemaRuntimeSource
 {
     public const string Code = """
-internal sealed class XPScriptJsonSchema
+internal sealed class XPScriptJsonSchema : IXPScriptJsonNodeConvertible
 {
     private readonly System.Text.Json.Nodes.JsonObject _schema;
     public XPScriptJsonSchema() { _schema = new System.Text.Json.Nodes.JsonObject(); }
@@ -48,6 +48,7 @@ internal sealed class XPScriptJsonSchema
     public XPScriptJsonSchema Items(object? schemaValue) { _schema["items"] = ToSchemaObject(schemaValue); return this; }
     public XPScriptJsonSchema Clone() => new XPScriptJsonSchema(_schema);
     public override string ToString() => Text;
+    System.Text.Json.Nodes.JsonNode? IXPScriptJsonNodeConvertible.ToJsonNode() => ToJsonSchemaObject();
     internal System.Text.Json.Nodes.JsonObject ToJsonSchemaObject() => (System.Text.Json.Nodes.JsonObject)_schema.DeepClone();
 
     private static XPScriptJsonSchema InferSchema(object? value, bool requiredProperties) { var node = XPScriptNativeJson.ToNode(value); if (node is null) throw new XPScriptRuntimeException(13, "XPJsonSchema.FromJson requires an XPJson value."); XPScriptNativeJson.ValidateBudget(node); return new XPScriptJsonSchema(InferNode(node, requiredProperties, 0)); }
