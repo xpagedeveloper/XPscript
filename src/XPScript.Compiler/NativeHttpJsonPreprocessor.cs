@@ -48,6 +48,8 @@ internal sealed class NativeHttpJsonPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bXPJsonDocument\.Parse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.Parse\s*\(", "XPScriptJsonSchema.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.FromJson\s*\(", "XPScriptJsonSchema.FromJson(", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.Infer\s*\(", "XPScriptJsonSchema.Infer(", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.FromValue\s*\(", "XPScriptJsonSchema.FromValue(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bJsonParse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bJsonStringify\s*\(", "XPScriptNativeJson.Stringify(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bJsonEncode\s*\(", "XPScriptNativeJson.Stringify(", RegexOptions.IgnoreCase);
