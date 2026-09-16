@@ -3,6 +3,11 @@ namespace XPScript.Compiler;
 internal static class NativeJsonRuntimeSource
 {
     public const string Code = """
+internal interface IXPScriptJsonNodeConvertible
+{
+    System.Text.Json.Nodes.JsonNode? ToJsonNode();
+}
+
 internal static class XPScriptNativeJson
 {
     private const int MaxParseBytes = 8 * 1024 * 1024;
@@ -73,6 +78,7 @@ internal static class XPScriptNativeJson
                 XPScriptJsonObject obj => obj.Node.DeepClone(),
                 XPScriptJsonArray array => array.Node.DeepClone(),
                 XPScriptJsonElement element => element.Node?.DeepClone(),
+                IXPScriptJsonNodeConvertible convertible => convertible.ToJsonNode()?.DeepClone(),
                 System.Text.Json.Nodes.JsonNode jsonNode => jsonNode.DeepClone(),
                 string s => System.Text.Json.Nodes.JsonValue.Create(s),
                 bool b => System.Text.Json.Nodes.JsonValue.Create(b),
