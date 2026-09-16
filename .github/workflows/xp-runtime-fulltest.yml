@@ -39,16 +39,49 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Compile and run XPSpreadsheet suite
         shell: pwsh
+        timeout-minutes: 12
         run: |
           New-Item -ItemType Directory -Force -Path ./out/xp-runtime | Out-Null
           $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          $runtimeTimeoutMilliseconds = 50000
+
+          function Invoke-RuntimeWithTimeout([string] $fileName, [int] $timeoutMilliseconds, [string] $label) {
+            $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+            $startInfo.FileName = $fileName
+            $startInfo.UseShellExecute = $false
+            $startInfo.RedirectStandardOutput = $true
+            $startInfo.RedirectStandardError = $true
+            $process = [System.Diagnostics.Process]::new()
+            $process.StartInfo = $startInfo
+            try {
+              if (-not $process.Start()) { throw "Unable to start runtime: $label" }
+              $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+              $stderrTask = $process.StandardError.ReadToEndAsync()
+              if (-not $process.WaitForExit($timeoutMilliseconds)) {
+                Write-Error "XP Runtime FullTest timed out after $($timeoutMilliseconds / 1000)s: $label (pid=$($process.Id))"
+                try { $process.Kill($true) } catch { Write-Warning "Failed to kill process tree for ${label}: $_" }
+                [void] $process.WaitForExit(10000)
+                exit 124
+              }
+              $stdout = $stdoutTask.GetAwaiter().GetResult()
+              $stderr = $stderrTask.GetAwaiter().GetResult()
+              if ($stdout) { Write-Host $stdout.TrimEnd() }
+              if ($stderr) { Write-Host $stderr.TrimEnd() }
+              return $process.ExitCode
+            }
+            finally { $process.Dispose() }
+          }
+
           $samples = @('xpspreadsheet-basic','xpspreadsheet-worksheets','xpspreadsheet-styles','xpspreadsheet-ranges','xpspreadsheet-formatting','xpspreadsheet-autofilter','xpspreadsheet-csv-interop')
           foreach ($sample in $samples) {
+            Write-Host "XPSpreadsheet: compiling $sample"
             dotnet $compilerDll "./demo/spreadsheet/$sample.xps" -o "./out/xp-runtime/$sample" --runtime=false
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            $exe = if (Test-Path "./out/xp-runtime/$sample.exe") { "./out/xp-runtime/$sample.exe" } else { "./out/xp-runtime/$sample" }
-            & $exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $exe = if (Test-Path "./out/xp-runtime/$sample.exe") { (Resolve-Path "./out/xp-runtime/$sample.exe").Path } else { (Resolve-Path "./out/xp-runtime/$sample").Path }
+            Write-Host "XPSpreadsheet: running $sample ($exe)"
+            $runExit = Invoke-RuntimeWithTimeout $exe $runtimeTimeoutMilliseconds "run $sample"
+            if ($runExit -ne 0) { exit $runExit }
+            Write-Host "XPSpreadsheet: completed $sample"
           }
           if (-not $IsWindows) {
             $xlsx = Get-ChildItem -Path . -Filter 'xpspreadsheet-basic.xlsx' -File -Recurse | Select-Object -First 1
