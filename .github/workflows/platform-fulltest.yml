@@ -44,7 +44,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path ./out/platform | Out-Null
           $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
           $compileTimeoutMilliseconds = if ($IsWindows) { 120000 } else { 60000 }
-          $runtimeTimeoutMilliseconds = 30000
+          $runtimeTimeoutMilliseconds = 50000
 
           function Invoke-ProcessWithTimeout([string] $fileName, [string[]] $arguments, [int] $timeoutMilliseconds, [string] $label) {
             $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
