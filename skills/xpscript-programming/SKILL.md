@@ -90,7 +90,7 @@ Each instance must keep its own state.
 
 When using XPDB or XPAI, follow the exact constructor/member names shown by the current database/AI docs and samples. Never infer those signatures from older examples or another language.
 
-For XPAi structured output, prefer defining the desired result shape as an XPscript class and passing an instance to `SetResultClass` rather than hand-building JSON Schema. Public fields and public readable properties form the schema; private backing state is excluded. Use `SystemPrompt` and `UserPrompt` for the common two-part prompt shape, and use `SetJsonSchema` only when a raw provider-specific schema is required. See `docs/xpai-structured-output.md` and `samples/xpai-structured-output.xps`.
+For XPAi structured output, prefer defining the desired result shape as an XPscript class and passing an instance to `SetResultClass` when the contract maps naturally to a class. Public fields and public readable properties form the generated schema; private backing state is excluded. Use `SystemPrompt` and `UserPrompt` for the common two-part prompt shape. Use `SetJsonSchema` for an explicit schema; it accepts `XPJsonSchema` directly as well as `XPJsonObject` or `XPJsonDocument` with an object root. Prefer `XPJsonSchema` over hand-building raw JSON when XPscript's schema API can express the required contract. See `docs/xpai-structured-output.md` and `samples/xpai-structured-output.xps`.
 
 ## Native XML
 
