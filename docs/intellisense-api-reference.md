@@ -78,7 +78,7 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `JsonSchema` | `Dim schema As New XPJsonSchema` | none | Creates a mutable JSON Schema object. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema` | `Dim schema As New XPJsonSchema` | none | Creates a mutable JSON Schema object that can also be passed directly to JSON-aware runtime APIs such as `XPAi.SetJsonSchema`. | [xpai-structured-output.xps](../samples/xpai-structured-output.xps) |
 | `JsonSchema.Parse` | `XPJsonSchema.Parse(text)` | JSON Schema `text`. | Parses a JSON Schema object from JSON text. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonSchema.FromJson` | `XPJsonSchema.FromJson(json)` | example JSON value. | Infers a JSON Schema from an example JSON value, marking inferred object properties as required. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonSchema.Json` | `schema.Json` | none | Returns the schema as an XPJsonDocument. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
