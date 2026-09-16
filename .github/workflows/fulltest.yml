@@ -31,7 +31,9 @@ jobs:
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Run all Windows FullTests
         shell: pwsh
-        run: ./.github/scripts/run-fulltests.ps1
+        run: |
+          ./.github/scripts/run-fulltests.ps1
+          ./.github/scripts/run-xpjsonschema-fulltest.ps1
 
   unix:
     name: ${{ matrix.name }} FullTest
@@ -59,4 +61,6 @@ jobs:
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Run all ${{ matrix.name }} FullTests
         shell: pwsh
-        run: ./.github/scripts/run-fulltests.ps1
+        run: |
+          ./.github/scripts/run-fulltests.ps1
+          ./.github/scripts/run-xpjsonschema-fulltest.ps1
