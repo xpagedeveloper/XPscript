@@ -184,6 +184,18 @@ Sub Main()
     Set unmatchedPatternProperty = XPJsonDocument.Parse("{""other"":1}")
     If patternPropertiesSchema.IsValid(unmatchedPatternProperty) Then Error 5, "Expected additionalProperties=false to reject properties unmatched by patternProperties"
 
+    Dim additionalPropertiesSchema As XPJsonSchema
+    Set additionalPropertiesSchema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string""}},""patternProperties"":{""^S_"":{""type"":""string""}},""additionalProperties"":{""type"":""integer""}}")
+    Dim validAdditionalProperties As XPJsonDocument
+    Set validAdditionalProperties = XPJsonDocument.Parse("{""name"":""Ada"",""S_label"":""ok"",""count"":2}")
+    If Not additionalPropertiesSchema.IsValid(validAdditionalProperties) Then Error 5, "Expected additionalProperties schema to validate unmatched properties"
+    Dim invalidAdditionalProperty As XPJsonDocument
+    Set invalidAdditionalProperty = XPJsonDocument.Parse("{""name"":""Ada"",""count"":""two""}")
+    If additionalPropertiesSchema.IsValid(invalidAdditionalProperty) Then Error 5, "Expected additionalProperties schema to reject an invalid unmatched property"
+    Dim patternPropertyNotAdditional As XPJsonDocument
+    Set patternPropertyNotAdditional = XPJsonDocument.Parse("{""S_label"":""ok""}")
+    If Not additionalPropertiesSchema.IsValid(patternPropertyNotAdditional) Then Error 5, "Expected pattern-matched properties not to be revalidated by additionalProperties"
+
     Dim prefixItemsSchema As XPJsonSchema
     Set prefixItemsSchema = XPJsonSchema.Parse("{""type"":""array"",""prefixItems"":[{""type"":""string""},{""type"":""integer""}],""items"":{""type"":""boolean""}}")
     Dim validTuple As New XPJsonArray
