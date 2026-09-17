@@ -12,9 +12,11 @@ internal static class XpsOpenApiCommand
             return 0;
         }
 
+        if (args[0].Equals("client", StringComparison.OrdinalIgnoreCase)) return RunClient(args[1..]);
+
         var command = args[0].ToLowerInvariant();
         if (command is not ("generate" or "import"))
-            throw new ArgumentException("openapi supports the 'generate' and 'import' commands.");
+            throw new ArgumentException("openapi supports 'generate', 'import', and 'client'.");
         if (args.Length < 2)
             throw new ArgumentException($"openapi {command} requires an OpenAPI .yaml, .yml, or .json specification file.");
 
@@ -42,28 +44,73 @@ internal static class XpsOpenApiCommand
         }
 
         ValidateSpecificationPath(specificationPath);
-        outputPath ??= Path.Combine(
-            Path.GetDirectoryName(specificationPath) ?? Environment.CurrentDirectory,
-            Path.GetFileNameWithoutExtension(specificationPath) + ".xps");
-
-        if (!Path.GetExtension(outputPath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("OpenAPI generated output must use the .xps extension.");
+        outputPath ??= DefaultOutput(specificationPath);
+        ValidateOutputPath(outputPath);
 
         return command == "generate"
             ? Generate(specificationPath, outputPath, force)
             : Import(specificationPath, outputPath);
     }
 
+    private static int RunClient(string[] args)
+    {
+        if (args.Length == 0 || args[0] is "--help" or "-h") { WriteHelp(); return 0; }
+        var command = args[0].ToLowerInvariant();
+        if (command is not ("generate" or "update")) throw new ArgumentException("openapi client supports 'generate' and 'update'.");
+        if (args.Length < 2) throw new ArgumentException($"openapi client {command} requires an OpenAPI specification file.");
+
+        var specificationPath = Path.GetFullPath(args[1]);
+        string? outputPath = null;
+        string? className = null;
+        for (var i = 2; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "-o":
+                case "--output":
+                    if (++i >= args.Length) throw new ArgumentException(args[i - 1] + " requires an output .xps path.");
+                    outputPath = Path.GetFullPath(args[i]);
+                    break;
+                case "--class":
+                    if (++i >= args.Length) throw new ArgumentException("--class requires an XPScript class name.");
+                    className = args[i];
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown openapi client {command} argument: " + args[i]);
+            }
+        }
+
+        ValidateSpecificationPath(specificationPath);
+        outputPath ??= Path.Combine(Path.GetDirectoryName(specificationPath) ?? Environment.CurrentDirectory,
+            Path.GetFileNameWithoutExtension(specificationPath) + ".client.xps");
+        ValidateOutputPath(outputPath);
+
+        if (command == "generate" && File.Exists(outputPath))
+            throw new IOException("Generated client output already exists. Use 'openapi client update' to replace generator-owned output: " + outputPath);
+        if (command == "update" && File.Exists(outputPath))
+        {
+            var existing = File.ReadAllText(outputPath);
+            if (!existing.Contains("<xpscript-openapi-client", StringComparison.Ordinal))
+                throw new IOException("Refusing to update a file that was not created by the OpenAPI client generator: " + outputPath);
+        }
+
+        var result = new XpsOpenApiClientGenerator().GenerateFile(specificationPath, className);
+        var directory = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+        File.WriteAllText(outputPath, result.Source);
+        Console.WriteLine($"{(command == "generate" ? "Generated" : "Updated")} API consumer {outputPath}");
+        Console.WriteLine($"OpenAPI {result.OpenApiVersion}: {result.ClassName}, {result.Operations.Count} operation(s), {result.Models.Count} model(s)");
+        return 0;
+    }
+
     private static int Generate(string specificationPath, string outputPath, bool force)
     {
         if (File.Exists(outputPath) && !force)
             throw new IOException("Generated output already exists. Use --force to overwrite: " + outputPath);
-
         var result = new XpsOpenApiGenerator().GenerateFile(specificationPath);
         var directory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
         File.WriteAllText(outputPath, result.Source);
-
         Console.WriteLine($"Generated {outputPath}");
         Console.WriteLine($"OpenAPI {result.OpenApiVersion}: {result.Operations.Count} endpoint(s), {result.Models.Count} model(s)");
         return 0;
@@ -79,12 +126,9 @@ internal static class XpsOpenApiCommand
             Console.WriteLine($"OpenAPI {generated.OpenApiVersion}: created new file with {generated.Operations.Count} endpoint(s), {generated.Models.Count} model(s)");
             return 0;
         }
-
         var existing = File.ReadAllText(outputPath);
         var result = new XpsOpenApiImporter().ImportFile(specificationPath, existing);
-        if (result.Changed)
-            ValidateAndReplace(outputPath, result.Source);
-
+        if (result.Changed) ValidateAndReplace(outputPath, result.Source);
         Console.WriteLine($"OpenAPI {result.OpenApiVersion} additive import: {(result.Changed ? "updated" : "no additions")}");
         Console.WriteLine($"Added: {result.AddedClasses.Count} class(es), {result.AddedProperties.Count} class property/properties, {result.AddedProcedures.Count} procedure(s)");
         foreach (var item in result.AddedClasses) Console.WriteLine("  + class " + item);
@@ -100,7 +144,6 @@ internal static class XpsOpenApiCommand
         var directory = Path.GetDirectoryName(outputPath);
         if (string.IsNullOrWhiteSpace(directory)) directory = Environment.CurrentDirectory;
         Directory.CreateDirectory(directory);
-
         var tempPath = Path.Combine(directory, "." + Path.GetFileName(outputPath) + ".openapi-import-" + Guid.NewGuid().ToString("N") + ".xps");
         try
         {
@@ -110,10 +153,17 @@ internal static class XpsOpenApiCommand
             finally { unit.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
             File.Move(tempPath, outputPath, overwrite: true);
         }
-        finally
-        {
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
-        }
+        finally { try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { } }
+    }
+
+    private static string DefaultOutput(string specificationPath) => Path.Combine(
+        Path.GetDirectoryName(specificationPath) ?? Environment.CurrentDirectory,
+        Path.GetFileNameWithoutExtension(specificationPath) + ".xps");
+
+    private static void ValidateOutputPath(string outputPath)
+    {
+        if (!Path.GetExtension(outputPath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("OpenAPI generated output must use the .xps extension.");
     }
 
     private static void ValidateSpecificationPath(string specificationPath)
@@ -131,15 +181,18 @@ internal static class XpsOpenApiCommand
 Usage:
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
   xpscript openapi import <spec.yaml|spec.yml|spec.json> [-o output.xps]
+  xpscript openapi client generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--class ApiClass]
+  xpscript openapi client update <spec.yaml|spec.yml|spec.json> [-o output.xps] [--class ApiClass]
 
-`generate` creates a complete XPScript REST server source file. --force replaces an existing output file.
-`import` is additive. Existing classes, properties, Functions, Subs, attributes and bodies are preserved. It only adds missing classes, missing class properties and missing generated procedures. Contract drift is reported as warnings rather than rewriting existing declarations. The merged source must compile before the destination is replaced.
+`generate` and `import` retain their existing REST server behavior.
+`client generate` creates an XPHttpClient-based API consumer.
+`client update` replaces only a generator-owned client file and follows the current OpenAPI contract.
 
 Examples:
-  xpscript openapi generate openapi.yaml
   xpscript openapi generate petstore.yaml -o ./generated/petstore.xps
   xpscript openapi import petstore.yaml -o ./generated/petstore.xps
-  xpscript openapi generate api.json --force
+  xpscript openapi client generate petstore.yaml -o ./generated/petstore.client.xps --class PetStoreApi
+  xpscript openapi client update petstore.yaml -o ./generated/petstore.client.xps --class PetStoreApi
 """);
     }
 }
