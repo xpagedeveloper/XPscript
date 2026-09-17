@@ -11,6 +11,7 @@ End Class
 Sub Main()
     Dim ai As XPAi
     Dim contract As PrivacyAnswer
+    Dim schema As XPJsonSchema
 
     Set ai = New XPAi("https://api.example.com/v1/chat/completions", "test-key")
     ai.Model = "example-model"
@@ -21,14 +22,21 @@ Sub Main()
     ai.JsonSchemaName = "privacy_answer"
     ai.JsonSchemaStrict = True
     Call ai.SetResultClass(contract)
+    If Not ai.HasJsonSchema Then Error 5, "Expected SetResultClass to configure a JSON schema"
 
-    Print "SYSTEM=" & ai.SystemPrompt
-    Print "USER=" & ai.UserPrompt
-    Print "SCHEMA=" & CStr(ai.HasJsonSchema)
+    ' Direct XPJsonSchema/XPAi interop must work at runtime without a network call.
+    Set schema = New XPJsonSchema
+    schema.Type = "object"
+    Call schema.AddString("answer", True)
+    schema.AdditionalProperties = False
+    Call ai.SetJsonSchema(schema)
+    If Not ai.HasJsonSchema Then Error 5, "Expected XPJsonSchema to configure XPAi structured output"
+
+    Call ai.ClearJsonSchema()
+    If ai.HasJsonSchema Then Error 5, "Expected ClearJsonSchema to remove the structured output schema"
 
     Call ai.ClearPrompt()
-    Call ai.ClearJsonSchema()
     Call ai.Dispose()
 
-    Print "XPAI-STRUCTURED-COMPILE=OK"
+    Print "XPAI-STRUCTURED-RUNTIME=OK"
 End Sub

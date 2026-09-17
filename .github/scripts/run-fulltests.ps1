@@ -88,7 +88,8 @@ $r = Invoke-Bounded (Get-XpsExe xpspreadsheet-invalid-format) @() $runtimeTimeou
 if ($r.ExitCode -eq 0 -or $r.Output -notmatch 'supports only \.xlsx files') { throw 'XPSpreadsheet unsupported-format regression failed.' }
 Run-Xps ./samples/native-csv-regression.xps native-csv-regression | Out-Null
 Run-Xps ./samples/native-xml-dom-regression.xps native-xml-dom-regression | Out-Null
-Compile-Xps ./samples/xpai-structured-output.xps xpai-structured
+$r = Run-Xps ./samples/xpai-structured-output.xps xpai-structured
+if ($r.Output -notmatch 'XPAI-STRUCTURED-RUNTIME=OK') { throw 'XPAi structured output runtime regression did not complete.' }
 Write-Host 'XP_RUNTIME_FULLTEST: passed'
 
 Write-Host '=== PLATFORM FULLTEST ==='

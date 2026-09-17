@@ -78,11 +78,9 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `JsonSchema` | `Dim schema As New XPJsonSchema` | none | Creates a mutable JSON Schema object. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema` | `Dim schema As New XPJsonSchema` | none | Creates a mutable JSON Schema object that can also be passed directly to JSON-aware runtime APIs such as `XPAi.SetJsonSchema`. | [xpai-structured-output.xps](../samples/xpai-structured-output.xps) |
 | `JsonSchema.Parse` | `XPJsonSchema.Parse(text)` | JSON Schema `text`. | Parses a JSON Schema object from JSON text. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
-| `JsonSchema.FromJson` | `XPJsonSchema.FromJson(json)` | JSON object/document containing a schema. | Creates a schema from an existing JSON Schema object. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
-| `JsonSchema.Infer` | `XPJsonSchema.Infer(json [, required])` | JSON value; optional required-property flag. | Infers a JSON Schema from an example JSON value. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
-| `JsonSchema.FromValue` | `XPJsonSchema.FromValue(json [, required])` | JSON value; optional required-property flag. | Alias for schema inference from an example value. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonSchema.FromJson` | `XPJsonSchema.FromJson(json)` | example JSON value. | Infers a JSON Schema from an example JSON value, marking inferred object properties as required. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonSchema.Json` | `schema.Json` | none | Returns the schema as an XPJsonDocument. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonSchema.Text` | `schema.Text` | none | Returns compact JSON Schema text. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonSchema.Type` | `schema.Type` | none | Gets or sets the JSON Schema type keyword. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
@@ -106,9 +104,7 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `JsonSchema.Items` | `schema.Items(itemSchema)` | item schema. | Sets the array items schema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonSchema.Clone` | `schema.Clone()` | none | Returns an independent copy of the schema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonSchema.ToString` | `schema.ToString()` | none | Returns compact JSON Schema text. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
-| `JsonSchemaValidator` | `XPJsonSchemaValidator` | none | Runtime JSON Schema validator used by XPJsonSchema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
-| `JsonSchemaValidator.Validate` | `XPJsonSchemaValidator.Validate(schema, json)` | schema and JSON value. | Validates JSON against a schema. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
-| `JsonValidationResult` | `Dim result As XPJsonValidationResult` | none | Represents JSON Schema validation output. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonValidationResult` | `Dim result As XPJsonValidationResult` | none | Represents JSON Schema validation output returned by `schema.Validate`. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.Valid` | `result.Valid` | none | True when validation produced no errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.ErrorCount` | `result.ErrorCount` | none | Number of validation errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.Errors` | `result.Errors` | none | Returns validation errors as XPJsonArray. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |

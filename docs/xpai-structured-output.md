@@ -28,7 +28,7 @@ A request may consist only of `SystemPrompt` and/or `UserPrompt`; `AddMessage` i
 
 ## XPscript class result contracts
 
-The preferred structured-output API is `SetResultClass`.
+The preferred structured-output API is `SetResultClass` when the desired result shape maps naturally to an XPscript class.
 
 Define the shape you want as a normal XPscript class:
 
@@ -88,17 +88,22 @@ Call ai.SetResultClass(contract, "customer_summary", True)
 
 The optional name is the JSON Schema name. The optional strict value overrides `JsonSchemaStrict` for that call.
 
-## Raw JSON Schema
+## Explicit JSON Schema
 
-Use `SetJsonSchema` when a provider requires schema details that cannot be represented by an XPscript class:
+Use `SetJsonSchema` when the schema is built explicitly, including schemas created with `XPJsonSchema` or raw JSON schema objects:
 
 ```xpscript
+Dim schema As New XPJsonSchema
+schema.Type = "object"
+Call schema.AddString("answer", True)
+schema.AdditionalProperties = False
+
 Call ai.SetJsonSchema(schema)
 Call ai.SetJsonSchema(schema, "result_name")
 Call ai.SetJsonSchema(schema, "result_name", True)
 ```
 
-`schema` must be a `XPJsonObject` or `XPJsonDocument` with an object root.
+`schema` may be an `XPJsonSchema`, an `XPJsonObject`, or an `XPJsonDocument` with an object root. `XPJsonSchema` is converted through the native JSON runtime without requiring `XPAi` itself to depend directly on the JSON Schema implementation.
 
 Related properties:
 
@@ -107,7 +112,7 @@ Related properties:
 | `JsonSchemaName` | Schema name. Defaults to `response`. |
 | `JsonSchemaStrict` | Whether the provider JSON Schema request uses strict mode. Defaults to `True`. |
 | `HasJsonSchema` | `True` when a result schema is configured. |
-| `ResponseJsonSchema` | Gets a cloned configured schema, or sets a raw schema. |
+| `ResponseJsonSchema` | Gets a cloned configured schema, or sets an explicit schema. |
 | `ClearJsonSchema()` | Removes the structured-output requirement. |
 
 `response_format` is owned by these dedicated APIs and cannot be set through `SetOption`.
