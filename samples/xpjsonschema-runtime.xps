@@ -38,5 +38,27 @@ Sub Main()
     If Not parsed.IsValid(parsedJson) Then Error 5, "Expected parsed schema to validate matching JSON"
     If parsed.IsValid(validJson) Then Error 5, "Expected parsed schema to reject additional properties"
 
+    ' Composition keywords follow JSON Schema applicator semantics.
+    Dim allOfSchema As XPJsonSchema
+    Set allOfSchema = XPJsonSchema.Parse("{""allOf"":[{""type"":""integer""},{""minimum"":10}]}")
+    If Not allOfSchema.IsValid(12) Then Error 5, "Expected allOf to accept value satisfying every branch"
+    If allOfSchema.IsValid(8) Then Error 5, "Expected allOf to reject value failing one branch"
+
+    Dim anyOfSchema As XPJsonSchema
+    Set anyOfSchema = XPJsonSchema.Parse("{""anyOf"":[{""type"":""string""},{""type"":""integer""}]}")
+    If Not anyOfSchema.IsValid("Ada") Then Error 5, "Expected anyOf to accept matching string branch"
+    If Not anyOfSchema.IsValid(37) Then Error 5, "Expected anyOf to accept matching integer branch"
+    If anyOfSchema.IsValid(True) Then Error 5, "Expected anyOf to reject value matching no branch"
+
+    Dim oneOfSchema As XPJsonSchema
+    Set oneOfSchema = XPJsonSchema.Parse("{""oneOf"":[{""type"":""number""},{""type"":""integer""}]}")
+    If Not oneOfSchema.IsValid(1.5) Then Error 5, "Expected oneOf to accept exactly one matching branch"
+    If oneOfSchema.IsValid(1) Then Error 5, "Expected oneOf to reject value matching multiple branches"
+
+    Dim notSchema As XPJsonSchema
+    Set notSchema = XPJsonSchema.Parse("{""not"":{""type"":""string""}}")
+    If Not notSchema.IsValid(37) Then Error 5, "Expected not to accept a non-matching value"
+    If notSchema.IsValid("Ada") Then Error 5, "Expected not to reject a matching value"
+
     Print "XPJSONSCHEMA-RUNTIME=OK"
 End Sub
