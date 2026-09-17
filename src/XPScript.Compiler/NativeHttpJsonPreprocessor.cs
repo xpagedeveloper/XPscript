@@ -4,10 +4,10 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeHttpJsonPreprocessor
 {
-    private const string NativeTypePattern = "XPHttpClient|XPHttpResponse|XPJsonDocument|XPJsonObject|XPJsonArray|XPJsonElement|XPJsonSchema|XPHttpDbSupabase|XPDbSupabase|XPHttpDbDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|AITool";
+    private const string NativeTypePattern = "XPHttpClient|XPHttpResponse|XPJsonDocument|XPJsonObject|XPJsonArray|XPJsonElement|XPJsonSchema|XPJsonValidationResult|XPHttpDbSupabase|XPDbSupabase|XPHttpDbDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|AITool";
     private static readonly string[] FeatureMarkers =
     [
-        "XPHttpClient", "XPHttpResponse", "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJsonSchema",
+        "XPHttpClient", "XPHttpResponse", "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJsonSchema", "XPJsonValidationResult",
         "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode", "XPHttpDbSupabase", "XPDbSupabase",
         "XPHttpDbDominoRest", "XPDBSQLite", "XPDbMsSql", "XPDbMySql", "XPAi", "AITool"
     ];
