@@ -31,7 +31,6 @@ Start with:
 - `docs/native-http-json.md`
 - `docs/sqlite.md`
 - `docs/mssql.md`
-- `docs/evaluate.md`
 - `docs/security.md` — security boundaries and powerful APIs
 - `docs/diagnostics-security.md` — diagnostic redaction and secret-safe error policy
 
@@ -274,7 +273,7 @@ The complete sample-based grouping is in `docs/index.md`.
 
 ## Samples
 
-The `samples` directory contains XPScript source fixtures for core language features, classes/lists, arrays/operators, HTTP/JSON, text/file I/O, platform behavior, native libraries, Evaluate, security diagnostics and compiler compatibility behavior.
+The `samples` directory contains XPScript source fixtures for core language features, classes/lists, arrays/operators, HTTP/JSON, text/file I/O, platform behavior, native libraries, security diagnostics and compiler compatibility behavior.
 
 Documentation should reuse these samples instead of creating duplicate example programs unless a new example is explicitly needed.
 
