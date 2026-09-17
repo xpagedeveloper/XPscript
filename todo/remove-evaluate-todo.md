@@ -44,7 +44,7 @@ Historical Git commits are not changed.
 ## 5. Samples and fixtures
 
 - [x] Remove all `samples/evaluate-*` files.
-- [ ] Remove Evaluate-specific test fixtures and expected-output files.
+- [x] Remove Evaluate-specific test fixtures and expected-output files.
 - [ ] Remove references to deleted Evaluate samples from sample indexes and scripts.
 - [ ] Verify no generic sample depends on Evaluate indirectly.
 
@@ -60,17 +60,17 @@ Historical Git commits are not changed.
 ## 7. Generated API and IntelliSense surfaces
 
 - [ ] Remove Evaluate from generated API documentation.
-- [ ] Remove Evaluate from IntelliSense metadata and completion data.
+- [x] Remove Evaluate from IntelliSense metadata and completion data.
 - [ ] Remove Evaluate from API manifests, runtime registries and exported symbol lists.
 - [ ] Regenerate generated artifacts where required.
-- [ ] Verify API-sync checks no longer expect Evaluate.
+- [x] Verify API-sync checks no longer expect Evaluate.
 
 ## 8. CI and automated tests
 
-- [ ] Remove Evaluate-specific CI jobs and workflow steps.
-- [ ] Remove Evaluate-specific regression tests from FullTests.
-- [ ] Remove Evaluate-specific fixtures used by CI.
-- [ ] Remove scripts that compile or execute Evaluate samples.
+- [x] Remove Evaluate-specific CI jobs and workflow steps.
+- [x] Remove Evaluate-specific regression tests from FullTests.
+- [x] Remove Evaluate-specific fixtures used by CI.
+- [x] Remove scripts that compile or execute Evaluate samples.
 - [ ] Update test counts or expected test manifests if they are explicit.
 - [ ] Verify permanent cross-platform FullTests still run on supported platforms.
 - [ ] Verify API-sync and documentation checks pass without Evaluate.
