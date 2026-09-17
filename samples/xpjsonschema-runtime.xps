@@ -14,6 +14,7 @@ Sub Main()
     Set validResult = schema.Validate(validJson)
     If Not validResult.Valid Then Error 5, "Expected valid JSON to satisfy schema"
     If validResult.ErrorCount <> 0 Then Error 5, "Expected zero validation errors"
+    If validResult.Errors.Count <> 0 Then Error 5, "Expected empty validation error collection"
 
     Dim invalidJson As XPJsonDocument
     Set invalidJson = XPJsonDocument.Parse("{""name"":""Ada""}")
@@ -21,6 +22,8 @@ Sub Main()
     Set invalidResult = schema.Validate(invalidJson)
     If invalidResult.Valid Then Error 5, "Expected missing required age to fail validation"
     If invalidResult.ErrorCount = 0 Then Error 5, "Expected validation errors for invalid JSON"
+    If invalidResult.Errors.Count <> invalidResult.ErrorCount Then Error 5, "Expected Errors.Count to match ErrorCount"
+    If invalidResult.Json.Text = "" Then Error 5, "Expected validation result JSON"
 
     ' FromJson infers a schema from XPJson data.
     Dim inferred As XPJsonSchema
