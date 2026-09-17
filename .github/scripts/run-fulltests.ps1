@@ -49,6 +49,9 @@ if (Should-Run 'notes') {
 
 if (Should-Run 'runtime') {
   Write-Host '=== XP RUNTIME FULLTEST ==='
+  # Run the actively developed JSON Schema regression first so failures surface before the slower runtime matrix.
+  $jsonSchema = Run-Xps ./samples/xpjsonschema-runtime.xps xpjsonschema-runtime
+  if ($jsonSchema.Output -notmatch 'XPJSONSCHEMA-RUNTIME=OK') { throw 'XPJsonSchema runtime regression did not complete.' }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/SpreadsheetCapabilityProbe/SpreadsheetCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Spreadsheet compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   foreach ($sample in @('xpspreadsheet-basic','xpspreadsheet-worksheets','xpspreadsheet-styles','xpspreadsheet-ranges','xpspreadsheet-formatting','xpspreadsheet-autofilter','xpspreadsheet-csv-interop')) { Run-Xps "./demo/spreadsheet/$sample.xps" $sample | Out-Null }
   if (-not $IsWindows) {
@@ -60,8 +63,6 @@ if (Should-Run 'runtime') {
   $r = Invoke-Bounded (Get-XpsExe xpspreadsheet-invalid-format) @() $runtimeTimeoutMilliseconds 'unsupported spreadsheet format'; if ($r.ExitCode -eq 0 -or $r.Output -notmatch 'supports only \.xlsx files') { throw 'XPSpreadsheet unsupported-format regression failed.' }
   Run-Xps ./samples/native-csv-regression.xps native-csv-regression | Out-Null
   Run-Xps ./samples/native-xml-dom-regression.xps native-xml-dom-regression | Out-Null
-  $jsonSchema = Run-Xps ./samples/xpjsonschema-runtime.xps xpjsonschema-runtime
-  if ($jsonSchema.Output -notmatch 'XPJSONSCHEMA-RUNTIME=OK') { throw 'XPJsonSchema runtime regression did not complete.' }
   $r = Run-Xps ./samples/xpai-structured-output.xps xpai-structured
   if ($r.Output -notmatch 'XPAI-STRUCTURED-RUNTIME=OK') { throw 'XPAi structured output runtime regression did not complete.' }
   Write-Host 'XP_RUNTIME_FULLTEST: passed'
