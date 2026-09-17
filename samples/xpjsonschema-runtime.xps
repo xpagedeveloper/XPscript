@@ -110,7 +110,6 @@ Sub Main()
     If Not multipleOfSchema.IsValid(2.5) Then Error 5, "Expected multipleOf to accept an exact decimal multiple"
     If multipleOfSchema.IsValid(2.6) Then Error 5, "Expected multipleOf to reject a non-multiple"
 
-    ' contains counts matching array items; minContains/maxContains constrain that count.
     Dim containsSchema As XPJsonSchema
     Set containsSchema = XPJsonSchema.Parse("{""type"":""array"",""contains"":{""type"":""integer"",""minimum"":10},""minContains"":2,""maxContains"":3}")
     Dim containsValid As New XPJsonArray
@@ -129,7 +128,6 @@ Sub Main()
     Call containsTooMany.Add(13)
     If containsSchema.IsValid(containsTooMany) Then Error 5, "Expected maxContains to reject too many matching items"
 
-    ' dependentRequired applies only when its triggering property is present.
     Dim dependencySchema As XPJsonSchema
     Set dependencySchema = XPJsonSchema.Parse("{""type"":""object"",""dependentRequired"":{""creditCard"":[""billingAddress""]}}")
     Dim noCreditCard As XPJsonDocument
@@ -142,7 +140,29 @@ Sub Main()
     Set incompletePayment = XPJsonDocument.Parse("{""creditCard"":""1234""}")
     If dependencySchema.IsValid(incompletePayment) Then Error 5, "Expected dependentRequired to reject a missing dependent property"
 
-    ' $schema is metadata and does not constrain an instance by itself.
+    ' dependentSchemas validates the whole object when its trigger is present.
+    Dim dependentSchemasSchema As XPJsonSchema
+    Set dependentSchemasSchema = XPJsonSchema.Parse("{""type"":""object"",""dependentSchemas"":{""creditCard"":{""required"":[""billingAddress""],""properties"":{""billingAddress"":{""type"":""string""}}}}}")
+    If Not dependentSchemasSchema.IsValid(noCreditCard) Then Error 5, "Expected dependentSchemas to be inactive without its trigger"
+    If Not dependentSchemasSchema.IsValid(completePayment) Then Error 5, "Expected dependentSchemas to accept a matching dependent schema"
+    If dependentSchemasSchema.IsValid(incompletePayment) Then Error 5, "Expected dependentSchemas to reject an invalid triggered object"
+
+    ' if/then/else applies only the selected conditional branch.
+    Dim conditionalSchema As XPJsonSchema
+    Set conditionalSchema = XPJsonSchema.Parse("{""type"":""object"",""if"":{""properties"":{""country"":{""const"":""SE""}},""required"":[""country""]},""then"":{""required"":[""postalCode""]},""else"":{""required"":[""region""]}}")
+    Dim swedishAddress As XPJsonDocument
+    Set swedishAddress = XPJsonDocument.Parse("{""country"":""SE"",""postalCode"":""11122""}")
+    If Not conditionalSchema.IsValid(swedishAddress) Then Error 5, "Expected then branch to accept a Swedish address with postalCode"
+    Dim invalidSwedishAddress As XPJsonDocument
+    Set invalidSwedishAddress = XPJsonDocument.Parse("{""country"":""SE""}")
+    If conditionalSchema.IsValid(invalidSwedishAddress) Then Error 5, "Expected then branch to require postalCode"
+    Dim foreignAddress As XPJsonDocument
+    Set foreignAddress = XPJsonDocument.Parse("{""country"":""US"",""region"":""CA""}")
+    If Not conditionalSchema.IsValid(foreignAddress) Then Error 5, "Expected else branch to accept a non-Swedish address with region"
+    Dim invalidForeignAddress As XPJsonDocument
+    Set invalidForeignAddress = XPJsonDocument.Parse("{""country"":""US""}")
+    If conditionalSchema.IsValid(invalidForeignAddress) Then Error 5, "Expected else branch to require region"
+
     Dim dialectSchema As XPJsonSchema
     Set dialectSchema = XPJsonSchema.Parse("{""$schema"":""https://json-schema.org/draft/2020-12/schema""}")
     If Not dialectSchema.IsValid(validJson) Then Error 5, "Expected $schema metadata not to invalidate an instance"
