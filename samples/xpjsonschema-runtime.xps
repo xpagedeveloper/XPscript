@@ -213,6 +213,12 @@ Sub Main()
     Call invalidTupleTail.Add("notBoolean")
     If prefixItemsSchema.IsValid(invalidTupleTail) Then Error 5, "Expected items to validate elements after prefixItems"
 
+    Dim typeArraySchema As XPJsonSchema
+    Set typeArraySchema = XPJsonSchema.Parse("{""type"":[""string"",""null""]}")
+    If Not typeArraySchema.IsValid("Ada") Then Error 5, "Expected type array to accept a matching string"
+    If Not typeArraySchema.IsValid(Null) Then Error 5, "Expected type array to accept null"
+    If typeArraySchema.IsValid(37) Then Error 5, "Expected type array to reject a value matching none of its types"
+
     Dim dialectSchema As XPJsonSchema
     Set dialectSchema = XPJsonSchema.Parse("{""$schema"":""https://json-schema.org/draft/2020-12/schema""}")
     If Not dialectSchema.IsValid(validJson) Then Error 5, "Expected $schema metadata not to invalidate an instance"
