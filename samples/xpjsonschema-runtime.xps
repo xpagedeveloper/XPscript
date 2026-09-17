@@ -70,5 +70,40 @@ Sub Main()
     If Not notSchema.IsValid(37) Then Error 5, "Expected not to accept a non-matching value"
     If notSchema.IsValid("Ada") Then Error 5, "Expected not to reject a matching value"
 
+    ' Object property counts are enforced independently of declared properties.
+    Dim propertyCountSchema As XPJsonSchema
+    Set propertyCountSchema = XPJsonSchema.Parse("{""type"":""object"",""minProperties"":1,""maxProperties"":2}")
+    Dim oneProperty As XPJsonDocument
+    Set oneProperty = XPJsonDocument.Parse("{""a"":1}")
+    Dim threeProperties As XPJsonDocument
+    Set threeProperties = XPJsonDocument.Parse("{""a"":1,""b"":2,""c"":3}")
+    If propertyCountSchema.IsValid(emptyObject) Then Error 5, "Expected minProperties to reject an empty object"
+    If Not propertyCountSchema.IsValid(oneProperty) Then Error 5, "Expected property count inside bounds to validate"
+    If propertyCountSchema.IsValid(threeProperties) Then Error 5, "Expected maxProperties to reject an oversized object"
+
+    ' uniqueItems uses JSON value equality, including structured values.
+    Dim uniqueItemsSchema As XPJsonSchema
+    Set uniqueItemsSchema = XPJsonSchema.Parse("{""type"":""array"",""uniqueItems"":true}")
+    Dim uniqueValues As New XPJsonArray
+    Call uniqueValues.Add(1)
+    Call uniqueValues.Add(2)
+    Call uniqueValues.Add(3)
+    If Not uniqueItemsSchema.IsValid(uniqueValues) Then Error 5, "Expected uniqueItems to accept distinct values"
+
+    Dim duplicateValues As New XPJsonArray
+    Call duplicateValues.Add(1)
+    Call duplicateValues.Add(2)
+    Call duplicateValues.Add(1)
+    If uniqueItemsSchema.IsValid(duplicateValues) Then Error 5, "Expected uniqueItems to reject duplicate values"
+
+    Dim duplicateObjects As New XPJsonArray
+    Dim duplicateObject1 As New XPJsonObject
+    Dim duplicateObject2 As New XPJsonObject
+    Call duplicateObject1.Set("id", 1)
+    Call duplicateObject2.Set("id", 1)
+    Call duplicateObjects.Add(duplicateObject1)
+    Call duplicateObjects.Add(duplicateObject2)
+    If uniqueItemsSchema.IsValid(duplicateObjects) Then Error 5, "Expected uniqueItems to compare structured JSON values"
+
     Print "XPJSONSCHEMA-RUNTIME=OK"
 End Sub
