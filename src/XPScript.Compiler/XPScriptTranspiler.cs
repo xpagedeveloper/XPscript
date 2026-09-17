@@ -41,7 +41,6 @@ public sealed partial class XPScriptTranspiler
     {
         source = new MultilineStringPreprocessor().Transform(source, sourceName);
         source = new EscapedQuotePreprocessor().Transform(source);
-        source = new EvaluateByValSyntaxPreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
         new DateComparisonValidator().Validate(source, sourceName);
         new ClassOverloadValidator().Validate(source, sourceName);
@@ -108,7 +107,6 @@ public sealed partial class XPScriptTranspiler
         protectedSource = operatorArray.TransformProtectedSource(protectedSource);
         protectedSource = new TextIoCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ReferenceRuntimeExtensionsPreprocessor().Transform(protectedSource);
-        protectedSource = new XPScriptEvaluatePreprocessor().Transform(protectedSource);
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
@@ -124,8 +122,6 @@ public sealed partial class XPScriptTranspiler
         generated += "\n\n" + CallbackRuntimeSource.Code + "\n";
         generated += "\n\n" + ExtendedCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
-        generated += "\n\n" + EvaluateArgumentRuntimeSource.Code + "\n";
-        generated += "\n\n" + NormalizeEvaluateRuntime(XPScriptEvaluateRuntimeSource.Code) + "\n";
         generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
         if (usesSpreadsheet) generated += "\n\n" + SpreadsheetRuntimeSource.Code + "\n";
         if (usesNetworkTools) generated += "\n\n" + NetworkToolsRuntimeSource.Code + "\n";
