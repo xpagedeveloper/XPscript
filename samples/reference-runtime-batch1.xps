@@ -28,6 +28,7 @@ Sub Main()
     Print "CVDATE=" & CStr(Year(d))
     Print "ISLIST=" & CStr(IsList(users))
     Print "ISUNKNOWN=" & CStr(IsUnknown(unknownValue))
+    Print "ISNUMERIC=" & CStr(IsNumeric("123.5"))
 
     regexMatches = RegexMatch("A12 B345 C7", "[0-9]+")
     stringMatches = RegexMatch("X9 Y88", "[0-9]+")
