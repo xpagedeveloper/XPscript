@@ -51,8 +51,8 @@ Historical Git commits are not changed.
 ## 6. Documentation
 
 - [x] Remove `docs/evaluate.md` if present.
-- [ ] Remove Evaluate sections and links from language documentation.
-- [ ] Remove Evaluate examples from README files and tutorials.
+- [x] Remove Evaluate sections and links from language documentation.
+- [x] Remove Evaluate examples from README files and tutorials.
 - [ ] Remove Evaluate references from runtime/reference documentation.
 - [x] Remove obsolete Evaluate TODO or closeout documents once their information is no longer needed.
 - [x] Keep historical Git history unchanged.
