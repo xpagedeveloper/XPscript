@@ -22,7 +22,7 @@ Historical Git commits are not changed.
 - [x] Remove Evaluate-specific transpiler branches and code generation.
 - [x] Remove compiler diagnostics that only exist for Evaluate.
 - [x] Remove Evaluate-specific compiler helpers that become unused.
-- [ ] Confirm normal expression, function and procedure compilation is unaffected.
+- [x] Confirm normal expression, function and procedure compilation is unaffected.
 
 ## 3. Preprocessor and postprocessor pipeline
 
@@ -72,19 +72,19 @@ Historical Git commits are not changed.
 - [x] Remove Evaluate-specific fixtures used by CI.
 - [x] Remove scripts that compile or execute Evaluate samples.
 - [ ] Update test counts or expected test manifests if they are explicit.
-- [ ] Verify permanent cross-platform FullTests still run on supported platforms.
-- [ ] Verify API-sync and documentation checks pass without Evaluate.
+- [x] Verify permanent cross-platform FullTests still run on supported platforms.
+- [x] Verify API-sync and documentation checks pass without Evaluate.
 
 ## 9. Build and regression verification
 
-- [ ] Build the full solution after removal.
-- [ ] Run compiler tests.
-- [ ] Run runtime tests.
+- [x] Build the full solution after removal.
+- [x] Run compiler tests.
+- [x] Run runtime tests.
 - [ ] Run FullTests locally where possible.
-- [ ] Verify Windows CI.
-- [ ] Verify Linux CI.
-- [ ] Verify macOS CI.
-- [ ] Verify generated API and documentation checks.
+- [x] Verify Windows CI.
+- [x] Verify Linux CI.
+- [x] Verify macOS CI.
+- [x] Verify generated API and documentation checks.
 - [ ] Fix all warnings caused by dead Evaluate code or unused imports.
 
 ## 10. Final repository sweep
@@ -99,4 +99,4 @@ Historical Git commits are not changed.
 - [ ] Review the branch diff for accidental unrelated changes.
 - [x] Ensure `main` was not modified directly.
 - [ ] Move this TODO to `todo/done/` after all checks pass.
-- [ ] Open the pull request with a summary of removed surfaces and CI verification results.
+- [x] Open the pull request with a summary of removed surfaces and CI verification results.
