@@ -163,6 +163,44 @@ Sub Main()
     Set invalidForeignAddress = XPJsonDocument.Parse("{""country"":""US""}")
     If conditionalSchema.IsValid(invalidForeignAddress) Then Error 5, "Expected else branch to require region"
 
+    Dim propertyNamesSchema As XPJsonSchema
+    Set propertyNamesSchema = XPJsonSchema.Parse("{""type"":""object"",""propertyNames"":{""pattern"":""^[a-z]+$""}}")
+    Dim validPropertyNames As XPJsonDocument
+    Set validPropertyNames = XPJsonDocument.Parse("{""name"":1,""age"":2}")
+    If Not propertyNamesSchema.IsValid(validPropertyNames) Then Error 5, "Expected propertyNames to accept matching names"
+    Dim invalidPropertyNames As XPJsonDocument
+    Set invalidPropertyNames = XPJsonDocument.Parse("{""valid"":1,""BadName"":2}")
+    If propertyNamesSchema.IsValid(invalidPropertyNames) Then Error 5, "Expected propertyNames to reject a non-matching name"
+
+    Dim patternPropertiesSchema As XPJsonSchema
+    Set patternPropertiesSchema = XPJsonSchema.Parse("{""type"":""object"",""patternProperties"":{""^S_"":{""type"":""string""},""^I_"":{""type"":""integer""}},""additionalProperties"":false}")
+    Dim validPatternProperties As XPJsonDocument
+    Set validPatternProperties = XPJsonDocument.Parse("{""S_name"":""Ada"",""I_age"":37}")
+    If Not patternPropertiesSchema.IsValid(validPatternProperties) Then Error 5, "Expected patternProperties to validate matching properties"
+    Dim invalidPatternValue As XPJsonDocument
+    Set invalidPatternValue = XPJsonDocument.Parse("{""S_name"":37}")
+    If patternPropertiesSchema.IsValid(invalidPatternValue) Then Error 5, "Expected patternProperties to validate matching property values"
+    Dim unmatchedPatternProperty As XPJsonDocument
+    Set unmatchedPatternProperty = XPJsonDocument.Parse("{""other"":1}")
+    If patternPropertiesSchema.IsValid(unmatchedPatternProperty) Then Error 5, "Expected additionalProperties=false to reject properties unmatched by patternProperties"
+
+    Dim prefixItemsSchema As XPJsonSchema
+    Set prefixItemsSchema = XPJsonSchema.Parse("{""type"":""array"",""prefixItems"":[{""type"":""string""},{""type"":""integer""}],""items"":{""type"":""boolean""}}")
+    Dim validTuple As New XPJsonArray
+    Call validTuple.Add("Ada")
+    Call validTuple.Add(37)
+    Call validTuple.Add(True)
+    If Not prefixItemsSchema.IsValid(validTuple) Then Error 5, "Expected prefixItems and trailing items to validate a tuple"
+    Dim invalidTuplePrefix As New XPJsonArray
+    Call invalidTuplePrefix.Add(37)
+    Call invalidTuplePrefix.Add(37)
+    If prefixItemsSchema.IsValid(invalidTuplePrefix) Then Error 5, "Expected prefixItems to reject an invalid prefix value"
+    Dim invalidTupleTail As New XPJsonArray
+    Call invalidTupleTail.Add("Ada")
+    Call invalidTupleTail.Add(37)
+    Call invalidTupleTail.Add("notBoolean")
+    If prefixItemsSchema.IsValid(invalidTupleTail) Then Error 5, "Expected items to validate elements after prefixItems"
+
     Dim dialectSchema As XPJsonSchema
     Set dialectSchema = XPJsonSchema.Parse("{""$schema"":""https://json-schema.org/draft/2020-12/schema""}")
     If Not dialectSchema.IsValid(validJson) Then Error 5, "Expected $schema metadata not to invalidate an instance"
