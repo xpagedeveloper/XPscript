@@ -115,6 +115,8 @@ internal static class XPScriptJsonSchemaValidator
         if (node is System.Text.Json.Nodes.JsonObject obj)
         {
             var properties = schema["properties"] as System.Text.Json.Nodes.JsonObject;
+            if (schema["minProperties"] is System.Text.Json.Nodes.JsonValue minProperties && minProperties.TryGetValue<int>(out var min) && obj.Count < min) Add(errors, path, "minProperties", "Object has too few properties.", min.ToString(), obj.Count.ToString());
+            if (schema["maxProperties"] is System.Text.Json.Nodes.JsonValue maxProperties && maxProperties.TryGetValue<int>(out var max) && obj.Count > max) Add(errors, path, "maxProperties", "Object has too many properties.", max.ToString(), obj.Count.ToString());
             if (schema["required"] is System.Text.Json.Nodes.JsonArray required)
                 foreach (var item in required) { var name = ReadString(item); if (name.Length > 0 && !obj.ContainsKey(name)) Add(errors, Child(path, name), "required", "Required property is missing.", "present", "missing"); }
             if (properties is not null)
@@ -126,6 +128,14 @@ internal static class XPScriptJsonSchemaValidator
         {
             if (schema["minItems"] is System.Text.Json.Nodes.JsonValue minItems && minItems.TryGetValue<int>(out var min) && array.Count < min) Add(errors, path, "minItems", "Array has too few items.", min.ToString(), array.Count.ToString());
             if (schema["maxItems"] is System.Text.Json.Nodes.JsonValue maxItems && maxItems.TryGetValue<int>(out var max) && array.Count > max) Add(errors, path, "maxItems", "Array has too many items.", max.ToString(), array.Count.ToString());
+            if (schema["uniqueItems"] is System.Text.Json.Nodes.JsonValue uniqueItems && uniqueItems.TryGetValue<bool>(out var requireUnique) && requireUnique)
+            {
+                var duplicate = false;
+                for (var i = 0; i < array.Count && !duplicate; i++)
+                    for (var j = i + 1; j < array.Count; j++)
+                        if (System.Text.Json.Nodes.JsonNode.DeepEquals(array[i], array[j])) { duplicate = true; break; }
+                if (duplicate) Add(errors, path, "uniqueItems", "Array items must be unique.", "unique items", "duplicate items");
+            }
             if (schema["items"] is System.Text.Json.Nodes.JsonObject itemSchema) for (var i = 0; i < array.Count; i++) ValidateNode(itemSchema, array[i], path + "[" + i + "]", errors, depth + 1);
         }
         else if (node is System.Text.Json.Nodes.JsonValue scalar)
