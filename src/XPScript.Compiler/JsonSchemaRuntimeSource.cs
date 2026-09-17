@@ -116,9 +116,13 @@ internal static class XPScriptJsonSchemaValidator
         if (node is System.Text.Json.Nodes.JsonObject obj)
         {
             var properties = schema["properties"] as System.Text.Json.Nodes.JsonObject;
+            var patternProperties = schema["patternProperties"] as System.Text.Json.Nodes.JsonObject;
             if (schema["minProperties"] is System.Text.Json.Nodes.JsonValue minProperties && minProperties.TryGetValue<int>(out var min) && obj.Count < min) Add(errors, path, "minProperties", "Object has too few properties.", min.ToString(), obj.Count.ToString());
             if (schema["maxProperties"] is System.Text.Json.Nodes.JsonValue maxProperties && maxProperties.TryGetValue<int>(out var max) && obj.Count > max) Add(errors, path, "maxProperties", "Object has too many properties.", max.ToString(), obj.Count.ToString());
             if (schema["required"] is System.Text.Json.Nodes.JsonArray required) foreach (var item in required) { var name = ReadString(item); if (name.Length > 0 && !obj.ContainsKey(name)) Add(errors, Child(path, name), "required", "Required property is missing.", "present", "missing"); }
+            if (schema["propertyNames"] is System.Text.Json.Nodes.JsonObject propertyNamesSchema)
+                foreach (var property in obj)
+                    if (!IsValidAgainst(propertyNamesSchema, System.Text.Json.Nodes.JsonValue.Create(property.Key), Child(path, property.Key), depth + 1)) Add(errors, Child(path, property.Key), "propertyNames", "Property name does not satisfy propertyNames schema.", "matching property name", property.Key);
             if (schema["dependentRequired"] is System.Text.Json.Nodes.JsonObject dependentRequired)
                 foreach (var dependency in dependentRequired)
                     if (obj.ContainsKey(dependency.Key) && dependency.Value is System.Text.Json.Nodes.JsonArray names)
@@ -128,7 +132,23 @@ internal static class XPScriptJsonSchemaValidator
                     if (obj.ContainsKey(dependency.Key) && dependency.Value is System.Text.Json.Nodes.JsonObject dependentSchema)
                         ValidateNode(dependentSchema, obj, path, errors, depth + 1);
             if (properties is not null) foreach (var property in properties) if (property.Value is System.Text.Json.Nodes.JsonObject childSchema && obj.TryGetPropertyValue(property.Key, out var child)) ValidateNode(childSchema, child, Child(path, property.Key), errors, depth + 1);
-            if (schema["additionalProperties"] is System.Text.Json.Nodes.JsonValue ap && ap.TryGetValue<bool>(out var allow) && !allow) foreach (var property in obj) if (properties is null || !properties.ContainsKey(property.Key)) Add(errors, Child(path, property.Key), "additionalProperties", "Additional property is not allowed.", "declared property", property.Key);
+            if (patternProperties is not null)
+                foreach (var pattern in patternProperties)
+                    if (pattern.Value is System.Text.Json.Nodes.JsonObject patternSchema)
+                    {
+                        try { foreach (var property in obj) if (System.Text.RegularExpressions.Regex.IsMatch(property.Key, pattern.Key, System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250))) ValidateNode(patternSchema, property.Value, Child(path, property.Key), errors, depth + 1); }
+                        catch (ArgumentException) { Add(errors, path, "patternProperties", "Schema contains an invalid property-name regular expression.", "valid regex", pattern.Key); }
+                    }
+            if (schema["additionalProperties"] is System.Text.Json.Nodes.JsonValue ap && ap.TryGetValue<bool>(out var allow) && !allow)
+                foreach (var property in obj)
+                {
+                    var declared = properties is not null && properties.ContainsKey(property.Key);
+                    var patternMatched = false;
+                    if (!declared && patternProperties is not null)
+                        foreach (var pattern in patternProperties)
+                            try { if (System.Text.RegularExpressions.Regex.IsMatch(property.Key, pattern.Key, System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250))) { patternMatched = true; break; } } catch (ArgumentException) { }
+                    if (!declared && !patternMatched) Add(errors, Child(path, property.Key), "additionalProperties", "Additional property is not allowed.", "declared or pattern-matched property", property.Key);
+                }
         }
         else if (node is System.Text.Json.Nodes.JsonArray array)
         {
@@ -147,7 +167,13 @@ internal static class XPScriptJsonSchemaValidator
                 if (matches < minContains) Add(errors, path, "contains", "Array has too few items matching contains.", "at least " + minContains + " matching items", matches + " matching items");
                 if (maxContains.HasValue && matches > maxContains.Value) Add(errors, path, "maxContains", "Array has too many items matching contains.", "at most " + maxContains.Value + " matching items", matches + " matching items");
             }
-            if (schema["items"] is System.Text.Json.Nodes.JsonObject itemSchema) for (var i = 0; i < array.Count; i++) ValidateNode(itemSchema, array[i], path + "[" + i + "]", errors, depth + 1);
+            var prefixCount = 0;
+            if (schema["prefixItems"] is System.Text.Json.Nodes.JsonArray prefixItems)
+            {
+                prefixCount = prefixItems.Count;
+                for (var i = 0; i < prefixItems.Count && i < array.Count; i++) if (prefixItems[i] is System.Text.Json.Nodes.JsonObject prefixSchema) ValidateNode(prefixSchema, array[i], path + "[" + i + "]", errors, depth + 1);
+            }
+            if (schema["items"] is System.Text.Json.Nodes.JsonObject itemSchema) for (var i = prefixCount; i < array.Count; i++) ValidateNode(itemSchema, array[i], path + "[" + i + "]", errors, depth + 1);
         }
         else if (node is System.Text.Json.Nodes.JsonValue scalar)
         {
