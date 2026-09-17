@@ -40,23 +40,22 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 15. [Compact command index](commands.md), a concise compatibility overview.
 16. [Core command examples](command-examples.md), minimal copy/paste examples for common language constructs.
 17. [Date and time](date-time.md), date functions, Date object enhancements and OS formatting metadata.
-18. [Evaluate](evaluate.md), dynamic XPScript evaluation.
-19. [Classes](classes.md), classes, constructors, properties, object references and module state.
-20. [Web programming](web.md), routing, HTTP methods, Request, Response, Session, Application, route rules and precompile.
-21. [REST API development](rest-api.md), explicit routes, binding, validation, Response helpers, CORS, rate limiting and state scopes.
-22. [CSRF protection](csrf.md), automatic UIForm protection, manual forms, custom browser requests, bearer APIs and browser WebAssembly challenge/retry.
-23. [WebIIS deployment target](webiis.md), build a normal IIS deployable package with ASP.NET Core Module V2, ZIP and Web Deploy support.
-24. [Hosting on IIS](iis-hosting.md), alternative production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.
-25. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
-26. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
-27. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
-28. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
-29. [SQLite database](sqlite.md), local parameterized SQL, JSON query results, transactions and file-path boundaries.
-30. [SQL Server database](mssql.md), SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.
-31. [XPAi client](ai.md), OpenAI-compatible AI requests, provider configuration, response metadata and SSE streaming.
-32. [XPAi tools and session memory](ai-tools-sessions.md), AITool schemas/callbacks, automatic tool execution and provider session continuation.
-33. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
-34. [Documentation rules](documentation-rules.md), the required structure and CI validation for command/API documentation and demos.
+18. [Classes](classes.md), classes, constructors, properties, object references and module state.
+19. [Web programming](web.md), routing, HTTP methods, Request, Response, Session, Application, route rules and precompile.
+20. [REST API development](rest-api.md), explicit routes, binding, validation, Response helpers, CORS, rate limiting and state scopes.
+21. [CSRF protection](csrf.md), automatic UIForm protection, manual forms, custom browser requests, bearer APIs and browser WebAssembly challenge/retry.
+22. [WebIIS deployment target](webiis.md), build a normal IIS deployable package with ASP.NET Core Module V2, ZIP and Web Deploy support.
+23. [Hosting on IIS](iis-hosting.md), alternative production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.
+24. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
+25. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
+26. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
+27. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
+28. [SQLite database](sqlite.md), local parameterized SQL, JSON query results, transactions and file-path boundaries.
+29. [SQL Server database](mssql.md), SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.
+30. [XPAi client](ai.md), OpenAI-compatible AI requests, provider configuration, response metadata and SSE streaming.
+31. [XPAi tools and session memory](ai-tools-sessions.md), AITool schemas/callbacks, automatic tool execution and provider session continuation.
+32. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
+33. [Documentation rules](documentation-rules.md), the required structure and CI validation for command/API documentation and demos.
 
 ## How XPScript runs
 
