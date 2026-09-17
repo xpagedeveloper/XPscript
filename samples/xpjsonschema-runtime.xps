@@ -23,7 +23,7 @@ Sub Main()
     If invalidResult.Valid Then Error 5, "Expected missing required age to fail validation"
     If invalidResult.ErrorCount = 0 Then Error 5, "Expected validation errors for invalid JSON"
     If invalidResult.Errors.Count <> invalidResult.ErrorCount Then Error 5, "Expected Errors.Count to match ErrorCount"
-    If invalidResult.Json.Text = "" Then Error 5, "Expected validation result JSON"
+    If invalidResult.Json.Stringify() = "" Then Error 5, "Expected validation result JSON"
 
     Dim inferred As XPJsonSchema
     Set inferred = XPJsonSchema.FromJson(validJson)
