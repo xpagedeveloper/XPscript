@@ -88,6 +88,27 @@ internal static class XPScriptJsonSchemaValidator
         var expectedType = ReadString(schema["type"]);
         if (expectedType.Length > 0 && !MatchesType(node, expectedType)) { Add(errors, path, "type", "Value does not match the required JSON type.", expectedType, ActualType(node)); return; }
 
+        if (schema["allOf"] is System.Text.Json.Nodes.JsonArray allOf)
+        {
+            for (var i = 0; i < allOf.Count; i++)
+                if (allOf[i] is System.Text.Json.Nodes.JsonObject childSchema && !IsValidAgainst(childSchema, node, path, depth + 1))
+                    Add(errors, path, "allOf", "Value does not satisfy every allOf schema.", "all schemas", "schema " + i + " failed");
+        }
+        if (schema["anyOf"] is System.Text.Json.Nodes.JsonArray anyOf)
+        {
+            var matches = 0;
+            foreach (var child in anyOf) if (child is System.Text.Json.Nodes.JsonObject childSchema && IsValidAgainst(childSchema, node, path, depth + 1)) matches++;
+            if (matches == 0) Add(errors, path, "anyOf", "Value does not satisfy any anyOf schema.", "at least one schema", "0 schemas");
+        }
+        if (schema["oneOf"] is System.Text.Json.Nodes.JsonArray oneOf)
+        {
+            var matches = 0;
+            foreach (var child in oneOf) if (child is System.Text.Json.Nodes.JsonObject childSchema && IsValidAgainst(childSchema, node, path, depth + 1)) matches++;
+            if (matches != 1) Add(errors, path, "oneOf", "Value must satisfy exactly one oneOf schema.", "1 schema", matches + " schemas");
+        }
+        if (schema["not"] is System.Text.Json.Nodes.JsonObject notSchema && IsValidAgainst(notSchema, node, path, depth + 1))
+            Add(errors, path, "not", "Value satisfies a schema that must not match.", "schema mismatch", "schema matched");
+
         if (schema["const"] is System.Text.Json.Nodes.JsonNode constNode && !System.Text.Json.Nodes.JsonNode.DeepEquals(node, constNode)) Add(errors, path, "const", "Value does not match const.", constNode.ToJsonString(), Display(node));
         if (schema["enum"] is System.Text.Json.Nodes.JsonArray enumValues && !enumValues.Any(x => System.Text.Json.Nodes.JsonNode.DeepEquals(node, x))) Add(errors, path, "enum", "Value is not one of the allowed values.", enumValues.ToJsonString(), Display(node));
 
@@ -123,6 +144,12 @@ internal static class XPScriptJsonSchemaValidator
         }
     }
 
+    private static bool IsValidAgainst(System.Text.Json.Nodes.JsonObject schema, System.Text.Json.Nodes.JsonNode? node, string path, int depth)
+    {
+        var branchErrors = new System.Text.Json.Nodes.JsonArray();
+        ValidateNode(schema, node, path, branchErrors, depth);
+        return branchErrors.Count == 0;
+    }
     private static bool MatchesType(System.Text.Json.Nodes.JsonNode? node, string type) => type.ToLowerInvariant() switch { "null" => node is null, "object" => node is System.Text.Json.Nodes.JsonObject, "array" => node is System.Text.Json.Nodes.JsonArray, "boolean" => node is System.Text.Json.Nodes.JsonValue b && b.TryGetValue<bool>(out _), "string" => node is System.Text.Json.Nodes.JsonValue s && s.TryGetValue<string>(out _), "integer" => node is System.Text.Json.Nodes.JsonValue i && (i.TryGetValue<int>(out _) || i.TryGetValue<long>(out _)), "number" => node is System.Text.Json.Nodes.JsonValue n && TryNumber(n, out _), _ => true };
     private static bool TryNumber(System.Text.Json.Nodes.JsonNode? node, out decimal value) { value = 0; if (node is not System.Text.Json.Nodes.JsonValue v || v.TryGetValue<bool>(out _)) return false; if (v.TryGetValue<decimal>(out value)) return true; if (v.TryGetValue<long>(out var l)) { value = l; return true; } if (v.TryGetValue<double>(out var d) && double.IsFinite(d)) { try { value = (decimal)d; return true; } catch (OverflowException) { return false; } } return false; }
     private static string ActualType(System.Text.Json.Nodes.JsonNode? node) { if (node is null) return "null"; if (node is System.Text.Json.Nodes.JsonObject) return "object"; if (node is System.Text.Json.Nodes.JsonArray) return "array"; if (node is System.Text.Json.Nodes.JsonValue v) { if (v.TryGetValue<bool>(out _)) return "boolean"; if (v.TryGetValue<string>(out _)) return "string"; if (v.TryGetValue<int>(out _) || v.TryGetValue<long>(out _)) return "integer"; if (TryNumber(v, out _)) return "number"; } return "unknown"; }
