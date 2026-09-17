@@ -22,6 +22,10 @@ foreach ($row in $rows) {
 }
 
 $content = Get-Content -LiteralPath $file -Raw
+if ($content -match '(?i)\bEvaluate\b') {
+    $errors.Add('Machine-readable IntelliSense API reference still exposes removed Evaluate support.')
+}
+
 $required = @(
     'NotesSession.HashPassword',
     'NotesSession.VerifyPassword',
