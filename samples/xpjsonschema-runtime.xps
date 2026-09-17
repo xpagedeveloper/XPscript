@@ -219,6 +219,12 @@ Sub Main()
     If Not typeArraySchema.IsValid(Null) Then Error 5, "Expected type array to accept null"
     If typeArraySchema.IsValid(37) Then Error 5, "Expected type array to reject a value matching none of its types"
 
+    Dim integerSemanticsSchema As XPJsonSchema
+    Set integerSemanticsSchema = XPJsonSchema.Parse("{""type"":""integer""}")
+    If Not integerSemanticsSchema.IsValid(1) Then Error 5, "Expected integer type to accept integral values"
+    If Not integerSemanticsSchema.IsValid(1.0) Then Error 5, "Expected integer type to accept numbers with zero fractional part"
+    If integerSemanticsSchema.IsValid(1.5) Then Error 5, "Expected integer type to reject fractional numbers"
+
     Dim dialectSchema As XPJsonSchema
     Set dialectSchema = XPJsonSchema.Parse("{""$schema"":""https://json-schema.org/draft/2020-12/schema""}")
     If Not dialectSchema.IsValid(validJson) Then Error 5, "Expected $schema metadata not to invalidate an instance"
