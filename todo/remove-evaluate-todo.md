@@ -53,16 +53,16 @@ Historical Git commits are not changed.
 - [x] Remove `docs/evaluate.md` if present.
 - [x] Remove Evaluate sections and links from language documentation.
 - [x] Remove Evaluate examples from README files and tutorials.
-- [ ] Remove Evaluate references from runtime/reference documentation.
+- [x] Remove Evaluate references from runtime/reference documentation.
 - [x] Remove obsolete Evaluate TODO or closeout documents once their information is no longer needed.
 - [x] Keep historical Git history unchanged.
 
 ## 7. Generated API and IntelliSense surfaces
 
-- [ ] Remove Evaluate from generated API documentation.
+- [x] Remove Evaluate from generated API documentation.
 - [x] Remove Evaluate from IntelliSense metadata and completion data.
 - [ ] Remove Evaluate from API manifests, runtime registries and exported symbol lists.
-- [ ] Regenerate generated artifacts where required.
+- [x] Regenerate generated artifacts where required.
 - [x] Verify API-sync checks no longer expect Evaluate.
 
 ## 8. CI and automated tests
