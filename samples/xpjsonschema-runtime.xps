@@ -105,5 +105,17 @@ Sub Main()
     Call duplicateObjects.Add(duplicateObject2)
     If uniqueItemsSchema.IsValid(duplicateObjects) Then Error 5, "Expected uniqueItems to compare structured JSON values"
 
+    ' Numeric validation supports exclusive bounds and decimal multiples.
+    Dim numericBoundsSchema As XPJsonSchema
+    Set numericBoundsSchema = XPJsonSchema.Parse("{""type"":""number"",""exclusiveMinimum"":1,""exclusiveMaximum"":10}")
+    If numericBoundsSchema.IsValid(1) Then Error 5, "Expected exclusiveMinimum to reject its boundary"
+    If Not numericBoundsSchema.IsValid(1.5) Then Error 5, "Expected exclusive numeric bounds to accept an interior value"
+    If numericBoundsSchema.IsValid(10) Then Error 5, "Expected exclusiveMaximum to reject its boundary"
+
+    Dim multipleOfSchema As XPJsonSchema
+    Set multipleOfSchema = XPJsonSchema.Parse("{""type"":""number"",""multipleOf"":0.5}")
+    If Not multipleOfSchema.IsValid(2.5) Then Error 5, "Expected multipleOf to accept an exact decimal multiple"
+    If multipleOfSchema.IsValid(2.6) Then Error 5, "Expected multipleOf to reject a non-multiple"
+
     Print "XPJSONSCHEMA-RUNTIME=OK"
 End Sub
