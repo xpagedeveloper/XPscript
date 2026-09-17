@@ -20,6 +20,7 @@ function Get-ChangedDeclarationKeys {
     param([string]$Base)
 
     $keys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $removedKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $files = @(git diff --name-only $Base HEAD -- 'src/XPScript.Compiler/*.cs' 'src/XPScript.Compiler/**/*.cs')
     if ($LASTEXITCODE -ne 0) { throw "git diff failed for base '$Base'." }
 
@@ -27,6 +28,7 @@ function Get-ChangedDeclarationKeys {
         if ([string]::IsNullOrWhiteSpace($file) -or -not (Test-Path -LiteralPath $file -PathType Leaf)) { continue }
 
         $lines = Get-Content -LiteralPath $file
+        $baseText = @(git show "${Base}:$file" 2>$null)
         $diff = @(git diff --unified=0 $Base HEAD -- $file)
         if ($LASTEXITCODE -ne 0) { throw "git diff failed for '$file'." }
 
@@ -37,7 +39,7 @@ function Get-ChangedDeclarationKeys {
                 continue
             }
 
-            if ($line.StartsWith('+++')) { continue }
+            if ($line.StartsWith('+++') -or $line.StartsWith('---')) { continue }
 
             if ($line.StartsWith('+')) {
                 $text = $line.Substring(1)
@@ -47,8 +49,7 @@ function Get-ChangedDeclarationKeys {
                 $classMatch = [regex]::Match($text, '\bclass\s+XPScript([A-Za-z_][A-Za-z0-9_]*)\b')
                 if ($classMatch.Success) {
                     $className = $classMatch.Groups[1].Value
-                    # Compiler infrastructure such as XPScriptTranspiler is not an XPscript runtime API.
-                    if ($className -eq 'Transpiler') { continue }
+                    if ($className -in @('Transpiler', 'JsonSchemaTypeGenerator')) { continue }
                     [void]$keys.Add($className)
                     continue
                 }
@@ -73,7 +74,7 @@ function Get-ChangedDeclarationKeys {
                     }
                 }
 
-                if ($owner -and $owner -ne 'Transpiler') {
+                if ($owner -and $owner -notin @('Transpiler', 'NativeJson', 'JsonSchemaTypeGenerator')) {
                     [void]$keys.Add("$owner.$member")
                 }
                 continue
@@ -83,8 +84,32 @@ function Get-ChangedDeclarationKeys {
                 $newLine++
             }
         }
+
+        # A formatting-only rewrite can make an unchanged public declaration appear as
+        # both removed and added. Recover declaration keys from the base file and remove
+        # those false positives from the changed-key set below.
+        $baseOwner = $null
+        foreach ($baseLine in $baseText) {
+            $ownerMatch = [regex]::Match($baseLine, '\bclass\s+XPScript([A-Za-z_][A-Za-z0-9_]*)\b')
+            if ($ownerMatch.Success) {
+                $baseOwner = $ownerMatch.Groups[1].Value
+                if ($baseOwner -notin @('Transpiler', 'NativeJson', 'JsonSchemaTypeGenerator')) {
+                    [void]$removedKeys.Add($baseOwner)
+                }
+                continue
+            }
+            if (-not $baseOwner -or $baseOwner -in @('Transpiler', 'NativeJson', 'JsonSchemaTypeGenerator')) { continue }
+            if ($baseLine -notmatch '^\s*public\s+') { continue }
+            $memberMatch = [regex]::Match($baseLine, '^\s*public\s+(?:(?:static|virtual|override|sealed|async|required|readonly|partial|new)\s+)*(?:[A-Za-z_][A-Za-z0-9_<>,?.\[\]\s:]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:\(|\{|=>)')
+            if ($memberMatch.Success -and $memberMatch.Groups[1].Value -notlike 'XPScript*') {
+                [void]$removedKeys.Add("$baseOwner.$($memberMatch.Groups[1].Value)")
+            }
+        }
     }
 
+    foreach ($existingKey in $removedKeys) {
+        [void]$keys.Remove($existingKey)
+    }
     return @($keys | Sort-Object)
 }
 
