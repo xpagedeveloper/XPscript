@@ -150,6 +150,9 @@ internal static class XPScriptJsonSchemaValidator
             {
                 if (TryNumber(schema["minimum"], out var minimum) && number < minimum) Add(errors, path, "minimum", "Number is below the minimum.", minimum.ToString(System.Globalization.CultureInfo.InvariantCulture), number.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 if (TryNumber(schema["maximum"], out var maximum) && number > maximum) Add(errors, path, "maximum", "Number is above the maximum.", maximum.ToString(System.Globalization.CultureInfo.InvariantCulture), number.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                if (TryNumber(schema["exclusiveMinimum"], out var exclusiveMinimum) && number <= exclusiveMinimum) Add(errors, path, "exclusiveMinimum", "Number must be greater than the exclusive minimum.", exclusiveMinimum.ToString(System.Globalization.CultureInfo.InvariantCulture), number.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                if (TryNumber(schema["exclusiveMaximum"], out var exclusiveMaximum) && number >= exclusiveMaximum) Add(errors, path, "exclusiveMaximum", "Number must be less than the exclusive maximum.", exclusiveMaximum.ToString(System.Globalization.CultureInfo.InvariantCulture), number.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                if (TryNumber(schema["multipleOf"], out var multipleOf) && multipleOf > 0 && number % multipleOf != 0) Add(errors, path, "multipleOf", "Number is not a multiple of the required value.", multipleOf.ToString(System.Globalization.CultureInfo.InvariantCulture), number.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
         }
     }
