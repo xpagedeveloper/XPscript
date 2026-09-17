@@ -15,6 +15,6 @@ parameters:
   - name: "count"
     required: false
     description: "Optional number of characters to return."
-example: "/samples/evaluate-standard-functions.xps"
+example: "/samples/compatibility.xps"
 migration: complete
 ---
