@@ -77,10 +77,22 @@ jobs:
         run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-session-database-open-runtime-test.xps ./out/notes-core-database.exe
 
   fulltest-windows:
-    name: Windows FullTest
+    name: Windows ${{ matrix.name }} FullTest
     needs: compile-windows
     runs-on: windows-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Language
+            suite: language
+          - name: Notes
+            suite: notes
+          - name: XP Runtime
+            suite: runtime
+          - name: Platform
+            suite: platform
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
@@ -91,9 +103,9 @@ jobs:
         run: |
           dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      - name: Run all Windows FullTests
+      - name: Run Windows ${{ matrix.name }} FullTest
         shell: pwsh
-        run: ./.github/scripts/run-fulltests.ps1
+        run: ./.github/scripts/run-fulltests.ps1 -Suite ${{ matrix.suite }}
 
   compile-linux:
     name: Compile Linux
