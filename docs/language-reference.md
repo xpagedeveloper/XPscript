@@ -17,7 +17,6 @@ Every row has a command title, syntax, parameter description, short behavior des
 - [File and filesystem](#file-and-filesystem)
 - [Console, environment and process](#console-environment-and-process)
 - [Classes, types and properties](#classes-types-and-properties)
-- [Evaluate](#evaluate)
 - [Native and managed interop](#native-and-managed-interop)
 - [Compiler CLI](#compiler-cli)
 
@@ -59,7 +58,7 @@ Every row has a command title, syntax, parameter description, short behavior des
 | `While` / `Wend` | `While condition ... Wend` | loop condition. | Legacy-style while loop. | [statement-layout-audit.xps](../samples/statement-layout-audit.xps) |
 | `GoTo` | `GoTo label` | label in current procedure. | Jumps to a label. | [core-language.xps](../samples/core-language.xps) |
 | `GoSub` | `GoSub label` | label in current procedure. | Calls a label block and returns with `Return`. | [core-language.xps](../samples/core-language.xps) |
-| `Return` | `Return [value]` | optional return value/context. | Returns from GoSub or supported Evaluate/procedure contexts. | [evaluate-xpscript.xps](../samples/evaluate-xpscript.xps) |
+| `Return` | `Return` | none | Returns from a GoSub label block to the calling statement. | [core-language.xps](../samples/core-language.xps) |
 | `On Error GoTo` | `On Error GoTo label` | error-handler label. | Installs procedure error handler. | [core-language.xps](../samples/core-language.xps) |
 | `On Error Resume Next` | `On Error Resume Next` | none | Continues at the next statement after runtime errors. | [nested-resume-targets.xps](../samples/nested-resume-targets.xps) |
 | `Resume` | `Resume [Next|label]` | optional resume target. | Resumes after a handled error. | [nested-resume-targets.xps](../samples/nested-resume-targets.xps) |
@@ -99,11 +98,11 @@ Array-consuming operations normalize an object reference whose value is `Nothing
 | `Array` | `Array(value1, value2, ...)` | values. | Creates Variant array. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `Join` | `Join(array [, delimiter])` | array and optional delimiter. | Joins array values into text. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `Explode` | `Explode(text [, delimiter])` | text and optional delimiter. | Splits text into array. | [operators-arrays.xps](../samples/operators-arrays.xps) |
-| `ArrayAppend` | `ArrayAppend(array, value)` | array and value. | Appends a value using array helper semantics. | [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) |
-| `ArrayGetIndex` | `ArrayGetIndex(array, value)` | array and search value. | Finds matching index. | [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) |
-| `ArrayUnique` | `ArrayUnique(array)` | array. | Returns values without duplicates. | [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) |
-| `ArraySlice` | `ArraySlice(array, start [, count])` | array, start, optional count. | Returns slice. | [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) |
-| `ArraySplice` | `ArraySplice(array, start, count [, replacement])` | array, range, optional replacement. | Removes/replaces range. | [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) |
+| `ArrayAppend` | `ArrayAppend(array, value)` | array and value. | Appends a value using array helper semantics. | [operators-arrays.xps](../samples/operators-arrays.xps) |
+| `ArrayGetIndex` | `ArrayGetIndex(array, value)` | array and search value. | Finds matching index. | [operators-arrays.xps](../samples/operators-arrays.xps) |
+| `ArrayUnique` | `ArrayUnique(array)` | array. | Returns values without duplicates. | [operators-arrays.xps](../samples/operators-arrays.xps) |
+| `ArraySlice` | `ArraySlice(array, start [, count])` | array, start, optional count. | Returns slice. | [operators-arrays.xps](../samples/operators-arrays.xps) |
+| `ArraySplice` | `ArraySplice(array, start, count [, replacement])` | array, range, optional replacement. | Removes/replaces range. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `IsElement` | `IsElement(list(tag))` | keyed list element. | Tests whether list element exists. | [lists-classes.xps](../samples/lists-classes.xps) |
 | `ListTag` | `ListTag(list)` | list. | Returns list tags. | [lists-classes.xps](../samples/lists-classes.xps) |
 
@@ -129,7 +128,7 @@ Array-consuming operations normalize an object reference whose value is `Nothing
 | `IsDate` | `IsDate(value)` | value. | Tests date compatibility. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `IsNull` | `IsNull(value)` | value. | Tests Null state. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `IsEmpty` | `IsEmpty(value)` | value. | Tests Empty state. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
-| `IsNumeric` | `IsNumeric(value)` | value. | Tests numeric compatibility. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
+| `IsNumeric` | `IsNumeric(value)` | value. | Tests numeric compatibility. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `IsObject` | `IsObject(value)` | value. | Tests object/reference state. | [language-extensions.xps](../samples/language-extensions.xps) |
 | `IsScalar` | `IsScalar(value)` | value. | Tests scalar value state. | [compatibility.xps](../samples/compatibility.xps) |
 | `IsList` | `IsList(value)` | value. | Tests keyed-list state. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
@@ -141,15 +140,15 @@ Array-consuming operations normalize an object reference whose value is `Nothing
 |---|---|---|---|---|
 | `Len` | `Len(text)` | text. | Returns character length. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `LenB` | `LenB(text)` | text. | Returns byte-oriented length using runtime byte encoding. | [compatibility.xps](../samples/compatibility.xps) |
-| `Left` | `Left(text, count)` | text and character count. | Returns left substring. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
-| `Right` | `Right(text, count)` | text and count. | Returns right substring. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
-| `Mid` | `Mid(text, start [, count])` | text, one-based start, optional count. | Returns substring. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
-| `Instr` | `Instr([start,] text, search [, compare])` | optional start, source text, search text, optional compare. | Finds substring position. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
+| `Left` | `Left(text, count)` | text and character count. | Returns left substring. | [compatibility.xps](../samples/compatibility.xps) |
+| `Right` | `Right(text, count)` | text and count. | Returns right substring. | [compatibility.xps](../samples/compatibility.xps) |
+| `Mid` | `Mid(text, start [, count])` | text, one-based start, optional count. | Returns substring. | [compatibility.xps](../samples/compatibility.xps) |
+| `Instr` | `Instr([start,] text, search [, compare])` | optional start, source text, search text, optional compare. | Finds substring position. | [compatibility.xps](../samples/compatibility.xps) |
 | `InstrB` | `InstrB([start,] text, search)` | optional start, source, search. | Byte-oriented substring search. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `LeftB` | `LeftB(text, count)` | text and byte count. | Returns left byte-oriented substring. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `RightB` | `RightB(text, count)` | text and byte count. | Returns right byte-oriented substring. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `MidB` | `MidB(text, start [, count])` | text, one-based byte start, optional byte count. | Returns byte-oriented substring. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
-| `Replace` | `Replace(text, find, replacement)` | source text, find text, replacement. | Replaces matching text. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
+| `Replace` | `Replace(text, find, replacement)` | source text, find text, replacement. | Replaces matching text. | [compatibility.xps](../samples/compatibility.xps) |
 | `LCase` | `LCase(text)` | text. | Converts to lower case. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `UCase` | `UCase(text)` | text. | Converts to upper case. | [hello.xps](../demo/console/hello.xps) |
 | `LTrim` | `LTrim(text)` | text. | Removes leading whitespace. | [compatibility.xps](../samples/compatibility.xps) |
@@ -198,20 +197,20 @@ See [Date and time](date-time.md) for Date object extensions.
 | `Int` | `Int(number)` | number. | Floors value. | [compatibility.xps](../samples/compatibility.xps) |
 | `Fix` | `Fix(number)` | number. | Truncates toward zero. | [compatibility.xps](../samples/compatibility.xps) |
 | `Round` | `Round(number [, digits])` | number and optional decimal digits. | Rounds value. | [compatibility.xps](../samples/compatibility.xps) |
-| `Sqr` | `Sqr(number)` | non-negative number. | Square root. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
+| `Sqr` | `Sqr(number)` | non-negative number. | Square root. | [compatibility.xps](../samples/compatibility.xps) |
 | `Sgn` | `Sgn(number)` | number. | Returns sign. | [compatibility.xps](../samples/compatibility.xps) |
-| `Sin` | `Sin(radians)` | radians. | Sine. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
-| `Cos` | `Cos(radians)` | radians. | Cosine. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
-| `Tan` | `Tan(radians)` | radians. | Tangent. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
+| `Sin` | `Sin(radians)` | radians. | Sine. | [compatibility.xps](../samples/compatibility.xps) |
+| `Cos` | `Cos(radians)` | radians. | Cosine. | [compatibility.xps](../samples/compatibility.xps) |
+| `Tan` | `Tan(radians)` | radians. | Tangent. | [compatibility.xps](../samples/compatibility.xps) |
 | `Rnd` | `Rnd([number])` | optional number. | Returns pseudo-random value. | [compatibility.xps](../samples/compatibility.xps) |
 | `Randomize` | `Randomize [seed]` | optional seed. | Seeds random generator. | [compatibility.xps](../samples/compatibility.xps) |
-| `Hex` | `Hex(number)` | integer value. | Formats value as hexadecimal text. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
-| `Bin` | `Bin(number)` | integer value. | Formats value as binary text. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
+| `Hex` | `Hex(number)` | integer value. | Formats value as hexadecimal text. | [compatibility.xps](../samples/compatibility.xps) |
+| `Bin` | `Bin(number)` | integer value. | Formats value as binary text. | [compatibility.xps](../samples/compatibility.xps) |
 | `Date` | `Date()` | none | Current local date. | [date-object-enhancements.xps](../samples/date-object-enhancements.xps) |
 | `Now` | `Now()` | none | Current local date/time. | [date-object-enhancements.xps](../samples/date-object-enhancements.xps) |
 | `DateNumber` | `DateNumber(year, month, day)` | year, month, day. | Creates Date. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `TimeNumber` | `TimeNumber(hour, minute, second)` | hour, minute, second. | Creates time value. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
-| `DateAdd` | `DateAdd(interval, number, date)` | interval, signed amount, source Date. | Adds date interval. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
+| `DateAdd` | `DateAdd(interval, number, date)` | interval, signed amount, source Date. | Adds date interval. | [compatibility.xps](../samples/compatibility.xps) |
 | `DateDiff` | `DateDiff(interval, date1, date2)` | interval and two dates. | Returns date difference. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `Year` | `Year(date)` | Date. | Returns year. | [date-object-enhancements.xps](../samples/date-object-enhancements.xps) |
 | `Month` | `Month(date)` | Date. | Returns month. | [date-object-enhancements.xps](../samples/date-object-enhancements.xps) |
@@ -272,14 +271,6 @@ See [Date and time](date-time.md) for Date object extensions.
 | `Property Let` | `Property Let Name(...)` | property/index parameters and scalar value. | Declares scalar property assignment. | [indexed-properties.xps](../samples/indexed-properties.xps) |
 | `Property Set` | `Property Set Name(...)` | property/index parameters and object value. | Declares object-reference property assignment. | [indexed-object-properties.xps](../samples/indexed-object-properties.xps) |
 
-## Evaluate
-
-| Command | Syntax | Parameters | Description | Example |
-|---|---|---|---|---|
-| `Evaluate` | `Evaluate(sourceText [, callvar])` | XPScript source text and optional restricted callvar snapshot. | Executes supported isolated dynamic XPScript and returns explicit `Return` value. | [evaluate-xpscript.xps](../samples/evaluate-xpscript.xps) |
-
-See [Evaluate](evaluate.md) for isolation and supported-function details.
-
 ## Native and managed interop
 
 | Command | Syntax | Parameters | Description | Example |
@@ -287,8 +278,8 @@ See [Evaluate](evaluate.md) for isolation and supported-function details.
 | `Declare Function` | `Declare Function Name Lib "library" (...) As Type` | native library, entry signature; native parameters explicitly `ByVal`. | Declares native function. | [platform-native-library.xps](../samples/platform-native-library.xps) |
 | `Declare Sub` | `Declare Sub Name Lib "library" (...)` | native library and signature. | Declares native procedure. | [platform-native-library.xps](../samples/platform-native-library.xps) |
 | `WindowsLib` | `WindowsLib "library"` | Windows native library. | Selects Windows native library for declaration. | [platform-native-library.xps](../samples/platform-native-library.xps) |
-| `LinuxLib` | `LinuxLib "library"` | Linux native library. | Selects Linux native library. | [platform-native-library.xps](../samples/platform-native-library.xps) |
-| `MacOSLib` | `MacOSLib "library"` | macOS native library. | Selects macOS native library. | [platform-native-library.xps](../samples/platform-native-library.xps) |
+| `LinuxLib` | `LinuxLib "library"` | Linux native library. | Selects Linux native library for declaration. | [platform-native-library.xps](../samples/platform-native-library.xps) |
+| `MacOSLib` | `MacOSLib "library"` | macOS native library. | Selects macOS native library for declaration. | [platform-native-library.xps](../samples/platform-native-library.xps) |
 | architecture library selectors | `WindowsX64Lib`, `WindowsArm64Lib`, `LinuxX64Lib`, `LinuxArm64Lib`, `MacOSX64Lib`, `MacOSArm64Lib` | architecture-specific library path/name. | Overrides native asset for exact OS/architecture target. | [native-architecture-assets.xps](../samples/native-architecture-assets.xps) |
 | `WindowsAlias` | `WindowsAlias "name"` | Windows entry-point name. | Selects Windows native alias. | [platform-native-library.xps](../samples/platform-native-library.xps) |
 | `LinuxAlias` | `LinuxAlias "name"` | Linux entry-point name. | Selects Linux native alias. | [platform-native-library.xps](../samples/platform-native-library.xps) |

@@ -13,7 +13,7 @@ The primary documentation entry points are:
 - `language.md`, BASIC language guide.
 - `language-reference.md`, complete language statement, built-in scalar function and process-command reference.
 - `file-io-reference.md`, complete file I/O, filesystem, metadata and locking command reference.
-- `native-interop-reference.md`, complete native declaration selectors plus managed/native reference directives.
+- `native-interop-reference.md`, complete native declaration selectors plus managed/native dependency directives.
 - `cli-reference.md`, complete compiler, Kestrel, FastCGI and WebIIS command-line reference.
 - `api-reference.md`, complete searchable runtime-object API reference.
 - `notes-c-api.md`, authoritative native Notes/Domino object-model reference.
@@ -21,7 +21,6 @@ The primary documentation entry points are:
 - `commands.md`, compact compatibility/quick command index.
 - `command-examples.md`, small runnable examples for common core language commands.
 - `date-time.md`, Date/date-time command details.
-- `evaluate.md`, Evaluate behavior.
 - `classes.md`, classes/types/object model.
 - `web.md` and `rest-api.md`, web runtime, routing, state and REST behavior.
 - `uiform.md` and `uiform-fields.md`, UIForm/UIListView behavior and controls.
@@ -81,7 +80,7 @@ Examples:
 
 ## XPscript programming skill synchronization
 
-When a change affects how an LLM should write XPscript — including public runtime classes, constructors, member signatures, lifecycle rules, supported overloads, native Notes/Domino behavior, filesystem APIs, database/AI/XML APIs, iteration semantics, or recommended idioms — review `skills/xpscript-programming/SKILL.md` in the same change. Update it when the new behavior changes valid generated XPscript. The skill is operational guidance, not the exhaustive reference; it must point to the authoritative documentation and must not claim behavior that is only planned or partially implemented.
+When a change affects how an LLM should write XPscript, including public runtime classes, constructors, member signatures, lifecycle rules, supported overloads, native Notes/Domino behavior, filesystem APIs, database/AI/XML APIs, iteration semantics, or recommended idioms, review `skills/xpscript-programming/SKILL.md` in the same change. Update it when the new behavior changes valid generated XPscript. The skill is operational guidance, not the exhaustive reference; it must point to the authoritative documentation and must not claim behavior that is only planned or partially implemented.
 
 A TODO/checklist update is not a substitute for reference documentation or skill synchronization. The separate `XPScript-visual-code-plugin` repository also consumes the canonical documentation; its scheduled sync/release workflow is expected to publish a new patch release when generated IntelliSense metadata changes.
 

@@ -1,8 +1,0 @@
-Sub Main()
-    Dim value As Integer
-    Dim result As Variant
-
-    value = 10
-    result = Evaluate("callvar = 99 : Return callvar", value)
-    Print result
-End Sub

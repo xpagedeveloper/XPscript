@@ -5,10 +5,6 @@ namespace XPScript.Compiler;
 
 public sealed partial class XPScriptTranspiler
 {
-    private static string NormalizeEvaluateRuntime(string code) => code
-        .Replace("\"isobject\" when args.Count == 1 => XPScriptRuntime.IsObject(Arg(0)),", "\"isobject\" when args.Count == 1 => XPScriptNullRuntime.IsObject(Arg(0)),", StringComparison.Ordinal)
-        .Replace("\"isscalar\" when args.Count == 1 => Arg(0) is not LSArray && XPScriptRuntime.IsScalar(Arg(0)),", "\"isscalar\" when args.Count == 1 => Arg(0) is not LSArray && XPScriptNullRuntime.IsScalar(Arg(0)),", StringComparison.Ordinal);
-
     private static string GetSourceDirectory(string sourceName)
     {
         var fullSourcePath = Path.GetFullPath(sourceName);

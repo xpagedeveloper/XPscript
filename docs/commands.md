@@ -25,7 +25,7 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `ForAll` | `ForAll item In collection` | item, collection | Iterates a list or collection. | [lists-classes.xps](../samples/lists-classes.xps) |
 | `GoTo` | `GoTo label` | label | Jumps to a label in the current procedure. | [core-language.xps](../samples/core-language.xps) |
 | `GoSub` | `GoSub label` | label | Calls a label block. | [core-language.xps](../samples/core-language.xps) |
-| `Return` | `Return [value]` | optional value | Returns from a procedure, GoSub or Evaluate block. | [evaluate-xpscript.xps](../samples/evaluate-xpscript.xps) |
+| `Return` | `Return` | none | Returns from a GoSub label block to the calling statement. | [core-language.xps](../samples/core-language.xps) |
 | `On Error` | `On Error GoTo label` | label or Resume Next | Installs error handling. | [core-language.xps](../samples/core-language.xps) |
 | `Resume` | `Resume [Next|label]` | optional target | Continues after a handled error. | [nested-resume-targets.xps](../samples/nested-resume-targets.xps) |
 | `Error` | `Error number [, description]` | number, description | Raises an XPScript runtime error. | [core-language.xps](../samples/core-language.xps) |
@@ -43,11 +43,11 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `Array` | `Array(value1, value2, ...)` | values | Creates a Variant array. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `Join` | `Join(array [, delimiter])` | array, delimiter | Joins array values into text. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `Explode` | `Explode(text [, delimiter])` | text, delimiter | Splits text into an array. | [operators-arrays.xps](../samples/operators-arrays.xps) |
-| `ArrayAppend` | `ArrayAppend(array, value)` | array, value | Appends a value using array helper semantics. | [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) |
-| `ArrayGetIndex` | `ArrayGetIndex(array, value)` | array, value | Finds the matching array index. | [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) |
-| `ArrayUnique` | `ArrayUnique(array)` | array | Removes duplicate values. | [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) |
-| `ArraySlice` | `ArraySlice(array, start [, count])` | array, start, count | Returns a slice. | [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) |
-| `ArraySplice` | `ArraySplice(array, start, count [, replacement])` | array, start, count, replacement | Removes or replaces a range. | [evaluate-array-helpers.xps](../samples/evaluate-array-helpers.xps) |
+| `ArrayAppend` | `ArrayAppend(array, value)` | array, value | Appends a value using array helper semantics. | [operators-arrays.xps](../samples/operators-arrays.xps) |
+| `ArrayGetIndex` | `ArrayGetIndex(array, value)` | array, value | Finds the matching array index. | [operators-arrays.xps](../samples/operators-arrays.xps) |
+| `ArrayUnique` | `ArrayUnique(array)` | array | Removes duplicate values. | [operators-arrays.xps](../samples/operators-arrays.xps) |
+| `ArraySlice` | `ArraySlice(array, start [, count])` | array, start, count | Returns a slice. | [operators-arrays.xps](../samples/operators-arrays.xps) |
+| `ArraySplice` | `ArraySplice(array, start, count [, replacement])` | array, start, count, replacement | Removes or replaces a range. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `IsElement` | `IsElement(list(tag))` | list element | Tests whether a list element exists. | [lists-classes.xps](../samples/lists-classes.xps) |
 | `ListTag` | `ListTag(list)` | list | Returns list tags. | [lists-classes.xps](../samples/lists-classes.xps) |
 
@@ -111,9 +111,9 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `Round` | `Round(number [, digits])` | number, digits | Rounds a number. | [compatibility.xps](../samples/compatibility.xps) |
 | `Sqr` | `Sqr(number)` | number | Returns square root. | [compatibility.xps](../samples/compatibility.xps) |
 | `Sgn` | `Sgn(number)` | number | Returns sign. | [compatibility.xps](../samples/compatibility.xps) |
-| `Sin` | `Sin(radians)` | radians | Returns sine. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
-| `Cos` | `Cos(radians)` | radians | Returns cosine. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
-| `Tan` | `Tan(radians)` | radians | Returns tangent. | [evaluate-standard-functions.xps](../samples/evaluate-standard-functions.xps) |
+| `Sin` | `Sin(radians)` | radians | Returns sine. | [compatibility.xps](../samples/compatibility.xps) |
+| `Cos` | `Cos(radians)` | radians | Returns cosine. | [compatibility.xps](../samples/compatibility.xps) |
+| `Tan` | `Tan(radians)` | radians | Returns tangent. | [compatibility.xps](../samples/compatibility.xps) |
 | `Rnd` | `Rnd([number])` | optional number | Returns a pseudo-random value. | [compatibility.xps](../samples/compatibility.xps) |
 | `Randomize` | `Randomize [seed]` | optional seed | Seeds the random generator. | [compatibility.xps](../samples/compatibility.xps) |
 | `DateNumber` | `DateNumber(year, month, day)` | year, month, day | Creates a date. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
@@ -149,11 +149,10 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `Shell` | `Shell(command [, windowStyle])` | command, optional style | Starts an external process. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `Format` | `Format(value [, format])` | value, format | Formats a value. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
 
-## Evaluate, classes and native integration
+## Classes and native integration
 
 | Command | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `Evaluate` | `Evaluate(sourceText [, callvar])` | source text, optional callvar | Executes supported dynamic XPScript. | [evaluate-xpscript.xps](../samples/evaluate-xpscript.xps) |
 | `Enum` | `Enum Name ... End Enum` | name, members | Declares an Enum. | [language-extensions.xps](../samples/language-extensions.xps) |
 | `Type` | `Type Name ... End Type` | name, fields | Declares a value type. | [type-value-copy.xps](../samples/type-value-copy.xps) |
 | `Class` | `Class Name ... End Class` | name, members | Declares a class. | [lists-classes.xps](../samples/lists-classes.xps) |
@@ -221,4 +220,4 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `--single-file` | `--single-file=true|false` | boolean | Bundles application libraries into the executable when `true` (default); emits separate application files when `false`. | [hello.xps](../samples/hello.xps) |
 | `--result-format` | `--result-format text|json|xml` | format | Selects compiler result serialization. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 
-For hosting parameters and web runtime objects, see [Getting started](getting-started.md) and [Web](web.md). For class details, see [Classes and types](classes.md). For dynamic evaluation, see [Evaluate](evaluate.md).
+For hosting parameters and web runtime objects, see [Getting started](getting-started.md) and [Web](web.md). For class details, see [Classes and types](classes.md).

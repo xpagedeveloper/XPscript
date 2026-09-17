@@ -7,7 +7,6 @@ internal sealed class ParameterPassingPostProcessor
 {
     private const string ByRefPrefix = "__xps_byref_";
     private const string ByValPrefix = "__xps_byval_";
-    private const string EvaluateByValMarker = "XPScriptEvaluateByValArgument";
 
     private sealed record ProcedureSignature(string Name, bool[] ByRef, bool ReturnsVoid);
 
@@ -25,7 +24,6 @@ internal sealed class ParameterPassingPostProcessor
         foreach (var signature in signatures.Values.OrderByDescending(x => x.Name.Length))
             generated = RewriteCalls(generated, signature);
 
-        generated = RewriteEvaluateCalls(generated);
         return generated + "\n\n" + ByRefCallRuntimeSource + "\n";
     }
 
@@ -189,87 +187,6 @@ internal sealed class ParameterPassingPostProcessor
         return body.ToString();
     }
 
-    private static string RewriteEvaluateCalls(string generated)
-    {
-        const string target = "XPScriptEvaluateRuntime.Evaluate";
-        var output = new StringBuilder(generated.Length + 128);
-        var cursor = 0;
-        while (cursor < generated.Length)
-        {
-            var index = generated.IndexOf(target, cursor, StringComparison.Ordinal);
-            if (index < 0)
-            {
-                output.Append(generated.AsSpan(cursor));
-                break;
-            }
-
-            output.Append(generated.AsSpan(cursor, index - cursor));
-            var open = index + target.Length;
-            while (open < generated.Length && char.IsWhiteSpace(generated[open])) open++;
-            if (open >= generated.Length || generated[open] != '(')
-            {
-                output.Append(target);
-                cursor = index + target.Length;
-                continue;
-            }
-
-            var close = FindMatchingParen(generated, open);
-            if (close < 0)
-            {
-                output.Append(target);
-                cursor = index + target.Length;
-                continue;
-            }
-
-            var args = SplitArguments(generated[(open + 1)..close]);
-            if (args.Count < 2)
-            {
-                output.Append(generated.AsSpan(index, close - index + 1));
-                cursor = close + 1;
-                continue;
-            }
-
-            var bindings = new List<string>();
-            for (var argIndex = 1; argIndex < args.Count; argIndex++)
-            {
-                var argument = args[argIndex].Trim();
-                if (TryUnwrapByVal(argument, out var byVal))
-                {
-                    bindings.Add($"XPScriptEvaluateArgument.ByVal({byVal})");
-                    continue;
-                }
-
-                if (IsAssignableArgument(argument))
-                {
-                    var setterName = "__xps_eval_value_" + argIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                    bindings.Add($"XPScriptEvaluateArgument.ByRef((object?){argument}, (Action<object?>)({setterName} => {argument} = (dynamic){setterName}))");
-                }
-                else
-                {
-                    bindings.Add($"XPScriptEvaluateArgument.ByVal({argument})");
-                }
-            }
-
-            output.Append("XPScriptEvaluateRuntime.EvaluateArguments(");
-            output.Append(args[0].Trim());
-            if (bindings.Count > 0) output.Append(", ").Append(string.Join(", ", bindings));
-            output.Append(')');
-            cursor = close + 1;
-        }
-        return output.ToString();
-    }
-
-    private static bool TryUnwrapByVal(string argument, out string value)
-    {
-        value = "";
-        if (!argument.StartsWith(EvaluateByValMarker + "(", StringComparison.Ordinal) || !argument.EndsWith(')')) return false;
-        var open = EvaluateByValMarker.Length;
-        var close = FindMatchingParen(argument, open);
-        if (close != argument.Length - 1) return false;
-        value = argument[(open + 1)..close].Trim();
-        return true;
-    }
-
     private static string TakeTrailingMemberReceiver(StringBuilder output)
     {
         if (output.Length < 2) return "";
@@ -418,7 +335,7 @@ internal sealed class ParameterPassingPostProcessor
             copiedTo = Math.Min(i, value.Length);
             return true;
         }
-        if (value[index] == '\'' )
+        if (value[index] == '\'')
         {
             var i = index + 1;
             while (i < value.Length)
@@ -431,8 +348,8 @@ internal sealed class ParameterPassingPostProcessor
         }
         if (index + 1 < value.Length && value[index] == '/' && value[index + 1] == '/')
         {
-            var end = value.IndexOf('\n', index + 2);
-            copiedTo = end < 0 ? value.Length : end;
+            var newline = value.IndexOf('\n', index + 2);
+            copiedTo = newline < 0 ? value.Length : newline;
             return true;
         }
         if (index + 1 < value.Length && value[index] == '/' && value[index + 1] == '*')
@@ -450,8 +367,8 @@ internal sealed class ParameterPassingPostProcessor
     private const string ByRefCallRuntimeSource = """
 internal static class XPScriptByRefCallRuntime
 {
-    public static T Invoke<T>(Func<T> action) => action();
-    public static void Invoke(Action action) => action();
+    internal static void Invoke(System.Action action) => action();
+    internal static T Invoke<T>(System.Func<T> action) => action();
 }
 """;
 }

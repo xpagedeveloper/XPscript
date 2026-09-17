@@ -12,7 +12,6 @@ REQUIRED_DOCS = {
     "language.md",
     "commands.md",
     "command-examples.md",
-    "evaluate.md",
     "classes.md",
     "web.md",
     "uiform.md",

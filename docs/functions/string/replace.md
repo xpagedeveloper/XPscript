@@ -15,6 +15,6 @@ parameters:
   - name: "replacement"
     required: true
     description: "Replacement text."
-example: "/samples/evaluate-standard-functions.xps"
+example: "/samples/compatibility.xps"
 migration: complete
 ---
