@@ -8,7 +8,7 @@ internal sealed class ReservedIdentifierPreprocessor
     {
         "Program", "Script",
         "XPScriptRuntime", "XPScriptErrorRuntime", "XPScriptReferenceRuntime", "XPScriptTextIO", "XPScriptFileIO", "XPScriptFileSystemRuntime", "XPScriptApplicationRuntime",
-        "XPScriptEvaluateRuntime", "XPScriptEvaluateCollectionRuntime", "XPScriptEvaluateSemanticsRuntime", "XPScriptEvaluateFunctionArityRuntime", "XPCrossPlatformRuntime", "XPDateRuntime", "XPModuleArrayRuntime", "XPTypeArrayRuntime",
+        "XPCrossPlatformRuntime", "XPDateRuntime", "XPModuleArrayRuntime", "XPTypeArrayRuntime",
         "XPModuleObjectRuntime", "XPSourceLineRuntime", "LSOperatorArrayRuntime", "LSArrayRuntime", "LSControlRuntime", "LSCoreMarker", "LSObjectIdentityRuntime",
         "LSExtendedRuntime", "LSExtendedErrorRuntime", "LSByRefRuntime",
         "XPHttpClient", "XPHttpResponse",
