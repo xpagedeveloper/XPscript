@@ -119,8 +119,8 @@ internal static class XPScriptJsonSchemaValidator
                 foreach (var item in required) { var name = ReadString(item); if (name.Length > 0 && !obj.ContainsKey(name)) Add(errors, Child(path, name), "required", "Required property is missing.", "present", "missing"); }
             if (properties is not null)
                 foreach (var property in properties) if (property.Value is System.Text.Json.Nodes.JsonObject childSchema && obj.TryGetPropertyValue(property.Key, out var child)) ValidateNode(childSchema, child, Child(path, property.Key), errors, depth + 1);
-            if (schema["additionalProperties"] is System.Text.Json.Nodes.JsonValue ap && ap.TryGetValue<bool>(out var allow) && !allow && properties is not null)
-                foreach (var property in obj) if (!properties.ContainsKey(property.Key)) Add(errors, Child(path, property.Key), "additionalProperties", "Additional property is not allowed.", "declared property", property.Key);
+            if (schema["additionalProperties"] is System.Text.Json.Nodes.JsonValue ap && ap.TryGetValue<bool>(out var allow) && !allow)
+                foreach (var property in obj) if (properties is null || !properties.ContainsKey(property.Key)) Add(errors, Child(path, property.Key), "additionalProperties", "Additional property is not allowed.", "declared property", property.Key);
         }
         else if (node is System.Text.Json.Nodes.JsonArray array)
         {
