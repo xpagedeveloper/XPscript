@@ -66,14 +66,10 @@ RichTextField stores HTML intentionally. Stored rich-text HTML must be treated a
 
 XPScript does not compile request bodies, query-string values or form fields as XPScript source code.
 
-`Evaluate` uses a restricted expression evaluator. It does not expose `Shell`, `CreateObject`, `GetObject`, compiler APIs, file execution APIs or arbitrary method invocation. Attempts to call unsupported functions fail with a runtime error.
-
-Dynamic Evaluate input is limited to 32768 characters to reduce parser and resource-exhaustion abuse.
-
 Do not build XPScript source files from request data and invoke the compiler manually from host application code. Keep code and request data separate.
 
 ## Security behavior
 
 CSRF validation happens before REST parameter binding and before the route procedure executes. A rejected request therefore cannot trigger route-side writes or database operations.
 
-The web security regression suite verifies valid, missing and modified CSRF tokens, bearer-token compatibility, security headers, HTML encoding and blocked server-side Evaluate access to Shell.
+The web security regression suite verifies valid, missing and modified CSRF tokens, bearer-token compatibility, security headers and HTML encoding.

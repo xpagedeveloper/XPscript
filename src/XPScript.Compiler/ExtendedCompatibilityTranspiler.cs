@@ -9,7 +9,7 @@ internal sealed class ExtendedCompatibilityTranspiler
     private static readonly string[] JsonHttpTypes = ["NotesHTTPRequest", "NotesJSONNavigator", "NotesJSONObject", "NotesJSONArray", "NotesJSONElement"];
     private static readonly string[] ExtendedFunctions =
     [
-        "Environ", "Format", "FormatNumber", "FormatPercent", "Evaluate", "GetObject", "InputBox", "MessageBox", "Shell"
+        "Environ", "Format", "FormatNumber", "FormatPercent", "GetObject", "InputBox", "MessageBox", "Shell"
     ];
 
     private static readonly Dictionary<string, string[]> TypeMembers = new(StringComparer.OrdinalIgnoreCase)
