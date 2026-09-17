@@ -139,16 +139,19 @@ internal static class XPScriptJsonSchemaValidator
                         try { foreach (var property in obj) if (System.Text.RegularExpressions.Regex.IsMatch(property.Key, pattern.Key, System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250))) ValidateNode(patternSchema, property.Value, Child(path, property.Key), errors, depth + 1); }
                         catch (ArgumentException) { Add(errors, path, "patternProperties", "Schema contains an invalid property-name regular expression.", "valid regex", pattern.Key); }
                     }
-            if (schema["additionalProperties"] is System.Text.Json.Nodes.JsonValue ap && ap.TryGetValue<bool>(out var allow) && !allow)
-                foreach (var property in obj)
-                {
-                    var declared = properties is not null && properties.ContainsKey(property.Key);
-                    var patternMatched = false;
-                    if (!declared && patternProperties is not null)
-                        foreach (var pattern in patternProperties)
-                            try { if (System.Text.RegularExpressions.Regex.IsMatch(property.Key, pattern.Key, System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250))) { patternMatched = true; break; } } catch (ArgumentException) { }
-                    if (!declared && !patternMatched) Add(errors, Child(path, property.Key), "additionalProperties", "Additional property is not allowed.", "declared or pattern-matched property", property.Key);
-                }
+            foreach (var property in obj)
+            {
+                var declared = properties is not null && properties.ContainsKey(property.Key);
+                var patternMatched = false;
+                if (!declared && patternProperties is not null)
+                    foreach (var pattern in patternProperties)
+                        try { if (System.Text.RegularExpressions.Regex.IsMatch(property.Key, pattern.Key, System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250))) { patternMatched = true; break; } } catch (ArgumentException) { }
+                if (declared || patternMatched) continue;
+                if (schema["additionalProperties"] is System.Text.Json.Nodes.JsonValue ap && ap.TryGetValue<bool>(out var allow) && !allow)
+                    Add(errors, Child(path, property.Key), "additionalProperties", "Additional property is not allowed.", "declared or pattern-matched property", property.Key);
+                else if (schema["additionalProperties"] is System.Text.Json.Nodes.JsonObject additionalSchema)
+                    ValidateNode(additionalSchema, property.Value, Child(path, property.Key), errors, depth + 1);
+            }
         }
         else if (node is System.Text.Json.Nodes.JsonArray array)
         {
