@@ -45,8 +45,10 @@ public sealed class XpsOpenApiClientGenerator
         if (operations.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI document does not contain any supported path operations.");
         var baseUrl = ReadServerUrl(root);
         var source = EmitSource(version, sourceName, apiName, baseUrl, root, models, operations);
+        var modelNames = models.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+        source = XpsOpenApiClientTypedResponseMapper.Apply(source, modelNames);
         return new XpsOpenApiClientGenerationResult(version, apiName, source,
-            operations.Select(x => x.Name).ToArray(), models.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray());
+            operations.Select(x => x.Name).ToArray(), modelNames);
     }
 
     private static JsonObject ParseDocument(string specification)
