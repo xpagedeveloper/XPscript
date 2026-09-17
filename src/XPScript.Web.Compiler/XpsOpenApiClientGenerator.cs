@@ -45,10 +45,8 @@ public sealed class XpsOpenApiClientGenerator
         if (operations.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI document does not contain any supported path operations.");
         var baseUrl = ReadServerUrl(root);
         var source = EmitSource(version, sourceName, apiName, baseUrl, root, models, operations);
-        var modelNames = models.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
-        source = XpsOpenApiClientTypedResponseMapper.Apply(source, modelNames);
         return new XpsOpenApiClientGenerationResult(version, apiName, source,
-            operations.Select(x => x.Name).ToArray(), modelNames);
+            operations.Select(x => x.Name).ToArray(), models.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray());
     }
 
     private static JsonObject ParseDocument(string specification)
@@ -246,8 +244,6 @@ public sealed class XpsOpenApiClientGenerator
 
     private static void EmitOperation(StringBuilder b, string apiName, ClientOperation op, Dictionary<string, JsonObject> models)
     {
-        if (op.Method is not ("GET" or "POST" or "PUT" or "PATCH" or "DELETE"))
-            throw new XpsOpenApiGenerationException($"OpenAPI client generation for HTTP {op.Method} requires the generic XPHttpClient.Send runtime support and is not enabled yet.");
         var responseName = apiName + "Response";
         var args = op.Parameters.Select(p => $"{ToIdentifier(p.Name)} As {p.TypeName}").ToList();
         if (op.Body is not null) args.Add($"payload As {op.Body.TypeName}");
@@ -258,24 +254,23 @@ public sealed class XpsOpenApiClientGenerator
         b.AppendLine($"        Set result = New {responseName}");
         b.AppendLine($"        url = BaseUrl & \"{EscapeXps(op.Path)}\"");
         foreach (var p in op.Parameters.Where(x => x.Location == "path"))
-            b.AppendLine($"        url = Replace(url, \"{{{EscapeXps(p.Name)}}}\", CStr({ToIdentifier(p.Name)}))");
+            b.AppendLine($"        url = Replace(url, \"{{{EscapeXps(p.Name)}}}\", Http.EncodePath({ToIdentifier(p.Name)}))");
         foreach (var p in op.Parameters.Where(x => x.Location == "query"))
             b.AppendLine($"        url = Http.AddQuery(url, \"{EscapeXps(p.Name)}\", {ToIdentifier(p.Name)})");
         foreach (var p in op.Parameters.Where(x => x.Location == "header"))
             b.AppendLine($"        Call Http.SetHeader(\"{EscapeXps(p.Name)}\", CStr({ToIdentifier(p.Name)}))");
-        var call = op.Method switch
+
+        // All generated calls go through the public XPScript HTTP/JSON surface. JSON request
+        // bodies are serialized by JsonStringify and the generic Send method handles every verb.
+        if (op.Body is not null)
         {
-            "GET" => "Http.Get(url)",
-            "DELETE" => "Http.Delete(url)",
-            "POST" when op.Body is not null => "Http.PostJson(url, payload)",
-            "PUT" when op.Body is not null => "Http.PutJson(url, payload)",
-            "PATCH" when op.Body is not null => "Http.PatchJson(url, payload)",
-            "POST" => "Http.Post(url, \"\")",
-            "PUT" => "Http.Put(url, \"\")",
-            "PATCH" => "Http.Patch(url, \"\")",
-            _ => throw new InvalidOperationException()
-        };
-        b.AppendLine($"        Set raw = {call}");
+            b.AppendLine("        Call Http.SetHeader(\"Content-Type\", \"application/json\")");
+            b.AppendLine($"        Set raw = Http.Send(\"{op.Method}\", url, JsonStringify(payload))");
+        }
+        else
+        {
+            b.AppendLine($"        Set raw = Http.Send(\"{op.Method}\", url)");
+        }
         b.AppendLine("        Set result.Raw = raw");
         b.AppendLine("        result.StatusCode = raw.StatusCode");
         b.AppendLine("        result.IsSuccess = raw.IsSuccess");
@@ -296,14 +291,19 @@ public sealed class XpsOpenApiClientGenerator
             {
                 b.AppendLine($"            result.ResponseType = \"{EscapeXps(response.TypeName)}\"");
                 if (models.ContainsKey(response.TypeName))
-                    b.AppendLine($"            ' Typed {response.TypeName} deserialization will populate result.{response.TypeName} through the shared JSON object mapper.");
+                    b.AppendLine($"            Set result.{response.TypeName} = OpenApiMap{response.TypeName}(result.Json)");
             }
         }
         var fallback = op.Responses.FirstOrDefault(x => x.Code.Equals("default", StringComparison.OrdinalIgnoreCase));
         if (fallback is not null)
         {
             b.AppendLine(first ? "        If True Then" : "        Else");
-            if (fallback.TypeName is not null) b.AppendLine($"            result.ResponseType = \"{EscapeXps(fallback.TypeName)}\"");
+            if (fallback.TypeName is not null)
+            {
+                b.AppendLine($"            result.ResponseType = \"{EscapeXps(fallback.TypeName)}\"");
+                if (models.ContainsKey(fallback.TypeName))
+                    b.AppendLine($"            Set result.{fallback.TypeName} = OpenApiMap{fallback.TypeName}(result.Json)");
+            }
             first = false;
         }
         if (!first) b.AppendLine("        End If");
