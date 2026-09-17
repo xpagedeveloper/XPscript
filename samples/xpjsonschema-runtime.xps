@@ -25,12 +25,10 @@ Sub Main()
     If invalidResult.Errors.Count <> invalidResult.ErrorCount Then Error 5, "Expected Errors.Count to match ErrorCount"
     If invalidResult.Json.Text = "" Then Error 5, "Expected validation result JSON"
 
-    ' FromJson infers a schema from XPJson data.
     Dim inferred As XPJsonSchema
     Set inferred = XPJsonSchema.FromJson(validJson)
     If Not inferred.IsValid(validJson) Then Error 5, "Expected inferred schema to validate its source JSON"
 
-    ' Parse reads an existing JSON Schema document.
     Dim parsed As XPJsonSchema
     Set parsed = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string""}},""required"":[""name""],""additionalProperties"":false}")
     Dim parsedJson As XPJsonDocument
@@ -38,7 +36,6 @@ Sub Main()
     If Not parsed.IsValid(parsedJson) Then Error 5, "Expected parsed schema to validate matching JSON"
     If parsed.IsValid(validJson) Then Error 5, "Expected parsed schema to reject additional properties"
 
-    ' additionalProperties=false closes an object even when properties is omitted.
     Dim closedObject As XPJsonSchema
     Set closedObject = XPJsonSchema.Parse("{""type"":""object"",""additionalProperties"":false}")
     Dim emptyObject As XPJsonDocument
@@ -48,7 +45,6 @@ Sub Main()
     If Not closedObject.IsValid(emptyObject) Then Error 5, "Expected closed empty object schema to accept an empty object"
     If closedObject.IsValid(objectWithProperty) Then Error 5, "Expected additionalProperties=false to reject undeclared properties without a properties keyword"
 
-    ' Composition keywords follow JSON Schema applicator semantics.
     Dim allOfSchema As XPJsonSchema
     Set allOfSchema = XPJsonSchema.Parse("{""allOf"":[{""type"":""integer""},{""minimum"":10}]}")
     If Not allOfSchema.IsValid(12) Then Error 5, "Expected allOf to accept value satisfying every branch"
@@ -70,7 +66,6 @@ Sub Main()
     If Not notSchema.IsValid(37) Then Error 5, "Expected not to accept a non-matching value"
     If notSchema.IsValid("Ada") Then Error 5, "Expected not to reject a matching value"
 
-    ' Object property counts are enforced independently of declared properties.
     Dim propertyCountSchema As XPJsonSchema
     Set propertyCountSchema = XPJsonSchema.Parse("{""type"":""object"",""minProperties"":1,""maxProperties"":2}")
     Dim oneProperty As XPJsonDocument
@@ -81,7 +76,6 @@ Sub Main()
     If Not propertyCountSchema.IsValid(oneProperty) Then Error 5, "Expected property count inside bounds to validate"
     If propertyCountSchema.IsValid(threeProperties) Then Error 5, "Expected maxProperties to reject an oversized object"
 
-    ' uniqueItems uses JSON value equality, including structured values.
     Dim uniqueItemsSchema As XPJsonSchema
     Set uniqueItemsSchema = XPJsonSchema.Parse("{""type"":""array"",""uniqueItems"":true}")
     Dim uniqueValues As New XPJsonArray
@@ -105,7 +99,6 @@ Sub Main()
     Call duplicateObjects.Add(duplicateObject2)
     If uniqueItemsSchema.IsValid(duplicateObjects) Then Error 5, "Expected uniqueItems to compare structured JSON values"
 
-    ' Numeric validation supports exclusive bounds and decimal multiples.
     Dim numericBoundsSchema As XPJsonSchema
     Set numericBoundsSchema = XPJsonSchema.Parse("{""type"":""number"",""exclusiveMinimum"":1,""exclusiveMaximum"":10}")
     If numericBoundsSchema.IsValid(1) Then Error 5, "Expected exclusiveMinimum to reject its boundary"
@@ -116,6 +109,43 @@ Sub Main()
     Set multipleOfSchema = XPJsonSchema.Parse("{""type"":""number"",""multipleOf"":0.5}")
     If Not multipleOfSchema.IsValid(2.5) Then Error 5, "Expected multipleOf to accept an exact decimal multiple"
     If multipleOfSchema.IsValid(2.6) Then Error 5, "Expected multipleOf to reject a non-multiple"
+
+    ' contains counts matching array items; minContains/maxContains constrain that count.
+    Dim containsSchema As XPJsonSchema
+    Set containsSchema = XPJsonSchema.Parse("{""type"":""array"",""contains"":{""type"":""integer"",""minimum"":10},""minContains"":2,""maxContains"":3}")
+    Dim containsValid As New XPJsonArray
+    Call containsValid.Add(10)
+    Call containsValid.Add(12)
+    Call containsValid.Add("skip")
+    If Not containsSchema.IsValid(containsValid) Then Error 5, "Expected contains/minContains to accept two matching items"
+    Dim containsTooFew As New XPJsonArray
+    Call containsTooFew.Add(10)
+    Call containsTooFew.Add(2)
+    If containsSchema.IsValid(containsTooFew) Then Error 5, "Expected minContains to reject too few matching items"
+    Dim containsTooMany As New XPJsonArray
+    Call containsTooMany.Add(10)
+    Call containsTooMany.Add(11)
+    Call containsTooMany.Add(12)
+    Call containsTooMany.Add(13)
+    If containsSchema.IsValid(containsTooMany) Then Error 5, "Expected maxContains to reject too many matching items"
+
+    ' dependentRequired applies only when its triggering property is present.
+    Dim dependencySchema As XPJsonSchema
+    Set dependencySchema = XPJsonSchema.Parse("{""type"":""object"",""dependentRequired"":{""creditCard"":[""billingAddress""]}}")
+    Dim noCreditCard As XPJsonDocument
+    Set noCreditCard = XPJsonDocument.Parse("{""name"":""Ada""}")
+    If Not dependencySchema.IsValid(noCreditCard) Then Error 5, "Expected dependentRequired to be inactive without its trigger"
+    Dim completePayment As XPJsonDocument
+    Set completePayment = XPJsonDocument.Parse("{""creditCard"":""1234"",""billingAddress"":""Stockholm""}")
+    If Not dependencySchema.IsValid(completePayment) Then Error 5, "Expected dependentRequired to accept complete dependencies"
+    Dim incompletePayment As XPJsonDocument
+    Set incompletePayment = XPJsonDocument.Parse("{""creditCard"":""1234""}")
+    If dependencySchema.IsValid(incompletePayment) Then Error 5, "Expected dependentRequired to reject a missing dependent property"
+
+    ' $schema is metadata and does not constrain an instance by itself.
+    Dim dialectSchema As XPJsonSchema
+    Set dialectSchema = XPJsonSchema.Parse("{""$schema"":""https://json-schema.org/draft/2020-12/schema""}")
+    If Not dialectSchema.IsValid(validJson) Then Error 5, "Expected $schema metadata not to invalidate an instance"
 
     Print "XPJSONSCHEMA-RUNTIME=OK"
 End Sub
