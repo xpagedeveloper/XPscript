@@ -1,0 +1,384 @@
+using System.Globalization;
+using System.Text;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+using YamlDotNet.RepresentationModel;
+
+namespace XPScript.Web.Compiler;
+
+public sealed record XpsOpenApiClientGenerationResult(
+    string OpenApiVersion,
+    string ClassName,
+    string Source,
+    IReadOnlyList<string> Operations,
+    IReadOnlyList<string> Models);
+
+/// <summary>
+/// Generates an XPScript API consumer from an OpenAPI 3 document.
+/// This is intentionally separate from XpsOpenApiGenerator, which remains the REST server generator.
+/// </summary>
+public sealed class XpsOpenApiClientGenerator
+{
+    private static readonly string[] HttpMethods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"];
+    private static readonly Regex IdentifierPattern = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant);
+
+    public XpsOpenApiClientGenerationResult GenerateFile(string specificationPath, string? className = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(specificationPath);
+        var fullPath = Path.GetFullPath(specificationPath);
+        if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI specification file was not found.", fullPath);
+        return Generate(File.ReadAllText(fullPath), Path.GetFileName(fullPath), className);
+    }
+
+    public XpsOpenApiClientGenerationResult Generate(string specification, string? sourceName = null, string? className = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(specification);
+        var root = ParseDocument(specification);
+        var version = ReadString(root, "openapi")
+            ?? throw new XpsOpenApiGenerationException("OpenAPI document is missing the required 'openapi' version field.");
+        if (!version.StartsWith("3.0.", StringComparison.Ordinal) && !version.StartsWith("3.1.", StringComparison.Ordinal))
+            throw new XpsOpenApiGenerationException($"OpenAPI version '{version}' is unsupported. XPScript supports OpenAPI 3.0.x and 3.1.x.");
+
+        var apiName = ResolveClassName(root, sourceName, className);
+        var models = CollectModels(root);
+        var operations = CollectOperations(root);
+        if (operations.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI document does not contain any supported path operations.");
+        var baseUrl = ReadServerUrl(root);
+        var source = EmitSource(version, sourceName, apiName, baseUrl, root, models, operations);
+        return new XpsOpenApiClientGenerationResult(version, apiName, source,
+            operations.Select(x => x.Name).ToArray(), models.Keys.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray());
+    }
+
+    private static JsonObject ParseDocument(string specification)
+    {
+        var trimmed = specification.AsSpan().TrimStart();
+        if (!trimmed.IsEmpty && trimmed[0] == '{')
+            return JsonNode.Parse(specification) as JsonObject ?? throw new XpsOpenApiGenerationException("OpenAPI JSON root must be an object.");
+        var yaml = new YamlStream();
+        yaml.Load(new StringReader(specification));
+        if (yaml.Documents.Count != 1) throw new XpsOpenApiGenerationException("OpenAPI YAML must contain exactly one document.");
+        return ConvertYaml(yaml.Documents[0].RootNode) as JsonObject ?? throw new XpsOpenApiGenerationException("OpenAPI YAML root must be an object.");
+    }
+
+    private static JsonNode? ConvertYaml(YamlNode node) => node switch
+    {
+        YamlMappingNode map => ConvertMap(map),
+        YamlSequenceNode sequence => ConvertSequence(sequence),
+        YamlScalarNode scalar => ConvertScalar(scalar),
+        _ => throw new XpsOpenApiGenerationException("Unsupported YAML node in OpenAPI document.")
+    };
+
+    private static JsonObject ConvertMap(YamlMappingNode map)
+    {
+        var result = new JsonObject();
+        foreach (var pair in map.Children)
+        {
+            if (pair.Key is not YamlScalarNode key || string.IsNullOrWhiteSpace(key.Value))
+                throw new XpsOpenApiGenerationException("OpenAPI YAML mapping keys must be strings.");
+            result[key.Value] = ConvertYaml(pair.Value);
+        }
+        return result;
+    }
+
+    private static JsonArray ConvertSequence(YamlSequenceNode sequence)
+    {
+        var result = new JsonArray();
+        foreach (var item in sequence.Children) result.Add(ConvertYaml(item));
+        return result;
+    }
+
+    private static JsonNode? ConvertScalar(YamlScalarNode scalar)
+    {
+        var value = scalar.Value ?? string.Empty;
+        if (value is "~" || value.Equals("null", StringComparison.OrdinalIgnoreCase)) return null;
+        if (bool.TryParse(value, out var b)) return JsonValue.Create(b);
+        if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i)) return JsonValue.Create(i);
+        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) return JsonValue.Create(d);
+        return JsonValue.Create(value);
+    }
+
+    private static Dictionary<string, JsonObject> CollectModels(JsonObject root)
+    {
+        var result = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
+        if (root["components"] is not JsonObject components || components["schemas"] is not JsonObject schemas) return result;
+        foreach (var pair in schemas)
+            if (pair.Value is JsonObject schema) result.Add(ToIdentifier(pair.Key), schema);
+        return result;
+    }
+
+    private static List<ClientOperation> CollectOperations(JsonObject root)
+    {
+        if (root["paths"] is not JsonObject paths) throw new XpsOpenApiGenerationException("OpenAPI document is missing paths.");
+        var result = new List<ClientOperation>();
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in paths)
+        {
+            if (path.Value is not JsonObject pathItem) continue;
+            var inherited = ReadParameters(root, pathItem["parameters"]);
+            foreach (var method in HttpMethods)
+            {
+                if (pathItem[method] is not JsonObject operation) continue;
+                var name = ToIdentifier(ReadString(operation, "operationId") ?? method + " " + path.Key.Replace("{", "").Replace("}", ""));
+                var baseName = name;
+                for (var n = 2; !used.Add(name); n++) name = baseName + n.ToString(CultureInfo.InvariantCulture);
+                var parameters = new List<ClientParameter>(inherited);
+                parameters.AddRange(ReadParameters(root, operation["parameters"]));
+                var body = ReadBody(root, operation["requestBody"]);
+                var responses = ReadResponses(root, operation["responses"]);
+                result.Add(new ClientOperation(method.ToUpperInvariant(), path.Key, name, parameters, body, responses));
+            }
+        }
+        return result;
+    }
+
+    private static List<ClientParameter> ReadParameters(JsonObject root, JsonNode? node)
+    {
+        var result = new List<ClientParameter>();
+        if (node is not JsonArray array) return result;
+        foreach (var item in array)
+        {
+            var parameter = Resolve(root, item);
+            var name = ReadString(parameter, "name") ?? throw new XpsOpenApiGenerationException("OpenAPI parameter is missing name.");
+            var location = ReadString(parameter, "in")?.ToLowerInvariant() ?? string.Empty;
+            if (location is not ("path" or "query" or "header"))
+                throw new XpsOpenApiGenerationException($"Client generation does not yet support parameter location '{location}'.");
+            if (parameter["schema"] is not JsonObject schema) throw new XpsOpenApiGenerationException($"Parameter '{name}' is missing schema.");
+            result.Add(new ClientParameter(name, location, XpsType(root, schema), ReadBool(parameter, "required")));
+        }
+        return result;
+    }
+
+    private static ClientBody? ReadBody(JsonObject root, JsonNode? node)
+    {
+        if (node is null) return null;
+        var body = Resolve(root, node);
+        if (body["content"] is not JsonObject content || SelectJson(content)?["schema"] is not JsonObject schema)
+            throw new XpsOpenApiGenerationException("Client request bodies currently require JSON content with a schema.");
+        return new ClientBody(XpsType(root, schema), ReadBool(body, "required"));
+    }
+
+    private static List<ClientResponse> ReadResponses(JsonObject root, JsonNode? node)
+    {
+        if (node is not JsonObject responses || responses.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI operation must declare responses.");
+        var result = new List<ClientResponse>();
+        foreach (var pair in responses)
+        {
+            if (!pair.Key.Equals("default", StringComparison.OrdinalIgnoreCase) &&
+                (!int.TryParse(pair.Key, out var status) || status is < 100 or > 599))
+                throw new XpsOpenApiGenerationException($"Invalid HTTP response code '{pair.Key}'.");
+            var response = Resolve(root, pair.Value);
+            string? type = null;
+            if (response["content"] is JsonObject content && SelectJson(content)?["schema"] is JsonObject schema) type = XpsType(root, schema);
+            result.Add(new ClientResponse(pair.Key, type));
+        }
+        return result;
+    }
+
+    private static string EmitSource(string version, string? sourceName, string apiName, string? baseUrl, JsonObject root,
+        Dictionary<string, JsonObject> models, IReadOnlyList<ClientOperation> operations)
+    {
+        var b = new StringBuilder();
+        b.AppendLine("Option Declare");
+        b.AppendLine();
+        b.AppendLine($"' <xpscript-openapi-client version=\"1\" openapi=\"{version}\">");
+        b.AppendLine($"' Generated API consumer{(string.IsNullOrWhiteSpace(sourceName) ? string.Empty : " from " + sourceName)}. Do not edit this file.");
+        b.AppendLine();
+        foreach (var model in models.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase)) { EmitModel(b, root, model.Key, model.Value); b.AppendLine(); }
+
+        var responseName = apiName + "Response";
+        b.AppendLine($"Public Class {responseName}");
+        b.AppendLine("    Public StatusCode As Integer");
+        b.AppendLine("    Public IsSuccess As Boolean");
+        b.AppendLine("    Public ResponseType As String");
+        b.AppendLine("    Public Raw As XPHttpResponse");
+        b.AppendLine("    Public Json As XPJsonDocument");
+        foreach (var type in operations.SelectMany(x => x.Responses).Select(x => x.TypeName).Where(x => x is not null && models.ContainsKey(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x))
+            b.AppendLine($"    Public {type} As {type}");
+        b.AppendLine("End Class");
+        b.AppendLine();
+
+        b.AppendLine($"Public Class {apiName}");
+        b.AppendLine("    Private BaseUrl As String");
+        b.AppendLine("    Private Http As XPHttpClient");
+        b.AppendLine();
+        b.AppendLine("    Public Sub New(url As String)");
+        b.AppendLine("        BaseUrl = url");
+        b.AppendLine("        Set Http = New XPHttpClient");
+        b.AppendLine("    End Sub");
+        b.AppendLine();
+        if (!string.IsNullOrWhiteSpace(baseUrl))
+        {
+            b.AppendLine("    Public Sub New()");
+            b.AppendLine($"        BaseUrl = \"{EscapeXps(baseUrl)}\"");
+            b.AppendLine("        Set Http = New XPHttpClient");
+            b.AppendLine("    End Sub");
+            b.AppendLine();
+        }
+        b.AppendLine("    Public Sub SetBearerToken(token As String)");
+        b.AppendLine("        Call Http.SetHeader(\"Authorization\", \"Bearer \" & token)");
+        b.AppendLine("    End Sub");
+        b.AppendLine();
+        b.AppendLine("    Public Sub SetHeader(name As String, value As String)");
+        b.AppendLine("        Call Http.SetHeader(name, value)");
+        b.AppendLine("    End Sub");
+        b.AppendLine();
+        foreach (var op in operations) { EmitOperation(b, apiName, op, models); b.AppendLine(); }
+        b.AppendLine("End Class");
+        b.AppendLine("' </xpscript-openapi-client>");
+        return b.ToString();
+    }
+
+    private static void EmitModel(StringBuilder b, JsonObject root, string name, JsonObject schema)
+    {
+        var resolved = Resolve(root, schema);
+        b.AppendLine($"Public Class {name}");
+        if (resolved["properties"] is not JsonObject properties || properties.Count == 0) b.AppendLine("    Public Value As Variant");
+        else foreach (var property in properties)
+        {
+            if (!IdentifierPattern.IsMatch(property.Key)) throw new XpsOpenApiGenerationException($"Schema '{name}' property '{property.Key}' is not a valid XPScript identifier.");
+            if (property.Value is not JsonObject propertySchema) continue;
+            b.AppendLine($"    Public {property.Key} As {XpsType(root, propertySchema)}");
+        }
+        b.AppendLine("End Class");
+    }
+
+    private static void EmitOperation(StringBuilder b, string apiName, ClientOperation op, Dictionary<string, JsonObject> models)
+    {
+        if (op.Method is not ("GET" or "POST" or "PUT" or "PATCH" or "DELETE"))
+            throw new XpsOpenApiGenerationException($"OpenAPI client generation for HTTP {op.Method} requires the generic XPHttpClient.Send runtime support and is not enabled yet.");
+        var responseName = apiName + "Response";
+        var args = op.Parameters.Select(p => $"{ToIdentifier(p.Name)} As {p.TypeName}").ToList();
+        if (op.Body is not null) args.Add($"payload As {op.Body.TypeName}");
+        b.AppendLine($"    Public Function {op.Name}({string.Join(", ", args)}) As {responseName}");
+        b.AppendLine("        Dim url As String");
+        b.AppendLine("        Dim raw As XPHttpResponse");
+        b.AppendLine($"        Dim result As {responseName}");
+        b.AppendLine($"        Set result = New {responseName}");
+        b.AppendLine($"        url = BaseUrl & \"{EscapeXps(op.Path)}\"");
+        foreach (var p in op.Parameters.Where(x => x.Location == "path"))
+            b.AppendLine($"        url = Replace(url, \"{{{EscapeXps(p.Name)}}}\", CStr({ToIdentifier(p.Name)}))");
+        foreach (var p in op.Parameters.Where(x => x.Location == "query"))
+            b.AppendLine($"        url = Http.AddQuery(url, \"{EscapeXps(p.Name)}\", {ToIdentifier(p.Name)})");
+        foreach (var p in op.Parameters.Where(x => x.Location == "header"))
+            b.AppendLine($"        Call Http.SetHeader(\"{EscapeXps(p.Name)}\", CStr({ToIdentifier(p.Name)}))");
+        var call = op.Method switch
+        {
+            "GET" => "Http.Get(url)",
+            "DELETE" => "Http.Delete(url)",
+            "POST" when op.Body is not null => "Http.PostJson(url, payload)",
+            "PUT" when op.Body is not null => "Http.PutJson(url, payload)",
+            "PATCH" when op.Body is not null => "Http.PatchJson(url, payload)",
+            "POST" => "Http.Post(url, \"\")",
+            "PUT" => "Http.Put(url, \"\")",
+            "PATCH" => "Http.Patch(url, \"\")",
+            _ => throw new InvalidOperationException()
+        };
+        b.AppendLine($"        Set raw = {call}");
+        b.AppendLine("        Set result.Raw = raw");
+        b.AppendLine("        result.StatusCode = raw.StatusCode");
+        b.AppendLine("        result.IsSuccess = raw.IsSuccess");
+        b.AppendLine("        If Len(raw.Body) > 0 Then Set result.Json = raw.Json()");
+        EmitResponseMapping(b, op, models);
+        b.AppendLine($"        Set {op.Name} = result");
+        b.AppendLine("    End Function");
+    }
+
+    private static void EmitResponseMapping(StringBuilder b, ClientOperation op, Dictionary<string, JsonObject> models)
+    {
+        var first = true;
+        foreach (var response in op.Responses.Where(x => !x.Code.Equals("default", StringComparison.OrdinalIgnoreCase)))
+        {
+            b.AppendLine($"        {(first ? "If" : "ElseIf")} raw.StatusCode = {response.Code} Then");
+            first = false;
+            if (response.TypeName is not null)
+            {
+                b.AppendLine($"            result.ResponseType = \"{EscapeXps(response.TypeName)}\"");
+                if (models.ContainsKey(response.TypeName))
+                    b.AppendLine($"            ' Typed {response.TypeName} deserialization will populate result.{response.TypeName} through the shared JSON object mapper.");
+            }
+        }
+        var fallback = op.Responses.FirstOrDefault(x => x.Code.Equals("default", StringComparison.OrdinalIgnoreCase));
+        if (fallback is not null)
+        {
+            b.AppendLine(first ? "        If True Then" : "        Else");
+            if (fallback.TypeName is not null) b.AppendLine($"            result.ResponseType = \"{EscapeXps(fallback.TypeName)}\"");
+            first = false;
+        }
+        if (!first) b.AppendLine("        End If");
+    }
+
+    private static string XpsType(JsonObject root, JsonObject schema)
+    {
+        if (ReadString(schema, "$ref") is { } reference)
+        {
+            _ = Resolve(root, schema);
+            return ToIdentifier(reference[(reference.LastIndexOf('/') + 1)..]);
+        }
+        var type = ReadString(schema, "type")?.ToLowerInvariant();
+        var format = ReadString(schema, "format")?.ToLowerInvariant();
+        return type switch
+        {
+            "integer" => format == "int32" ? "Integer" : "Long",
+            "number" => format == "float" ? "Single" : "Double",
+            "boolean" => "Boolean",
+            "string" => format is "date" or "date-time" ? "Date" : "String",
+            _ => "Variant"
+        };
+    }
+
+    private static JsonObject Resolve(JsonObject root, JsonNode? node)
+    {
+        if (node is not JsonObject current) throw new XpsOpenApiGenerationException("OpenAPI reference target must be an object.");
+        for (var depth = 0; depth < 32; depth++)
+        {
+            var reference = ReadString(current, "$ref");
+            if (reference is null) return current;
+            if (!reference.StartsWith("#/", StringComparison.Ordinal)) throw new XpsOpenApiGenerationException("Only local OpenAPI references are currently supported.");
+            JsonNode? target = root;
+            foreach (var segment in reference[2..].Split('/')) target = target is JsonObject obj ? obj[segment.Replace("~1", "/").Replace("~0", "~")] : null;
+            current = target as JsonObject ?? throw new XpsOpenApiGenerationException($"OpenAPI reference '{reference}' was not found.");
+        }
+        throw new XpsOpenApiGenerationException("OpenAPI reference depth exceeded.");
+    }
+
+    private static JsonObject? SelectJson(JsonObject content)
+    {
+        if (content["application/json"] is JsonObject exact) return exact;
+        foreach (var pair in content) if (pair.Key.EndsWith("+json", StringComparison.OrdinalIgnoreCase) && pair.Value is JsonObject media) return media;
+        return null;
+    }
+
+    private static string ResolveClassName(JsonObject root, string? sourceName, string? requested)
+    {
+        if (!string.IsNullOrWhiteSpace(requested)) return ToIdentifier(requested);
+        var title = root["info"] is JsonObject info ? ReadString(info, "title") : null;
+        var value = title ?? Path.GetFileNameWithoutExtension(sourceName ?? "OpenApi");
+        var name = ToIdentifier(value);
+        return name.EndsWith("Api", StringComparison.OrdinalIgnoreCase) ? name : name + "Api";
+    }
+
+    private static string? ReadServerUrl(JsonObject root)
+    {
+        if (root["servers"] is not JsonArray servers || servers.Count == 0 || servers[0] is not JsonObject server) return null;
+        var url = ReadString(server, "url");
+        return url is not null && Uri.TryCreate(url, UriKind.Absolute, out _) ? url.TrimEnd('/') : null;
+    }
+
+    private static string ToIdentifier(string value)
+    {
+        var parts = Regex.Split(value.Trim(), "[^A-Za-z0-9_]+").Where(x => x.Length > 0).ToArray();
+        if (parts.Length == 0) throw new XpsOpenApiGenerationException($"'{value}' cannot be converted to an XPScript identifier.");
+        var result = string.Concat(parts.Select(x => char.ToUpperInvariant(x[0]) + x[1..]));
+        if (char.IsDigit(result[0])) result = "Api" + result;
+        return result;
+    }
+
+    private static string EscapeXps(string value) => value.Replace("\"", "\"\"");
+    private static string? ReadString(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+    private static bool ReadBool(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<bool>(out var result) && result;
+
+    private sealed record ClientParameter(string Name, string Location, string TypeName, bool Required);
+    private sealed record ClientBody(string TypeName, bool Required);
+    private sealed record ClientResponse(string Code, string? TypeName);
+    private sealed record ClientOperation(string Method, string Path, string Name, IReadOnlyList<ClientParameter> Parameters, ClientBody? Body, IReadOnlyList<ClientResponse> Responses);
+}
