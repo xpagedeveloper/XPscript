@@ -103,6 +103,12 @@ internal static class XPScriptJsonSchemaValidator
             if (matches != 1) Add(errors, path, "oneOf", "Value must satisfy exactly one oneOf schema.", "1 schema", matches + " schemas");
         }
         if (schema["not"] is System.Text.Json.Nodes.JsonObject notSchema && IsValidAgainst(notSchema, node, path, depth + 1)) Add(errors, path, "not", "Value satisfies a schema that must not match.", "schema mismatch", "schema matched");
+        if (schema["if"] is System.Text.Json.Nodes.JsonObject ifSchema)
+        {
+            var conditionMatches = IsValidAgainst(ifSchema, node, path, depth + 1);
+            if (conditionMatches && schema["then"] is System.Text.Json.Nodes.JsonObject thenSchema) ValidateNode(thenSchema, node, path, errors, depth + 1);
+            else if (!conditionMatches && schema["else"] is System.Text.Json.Nodes.JsonObject elseSchema) ValidateNode(elseSchema, node, path, errors, depth + 1);
+        }
 
         if (schema["const"] is System.Text.Json.Nodes.JsonNode constNode && !System.Text.Json.Nodes.JsonNode.DeepEquals(node, constNode)) Add(errors, path, "const", "Value does not match const.", constNode.ToJsonString(), Display(node));
         if (schema["enum"] is System.Text.Json.Nodes.JsonArray enumValues && !enumValues.Any(x => System.Text.Json.Nodes.JsonNode.DeepEquals(node, x))) Add(errors, path, "enum", "Value is not one of the allowed values.", enumValues.ToJsonString(), Display(node));
@@ -117,6 +123,10 @@ internal static class XPScriptJsonSchemaValidator
                 foreach (var dependency in dependentRequired)
                     if (obj.ContainsKey(dependency.Key) && dependency.Value is System.Text.Json.Nodes.JsonArray names)
                         foreach (var item in names) { var name = ReadString(item); if (name.Length > 0 && !obj.ContainsKey(name)) Add(errors, Child(path, name), "dependentRequired", "Dependent property is missing.", "present when " + dependency.Key + " is present", "missing"); }
+            if (schema["dependentSchemas"] is System.Text.Json.Nodes.JsonObject dependentSchemas)
+                foreach (var dependency in dependentSchemas)
+                    if (obj.ContainsKey(dependency.Key) && dependency.Value is System.Text.Json.Nodes.JsonObject dependentSchema)
+                        ValidateNode(dependentSchema, obj, path, errors, depth + 1);
             if (properties is not null) foreach (var property in properties) if (property.Value is System.Text.Json.Nodes.JsonObject childSchema && obj.TryGetPropertyValue(property.Key, out var child)) ValidateNode(childSchema, child, Child(path, property.Key), errors, depth + 1);
             if (schema["additionalProperties"] is System.Text.Json.Nodes.JsonValue ap && ap.TryGetValue<bool>(out var allow) && !allow) foreach (var property in obj) if (properties is null || !properties.ContainsKey(property.Key)) Add(errors, Child(path, property.Key), "additionalProperties", "Additional property is not allowed.", "declared property", property.Key);
         }
