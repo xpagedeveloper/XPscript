@@ -11,6 +11,9 @@ Sub Main()
     Print Hex(255)
     Print Bin(10)
     Print CStr(Sgn(-4))
+    Print CStr(Sin(0))
+    Print CStr(Cos(0))
+    Print CStr(Tan(0))
 
     If "A\"B" <> "A""B" Then
         Error 9201, "Escaped quote normalization failed"
