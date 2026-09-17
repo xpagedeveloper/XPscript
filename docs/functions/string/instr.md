@@ -18,6 +18,6 @@ parameters:
   - name: "compare"
     required: false
     description: "Optional comparison mode."
-example: "/samples/evaluate-standard-functions.xps"
+example: "/samples/compatibility.xps"
 migration: complete
 ---
