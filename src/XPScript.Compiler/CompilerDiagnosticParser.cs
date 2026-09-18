@@ -28,7 +28,7 @@ internal static class CompilerDiagnosticParser
                 Line = line,
                 Position = pos,
                 Description = Humanize(match.Groups["desc"].Value.Trim()),
-                Code = code,
+                SourceCode = code,
                 MarkedCode = Mark(code, pos)
             });
         }
