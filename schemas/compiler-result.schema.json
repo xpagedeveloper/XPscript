@@ -4,27 +4,102 @@
   "title": "XPScript Compiler Result",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "schemaVersion", "compilerVersion", "operation", "result", "errors"],
+  "required": [
+    "schema",
+    "schemaVersion",
+    "compilerVersion",
+    "operation",
+    "result",
+    "errors"
+  ],
   "properties": {
-    "schema": { "const": "xpscript.compiler-result" },
-    "schemaVersion": { "const": 1 },
-    "compilerVersion": { "type": "string", "minLength": 1 },
-    "operation": { "enum": ["compile", "validate"] },
-    "result": { "enum": ["ok", "error"] },
-    "output": { "type": "string" },
+    "schema": {
+      "const": "xpscript.compiler-result"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "compilerVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operation": {
+      "enum": [
+        "compile",
+        "validate"
+      ]
+    },
+    "result": {
+      "enum": [
+        "ok",
+        "error"
+      ]
+    },
+    "output": {
+      "type": "string"
+    },
     "errors": {
       "type": "array",
-      "items": { "$ref": "compiler-diagnostic.schema.json" }
+      "items": {
+        "$ref": "compiler-diagnostic.schema.json"
+      }
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entryPoint"
+      ],
+      "properties": {
+        "entryPoint": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     }
   },
   "allOf": [
     {
-      "if": { "properties": { "operation": { "const": "validate" } }, "required": ["operation"] },
-      "then": { "not": { "required": ["output"] } }
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "validate"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "not": {
+          "required": [
+            "output"
+          ]
+        }
+      }
     },
     {
-      "if": { "properties": { "result": { "const": "error" } }, "required": ["result"] },
-      "then": { "properties": { "errors": { "minItems": 1 } } }
+      "if": {
+        "properties": {
+          "result": {
+            "const": "error"
+          }
+        },
+        "required": [
+          "result"
+        ]
+      },
+      "then": {
+        "properties": {
+          "errors": {
+            "minItems": 1
+          }
+        }
+      }
     }
   ]
 }
