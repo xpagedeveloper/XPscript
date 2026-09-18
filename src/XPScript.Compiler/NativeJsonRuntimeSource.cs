@@ -143,6 +143,7 @@ internal sealed class XPScriptJsonArray
     public void Set(object? indexValue, object? value) { var index = XPScriptRuntime.CInt(indexValue); if (index < 0 || index >= Node.Count) throw new XPScriptRuntimeException(9, "JSON array index out of range."); var previous = Node[index]?.DeepClone(); Node[index] = XPScriptNativeJson.ToNode(value); try { XPScriptNativeJson.ValidateBudget(Node); } catch { Node[index] = previous; throw; } }
     public void RemoveAt(object? indexValue) { var index = XPScriptRuntime.CInt(indexValue); if (index < 0 || index >= Node.Count) throw new XPScriptRuntimeException(9, "JSON array index out of range."); Node.RemoveAt(index); }
     public string Stringify() => XPScriptNativeJson.Stringify(this);
+    public object? ToObject(object? contract) => XPScriptNativeJson.ToObject(this, contract);
 }
 internal sealed class XPScriptJsonElement
 {
