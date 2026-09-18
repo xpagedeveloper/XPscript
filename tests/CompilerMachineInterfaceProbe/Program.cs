@@ -25,6 +25,12 @@ var cases = new[]
 foreach (var test in cases)
 {
     var source = Path.Combine(root, test.Source.Replace('/', Path.DirectorySeparatorChar));
+    var validation = await driver.ValidateWithResultAsync(source);
+    Require(!validation.Success, test.Source + " validation must fail");
+    Require(validation.Operation == "validate", test.Source + " validation operation");
+    Require(validation.Output is null, test.Source + " validation must not produce output");
+    Require(validation.Errors.Any(d => d.DiagnosticCode == test.DiagnosticCode), test.Source + " validation missing " + test.DiagnosticCode);
+
     var output = Path.Combine(outputRoot, Path.GetFileNameWithoutExtension(source) + ".dll");
     var result = await driver.CompileWithResultAsync(source, output, selfContained: false);
     Require(!result.Success, test.Source + " must fail compilation");
