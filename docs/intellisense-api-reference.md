@@ -106,6 +106,8 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `JsonSchema.ToString` | `schema.ToString()` | none | Returns compact JSON Schema text. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult` | `Dim result As XPJsonValidationResult` | none | Represents JSON Schema validation output returned by `schema.Validate`. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.Valid` | `result.Valid` | none | True when validation produced no errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonValidationResult.IsValid` | `result.IsValid` | none | Alias for Valid; True when validation produced no errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.ErrorCount` | `result.ErrorCount` | none | Number of validation errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.Errors` | `result.Errors` | none | Returns validation errors as XPJsonArray. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonValidationResult.GetError` | `result.GetError(index)` | Zero-based validation error index. | Returns one validation error as XPJsonObject with path, schemaPath, keyword, message, expected, and actual fields. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.Json` | `result.Json` | none | Returns the complete validation result as XPJsonDocument. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
