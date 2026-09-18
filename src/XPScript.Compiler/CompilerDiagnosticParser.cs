@@ -7,7 +7,7 @@ internal static class CompilerDiagnosticParser
 {
     private const string GeneratedMarker = "XPSCRIPT-GENERATED-DIAGNOSTIC|";
 
-    public static List<CompileDiagnostic> Parse(string message, string sourcePath, string source, bool debug)
+    public static List<CompileDiagnostic> Parse(string message, string sourcePath, string source, bool debug, string diagnosticCode = "", string category = "")
     {
         debug = debug || CompilerDiagnosticMode.Debug;
         var result = new List<CompileDiagnostic>();
@@ -29,7 +29,9 @@ internal static class CompilerDiagnosticParser
                 Position = pos,
                 Description = Humanize(match.Groups["desc"].Value.Trim()),
                 SourceCode = code,
-                MarkedCode = Mark(code, pos)
+                MarkedCode = Mark(code, pos),
+                DiagnosticCode = diagnosticCode,
+                Category = string.IsNullOrWhiteSpace(category) ? "compiler" : category
             });
         }
 
@@ -49,7 +51,9 @@ internal static class CompilerDiagnosticParser
                 File = DiagnosticFileName(sourcePath),
                 Description = debug
                     ? FirstDiagnosticLine(message)
-                    : "Compilation failed. Use --debug to show generated C# diagnostics."
+                    : "Compilation failed. Use --debug to show generated C# diagnostics.",
+                DiagnosticCode = string.IsNullOrWhiteSpace(diagnosticCode) ? CompilerDiagnosticCodes.CompilationFailed : diagnosticCode,
+                Category = string.IsNullOrWhiteSpace(category) ? "compiler" : category
             }
         ];
     }
@@ -67,7 +71,9 @@ internal static class CompilerDiagnosticParser
                 File = DiagnosticFileName(match.Groups["file"].Value),
                 Line = int.Parse(match.Groups["line"].Value),
                 Position = int.Parse(match.Groups["pos"].Value),
-                Description = $"{match.Groups["id"].Value}: {Humanize(match.Groups["desc"].Value.Trim())}"
+                Description = Humanize(match.Groups["desc"].Value.Trim()),
+                UpstreamCode = match.Groups["id"].Value,
+                Category = "code-generation"
             });
         }
 
