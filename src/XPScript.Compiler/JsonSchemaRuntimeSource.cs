@@ -59,8 +59,8 @@ internal sealed class XPScriptJsonSchema : IXPScriptJsonNodeConvertible
     {
         if (node is null) return null;
         if (IsDirectSchemaKeyword(name) && IsSchemaNode(node)) return NormalizeSchemaNode(node);
-        if (IsSchemaMapKeyword(name) && node is System.Text.Json.Nodes.JsonObject map) { var wrapper = new System.Text.Json.Nodes.JsonObject { [name] = map.DeepClone() }; return NormalizeSchemaNode(wrapper)[name]; }
-        if (IsSchemaArrayKeyword(name) && node is System.Text.Json.Nodes.JsonArray array) { var wrapper = new System.Text.Json.Nodes.JsonObject { [name] = array.DeepClone() }; return NormalizeSchemaNode(wrapper)[name]; }
+        if (IsSchemaMapKeyword(name) && node is System.Text.Json.Nodes.JsonObject map) { var wrapper = new System.Text.Json.Nodes.JsonObject { [name] = map.DeepClone() }; return NormalizeSchemaNode(wrapper)[name]?.DeepClone(); }
+        if (IsSchemaArrayKeyword(name) && node is System.Text.Json.Nodes.JsonArray array) { var wrapper = new System.Text.Json.Nodes.JsonObject { [name] = array.DeepClone() }; return NormalizeSchemaNode(wrapper)[name]?.DeepClone(); }
         return node;
     }
     private static bool IsDirectSchemaKeyword(string name) => name is "additionalProperties" or "contains" or "propertyNames" or "not" or "if" or "then" or "else" or "items";
