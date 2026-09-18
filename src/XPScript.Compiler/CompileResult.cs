@@ -53,6 +53,18 @@ public sealed class CompileResult
         Output = outputPath
     };
 
+    public static CompileResult Valid() => new()
+    {
+        Operation = "validate",
+        Result = "ok"
+    };
+
+    internal CompileResult WithOperation(string operation)
+    {
+        Operation = operation;
+        return this;
+    }
+
     public static CompileResult Error(IEnumerable<CompileDiagnostic> errors) => new()
     {
         Result = "error",
