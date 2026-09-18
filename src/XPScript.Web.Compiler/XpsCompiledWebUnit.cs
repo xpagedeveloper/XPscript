@@ -133,7 +133,7 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             ?? throw new XpsWebRouteException("XPJsonSchema.Parse returned no schema.");
         var validate = schemaType.GetMethod("Validate", BindingFlags.Instance | BindingFlags.Public)
             ?? throw new XpsWebRouteException("XPJsonSchema.Validate was not found in the compiled web unit.");
-        var result = validate.Invoke(schema, [context.Request.BodyText])
+        var jsonType = assembly.GetType("XPScriptJsonDocument", throwOnError: false, ignoreCase: false)\n            ?? throw new XpsWebRouteException("XPJsonDocument runtime was not included in the compiled web unit.");\n        var jsonParse = jsonType.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public)\n            ?? throw new XpsWebRouteException("XPJsonDocument.Parse was not found in the compiled web unit.");\n        var document = jsonParse.Invoke(null, [context.Request.BodyText()])\n            ?? throw new XpsWebRouteException("XPJsonDocument.Parse returned no document.");\n        var result = validate.Invoke(schema, [document])
             ?? throw new XpsWebRouteException("XPJsonSchema.Validate returned no result.");
         var resultType = result.GetType();
         if ((bool)(resultType.GetProperty("Valid")?.GetValue(result) ?? false)) return new Dictionary<string, string[]>();
