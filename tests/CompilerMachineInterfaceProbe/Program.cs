@@ -41,10 +41,13 @@ var overloadMetadataDiagnostic = overloadMetadataCase.Errors.FirstOrDefault(d =>
 Require(overloadMetadataDiagnostic is not null, "overload metadata diagnostic");
 Require(overloadMetadataDiagnostic.Properties is not null, "overload metadata properties");
 Require(overloadMetadataDiagnostic.Properties.Any(p => p.Name == "symbol"), "overload metadata symbol");
+Require(overloadMetadataDiagnostic.Properties.Any(p => p.Name == "symbolKind" && p.Value == "method"), "overload metadata symbol kind");
+Require(overloadMetadataDiagnostic.Properties.Any(p => p.Name == "receiverType" && !string.IsNullOrWhiteSpace(p.Value)), "overload metadata receiver type");
 Require(overloadMetadataDiagnostic.Properties.Any(p => p.Name == "suppliedSignature"), "overload metadata supplied signature");
 Require(overloadMetadataDiagnostic.Properties.Count(p => p.Name == "candidateSignature") >= 2, "overload metadata candidates");
 var candidateSignatures = overloadMetadataDiagnostic.Properties.Where(p => p.Name == "candidateSignature").Select(p => p.Value).ToArray();
 Require(candidateSignatures.SequenceEqual(candidateSignatures.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)), "overload metadata candidate ordering");
+Require(candidateSignatures.All(x => x.Contains("ByRef ", StringComparison.Ordinal) || x.Contains("ByVal ", StringComparison.Ordinal)), "overload metadata parameter passing mode");
 
 var typeMetadataCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "null-integer-parameter-error.xps"));
 var typeMetadataDiagnostic = typeMetadataCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2003");
