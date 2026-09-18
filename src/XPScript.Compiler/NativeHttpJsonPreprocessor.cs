@@ -43,8 +43,11 @@ internal sealed class NativeHttpJsonPreprocessor
             // Set is reserved for user-defined XPScript object references. Native XP runtime
             // objects are Variant-backed after this preprocessor, so assignment to their public
             // fields must use normal value assignment at the transpiler boundary.
-            if (Regex.IsMatch(rewritten, @"^Set\s+[A-Za-z_]\w*\.(Raw|Json|Validation)\s*=", RegexOptions.IgnoreCase))
-                rewritten = Regex.Replace(rewritten, @"^Set\s+", string.Empty, RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(
+                rewritten,
+                @"(?<![A-Za-z0-9_])Set\s+([A-Za-z_]\w*\.(?:Raw|Json|Validation)\s*=)",
+                "$1",
+                RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonDocument\.Parse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.Parse\s*\(", "XPScriptJsonSchema.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.FromJson\s*\(", "XPScriptJsonSchema.FromJson(", RegexOptions.IgnoreCase);
