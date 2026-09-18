@@ -39,7 +39,9 @@ internal sealed class NothingComparisonValidator
             throw new CompilerException(
                 $"{sourceName}({i + 1},{match.Index + 1}): Nothing cannot be compared with '{op}'. " +
                 "Use 'Is Nothing' or 'Is Not Nothing' for object references." + Environment.NewLine +
-                $"  {lines[i].Trim()}");
+                $"  {lines[i].Trim()}",
+                CompilerDiagnosticCodes.InvalidNothingComparison,
+                "syntax");
         }
     }
 
