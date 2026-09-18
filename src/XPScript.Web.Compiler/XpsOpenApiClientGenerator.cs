@@ -98,10 +98,10 @@ public sealed class XpsOpenApiClientGenerator
     private static void EmitModel(StringBuilder b, JsonObject root, string name, JsonObject schema) { var resolved = Resolve(root, schema); b.AppendLine($"Public Class {name}"); if (resolved["properties"] is not JsonObject properties || properties.Count == 0) b.AppendLine("    Public Value As Variant"); else foreach (var property in properties) { if (!IdentifierPattern.IsMatch(property.Key)) throw new XpsOpenApiGenerationException($"Schema '{name}' property '{property.Key}' is not a valid XPScript identifier."); if (property.Value is JsonObject propertySchema) b.AppendLine($"    Public {property.Key} As {XpsType(root, propertySchema)}"); } b.AppendLine("End Class"); }
     private static void EmitOperation(StringBuilder b, string apiName, ClientOperation op, Dictionary<string, JsonObject> models, Dictionary<string, ClientSecurityScheme> securitySchemes)
     {
-        var responseName = apiName + "Response"; var args = op.Parameters.Select(p => $"{ToIdentifier(p.Name)} As {p.TypeName}").ToList(); if (op.Body is not null) args.Add($"payload As {op.Body.TypeName}"); b.AppendLine($"    Public Function {op.Name}({string.Join(", ", args)}) As {responseName}"); b.AppendLine("        Dim url As String"); b.AppendLine("        Dim raw As XPHttpResponse"); b.AppendLine("        Dim request As New XPHttpRequest"); b.AppendLine($"        Dim result As {responseName}"); b.AppendLine($"        Set result = New {responseName}"); b.AppendLine($"        url = BaseUrl & \"{EscapeXps(op.Path)}\"");
-        foreach (var p in op.Parameters.Where(x => x.Location == "path")) b.AppendLine($"        url = Replace(url, \"{{{EscapeXps(p.Name)}}}\", Http.EncodePath({ToIdentifier(p.Name)}))"); foreach (var p in op.Parameters.Where(x => x.Location == "query")) b.AppendLine($"        url = Http.AddQuery(url, \"{EscapeXps(p.Name)}\", {ToIdentifier(p.Name)})"); foreach (var p in op.Parameters.Where(x => x.Location == "header")) b.AppendLine($"        Call request.SetHeader(\"{EscapeXps(p.Name)}\", CStr({ToIdentifier(p.Name)}))");
+        var responseName = apiName + "Response"; var args = op.Parameters.Where(p => p.Required).Select(p => $"{ToIdentifier(p.Name)} As {p.TypeName}").Concat(op.Parameters.Where(p => !p.Required).Select(p => $"Optional {ToIdentifier(p.Name)} As {p.TypeName} = {DefaultValue(p.TypeName)}")).ToList(); if (op.Body is not null) args.Add(op.Body.Required ? $"payload As {op.Body.TypeName}" : $"Optional payload As {op.Body.TypeName} = {DefaultValue(op.Body.TypeName)}"); b.AppendLine($"    Public Function {op.Name}({string.Join(", ", args)}) As {responseName}"); b.AppendLine("        Dim url As String"); b.AppendLine("        Dim raw As XPHttpResponse"); b.AppendLine("        Dim request As New XPHttpRequest"); b.AppendLine($"        Dim result As {responseName}"); b.AppendLine($"        Set result = New {responseName}"); b.AppendLine($"        url = BaseUrl & \"{EscapeXps(op.Path)}\"");
+        foreach (var p in op.Parameters.Where(x => x.Location == "path")) b.AppendLine($"        url = Replace(url, \"{{{EscapeXps(p.Name)}}}\", Http.EncodePath({ToIdentifier(p.Name)}))"); foreach (var p in op.Parameters.Where(x => x.Location == "query")) { var line = $"url = Http.AddQuery(url, \"{EscapeXps(p.Name)}\", {ToIdentifier(p.Name)})"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); } foreach (var p in op.Parameters.Where(x => x.Location == "header")) { var line = $"Call request.SetHeader(\"{EscapeXps(p.Name)}\", CStr({ToIdentifier(p.Name)}))"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); }
         EmitSecurity(b, op, securitySchemes);
-        b.AppendLine($"        request.Method = \"{op.Method}\""); b.AppendLine("        request.Url = url"); if (op.Body is not null) { b.AppendLine("        Call request.SetHeader(\"Content-Type\", \"application/json\")"); b.AppendLine("        request.Body = JsonStringify(payload)"); } b.AppendLine("        Set raw = Http.Send(request)");
+        b.AppendLine($"        request.Method = \"{op.Method}\""); b.AppendLine("        request.Url = url"); if (op.Body is not null) { if (!op.Body.Required) b.AppendLine("        If Not payload Is Nothing Then"); var indent = op.Body.Required ? "        " : "            "; b.AppendLine(indent + "Call request.SetHeader(\"Content-Type\", \"application/json\")"); b.AppendLine(indent + "request.Body = JsonStringify(payload)"); if (!op.Body.Required) b.AppendLine("        End If"); } b.AppendLine("        Set raw = Http.Send(request)");
         b.AppendLine("        Set result.Raw = raw"); b.AppendLine("        result.StatusCode = raw.StatusCode"); b.AppendLine("        result.IsSuccess = raw.IsSuccess"); b.AppendLine("        If Len(raw.Body) > 0 Then Set result.Json = raw.Json()"); EmitResponseMapping(b, op, models); b.AppendLine($"        Set {op.Name} = result"); b.AppendLine("    End Function");
     }
     private static void EmitSecurity(StringBuilder b, ClientOperation op, Dictionary<string, ClientSecurityScheme> securitySchemes)
@@ -181,6 +181,25 @@ public sealed class XpsOpenApiClientGenerator
         }
         if (!first) b.AppendLine("        End If");
     }
+    private static void EmitOptionalValue(StringBuilder b, ClientParameter parameter, string statement)
+    {
+        var name = ToIdentifier(parameter.Name);
+        var condition = parameter.TypeName switch
+        {
+            "String" => $"Len({name}) > 0",
+            "Variant" => $"Not {name} Is Nothing",
+            _ => $"{name} <> {DefaultValue(parameter.TypeName)}"
+        };
+        b.AppendLine($"        If {condition} Then {statement}");
+    }
+    private static string DefaultValue(string typeName) => typeName switch
+    {
+        "String" => "\"\"",
+        "Boolean" => "False",
+        "Single" or "Double" or "Integer" or "Long" => "0",
+        "Date" => "0",
+        _ => "Nothing"
+    };
     private static string XpsType(JsonObject root, JsonObject schema) { if (ReadString(schema, "$ref") is { } reference) { _ = Resolve(root, schema); return ToIdentifier(reference[(reference.LastIndexOf('/') + 1)..]); } var type = ReadString(schema, "type")?.ToLowerInvariant(); var format = ReadString(schema, "format")?.ToLowerInvariant(); return type switch { "integer" => format == "int32" ? "Integer" : "Long", "number" => format == "float" ? "Single" : "Double", "boolean" => "Boolean", "string" => format is "date" or "date-time" ? "Date" : "String", _ => "Variant" }; }
     private static JsonObject Resolve(JsonObject root, JsonNode? node) { if (node is not JsonObject current) throw new XpsOpenApiGenerationException("OpenAPI reference target must be an object."); for (var depth = 0; depth < 32; depth++) { var reference = ReadString(current, "$ref"); if (reference is null) return current; if (!reference.StartsWith("#/", StringComparison.Ordinal)) throw new XpsOpenApiGenerationException("Only local OpenAPI references are currently supported."); JsonNode? target = root; foreach (var segment in reference[2..].Split('/')) target = target is JsonObject obj ? obj[segment.Replace("~1", "/").Replace("~0", "~")] : null; current = target as JsonObject ?? throw new XpsOpenApiGenerationException($"OpenAPI reference '{reference}' was not found."); } throw new XpsOpenApiGenerationException("OpenAPI reference depth exceeded."); }
     private static JsonObject? SelectJson(JsonObject content) { if (content["application/json"] is JsonObject exact) return exact; foreach (var pair in content) if (pair.Key.EndsWith("+json", StringComparison.OrdinalIgnoreCase) && pair.Value is JsonObject media) return media; return null; }
