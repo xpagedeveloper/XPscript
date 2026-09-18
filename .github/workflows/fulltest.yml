@@ -168,9 +168,7 @@ jobs:
           grep -q 'Public Class ClientCIApi' ./out/generated-openapi-client.xps
           grep -q 'XPJsonSchema.Parse' ./out/generated-openapi-client.xps
           grep -q 'XPJsonArray' ./out/generated-openapi-client.xps
-          grep -q 'Optional Limit As Variant = Nothing' ./out/generated-openapi-client.xps
-          grep -q 'Optional Enabled As Variant = Nothing' ./out/generated-openapi-client.xps
-          grep -q 'Optional Label As Variant = Nothing' ./out/generated-openapi-client.xps
+          grep -q 'Optional Expand As Variant = Nothing' ./out/generated-openapi-client.xps
           grep -q 'Public Class ItemChoice' ./out/generated-openapi-client.xps
           grep -q 'Public Class ItemEnvelope' ./out/generated-openapi-client.xps
           grep -q 'Public Class ItemState' ./out/generated-openapi-client.xps
