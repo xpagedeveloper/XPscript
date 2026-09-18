@@ -92,8 +92,7 @@ foreach (var expected in new[]
     "public string InitialFocus",
     "public void FocusFirstInvalid()",
     "public void SetValidationError(object? name, object? message)",
-    "accessibleName = field.AccessibleName",
-    "validationError = field.ValidationError",
+    "public string ValidationError",
     "aria-invalid",
     "aria-describedby",
     "aria-live"
