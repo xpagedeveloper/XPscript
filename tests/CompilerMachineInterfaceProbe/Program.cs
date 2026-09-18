@@ -32,6 +32,16 @@ Require(generatedValidation.Output is null, "generated C# validation must not pr
 Require(generatedValidation.Errors.Any(d => d.DiagnosticCode == "XPS2008"), "generated C# validation missing XPS2008");
 Require(generatedValidation.Errors.Any(d => d.UpstreamCode == "CS0103"), "generated C# validation missing CS0103 upstream code");
 
+var overloadMetadataCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "class-method-overloads-no-match.xps"));
+var overloadMetadataDiagnostic = overloadMetadataCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2004");
+Require(overloadMetadataDiagnostic is not null, "overload metadata diagnostic");
+Require(overloadMetadataDiagnostic.Properties is not null, "overload metadata properties");
+Require(overloadMetadataDiagnostic.Properties.Any(p => p.Name == "symbol"), "overload metadata symbol");
+Require(overloadMetadataDiagnostic.Properties.Any(p => p.Name == "suppliedSignature"), "overload metadata supplied signature");
+Require(overloadMetadataDiagnostic.Properties.Count(p => p.Name == "candidateSignature") >= 2, "overload metadata candidates");
+var candidateSignatures = overloadMetadataDiagnostic.Properties.Where(p => p.Name == "candidateSignature").Select(p => p.Value).ToArray();
+Require(candidateSignatures.SequenceEqual(candidateSignatures.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)), "overload metadata candidate ordering");
+
 var typeMetadataCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "null-integer-parameter-error.xps"));
 var typeMetadataDiagnostic = typeMetadataCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2003");
 Require(typeMetadataDiagnostic is not null, "type metadata diagnostic");
