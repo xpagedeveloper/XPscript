@@ -32,6 +32,24 @@ Require(generatedValidation.Output is null, "generated C# validation must not pr
 Require(generatedValidation.Errors.Any(d => d.DiagnosticCode == "XPS2008"), "generated C# validation missing XPS2008");
 Require(generatedValidation.Errors.Any(d => d.UpstreamCode == "CS0103"), "generated C# validation missing CS0103 upstream code");
 
+var typeMetadataCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "null-integer-parameter-error.xps"));
+var typeMetadataDiagnostic = typeMetadataCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2003");
+Require(typeMetadataDiagnostic is not null, "type metadata diagnostic");
+Require(typeMetadataDiagnostic.Properties is not null, "type metadata properties");
+Require(typeMetadataDiagnostic.Properties.Any(p => p.Name == "parameter"), "type metadata parameter");
+Require(typeMetadataDiagnostic.Properties.Any(p => p.Name == "expectedType"), "type metadata expectedType");
+Require(typeMetadataDiagnostic.Properties.Any(p => p.Name == "actualType"), "type metadata actualType");
+var typeMetadataJson = JsonSerializer.Serialize(typeMetadataCase);
+using (var typeMetadataDocument = JsonDocument.Parse(typeMetadataJson))
+{
+    var diagnostic = typeMetadataDocument.RootElement.GetProperty("errors")
+        .EnumerateArray().First(e => e.GetProperty("diagnosticCode").GetString() == "XPS2003");
+    var properties = diagnostic.GetProperty("properties").EnumerateArray().ToArray();
+    Require(properties.Any(p => p.GetProperty("name").GetString() == "parameter"), "JSON type metadata parameter");
+    Require(properties.Any(p => p.GetProperty("name").GetString() == "expectedType"), "JSON type metadata expectedType");
+    Require(properties.Any(p => p.GetProperty("name").GetString() == "actualType"), "JSON type metadata actualType");
+}
+
 foreach (var test in cases)
 {
     var source = Path.Combine(root, test.Source.Replace('/', Path.DirectorySeparatorChar));
