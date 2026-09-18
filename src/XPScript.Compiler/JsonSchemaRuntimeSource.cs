@@ -11,7 +11,7 @@ internal sealed class XPScriptJsonSchema : IXPScriptJsonNodeConvertible
 
     public static XPScriptJsonSchema Parse(object? value)
     {
-        try { var node = System.Text.Json.Nodes.JsonNode.Parse(XPScriptRuntime.CStr(value), documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = 64 }); if (node is not System.Text.Json.Nodes.JsonObject obj) throw new XPScriptRuntimeException(13, "XPJsonSchema requires a JSON object root."); return new XPScriptJsonSchema(obj); }
+        try { var node = System.Text.Json.Nodes.JsonNode.Parse(XPScriptRuntime.CStr(value), documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = 64 }); if (!IsSchemaNode(node)) throw new XPScriptRuntimeException(13, "XPJsonSchema requires a JSON object or boolean schema root."); return new XPScriptJsonSchema(NormalizeSchemaNode(node!)); }
         catch (System.Text.Json.JsonException) { throw new XPScriptRuntimeException(13, "XPJsonSchema input is not valid JSON."); }
     }
     public static XPScriptJsonSchema FromJson(object? value) => InferSchema(value, true);
@@ -56,7 +56,26 @@ internal sealed class XPScriptJsonSchema : IXPScriptJsonNodeConvertible
     private void AddRequired(string name) { var required = _schema["required"] as System.Text.Json.Nodes.JsonArray; if (required is null) { required = new System.Text.Json.Nodes.JsonArray(); _schema["required"] = required; } foreach (var item in required) if (item is System.Text.Json.Nodes.JsonValue v && v.TryGetValue<string>(out var existing) && string.Equals(existing, name, StringComparison.Ordinal)) return; required.Add(name); }
     private void SetKeyword(string name, object? value) { if (value is null || XPScriptNullRuntime.IsNull(value)) { _schema.Remove(name); return; } _schema[name] = value is XPScriptJsonSchema schema ? schema.ToJsonSchemaObject() : XPScriptNativeJson.ToNode(value); XPScriptNativeJson.ValidateBudget(_schema); }
     private string ReadString(string name) => _schema[name] is System.Text.Json.Nodes.JsonValue v && v.TryGetValue<string>(out var s) ? s : string.Empty;
-    private static System.Text.Json.Nodes.JsonObject ToSchemaObject(object? value) { if (value is XPScriptJsonSchema schema) return schema.ToJsonSchemaObject(); var node = XPScriptNativeJson.ToNode(value); if (node is not System.Text.Json.Nodes.JsonObject obj) throw new XPScriptRuntimeException(13, "XPJsonSchema child schema must be an XPJsonSchema, JsonObject or JsonDocument with an object root."); XPScriptNativeJson.ValidateBudget(obj); return (System.Text.Json.Nodes.JsonObject)obj.DeepClone(); }
+    private static System.Text.Json.Nodes.JsonObject ToSchemaObject(object? value) { if (value is XPScriptJsonSchema schema) return schema.ToJsonSchemaObject(); var node = XPScriptNativeJson.ToNode(value); if (!IsSchemaNode(node)) throw new XPScriptRuntimeException(13, "XPJsonSchema child schema must be an XPJsonSchema, JSON object or boolean schema."); XPScriptNativeJson.ValidateBudget(node!); return NormalizeSchemaNode(node!); }
+    private static bool IsSchemaNode(System.Text.Json.Nodes.JsonNode? node) => node is System.Text.Json.Nodes.JsonObject || (node is System.Text.Json.Nodes.JsonValue value && value.TryGetValue<bool>(out _));
+    private static System.Text.Json.Nodes.JsonObject NormalizeSchemaNode(System.Text.Json.Nodes.JsonNode node)
+    {
+        if (node is System.Text.Json.Nodes.JsonValue booleanValue && booleanValue.TryGetValue<bool>(out var allowed))
+            return allowed ? new System.Text.Json.Nodes.JsonObject() : new System.Text.Json.Nodes.JsonObject { ["not"] = new System.Text.Json.Nodes.JsonObject() };
+        if (node is not System.Text.Json.Nodes.JsonObject source) throw new XPScriptRuntimeException(13, "JSON Schema nodes must be objects or booleans.");
+        var result = (System.Text.Json.Nodes.JsonObject)source.DeepClone();
+        foreach (var name in new[] { "additionalProperties", "contains", "propertyNames", "not", "if", "then", "else", "items" })
+            if (result[name] is System.Text.Json.Nodes.JsonNode child && IsSchemaNode(child)) result[name] = NormalizeSchemaNode(child);
+        foreach (var name in new[] { "properties", "patternProperties", "dependentSchemas", "$defs" })
+            if (result[name] is System.Text.Json.Nodes.JsonObject map)
+                foreach (var property in map.ToList())
+                    if (property.Value is System.Text.Json.Nodes.JsonNode child && IsSchemaNode(child)) map[property.Key] = NormalizeSchemaNode(child);
+        foreach (var name in new[] { "allOf", "anyOf", "oneOf", "prefixItems" })
+            if (result[name] is System.Text.Json.Nodes.JsonArray array)
+                for (var i = 0; i < array.Count; i++)
+                    if (array[i] is System.Text.Json.Nodes.JsonNode child && IsSchemaNode(child)) array[i] = NormalizeSchemaNode(child);
+        return result;
+    }
     private static System.Text.Json.Nodes.JsonObject TypeSchema(string type) => new() { ["type"] = type };
     private static string ValidateKeyword(object? value) { var name = XPScriptRuntime.CStr(value).Trim(); if (name.Length == 0 || name.Length > 256 || name.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new XPScriptRuntimeException(5, "XPJsonSchema keyword is invalid."); return name; }
     private static string ValidatePropertyName(object? value) { var name = XPScriptRuntime.CStr(value); if (name.Length == 0 || name.Length > 1024 || name.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new XPScriptRuntimeException(5, "XPJsonSchema property name is invalid."); return name; }
