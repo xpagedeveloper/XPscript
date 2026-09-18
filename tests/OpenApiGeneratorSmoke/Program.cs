@@ -72,6 +72,28 @@ paths:
 }
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorization header", StringComparison.OrdinalIgnoreCase)) { }
 
+var jsonTypesServer = new XpsOpenApiGenerator().Generate("""
+openapi: 3.1.0
+info: { title: JSON Types Server, version: 1.0.0 }
+paths:
+  /values:
+    post:
+      operationId: jsonTypes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+""", "json-types-server.yaml").Source;
+if (!jsonTypesServer.Contains("As XPJsonArray", StringComparison.Ordinal) || !jsonTypesServer.Contains("OpenAPI responses: 200 XPJsonObject", StringComparison.Ordinal))
+    throw new Exception("REST server generation must reuse public XPJsonArray/XPJsonObject types.");
+
 var overrideServer = new XpsOpenApiGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Server Override, version: 1.0.0 }
