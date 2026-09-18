@@ -3,11 +3,11 @@ namespace XPScript.Compiler;
 internal static class JsonSchemaRuntimeSource
 {
     public const string Code = """
-public sealed class XPScriptJsonSchema : IXPScriptJsonNodeConvertible
+internal sealed class XPScriptJsonSchema : IXPScriptJsonNodeConvertible
 {
     private readonly System.Text.Json.Nodes.JsonObject _schema;
     public XPScriptJsonSchema() { _schema = new System.Text.Json.Nodes.JsonObject(); }
-    public XPScriptJsonSchema(System.Text.Json.Nodes.JsonObject schema) { _schema = (System.Text.Json.Nodes.JsonObject)schema.DeepClone(); XPScriptNativeJson.ValidateBudget(_schema); }
+    private XPScriptJsonSchema(System.Text.Json.Nodes.JsonObject schema) { _schema = (System.Text.Json.Nodes.JsonObject)schema.DeepClone(); XPScriptNativeJson.ValidateBudget(_schema); }
 
     public static XPScriptJsonSchema Parse(object? value)
     {
@@ -92,10 +92,10 @@ public sealed class XPScriptJsonSchema : IXPScriptJsonNodeConvertible
     private static string ValidatePropertyName(object? value) { var name = XPScriptRuntime.CStr(value); if (name.Length == 0 || name.Length > 1024 || name.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new XPScriptRuntimeException(5, "XPJsonSchema property name is invalid."); return name; }
 }
 
-public sealed class XPScriptJsonValidationResult
+internal sealed class XPScriptJsonValidationResult
 {
     private readonly System.Text.Json.Nodes.JsonArray _errors;
-    public XPScriptJsonValidationResult(System.Text.Json.Nodes.JsonArray errors) { _errors = errors; }
+    internal XPScriptJsonValidationResult(System.Text.Json.Nodes.JsonArray errors) { _errors = errors; }
     public bool Valid => _errors.Count == 0;
     public bool IsValid => Valid;
     public int ErrorCount => _errors.Count;
@@ -123,7 +123,7 @@ public sealed class XPScriptJsonValidationResult
     public XPScriptJsonDocument Json => new XPScriptJsonDocument(new System.Text.Json.Nodes.JsonObject { ["valid"] = Valid, ["errorCount"] = ErrorCount, ["errors"] = _errors.DeepClone() });
 }
 
-public static class XPScriptJsonSchemaValidator
+internal static class XPScriptJsonSchemaValidator
 {
     public static XPScriptJsonValidationResult Validate(System.Text.Json.Nodes.JsonObject schema, object? value)
     {
