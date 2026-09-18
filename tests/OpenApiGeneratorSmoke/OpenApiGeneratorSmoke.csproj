@@ -14,5 +14,6 @@
     <None Include="petstore-reimport.yaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="client-ci.yaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="petstore.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="fixtures/*.yaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
