@@ -185,7 +185,8 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 value = field.Type is "PasswordField" or "MultiListBox" or "Separator" or "Spacer" ? null : GetFieldValueString(field.Name),
                 values = field.Type == "MultiListBox" ? ReadSelectedValues(field.Name) : Array.Empty<string>(),
                 options = field.Options,
-                regionId = field.RegionId
+                regionId = field.RegionId,
+                validationError = GetValidationError(field.Name)
             }).ToArray(),
             buttons = _buttons.Select(button => new
             {
