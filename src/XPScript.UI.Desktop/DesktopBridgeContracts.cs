@@ -59,6 +59,7 @@ public sealed record DesktopFormField(
     public string AccessKey { get; init; } = string.Empty;
     public string HotKey { get; init; } = string.Empty;
     public string ValidationError { get; init; } = string.Empty;
+    public string SchemaValidationError { get; init; } = string.Empty;
 }
 
 public sealed record DesktopFormButton(
