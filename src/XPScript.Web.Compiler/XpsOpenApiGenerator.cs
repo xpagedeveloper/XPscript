@@ -163,8 +163,7 @@ public sealed class XpsOpenApiGenerator
                 if (pathItem[method] is not JsonObject operation) continue;
                 var rawName = ReadString(operation, "operationId") ?? BuildOperationName(method, pathPair.Key);
                 var name = UniqueOperationName(ToTypeIdentifier(rawName, $"operation '{method.ToUpperInvariant()} {pathPair.Key}'"), usedNames);
-                var parameters = new List<ParameterModel>(pathParameters);
-                parameters.AddRange(ReadParameters(root, operation["parameters"], $"{method.ToUpperInvariant()} {pathPair.Key} parameters"));
+                var parameters = MergeParameters(pathParameters, ReadParameters(root, operation["parameters"], $"{method.ToUpperInvariant()} {pathPair.Key} parameters"));
                 EnsureUniqueParameters(parameters, method, pathPair.Key);
                 var body = ReadRequestBody(root, operation["requestBody"], name, models, $"{method.ToUpperInvariant()} {pathPair.Key} requestBody");
                 var responses = ReadResponses(root, operation["responses"], $"{method.ToUpperInvariant()} {pathPair.Key} responses");
@@ -187,12 +186,28 @@ public sealed class XpsOpenApiGenerator
             var name = ReadString(parameter, "name") ?? throw new XpsOpenApiGenerationException($"{context} contains a parameter without a name.");
             var location = ReadString(parameter, "in")?.ToLowerInvariant()
                 ?? throw new XpsOpenApiGenerationException($"Parameter '{name}' in {context} is missing 'in'.");
+            if (location == "path" && !ReadBoolean(parameter, "required"))
+                throw new XpsOpenApiGenerationException($"Path parameter '{name}' in {context} must declare required: true.");
             if (location is not ("path" or "query" or "header"))
                 throw new XpsOpenApiGenerationException($"Parameter '{name}' uses unsupported location '{location}'. Supported locations are path, query and header.");
             if (parameter["schema"] is not JsonObject schema)
                 throw new XpsOpenApiGenerationException($"Parameter '{name}' in {context} must declare a schema.");
             var type = GetXpsType(root, schema, $"parameter '{name}'");
             result.Add(new ParameterModel(name, location, type.TypeName, type.IsObject, ReadBoolean(parameter, "required")));
+        }
+        return result;
+    }
+
+    private static List<ParameterModel> MergeParameters(IReadOnlyList<ParameterModel> inherited, IReadOnlyList<ParameterModel> operation)
+    {
+        var result = new List<ParameterModel>(inherited);
+        foreach (var parameter in operation)
+        {
+            var index = result.FindIndex(existing =>
+                existing.Name.Equals(parameter.Name, StringComparison.Ordinal) &&
+                existing.Location.Equals(parameter.Location, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0) result[index] = parameter;
+            else result.Add(parameter);
         }
         return result;
     }
