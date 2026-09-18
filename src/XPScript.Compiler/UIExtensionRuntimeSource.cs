@@ -168,6 +168,18 @@ internal sealed class XPScriptUIForm
             ? XPScriptJsonSchema.Parse("true").Validate(_data)
             : _validationSchema.Validate(_data);
     public bool IsDataValid => ValidateData().Valid;
+    internal string GetValidationError(object? nameValue)
+    {
+        var name = XPScriptRuntime.CStr(nameValue);
+        var result = ValidateData();
+        for (var i = 0; i < result.ErrorCount; i++)
+        {
+            var error = result.GetError(i);
+            if (!XPScriptRuntime.CStr(error.Get("path")).Equals("$." + name, StringComparison.OrdinalIgnoreCase)) continue;
+            return XPScriptRuntime.CStr(error.Get("message"));
+        }
+        return string.Empty;
+    }
 
     public void BindData(object? value)
     {
