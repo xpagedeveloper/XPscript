@@ -101,6 +101,11 @@ public sealed class CompileDiagnostic
     [XmlElement("diagnosticCode")]
     public string DiagnosticCode { get; set; } = "";
 
+    [JsonPropertyName("upstreamCode")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [XmlElement("upstreamCode")]
+    public string UpstreamCode { get; set; } = "";
+
     [JsonPropertyName("severity")]
     [XmlElement("severity")]
     public string Severity { get; set; } = "error";
@@ -131,6 +136,7 @@ public sealed class CompileDiagnostic
         Severity = NormalizeSeverity(Severity);
         Category = string.IsNullOrWhiteSpace(Category) ? "compiler" : Category.Trim().ToLowerInvariant();
         DiagnosticCode = DiagnosticCode.Trim();
+        UpstreamCode = UpstreamCode.Trim();
     }
 
     private static string NormalizeSeverity(string value)
