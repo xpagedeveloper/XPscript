@@ -90,6 +90,15 @@ public sealed class XpsOpenApiClientGenerator
                 if (!securitySchemes.ContainsKey(schemeName))
                     throw new XpsOpenApiGenerationException($"Operation '{op.Name}' references unsupported or undefined security scheme '{schemeName}'.");
 
+        foreach (var alternative in op.Security)
+        {
+            var authorizationSchemes = alternative.Select(name => securitySchemes[name])
+                .Where(scheme => scheme.Kind is "bearer" or "basic" || (scheme.Kind == "apikey" && string.Equals(scheme.Location, "header", StringComparison.OrdinalIgnoreCase) && string.Equals(scheme.WireName, "Authorization", StringComparison.OrdinalIgnoreCase)))
+                .ToArray();
+            if (authorizationSchemes.Length > 1)
+                throw new XpsOpenApiGenerationException($"Operation '{op.Name}' combines multiple security schemes in one AND requirement that all use the Authorization header: {string.Join(", ", authorizationSchemes.Select(x => x.Name))}. Use alternative security requirements (OR) instead.");
+        }
+
         var first = true;
         foreach (var alternative in op.Security)
         {
