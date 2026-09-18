@@ -962,7 +962,7 @@ internal static class LSForAllRuntime
 
     private (string Name, string XPScriptType, bool IsList, bool IsByRef) ParseArgumentDeclaration(string raw)
     {
-        var match = Regex.Match(raw, @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(?:(List))?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
+        var match = Regex.Match(raw, @"^(?:\[(?:FromRoute|FromQuery|FromBody|FromHeader)(?::(?:\""[^\""]+\""|[^\]]+))?\]\s*)?(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(?:(List))?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
         if (!match.Success) throw new CompilerException($"Unsupported argument declaration: {raw}");
         return (match.Groups[2].Value, string.IsNullOrWhiteSpace(match.Groups[4].Value) ? "Variant" : match.Groups[4].Value, !string.IsNullOrWhiteSpace(match.Groups[3].Value), match.Groups[1].Value.Equals("ByRef", StringComparison.OrdinalIgnoreCase));
     }
