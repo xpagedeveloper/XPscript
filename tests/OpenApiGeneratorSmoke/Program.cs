@@ -152,6 +152,11 @@ paths:
 if (!unicodeClient.Contains("Http.EncodePath(City)", StringComparison.Ordinal) || !unicodeClient.Contains("Http.AddQuery(url, \"q\", Q)", StringComparison.Ordinal))
     throw new Exception("OpenAPI Unicode path/query values must flow through XPHttp UTF-8 encoding helpers.");
 
+if (!clientResult.Source.Contains("Public Validation As XPJsonValidationResult", StringComparison.Ordinal) ||
+    !clientResult.Source.Contains("XPJsonSchema.Parse(", StringComparison.Ordinal) ||
+    !clientResult.Source.Contains(".Validate(result.Json)", StringComparison.Ordinal))
+    throw new Exception("Generated OpenAPI JSON responses must expose XPJsonSchema validation results.");
+
 if (clientResult.Source.Contains("UIForm", StringComparison.OrdinalIgnoreCase) || clientResult.Source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal))
     throw new Exception("Generated OpenAPI client must not depend on UIForm runtime.");
 foreach (var marker in new[] { "XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPJsonDocument", "Http.Send(request)" })
