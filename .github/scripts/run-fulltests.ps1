@@ -52,6 +52,8 @@ if (Should-Run 'runtime') {
   # Run the actively developed JSON Schema regression first so failures surface before the slower runtime matrix.
   $jsonSchema = Run-Xps ./samples/xpjsonschema-runtime.xps xpjsonschema-runtime
   if ($jsonSchema.Output -notmatch 'XPJSONSCHEMA-RUNTIME=OK') { throw 'XPJsonSchema runtime regression did not complete.' }
+  $jsonSchemaBoolean = Run-Xps ./samples/xpjsonschema-boolean-runtime.xps xpjsonschema-boolean-runtime
+  if ($jsonSchemaBoolean.Output -notmatch 'XPJSONSCHEMA-BOOLEAN-RUNTIME=OK') { throw 'XPJsonSchema boolean-schema regression did not complete.' }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/SpreadsheetCapabilityProbe/SpreadsheetCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Spreadsheet compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   foreach ($sample in @('xpspreadsheet-basic','xpspreadsheet-worksheets','xpspreadsheet-styles','xpspreadsheet-ranges','xpspreadsheet-formatting','xpspreadsheet-autofilter','xpspreadsheet-csv-interop')) { Run-Xps "./demo/spreadsheet/$sample.xps" $sample | Out-Null }
   if (-not $IsWindows) {
