@@ -136,6 +136,34 @@ paths:
 foreach (var marker in new[] { "Optional Q As String = \"\"", "Optional Limit As Integer = 0", "Optional XTrace As String = \"\"", "Optional payload As Filter = Nothing", "If Len(Q) > 0 Then url = Http.AddQuery", "If Len(XTrace) > 0 Then Call request.SetHeader", "If Not payload Is Nothing Then" })
     if (!optionalClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated optional OpenAPI values are missing marker: " + marker);
 
+var arrayClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Arrays, version: 1.0.0 }
+paths:
+  /items:
+    post:
+      operationId: arrayValues
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { type: string }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: integer }
+""", "arrays.yaml").Source;
+if (!arrayClient.Contains("payload As XPJsonArray", StringComparison.Ordinal) ||
+    !arrayClient.Contains("ResponseType = \"XPJsonArray\"", StringComparison.Ordinal) ||
+    !arrayClient.Contains("XPJsonSchema.Parse(", StringComparison.Ordinal))
+    throw new Exception("OpenAPI arrays must use XPJsonArray and XPJsonSchema.");
+
 var unicodeClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Unicode, version: 1.0.0 }
