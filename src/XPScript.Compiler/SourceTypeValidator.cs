@@ -18,7 +18,7 @@ internal sealed class SourceTypeValidator
         var procedures = CollectProcedures(lines);
         var moduleVariables = CollectModuleVariables(lines);
         var variables = new Dictionary<string, (string Type, bool IsArray)>(StringComparer.OrdinalIgnoreCase);
-        var diagnostics = new List<string>();
+        var diagnostics = new List<CompileDiagnostic>();
         var inProcedure = false;
 
         for (var i = 0; i < lines.Length; i++)
@@ -68,8 +68,7 @@ internal sealed class SourceTypeValidator
                         var expectedText = requiredCount == maximumCount
                             ? $"{maximumCount} parameter(s)"
                             : $"between {requiredCount} and {maximumCount} parameter(s)";
-                        AddDiagnostic(diagnostics, sourceName, i + 1, Math.Max(1, call.Index + 1), original,
-                            $"Function/Sub '{procedure.Name}' expects {expectedText} but received {args.Count}.");
+                        AddDiagnostic(diagnostics, sourceName, i + 1, Math.Max(1, call.Index + 1), original, $"Function/Sub '{procedure.Name}' expects {expectedText} but received {args.Count}.", CompilerDiagnosticCodes.ArgumentCountMismatch);
                     }
 
                     for (var p = 0; p < Math.Min(args.Count, procedure.Parameters.Count); p++)
@@ -82,8 +81,7 @@ internal sealed class SourceTypeValidator
                         {
                             if (expected.Type.Equals("Variant", StringComparison.OrdinalIgnoreCase) && !expected.IsArray) continue;
                             var pos = original.IndexOf(args[p].Trim(), StringComparison.Ordinal);
-                            AddDiagnostic(diagnostics, sourceName, i + 1, pos >= 0 ? pos + 1 : call.Index + 1, original,
-                                $"Null can be passed only to a Variant-compatible parameter. Parameter '{expected.Name}' of '{procedure.Name}' expects {FormatType(expected.Type, expected.IsArray)}.");
+                            AddDiagnostic(diagnostics, sourceName, i + 1, pos >= 0 ? pos + 1 : call.Index + 1, original, $"Null can be passed only to a Variant-compatible parameter. Parameter '{expected.Name}' of '{procedure.Name}' expects {FormatType(expected.Type, expected.IsArray)}.", CompilerDiagnosticCodes.ArgumentTypeMismatch);
                             continue;
                         }
 
@@ -91,15 +89,14 @@ internal sealed class SourceTypeValidator
                         if (IsCompatible(expected.Type, expected.IsArray, actual.Value.Type, actual.Value.IsArray)) continue;
 
                         var argumentPos = original.IndexOf(args[p].Trim(), StringComparison.Ordinal);
-                        AddDiagnostic(diagnostics, sourceName, i + 1, argumentPos >= 0 ? argumentPos + 1 : call.Index + 1, original,
-                            $"Parameter '{expected.Name}' of '{procedure.Name}' expects {FormatType(expected.Type, expected.IsArray)} but received {FormatType(actual.Value.Type, actual.Value.IsArray)}.");
+                        AddDiagnostic(diagnostics, sourceName, i + 1, argumentPos >= 0 ? argumentPos + 1 : call.Index + 1, original, $"Parameter '{expected.Name}' of '{procedure.Name}' expects {FormatType(expected.Type, expected.IsArray)} but received {FormatType(actual.Value.Type, actual.Value.IsArray)}.", CompilerDiagnosticCodes.ArgumentTypeMismatch);
                     }
                 }
             }
         }
 
         if (diagnostics.Count > 0)
-            throw new CompilerException(string.Join(Environment.NewLine, diagnostics));
+            throw new CompilerException("Source type validation failed.", diagnostics);
     }
 
     private static void ValidateAssignment(
@@ -108,7 +105,7 @@ internal sealed class SourceTypeValidator
         string original,
         string line,
         Dictionary<string, (string Type, bool IsArray)> variables,
-        List<string> diagnostics)
+        List<CompileDiagnostic> diagnostics)
     {
         if (Regex.IsMatch(line, @"^Set\b", RegexOptions.IgnoreCase)) return;
 
@@ -121,8 +118,7 @@ internal sealed class SourceTypeValidator
 
         if (rhsText.Equals("Nothing", StringComparison.OrdinalIgnoreCase))
         {
-            AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original,
-                "Nothing is valid only for object-reference assignment with Set.");
+            AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original, "Nothing is valid only for object-reference assignment with Set.", CompilerDiagnosticCodes.TypeMismatch);
             return;
         }
 
@@ -131,8 +127,7 @@ internal sealed class SourceTypeValidator
             if (!variables.TryGetValue(targetName, out var nullTarget)) return;
             if (nullTarget.Type.Equals("Variant", StringComparison.OrdinalIgnoreCase) && !nullTarget.IsArray) return;
 
-            AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original,
-                $"Null can be assigned only to a Variant-compatible value, not {FormatType(nullTarget.Type, nullTarget.IsArray)}.");
+            AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original, $"Null can be assigned only to a Variant-compatible value, not {FormatType(nullTarget.Type, nullTarget.IsArray)}.", CompilerDiagnosticCodes.TypeMismatch);
             return;
         }
 
@@ -145,8 +140,7 @@ internal sealed class SourceTypeValidator
         if (actual is null || target.Type.Equals("Variant", StringComparison.OrdinalIgnoreCase)) return;
         if (IsCompatible(target.Type, target.IsArray, actual.Value.Type, actual.Value.IsArray)) return;
 
-        AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original,
-            $"Unable to assign {FormatType(actual.Value.Type, actual.Value.IsArray)} to {FormatType(target.Type, target.IsArray)}.");
+        AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original, $"Unable to assign {FormatType(actual.Value.Type, actual.Value.IsArray)} to {FormatType(target.Type, target.IsArray)}.", CompilerDiagnosticCodes.TypeMismatch);
     }
 
     private static Dictionary<string, (string Type, bool IsArray)> CollectModuleVariables(string[] lines)
@@ -311,8 +305,19 @@ internal sealed class SourceTypeValidator
         return line;
     }
 
-    private static void AddDiagnostic(List<string> diagnostics, string sourceName, int line, int position, string code, string description)
+    private static void AddDiagnostic(List<CompileDiagnostic> diagnostics, string sourceName, int line, int position, string code, string description, string diagnosticCode)
     {
-        diagnostics.Add($"{sourceName}({line},{position}): {description}{Environment.NewLine}  {CompilerDiagnosticRedaction.MaskStringLiterals(code).TrimEnd()}");
-    }
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(code).TrimEnd();
+        diagnostics.Add(new CompileDiagnostic
+        {
+            File = sourceName,
+            Line = line,
+            Position = position,
+            Description = description,
+            DiagnosticCode = diagnosticCode,
+            Category = diagnosticCode == CompilerDiagnosticCodes.ArgumentCountMismatch ? "argument" : "type",
+            SourceCode = safeSource,
+            MarkedCode = safeSource
+        });
+
 }
