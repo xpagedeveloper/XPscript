@@ -42,10 +42,10 @@ public sealed class CompilerDriver
         try
         {
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath))]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceExtensionInvalid, "configuration")]);
 
             if (!File.Exists(sourcePath))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath))]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]);
 
             source = await File.ReadAllTextAsync(sourcePath);
             await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
@@ -57,7 +57,7 @@ public sealed class CompilerDriver
         }
         catch (Exception)
         {
-            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath))]);
+            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]);
         }
     }
 
@@ -67,10 +67,10 @@ public sealed class CompilerDriver
         try
         {
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath))]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceExtensionInvalid, "configuration")]);
 
             if (!File.Exists(sourcePath))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath))]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]);
 
             source = await File.ReadAllTextAsync(sourcePath);
             var executablePath = await CompileForRunAsync(sourcePath, outputDirectory, runtimeIdentifier);
@@ -82,7 +82,7 @@ public sealed class CompilerDriver
         }
         catch (Exception)
         {
-            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath))]);
+            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]);
         }
     }
 
@@ -547,14 +547,18 @@ public sealed class CompilerDriver
         string description,
         string code,
         string marked,
-        string file = "") => new()
+        string file = "",
+        string diagnosticCode = "",
+        string category = "compiler") => new()
     {
         File = file,
         Line = line,
         Position = pos,
         Description = description,
         SourceCode = code,
-        MarkedCode = marked
+        MarkedCode = marked,
+        DiagnosticCode = diagnosticCode,
+        Category = category
     };
 
 }
