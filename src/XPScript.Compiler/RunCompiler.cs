@@ -29,7 +29,17 @@ internal static class RunCompiler
         }
         catch (CompilerException ex)
         {
-            var diagnostics = CompilerDiagnosticParser.Parse(ex.Message, sourcePath, source, debug: false, ex.DiagnosticCode, ex.Category);
+            // Language validators can already provide source-mapped structured
+            // diagnostics. Preserve those in normal machine output. Generated
+            // C# diagnostics remain debug-only unless they are the only detail.
+            if (ex.GeneratedDiagnostics.Count > 0 &&
+                ex.GeneratedDiagnostics.Any(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)))
+            {
+                return CompileResult.Error(ex.GeneratedDiagnostics);
+            }
+
+            var diagnostics = CompilerDiagnosticParser.Parse(
+                ex.Message, sourcePath, source, debug: false, ex.DiagnosticCode, ex.Category);
             if (debug && ex.GeneratedDiagnostics.Count > 0)
                 diagnostics.AddRange(ex.GeneratedDiagnostics);
             return CompileResult.Error(diagnostics);
