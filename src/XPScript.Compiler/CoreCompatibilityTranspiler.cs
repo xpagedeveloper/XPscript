@@ -186,7 +186,7 @@ internal sealed class CoreCompatibilityTranspiler
         foreach (var part in SplitArguments(raw))
         {
             var clean = Regex.Replace(part.Trim(), @"\b(LMBCS|Unicode)\b", "", RegexOptions.IgnoreCase).Trim();
-            clean = Regex.Replace(clean, @"^\\[(?:FromRoute|FromQuery|FromBody|FromHeader)(?::(?:\\"[^\\"]+\\"|[^\\]]+))?\\]\\s*", "", RegexOptions.IgnoreCase).Trim();
+            clean = Regex.Replace(clean, @"^\[(?:FromRoute|FromQuery|FromBody|FromHeader)(?::(?:""[^""]+""|[^\]]+))?\]\s*", "", RegexOptions.IgnoreCase).Trim();
             var match = Regex.Match(clean, @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(\(\))?\s*(List)?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
             if (!match.Success) throw new CompilerException("Unsupported parameter declaration: " + part.Trim());
             var mode = match.Groups[1].Value;
