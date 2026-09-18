@@ -33,6 +33,23 @@ internal sealed class UIFormEventDispatcherPostProcessor
         object?[] callbackArguments = [];
         XPScriptUIFormEvent? callbackEvent = null;
 
+        if (kind.Equals("validate", StringComparison.OrdinalIgnoreCase))
+        {
+            var field = FindField(controlName);
+            if (field.Type == "MultiListBox")
+            {
+                var submittedValues = submittedValue.Length == 0
+                    ? Array.Empty<string>()
+                    : submittedValue.Split('\u001f', StringSplitOptions.RemoveEmptyEntries);
+                ApplySubmittedValues(field, submittedValues);
+            }
+            else
+            {
+                ApplySubmittedValue(field, submittedValue);
+            }
+            return SerializeActionState();
+        }
+
         if (kind.Equals("change", StringComparison.OrdinalIgnoreCase))
         {
             var field = FindField(controlName);
