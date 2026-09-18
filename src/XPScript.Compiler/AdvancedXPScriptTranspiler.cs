@@ -79,6 +79,7 @@ internal sealed class AdvancedXPScriptTranspiler
     private string? _currentClass;
     private string? _currentProcedure;
     private string? _currentReturnType;
+    private string? _currentReturnObjectClass;
     private string? _currentProperty;
     private ProcedureKind _procedureKind;
     private int _indent;
@@ -205,6 +206,7 @@ internal static class LSForAllRuntime
         _currentClass = null;
         _currentProcedure = null;
         _currentReturnType = null;
+        _currentReturnObjectClass = null;
         _currentProperty = null;
         _procedureKind = ProcedureKind.None;
         _variableTypes.Clear();
@@ -495,6 +497,7 @@ internal static class LSForAllRuntime
 
         _currentProcedure = nameFn;
         _currentReturnType = returnType;
+        _currentReturnObjectClass = _classes.ContainsKey(xpscriptReturnType) ? xpscriptReturnType : null;
         _procedureKind = ProcedureKind.Function;
         _variableTypes.Clear();
         _objectVariables.Clear();
@@ -844,9 +847,8 @@ internal static class LSForAllRuntime
         var lhsRaw = match.Groups[1].Value;
         var functionResultClass = _procedureKind == ProcedureKind.Function
             && lhsRaw.Equals(_currentProcedure, StringComparison.OrdinalIgnoreCase)
-            && _currentReturnType is not null
-            && _classes.ContainsKey(_currentReturnType)
-                ? _currentReturnType
+            && _currentReturnObjectClass is not null
+                ? _currentReturnObjectClass
                 : null;
         var lhs = functionResultClass is not null ? "__result" : TransformObjectReferenceTarget(lhsRaw);
         if (lhs is null) throw new CompilerException($"Set target is not an object reference: {lhsRaw}");
