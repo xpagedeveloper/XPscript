@@ -684,8 +684,8 @@ public sealed class CompilerDriver
         Line = line,
         Position = pos,
         Description = description,
-        Code = code,
-        MarkedCode = marked
+        SourceCode = code,
+        MarkedSourceCode = marked
     };
 
     private static string Mark(string code, int position)
