@@ -46,9 +46,9 @@ The CLI must be a consumer of the shared compiler service rather than the only p
 - [x] Add `schema` and `schemaVersion`.
 - [x] Include compiler version.
 - [x] Include operation, such as `compile` or `validate`.
-- [ ] Include target and entry source where applicable.
+- [x] Include target and entry source where applicable.
 - [x] Always return a diagnostics collection.
-- [ ] Ensure early failures still produce valid structured output.
+- [x] Ensure early failures still produce valid structured output.
 - [ ] Ensure JSON mode never mixes human logging into stdout.
 - [ ] Route non-result logging to stderr where appropriate.
 - [ ] Make breaking contract changes explicit through schema versioning.
