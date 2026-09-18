@@ -1,0 +1,36 @@
+' OpenAPI API-consumer runtime surface smoke sample.
+' This sample intentionally uses the public XPHttp/XPJson APIs documented for generated clients.
+
+Public Class SamplePet
+    Public id As Long
+    Public name As String
+End Class
+
+Dim http As New XPHttpClient
+Dim request As New XPHttpRequest
+Dim response As XPHttpResponse
+Dim json As XPJsonDocument
+Dim pet As New SamplePet
+Dim url As String
+
+url = http.AddQuery("https://example.invalid/pets", "name", "räksmörgås-München-übergröß-ñandú-español")
+url = url & "/" & http.EncodePath("åäö/ÄÖÜ/straße/ñ/東京")
+request.Method = "GET"
+request.Url = url
+Call request.SetHeader("Accept", "application/json")
+Call request.SetBearerToken("example-token")
+Set response = http.Send(request)
+
+' Basic authentication is request-scoped too. Precompute the Authorization value once when credentials are configured.
+Dim basicRequest As New XPHttpRequest
+Dim basicAuthorization As String
+basicAuthorization = http.BasicAuthorization("München-åäö-東京", "päss:wörd-señor")
+basicRequest.Method = "GET"
+basicRequest.Url = "https://example.invalid/private"
+Call basicRequest.SetAuthorization(basicAuthorization)
+Set response = http.Send(basicRequest)
+
+If Len(response.Body) > 0 Then
+    Set json = response.Json()
+    Set pet = json.ToObject(pet)
+End If

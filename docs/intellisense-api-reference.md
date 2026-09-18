@@ -108,7 +108,38 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `JsonValidationResult.Valid` | `result.Valid` | none | True when validation produced no errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.IsValid` | `result.IsValid` | none | Alias for Valid; True when validation produced no errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.ErrorCount` | `result.ErrorCount` | none | Number of validation errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonValidationResult.GetError` | `result.GetError(index)` | Zero-based validation error index. | Returns one validation error as XPJsonObject with path, schemaPath, keyword, message, expected, and actual fields. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.Errors` | `result.Errors` | none | Returns validation errors as XPJsonArray. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.FailedPaths` | `result.FailedPaths` | none | Returns the unique failing data paths as XPJsonArray in validation error order. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
-| `JsonValidationResult.GetError` | `result.GetError(index)` | Zero-based validation error index. | Returns one validation error as XPJsonObject with path, schemaPath, keyword, message, expected, and actual fields. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.Json` | `result.Json` | none | Returns the complete validation result as XPJsonDocument. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+
+
+## HTTP and JSON API consumer additions
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `HttpClient.Send` | `client.Send(request)` | `request`: XPHttpRequest; overloads also accept method, URL and optional body. | Sends an HTTP request through the core HTTP runtime. Request bodies use the supplied content type; JSON callers should use UTF-8 JSON. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpClient.BasicAuthorization` | `client.BasicAuthorization(username, password)` | username and password. | Builds a Basic Authorization header value once using UTF-8 credentials followed by Base64; useful when the value will be reused across request-scoped calls. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpClient.EncodePath` | `client.EncodePath(value)` | `value`: path-segment value. | Percent-encodes a path segment using UTF-8 semantics. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpCoreHelpers` | `XPHttpClient` | none | Internal implementation surface behind the public XPHttp API; not intended to be called directly from XPScript. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpCoreHelpers.BasicAuthorization` | `client.BasicAuthorization(username, password)` | username and password. | Internal implementation of the public Basic authorization precomputation helper. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpCoreHelpers.AddQuery` | `client.AddQuery(url, name, value)` | URL, query name and value. | Implements the public query helper; names and values are UTF-8 percent-encoded. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpCoreHelpers.ResponseJson` | `response.Json()` | none | Implements JSON parsing for XPHttpResponse. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpCoreHelpers.SetBasicAuth` | `client.SetBasicAuth(username, password)` | username and password. | Implements Basic authentication using UTF-8 credentials before Base64 encoding; a colon is not permitted in the username. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpCoreHelpers.SetBearerToken` | `client.SetBearerToken(token)` | bearer token. | Implements Bearer authentication and rejects CR, LF and NUL credential characters. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpRequest` | `Dim request As New XPHttpRequest` | none | Request-scoped HTTP method, URL, body, headers and authentication. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpRequest.Method` | `request.Method = "GET"` | HTTP method. | Sets the request method. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpRequest.Url` | `request.Url = url` | absolute HTTP/HTTPS URL. | Sets the request URL. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpRequest.Body` | `request.Body = JsonStringify(payload)` | request body. | Sets the request body. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpRequest.Headers` | `request.Headers` | none | Exposes the request-scoped header collection. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpRequest.SetHeader` | `request.SetHeader(name, value)` | header name and value. | Sets a request-scoped header and rejects unsafe framing/control characters. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpRequest.SetBearerToken` | `request.SetBearerToken(token)` | bearer token. | Sets request-scoped Bearer authorization; it replaces any existing Authorization header on that request. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpRequest.SetAuthorization` | `request.SetAuthorization(value)` | complete Authorization header value. | Applies a precomputed Authorization value to this request only; it replaces any existing Authorization header on that request. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpRequest.SetBasicAuth` | `request.SetBasicAuth(username, password)` | username and password. | Sets request-scoped Basic authorization using UTF-8 before Base64; it replaces any existing Authorization header. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `NativeHttp.CreateRequest` | `New XPHttpRequest` | none | Runtime constructor backing XPHttpRequest. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `JsonDocument.ToObject` | `document.ToObject(target)` | typed target object. | Deserializes JSON into the target XPScript model type. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `JsonObject.ToObject` | `obj.ToObject(target)` | typed target object. | Deserializes a JSON object into the target XPScript model type. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `JsonElement.ToObject` | `element.ToObject(target)` | typed target object. | Deserializes a JSON element into the target XPScript model type. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpMultipart.GetMediaTypeParameter` | `response.ContentType` | none | Internal HTTP media-type parameter parser used by response decoding. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpUiFormHelpers.SetBearerToken` | `client.SetBearerToken(token)` | bearer token. | Compatibility runtime declaration; public callers use XPHttpClient. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `HttpUiFormHelpers.SetBasicAuth` | `client.SetBasicAuth(username, password)` | username and password. | Compatibility runtime declaration; public callers use XPHttpClient. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |

@@ -15,6 +15,16 @@ Set response = http.Patch("https://api.example.com/customers/42", "body")
 Set response = http.Delete("https://api.example.com/customers/42")
 ```
 
+For APIs that use other HTTP methods, `Send` is the generic entry point:
+
+```xpscript
+Set response = http.Send("HEAD", "https://api.example.com/health")
+Set response = http.Send("OPTIONS", "https://api.example.com/customers")
+Set response = http.Send("POST", "https://api.example.com/customers", body)
+```
+
+`Send(method, url [, body])` validates the HTTP method and uses the same timeout, header, network and response limits as the verb-specific methods.
+
 `XPHttpResponse` exposes `StatusCode`, `StatusText`, `Body`, `BodyLength`, `ContentType`, `Headers`, `IsSuccess`, multipart/file helpers and `SaveBodyToFile`.
 
 ## JSON requests
@@ -42,7 +52,7 @@ Available helpers:
 
 The JSON write helpers set `Content-Type` to `application/json; charset=utf-8`.
 
-## Query parameters
+## Query and path parameters
 
 Use `AddQuery` instead of concatenating untrusted values into a URL.
 
@@ -51,7 +61,13 @@ Dim url As String
 url = http.AddQuery("https://api.example.com/search", "q", "hello world")
 ```
 
-The parameter name and value are URL encoded.
+The parameter name and value are URL encoded. For a value that occupies one URL path segment, use `EncodePath`:
+
+```xpscript
+url = "https://api.example.com/customers/" & http.EncodePath(customerId)
+```
+
+`EncodePath` deliberately encodes `/` in the value so the value cannot change the path structure.
 
 ## Form encoded requests
 
@@ -123,13 +139,30 @@ End If
 
 ## Headers and authentication
 
+Headers configured on an `XPHttpClient` are reused by subsequent requests from that client:
+
 ```xpscript
 http.Timeout = 30
 Call http.SetHeader("Accept", "application/json")
-Call http.SetHeader("Authorization", "Bearer " & token)
 ```
 
-Headers can be removed with `RemoveHeader(name)` or all cleared with `ClearHeaders()`.
+For bearer authentication, use the dedicated helper instead of constructing the `Authorization` header manually:
+
+```xpscript
+Call http.SetBearerToken(token)
+Set response = http.Get(url)
+```
+
+For HTTP Basic authentication, pass the username and password as clear text to the client API:
+
+```xpscript
+Call http.SetBasicAuth("api-user", "api-password")
+Set response = http.Get(url)
+```
+
+`SetBasicAuth` creates the required `username:password` UTF-8 value and Base64-encodes it before setting the `Authorization: Basic ...` header. The separator colon is always present, so username-only (`"user", ""`) and password-only (`"", "password"`) credentials are supported. A username containing `:` is rejected because the first colon is the Basic authentication username/password separator. A password may contain colons.
+
+Calling `SetBearerToken` or `SetBasicAuth` replaces the current `Authorization` header. Headers can be removed with `RemoveHeader(name)` or all cleared with `ClearHeaders()`.
 
 ## Private and local endpoints
 

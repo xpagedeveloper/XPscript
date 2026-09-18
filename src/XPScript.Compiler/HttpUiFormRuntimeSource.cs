@@ -5,6 +5,24 @@ internal static class HttpUiFormRuntimeSource
     public const string Code = """
 internal static class XPScriptHttpUiFormHelpers
 {
+    public static void SetBearerToken(object? clientValue, object? tokenValue)
+    {
+        var token = XPScriptRuntime.CStr(tokenValue);
+        ValidateCredentialText(token, "Bearer token");
+        Client(clientValue).SetHeader("Authorization", "Bearer " + token);
+    }
+
+    public static void SetBasicAuth(object? clientValue, object? usernameValue, object? passwordValue)
+    {
+        var username = XPScriptRuntime.CStr(usernameValue);
+        var password = XPScriptRuntime.CStr(passwordValue);
+        ValidateCredentialText(username, "Basic authentication username");
+        ValidateCredentialText(password, "Basic authentication password");
+        if (username.Contains(':')) throw new XPScriptRuntimeException(5, "Basic authentication username cannot contain a colon.");
+        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes(username + ":" + password));
+        Client(clientValue).SetHeader("Authorization", "Basic " + credentials);
+    }
+
     public static XPScriptJsonDocument GetJson(object? clientValue, object? url)
     {
         var response = Client(clientValue).Get(url);
@@ -70,6 +88,12 @@ internal static class XPScriptHttpUiFormHelpers
     {
         var response = Response(responseValue);
         return XPScriptNativeJson.Parse(response.Body);
+    }
+
+    private static void ValidateCredentialText(string value, string name)
+    {
+        if (value.IndexOfAny(['\r', '\n', '\0']) >= 0)
+            throw new XPScriptRuntimeException(5, name + " contains a prohibited control character.");
     }
 
     private static void MarkFormClean(XPScriptUIForm form)

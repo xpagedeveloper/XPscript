@@ -15,10 +15,10 @@ internal static class XpsWebRecursionValidator
         @"^End\s+(?:Sub|Function|Property)\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex CallStatement = new(
-        @"\bCall\s+(?:Me\.)?([A-Za-z_]\w*)\b",
+        @"\bCall\s+(?![A-Za-z_]\w*\.)(?:Me\.)?([A-Za-z_]\w*)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex Invocation = new(
-        @"\b(?:Me\.)?([A-Za-z_]\w*)\s*\(",
+        @"(?<!\.)\b(?:Me\.)?([A-Za-z_]\w*)\s*\(",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public static void Validate(string source, string sourceName)

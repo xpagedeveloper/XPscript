@@ -5,6 +5,93 @@ var fixture = Path.Combine(AppContext.BaseDirectory, "petstore.yaml");
 var reimportFixture = Path.Combine(AppContext.BaseDirectory, "petstore-reimport.yaml");
 var generator = new XpsOpenApiGenerator();
 var result = generator.GenerateFile(fixture);
+var clientResult = new XpsOpenApiClientGenerator().GenerateFile(fixture);
+var securityClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Security Smoke, version: 1.0.0 }
+components:
+  securitySchemes:
+    BearerAuth: { type: http, scheme: bearer }
+    BasicAuth: { type: http, scheme: basic }
+    ApiKey: { type: apiKey, in: header, name: X-API-Key }
+security:
+  - BearerAuth: []
+  - BasicAuth: []
+paths:
+  /secure:
+    get:
+      operationId: secure
+      security:
+        - BearerAuth: []
+          ApiKey: []
+        - BasicAuth: []
+      responses:
+        '200': { description: ok }
+  /public:
+    get:
+      operationId: publicCall
+      security: []
+      responses:
+        '204': { description: ok }
+""", "security.yaml").Source;
+foreach (var marker in new[] { "request.SetBearerToken(AuthBearerAuth)", "request.SetAuthorization(AuthBasicAuthAuthorization)", "request.SetHeader(\"X-API-Key\", AuthApiKey)", "ElseIf", "Public Function PublicCall" })
+    if (!securityClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated OpenAPI security client is missing marker: " + marker);
+if (!securityClient.Contains("Private AuthBasicAuthAuthorization As String", StringComparison.Ordinal) ||
+    !securityClient.Contains("AuthBasicAuthAuthorization = Http.BasicAuthorization(username, password)", StringComparison.Ordinal) ||
+    securityClient.Contains("Public AuthBasicAuthAuthorization", StringComparison.Ordinal) ||
+    securityClient.Contains("AuthBasicAuthUsername", StringComparison.Ordinal) ||
+    securityClient.Contains("AuthBasicAuthPassword", StringComparison.Ordinal))
+    throw new Exception("Generated Basic auth must store only a private precomputed Authorization value.");
+
+var publicStart = securityClient.IndexOf("Public Function PublicCall", StringComparison.Ordinal);
+var publicEnd = securityClient.IndexOf("End Function", publicStart, StringComparison.Ordinal);
+var publicSource = securityClient[publicStart..publicEnd];
+if (publicSource.Contains("SetBearerToken", StringComparison.Ordinal) || publicSource.Contains("SetBasicAuth", StringComparison.Ordinal) || publicSource.Contains("X-API-Key", StringComparison.Ordinal))
+    throw new Exception("security: [] must not inherit authentication.");
+
+try
+{
+    _ = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Conflict, version: 1.0.0 }
+components:
+  securitySchemes:
+    BearerAuth: { type: http, scheme: bearer }
+    BasicAuth: { type: http, scheme: basic }
+security:
+  - BearerAuth: []
+    BasicAuth: []
+paths:
+  /bad:
+    get:
+      operationId: bad
+      responses:
+        '200': { description: ok }
+""", "conflict.yaml");
+    throw new Exception("Bearer+Basic AND security must be rejected.");
+}
+catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorization header", StringComparison.OrdinalIgnoreCase)) { }
+
+var unicodeClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Unicode, version: 1.0.0 }
+paths:
+  /cities/{city}:
+    get:
+      operationId: unicodePath
+      parameters:
+        - { name: city, in: path, required: true, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        '204': { description: ok }
+""", "unicode.yaml").Source;
+if (!unicodeClient.Contains("Http.EncodePath(City)", StringComparison.Ordinal) || !unicodeClient.Contains("Http.AddQuery(url, \"q\", Q)", StringComparison.Ordinal))
+    throw new Exception("OpenAPI Unicode path/query values must flow through XPHttp UTF-8 encoding helpers.");
+
+if (clientResult.Source.Contains("UIForm", StringComparison.OrdinalIgnoreCase) || clientResult.Source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal))
+    throw new Exception("Generated OpenAPI client must not depend on UIForm runtime.");
+foreach (var marker in new[] { "XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPJsonDocument", "Http.Send(request)" })
+    if (!clientResult.Source.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated OpenAPI client is missing core API marker: " + marker);
 
 if (result.OpenApiVersion != "3.1.0") throw new Exception("OpenAPI version was not retained.");
 if (result.Operations.Count != 2 || !result.Operations.Contains("GetPet") || !result.Operations.Contains("CreatePet"))
@@ -66,6 +153,9 @@ var root = Path.Combine(Path.GetTempPath(), "xps-openapi-generator-smoke-" + Gui
 Directory.CreateDirectory(root);
 try
 {
+    var clientPath = Path.Combine(root, "petstore-client.xps");
+    await File.WriteAllTextAsync(clientPath, clientResult.Source);
+
     var sourcePath = Path.Combine(root, "petstore.xps");
     await File.WriteAllTextAsync(sourcePath, result.Source);
 
@@ -177,6 +267,9 @@ try
         }
     }
 
+    foreach (var marker in new[] { "OPENAPI-CLIENT-SECURITY=OK", "OPENAPI-CLIENT-CORE-ONLY=OK" })
+        Console.WriteLine(marker);
+    Console.WriteLine("OPENAPI-CLIENT-COMPILE=OK");
     Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
     Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
     Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
