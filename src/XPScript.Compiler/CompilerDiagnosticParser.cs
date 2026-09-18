@@ -13,7 +13,7 @@ internal static class CompilerDiagnosticParser
         var result = new List<CompileDiagnostic>();
         var escapedSource = Regex.Escape(sourcePath).Replace("\\\\", @"[\\/]");
         var sourcePattern = new Regex(
-            $@"(?<file>{escapedSource}|[^\r\n]*\.xps)\((?<line>\d+)(?:,(?<pos>\d+))?\):\s*(?:(?:error\s+[^:]+:\s*)?)(?<desc>[^\r\n]+)",
+            $@"(?<file>{escapedSource}|[^\r\n]*\.xps)\((?<line>\d+)(?:,(?<pos>\d+))?\):\s*(?:(?<severity>error|warning|info)\s+(?<id>[A-Za-z]+\d+):\s*)?(?<desc>[^\r\n]+)",
             RegexOptions.IgnoreCase);
 
         foreach (Match match in sourcePattern.Matches(message))
@@ -31,6 +31,8 @@ internal static class CompilerDiagnosticParser
                 SourceCode = code,
                 MarkedCode = Mark(code, pos),
                 DiagnosticCode = diagnosticCode,
+                UpstreamCode = match.Groups["id"].Value,
+                Severity = match.Groups["severity"].Success ? match.Groups["severity"].Value : "error",
                 Category = string.IsNullOrWhiteSpace(category) ? "compiler" : category
             });
         }
@@ -88,7 +90,9 @@ internal static class CompilerDiagnosticParser
                 File = "Program.cs",
                 Line = int.Parse(match.Groups["line"].Value),
                 Position = int.Parse(match.Groups["pos"].Value),
-                Description = $"{match.Groups["id"].Value}: {Humanize(match.Groups["desc"].Value.Trim())}"
+                Description = Humanize(match.Groups["desc"].Value.Trim()),
+                UpstreamCode = match.Groups["id"].Value,
+                Category = "code-generation"
             });
         }
     }
