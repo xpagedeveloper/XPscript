@@ -210,6 +210,12 @@ public sealed class CompileDiagnostic
 
     // SourceText gives new consumers an unambiguous name while schema v1 keeps
     // "code" available for existing integrations.
+    [JsonPropertyName("properties")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [XmlArray("properties")]
+    [XmlArrayItem("property")]
+    public List<CompileDiagnosticProperty>? Properties { get; set; }
+
     [JsonPropertyName("sourceText")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [XmlElement("sourceText")]
@@ -247,4 +253,16 @@ public sealed class CompileDiagnostic
             _ => "error"
         };
     }
+}
+
+
+public sealed class CompileDiagnosticProperty
+{
+    [JsonPropertyName("name")]
+    [XmlAttribute("name")]
+    public string Name { get; set; } = "";
+
+    [JsonPropertyName("value")]
+    [XmlText]
+    public string Value { get; set; } = "";
 }
