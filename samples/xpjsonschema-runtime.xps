@@ -44,6 +44,16 @@ Sub Main()
     If multiResult.FailedPaths.Count <> 2 Then Error 5, "Expected two unique failed data paths"
     If multiResult.FailedPaths.Get(0) <> "$.name" Then Error 5, "Expected first failed data path"
     If multiResult.FailedPaths.Get(1) <> "$.age" Then Error 5, "Expected second failed data path"
+    Dim objectValue As XPJsonObject
+    Set objectValue = New XPJsonObject
+    Call objectValue.Set("name", "A")
+    Call objectValue.Set("age", -1)
+    Dim objectResult As XPJsonValidationResult
+    Set objectResult = multiSchema.Validate(objectValue)
+    If objectResult.Valid Then Error 5, "Expected XPJsonObject validation failures"
+    If objectResult.ErrorCount <> 2 Then Error 5, "Expected XPJsonObject validation to collect both property failures"
+    If objectResult.FailedPaths.Get(0) <> "$.name" Then Error 5, "Expected XPJsonObject name failure path"
+    If objectResult.FailedPaths.Get(1) <> "$.age" Then Error 5, "Expected XPJsonObject age failure path"
 
     Dim inferred As XPJsonSchema
     Set inferred = XPJsonSchema.FromJson(validJson)
