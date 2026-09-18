@@ -74,6 +74,7 @@ internal static class XPScriptUIDesktopAdapter
             width = form.Width > 0 ? form.Width : (int?)null,
             height = form.Height > 0 ? form.Height : (int?)null,
             resizable = form.Resizable,
+            hasValidationSchema = form.HasValidationSchema,
             fields = fields.Select(field => new
             {
                 name = field.Name, label = field.Label, type = field.Type, required = field.Required,
