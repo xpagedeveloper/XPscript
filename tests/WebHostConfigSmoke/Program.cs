@@ -37,6 +37,7 @@ try
     await VerifyInvalidConfigAsync(cliDll, configDir);
     await VerifyMissingConfigAsync(cliDll, configDir);
     await VerifyAutomaticConfigAsync(cliDll, configDir, automaticConfig);
+    await VerifyApiDocsJsonSchemaAsync(cliDll, siteDir);
     Console.WriteLine("WEB-HOST-CONFIG-SMOKE=OK");
 }
 finally
@@ -205,6 +206,48 @@ static async Task VerifyAutomaticConfigAsync(string cliDll, string configDir, st
     {
         Stop(process);
         File.Delete(automaticConfig);
+    }
+}
+
+static async Task VerifyApiDocsJsonSchemaAsync(string cliDll, string siteDir)
+{
+    var schemaDir = Path.Combine(siteDir, "schemas");
+    Directory.CreateDirectory(schemaDir);
+    await File.WriteAllTextAsync(Path.Combine(schemaDir, "create-user.schema.json"), """
+{"type":"object","required":["name"],"properties":{"name":{"type":"string"}}}
+""");
+    await File.WriteAllTextAsync(Path.Combine(siteDir, "schema-api.xps"), """
+[Anonymous]
+[Post:/api/schema-users]
+[JsonSchema:schemas/create-user.schema.json]
+Sub CreateSchemaUser([FromBody] payload As Object)
+    Response.OK(payload)
+End Sub
+""");
+
+    var port = GetFreePort();
+    using var process = Start(cliDll, ["web", "--root", siteDir, "--port", port.ToString(), "--api-docs"]);
+    try
+    {
+        await WaitForTcpAsync(port, process, TimeSpan.FromSeconds(30));
+        var openApiPath = Path.Combine(siteDir, "apidoc", "openapi.json");
+        if (!File.Exists(openApiPath)) throw new Exception("API documentation did not generate openapi.json.");
+        using var doc = JsonDocument.Parse(await File.ReadAllTextAsync(openApiPath));
+        var schema = doc.RootElement.GetProperty("paths")
+            .GetProperty("/api/schema-users")
+            .GetProperty("post")
+            .GetProperty("requestBody")
+            .GetProperty("content")
+            .GetProperty("application/json")
+            .GetProperty("schema");
+        if (!schema.TryGetProperty("$ref", out var reference) ||
+            reference.GetString() != "../schemas/create-user.schema.json")
+            throw new Exception("OpenAPI requestBody did not reference the route JSON Schema.");
+        Console.WriteLine("WEB-API-DOCS-JSON-SCHEMA=OK");
+    }
+    finally
+    {
+        Stop(process);
     }
 }
 
