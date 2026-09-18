@@ -29,7 +29,7 @@ internal static class RunCompiler
         }
         catch (CompilerException ex)
         {
-            var diagnostics = CompilerDiagnosticParser.Parse(ex.Message, sourcePath, source, debug: false);
+            var diagnostics = CompilerDiagnosticParser.Parse(ex.Message, sourcePath, source, debug: false, ex.DiagnosticCode, ex.Category);
             if (debug && ex.GeneratedDiagnostics.Count > 0)
                 diagnostics.AddRange(ex.GeneratedDiagnostics);
             return CompileResult.Error(diagnostics);
@@ -55,7 +55,7 @@ internal static class RunCompiler
     {
         var rid = runtimeIdentifier.Trim().ToLowerInvariant();
         if (!CompilerDriver.SupportedRuntimes.Contains(rid, StringComparer.OrdinalIgnoreCase))
-            throw new CompilerException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
+            throw new CompilerException("Unsupported runtime identifier '" + runtimeIdentifier + "'.", CompilerDiagnosticCodes.RuntimeIdentifierUnsupported, "configuration");
 
         var originalSource = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
