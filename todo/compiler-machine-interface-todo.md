@@ -49,8 +49,8 @@ The CLI must be a consumer of the shared compiler service rather than the only p
 - [x] Include target and entry source where applicable.
 - [x] Always return a diagnostics collection.
 - [x] Ensure early failures still produce valid structured output.
-- [ ] Ensure JSON mode never mixes human logging into stdout.
-- [ ] Route non-result logging to stderr where appropriate.
+- [x] Ensure JSON mode never mixes human logging into stdout.
+- [x] Route non-result logging to stderr where appropriate.
 - [x] Make breaking contract changes explicit through schema versioning.
 
 Target shape:
