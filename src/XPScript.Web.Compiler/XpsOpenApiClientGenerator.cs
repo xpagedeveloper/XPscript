@@ -55,8 +55,30 @@ public sealed class XpsOpenApiClientGenerator
     private static List<ClientOperation> CollectOperations(JsonObject root)
     {
         if (root["paths"] is not JsonObject paths) throw new XpsOpenApiGenerationException("OpenAPI document is missing paths."); var result = new List<ClientOperation>(); var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var path in paths) { if (path.Value is not JsonObject pathItem) continue; var inherited = ReadParameters(root, pathItem["parameters"]); foreach (var method in HttpMethods) { if (pathItem[method] is not JsonObject operation) continue; var name = ToIdentifier(ReadString(operation, "operationId") ?? method + " " + path.Key.Replace("{", "").Replace("}", "")); var baseName = name; for (var n = 2; !used.Add(name); n++) name = baseName + n.ToString(CultureInfo.InvariantCulture); var parameters = new List<ClientParameter>(inherited); parameters.AddRange(ReadParameters(root, operation["parameters"])); var security = operation.ContainsKey("security") ? ReadSecurity(operation["security"]) : ReadSecurity(root["security"]); result.Add(new ClientOperation(method.ToUpperInvariant(), path.Key, name, parameters, ReadBody(root, operation["requestBody"]), ReadResponses(root, operation["responses"]), security)); } }
+        foreach (var path in paths) { if (path.Value is not JsonObject pathItem) continue; var inherited = ReadParameters(root, pathItem["parameters"]); foreach (var method in HttpMethods) { if (pathItem[method] is not JsonObject operation) continue; var name = ToIdentifier(ReadString(operation, "operationId") ?? method + " " + path.Key.Replace("{", "").Replace("}", "")); var baseName = name; for (var n = 2; !used.Add(name); n++) name = baseName + n.ToString(CultureInfo.InvariantCulture); var parameters = MergeParameters(inherited, ReadParameters(root, operation["parameters"])); ValidateParameterIdentifiers(name, parameters); var security = operation.ContainsKey("security") ? ReadSecurity(operation["security"]) : ReadSecurity(root["security"]); result.Add(new ClientOperation(method.ToUpperInvariant(), path.Key, name, parameters, ReadBody(root, operation["requestBody"]), ReadResponses(root, operation["responses"]), security)); } }
         return result;
+    }
+    private static List<ClientParameter> MergeParameters(IReadOnlyList<ClientParameter> inherited, IReadOnlyList<ClientParameter> operation)
+    {
+        var result = new List<ClientParameter>(inherited);
+        foreach (var parameter in operation)
+        {
+            var index = result.FindIndex(x => x.Name.Equals(parameter.Name, StringComparison.Ordinal) && x.Location.Equals(parameter.Location, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0) result[index] = parameter;
+            else result.Add(parameter);
+        }
+        return result;
+    }
+    private static void ValidateParameterIdentifiers(string operationName, IReadOnlyList<ClientParameter> parameters)
+    {
+        var identifiers = new Dictionary<string, ClientParameter>(StringComparer.OrdinalIgnoreCase);
+        foreach (var parameter in parameters)
+        {
+            var identifier = ToIdentifier(parameter.Name);
+            if (identifiers.TryGetValue(identifier, out var existing))
+                throw new XpsOpenApiGenerationException($"Operation '{operationName}' parameters '{existing.Name}' and '{parameter.Name}' both map to XPScript identifier '{identifier}'.");
+            identifiers[identifier] = parameter;
+        }
     }
     private static IReadOnlyList<IReadOnlyList<string>> ReadSecurity(JsonNode? node) { var result = new List<IReadOnlyList<string>>(); if (node is not JsonArray array) return result; foreach (var item in array) { if (item is not JsonObject requirement) continue; result.Add(requirement.Select(x => x.Key).ToArray()); } return result; }
     private static List<ClientParameter> ReadParameters(JsonObject root, JsonNode? node) { var result = new List<ClientParameter>(); if (node is not JsonArray array) return result; foreach (var item in array) { var parameter = Resolve(root, item); var name = ReadString(parameter, "name") ?? throw new XpsOpenApiGenerationException("OpenAPI parameter is missing name."); var location = ReadString(parameter, "in")?.ToLowerInvariant() ?? string.Empty; if (location is not ("path" or "query" or "header")) throw new XpsOpenApiGenerationException($"Client generation does not yet support parameter location '{location}'."); if (parameter["schema"] is not JsonObject schema) throw new XpsOpenApiGenerationException($"Parameter '{name}' is missing schema."); result.Add(new ClientParameter(name, location, XpsType(root, schema), ReadBool(parameter, "required"))); } return result; }
