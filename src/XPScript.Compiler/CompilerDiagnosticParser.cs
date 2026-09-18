@@ -37,7 +37,8 @@ internal static class CompilerDiagnosticParser
                 Severity = match.Groups["severity"].Success ? match.Groups["severity"].Value : "error",
                 Category = !string.IsNullOrWhiteSpace(category)
                     ? category
-                    : classification.Category ?? "compiler"
+                    : classification.Category ?? "compiler",
+                Properties = SourceMappedProperties(upstreamCode, code, pos)
             });
         }
 
@@ -99,6 +100,28 @@ internal static class CompilerDiagnosticParser
                 Category = "code-generation"
             });
         }
+    }
+
+    private static List<CompileDiagnosticProperty>? SourceMappedProperties(string upstreamCode, string sourceLine, int position)
+    {
+        if (string.IsNullOrWhiteSpace(sourceLine) || position <= 0) return null;
+        var suffix = position <= sourceLine.Length ? sourceLine[(position - 1)..] : "";
+        Match match;
+        switch (upstreamCode.Trim().ToUpperInvariant())
+        {
+            case "CS0103":
+                match = Regex.Match(suffix, @"^(?<symbol>[A-Za-z_]\w*)");
+                if (match.Success)
+                    return [new CompileDiagnosticProperty { Name = "symbol", Value = match.Groups["symbol"].Value }];
+                break;
+            case "CS1061":
+            case "CS0117":
+                match = Regex.Match(suffix, @"^(?<member>[A-Za-z_]\w*)");
+                if (match.Success)
+                    return [new CompileDiagnosticProperty { Name = "member", Value = match.Groups["member"].Value }];
+                break;
+        }
+        return null;
     }
 
     private static string DiagnosticSourceLine(string rootSourcePath, string rootSource, string diagnosticSourcePath, int line)
