@@ -160,7 +160,7 @@ jobs:
       - name: Verify OpenAPI REST generator
         run: dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release
       - name: Generate OpenAPI API consumer for compile test
-        run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate ./tests/OpenApiGeneratorSmoke/client-ci.yaml -o ./out/generated-openapi-client.xps --force
+        run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate ./tests/OpenApiGeneratorSmoke/client-ci.yaml -o ./out/generated-openapi-client.xps
       - name: Verify generated OpenAPI API consumer surface
         shell: bash
         run: |
