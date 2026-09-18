@@ -461,8 +461,8 @@ public sealed class XpsOpenApiGenerator
             "number" => new XpsType(format == "float" ? "Single" : "Double", false),
             "boolean" => new XpsType("Boolean", false),
             "string" => new XpsType(format is "date" or "date-time" ? "Date" : "String", false),
-            "array" => new XpsType("Variant", false),
-            "object" => new XpsType("Variant", false),
+            "array" => new XpsType("XPJsonArray", true),
+            "object" => new XpsType("XPJsonObject", true),
             null => new XpsType("Variant", false),
             _ => throw new XpsOpenApiGenerationException($"{context} uses unsupported schema type '{type}'.")
         };
@@ -486,7 +486,7 @@ public sealed class XpsOpenApiGenerator
     {
         if (TryGetReference(schema, out var reference)) return ReferenceTypeName(reference, context);
         var type = GetXpsType(root, schema, context).TypeName;
-        return type == "Variant" && GetPrimaryType(schema) == "array" ? "array" : type;
+        return type;
     }
 
     private static JsonObject ResolveObject(JsonObject root, JsonNode? node, string context)
