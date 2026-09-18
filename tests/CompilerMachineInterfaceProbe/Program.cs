@@ -30,6 +30,8 @@ foreach (var test in cases)
     Require(!result.Success, test.Source + " must fail compilation");
     Require(result.Schema == CompileResult.CurrentSchema, test.Source + " schema");
     Require(result.SchemaVersion == CompileResult.CurrentSchemaVersion, test.Source + " schemaVersion");
+    Require(!string.IsNullOrWhiteSpace(result.CompilerVersion), test.Source + " compilerVersion");
+    Require(result.Operation == "compile", test.Source + " operation");
 
     var diagnostic = result.Errors.FirstOrDefault(d => d.DiagnosticCode == test.DiagnosticCode);
     Require(diagnostic is not null, test.Source + " missing " + test.DiagnosticCode);
@@ -45,6 +47,8 @@ foreach (var test in cases)
     var rootElement = document.RootElement;
     Require(rootElement.GetProperty("schema").GetString() == CompileResult.CurrentSchema, test.Source + " JSON schema");
     Require(rootElement.GetProperty("schemaVersion").GetInt32() == CompileResult.CurrentSchemaVersion, test.Source + " JSON schemaVersion");
+    Require(!string.IsNullOrWhiteSpace(rootElement.GetProperty("compilerVersion").GetString()), test.Source + " JSON compilerVersion");
+    Require(rootElement.GetProperty("operation").GetString() == "compile", test.Source + " JSON operation");
     var errors = rootElement.GetProperty("errors");
     Require(errors.GetArrayLength() > 0, test.Source + " JSON errors");
     var jsonDiagnostic = errors.EnumerateArray().FirstOrDefault(e => e.TryGetProperty("diagnosticCode", out var code) && code.GetString() == test.DiagnosticCode);
