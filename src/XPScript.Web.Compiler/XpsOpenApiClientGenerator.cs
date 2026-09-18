@@ -98,7 +98,7 @@ public sealed class XpsOpenApiClientGenerator
     private static void EmitModel(StringBuilder b, JsonObject root, string name, JsonObject schema) { var resolved = XpsOpenApiSchema.Resolve(root, schema, "OpenAPI client schema"); b.AppendLine($"Public Class {name}"); if (resolved["properties"] is not JsonObject properties || properties.Count == 0) b.AppendLine("    Public Value As Variant"); else foreach (var property in properties) { if (!IdentifierPattern.IsMatch(property.Key)) throw new XpsOpenApiGenerationException($"Schema '{name}' property '{property.Key}' is not a valid XPScript identifier."); if (property.Value is JsonObject propertySchema) b.AppendLine($"    Public {property.Key} As {XpsType(root, propertySchema)}"); } b.AppendLine("End Class"); }
     private static void EmitOperation(StringBuilder b, string apiName, ClientOperation op, Dictionary<string, JsonObject> models, Dictionary<string, ClientSecurityScheme> securitySchemes)
     {
-        var responseName = apiName + "Response"; var args = op.Parameters.Where(p => p.Required).Select(p => $"{ToIdentifier(p.Name)} As {p.TypeName}").Concat(op.Parameters.Where(p => !p.Required).Select(p => $"Optional {ToIdentifier(p.Name)} As {p.TypeName} = {DefaultValue(p.TypeName)}")).ToList(); if (op.Body is not null) args.Add(op.Body.Required ? $"payload As {op.Body.TypeName}" : $"Optional payload As {op.Body.TypeName} = {DefaultValue(op.Body.TypeName)}"); b.AppendLine($"    Public Function {op.Name}({string.Join(", ", args)}) As {responseName}"); b.AppendLine("        Dim url As String"); b.AppendLine("        Dim raw As XPHttpResponse"); b.AppendLine("        Dim request As New XPHttpRequest"); b.AppendLine($"        Dim result As {responseName}"); b.AppendLine($"        Set result = New {responseName}"); b.AppendLine($"        url = BaseUrl & \"{EscapeXps(op.Path)}\"");
+        var responseName = apiName + "Response"; var args = op.Parameters.Where(p => p.Required).Select(p => $"{ToIdentifier(p.Name)} As {p.TypeName}").Concat(op.Parameters.Where(p => !p.Required).Select(p => $"Optional {ToIdentifier(p.Name)} As Variant = Nothing")).ToList(); if (op.Body is not null) args.Add(op.Body.Required ? $"payload As {op.Body.TypeName}" : "Optional payload As Variant = Nothing"); b.AppendLine($"    Public Function {op.Name}({string.Join(", ", args)}) As {responseName}"); b.AppendLine("        Dim url As String"); b.AppendLine("        Dim raw As XPHttpResponse"); b.AppendLine("        Dim request As New XPHttpRequest"); b.AppendLine($"        Dim result As {responseName}"); b.AppendLine($"        Set result = New {responseName}"); b.AppendLine($"        url = BaseUrl & \"{EscapeXps(op.Path)}\"");
         foreach (var p in op.Parameters.Where(x => x.Location == "path")) b.AppendLine($"        url = Replace(url, \"{{{EscapeXps(p.Name)}}}\", Http.EncodePath({ToIdentifier(p.Name)}))"); foreach (var p in op.Parameters.Where(x => x.Location == "query")) { var line = $"url = Http.AddQuery(url, \"{EscapeXps(p.Name)}\", {ToIdentifier(p.Name)})"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); } foreach (var p in op.Parameters.Where(x => x.Location == "header")) { var line = $"Call request.SetHeader(\"{EscapeXps(p.Name)}\", CStr({ToIdentifier(p.Name)}))"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); }
         EmitSecurity(b, op, securitySchemes);
         b.AppendLine($"        request.Method = \"{op.Method}\""); b.AppendLine("        request.Url = url"); if (op.Body is not null) { if (!op.Body.Required) b.AppendLine("        If Not payload Is Nothing Then"); var indent = op.Body.Required ? "        " : "            "; b.AppendLine(indent + "Call request.SetHeader(\"Content-Type\", \"application/json\")"); b.AppendLine(indent + "request.Body = JsonStringify(payload)"); if (!op.Body.Required) b.AppendLine("        End If"); } b.AppendLine("        Set raw = Http.Send(request)");
@@ -208,13 +208,7 @@ public sealed class XpsOpenApiClientGenerator
     private static void EmitOptionalValue(StringBuilder b, ClientParameter parameter, string statement)
     {
         var name = ToIdentifier(parameter.Name);
-        var condition = parameter.TypeName switch
-        {
-            "String" => $"Len({name}) > 0",
-            "Variant" => $"Not {name} Is Nothing",
-            _ => $"{name} <> {DefaultValue(parameter.TypeName)}"
-        };
-        b.AppendLine($"        If {condition} Then {statement}");
+        b.AppendLine($"        If Not {name} Is Nothing Then {statement}");
     }
     private static string DefaultValue(string typeName) => typeName switch
     {
