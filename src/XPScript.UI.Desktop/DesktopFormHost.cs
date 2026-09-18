@@ -54,6 +54,7 @@ public static class DesktopFormHost
         var fieldPanels = new Dictionary<string, StackPanel>(StringComparer.OrdinalIgnoreCase);
         var fieldLabels = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
         var fieldValidationTexts = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
+        var currentValidationErrors = request.Fields.ToDictionary(field => field.Name, field => field.ValidationError, StringComparer.OrdinalIgnoreCase);
         var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var customButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
@@ -88,6 +89,12 @@ public static class DesktopFormHost
                 FontSize = 12
             };
             fieldValidationTexts[field.Name] = fieldValidation;
+            if (field.ValidationError.Length > 0)
+            {
+                fieldValidation.Text = field.ValidationError;
+                fieldValidation.IsVisible = true;
+                DesktopAccessibilityHost.SetValidationError(editor, field.ValidationError);
+            }
             fieldPanel.Children.Add(fieldValidation);
 
             var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : automaticRow++;
@@ -157,6 +164,7 @@ public static class DesktopFormHost
                     if (state.TryGetProperty("validationError", out var validationErrorElement))
                     {
                         var validationError = validationErrorElement.GetString() ?? string.Empty;
+                        currentValidationErrors[name] = validationError;
                         if (fieldValidationTexts.TryGetValue(name, out var errorText))
                         {
                             errorText.Text = validationError;
@@ -233,18 +241,19 @@ public static class DesktopFormHost
 
         if (eventCallback is not null)
         {
-            foreach (var sourceField in request.Fields.Where(field => field.OnChangeHandler.Length > 0 || field.RefreshHandler.Length > 0))
+            foreach (var sourceField in request.Fields.Where(field => request.HasValidationSchema || field.OnChangeHandler.Length > 0 || field.RefreshHandler.Length > 0))
             {
                 if (!editors.TryGetValue(sourceField.Name, out var sourceEditor)) continue;
+                var eventKind = sourceField.OnChangeHandler.Length > 0 || sourceField.RefreshHandler.Length > 0 ? "change:" : "validate:";
                 switch (sourceEditor)
                 {
-                    case ComboBox comboBox: comboBox.SelectionChanged += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, comboBox); break;
-                    case ListBox listBox: listBox.SelectionChanged += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, listBox); break;
-                    case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, checkBox); break;
+                    case ComboBox comboBox: comboBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, comboBox); break;
+                    case ListBox listBox: listBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, listBox); break;
+                    case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, checkBox); break;
                     case StackPanel radioPanel:
-                        foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, radioPanel);
+                        foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, radioPanel);
                         break;
-                    case TextBox textBox: textBox.LostFocus += (_, _) => TriggerEvent("change:" + sourceField.Name, sourceField, textBox); break;
+                    case TextBox textBox: textBox.LostFocus += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, textBox); break;
                 }
             }
         }
@@ -298,7 +307,8 @@ public static class DesktopFormHost
                     if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase)) continue;
                     if (!editors.TryGetValue(field.Name, out var editor)) continue;
                     optionOverrides.TryGetValue(field.Name, out var allowedOptions);
-                    var validationError = field.ValidationError.Length > 0 ? field.ValidationError : ValidateEditorValue(field, editor, allowedOptions);
+                    currentValidationErrors.TryGetValue(field.Name, out var currentValidationError);
+                    var validationError = !string.IsNullOrEmpty(currentValidationError) ? currentValidationError : ValidateEditorValue(field, editor, allowedOptions);
                     if (validationError is null) continue;
 
                     if (fieldValidationTexts.TryGetValue(field.Name, out var errorText))
