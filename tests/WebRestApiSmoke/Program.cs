@@ -12,6 +12,7 @@ Directory.CreateDirectory(Path.Combine(root, "schemas"));
 await File.WriteAllTextAsync(Path.Combine(root, "schemas", "create-user.schema.json"), """
 {"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":120}}}
 """);
+await File.WriteAllTextAsync(Path.Combine(root, "schemas", "invalid.schema.json"), "{not-json");
 
 await File.WriteAllTextAsync(apiPath, """
 Public Class CreateUserRequest
@@ -54,6 +55,22 @@ End Sub
 [JsonSchema:schemas/create-user.schema.json]
 Sub CreateUser([FromBody] payload As CreateUserRequest)
     Response.OK(payload)
+End Sub
+
+[Anonymous]
+[Post]
+[Route:/api/schema-missing]
+[JsonSchema:schemas/missing.schema.json]
+Sub MissingSchema()
+    Response.Write("HANDLER-RAN")
+End Sub
+
+[Anonymous]
+[Post]
+[Route:/api/schema-invalid]
+[JsonSchema:schemas/invalid.schema.json]
+Sub InvalidSchema()
+    Response.Write("HANDLER-RAN")
 End Sub
 
 [Anonymous]
@@ -233,6 +250,44 @@ try
             throw new Exception("JSON Schema Problem Details did not preserve the full XPJsonValidationResult error.");
     }
     Console.WriteLine("WEB-REST-JSON-SCHEMA-VALIDATION=OK");
+
+    var malformedJson = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{not-json",
+        "application/json");
+    if (malformedJson.StatusCode != 400)
+        throw new Exception($"Malformed request JSON returned {malformedJson.StatusCode} instead of 400.");
+    if (!BodyText(malformedJson).Contains("body", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Malformed request JSON did not return a body validation error.");
+
+    var missingSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/schema-missing",
+        "{}",
+        "application/json");
+    if (missingSchema.StatusCode != 500)
+        throw new Exception($"Missing configured JSON Schema returned {missingSchema.StatusCode} instead of 500.");
+    if (BodyText(missingSchema).Contains("HANDLER-RAN", StringComparison.Ordinal))
+        throw new Exception("Route handler executed when configured JSON Schema was missing.");
+
+    var invalidSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/schema-invalid",
+        "{}",
+        "application/json");
+    if (invalidSchema.StatusCode != 500)
+        throw new Exception($"Invalid configured JSON Schema returned {invalidSchema.StatusCode} instead of 500.");
+    if (BodyText(invalidSchema).Contains("HANDLER-RAN", StringComparison.Ordinal))
+        throw new Exception("Route handler executed when configured JSON Schema was invalid.");
+
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-ERROR-CLASSIFICATION=OK");
 
     var invalid = await SendAsync(
         dispatcher,
