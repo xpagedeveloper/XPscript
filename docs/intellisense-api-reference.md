@@ -139,6 +139,7 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `NativeHttp.CreateRequest` | `New XPHttpRequest` | none | Runtime constructor backing XPHttpRequest. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
 | `JsonDocument.ToObject` | `document.ToObject(target)` | typed target object. | Deserializes JSON into the target XPScript model type. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
 | `JsonObject.ToObject` | `obj.ToObject(target)` | typed target object. | Deserializes a JSON object into the target XPScript model type. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+| `JsonArray.ToObject` | `array.ToObject(target)` | typed target object. | Deserializes a JSON array into the target XPScript model type. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
 | `JsonElement.ToObject` | `element.ToObject(target)` | typed target object. | Deserializes a JSON element into the target XPScript model type. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
 | `HttpMultipart.GetMediaTypeParameter` | `response.ContentType` | none | Internal HTTP media-type parameter parser used by response decoding. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
 | `HttpUiFormHelpers.SetBearerToken` | `client.SetBearerToken(token)` | bearer token. | Compatibility runtime declaration; public callers use XPHttpClient. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
