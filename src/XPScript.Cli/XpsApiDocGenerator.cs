@@ -134,6 +134,8 @@ internal static class XpsApiDocGenerator
         if (endpoint.JsonSchema is not null)
         {
             var schemaPath = endpoint.JsonSchema.Replace('\\', '/').TrimStart('/');
+            if (schemaPath.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(part => part == ".."))
+                throw new InvalidOperationException($"JSON Schema path '{endpoint.JsonSchema}' must stay inside the API root.");
             return new Dictionary<string, object> { ["$ref"] = "../" + schemaPath };
         }
         return endpoint.Parameters.FirstOrDefault(p => p.Location == "body") is { } body ? Schema(body.Type) : null;
