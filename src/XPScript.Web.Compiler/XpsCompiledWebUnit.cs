@@ -69,7 +69,12 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
 
         if (descriptor.JsonSchema is not null)
         {
-            var schemaErrors = ValidateJsonSchemaWithXpRuntime(assembly, context, descriptor.JsonSchema);
+            IReadOnlyDictionary<string, string[]> schemaErrors;
+            try { schemaErrors = ValidateJsonSchemaWithXpRuntime(assembly, context, descriptor.JsonSchema); }
+            catch (TargetInvocationException ex) when (ex.InnerException is not null)
+            {
+                schemaErrors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [ex.InnerException.Message] };
+            }
             if (schemaErrors.Count > 0)
             {
                 XpsWebResponseRestExtensions.Problem(context.Response, 400, "JSON Schema validation failed", "The request body does not satisfy the route XPJsonSchema.", schemaErrors);
