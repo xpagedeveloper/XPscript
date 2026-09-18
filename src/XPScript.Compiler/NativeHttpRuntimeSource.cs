@@ -386,6 +386,13 @@ internal sealed class XPScriptHttpRequest
         SetHeader("Authorization", "Bearer " + token);
     }
 
+    public void SetAuthorization(object? authorizationValue)
+    {
+        var authorization = XPScriptRuntime.CStr(authorizationValue);
+        if (authorization.IndexOfAny(['\r', '\n', '\0']) >= 0) throw new XPScriptRuntimeException(5, "Authorization value contains a prohibited control character.");
+        SetHeader("Authorization", authorization);
+    }
+
     public void SetBasicAuth(object? usernameValue, object? passwordValue)
     {
         var username = XPScriptRuntime.CStr(usernameValue);
