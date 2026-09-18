@@ -31,8 +31,12 @@ jobs:
       - name: Validate CLI JSON contract
         shell: pwsh
         run: |
+          $previousPreference = $ErrorActionPreference
+          $ErrorActionPreference = 'Continue'
           $output = dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- validate samples/null-integer-assignment-error.xps --result-format json
-          if ($LASTEXITCODE -ne 2) { throw "Expected validation exit code 2, got $LASTEXITCODE" }
+          $exitCode = $LASTEXITCODE
+          $ErrorActionPreference = $previousPreference
+          if ($exitCode -ne 2) { throw "Expected validation exit code 2, got $exitCode" }
           $json = $output | ConvertFrom-Json
           if ($json.schema -ne 'xpscript.compiler-result') { throw "Unexpected schema" }
           if ($json.schemaVersion -ne 1) { throw "Unexpected schemaVersion" }
