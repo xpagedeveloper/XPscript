@@ -217,6 +217,21 @@ try
     var schemaInvalidBody = BodyText(schemaInvalid);
     if (!schemaInvalidBody.Contains("$.age", StringComparison.Ordinal) || !schemaInvalidBody.Contains("JSON Schema validation failed", StringComparison.Ordinal))
         throw new Exception("JSON Schema Problem Details did not contain structured field path errors.");
+    using (var schemaProblem = JsonDocument.Parse(schemaInvalid.Body))
+    {
+        var rootElement = schemaProblem.RootElement;
+        if (!rootElement.TryGetProperty("validationErrors", out var validationErrors) || validationErrors.ValueKind != JsonValueKind.Array || validationErrors.GetArrayLength() == 0)
+            throw new Exception("JSON Schema Problem Details did not contain validationErrors.");
+        var ageError = validationErrors.EnumerateArray().FirstOrDefault(item =>
+            item.TryGetProperty("path", out var pathValue) && pathValue.GetString() == "$.age");
+        if (ageError.ValueKind != JsonValueKind.Object ||
+            !ageError.TryGetProperty("schemaPath", out var schemaPathValue) || string.IsNullOrWhiteSpace(schemaPathValue.GetString()) ||
+            !ageError.TryGetProperty("keyword", out var keywordValue) || keywordValue.GetString() != "minimum" ||
+            !ageError.TryGetProperty("message", out var messageValue) || string.IsNullOrWhiteSpace(messageValue.GetString()) ||
+            !ageError.TryGetProperty("expected", out var expectedValue) || expectedValue.GetString() != ">= 18" ||
+            !ageError.TryGetProperty("actual", out var actualValue) || actualValue.GetString() != "12")
+            throw new Exception("JSON Schema Problem Details did not preserve the full XPJsonValidationResult error.");
+    }
     Console.WriteLine("WEB-REST-JSON-SCHEMA-VALIDATION=OK");
 
     var invalid = await SendAsync(
