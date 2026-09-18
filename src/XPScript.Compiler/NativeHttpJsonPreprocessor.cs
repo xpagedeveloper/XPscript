@@ -4,8 +4,8 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeHttpJsonPreprocessor
 {
-    private const string NativeTypePattern = "XPHttpClient|XPHttpResponse|XPJsonDocument|XPJsonObject|XPJsonArray|XPJsonElement|XPJsonSchema|XPJsonValidationResult|XPHttpDbSupabase|XPDbSupabase|XPHttpDbDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|AITool";
-    private static readonly string[] FeatureMarkers = ["XPHttpClient", "XPHttpResponse", "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJsonSchema", "XPJsonValidationResult", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode", "XPHttpDbSupabase", "XPDbSupabase", "XPHttpDbDominoRest", "XPDBSQLite", "XPDbMsSql", "XPDbMySql", "XPAi", "AITool"];
+    private const string NativeTypePattern = "XPHttpClient|XPHttpRequest|XPHttpResponse|XPJsonDocument|XPJsonObject|XPJsonArray|XPJsonElement|XPJsonSchema|XPJsonValidationResult|XPHttpDbSupabase|XPDbSupabase|XPHttpDbDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|AITool";
+    private static readonly string[] FeatureMarkers = ["XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJsonSchema", "XPJsonValidationResult", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode", "XPHttpDbSupabase", "XPDbSupabase", "XPHttpDbDominoRest", "XPDBSQLite", "XPDbMsSql", "XPDbMySql", "XPAi", "AITool"];
 
     public string Transform(string source)
     {
@@ -72,6 +72,7 @@ internal sealed class NativeHttpJsonPreprocessor
     {
         var args = rawArguments.Trim();
         if (type.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeHttp.CreateClient()";
+        if (type.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeHttp.CreateRequest()";
         if (type.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase)) return string.IsNullOrWhiteSpace(args) ? "XPScriptNativeJson.CreateDocument()" : $"XPScriptNativeJson.Parse({args})";
         if (type.Equals("XPJsonObject", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateObject()"; if (type.Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateArray()"; if (type.Equals("XPJsonElement", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeJson.CreateElement()";
         if (type.Equals("XPJsonSchema", StringComparison.OrdinalIgnoreCase)) return string.IsNullOrWhiteSpace(args) ? "new XPScriptJsonSchema()" : $"XPScriptJsonSchema.Parse({args})";
