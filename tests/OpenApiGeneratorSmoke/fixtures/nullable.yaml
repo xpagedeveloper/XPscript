@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info: { title: Nullable Corpus, version: 1.0.0 }
+paths:
+  /nullable:
+    post:
+      operationId: nullableValue
+      requestBody:
+        content:
+          application/json:
+            schema: { type: [string, 'null'] }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: [integer, 'null'] }
