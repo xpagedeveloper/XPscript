@@ -2,14 +2,16 @@ using System.Xml.Serialization;
 using System.Text.Json;
 using XPScript.Compiler;
 
-if (args.Length != 2)
+if (args.Length != 1)
 {
-    Console.Error.WriteLine("Usage: CompilerMachineInterfaceProbe <compiler-project> <repo-root>");
+    Console.Error.WriteLine("Usage: CompilerMachineInterfaceProbe <repo-root>");
     return 2;
 }
 
-var compilerProject = Path.GetFullPath(args[0]);
-var root = Path.GetFullPath(args[1]);
+var root = Path.GetFullPath(args[0]);
+var driver = new CompilerDriver();
+var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(outputRoot);
 
 var cases = new[]
 {
@@ -23,7 +25,8 @@ var cases = new[]
 foreach (var test in cases)
 {
     var source = Path.Combine(root, test.Source.Replace('/', Path.DirectorySeparatorChar));
-    var result = await CompilerDriver.CompileWithResultAsync(source);
+    var output = Path.Combine(outputRoot, Path.GetFileNameWithoutExtension(source) + ".dll");
+    var result = await driver.CompileWithResultAsync(source, output, selfContained: false);
     Require(!result.Success, test.Source + " must fail compilation");
     Require(result.Schema == CompileResult.CurrentSchema, test.Source + " schema");
     Require(result.SchemaVersion == CompileResult.CurrentSchemaVersion, test.Source + " schemaVersion");
@@ -87,6 +90,8 @@ using var xmlReader = new StringReader(xml);
 var xmlRoundTrip = (CompileResult?)xmlSerializer.Deserialize(xmlReader);
 Require(xmlRoundTrip?.Errors.Count == 1, "XML diagnostic round trip");
 Require(xmlRoundTrip.Errors[0].SourceCode == "value = text", "XML source code round trip");
+
+try { Directory.Delete(outputRoot, recursive: true); } catch { }
 
 Console.WriteLine("CompilerMachineInterfaceProbe OK");
 return 0;
