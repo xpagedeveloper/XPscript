@@ -123,14 +123,14 @@ public sealed class CompileDiagnostic
     // will use XPSxxxx identifiers. Upstream compiler identifiers can be retained
     // until they are mapped to a stable XPScript diagnostic.
     [JsonPropertyName("diagnosticCode")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [XmlElement("diagnosticCode")]
-    public string DiagnosticCode { get; set; } = "";
+    public string? DiagnosticCode { get; set; }
 
     [JsonPropertyName("upstreamCode")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [XmlElement("upstreamCode")]
-    public string UpstreamCode { get; set; } = "";
+    public string? UpstreamCode { get; set; }
 
     [JsonPropertyName("severity")]
     [XmlElement("severity")]
@@ -169,9 +169,12 @@ public sealed class CompileDiagnostic
     {
         Severity = NormalizeSeverity(Severity);
         Category = string.IsNullOrWhiteSpace(Category) ? "compiler" : Category.Trim().ToLowerInvariant();
-        DiagnosticCode = DiagnosticCode.Trim();
-        UpstreamCode = UpstreamCode.Trim();
+        DiagnosticCode = NormalizeOptionalCode(DiagnosticCode);
+        UpstreamCode = NormalizeOptionalCode(UpstreamCode);
     }
+
+    private static string? NormalizeOptionalCode(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string NormalizeSeverity(string value)
     {
