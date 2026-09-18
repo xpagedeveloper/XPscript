@@ -6,6 +6,19 @@ namespace XPScript.Compiler;
 /// </summary>
 internal static class CompilerDiagnosticCodes
 {
+    // XPS1xxx: parser/syntax validation.
+    public const string UnescapedStringQuote = "XPS1001";
+    public const string InvalidNothingComparison = "XPS1002";
+
+    // XPS2xxx: type, argument, member and overload validation.
+    public const string TypeMismatch = "XPS2001";
+    public const string ArgumentCountMismatch = "XPS2002";
+    public const string ArgumentTypeMismatch = "XPS2003";
+    public const string NoMatchingOverload = "XPS2004";
+    public const string AmbiguousOverload = "XPS2005";
+    public const string DuplicateOverload = "XPS2006";
+    public const string ConflictingClassMember = "XPS2007";
+
     // XPS8xxx: project/configuration and compiler invocation.
     public const string SourceFileRequired = "XPS8001";
     public const string SourceExtensionInvalid = "XPS8002";
