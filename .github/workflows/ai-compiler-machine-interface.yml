@@ -53,9 +53,16 @@ jobs:
           $process.WaitForExit()
           if ($process.ExitCode -ne 2) { throw "Expected validation exit code 2, got $($process.ExitCode). stderr: $stderr" }
           $json = $output | ConvertFrom-Json
+          $output | Set-Content -NoNewline compiler-result.actual.json
           if ($json.schema -ne 'xpscript.compiler-result') { throw "Unexpected schema" }
           if ($json.schemaVersion -ne 1) { throw "Unexpected schemaVersion" }
           if ($json.operation -ne 'validate') { throw "Unexpected operation" }
           if ($json.result -ne 'error') { throw "Expected error result" }
           if (-not $json.compilerVersion) { throw "Missing compilerVersion" }
           if (-not ($json.errors | Where-Object { $_.diagnosticCode -eq 'XPS2001' })) { throw "Missing XPS2001 diagnostic" }
+
+      - name: Validate JSON Schema
+        shell: pwsh
+        run: |
+          dotnet tool install --global dotnet-jsonschema
+          jsonschema validate schemas/compiler-result.schema.json compiler-result.actual.json
