@@ -39,6 +39,8 @@ internal static class XpsOpenApiSchema
             return ReferenceTypeName(reference, context);
         }
         var resolved = Resolve(root, schema, context);
+        var composed = CompositionType(root, resolved, context);
+        if (composed is not null) return composed;
         var type = ReadString(resolved, "type")?.ToLowerInvariant();
         if (type is null && resolved.ContainsKey("properties")) type = "object";
         var format = ReadString(resolved, "format")?.ToLowerInvariant();
@@ -52,6 +54,19 @@ internal static class XpsOpenApiSchema
             "object" => "XPJsonObject",
             _ => "Variant"
         };
+    }
+
+    private static string? CompositionType(JsonObject root, JsonObject schema, string context)
+    {
+        foreach (var keyword in new[] { "oneOf", "anyOf", "allOf" })
+        {
+            if (schema[keyword] is not JsonArray branches || branches.Count == 0) continue;
+            var types = branches.OfType<JsonObject>().Select(branch => XpsType(root, branch, context + " " + keyword)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            if (types.Length == 1) return types[0];
+            if (keyword == "allOf" && types.All(type => type == "XPJsonObject" || type == "Variant")) return "XPJsonObject";
+            return "Variant";
+        }
+        return null;
     }
 
     internal static bool TryGetReference(JsonObject schema, out string reference)
