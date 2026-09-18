@@ -13,5 +13,6 @@
     <None Include="petstore.yaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="petstore-reimport.yaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="client-ci.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="petstore.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
