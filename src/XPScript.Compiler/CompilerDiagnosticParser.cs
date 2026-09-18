@@ -23,7 +23,7 @@ internal static class CompilerDiagnosticParser
             var diagnosticSource = match.Groups["file"].Value.Trim();
             var code = DiagnosticSourceLine(sourcePath, source, diagnosticSource, line);
             var upstreamCode = match.Groups["id"].Value;
-            var classification = CompilerDiagnosticClassifier.ClassifyUpstream(upstreamCode, sourceMapped: true);
+            var classification = CompilerDiagnosticClassifier.ClassifyUpstream(upstreamCode, CompilerDiagnosticClassifier.IsSourceMappedPath(diagnosticSource));
             result.Add(new CompileDiagnostic
             {
                 File = DiagnosticFileName(diagnosticSource),
@@ -46,7 +46,7 @@ internal static class CompilerDiagnosticParser
 
         if (result.Count > 0)
             return result
-                .GroupBy(x => (x.File, x.Line, x.Position, x.Description))
+                .GroupBy(x => (x.File, x.Line, x.Position, x.Description, x.DiagnosticCode, x.UpstreamCode, x.Severity, x.Category))
                 .Select(x => x.First())
                 .ToList();
 
