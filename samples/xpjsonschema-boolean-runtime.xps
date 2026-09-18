@@ -47,5 +47,22 @@ Sub Main()
     Call builderItemsValue.Add(37)
     If builderItemsSchema.IsValid(builderItemsValue) Then Error 5, "Expected builder Set items false to reject array items"
 
+    Dim builderAnyOfSchema As New XPJsonSchema
+    Dim builderAnyOf As New XPJsonArray
+    Call builderAnyOf.Add(False)
+    Call builderAnyOf.Add(XPJsonSchema.Parse("{""type"":""integer""}"))
+    Call builderAnyOfSchema.Set("anyOf", builderAnyOf)
+    If Not builderAnyOfSchema.IsValid(37) Then Error 5, "Expected builder Set anyOf to normalize boolean branches"
+    If builderAnyOfSchema.IsValid("Ada") Then Error 5, "Expected builder Set anyOf false branch not to match"
+
+    Dim builderPropertiesSchema As New XPJsonSchema
+    builderPropertiesSchema.Type = "object"
+    Dim builderProperties As New XPJsonDocument
+    Call builderProperties.Set("forbidden", False)
+    Call builderPropertiesSchema.Set("properties", builderProperties)
+    Dim builderForbiddenObject As XPJsonDocument
+    Set builderForbiddenObject = XPJsonDocument.Parse("{""forbidden"":123}")
+    If builderPropertiesSchema.IsValid(builderForbiddenObject) Then Error 5, "Expected builder Set properties to normalize false property schema"
+
     Print "XPJSONSCHEMA-BOOLEAN-RUNTIME=OK"
 End Sub
