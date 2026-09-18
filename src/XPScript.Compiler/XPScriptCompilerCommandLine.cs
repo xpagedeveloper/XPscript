@@ -22,6 +22,9 @@ public static class XPScriptCompilerCommandLine
         if (args[0].Equals("compile", StringComparison.OrdinalIgnoreCase))
             return await CompileAsync(args[1..]).ConfigureAwait(false);
 
+        if (args[0].Equals("validate", StringComparison.OrdinalIgnoreCase))
+            return await ValidateAsync(args[1..]).ConfigureAwait(false);
+
         return await CompileAsync(args).ConfigureAwait(false);
     }
 
@@ -151,6 +154,49 @@ public static class XPScriptCompilerCommandLine
         {
             CompleteProgress("Compilation failed");
             var result = CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]);
+            WriteResult(result, resultFormat is "json" or "xml" ? resultFormat : "text");
+            return 1;
+        }
+    }
+
+    public static async Task<int> ValidateAsync(string[] args)
+    {
+        var resultFormat = "text";
+        var debug = false;
+        try
+        {
+            if (args.Length == 0)
+            {
+                WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "validate requires an .xps source file." }]).WithOperation("validate"), resultFormat);
+                return 1;
+            }
+
+            var sourcePath = Path.GetFullPath(args[0]);
+            var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
+            for (var i = 1; i < args.Length; i++)
+            {
+                if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
+                    runtimeIdentifier = args[++i].ToLowerInvariant();
+                else if (args[i] == "--result-format" && i + 1 < args.Length)
+                    resultFormat = args[++i].ToLowerInvariant();
+                else if (args[i] == "--debug")
+                    debug = true;
+                else
+                    throw new ArgumentException($"Unknown argument: {args[i]}");
+            }
+
+            if (resultFormat is not ("text" or "json" or "xml"))
+                throw new ArgumentException("--result-format must be text, json, or xml.");
+
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+            var compiler = new CompilerDriver();
+            var result = await compiler.ValidateWithResultAsync(sourcePath, runtimeIdentifier).ConfigureAwait(false);
+            WriteResult(result, resultFormat);
+            return result.Success ? 0 : 2;
+        }
+        catch (Exception ex)
+        {
+            var result = CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]).WithOperation("validate");
             WriteResult(result, resultFormat is "json" or "xml" ? resultFormat : "text");
             return 1;
         }
