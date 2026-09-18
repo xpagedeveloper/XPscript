@@ -95,7 +95,7 @@ XPS9xxx internal compiler diagnostics
 
 - [x] Support `code`, `severity`, `category` and `message`.
 - [x] Support file, start line/column and end line/column where available.
-- [ ] Support structured diagnostic properties instead of encoding metadata into `message`.
+- [x] Support structured diagnostic properties instead of encoding metadata into `message`.
 - [x] Standardize severities at least as `error`, `warning` and `info`.
 - [x] Preserve the same semantic diagnostic across text, JSON and XML representations.
 
@@ -125,8 +125,8 @@ Minimum representation:
 
 ## 6. Symbol diagnostics
 
-- [ ] Structure unknown symbol and unknown member failures.
-- [ ] Include requested symbol name.
+- [x] Structure unknown symbol and unknown member failures.
+- [x] Include requested symbol name.
 - [ ] Include receiver type for failed member resolution.
 - [ ] Include symbol kind and containing scope where useful.
 - [ ] Reuse compiler symbol tables.
@@ -143,13 +143,13 @@ Minimum representation:
 
 ## 8. Type and argument diagnostics
 
-- [ ] Include expected and actual type for type mismatches.
-- [ ] Include affected symbol where applicable.
-- [ ] Structure missing, extra and invalid arguments.
-- [ ] Include parameter name/index and expected type.
+- [x] Include expected and actual type for type mismatches.
+- [x] Include affected symbol where applicable.
+- [x] Structure missing, extra and invalid arguments.
+- [x] Include parameter name/index and expected type.
 - [ ] Include procedure/function signature where useful.
 - [ ] Include ByRef/ByVal compatibility information where relevant.
-- [ ] Include overload candidates if supported by the language model.
+- [x] Include overload candidates if supported by the language model.
 
 ## 9. Target/platform diagnostics
 
