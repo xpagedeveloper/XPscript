@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Xml.Serialization;
 
@@ -16,6 +17,14 @@ public sealed class CompileResult
     [JsonPropertyName("schemaVersion")]
     [XmlElement("schemaVersion")]
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
+
+    [JsonPropertyName("compilerVersion")]
+    [XmlElement("compilerVersion")]
+    public string CompilerVersion { get; set; } = GetCompilerVersion();
+
+    [JsonPropertyName("operation")]
+    [XmlElement("operation")]
+    public string Operation { get; set; } = "compile";
 
     [JsonPropertyName("result")]
     [XmlElement("result")]
@@ -49,6 +58,11 @@ public sealed class CompileResult
         Result = "error",
         Errors = NormalizeDiagnostics(errors)
     };
+
+    private static string GetCompilerVersion() =>
+        typeof(CompileResult).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? typeof(CompileResult).Assembly.GetName().Version?.ToString()
+        ?? "unknown";
 
     private static List<CompileDiagnostic> NormalizeDiagnostics(IEnumerable<CompileDiagnostic> errors)
     {
