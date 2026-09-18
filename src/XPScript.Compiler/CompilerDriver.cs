@@ -529,39 +529,6 @@ public sealed class CompilerDriver
         return sanitized;
     }
 
-    private static string RedactSourceLine(string line)
-    {
-        if (string.IsNullOrEmpty(line)) return line;
-        var output = new StringBuilder(line.Length);
-        var inString = false;
-        for (var i = 0; i < line.Length; i++)
-        {
-            var c = line[i];
-
-            if (inString && c == '\\' && i + 1 < line.Length && line[i + 1] == '"')
-            {
-                output.Append("**");
-                i++;
-                continue;
-            }
-
-            if (c == '"')
-            {
-                output.Append(c);
-                if (inString && i + 1 < line.Length && line[i + 1] == '"')
-                {
-                    output.Append('"');
-                    i++;
-                    continue;
-                }
-                inString = !inString;
-                continue;
-            }
-            output.Append(inString ? '*' : c);
-        }
-        return output.ToString();
-    }
-
     private static string SafeFileName(string value)
     {
         try { return Path.GetFileName(value); }
@@ -573,22 +540,6 @@ public sealed class CompilerDriver
         try { return Path.GetFileName(value); }
         catch { return ""; }
     }
-
-    private static string Humanize(string description)
-    {
-        var convert = Regex.Match(description, @"cannot convert from '([^']+)' to '([^']+)'", RegexOptions.IgnoreCase);
-        if (convert.Success) return $"Unable to use {FriendlyType(convert.Groups[1].Value)} where {FriendlyType(convert.Groups[2].Value)} is required.";
-        var assign = Regex.Match(description, @"Cannot implicitly convert type '([^']+)' to '([^']+)'", RegexOptions.IgnoreCase);
-        if (assign.Success) return $"Unable to assign {FriendlyType(assign.Groups[1].Value)} to {FriendlyType(assign.Groups[2].Value)}.";
-        return description;
-    }
-
-    private static string FriendlyType(string type) => type.Trim() switch
-    {
-        "string" or "System.String" => "String", "int" or "System.Int32" => "Integer", "long" or "System.Int64" => "Long",
-        "double" or "System.Double" => "Double", "float" or "System.Single" => "Single", "bool" or "System.Boolean" => "Boolean",
-        "byte" or "System.Byte" => "Byte", "decimal" or "System.Decimal" => "Currency", _ => type
-    };
 
     private static CompileDiagnostic CreateDiagnostic(
         int line,
@@ -606,10 +557,5 @@ public sealed class CompilerDriver
         MarkedCode = marked
     };
 
-    private static string Mark(string code, int position)
-    {
-        if (string.IsNullOrEmpty(code) || position <= 0) return code;
-        var caret = Math.Clamp(position - 1, 0, code.Length);
-        return code + Environment.NewLine + new string(' ', caret) + "^";
-    }
+}
 }
