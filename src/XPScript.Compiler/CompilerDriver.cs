@@ -42,29 +42,29 @@ public sealed class CompilerDriver
         try
         {
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceExtensionInvalid, "configuration")]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceExtensionInvalid, "configuration")]).WithContext(sourcePath, runtimeIdentifier);
 
             if (!File.Exists(sourcePath))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]).WithContext(sourcePath, runtimeIdentifier);
 
             source = await File.ReadAllTextAsync(sourcePath);
             await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
-            return CompileResult.Ok(outputPath);
+            return CompileResult.Ok(outputPath).WithContext(sourcePath, runtimeIdentifier);
         }
         catch (CompilerException ex)
         {
             if (ex.GeneratedDiagnostics.Count > 0 &&
                 ex.GeneratedDiagnostics.Any(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)))
-                return CompileResult.Error(ex.GeneratedDiagnostics);
+                return CompileResult.Error(ex.GeneratedDiagnostics).WithContext(sourcePath, runtimeIdentifier);
 
             var diagnostics = ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category);
             if (CompilerDiagnosticMode.Debug && ex.GeneratedDiagnostics.Count > 0)
                 diagnostics.AddRange(ex.GeneratedDiagnostics);
-            return CompileResult.Error(diagnostics);
+            return CompileResult.Error(diagnostics).WithContext(sourcePath, runtimeIdentifier);
         }
         catch (Exception)
         {
-            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]);
+            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithContext(sourcePath, runtimeIdentifier);
         }
     }
 
