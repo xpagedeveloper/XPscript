@@ -34,8 +34,15 @@ paths:
       responses:
         '204': { description: ok }
 """, "security.yaml").Source;
-foreach (var marker in new[] { "request.SetBearerToken(AuthBearerAuth)", "request.SetBasicAuth(AuthBasicAuthUsername, AuthBasicAuthPassword)", "request.SetHeader(\"X-API-Key\", AuthApiKey)", "ElseIf", "Public Function PublicCall" })
+foreach (var marker in new[] { "request.SetBearerToken(AuthBearerAuth)", "request.SetAuthorization(AuthBasicAuthAuthorization)", "request.SetHeader(\"X-API-Key\", AuthApiKey)", "ElseIf", "Public Function PublicCall" })
     if (!securityClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated OpenAPI security client is missing marker: " + marker);
+if (!securityClient.Contains("Private AuthBasicAuthAuthorization As String", StringComparison.Ordinal) ||
+    !securityClient.Contains("AuthBasicAuthAuthorization = Http.BasicAuthorization(username, password)", StringComparison.Ordinal) ||
+    securityClient.Contains("Public AuthBasicAuthAuthorization", StringComparison.Ordinal) ||
+    securityClient.Contains("AuthBasicAuthUsername", StringComparison.Ordinal) ||
+    securityClient.Contains("AuthBasicAuthPassword", StringComparison.Ordinal))
+    throw new Exception("Generated Basic auth must store only a private precomputed Authorization value.");
+
 var publicStart = securityClient.IndexOf("Public Function PublicCall", StringComparison.Ordinal);
 var publicEnd = securityClient.IndexOf("End Function", publicStart, StringComparison.Ordinal);
 var publicSource = securityClient[publicStart..publicEnd];
