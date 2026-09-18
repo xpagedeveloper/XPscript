@@ -26,9 +26,9 @@ public sealed class CompileResult
     [XmlElement("output")]
     public string? Output { get; set; }
 
-    // Keep the established "errors" wire name for backward compatibility.
-    // Diagnostics can later include warnings/info without forcing existing JSON consumers
-    // to change as the machine interface evolves.
+    // Keep the established "errors" wire name in schema version 1 for backward
+    // compatibility. The entries are structured diagnostics even though the
+    // historical collection name is errors.
     [JsonPropertyName("errors")]
     [XmlArray("errors")]
     [XmlArrayItem("error")]
@@ -59,7 +59,7 @@ public sealed class CompileResult
 
             var generatedLocation = string.IsNullOrWhiteSpace(diagnostic.File) &&
                                     diagnostic.Line > 0 &&
-                                    string.IsNullOrWhiteSpace(diagnostic.Code);
+                                    string.IsNullOrWhiteSpace(diagnostic.SourceCode);
             if (!generatedLocation) continue;
 
             if (CompilerDiagnosticMode.Debug)
@@ -93,9 +93,13 @@ public sealed class CompileDiagnostic
     [XmlElement("description")]
     public string Description { get; set; } = "";
 
-    [JsonPropertyName("code")]
-    [XmlElement("code")]
-    public string Code { get; set; } = "";
+    // Stable machine-readable diagnostic identifier. XPScript-owned diagnostics
+    // will use XPSxxxx identifiers. Upstream compiler identifiers can be retained
+    // until they are mapped to a stable XPScript diagnostic.
+    [JsonPropertyName("diagnosticCode")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [XmlElement("diagnosticCode")]
+    public string DiagnosticCode { get; set; } = "";
 
     [JsonPropertyName("severity")]
     [XmlElement("severity")]
@@ -105,14 +109,28 @@ public sealed class CompileDiagnostic
     [XmlElement("category")]
     public string Category { get; set; } = "compiler";
 
+    // Historical schema-v1 field. "code" means the redacted XPScript source line,
+    // not the diagnostic identifier. Keep it for backward compatibility.
+    [JsonPropertyName("code")]
+    [XmlElement("code")]
+    public string SourceCode { get; set; } = "";
+
     [JsonPropertyName("markedCode")]
     [XmlElement("markedCode")]
     public string MarkedCode { get; set; } = "";
+
+    // SourceText gives new consumers an unambiguous name while schema v1 keeps
+    // "code" available for existing integrations.
+    [JsonPropertyName("sourceText")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [XmlElement("sourceText")]
+    public string SourceText => SourceCode;
 
     internal void NormalizeMachineFields()
     {
         Severity = NormalizeSeverity(Severity);
         Category = string.IsNullOrWhiteSpace(Category) ? "compiler" : Category.Trim().ToLowerInvariant();
+        DiagnosticCode = DiagnosticCode.Trim();
     }
 
     private static string NormalizeSeverity(string value)
