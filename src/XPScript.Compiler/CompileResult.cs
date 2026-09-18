@@ -30,6 +30,16 @@ public sealed class CompileResult
     [XmlElement("result")]
     public string Result { get; set; } = "ok";
 
+    [JsonPropertyName("target")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [XmlElement("target")]
+    public string? Target { get; set; }
+
+    [JsonPropertyName("source")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [XmlElement("source")]
+    public CompileSource? Source { get; set; }
+
     [JsonPropertyName("output")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [XmlElement("output")]
@@ -62,6 +72,13 @@ public sealed class CompileResult
     internal CompileResult WithOperation(string operation)
     {
         Operation = operation;
+        return this;
+    }
+
+    internal CompileResult WithContext(string sourcePath, string? target = null)
+    {
+        Target = string.IsNullOrWhiteSpace(target) ? null : target;
+        Source = new CompileSource { EntryPoint = Path.GetFileName(sourcePath) };
         return this;
     }
 
@@ -99,6 +116,13 @@ public sealed class CompileResult
         }
         return result;
     }
+}
+
+public sealed class CompileSource
+{
+    [JsonPropertyName("entryPoint")]
+    [XmlElement("entryPoint")]
+    public string EntryPoint { get; set; } = "";
 }
 
 public sealed class CompileDiagnostic
