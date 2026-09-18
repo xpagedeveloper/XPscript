@@ -124,9 +124,11 @@ public sealed class CompilerDriver
             ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
             var transpiler = new XPScriptTranspiler();
+            string generatedSource;
             using (ExpandedSourceContext.Begin(expandedSource, sourcePath, includeResult.Map))
-                _ = transpiler.Transpile(expandedSource, sourcePath, rid);
+                generatedSource = transpiler.Transpile(expandedSource, sourcePath, rid);
 
+            await ValidateGeneratedCodeAsync(sourcePath, rid, generatedSource, managedReferences);
             return CompileResult.Valid();
         }
         catch (CompilerException ex)
@@ -485,6 +487,74 @@ public sealed class CompilerDriver
         if (!SupportedRuntimeIdentifiers.Contains(rid))
             throw new ArgumentException("Unsupported runtime identifier '" + value + "'. Supported values: " + string.Join(", ", SupportedRuntimeIdentifiers.OrderBy(x => x)) + ".");
         return rid;
+    }
+
+    private async Task ValidateGeneratedCodeAsync(
+        string sourcePath,
+        string runtimeIdentifier,
+        string generatedSource,
+        ManagedAssemblyReferencePreprocessor.Result managedReferences)
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
+
+        try
+        {
+            var projectPath = Path.Combine(tempRoot, "Generated.csproj");
+            var programPath = Path.Combine(tempRoot, "Program.cs");
+            var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
+            var csproj = BuildGeneratedProject(
+                runtimeIdentifier,
+                selfContained: false,
+                stagedManagedReferences,
+                publishSingleFile: false,
+                usesMimeKit: generatedSource.Contains("MimeKit.", StringComparison.Ordinal),
+                assemblyName: "Validation");
+
+            await File.WriteAllTextAsync(projectPath, csproj);
+            CompilerPathSecurity.HardenTemporaryFile(projectPath);
+            await File.WriteAllTextAsync(programPath, generatedSource);
+            CompilerPathSecurity.HardenTemporaryFile(programPath);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                WorkingDirectory = tempRoot
+            };
+            psi.ArgumentList.Add("build");
+            psi.ArgumentList.Add(projectPath);
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add("Release");
+            psi.ArgumentList.Add("--nologo");
+            psi.ArgumentList.Add("-r");
+            psi.ArgumentList.Add(runtimeIdentifier);
+            psi.ArgumentList.Add("--self-contained");
+            psi.ArgumentList.Add("false");
+            CompilerBuildEnvironment.Configure(psi, tempRoot);
+
+            using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start validation build.");
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            var stdout = await stdoutTask;
+            var stderr = await stderrTask;
+            ApplicationSecurityAudit.Report(stdout + Environment.NewLine + stderr);
+
+            if (process.ExitCode != 0)
+            {
+                var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
+                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
+            }
+        }
+        finally
+        {
+            try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
+        }
     }
 
     private static string BuildGeneratedProject(
