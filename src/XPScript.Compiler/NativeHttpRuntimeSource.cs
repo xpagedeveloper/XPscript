@@ -6,6 +6,7 @@ internal static class NativeHttpRuntimeSource
 internal static class XPScriptNativeHttp
 {
     public static XPScriptHttpClient CreateClient() => new();
+    public static XPScriptHttpRequest CreateRequest() => new();
 }
 
 internal sealed class XPScriptHttpClient : IDisposable
@@ -99,6 +100,17 @@ internal sealed class XPScriptHttpClient : IDisposable
     public XPScriptHttpResponse Put(object? url, object? body) => SendCore(System.Net.Http.HttpMethod.Put, url, body);
     public XPScriptHttpResponse Patch(object? url, object? body) => SendCore(System.Net.Http.HttpMethod.Patch, url, body);
 
+    public XPScriptHttpResponse Send(object? requestValue)
+    {
+        EnsureNotDisposed();
+        if (requestValue is not XPScriptHttpRequest request)
+            throw new XPScriptRuntimeException(5, "HttpClient.Send(request) requires an XPHttpRequest.");
+        var methodText = XPScriptRuntime.CStr(request.Method).Trim().ToUpperInvariant();
+        if (methodText.Length == 0 || methodText.Any(ch => !IsHttpMethodTokenCharacter(ch)))
+            throw new XPScriptRuntimeException(5, "HTTP method contains an invalid character.");
+        return SendCore(new System.Net.Http.HttpMethod(methodText), request.Url, request.Body, request.Headers);
+    }
+
     // Generic request entry point exposed as XPHttpClient.Send(method, url [, body]).
     // This lets generated OpenAPI consumers support the complete HTTP method set without
     // reaching into the C# runtime or requiring one native method per verb.
@@ -108,7 +120,7 @@ internal sealed class XPScriptHttpClient : IDisposable
         var methodText = XPScriptRuntime.CStr(methodValue).Trim().ToUpperInvariant();
         if (methodText.Length == 0 || methodText.Any(c => !IsHttpMethodTokenCharacter(c)))
             throw new XPScriptRuntimeException(5, "HTTP method contains an invalid character.");
-        return SendCore(new System.Net.Http.HttpMethod(methodText), urlValue, bodyValue);
+        return SendCore(new System.Net.Http.HttpMethod(methodText), urlValue, bodyValue, null);
     }
 
     // Encodes one URI path segment. Slashes are encoded deliberately so an OpenAPI path
@@ -128,7 +140,7 @@ internal sealed class XPScriptHttpClient : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private XPScriptHttpResponse SendCore(System.Net.Http.HttpMethod method, object? urlValue, object? bodyValue)
+    private XPScriptHttpResponse SendCore(System.Net.Http.HttpMethod method, object? urlValue, object? bodyValue, IReadOnlyDictionary<string, string>? requestHeaders = null)
     {
         EnsureNotDisposed();
         _tls.Reset();
@@ -147,7 +159,8 @@ internal sealed class XPScriptHttpClient : IDisposable
                 throw new XPScriptRuntimeException(5, "HTTP request body exceeds the 8 MiB limit.");
 
             request.Content = new System.Net.Http.StringContent(bodyText, Encoding.UTF8);
-            if (_headers.TryGetValue("Content-Type", out var ct) && !string.IsNullOrWhiteSpace(ct))
+            var ct = requestHeaders is not null && requestHeaders.TryGetValue("Content-Type", out var requestCt) ? requestCt : (_headers.TryGetValue("Content-Type", out var defaultCt) ? defaultCt : null);
+            if (!string.IsNullOrWhiteSpace(ct))
             {
                 try { request.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(ct); }
                 catch (FormatException)
@@ -157,7 +170,9 @@ internal sealed class XPScriptHttpClient : IDisposable
             }
         }
 
-        foreach (var header in _headers)
+        var effectiveHeaders = new Dictionary<string, string>(_headers, StringComparer.OrdinalIgnoreCase);
+        if (requestHeaders is not null) foreach (var header in requestHeaders) effectiveHeaders[header.Key] = header.Value;
+        foreach (var header in effectiveHeaders)
         {
             if (header.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)) continue;
             if (!request.Headers.TryAddWithoutValidation(header.Key, header.Value))
@@ -342,6 +357,316 @@ internal sealed class XPScriptHttpClient : IDisposable
         char.IsAsciiLetterOrDigit(c) || c is '!' or '#' or '$' or '%' or '&' or '\'' or '*' or '+' or '-' or '.' or '^' or '_' or '`' or '|' or '~';
 
     private static bool IsHttpMethodTokenCharacter(char c) => IsHeaderTokenCharacter(c);
+}
+
+internal sealed class XPScriptHttpRequest
+{
+    private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
+    public object? Method { get; set; }
+    public object? Url { get; set; }
+    public object? Body { get; set; }
+    public IReadOnlyDictionary<string, string> Headers => _headers;
+    public void SetHeader(object? nameValue, object? value)
+    {
+        var name = XPScriptRuntime.CStr(nameValue).Trim();
+        if (name.Length == 0 || name.Any(ch => !(char.IsAsciiLetterOrDigit(ch) || ch is '!' or '#' or '
+    private XPScriptHttpPartCollection? _parts;
+    private XPScriptHttpFileCollection? _files;
+
+    internal byte[] RawBodyBytes { get; init; } = [];
+    internal Encoding BodyEncoding { get; init; } = Encoding.UTF8;
+    internal string ContentDisposition { get; init; } = "";
+
+    public int StatusCode { get; init; }
+    public string StatusText { get; init; } = "";
+    public string Body => BodyEncoding.GetString(RawBodyBytes);
+    public long BodyLength => RawBodyBytes.LongLength;
+    public string ContentType { get; init; } = "";
+    public Dictionary<string, string> Headers { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+    public bool IsSuccess { get; init; }
+    public string FileName => XPScriptHttpMultipart.SafeFileName(XPScriptHttpMultipart.GetDispositionParameter(ContentDisposition, "filename*", "filename"));
+    public XPScriptHttpPartCollection Parts => _parts ??= XPScriptHttpMultipart.ParseParts(RawBodyBytes, ContentType, ContentDisposition);
+    public int PartCount => Parts.Count;
+    public XPScriptHttpPart GetPart(object? indexValue) => Parts.Get(indexValue);
+    public XPScriptHttpFileCollection Files => _files ??= new XPScriptHttpFileCollection(Parts.Items.Where(part => part.IsFile));
+    public int FileCount => Files.Count;
+    public XPScriptHttpPart GetFile(object? indexValue) => Files.Get(indexValue);
+
+    public void SaveBodyToFile(object? pathValue) => XPScriptHttpFileStorage.Save(pathValue, RawBodyBytes);
+}
+
+internal sealed class XPScriptHttpPartCollection
+{
+    internal List<XPScriptHttpPart> Items { get; }
+
+    public XPScriptHttpPartCollection(IEnumerable<XPScriptHttpPart> parts) => Items = [.. parts];
+    public int Count => Items.Count;
+
+    public XPScriptHttpPart Get(object? indexValue)
+    {
+        var index = XPScriptRuntime.CInt(indexValue);
+        if (index < 0 || index >= Items.Count)
+            throw new XPScriptRuntimeException(9, "HTTP response part index is out of range.");
+        return Items[index];
+    }
+}
+
+internal sealed class XPScriptHttpFileCollection
+{
+    private readonly List<XPScriptHttpPart> _files;
+
+    public XPScriptHttpFileCollection(IEnumerable<XPScriptHttpPart> files) => _files = [.. files];
+    public int Count => _files.Count;
+
+    public XPScriptHttpPart Get(object? indexValue)
+    {
+        var index = XPScriptRuntime.CInt(indexValue);
+        if (index < 0 || index >= _files.Count)
+            throw new XPScriptRuntimeException(9, "HTTP response file index is out of range.");
+        return _files[index];
+    }
+}
+
+internal sealed class XPScriptHttpPart
+{
+    private readonly byte[] _data;
+
+    public XPScriptHttpPart(string name, string fileName, string contentType, Dictionary<string, string> headers, byte[] data)
+    {
+        Name = name;
+        FileName = fileName;
+        ContentType = string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType;
+        Headers = headers;
+        _data = data;
+    }
+
+    public string Name { get; }
+    public string FileName { get; }
+    public string ContentType { get; }
+    public Dictionary<string, string> Headers { get; }
+    public long Length => _data.LongLength;
+    public bool IsFile => FileName.Length > 0;
+    public bool IsText => XPScriptHttpMultipart.IsTextContentType(ContentType);
+    public string Body => XPScriptHttpMultipart.DecodeText(_data, ContentType);
+    public void SaveToFile(object? pathValue) => XPScriptHttpFileStorage.Save(pathValue, _data);
+}
+
+internal static class XPScriptHttpFileStorage
+{
+    public static void Save(object? pathValue, byte[] data)
+    {
+        var path = XPScriptRuntime.CStr(pathValue).Trim();
+        if (path.Length == 0)
+            throw new XPScriptRuntimeException(5, "HTTP file save requires a file path.");
+
+        string fullPath;
+        try { fullPath = Path.GetFullPath(path); }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            throw new XPScriptRuntimeException(5, "HTTP file save received an invalid file path.");
+        }
+
+        try
+        {
+            if (Directory.Exists(fullPath))
+                throw new XPScriptRuntimeException(5, "HTTP file save target must be a file.");
+            if (File.Exists(fullPath) && (File.GetAttributes(fullPath) & FileAttributes.ReparsePoint) != 0)
+                throw new XPScriptRuntimeException(5, "HTTP file save refuses symbolic-link or reparse-point targets.");
+
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                throw new XPScriptRuntimeException(5, "HTTP file save target directory does not exist.");
+
+            using var stream = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            stream.Write(data, 0, data.Length);
+            stream.Flush(flushToDisk: true);
+        }
+        catch (XPScriptRuntimeException) { throw; }
+        catch (UnauthorizedAccessException)
+        {
+            throw new XPScriptRuntimeException(70, "Permission denied while saving HTTP response data.");
+        }
+        catch (IOException)
+        {
+            throw new XPScriptRuntimeException(75, "Unable to save HTTP response data.");
+        }
+    }
+}
+
+internal static class XPScriptHttpMultipart
+{
+    private static readonly byte[] HeaderSeparator = [13, 10, 13, 10];
+
+    public static XPScriptHttpPartCollection ParseParts(byte[] body, string contentType, string contentDisposition)
+    {
+        var parts = new List<XPScriptHttpPart>();
+        if (!contentType.StartsWith("multipart/", StringComparison.OrdinalIgnoreCase))
+        {
+            var fileName = SafeFileName(GetDispositionParameter(contentDisposition, "filename*", "filename"));
+            var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (contentType.Length > 0) headers["Content-Type"] = contentType;
+            if (contentDisposition.Length > 0) headers["Content-Disposition"] = contentDisposition;
+            parts.Add(new XPScriptHttpPart("", fileName, contentType, headers, [.. body]));
+            return new XPScriptHttpPartCollection(parts);
+        }
+
+        var boundary = GetMediaTypeParameter(contentType, "boundary");
+        if (boundary.Length == 0 || boundary.Length > 200)
+            throw new XPScriptRuntimeException(5, "Multipart HTTP response has an invalid boundary.");
+
+        var delimiter = Encoding.ASCII.GetBytes("--" + boundary);
+        var prefixedDelimiter = Encoding.ASCII.GetBytes("\r\n--" + boundary);
+        var cursor = IndexOf(body, delimiter, 0);
+        if (cursor < 0)
+            throw new XPScriptRuntimeException(5, "Multipart HTTP response boundary was not found.");
+
+        while (cursor >= 0)
+        {
+            var afterBoundary = cursor + delimiter.Length;
+            if (HasBytes(body, afterBoundary, (byte)'-', (byte)'-')) break;
+            if (!HasBytes(body, afterBoundary, 13, 10))
+                throw new XPScriptRuntimeException(5, "Multipart HTTP response has malformed boundary framing.");
+
+            var headerStart = afterBoundary + 2;
+            var headerEnd = IndexOf(body, HeaderSeparator, headerStart);
+            if (headerEnd < 0)
+                throw new XPScriptRuntimeException(5, "Multipart HTTP response has malformed part headers.");
+
+            var dataStart = headerEnd + HeaderSeparator.Length;
+            var nextMarker = IndexOf(body, prefixedDelimiter, dataStart);
+            if (nextMarker < 0)
+                throw new XPScriptRuntimeException(5, "Multipart HTTP response is missing a closing boundary.");
+
+            var headerText = Encoding.Latin1.GetString(body, headerStart, headerEnd - headerStart);
+            var headers = ParsePartHeaders(headerText);
+            headers.TryGetValue("Content-Disposition", out var disposition);
+            headers.TryGetValue("Content-Type", out var partContentType);
+            var fileName = SafeFileName(GetDispositionParameter(disposition ?? "", "filename*", "filename"));
+            var name = GetDispositionParameter(disposition ?? "", "name");
+            var length = nextMarker - dataStart;
+            var data = new byte[length];
+            Buffer.BlockCopy(body, dataStart, data, 0, length);
+            parts.Add(new XPScriptHttpPart(name, fileName, partContentType ?? "application/octet-stream", headers, data));
+
+            cursor = nextMarker + 2;
+        }
+
+        return new XPScriptHttpPartCollection(parts);
+    }
+
+    public static bool IsTextContentType(string contentType)
+    {
+        var mediaType = contentType.Split(';', 2)[0].Trim();
+        return mediaType.StartsWith("text/", StringComparison.OrdinalIgnoreCase)
+            || mediaType.Equals("application/json", StringComparison.OrdinalIgnoreCase)
+            || mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase)
+            || mediaType.Equals("application/xml", StringComparison.OrdinalIgnoreCase)
+            || mediaType.EndsWith("+xml", StringComparison.OrdinalIgnoreCase)
+            || mediaType.Equals("application/javascript", StringComparison.OrdinalIgnoreCase)
+            || mediaType.Equals("application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string DecodeText(byte[] data, string contentType)
+    {
+        var charset = GetMediaTypeParameter(contentType, "charset");
+        var encoding = Encoding.UTF8;
+        if (charset.Length > 0)
+        {
+            try { encoding = Encoding.GetEncoding(charset); }
+            catch (ArgumentException) { throw new XPScriptRuntimeException(5, "HTTP response part specifies an unsupported text charset."); }
+        }
+        return encoding.GetString(data);
+    }
+
+    public static string GetMediaTypeParameter(string headerValue, string parameter)
+    {
+        foreach (var segment in headerValue.Split(';').Skip(1))
+        {
+            var equals = segment.IndexOf('=');
+            if (equals <= 0) continue;
+            var name = segment[..equals].Trim();
+            if (!name.Equals(parameter, StringComparison.OrdinalIgnoreCase)) continue;
+            return Unquote(segment[(equals + 1)..].Trim());
+        }
+        return "";
+    }
+
+    public static string GetDispositionParameter(string headerValue, params string[] parameters)
+    {
+        foreach (var parameter in parameters)
+        {
+            foreach (var segment in headerValue.Split(';').Skip(1))
+            {
+                var equals = segment.IndexOf('=');
+                if (equals <= 0) continue;
+                var name = segment[..equals].Trim();
+                if (!name.Equals(parameter, StringComparison.OrdinalIgnoreCase)) continue;
+                var value = Unquote(segment[(equals + 1)..].Trim());
+                if (parameter.EndsWith('*'))
+                {
+                    var marker = value.IndexOf("''", StringComparison.Ordinal);
+                    if (marker >= 0) value = value[(marker + 2)..];
+                    try { value = Uri.UnescapeDataString(value); } catch (UriFormatException) { return ""; }
+                }
+                return value;
+            }
+        }
+        return "";
+    }
+
+    public static string SafeFileName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "";
+        var normalized = value.Replace('\\', '/');
+        var name = normalized[(normalized.LastIndexOf('/') + 1)..];
+        foreach (var invalid in Path.GetInvalidFileNameChars()) name = name.Replace(invalid, '_');
+        return name is "." or ".." ? "" : name;
+    }
+
+    private static string Unquote(string value)
+    {
+        if (value.Length >= 2 && value[0] == '\"' && value[^1] == '\"') return value[1..^1].Replace("\\\"", "\"").Replace("\\\\", "\\");
+        return value;
+    }
+
+    private static Dictionary<string, string> ParsePartHeaders(string text)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var line in text.Split("\r\n", StringSplitOptions.RemoveEmptyEntries))
+        {
+            var colon = line.IndexOf(':');
+            if (colon <= 0) throw new XPScriptRuntimeException(5, "Multipart HTTP response contains a malformed header.");
+            var name = line[..colon].Trim();
+            var value = line[(colon + 1)..].Trim();
+            headers[name] = value;
+        }
+        return headers;
+    }
+
+    private static int IndexOf(byte[] source, byte[] pattern, int start)
+    {
+        if (pattern.Length == 0) return start;
+        for (var i = Math.Max(0, start); i <= source.Length - pattern.Length; i++)
+        {
+            var match = true;
+            for (var j = 0; j < pattern.Length; j++) if (source[i + j] != pattern[j]) { match = false; break; }
+            if (match) return i;
+        }
+        return -1;
+    }
+
+    private static bool HasBytes(byte[] source, int offset, byte first, byte second) =>
+        offset >= 0 && offset + 1 < source.Length && source[offset] == first && source[offset + 1] == second;
+}
+""";
+} or '%' or '&' or '\\'' or '*' or '+' or '-' or '.' or '^' or '_' or '`' or '|' or '~')))
+            throw new XPScriptRuntimeException(5, "HTTP header name contains an invalid character.");
+        if (name.Equals("Host", StringComparison.OrdinalIgnoreCase) || name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase) || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase))
+            throw new XPScriptRuntimeException(5, "HTTP framing and transport headers are managed by the runtime.");
+        var text = XPScriptRuntime.CStr(value);
+        if (text.IndexOfAny(['\\r', '\\n', '\\0']) >= 0) throw new XPScriptRuntimeException(5, "HTTP header value contains a prohibited control character.");
+        _headers[name] = text;
+    }
 }
 
 internal sealed class XPScriptHttpResponse
