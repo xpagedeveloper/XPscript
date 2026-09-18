@@ -425,9 +425,9 @@ public sealed class XpsWebRouteMetadataParser
 
     private static string NormalizeJsonSchemaPath(string value)
     {
-        var path = value.Trim().Replace(\'\\\\\', \'/\');
+        var path = value.Trim().Replace('\\', '/');
         if (path.Length is < 1 or > 1024) throw new XpsWebRouteMetadataException("JsonSchema requires a relative schema file path.");
-        if (Path.IsPathRooted(path) || path.StartsWith("/", StringComparison.Ordinal) || path.Split(\'/\').Any(x => x == "..") || path.Any(char.IsControl))
+        if (Path.IsPathRooted(path) || path.StartsWith("/", StringComparison.Ordinal) || path.Split('/').Any(x => x == "..") || path.Any(char.IsControl))
             throw new XpsWebRouteMetadataException("JsonSchema path must stay inside the web root.");
         if (!path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) throw new XpsWebRouteMetadataException("JsonSchema path must reference a .json file.");
         return path;
