@@ -186,24 +186,6 @@ internal sealed class UIFormAccessibilityPostProcessor
 
         generated = ReplaceOnceRequired(
             generated,
-            "                required = field.Required,\n",
-            Block(
-                "                required = field.Required,",
-                "                accessibleName = field.AccessibleName,",
-                "                accessibleDescription = field.AccessibleDescription,",
-                "                accessibleHelpText = field.AccessibleHelpText,",
-                "                accessibleLive = field.AccessibleLive,",
-                "                accessibilityHidden = field.AccessibilityHidden,",
-                "                focusable = field.Focusable,",
-                "                isTabStop = field.IsTabStop,",
-                "                tabIndex = field.TabIndex,",
-                "                accessKey = field.AccessKey,",
-                "                hotKey = field.HotKey,",
-                "                validationError = field.ValidationError,",
-                string.Empty));
-
-        generated = ReplaceOnceRequired(
-            generated,
             "            resizable = form.Resizable,\n",
             Block(
                 "            resizable = form.Resizable,",
