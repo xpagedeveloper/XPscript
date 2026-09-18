@@ -31,7 +31,14 @@ internal sealed class NativeHttpJsonPreprocessor
                 continue;
             }
 
-            var rewritten = line;
+            // Native XP objects can also occur in generated/public procedure signatures. Their
+            // implementation contract is Variant at the XPScript transpiler boundary, just like
+            // locals and fields; preserve the public source API while normalizing before parsing.
+            var rewritten = Regex.Replace(
+                line,
+                $@"\bAs\s+({NativeTypePattern})\b",
+                "As Variant",
+                RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonDocument\.Parse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.Parse\s*\(", "XPScriptJsonSchema.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.FromJson\s*\(", "XPScriptJsonSchema.FromJson(", RegexOptions.IgnoreCase);
