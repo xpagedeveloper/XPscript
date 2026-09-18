@@ -33,6 +33,8 @@ foreach (var test in cases)
     Require(!string.IsNullOrWhiteSpace(diagnostic.File), test.Source + " file");
     Require(diagnostic.Line > 0, test.Source + " line");
     Require(diagnostic.Position > 0, test.Source + " position");
+    Require(!string.IsNullOrWhiteSpace(diagnostic.SourceCode), test.Source + " source code");
+    Require(!string.IsNullOrWhiteSpace(diagnostic.Description), test.Source + " description");
 
     var json = JsonSerializer.Serialize(result);
     using var document = JsonDocument.Parse(json);
@@ -41,7 +43,11 @@ foreach (var test in cases)
     Require(rootElement.GetProperty("schemaVersion").GetInt32() == CompileResult.CurrentSchemaVersion, test.Source + " JSON schemaVersion");
     var errors = rootElement.GetProperty("errors");
     Require(errors.GetArrayLength() > 0, test.Source + " JSON errors");
-    Require(errors.EnumerateArray().Any(e => e.TryGetProperty("diagnosticCode", out var code) && code.GetString() == test.DiagnosticCode), test.Source + " JSON diagnosticCode");
+    var jsonDiagnostic = errors.EnumerateArray().FirstOrDefault(e => e.TryGetProperty("diagnosticCode", out var code) && code.GetString() == test.DiagnosticCode);
+    Require(jsonDiagnostic.ValueKind == JsonValueKind.Object, test.Source + " JSON diagnosticCode");
+    Require(jsonDiagnostic.GetProperty("severity").GetString() == "error", test.Source + " JSON severity");
+    Require(jsonDiagnostic.GetProperty("category").GetString() == test.Category, test.Source + " JSON category");
+    Require(jsonDiagnostic.GetProperty("sourceText").GetString() == jsonDiagnostic.GetProperty("code").GetString(), test.Source + " sourceText compatibility");
 }
 
 Console.WriteLine("CompilerMachineInterfaceProbe OK");
