@@ -247,6 +247,8 @@ internal sealed class ClassOverloadValidator
         var properties = new List<CompileDiagnosticProperty>
         {
             new() { Name = "symbol", Value = symbol },
+            new() { Name = "symbolKind", Value = "method" },
+            new() { Name = "receiverType", Value = candidates.Count > 0 ? candidates[0].ClassName : "" },
             new() { Name = "suppliedSignature", Value = suppliedSignature }
         };
         foreach (var candidate in candidates.OrderBy(FormatSignature, StringComparer.OrdinalIgnoreCase))
@@ -269,7 +271,7 @@ internal sealed class ClassOverloadValidator
 
     private static string FormatSignature(Method method) =>
         method.ClassName + "." + method.Name + "(" +
-        string.Join(", ", method.Parameters.Select(p => p.Name + " As " + p.Type + (p.IsArray ? "()" : ""))) + ")";
+        string.Join(", ", method.Parameters.Select(p => (p.IsByRef ? "ByRef " : "ByVal ") + p.Name + " As " + p.Type + (p.IsArray ? "()" : "") + (p.IsOptional ? " Optional" : ""))) + ")";
 
     private static int MatchScore(Parameter parameter, (string Type, bool IsArray)? actual)
     {
