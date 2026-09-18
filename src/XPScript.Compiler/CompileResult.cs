@@ -129,7 +129,15 @@ public sealed class CompileDiagnostic
     [JsonPropertyName("sourceText")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [XmlElement("sourceText")]
-    public string SourceText => SourceCode;
+    public string SourceText
+    {
+        get => SourceCode;
+        set
+        {
+            if (string.IsNullOrEmpty(SourceCode))
+                SourceCode = value ?? "";
+        }
+    }
 
     internal void NormalizeMachineFields()
     {
