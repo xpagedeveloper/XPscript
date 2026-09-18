@@ -31,6 +31,10 @@ Require(generatedValidation.Source?.EntryPoint == "generated-csharp-error.xps", 
 Require(generatedValidation.Output is null, "generated C# validation must not produce output");
 Require(generatedValidation.Errors.Any(d => d.DiagnosticCode == "XPS2008"), "generated C# validation missing XPS2008");
 Require(generatedValidation.Errors.Any(d => d.UpstreamCode == "CS0103"), "generated C# validation missing CS0103 upstream code");
+var generatedSymbolDiagnostic = generatedValidation.Errors.First(d => d.DiagnosticCode == "XPS2008");
+Require(generatedSymbolDiagnostic.Properties is not null, "generated symbol metadata properties");
+Require(generatedSymbolDiagnostic.Properties.Any(p => p.Name == "symbol" && p.Value == "MissingGeneratedProcedure"), "generated symbol metadata name");
+
 
 var overloadMetadataCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "class-method-overloads-no-match.xps"));
 var overloadMetadataDiagnostic = overloadMetadataCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2004");
