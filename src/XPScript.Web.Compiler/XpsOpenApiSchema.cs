@@ -54,6 +54,26 @@ internal static class XpsOpenApiSchema
         };
     }
 
+    internal static bool TryGetReference(JsonObject schema, out string reference)
+    {
+        reference = ReadString(schema, "$ref") ?? string.Empty;
+        return reference.Length > 0;
+    }
+
+    internal static string? PrimaryType(JsonObject schema)
+    {
+        if (schema["type"] is JsonValue value && value.TryGetValue<string>(out var scalar)) return scalar.ToLowerInvariant();
+        if (schema["type"] is JsonArray array)
+        {
+            var values = array.OfType<JsonValue>().Select(item => item.TryGetValue<string>(out var text) ? text : null)
+                .Where(text => text is not null && !text.Equals("null", StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            return values.Length == 1 ? values[0]!.ToLowerInvariant() : null;
+        }
+        if (schema.ContainsKey("properties")) return "object";
+        return null;
+    }
+
     internal static bool IsObjectType(JsonObject root, JsonObject schema, string context)
     {
         var type = XpsType(root, schema, context);
