@@ -192,9 +192,9 @@ security.Shell
 
 ## 12. JSON Schemas
 
-- [ ] Add JSON Schema for compiler results.
-- [ ] Add JSON Schema for diagnostics.
-- [ ] Choose a stable repository location such as `schemas/`.
+- [x] Add JSON Schema for compiler results.
+- [x] Add JSON Schema for diagnostics.
+- [x] Choose a stable repository location such as `schemas/`.
 - [ ] Validate representative compiler output against the schemas in CI.
 - [ ] Document additive and breaking schema evolution.
 
