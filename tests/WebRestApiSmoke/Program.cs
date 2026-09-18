@@ -289,6 +289,27 @@ try
 
     Console.WriteLine("WEB-REST-JSON-SCHEMA-ERROR-CLASSIFICATION=OK");
 
+    var schemaFilePath = Path.Combine(root, "schemas", "create-user.schema.json");
+    await File.WriteAllTextAsync(schemaFilePath, """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":40}}}
+""");
+    File.SetLastWriteTimeUtc(schemaFilePath, DateTime.UtcNow.AddSeconds(2));
+    var reloadedSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{\"name\":\"Fredrik\",\"email\":\"fredrik@example.com\",\"age\":42}",
+        "application/json");
+    if (reloadedSchema.StatusCode != 400 || !BodyText(reloadedSchema).Contains("$.age", StringComparison.Ordinal))
+        throw new Exception("Updated JSON Schema was not reloaded from the cache.");
+
+    await File.WriteAllTextAsync(schemaFilePath, """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":120}}}
+""");
+    File.SetLastWriteTimeUtc(schemaFilePath, DateTime.UtcNow.AddSeconds(4));
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-CACHE-RELOAD=OK");
+
     var invalid = await SendAsync(
         dispatcher,
         app,
