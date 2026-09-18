@@ -78,10 +78,42 @@ public sealed class XpsOpenApiClientGenerator
     {
         var responseName = apiName + "Response"; var args = op.Parameters.Select(p => $"{ToIdentifier(p.Name)} As {p.TypeName}").ToList(); if (op.Body is not null) args.Add($"payload As {op.Body.TypeName}"); b.AppendLine($"    Public Function {op.Name}({string.Join(", ", args)}) As {responseName}"); b.AppendLine("        Dim url As String"); b.AppendLine("        Dim raw As XPHttpResponse"); b.AppendLine("        Dim request As New XPHttpRequest"); b.AppendLine($"        Dim result As {responseName}"); b.AppendLine($"        Set result = New {responseName}"); b.AppendLine($"        url = BaseUrl & \"{EscapeXps(op.Path)}\"");
         foreach (var p in op.Parameters.Where(x => x.Location == "path")) b.AppendLine($"        url = Replace(url, \"{{{EscapeXps(p.Name)}}}\", Http.EncodePath({ToIdentifier(p.Name)}))"); foreach (var p in op.Parameters.Where(x => x.Location == "query")) b.AppendLine($"        url = Http.AddQuery(url, \"{EscapeXps(p.Name)}\", {ToIdentifier(p.Name)})"); foreach (var p in op.Parameters.Where(x => x.Location == "header")) b.AppendLine($"        Call request.SetHeader(\"{EscapeXps(p.Name)}\", CStr({ToIdentifier(p.Name)}))");
-        foreach (var alternative in op.Security.Take(1)) foreach (var schemeName in alternative) if (securitySchemes.TryGetValue(schemeName, out var scheme)) { var auth = "Auth" + ToIdentifier(scheme.Name); if (scheme.Kind == "apikey" && scheme.Location == "header") b.AppendLine($"        If Len({auth}) > 0 Then Call request.SetHeader(\"{EscapeXps(scheme.WireName!)}\", {auth})"); else if (scheme.Kind == "apikey" && scheme.Location == "query") b.AppendLine($"        If Len({auth}) > 0 Then url = Http.AddQuery(url, \"{EscapeXps(scheme.WireName!)}\", {auth})"); else if (scheme.Kind == "bearer") b.AppendLine($"        If Len({auth}) > 0 Then Call request.SetBearerToken({auth})"); else if (scheme.Kind == "basic") b.AppendLine($"        Call request.SetBasicAuth({auth}Username, {auth}Password)"); }
+        EmitSecurity(b, op, securitySchemes);
         b.AppendLine($"        request.Method = \"{op.Method}\""); b.AppendLine("        request.Url = url"); if (op.Body is not null) { b.AppendLine("        Call request.SetHeader(\"Content-Type\", \"application/json\")"); b.AppendLine("        request.Body = JsonStringify(payload)"); } b.AppendLine("        Set raw = Http.Send(request)");
         b.AppendLine("        Set result.Raw = raw"); b.AppendLine("        result.StatusCode = raw.StatusCode"); b.AppendLine("        result.IsSuccess = raw.IsSuccess"); b.AppendLine("        If Len(raw.Body) > 0 Then Set result.Json = raw.Json()"); EmitResponseMapping(b, op, models); b.AppendLine($"        Set {op.Name} = result"); b.AppendLine("    End Function");
     }
+    private static void EmitSecurity(StringBuilder b, ClientOperation op, Dictionary<string, ClientSecurityScheme> securitySchemes)
+    {
+        if (op.Security.Count == 0) return;
+        foreach (var alternative in op.Security)
+            foreach (var schemeName in alternative)
+                if (!securitySchemes.ContainsKey(schemeName))
+                    throw new XpsOpenApiGenerationException($"Operation '{op.Name}' references unsupported or undefined security scheme '{schemeName}'.");
+
+        var first = true;
+        foreach (var alternative in op.Security)
+        {
+            var condition = alternative.Count == 0 ? "True" : string.Join(" And ", alternative.Select(name =>
+            {
+                var scheme = securitySchemes[name]; var auth = "Auth" + ToIdentifier(scheme.Name);
+                return scheme.Kind == "basic" ? $"(Len({auth}Username) > 0 Or Len({auth}Password) > 0)" : $"Len({auth}) > 0";
+            }));
+            b.AppendLine($"        {(first ? "If" : "ElseIf")} {condition} Then");
+            foreach (var schemeName in alternative)
+            {
+                var scheme = securitySchemes[schemeName]; var auth = "Auth" + ToIdentifier(scheme.Name);
+                if (scheme.Kind == "apikey" && scheme.Location == "header") b.AppendLine($"            Call request.SetHeader(\"{EscapeXps(scheme.WireName!)}\", {auth})");
+                else if (scheme.Kind == "apikey" && scheme.Location == "query") b.AppendLine($"            url = Http.AddQuery(url, \"{EscapeXps(scheme.WireName!)}\", {auth})");
+                else if (scheme.Kind == "bearer") b.AppendLine($"            Call request.SetBearerToken({auth})");
+                else if (scheme.Kind == "basic") b.AppendLine($"            Call request.SetBasicAuth({auth}Username, {auth}Password)");
+            }
+            first = false;
+        }
+        b.AppendLine("        Else");
+        b.AppendLine($"            Error 5, \"Authentication credentials are required for OpenAPI operation {EscapeXps(op.Name)}.\"");
+        b.AppendLine("        End If");
+    }
+
     private static void EmitResponseMapping(StringBuilder b, ClientOperation op, Dictionary<string, JsonObject> models)
     {
         var first = true; foreach (var response in op.Responses.Where(x => !x.Code.Equals("default", StringComparison.OrdinalIgnoreCase))) { b.AppendLine($"        {(first ? "If" : "ElseIf")} raw.StatusCode = {response.Code} Then"); first = false; if (response.TypeName is not null) { b.AppendLine($"            result.ResponseType = \"{EscapeXps(response.TypeName)}\""); if (models.ContainsKey(response.TypeName)) { b.AppendLine($"            Dim mapped{response.TypeName} As {response.TypeName}"); b.AppendLine($"            Set mapped{response.TypeName} = New {response.TypeName}"); b.AppendLine($"            If Not result.Json Is Nothing Then Set result.{response.TypeName} = result.Json.ToObject(mapped{response.TypeName})"); } } }
