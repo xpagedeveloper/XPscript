@@ -255,6 +255,15 @@ Sub Main()
     If Not integerSemanticsSchema.IsValid(1.0) Then Error 5, "Expected integer type to accept numbers with zero fractional part"
     If integerSemanticsSchema.IsValid(1.5) Then Error 5, "Expected integer type to reject fractional numbers"
 
+    Dim refSchema As XPJsonSchema
+    Set refSchema = XPJsonSchema.Parse("{""type"":""object"",""$defs"":{""Child"":{""type"":""object"",""required"":[""name""],""properties"":{""name"":{""type"":""string""}}}},""properties"":{""child"":{""$ref"":""#/$defs/Child""}},""required"":[""child""]}")
+    Dim validRefJson As XPJsonDocument
+    Set validRefJson = XPJsonDocument.Parse("{""child"":{""name"":""Ada""}}")
+    If Not refSchema.IsValid(validRefJson) Then Error 5, "Expected local $defs/$ref to validate matching nested JSON"
+    Dim invalidRefJson As XPJsonDocument
+    Set invalidRefJson = XPJsonDocument.Parse("{""child"":{}}")
+    If refSchema.IsValid(invalidRefJson) Then Error 5, "Expected local $defs/$ref to enforce referenced required properties"
+
     Dim dialectSchema As XPJsonSchema
     Set dialectSchema = XPJsonSchema.Parse("{""$schema"":""https://json-schema.org/draft/2020-12/schema""}")
     If Not dialectSchema.IsValid(validJson) Then Error 5, "Expected $schema metadata not to invalidate an instance"
