@@ -8,6 +8,11 @@ var root = Path.Combine(Path.GetTempPath(), "xps-rest-api-smoke-" + Guid.NewGuid
 Directory.CreateDirectory(root);
 var apiPath = Path.Combine(root, "api.xps");
 
+Directory.CreateDirectory(Path.Combine(root, "schemas"));
+await File.WriteAllTextAsync(Path.Combine(root, "schemas", "create-user.schema.json"), """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":120}}}
+""");
+
 await File.WriteAllTextAsync(apiPath, """
 Public Class CreateUserRequest
     [Required]
@@ -200,6 +205,19 @@ try
     }
     if (Header(create, "Access-Control-Allow-Origin") != "*") throw new Exception("Wildcard CORS response header was missing.");
     Console.WriteLine("WEB-REST-CLASS-JSON-BINDING=OK");
+
+    var schemaInvalid = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{\"name\":\"Fredrik\",\"email\":\"fredrik@example.com\",\"age\":12}",
+        "application/json");
+    if (schemaInvalid.StatusCode != 400) throw new Exception($"JSON Schema invalid body returned {schemaInvalid.StatusCode} instead of 400.");
+    var schemaInvalidBody = BodyText(schemaInvalid);
+    if (!schemaInvalidBody.Contains("$.age", StringComparison.Ordinal) || !schemaInvalidBody.Contains("JSON Schema validation failed", StringComparison.Ordinal))
+        throw new Exception("JSON Schema Problem Details did not contain structured field path errors.");
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-VALIDATION=OK");
 
     var invalid = await SendAsync(
         dispatcher,
