@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Net.Mail;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace XPScript.Web.Runtime;
 
@@ -99,6 +100,99 @@ public sealed class XpsRestBindingException : Exception
 {
     public XpsRestBindingException(string message) : base(message) { }
     public XpsRestBindingException(string message, Exception innerException) : base(message, innerException) { }
+}
+
+public static class XpsRestJsonSchemaValidator
+{
+    public static IReadOnlyDictionary<string, string[]> Validate(XpsWebRequest request, string webRoot, string schemaPath)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var root = Path.GetFullPath(webRoot);
+        var candidate = Path.GetFullPath(Path.Combine(root, schemaPath.Replace('/', Path.DirectorySeparatorChar)));
+        var relative = Path.GetRelativePath(root, candidate);
+        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            throw new XpsRestBindingException("JSON Schema resolves outside the web root.");
+        if (!File.Exists(candidate)) throw new XpsRestBindingException($"JSON Schema '{schemaPath}' was not found.");
+
+        JsonNode schema;
+        JsonNode? instance;
+        try
+        {
+            schema = JsonNode.Parse(File.ReadAllText(candidate), documentOptions: new JsonDocumentOptions { MaxDepth = 64 })
+                ?? throw new XpsRestBindingException("JSON Schema document cannot be null.");
+            instance = JsonNode.Parse(request.Body.Span, documentOptions: new JsonDocumentOptions { MaxDepth = 64 });
+        }
+        catch (JsonException ex) { throw new XpsRestBindingException("JSON Schema or request body contains invalid JSON.", ex); }
+
+        var errors = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        ValidateNode(schema, instance, "$", errors, 0);
+        return errors.ToDictionary(x => x.Key, x => x.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static void ValidateNode(JsonNode schema, JsonNode? value, string path, Dictionary<string, List<string>> errors, int depth)
+    {
+        if (depth > 64) { Add(errors, path, "Validation nesting exceeds 64 levels."); return; }
+        if (schema is JsonValue booleanSchema && booleanSchema.TryGetValue<bool>(out var allowed)) { if (!allowed) Add(errors, path, "Value is rejected by the JSON Schema."); return; }
+        if (schema is not JsonObject obj) { Add(errors, path, "JSON Schema node must be an object or boolean."); return; }
+
+        if (obj["type"] is JsonValue typeValue && typeValue.TryGetValue<string>(out var type) && !MatchesType(value, type))
+        { Add(errors, path, $"Value does not match required JSON type '{type}'."); return; }
+
+        if (value is JsonObject data)
+        {
+            if (obj["required"] is JsonArray required)
+                foreach (var item in required)
+                    if (item is JsonValue rv && rv.TryGetValue<string>(out var name) && !data.ContainsKey(name))
+                        Add(errors, path + "." + name, $"Required property '{name}' is missing.");
+
+            if (obj["properties"] is JsonObject properties)
+                foreach (var property in properties)
+                    if (data.TryGetPropertyValue(property.Key, out var child) && property.Value is not null)
+                        ValidateNode(property.Value, child, path + "." + property.Key, errors, depth + 1);
+        }
+
+        if (value is JsonArray array && obj["items"] is JsonNode items)
+            for (var i = 0; i < array.Count; i++) ValidateNode(items, array[i], path + "[" + i + "]", errors, depth + 1);
+
+        if (value is JsonValue scalar)
+        {
+            if (obj["minLength"] is JsonValue minValue && minValue.TryGetValue<int>(out var min) && scalar.TryGetValue<string>(out var text) && text.Length < min)
+                Add(errors, path, $"String length must be at least {min}.");
+            if (obj["maxLength"] is JsonValue maxValue && maxValue.TryGetValue<int>(out var max) && scalar.TryGetValue<string>(out text) && text.Length > max)
+                Add(errors, path, $"String length must be at most {max}.");
+            if (TryNumber(scalar, out var number))
+            {
+                if (obj["minimum"] is JsonValue minimum && TryNumber(minimum, out var minNumber) && number < minNumber) Add(errors, path, $"Number must be at least {minNumber}.");
+                if (obj["maximum"] is JsonValue maximum && TryNumber(maximum, out var maxNumber) && number > maxNumber) Add(errors, path, $"Number must be at most {maxNumber}.");
+            }
+        }
+    }
+
+    private static bool MatchesType(JsonNode? value, string type) => type.ToLowerInvariant() switch
+    {
+        "null" => value is null,
+        "object" => value is JsonObject,
+        "array" => value is JsonArray,
+        "string" => value is JsonValue v && v.TryGetValue<string>(out _),
+        "boolean" => value is JsonValue v && v.TryGetValue<bool>(out _),
+        "integer" => value is JsonValue v && (v.TryGetValue<int>(out _) || v.TryGetValue<long>(out _)),
+        "number" => value is JsonValue v && TryNumber(v, out _),
+        _ => true
+    };
+
+    private static bool TryNumber(JsonValue value, out decimal number)
+    {
+        if (value.TryGetValue<decimal>(out number)) return true;
+        if (value.TryGetValue<long>(out var l)) { number = l; return true; }
+        if (value.TryGetValue<double>(out var d)) { number = (decimal)d; return true; }
+        number = 0; return false;
+    }
+
+    private static void Add(Dictionary<string, List<string>> errors, string path, string message)
+    {
+        if (!errors.TryGetValue(path, out var list)) errors[path] = list = [];
+        list.Add(message);
+    }
 }
 
 public static class XpsRestBinder
