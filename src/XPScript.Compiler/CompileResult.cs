@@ -6,6 +6,17 @@ namespace XPScript.Compiler;
 [XmlRoot("compileResult")]
 public sealed class CompileResult
 {
+    public const string CurrentSchema = "xpscript.compiler-result";
+    public const int CurrentSchemaVersion = 1;
+
+    [JsonPropertyName("schema")]
+    [XmlElement("schema")]
+    public string Schema { get; set; } = CurrentSchema;
+
+    [JsonPropertyName("schemaVersion")]
+    [XmlElement("schemaVersion")]
+    public int SchemaVersion { get; set; } = CurrentSchemaVersion;
+
     [JsonPropertyName("result")]
     [XmlElement("result")]
     public string Result { get; set; } = "ok";
@@ -15,6 +26,9 @@ public sealed class CompileResult
     [XmlElement("output")]
     public string? Output { get; set; }
 
+    // Keep the established "errors" wire name for backward compatibility.
+    // Diagnostics can later include warnings/info without forcing existing JSON consumers
+    // to change as the machine interface evolves.
     [JsonPropertyName("errors")]
     [XmlArray("errors")]
     [XmlArrayItem("error")]
@@ -41,6 +55,8 @@ public sealed class CompileResult
         var result = errors.ToList();
         foreach (var diagnostic in result)
         {
+            diagnostic.NormalizeMachineFields();
+
             var generatedLocation = string.IsNullOrWhiteSpace(diagnostic.File) &&
                                     diagnostic.Line > 0 &&
                                     string.IsNullOrWhiteSpace(diagnostic.Code);
@@ -81,7 +97,33 @@ public sealed class CompileDiagnostic
     [XmlElement("code")]
     public string Code { get; set; } = "";
 
+    [JsonPropertyName("severity")]
+    [XmlElement("severity")]
+    public string Severity { get; set; } = "error";
+
+    [JsonPropertyName("category")]
+    [XmlElement("category")]
+    public string Category { get; set; } = "compiler";
+
     [JsonPropertyName("markedCode")]
     [XmlElement("markedCode")]
     public string MarkedCode { get; set; } = "";
+
+    internal void NormalizeMachineFields()
+    {
+        Severity = NormalizeSeverity(Severity);
+        Category = string.IsNullOrWhiteSpace(Category) ? "compiler" : Category.Trim().ToLowerInvariant();
+    }
+
+    private static string NormalizeSeverity(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "error";
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "error" => "error",
+            "warning" => "warning",
+            "info" => "info",
+            _ => "error"
+        };
+    }
 }
