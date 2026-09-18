@@ -135,7 +135,7 @@ internal sealed class ClassOverloadValidator
                 if (seen.TryGetValue(signature, out var previous))
                 {
                     var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(lines[method.Line - 1]).TrimEnd();
-                    throw new CompilerException($"{sourceName}({method.Line},1): Duplicate overload '{method.ClassName}.{method.Name}' has the same effective parameter signature as line {previous.Line}.{Environment.NewLine}  {safeSource}");
+                    throw new CompilerException($"{sourceName}({method.Line},1): Duplicate overload '{method.ClassName}.{method.Name}' has the same effective parameter signature as line {previous.Line}.{Environment.NewLine}  {safeSource}", CompilerDiagnosticCodes.DuplicateOverload, "overload-resolution");
                 }
                 seen[signature] = method;
             }
@@ -213,12 +213,12 @@ internal sealed class ClassOverloadValidator
         if (scored.Count == 0)
         {
             var supplied = string.Join(", ", arguments.Select(a => InferType(a, variables)?.Type ?? "Unknown"));
-            throw new CompilerException($"{sourceName}({lineNumber},1): No overload of '{displayName}' matches supplied signature ({supplied}).{Environment.NewLine}  {safeSource}");
+            throw new CompilerException($"{sourceName}({lineNumber},1): No overload of '{displayName}' matches supplied signature ({supplied}).{Environment.NewLine}  {safeSource}", CompilerDiagnosticCodes.NoMatchingOverload, "overload-resolution");
         }
         var bestScore = scored.Min(x => x.Score);
         var best = scored.Where(x => x.Score == bestScore).ToArray();
         if (best.Length > 1)
-            throw new CompilerException($"{sourceName}({lineNumber},1): Ambiguous overload call '{displayName}'; {best.Length} overloads are equally specific.{Environment.NewLine}  {safeSource}");
+            throw new CompilerException($"{sourceName}({lineNumber},1): Ambiguous overload call '{displayName}'; {best.Length} overloads are equally specific.{Environment.NewLine}  {safeSource}", CompilerDiagnosticCodes.AmbiguousOverload, "overload-resolution");
     }
 
     private static int MatchScore(Parameter parameter, (string Type, bool IsArray)? actual)
