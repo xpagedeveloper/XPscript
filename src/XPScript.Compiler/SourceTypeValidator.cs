@@ -319,5 +319,5 @@ internal sealed class SourceTypeValidator
             SourceCode = safeSource,
             MarkedCode = safeSource
         });
-
+    }
 }
