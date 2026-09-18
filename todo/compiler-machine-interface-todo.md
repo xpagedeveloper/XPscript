@@ -195,7 +195,7 @@ security.Shell
 - [x] Add JSON Schema for compiler results.
 - [x] Add JSON Schema for diagnostics.
 - [x] Choose a stable repository location such as `schemas/`.
-- [ ] Validate representative compiler output against the schemas in CI.
+- [x] Validate representative compiler output against the schemas in CI.
 - [ ] Document additive and breaking schema evolution.
 
 Suggested files:
@@ -338,7 +338,7 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 - [ ] Run on Linux.
 - [ ] Run on macOS.
 - [ ] Verify equivalent diagnostic codes and source positions.
-- [ ] Validate JSON output against the published schemas.
+- [x] Validate JSON output against the published schemas.
 
 ## 23. Documentation
 
