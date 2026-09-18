@@ -85,7 +85,7 @@ paths:
       responses:
         '204': { description: ok }
 """, "unicode.yaml").Source;
-if (!unicodeClient.Contains("Http.EncodePath(city)", StringComparison.Ordinal) || !unicodeClient.Contains("Http.AddQuery(url, \"q\", q)", StringComparison.Ordinal))
+if (!unicodeClient.Contains("Http.EncodePath(City)", StringComparison.Ordinal) || !unicodeClient.Contains("Http.AddQuery(url, \"q\", Q)", StringComparison.Ordinal))
     throw new Exception("OpenAPI Unicode path/query values must flow through XPHttp UTF-8 encoding helpers.");
 
 if (clientResult.Source.Contains("UIForm", StringComparison.OrdinalIgnoreCase) || clientResult.Source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal))
