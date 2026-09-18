@@ -72,6 +72,34 @@ paths:
 }
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorization header", StringComparison.OrdinalIgnoreCase)) { }
 
+var nestedRefClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Nested Ref, version: 1.0.0 }
+components:
+  schemas:
+    Child:
+      type: object
+      required: [name]
+      properties: { name: { type: string } }
+    Parent:
+      type: object
+      required: [child]
+      properties:
+        child: { $ref: '#/components/schemas/Child' }
+paths:
+  /parent:
+    get:
+      operationId: parent
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Parent' }
+""", "nested-ref.yaml").Source;
+if (!nestedRefClient.Contains("#/$defs/Child", StringComparison.Ordinal) || nestedRefClient.Contains("#/components/schemas/Child", StringComparison.Ordinal))
+    throw new Exception("Generated response validation schema must rewrite nested OpenAPI component references to standalone JSON Schema $defs.");
+
 var compositionClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Composition, version: 1.0.0 }
