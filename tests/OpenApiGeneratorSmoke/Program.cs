@@ -72,6 +72,42 @@ paths:
 }
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorization header", StringComparison.OrdinalIgnoreCase)) { }
 
+var overrideClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Override, version: 1.0.0 }
+paths:
+  /items:
+    parameters:
+      - { name: q, in: query, required: false, schema: { type: string } }
+    get:
+      operationId: searchItems
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: integer, format: int32 } }
+      responses:
+        '204': { description: ok }
+""", "override.yaml").Source;
+if (!overrideClient.Contains("Public Function SearchItems(Q As Integer)", StringComparison.Ordinal) || overrideClient.Contains("Q As String", StringComparison.Ordinal))
+    throw new Exception("Operation-level OpenAPI parameters must override matching path-level parameters.");
+
+try
+{
+    _ = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Collision, version: 1.0.0 }
+paths:
+  /items:
+    get:
+      operationId: collision
+      parameters:
+        - { name: foo-bar, in: query, schema: { type: string } }
+        - { name: foo.bar, in: query, schema: { type: string } }
+      responses:
+        '204': { description: ok }
+""", "collision.yaml");
+    throw new Exception("Colliding generated parameter identifiers must be rejected.");
+}
+catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("both map to XPScript identifier", StringComparison.OrdinalIgnoreCase)) { }
+
 var unicodeClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Unicode, version: 1.0.0 }
