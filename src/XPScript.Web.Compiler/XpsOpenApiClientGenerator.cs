@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
 namespace XPScript.Web.Compiler;
@@ -38,7 +39,7 @@ public sealed class XpsOpenApiClientGenerator
     private static JsonNode? ConvertYaml(YamlNode node) => node switch { YamlMappingNode map => ConvertMap(map), YamlSequenceNode sequence => ConvertSequence(sequence), YamlScalarNode scalar => ConvertScalar(scalar), _ => throw new XpsOpenApiGenerationException("Unsupported YAML node in OpenAPI document.") };
     private static JsonObject ConvertMap(YamlMappingNode map) { var result = new JsonObject(); foreach (var pair in map.Children) { if (pair.Key is not YamlScalarNode key || string.IsNullOrWhiteSpace(key.Value)) throw new XpsOpenApiGenerationException("OpenAPI YAML mapping keys must be strings."); result[key.Value] = ConvertYaml(pair.Value); } return result; }
     private static JsonArray ConvertSequence(YamlSequenceNode sequence) { var result = new JsonArray(); foreach (var item in sequence.Children) result.Add(ConvertYaml(item)); return result; }
-    private static JsonNode? ConvertScalar(YamlScalarNode scalar) { var value = scalar.Value ?? string.Empty; if (value is "~" || value.Equals("null", StringComparison.OrdinalIgnoreCase)) return null; if (bool.TryParse(value, out var b)) return JsonValue.Create(b); if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i)) return JsonValue.Create(i); if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) return JsonValue.Create(d); return JsonValue.Create(value); }
+    private static JsonNode? ConvertScalar(YamlScalarNode scalar) { var value = scalar.Value ?? string.Empty; if (scalar.Style is not ScalarStyle.Plain) return JsonValue.Create(value); if (value is "~" || value.Equals("null", StringComparison.OrdinalIgnoreCase)) return null; if (bool.TryParse(value, out var b)) return JsonValue.Create(b); if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i)) return JsonValue.Create(i); if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) return JsonValue.Create(d); return JsonValue.Create(value); }
     private static Dictionary<string, JsonObject> CollectModels(JsonObject root) { var result = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase); if (root["components"] is not JsonObject components || components["schemas"] is not JsonObject schemas) return result; foreach (var pair in schemas) if (pair.Value is JsonObject schema) { var identifier = ToIdentifier(pair.Key); if (result.ContainsKey(identifier)) throw new XpsOpenApiGenerationException($"Component schemas contain an XPScript identifier collision at '{identifier}'."); result.Add(identifier, schema); } return result; }
     private static Dictionary<string, ClientSecurityScheme> CollectSecuritySchemes(JsonObject root)
     {
