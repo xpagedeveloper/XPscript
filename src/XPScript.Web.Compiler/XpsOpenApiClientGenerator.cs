@@ -116,8 +116,39 @@ public sealed class XpsOpenApiClientGenerator
 
     private static void EmitResponseMapping(StringBuilder b, ClientOperation op, Dictionary<string, JsonObject> models)
     {
-        var first = true; foreach (var response in op.Responses.Where(x => !x.Code.Equals("default", StringComparison.OrdinalIgnoreCase))) { b.AppendLine($"        {(first ? "If" : "ElseIf")} raw.StatusCode = {response.Code} Then"); first = false; if (response.TypeName is not null) { b.AppendLine($"            result.ResponseType = \"{EscapeXps(response.TypeName)}\""); if (models.ContainsKey(response.TypeName)) { b.AppendLine($"            Dim mapped{response.TypeName} As {response.TypeName}"); b.AppendLine($"            Set mapped{response.TypeName} = New {response.TypeName}"); b.AppendLine($"            If Not result.Json Is Nothing Then Set result.{response.TypeName} = result.Json.ToObject(mapped{response.TypeName})"); } } }
-        var fallback = op.Responses.FirstOrDefault(x => x.Code.Equals("default", StringComparison.OrdinalIgnoreCase)); if (fallback is not null) { b.AppendLine(first ? "        If True Then" : "        Else"); if (fallback.TypeName is not null) { b.AppendLine($"            result.ResponseType = \"{EscapeXps(fallback.TypeName)}\""); if (models.ContainsKey(fallback.TypeName)) { b.AppendLine($"            Dim mapped{fallback.TypeName} As {fallback.TypeName}"); b.AppendLine($"            Set mapped{fallback.TypeName} = New {fallback.TypeName}"); b.AppendLine($"            If Not result.Json Is Nothing Then Set result.{fallback.TypeName} = result.Json.ToObject(mapped{fallback.TypeName})"); } } first = false; } if (!first) b.AppendLine("        End If");
+        var mappedTypes = op.Responses.Where(x => x.TypeName is not null && models.ContainsKey(x.TypeName))
+            .Select(x => x.TypeName!).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        foreach (var type in mappedTypes)
+        {
+            b.AppendLine($"        Dim mapped{type} As {type}");
+            b.AppendLine($"        Set mapped{type} = New {type}");
+        }
+
+        var first = true;
+        foreach (var response in op.Responses.Where(x => !x.Code.Equals("default", StringComparison.OrdinalIgnoreCase)))
+        {
+            b.AppendLine($"        {(first ? "If" : "ElseIf")} raw.StatusCode = {response.Code} Then");
+            first = false;
+            if (response.TypeName is not null)
+            {
+                b.AppendLine($"            result.ResponseType = \"{EscapeXps(response.TypeName)}\"");
+                if (models.ContainsKey(response.TypeName))
+                    b.AppendLine($"            If Not result.Json Is Nothing Then Set result.{response.TypeName} = result.Json.ToObject(mapped{response.TypeName})");
+            }
+        }
+        var fallback = op.Responses.FirstOrDefault(x => x.Code.Equals("default", StringComparison.OrdinalIgnoreCase));
+        if (fallback is not null)
+        {
+            b.AppendLine(first ? "        If True Then" : "        Else");
+            if (fallback.TypeName is not null)
+            {
+                b.AppendLine($"            result.ResponseType = \"{EscapeXps(fallback.TypeName)}\"");
+                if (models.ContainsKey(fallback.TypeName))
+                    b.AppendLine($"            If Not result.Json Is Nothing Then Set result.{fallback.TypeName} = result.Json.ToObject(mapped{fallback.TypeName})");
+            }
+            first = false;
+        }
+        if (!first) b.AppendLine("        End If");
     }
     private static string XpsType(JsonObject root, JsonObject schema) { if (ReadString(schema, "$ref") is { } reference) { _ = Resolve(root, schema); return ToIdentifier(reference[(reference.LastIndexOf('/') + 1)..]); } var type = ReadString(schema, "type")?.ToLowerInvariant(); var format = ReadString(schema, "format")?.ToLowerInvariant(); return type switch { "integer" => format == "int32" ? "Integer" : "Long", "number" => format == "float" ? "Single" : "Double", "boolean" => "Boolean", "string" => format is "date" or "date-time" ? "Date" : "String", _ => "Variant" }; }
     private static JsonObject Resolve(JsonObject root, JsonNode? node) { if (node is not JsonObject current) throw new XpsOpenApiGenerationException("OpenAPI reference target must be an object."); for (var depth = 0; depth < 32; depth++) { var reference = ReadString(current, "$ref"); if (reference is null) return current; if (!reference.StartsWith("#/", StringComparison.Ordinal)) throw new XpsOpenApiGenerationException("Only local OpenAPI references are currently supported."); JsonNode? target = root; foreach (var segment in reference[2..].Split('/')) target = target is JsonObject obj ? obj[segment.Replace("~1", "/").Replace("~0", "~")] : null; current = target as JsonObject ?? throw new XpsOpenApiGenerationException($"OpenAPI reference '{reference}' was not found."); } throw new XpsOpenApiGenerationException("OpenAPI reference depth exceeded."); }
