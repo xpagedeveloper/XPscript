@@ -67,7 +67,7 @@ catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorizatio
 
 if (clientResult.Source.Contains("UIForm", StringComparison.OrdinalIgnoreCase) || clientResult.Source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal))
     throw new Exception("Generated OpenAPI client must not depend on UIForm runtime.");
-foreach (var marker in new[] { "XPHttpClient", "XPHttpResponse", "XPJsonDocument", "Http.Send(", "Http.SetBearerToken(token)", "Http.SetBasicAuth(username, password)" })
+foreach (var marker in new[] { "XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPJsonDocument", "Http.Send(request)" })
     if (!clientResult.Source.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated OpenAPI client is missing core API marker: " + marker);
 
 if (result.OpenApiVersion != "3.1.0") throw new Exception("OpenAPI version was not retained.");
