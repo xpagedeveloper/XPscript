@@ -155,8 +155,6 @@ try
 {
     var clientPath = Path.Combine(root, "petstore-client.xps");
     await File.WriteAllTextAsync(clientPath, clientResult.Source);
-    var clientCompiler = new XpsWebCompiler();
-    await using (var clientUnit = await clientCompiler.CompileAsync(clientPath, root)) { }
 
     var sourcePath = Path.Combine(root, "petstore.xps");
     await File.WriteAllTextAsync(sourcePath, result.Source);
