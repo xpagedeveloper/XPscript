@@ -69,15 +69,23 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
 
         if (descriptor.JsonSchema is not null)
         {
-            IReadOnlyDictionary<string, string[]> schemaErrors;
-            try { schemaErrors = ValidateJsonSchemaWithXpRuntime(assembly, context, descriptor.JsonSchema); }
+            SchemaValidationFailure schemaValidation;
+            try { schemaValidation = ValidateJsonSchemaWithXpRuntime(assembly, context, descriptor.JsonSchema); }
             catch (TargetInvocationException ex) when (ex.InnerException is not null)
             {
-                schemaErrors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [ex.InnerException.Message] };
+                schemaValidation = new SchemaValidationFailure(
+                    new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [ex.InnerException.Message] },
+                    []);
             }
-            if (schemaErrors.Count > 0)
+            if (schemaValidation.Errors.Count > 0)
             {
-                XpsWebResponseRestExtensions.Problem(context.Response, 400, "JSON Schema validation failed", "The request body does not satisfy the route XPJsonSchema.", schemaErrors);
+                XpsWebResponseRestExtensions.Problem(
+                    context.Response,
+                    400,
+                    "JSON Schema validation failed",
+                    "The request body does not satisfy the route XPJsonSchema.",
+                    schemaValidation.Errors,
+                    new Dictionary<string, object?> { ["validationErrors"] = schemaValidation.Details });
                 if (!context.Response.Completed) XpsWebSecurity.ApplyResponseSecurityHeaders(context.Response);
                 return;
             }
@@ -122,13 +130,19 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         }
     }
 
-    private static IReadOnlyDictionary<string, string[]> ValidateJsonSchemaWithXpRuntime(Assembly assembly, XpsWebContext context, string schemaPath)
+    private sealed record SchemaValidationFailure(
+        IReadOnlyDictionary<string, string[]> Errors,
+        IReadOnlyList<IReadOnlyDictionary<string, string>> Details);
+
+    private static SchemaValidationFailure ValidateJsonSchemaWithXpRuntime(Assembly assembly, XpsWebContext context, string schemaPath)
     {
         var root = Path.GetFullPath(context.Server.RootPath);
         var candidate = Path.GetFullPath(Path.Combine(root, schemaPath.Replace('/', Path.DirectorySeparatorChar)));
         var relative = Path.GetRelativePath(root, candidate);
         if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || !File.Exists(candidate))
-            return new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [$"XPJsonSchema '{schemaPath}' was not found inside the web root."] };
+            return new SchemaValidationFailure(
+                new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [$"XPJsonSchema '{schemaPath}' was not found inside the web root."] },
+                []);
 
         var schemaType = assembly.GetType("XPScriptJsonSchema", throwOnError: false, ignoreCase: false)
             ?? throw new XpsWebRouteException("XPJsonSchema runtime was not included in the compiled web unit.");
@@ -147,9 +161,11 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         var result = validate.Invoke(schema, [document])
             ?? throw new XpsWebRouteException("XPJsonSchema.Validate returned no result.");
         var resultType = result.GetType();
-        if ((bool)(resultType.GetProperty("Valid")?.GetValue(result) ?? false)) return new Dictionary<string, string[]>();
+        if ((bool)(resultType.GetProperty("Valid")?.GetValue(result) ?? false))
+            return new SchemaValidationFailure(new Dictionary<string, string[]>(), []);
 
         var errors = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var details = new List<IReadOnlyDictionary<string, string>>();
         var count = (int)(resultType.GetProperty("ErrorCount")?.GetValue(result) ?? 0);
         var getError = resultType.GetMethod("GetError", BindingFlags.Instance | BindingFlags.Public)
             ?? throw new XpsWebRouteException("XPJsonValidationResult.GetError was not found.");
@@ -159,12 +175,25 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             if (error is null) continue;
             var get = error.GetType().GetMethod("Get", BindingFlags.Instance | BindingFlags.Public);
             if (get is null) continue;
-            var path = Convert.ToString(get.Invoke(error, ["path"]), System.Globalization.CultureInfo.InvariantCulture) ?? "$";
-            var message = Convert.ToString(get.Invoke(error, ["message"]), System.Globalization.CultureInfo.InvariantCulture) ?? "JSON Schema validation failed.";
+            string Field(string name, string fallback = "") =>
+                Convert.ToString(get.Invoke(error, [name]), System.Globalization.CultureInfo.InvariantCulture) ?? fallback;
+            var path = Field("path", "$");
+            var message = Field("message", "JSON Schema validation failed.");
             if (!errors.TryGetValue(path, out var messages)) errors[path] = messages = [];
             messages.Add(message);
+            details.Add(new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["path"] = path,
+                ["schemaPath"] = Field("schemaPath"),
+                ["keyword"] = Field("keyword"),
+                ["message"] = message,
+                ["expected"] = Field("expected"),
+                ["actual"] = Field("actual")
+            });
         }
-        return errors.ToDictionary(x => x.Key, x => x.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
+        return new SchemaValidationFailure(
+            errors.ToDictionary(x => x.Key, x => x.Value.ToArray(), StringComparer.OrdinalIgnoreCase),
+            details);
     }
 
     private static object? TaskResult(Task task)
