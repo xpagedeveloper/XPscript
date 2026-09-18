@@ -71,6 +71,12 @@ foreach (var test in cases)
     Require(jsonDiagnostic.ValueKind == JsonValueKind.Object, test.Source + " JSON diagnosticCode");
     Require(jsonDiagnostic.GetProperty("severity").GetString() == "error", test.Source + " JSON severity");
     Require(jsonDiagnostic.GetProperty("category").GetString() == test.Category, test.Source + " JSON category");
+    Require(jsonDiagnostic.GetProperty("message").GetString() == jsonDiagnostic.GetProperty("description").GetString(), test.Source + " message compatibility");
+    Require(jsonDiagnostic.GetProperty("column").GetInt32() == jsonDiagnostic.GetProperty("position").GetInt32(), test.Source + " column compatibility");
+    if (jsonDiagnostic.GetProperty("line").GetInt32() > 0)
+        Require(jsonDiagnostic.GetProperty("endLine").GetInt32() == jsonDiagnostic.GetProperty("line").GetInt32(), test.Source + " endLine point range");
+    if (jsonDiagnostic.GetProperty("position").GetInt32() > 0)
+        Require(jsonDiagnostic.GetProperty("endColumn").GetInt32() == jsonDiagnostic.GetProperty("position").GetInt32(), test.Source + " endColumn point range");
     Require(jsonDiagnostic.GetProperty("sourceText").GetString() == jsonDiagnostic.GetProperty("code").GetString(), test.Source + " sourceText compatibility");
 }
 
@@ -94,6 +100,10 @@ using (var compatibilityDocument = JsonDocument.Parse(compatibilityJson))
     Require(error.GetProperty("diagnosticCode").GetString() == "XPS2001", "stable diagnosticCode wire field");
     Require(error.GetProperty("upstreamCode").GetString() == "CS0029", "upstreamCode wire field");
     Require(error.GetProperty("description").GetString() == "Example diagnostic.", "description must not contain upstream code");
+    Require(error.GetProperty("message").GetString() == "Example diagnostic.", "message alias");
+    Require(error.GetProperty("column").GetInt32() == 1, "column alias");
+    Require(error.GetProperty("endLine").GetInt32() == 1, "endLine point range");
+    Require(error.GetProperty("endColumn").GetInt32() == 1, "endColumn point range");
     Require(error.GetProperty("code").GetString() == "value = text", "legacy code source field");
     Require(error.GetProperty("sourceText").GetString() == "value = text", "sourceText alias");
 }
@@ -106,6 +116,10 @@ Require(xml.Contains("<diagnosticCode>XPS2001</diagnosticCode>", StringCompariso
 Require(xml.Contains("<upstreamCode>CS0029</upstreamCode>", StringComparison.Ordinal), "XML upstreamCode");
 Require(xml.Contains("<code>value = text</code>", StringComparison.Ordinal), "XML legacy code source field");
 Require(xml.Contains("<sourceText>value = text</sourceText>", StringComparison.Ordinal), "XML sourceText alias");
+Require(xml.Contains("<message>Example diagnostic.</message>", StringComparison.Ordinal), "XML message alias");
+Require(xml.Contains("<column>1</column>", StringComparison.Ordinal), "XML column alias");
+Require(xml.Contains("<endLine>1</endLine>", StringComparison.Ordinal), "XML endLine");
+Require(xml.Contains("<endColumn>1</endColumn>", StringComparison.Ordinal), "XML endColumn");
 using var xmlReader = new StringReader(xml);
 var xmlRoundTrip = (CompileResult?)xmlSerializer.Deserialize(xmlReader);
 Require(xmlRoundTrip?.Errors.Count == 1, "XML diagnostic round trip");
