@@ -18,6 +18,8 @@ internal static class CompilerDiagnosticCodes
     public const string AmbiguousOverload = "XPS2005";
     public const string DuplicateOverload = "XPS2006";
     public const string ConflictingClassMember = "XPS2007";
+    public const string UnknownSymbol = "XPS2008";
+    public const string UnknownMember = "XPS2009";
 
     // XPS8xxx: project/configuration and compiler invocation.
     public const string SourceFileRequired = "XPS8001";
