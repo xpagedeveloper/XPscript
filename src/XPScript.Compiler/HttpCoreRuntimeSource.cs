@@ -24,6 +24,17 @@ internal static class XPScriptHttpCoreHelpers
         Client(clientValue).SetHeader("Authorization", "Basic " + credentials);
     }
 
+    public static string BasicAuthorization(object? usernameValue, object? passwordValue)
+    {
+        var username = XPScriptRuntime.CStr(usernameValue);
+        var password = XPScriptRuntime.CStr(passwordValue);
+        ValidateCredentialText(username, "Basic authentication username");
+        ValidateCredentialText(password, "Basic authentication password");
+        if (username.Contains(':'))
+            throw new XPScriptRuntimeException(5, "Basic authentication username cannot contain a colon.");
+        return "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes(username + ":" + password));
+    }
+
     public static string AddQuery(object? clientValue, object? urlValue, object? nameValue, object? value)
     {
         _ = Client(clientValue);
