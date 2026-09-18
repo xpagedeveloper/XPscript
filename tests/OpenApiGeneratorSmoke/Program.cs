@@ -72,6 +72,36 @@ paths:
 }
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorization header", StringComparison.OrdinalIgnoreCase)) { }
 
+var overrideServer = new XpsOpenApiGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Server Override, version: 1.0.0 }
+paths:
+  /items:
+    parameters:
+      - { name: q, in: query, required: false, schema: { type: string } }
+    get:
+      operationId: searchItemsServer
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: integer, format: int32 } }
+      responses:
+        '204': { description: ok }
+""", "server-override.yaml").Source;
+if (!overrideServer.Contains("Q As Integer", StringComparison.Ordinal) || overrideServer.Contains("Q As String", StringComparison.Ordinal))
+    throw new Exception("REST server operation-level parameters must override matching path-level parameters.");
+
+var badServerPathRequired = false;
+try { _ = new XpsOpenApiGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Bad Server Path, version: 1.0.0 }
+paths:
+  /items/{id}:
+    get:
+      parameters:
+        - { name: id, in: path, schema: { type: string } }
+      responses: { '204': { description: ok } }
+"""); } catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("required: true", StringComparison.Ordinal)) { badServerPathRequired = true; }
+if (!badServerPathRequired) throw new Exception("REST server path parameters must require required: true.");
+
 var overrideClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Override, version: 1.0.0 }
