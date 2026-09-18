@@ -317,7 +317,14 @@ internal sealed class SourceTypeValidator
             DiagnosticCode = diagnosticCode,
             Category = diagnosticCode == CompilerDiagnosticCodes.ArgumentCountMismatch ? "argument" : "type",
             SourceCode = safeSource,
-            MarkedCode = safeSource
+            MarkedCode = MarkSource(safeSource, position)
         });
+    }
+
+    private static string MarkSource(string source, int position)
+    {
+        if (string.IsNullOrEmpty(source) || position <= 0) return source;
+        var caret = Math.Clamp(position - 1, 0, source.Length);
+        return source + Environment.NewLine + new string(' ', caret) + "^";
     }
 }
