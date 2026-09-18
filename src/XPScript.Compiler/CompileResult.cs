@@ -143,6 +143,40 @@ public sealed class CompileDiagnostic
     [XmlElement("description")]
     public string Description { get; set; } = "";
 
+    [JsonPropertyName("message")]
+    [XmlElement("message")]
+    public string Message
+    {
+        get => Description;
+        set
+        {
+            if (string.IsNullOrEmpty(Description))
+                Description = value ?? "";
+        }
+    }
+
+    [JsonPropertyName("column")]
+    [XmlElement("column")]
+    public int Column
+    {
+        get => Position;
+        set
+        {
+            if (Position == 0)
+                Position = value;
+        }
+    }
+
+    [JsonPropertyName("endLine")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [XmlElement("endLine")]
+    public int EndLine { get; set; }
+
+    [JsonPropertyName("endColumn")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [XmlElement("endColumn")]
+    public int EndColumn { get; set; }
+
     // Stable machine-readable diagnostic identifier. XPScript-owned diagnostics
     // will use XPSxxxx identifiers. Upstream compiler identifiers can be retained
     // until they are mapped to a stable XPScript diagnostic.
@@ -195,6 +229,8 @@ public sealed class CompileDiagnostic
         Category = string.IsNullOrWhiteSpace(Category) ? "compiler" : Category.Trim().ToLowerInvariant();
         DiagnosticCode = NormalizeOptionalCode(DiagnosticCode);
         UpstreamCode = NormalizeOptionalCode(UpstreamCode);
+        if (EndLine == 0 && Line > 0) EndLine = Line;
+        if (EndColumn == 0 && Position > 0) EndColumn = Position;
     }
 
     private static string? NormalizeOptionalCode(string? value) =>
