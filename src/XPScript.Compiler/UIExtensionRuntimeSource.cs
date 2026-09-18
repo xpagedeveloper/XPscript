@@ -165,7 +165,7 @@ internal sealed class XPScriptUIForm
     }
     public XPScriptJsonValidationResult ValidateData()
         => _validationSchema is null
-            ? XPScriptJsonSchema.Parse("true").Validate(_data)
+            ? new XPScriptJsonValidationResult(new System.Text.Json.Nodes.JsonArray())
             : _validationSchema.Validate(_data);
     public bool IsDataValid => ValidateData().Valid;
     internal string GetValidationError(object? nameValue)
