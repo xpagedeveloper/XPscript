@@ -53,7 +53,14 @@ public sealed class CompilerDriver
         }
         catch (CompilerException ex)
         {
-            return CompileResult.Error(ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category));
+            if (ex.GeneratedDiagnostics.Count > 0 &&
+                ex.GeneratedDiagnostics.Any(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)))
+                return CompileResult.Error(ex.GeneratedDiagnostics);
+
+            var diagnostics = ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category);
+            if (CompilerDiagnosticMode.Debug && ex.GeneratedDiagnostics.Count > 0)
+                diagnostics.AddRange(ex.GeneratedDiagnostics);
+            return CompileResult.Error(diagnostics);
         }
         catch (Exception)
         {
@@ -78,7 +85,14 @@ public sealed class CompilerDriver
         }
         catch (CompilerException ex)
         {
-            return CompileResult.Error(ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category));
+            if (ex.GeneratedDiagnostics.Count > 0 &&
+                ex.GeneratedDiagnostics.Any(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)))
+                return CompileResult.Error(ex.GeneratedDiagnostics);
+
+            var diagnostics = ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category);
+            if (CompilerDiagnosticMode.Debug && ex.GeneratedDiagnostics.Count > 0)
+                diagnostics.AddRange(ex.GeneratedDiagnostics);
+            return CompileResult.Error(diagnostics);
         }
         catch (Exception)
         {
