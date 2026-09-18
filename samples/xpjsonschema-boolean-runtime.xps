@@ -36,5 +36,16 @@ Sub Main()
     Set notFalseSchema = XPJsonSchema.Parse("{""not"":false}")
     If Not notFalseSchema.IsValid(37) Then Error 5, "Expected not false to accept every value"
 
+    Dim builderNotSchema As New XPJsonSchema
+    Call builderNotSchema.Set("not", False)
+    If Not builderNotSchema.IsValid(37) Then Error 5, "Expected builder Set not false to accept every value"
+
+    Dim builderItemsSchema As New XPJsonSchema
+    builderItemsSchema.Type = "array"
+    Call builderItemsSchema.Set("items", False)
+    Dim builderItemsValue As New XPJsonArray
+    Call builderItemsValue.Add(37)
+    If builderItemsSchema.IsValid(builderItemsValue) Then Error 5, "Expected builder Set items false to reject array items"
+
     Print "XPJSONSCHEMA-BOOLEAN-RUNTIME=OK"
 End Sub
