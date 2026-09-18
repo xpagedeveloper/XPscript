@@ -65,6 +65,22 @@ paths:
 }
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorization header", StringComparison.OrdinalIgnoreCase)) { }
 
+var unicodeClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Unicode, version: 1.0.0 }
+paths:
+  /cities/{city}:
+    get:
+      operationId: unicodePath
+      parameters:
+        - { name: city, in: path, required: true, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        '204': { description: ok }
+""", "unicode.yaml").Source;
+if (!unicodeClient.Contains("Http.EncodePath(city)", StringComparison.Ordinal) || !unicodeClient.Contains("Http.AddQuery(url, \"q\", q)", StringComparison.Ordinal))
+    throw new Exception("OpenAPI Unicode path/query values must flow through XPHttp UTF-8 encoding helpers.");
+
 if (clientResult.Source.Contains("UIForm", StringComparison.OrdinalIgnoreCase) || clientResult.Source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal))
     throw new Exception("Generated OpenAPI client must not depend on UIForm runtime.");
 foreach (var marker in new[] { "XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPJsonDocument", "Http.Send(request)" })
