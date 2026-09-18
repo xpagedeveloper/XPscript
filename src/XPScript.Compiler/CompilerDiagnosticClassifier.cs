@@ -1,6 +1,6 @@
 namespace XPScript.Compiler;
 
-internal readonly record struct CompilerDiagnosticClassification(string DiagnosticCode, string Category);
+internal readonly record struct CompilerDiagnosticClassification(string? DiagnosticCode, string? Category);
 
 internal static class CompilerDiagnosticClassifier
 {
