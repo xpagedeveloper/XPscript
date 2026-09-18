@@ -24,8 +24,9 @@ internal static class XPScriptHttpCoreHelpers
         Client(clientValue).SetHeader("Authorization", "Basic " + credentials);
     }
 
-    public static string BasicAuthorization(object? usernameValue, object? passwordValue)
+    public static string BasicAuthorization(object? clientValue, object? usernameValue, object? passwordValue)
     {
+        _ = Client(clientValue);
         var username = XPScriptRuntime.CStr(usernameValue);
         var password = XPScriptRuntime.CStr(passwordValue);
         ValidateCredentialText(username, "Basic authentication username");
