@@ -31,12 +31,27 @@ jobs:
       - name: Validate CLI JSON contract
         shell: pwsh
         run: |
-          $previousPreference = $ErrorActionPreference
-          $ErrorActionPreference = 'Continue'
-          $output = dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- validate samples/null-integer-assignment-error.xps --result-format json
-          $exitCode = $LASTEXITCODE
-          $ErrorActionPreference = $previousPreference
-          if ($exitCode -ne 2) { throw "Expected validation exit code 2, got $exitCode" }
+          $psi = [System.Diagnostics.ProcessStartInfo]::new()
+          $psi.FileName = 'dotnet'
+          $psi.ArgumentList.Add('run')
+          $psi.ArgumentList.Add('--project')
+          $psi.ArgumentList.Add('src/XPScript.Compiler/XPScript.Compiler.csproj')
+          $psi.ArgumentList.Add('-c')
+          $psi.ArgumentList.Add('Release')
+          $psi.ArgumentList.Add('--no-build')
+          $psi.ArgumentList.Add('--')
+          $psi.ArgumentList.Add('validate')
+          $psi.ArgumentList.Add('samples/null-integer-assignment-error.xps')
+          $psi.ArgumentList.Add('--result-format')
+          $psi.ArgumentList.Add('json')
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $psi.UseShellExecute = $false
+          $process = [System.Diagnostics.Process]::Start($psi)
+          $output = $process.StandardOutput.ReadToEnd()
+          $stderr = $process.StandardError.ReadToEnd()
+          $process.WaitForExit()
+          if ($process.ExitCode -ne 2) { throw "Expected validation exit code 2, got $($process.ExitCode). stderr: $stderr" }
           $json = $output | ConvertFrom-Json
           if ($json.schema -ne 'xpscript.compiler-result') { throw "Unexpected schema" }
           if ($json.schemaVersion -ne 1) { throw "Unexpected schemaVersion" }
