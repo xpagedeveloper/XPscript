@@ -38,6 +38,17 @@ Sub Main()
     Print "REVERTED_DIRTY_COUNT=" & CStr(form.DirtyFields.Count)
 
     Call form.SetFieldValue("name", "Saved customer")
+    Dim saveSchema As XPJsonSchema
+    Set saveSchema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""const"":""Allowed customer""}}}")
+    Call form.SetValidationSchema(saveSchema)
+    On Error Resume Next
+    Set response = http.SaveForm(form, "http://127.0.0.1:18081/customer")
+    If Err.Number = 0 Then Error 5, "Expected SaveForm JSON Schema validation failure"
+    If InStr(Err.Description, "$.name") = 0 Then Error 5, "Expected SaveForm validation failure path"
+    Err.Clear
+    On Error GoTo 0
+    Call form.SetValidationSchema(Nothing)
+    If Not form.IsDataValid Then Error 5, "Expected SaveForm data without schema to validate true"
     Set response = http.SaveForm(form, "http://127.0.0.1:18081/customer")
     Print "SAVEFORM_STATUS=" & CStr(response.StatusCode)
     Print "SAVEFORM_DIRTY=" & CStr(form.IsDirty)

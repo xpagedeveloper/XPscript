@@ -12,6 +12,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             generated.Contains("showValidationErrors = form.ShowValidationErrors", StringComparison.Ordinal) &&
             generated.Contains("showDefaultButtons = form.ShowDefaultButtons", StringComparison.Ordinal) &&
             generated.Contains("gridColumns = form.GridColumns", StringComparison.Ordinal) &&
+            generated.Contains("hasValidationSchema = form.HasValidationSchema", StringComparison.Ordinal) &&
             generated.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal) &&
             generated.Contains("placeholder = field.Placeholder", StringComparison.Ordinal) &&
             generated.Contains("tooltip = field.Tooltip", StringComparison.Ordinal) &&
@@ -45,6 +46,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             showValidationErrors = form.ShowValidationErrors,
             showDefaultButtons = form.ShowDefaultButtons,
             gridColumns = form.GridColumns,
+            hasValidationSchema = form.HasValidationSchema,
             fields = fields.Select(field => new
             {
                 name = field.Name,
@@ -80,7 +82,8 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
                 webViewHtml = field.WebViewHtml,
                 webViewUserAgent = field.WebViewUserAgent,
                 webViewBackground = field.WebViewBackground,
-                regexPattern = field.RegexPattern
+                regexPattern = field.RegexPattern,
+                schemaValidationError = form.GetValidationError(field.Name)
             }).ToArray(),
             buttons = form.Buttons.Select(button => new
             {

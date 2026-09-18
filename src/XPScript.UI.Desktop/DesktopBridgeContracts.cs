@@ -59,6 +59,7 @@ public sealed record DesktopFormField(
     public string AccessKey { get; init; } = string.Empty;
     public string HotKey { get; init; } = string.Empty;
     public string ValidationError { get; init; } = string.Empty;
+    public string SchemaValidationError { get; init; } = string.Empty;
 }
 
 public sealed record DesktopFormButton(
@@ -81,6 +82,7 @@ public sealed record DesktopFormRequest(
 {
     public string Theme { get; init; } = "System";
     public bool ShowValidationErrors { get; init; } = true;
+    public bool HasValidationSchema { get; init; }
     public bool ShowDefaultButtons { get; init; } = true;
     public int GridColumns { get; init; } = 1;
     public IReadOnlyList<DesktopFormButton> Buttons { get; init; } = Array.Empty<DesktopFormButton>();

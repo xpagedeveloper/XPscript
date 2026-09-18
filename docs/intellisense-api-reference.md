@@ -6,6 +6,16 @@ Every public runtime object, function, method, or property that is not already r
 
 The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `Example`. The example must point to an existing executable `.xps` sample or demo. This format is part of the XPscript documentation contract and is validated by CI.
 
+
+## UIForm JSON Schema validation
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `UIForm.SetValidationSchema` | `form.SetValidationSchema(schema)` | `schema`: `XPJsonSchema` or `Nothing`. | Sets or clears JSON Schema validation for bound form data. Without a schema, validation succeeds by default. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `UIForm.HasValidationSchema` | `form.HasValidationSchema` | none | Returns `True` when a JSON Schema is attached to the form. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `UIForm.ValidateData` | `form.ValidateData()` | none | Returns `XPJsonValidationResult` for bound form data; the result is valid when no schema is attached. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `UIForm.IsDataValid` | `form.IsDataValid` | none | Returns whether bound form data passes its attached JSON Schema, or `True` when no schema is attached. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+
 ## NotesSession additions
 
 | Member | Syntax | Parameters | Description | Example |

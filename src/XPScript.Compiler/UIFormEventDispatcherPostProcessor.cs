@@ -33,6 +33,23 @@ internal sealed class UIFormEventDispatcherPostProcessor
         object?[] callbackArguments = [];
         XPScriptUIFormEvent? callbackEvent = null;
 
+        if (kind.Equals("validate", StringComparison.OrdinalIgnoreCase))
+        {
+            var field = FindField(controlName);
+            if (field.Type == "MultiListBox")
+            {
+                var submittedValues = submittedValue.Length == 0
+                    ? Array.Empty<string>()
+                    : submittedValue.Split('\u001f', StringSplitOptions.RemoveEmptyEntries);
+                ApplySubmittedValues(field, submittedValues);
+            }
+            else
+            {
+                ApplySubmittedValue(field, submittedValue);
+            }
+            return SerializeActionState();
+        }
+
         if (kind.Equals("change", StringComparison.OrdinalIgnoreCase))
         {
             var field = FindField(controlName);
@@ -185,7 +202,8 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 value = field.Type is "PasswordField" or "MultiListBox" or "Separator" or "Spacer" ? null : GetFieldValueString(field.Name),
                 values = field.Type == "MultiListBox" ? ReadSelectedValues(field.Name) : Array.Empty<string>(),
                 options = field.Options,
-                regionId = field.RegionId
+                regionId = field.RegionId,
+                validationError = string.IsNullOrEmpty(field.ValidationError) ? GetValidationError(field.Name) : field.ValidationError
             }).ToArray(),
             buttons = _buttons.Select(button => new
             {
