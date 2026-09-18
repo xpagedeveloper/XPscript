@@ -39,6 +39,16 @@ internal sealed class XPScriptHttpClient : IDisposable
         };
     }
 
+    public string BasicAuthorization(object? usernameValue, object? passwordValue)
+    {
+        var username = XPScriptRuntime.CStr(usernameValue);
+        var password = XPScriptRuntime.CStr(passwordValue);
+        if (username.IndexOfAny(['\r', '\n', '\0']) >= 0 || password.IndexOfAny(['\r', '\n', '\0']) >= 0)
+            throw new XPScriptRuntimeException(5, "Basic authentication credentials contain a prohibited control character.");
+        if (username.Contains(':')) throw new XPScriptRuntimeException(5, "Basic authentication username cannot contain a colon.");
+        return "Basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes(username + ":" + password));
+    }
+
     public double Timeout
     {
         get => _timeout.TotalSeconds;
