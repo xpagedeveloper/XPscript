@@ -4,6 +4,10 @@ internal readonly record struct CompilerDiagnosticClassification(string Diagnost
 
 internal static class CompilerDiagnosticClassifier
 {
+    public static bool IsSourceMappedPath(string path) =>
+        !string.IsNullOrWhiteSpace(path) &&
+        Path.GetExtension(path).Equals(".xps", StringComparison.OrdinalIgnoreCase);
+
     public static CompilerDiagnosticClassification ClassifyUpstream(string upstreamCode, bool sourceMapped)
     {
         if (!sourceMapped || string.IsNullOrWhiteSpace(upstreamCode))
