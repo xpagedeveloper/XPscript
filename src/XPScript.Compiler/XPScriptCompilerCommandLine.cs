@@ -569,7 +569,7 @@ Use -- before script arguments when an argument could otherwise be interpreted a
                         Console.WriteLine($"  line: {error.Line}");
                         Console.WriteLine($"  position: {error.Position}");
                         Console.WriteLine($"  description: {error.Description}");
-                        if (!string.IsNullOrEmpty(error.Code)) Console.WriteLine($"  code: {error.Code}");
+                        if (!string.IsNullOrEmpty(error.SourceCode)) Console.WriteLine($"  code: {error.SourceCode}");\n                        if (!string.IsNullOrEmpty(error.DiagnosticCode)) Console.WriteLine($"  diagnosticCode: {error.DiagnosticCode}");
                         if (!string.IsNullOrEmpty(error.MarkedCode))
                         {
                             Console.WriteLine("  markedCode:");
