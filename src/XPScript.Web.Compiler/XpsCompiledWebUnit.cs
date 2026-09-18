@@ -67,22 +67,6 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase)
             ?? throw new XpsWebRouteException($"Exported route procedure '{procedureName}' was not found in the compiled unit.");
 
-        if (descriptor.JsonSchema is not null)
-        {
-            IReadOnlyDictionary<string, string[]> schemaErrors;
-            try { schemaErrors = XpsRestJsonSchemaValidator.Validate(context.Request, context.Server.RootPath, descriptor.JsonSchema); }
-            catch (XpsRestBindingException ex)
-            {
-                schemaErrors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [ex.Message] };
-            }
-            if (schemaErrors.Count > 0)
-            {
-                XpsWebResponseRestExtensions.Problem(context.Response, 400, "JSON Schema validation failed", "The request body does not satisfy the route JSON Schema.", schemaErrors);
-                if (!context.Response.Completed) XpsWebSecurity.ApplyResponseSecurityHeaders(context.Response);
-                return;
-            }
-        }
-
         if (!XpsRestBinder.TryBind(method, context, descriptor, out var arguments, out var errors))
         {
             if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal))
