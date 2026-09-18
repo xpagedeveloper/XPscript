@@ -69,14 +69,7 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
 
         if (descriptor.JsonSchema is not null)
         {
-            SchemaValidationFailure schemaValidation;
-            try { schemaValidation = ValidateJsonSchemaWithXpRuntime(assembly, context, descriptor.JsonSchema); }
-            catch (TargetInvocationException ex) when (ex.InnerException is not null)
-            {
-                schemaValidation = new SchemaValidationFailure(
-                    new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [ex.InnerException.Message] },
-                    []);
-            }
+            var schemaValidation = ValidateJsonSchemaWithXpRuntime(assembly, context, descriptor.JsonSchema);
             if (schemaValidation.Errors.Count > 0)
             {
                 XpsWebResponseRestExtensions.Problem(
@@ -139,27 +132,55 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         var root = Path.GetFullPath(context.Server.RootPath);
         var candidate = Path.GetFullPath(Path.Combine(root, schemaPath.Replace('/', Path.DirectorySeparatorChar)));
         var relative = Path.GetRelativePath(root, candidate);
-        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || !File.Exists(candidate))
-            return new SchemaValidationFailure(
-                new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [$"XPJsonSchema '{schemaPath}' was not found inside the web root."] },
-                []);
+        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            throw new XpsWebRouteException($"XPJsonSchema '{schemaPath}' resolves outside the web root.");
+        if (!File.Exists(candidate))
+            throw new XpsWebRouteException($"Configured XPJsonSchema '{schemaPath}' was not found inside the web root.");
 
         var schemaType = assembly.GetType("XPScriptJsonSchema", throwOnError: false, ignoreCase: false)
             ?? throw new XpsWebRouteException("XPJsonSchema runtime was not included in the compiled web unit.");
         var parse = schemaType.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public)
             ?? throw new XpsWebRouteException("XPJsonSchema.Parse was not found in the compiled web unit.");
-        var schema = parse.Invoke(null, [File.ReadAllText(candidate)])
-            ?? throw new XpsWebRouteException("XPJsonSchema.Parse returned no schema.");
+        object schema;
+        try
+        {
+            schema = parse.Invoke(null, [File.ReadAllText(candidate)])
+                ?? throw new XpsWebRouteException("XPJsonSchema.Parse returned no schema.");
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            throw new XpsWebRouteException($"Configured XPJsonSchema '{schemaPath}' is invalid: {ex.InnerException.Message}", ex.InnerException);
+        }
         var validate = schemaType.GetMethod("Validate", BindingFlags.Instance | BindingFlags.Public)
             ?? throw new XpsWebRouteException("XPJsonSchema.Validate was not found in the compiled web unit.");
         var nativeJsonType = assembly.GetType("XPScriptNativeJson", throwOnError: false, ignoreCase: false)
             ?? throw new XpsWebRouteException("XPJson runtime was not included in the compiled web unit.");
         var jsonParse = nativeJsonType.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public)
             ?? throw new XpsWebRouteException("XPJsonDocument.Parse runtime entry point was not found.");
-        var document = jsonParse.Invoke(null, [context.Request.BodyText()])
-            ?? throw new XpsWebRouteException("XPJsonDocument.Parse returned no document.");
-        var result = validate.Invoke(schema, [document])
-            ?? throw new XpsWebRouteException("XPJsonSchema.Validate returned no result.");
+        object document;
+        try
+        {
+            document = jsonParse.Invoke(null, [context.Request.BodyText()])
+                ?? throw new XpsWebRouteException("XPJsonDocument.Parse returned no document.");
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            return new SchemaValidationFailure(
+                new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [ex.InnerException.Message] },
+                []);
+        }
+
+        object result;
+        try
+        {
+            result = validate.Invoke(schema, [document])
+                ?? throw new XpsWebRouteException("XPJsonSchema.Validate returned no result.");
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+            throw;
+        }
         var resultType = result.GetType();
         if ((bool)(resultType.GetProperty("Valid")?.GetValue(result) ?? false))
             return new SchemaValidationFailure(new Dictionary<string, string[]>(), []);
@@ -215,4 +236,5 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
 public sealed class XpsWebRouteException : Exception
 {
     public XpsWebRouteException(string message) : base(message) { }
+    public XpsWebRouteException(string message, Exception innerException) : base(message, innerException) { }
 }
