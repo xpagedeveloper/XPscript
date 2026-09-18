@@ -1,0 +1,29 @@
+name: AI Compiler Machine Interface
+
+on:
+  push:
+    branches:
+      - ai-compiler-machine-interface
+  workflow_dispatch:
+
+jobs:
+  machine-interface:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore XPScriptCompiler.slnx
+
+      - name: Build
+        run: dotnet build XPScriptCompiler.slnx -c Release --no-restore
+
+      - name: Machine interface probe
+        run: dotnet run --project tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release -- .
