@@ -24,6 +24,23 @@ Sub Main()
     If invalidResult.ErrorCount = 0 Then Error 5, "Expected validation errors for invalid JSON"
     If invalidResult.Errors.Count <> invalidResult.ErrorCount Then Error 5, "Expected Errors.Count to match ErrorCount"
     If invalidResult.Json.Stringify() = "" Then Error 5, "Expected validation result JSON"
+    If invalidResult.Errors.Get(0).Get("path") <> "$.age" Then Error 5, "Expected missing required property path"
+    If invalidResult.Errors.Get(0).Get("keyword") <> "required" Then Error 5, "Expected required validation keyword"
+    If invalidResult.IsValid Then Error 5, "Expected IsValid alias to report invalid result"
+    If invalidResult.GetError(0).Get("path") <> "$.age" Then Error 5, "Expected GetError to expose validation error object"
+
+    Dim multiSchema As XPJsonSchema
+    Set multiSchema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string"",""minLength"":3},""age"":{""type"":""integer"",""minimum"":0}},""required"":[""name"",""age""]}")
+    Dim multiJson As XPJsonDocument
+    Set multiJson = XPJsonDocument.Parse("{""name"":""A"",""age"":-1}")
+    Dim multiResult As XPJsonValidationResult
+    Set multiResult = multiSchema.Validate(multiJson)
+    If multiResult.Valid Then Error 5, "Expected multiple property validation failures"
+    If multiResult.ErrorCount <> 2 Then Error 5, "Expected all property validation failures to be collected"
+    If multiResult.Errors.Get(0).Get("path") <> "$.name" Then Error 5, "Expected first property error path"
+    If multiResult.Errors.Get(1).Get("path") <> "$.age" Then Error 5, "Expected second property error path"
+    If multiResult.GetError(0).Get("schemaPath") <> "$.properties.name.minLength" Then Error 5, "Expected nested schema path for name failure"
+    If multiResult.GetError(1).Get("schemaPath") <> "$.properties.age.minimum" Then Error 5, "Expected nested schema path for age failure"
 
     Dim inferred As XPJsonSchema
     Set inferred = XPJsonSchema.FromJson(validJson)
@@ -218,6 +235,12 @@ Sub Main()
     If Not typeArraySchema.IsValid("Ada") Then Error 5, "Expected type array to accept a matching string"
     If Not typeArraySchema.IsValid(Null) Then Error 5, "Expected type array to accept null"
     If typeArraySchema.IsValid(37) Then Error 5, "Expected type array to reject a value matching none of its types"
+
+    Dim integerSemanticsSchema As XPJsonSchema
+    Set integerSemanticsSchema = XPJsonSchema.Parse("{""type"":""integer""}")
+    If Not integerSemanticsSchema.IsValid(1) Then Error 5, "Expected integer type to accept integral values"
+    If Not integerSemanticsSchema.IsValid(1.0) Then Error 5, "Expected integer type to accept numbers with zero fractional part"
+    If integerSemanticsSchema.IsValid(1.5) Then Error 5, "Expected integer type to reject fractional numbers"
 
     Dim dialectSchema As XPJsonSchema
     Set dialectSchema = XPJsonSchema.Parse("{""$schema"":""https://json-schema.org/draft/2020-12/schema""}")
