@@ -5,6 +5,11 @@ var fixture = Path.Combine(AppContext.BaseDirectory, "petstore.yaml");
 var reimportFixture = Path.Combine(AppContext.BaseDirectory, "petstore-reimport.yaml");
 var generator = new XpsOpenApiGenerator();
 var result = generator.GenerateFile(fixture);
+var clientResult = new XpsOpenApiClientGenerator().GenerateFile(fixture);
+if (clientResult.Source.Contains("UIForm", StringComparison.OrdinalIgnoreCase) || clientResult.Source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal))
+    throw new Exception("Generated OpenAPI client must not depend on UIForm runtime.");
+foreach (var marker in new[] { "XPHttpClient", "XPHttpResponse", "XPJsonDocument", "Http.Send(", "Http.SetBearerToken(token)", "Http.SetBasicAuth(username, password)" })
+    if (!clientResult.Source.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated OpenAPI client is missing core API marker: " + marker);
 
 if (result.OpenApiVersion != "3.1.0") throw new Exception("OpenAPI version was not retained.");
 if (result.Operations.Count != 2 || !result.Operations.Contains("GetPet") || !result.Operations.Contains("CreatePet"))
@@ -66,6 +71,11 @@ var root = Path.Combine(Path.GetTempPath(), "xps-openapi-generator-smoke-" + Gui
 Directory.CreateDirectory(root);
 try
 {
+    var clientPath = Path.Combine(root, "petstore-client.xps");
+    await File.WriteAllTextAsync(clientPath, clientResult.Source);
+    var clientCompiler = new XpsWebCompiler();
+    await using (var clientUnit = await clientCompiler.CompileAsync(clientPath, root)) { }
+
     var sourcePath = Path.Combine(root, "petstore.xps");
     await File.WriteAllTextAsync(sourcePath, result.Source);
 
@@ -177,6 +187,8 @@ try
         }
     }
 
+    Console.WriteLine("OPENAPI-CLIENT-CORE-ONLY=OK");
+    Console.WriteLine("OPENAPI-CLIENT-COMPILE=OK");
     Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
     Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
     Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
