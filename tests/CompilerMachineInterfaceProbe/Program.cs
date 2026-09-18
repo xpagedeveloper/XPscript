@@ -1,3 +1,4 @@
+using System.Xml.Serialization;
 using System.Text.Json;
 using XPScript.Compiler;
 
@@ -73,6 +74,19 @@ using (var compatibilityDocument = JsonDocument.Parse(compatibilityJson))
     Require(error.GetProperty("code").GetString() == "value = text", "legacy code source field");
     Require(error.GetProperty("sourceText").GetString() == "value = text", "sourceText alias");
 }
+
+var xmlSerializer = new XmlSerializer(typeof(CompileResult));
+using var xmlWriter = new StringWriter();
+xmlSerializer.Serialize(xmlWriter, CompileResult.Error([legacyDiagnostic]));
+var xml = xmlWriter.ToString();
+Require(xml.Contains("<diagnosticCode>XPS2001</diagnosticCode>", StringComparison.Ordinal), "XML diagnosticCode");
+Require(xml.Contains("<upstreamCode>CS0029</upstreamCode>", StringComparison.Ordinal), "XML upstreamCode");
+Require(xml.Contains("<code>value = text</code>", StringComparison.Ordinal), "XML legacy code source field");
+Require(xml.Contains("<sourceText>value = text</sourceText>", StringComparison.Ordinal), "XML sourceText alias");
+using var xmlReader = new StringReader(xml);
+var xmlRoundTrip = (CompileResult?)xmlSerializer.Deserialize(xmlReader);
+Require(xmlRoundTrip?.Errors.Count == 1, "XML diagnostic round trip");
+Require(xmlRoundTrip.Errors[0].SourceCode == "value = text", "XML source code round trip");
 
 Console.WriteLine("CompilerMachineInterfaceProbe OK");
 return 0;
