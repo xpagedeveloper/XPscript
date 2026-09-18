@@ -7,7 +7,7 @@ public sealed class XPScriptJsonSchema : IXPScriptJsonNodeConvertible
 {
     private readonly System.Text.Json.Nodes.JsonObject _schema;
     public XPScriptJsonSchema() { _schema = new System.Text.Json.Nodes.JsonObject(); }
-    private XPScriptJsonSchema(System.Text.Json.Nodes.JsonObject schema) { _schema = (System.Text.Json.Nodes.JsonObject)schema.DeepClone(); XPScriptNativeJson.ValidateBudget(_schema); }
+    public XPScriptJsonSchema(System.Text.Json.Nodes.JsonObject schema) { _schema = (System.Text.Json.Nodes.JsonObject)schema.DeepClone(); XPScriptNativeJson.ValidateBudget(_schema); }
 
     public static XPScriptJsonSchema Parse(object? value)
     {
