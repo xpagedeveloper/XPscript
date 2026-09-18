@@ -46,6 +46,7 @@ End Sub
 [Post]
 [Route:/api/users]
 [Cors:*]
+[JsonSchema:schemas/create-user.schema.json]
 Sub CreateUser([FromBody] payload As CreateUserRequest)
     Response.OK(payload)
 End Sub
@@ -147,6 +148,7 @@ try
     if (parsed.Routes["GetUser"].RouteTemplate != "/api/users/{id}") throw new Exception("[Route] metadata was not retained.");
     if (parsed.Routes["GetUser"].Cors is null || parsed.Routes["GetUser"].RateLimit is null) throw new Exception("CORS or rate limit metadata was not retained.");
     if (parsed.Routes["CreateUser"].ValidationRules?.Count != 5) throw new Exception("Model validation metadata was not collected.");
+    if (parsed.Routes["CreateUser"].JsonSchema != "schemas/create-user.schema.json") throw new Exception("JSON Schema route metadata was not retained.");
     if (parsed.Routes["BindSources"].ParameterBindings?.Count != 3) throw new Exception("Explicit parameter bindings were not retained.");
     if (parsed.Source.Contains("[FromRoute]", StringComparison.OrdinalIgnoreCase)) throw new Exception("Parameter binding syntax was not stripped before compilation.");
 
