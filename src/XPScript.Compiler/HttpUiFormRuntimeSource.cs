@@ -71,6 +71,7 @@ internal static class XPScriptHttpUiFormHelpers
     public static XPScriptHttpResponse SaveForm(object? clientValue, object? formValue, object? url)
     {
         var form = Form(formValue);
+        EnsureFormDataValid(form, "SaveForm");
         var response = PostJson(clientValue, url, form.Data);
         if (response.IsSuccess) MarkFormClean(form);
         return response;
@@ -79,6 +80,7 @@ internal static class XPScriptHttpUiFormHelpers
     public static XPScriptHttpResponse PutForm(object? clientValue, object? formValue, object? url)
     {
         var form = Form(formValue);
+        EnsureFormDataValid(form, "PutForm");
         var response = PutJson(clientValue, url, form.Data);
         if (response.IsSuccess) MarkFormClean(form);
         return response;
@@ -94,6 +96,15 @@ internal static class XPScriptHttpUiFormHelpers
     {
         if (value.IndexOfAny(['\r', '\n', '\0']) >= 0)
             throw new XPScriptRuntimeException(5, name + " contains a prohibited control character.");
+    }
+
+    private static void EnsureFormDataValid(XPScriptUIForm form, string operation)
+    {
+        var validation = form.ValidateData();
+        if (validation.Valid) return;
+        var paths = validation.FailedPaths;
+        var failed = paths.Count == 0 ? "unknown path" : string.Join(", ", Enumerable.Range(0, paths.Count).Select(index => XPScriptRuntime.CStr(paths.Get(index))));
+        throw new XPScriptRuntimeException(5, $"UIForm.{operation} JSON Schema validation failed: {failed}.");
     }
 
     private static void MarkFormClean(XPScriptUIForm form)
