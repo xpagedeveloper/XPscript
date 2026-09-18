@@ -167,8 +167,7 @@ public sealed class XpsOpenApiClientGenerator
     }
     private static string ResponseSchemaText(JsonObject root, JsonObject schema)
     {
-        var resolved = XpsOpenApiSchema.Resolve(root, schema, "OpenAPI client schema");
-        return resolved.ToJsonString();
+        return XpsOpenApiSchema.StandaloneJsonSchema(root, schema, "OpenAPI client response schema");
     }
     private static void EmitResponseMapping(StringBuilder b, ClientOperation op, Dictionary<string, JsonObject> models)
     {
