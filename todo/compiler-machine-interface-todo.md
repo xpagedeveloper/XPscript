@@ -42,12 +42,12 @@ The CLI must be a consumer of the shared compiler service rather than the only p
 
 ## 2. Versioned compiler result contract
 
-- [ ] Define a stable compiler-result contract.
-- [ ] Add `schema` and `schemaVersion`.
-- [ ] Include compiler version.
-- [ ] Include operation, such as `compile` or `validate`.
+- [x] Define a stable compiler-result contract.
+- [x] Add `schema` and `schemaVersion`.
+- [x] Include compiler version.
+- [x] Include operation, such as `compile` or `validate`.
 - [ ] Include target and entry source where applicable.
-- [ ] Always return a diagnostics collection.
+- [x] Always return a diagnostics collection.
 - [ ] Ensure early failures still produce valid structured output.
 - [ ] Ensure JSON mode never mixes human logging into stdout.
 - [ ] Route non-result logging to stderr where appropriate.
@@ -73,9 +73,9 @@ Target shape:
 ## 3. Stable diagnostic codes
 
 - [ ] Introduce stable diagnostic codes independent of human-readable messages.
-- [ ] Define code ranges after reviewing the current compiler architecture.
-- [ ] Never reuse a code for a different semantic meaning.
-- [ ] Add regression tests protecting diagnostic-code stability.
+- [x] Define code ranges after reviewing the current compiler architecture.
+- [x] Never reuse a code for a different semantic meaning.
+- [x] Add regression tests protecting diagnostic-code stability.
 
 Candidate ranges to investigate:
 
@@ -96,8 +96,8 @@ XPS9xxx internal compiler diagnostics
 - [ ] Support `code`, `severity`, `category` and `message`.
 - [ ] Support file, start line/column and end line/column where available.
 - [ ] Support structured diagnostic properties instead of encoding metadata into `message`.
-- [ ] Standardize severities at least as `error`, `warning` and `info`.
-- [ ] Preserve the same semantic diagnostic across text, JSON and XML representations.
+- [x] Standardize severities at least as `error`, `warning` and `info`.
+- [x] Preserve the same semantic diagnostic across text, JSON and XML representations.
 
 Minimum representation:
 
@@ -207,11 +207,11 @@ schemas/compiler-diagnostic.schema.json
 
 ## 13. Validation-only operation
 
-- [ ] Add or expose validation that performs normal parsing, symbol resolution, type checking, semantic validation and target validation without producing a final executable.
-- [ ] Reuse the normal compiler pipeline.
-- [ ] Do not create a reduced AI parser/type checker.
-- [ ] Ensure diagnostics match normal compilation for equivalent validation failures.
-- [ ] Avoid expensive packaging/publishing work.
+- [x] Add or expose validation that performs normal parsing, symbol resolution, type checking, semantic validation and target validation without producing a final executable.
+- [x] Reuse the normal compiler pipeline.
+- [x] Do not create a reduced AI parser/type checker.
+- [x] Ensure diagnostics match normal compilation for equivalent validation failures.
+- [x] Avoid expensive packaging/publishing work.
 
 Proposed CLI:
 
