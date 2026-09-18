@@ -164,6 +164,41 @@ if (!arrayClient.Contains("payload As XPJsonArray", StringComparison.Ordinal) ||
     !arrayClient.Contains("XPJsonSchema.Parse(", StringComparison.Ordinal))
     throw new Exception("OpenAPI arrays must use XPJsonArray and XPJsonSchema.");
 
+var nullableClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Nullable, version: 1.0.0 }
+paths:
+  /value:
+    post:
+      operationId: nullableValue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: [string, 'null'] }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: [integer, 'null'] }
+""", "nullable.yaml").Source;
+if (!nullableClient.Contains("payload As String", StringComparison.Ordinal) || !nullableClient.Contains("ResponseType = \"Long\"", StringComparison.Ordinal))
+    throw new Exception("OpenAPI 3.1 nullable type unions must preserve their non-null XPScript type.");
+
+var badPathRequired = false;
+try { _ = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: BadPath, version: 1.0.0 }
+paths:
+  /items/{id}:
+    get:
+      parameters:
+        - { name: id, in: path, schema: { type: string } }
+      responses: { '204': { description: ok } }
+"""); } catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("required: true", StringComparison.Ordinal)) { badPathRequired = true; }
+if (!badPathRequired) throw new Exception("OpenAPI path parameters must require required: true.");
+
 var unicodeClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Unicode, version: 1.0.0 }
