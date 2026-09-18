@@ -110,6 +110,8 @@ internal sealed class EscapedQuotePreprocessor
         throw new CompilerException(
             $"{file}({line},{position}): Possible unescaped quote inside String. " +
             "Use \\\" or doubled quotes (\"\") for a literal quote. " +
-            "If the text between quotes is a variable, concatenate it with & or +.");
+            "If the text between quotes is a variable, concatenate it with & or +.",
+            CompilerDiagnosticCodes.UnescapedStringQuote,
+            "syntax");
     }
 }
