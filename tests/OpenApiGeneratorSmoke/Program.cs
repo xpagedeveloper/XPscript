@@ -72,6 +72,55 @@ paths:
 }
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorization header", StringComparison.OrdinalIgnoreCase)) { }
 
+var compositionClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Composition, version: 1.0.0 }
+paths:
+  /choice:
+    post:
+      operationId: choose
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { type: string }
+                - { type: integer }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - { type: string }
+                  - { type: integer }
+""", "composition.yaml").Source;
+if (!compositionClient.Contains("payload As Variant", StringComparison.Ordinal) || !compositionClient.Contains("ResponseType = \"Variant\"", StringComparison.Ordinal))
+    throw new Exception("Mixed oneOf/anyOf schemas must use conservative Variant typing.");
+
+var compositionServer = new XpsOpenApiGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Composition Server, version: 1.0.0 }
+paths:
+  /combined:
+    post:
+      operationId: combined
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { type: object, properties: { a: { type: string } } }
+                - { type: object, properties: { b: { type: integer } } }
+      responses:
+        '200': { description: ok }
+""", "composition-server.yaml").Source;
+if (!compositionServer.Contains("As XPJsonObject", StringComparison.Ordinal))
+    throw new Exception("Object allOf schemas must use XPJsonObject.");
+
 var jsonTypesServer = new XpsOpenApiGenerator().Generate("""
 openapi: 3.1.0
 info: { title: JSON Types Server, version: 1.0.0 }
