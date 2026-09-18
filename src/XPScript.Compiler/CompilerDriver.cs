@@ -53,7 +53,7 @@ public sealed class CompilerDriver
         }
         catch (CompilerException ex)
         {
-            return CompileResult.Error(ParseCompilerDiagnostics(ex.Message, sourcePath, source));
+            return CompileResult.Error(ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category));
         }
         catch (Exception)
         {
@@ -78,7 +78,7 @@ public sealed class CompilerDriver
         }
         catch (CompilerException ex)
         {
-            return CompileResult.Error(ParseCompilerDiagnostics(ex.Message, sourcePath, source));
+            return CompileResult.Error(ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category));
         }
         catch (Exception)
         {
@@ -515,8 +515,19 @@ public sealed class CompilerDriver
         return candidates.Length == 1 ? candidates[0] : null;
     }
 
-    private static List<CompileDiagnostic> ParseCompilerDiagnostics(string message, string sourcePath, string source) =>
-        CompilerDiagnosticParser.Parse(message, sourcePath, source, CompilerDiagnosticMode.Debug);
+    private static List<CompileDiagnostic> ParseCompilerDiagnostics(
+        string message,
+        string sourcePath,
+        string source,
+        string diagnosticCode = "",
+        string category = "") =>
+        CompilerDiagnosticParser.Parse(
+            message,
+            sourcePath,
+            source,
+            CompilerDiagnosticMode.Debug,
+            diagnosticCode,
+            category);
 
     private static string SanitizeBuildDiagnostics(string text, string tempRoot, string sourcePath)
     {
