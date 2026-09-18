@@ -545,6 +545,7 @@ internal static class LSForAllRuntime
     {
         _currentProcedure = null;
         _currentReturnType = null;
+        _currentReturnObjectClass = null;
         _currentProperty = null;
         _procedureKind = ProcedureKind.None;
         _variableTypes.Clear();
