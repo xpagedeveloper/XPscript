@@ -100,6 +100,20 @@ internal sealed class XPScriptJsonValidationResult
     public bool IsValid => Valid;
     public int ErrorCount => _errors.Count;
     public XPScriptJsonArray Errors => new XPScriptJsonArray((System.Text.Json.Nodes.JsonArray)_errors.DeepClone());
+    public XPScriptJsonArray FailedPaths
+    {
+        get
+        {
+            var paths = new System.Text.Json.Nodes.JsonArray();
+            var seen = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
+            foreach (var error in _errors)
+            {
+                if (error is not System.Text.Json.Nodes.JsonObject obj || obj["path"] is not System.Text.Json.Nodes.JsonValue value || !value.TryGetValue<string>(out var path) || !seen.Add(path)) continue;
+                paths.Add(path);
+            }
+            return new XPScriptJsonArray(paths);
+        }
+    }
     public XPScriptJsonObject GetError(object? indexValue)
     {
         var index = XPScriptRuntime.CInt(indexValue);
