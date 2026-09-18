@@ -135,6 +135,7 @@ internal sealed class XPScriptUIForm
     private int? _height;
     private bool _resizable;
     private XPScriptJsonObject _data = XPScriptNativeJson.CreateObject();
+    private XPScriptJsonSchema? _validationSchema;
     private readonly List<XPScriptUIField> _fields = [];
 
     internal XPScriptUIForm(string title, int? width, int? height, bool resizable)
@@ -152,6 +153,21 @@ internal sealed class XPScriptUIForm
     public bool HasExplicitSize => _width.HasValue || _height.HasValue;
     public object Data => _data;
     public int FieldCount => _fields.Count;
+    public bool HasValidationSchema => _validationSchema is not null;
+    public void SetValidationSchema(object? value)
+    {
+        _validationSchema = value switch
+        {
+            XPScriptJsonSchema schema => schema,
+            null => null,
+            _ => throw new XPScriptRuntimeException(13, "UIForm.SetValidationSchema requires an XPJsonSchema or Nothing.")
+        };
+    }
+    public XPScriptJsonValidationResult ValidateData()
+        => _validationSchema is null
+            ? XPScriptJsonSchema.Parse("true").Validate(_data)
+            : _validationSchema.Validate(_data);
+    public bool IsDataValid => ValidateData().Valid;
 
     public void BindData(object? value)
     {
