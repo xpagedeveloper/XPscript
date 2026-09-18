@@ -203,7 +203,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 values = field.Type == "MultiListBox" ? ReadSelectedValues(field.Name) : Array.Empty<string>(),
                 options = field.Options,
                 regionId = field.RegionId,
-                validationError = GetValidationError(field.Name)
+                validationError = string.IsNullOrEmpty(field.ValidationError) ? GetValidationError(field.Name) : field.ValidationError
             }).ToArray(),
             buttons = _buttons.Select(button => new
             {
