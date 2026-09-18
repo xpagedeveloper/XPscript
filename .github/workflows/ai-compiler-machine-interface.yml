@@ -64,5 +64,5 @@ jobs:
       - name: Validate JSON Schema
         shell: pwsh
         run: |
-          dotnet tool install --global dotnet-jsonschema
-          jsonschema validate schemas/compiler-result.schema.json compiler-result.actual.json
+          python -m pip install --disable-pip-version-check jsonschema==4.25.1
+          python -m jsonschema -i compiler-result.actual.json schemas/compiler-result.schema.json
