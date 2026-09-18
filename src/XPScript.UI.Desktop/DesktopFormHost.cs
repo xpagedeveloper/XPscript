@@ -154,6 +154,16 @@ public static class DesktopFormHost
                         ToolTip.SetTip(editor, text.Length == 0 ? null : text);
                     }
                     if (fieldLabels.TryGetValue(name, out var label) && state.TryGetProperty("label", out var labelElement)) label.Text = labelElement.GetString() ?? string.Empty;
+                    if (state.TryGetProperty("validationError", out var validationErrorElement))
+                    {
+                        var validationError = validationErrorElement.GetString() ?? string.Empty;
+                        if (fieldValidationTexts.TryGetValue(name, out var errorText))
+                        {
+                            errorText.Text = validationError;
+                            errorText.IsVisible = validationError.Length > 0;
+                        }
+                        DesktopAccessibilityHost.SetValidationError(editor, validationError.Length == 0 ? null : validationError);
+                    }
 
                     var options = state.TryGetProperty("options", out var optionsElement) && optionsElement.ValueKind == JsonValueKind.Array
                         ? optionsElement.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray()
