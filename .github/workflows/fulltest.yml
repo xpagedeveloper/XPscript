@@ -171,10 +171,23 @@ jobs:
           ! grep -qi 'UIForm' ./out/generated-openapi-client.xps
       - name: Compile generated OpenAPI API consumer
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi-client.xps -o ./out/generated-openapi-client --runtime=false
-      - name: Verify OpenAPI unified CLI generate
-        run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./tests/OpenApiGeneratorSmoke/petstore.yaml -o ./out/generated-openapi.xps --force
-      - name: Verify OpenAPI unified CLI import
-        run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi import ./tests/OpenApiGeneratorSmoke/petstore-reimport.yaml -o ./out/generated-openapi.xps
+      - name: Verify OpenAPI REST server generate and compile
+        shell: bash
+        run: |
+          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./tests/OpenApiGeneratorSmoke/petstore.yaml -o ./out/generated-openapi.xps --force
+          test -f ./out/generated-openapi.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi.xps -o ./out/generated-openapi-server --runtime=false
+      - name: Verify OpenAPI REST server import and compile
+        shell: bash
+        run: |
+          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi import ./tests/OpenApiGeneratorSmoke/petstore-reimport.yaml -o ./out/generated-openapi.xps
+          test -f ./out/generated-openapi.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi.xps -o ./out/imported-openapi-server --runtime=false
+      - name: Verify OpenAPI JSON REST server generate and compile
+        shell: bash
+        run: |
+          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./tests/OpenApiGeneratorSmoke/petstore.json -o ./out/generated-openapi-json.xps --force
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi-json.xps -o ./out/generated-openapi-json-server --runtime=false
       - name: Compile ordinary application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --runtime=false
       - name: Verify generated license notice
