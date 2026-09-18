@@ -12,6 +12,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             generated.Contains("showValidationErrors = form.ShowValidationErrors", StringComparison.Ordinal) &&
             generated.Contains("showDefaultButtons = form.ShowDefaultButtons", StringComparison.Ordinal) &&
             generated.Contains("gridColumns = form.GridColumns", StringComparison.Ordinal) &&
+            generated.Contains("hasValidationSchema = form.HasValidationSchema", StringComparison.Ordinal) &&
             generated.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal) &&
             generated.Contains("placeholder = field.Placeholder", StringComparison.Ordinal) &&
             generated.Contains("tooltip = field.Tooltip", StringComparison.Ordinal) &&
