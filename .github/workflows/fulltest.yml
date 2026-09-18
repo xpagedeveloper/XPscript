@@ -168,6 +168,9 @@ jobs:
           grep -q 'Public Class ClientCIApi' ./out/generated-openapi-client.xps
           grep -q 'XPJsonSchema.Parse' ./out/generated-openapi-client.xps
           grep -q 'XPJsonArray' ./out/generated-openapi-client.xps
+          grep -q 'Public Class ItemChoice' ./out/generated-openapi-client.xps
+          grep -q 'Public Class ItemEnvelope' ./out/generated-openapi-client.xps
+          grep -q 'Public Class ItemState' ./out/generated-openapi-client.xps
           ! grep -qi 'UIForm' ./out/generated-openapi-client.xps
       - name: Compile generated OpenAPI API consumer
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi-client.xps -o ./out/generated-openapi-client --runtime=false
