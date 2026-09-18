@@ -22,6 +22,15 @@ internal sealed class NativeHttpJsonPreprocessor
             var dim = Regex.Match(line, $@"^Dim\s+([A-Za-z_]\w*)\s+As\s+({NativeTypePattern})\s*$", RegexOptions.IgnoreCase);
             if (dim.Success) { var name = dim.Groups[1].Value; var type = dim.Groups[2].Value; nativeVariables.Add(name); nativeTypes[name] = type; output.Add(indent + $"Dim {name} As Variant"); continue; }
 
+            // Public XP runtime objects are implemented behind the native preprocessor and therefore
+            // use Variant storage when they appear as class fields as well as local variables.
+            var field = Regex.Match(line, $@"^(Public|Private)\s+([A-Za-z_]\w*)\s+As\s+({NativeTypePattern})\s*$", RegexOptions.IgnoreCase);
+            if (field.Success)
+            {
+                output.Add(indent + $"{field.Groups[1].Value} {field.Groups[2].Value} As Variant");
+                continue;
+            }
+
             var rewritten = line;
             rewritten = Regex.Replace(rewritten, @"\bXPJsonDocument\.Parse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.Parse\s*\(", "XPScriptJsonSchema.Parse(", RegexOptions.IgnoreCase);
