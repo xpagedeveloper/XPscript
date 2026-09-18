@@ -82,7 +82,8 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
                 webViewHtml = field.WebViewHtml,
                 webViewUserAgent = field.WebViewUserAgent,
                 webViewBackground = field.WebViewBackground,
-                regexPattern = field.RegexPattern
+                regexPattern = field.RegexPattern,
+                schemaValidationError = form.GetValidationError(field.Name)
             }).ToArray(),
             buttons = form.Buttons.Select(button => new
             {
