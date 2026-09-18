@@ -54,6 +54,12 @@ internal static class XpsOpenApiSchema
         };
     }
 
+    internal static bool IsObjectType(JsonObject root, JsonObject schema, string context)
+    {
+        var type = XpsType(root, schema, context);
+        return type is "XPJsonArray" or "XPJsonObject" || ReadString(schema, "$ref") is not null;
+    }
+
     internal static string ReferenceTypeName(string reference, string context)
     {
         if (!reference.StartsWith("#/components/schemas/", StringComparison.Ordinal))
