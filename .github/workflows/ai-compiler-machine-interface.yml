@@ -61,6 +61,35 @@ jobs:
           if (-not $json.compilerVersion) { throw "Missing compilerVersion" }
           if (-not ($json.errors | Where-Object { $_.diagnosticCode -eq 'XPS2001' })) { throw "Missing XPS2001 diagnostic" }
 
+      - name: Verify machine stdout and stderr separation
+        shell: pwsh
+        run: |
+          $psi = [System.Diagnostics.ProcessStartInfo]::new()
+          $psi.FileName = 'dotnet'
+          $psi.ArgumentList.Add('run')
+          $psi.ArgumentList.Add('--project')
+          $psi.ArgumentList.Add('src/XPScript.Compiler/XPScript.Compiler.csproj')
+          $psi.ArgumentList.Add('-c')
+          $psi.ArgumentList.Add('Release')
+          $psi.ArgumentList.Add('--no-build')
+          $psi.ArgumentList.Add('--')
+          $psi.ArgumentList.Add('compile')
+          $psi.ArgumentList.Add('samples/null-integer-assignment-error.xps')
+          $psi.ArgumentList.Add('--result-format')
+          $psi.ArgumentList.Add('json')
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $psi.UseShellExecute = $false
+          $process = [System.Diagnostics.Process]::Start($psi)
+          $stdout = $process.StandardOutput.ReadToEnd()
+          $stderr = $process.StandardError.ReadToEnd()
+          $process.WaitForExit()
+          if ($process.ExitCode -ne 2) { throw "Expected compile exit code 2, got $($process.ExitCode)" }
+          $json = $stdout | ConvertFrom-Json
+          if ($json.schema -ne 'xpscript.compiler-result') { throw "stdout is not a compiler result" }
+          if ($stdout -match 'Started to compile|Compilation failed for|Compiled .* in') { throw "Human progress leaked into stdout" }
+          if ($stderr -notmatch 'Started to compile') { throw "Expected human progress on stderr" }
+
       - name: Validate JSON Schema
         shell: pwsh
         run: |
