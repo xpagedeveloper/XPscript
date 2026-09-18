@@ -26,6 +26,8 @@ var generatedCodeCase = Path.Combine(root, "samples", "include-source-map", "gen
 var generatedValidation = await driver.ValidateWithResultAsync(generatedCodeCase);
 Require(!generatedValidation.Success, "generated C# validation must fail");
 Require(generatedValidation.Operation == "validate", "generated C# validation operation");
+Require(generatedValidation.Target == CompilerDriver.CurrentRuntimeIdentifier(), "generated C# validation target");
+Require(generatedValidation.Source?.EntryPoint == "generated-csharp-error.xps", "generated C# validation entry source");
 Require(generatedValidation.Output is null, "generated C# validation must not produce output");
 Require(generatedValidation.Errors.Any(d => d.DiagnosticCode == "XPS2008"), "generated C# validation missing XPS2008");
 Require(generatedValidation.Errors.Any(d => d.UpstreamCode == "CS0103"), "generated C# validation missing CS0103 upstream code");
