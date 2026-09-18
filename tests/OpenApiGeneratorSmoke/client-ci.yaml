@@ -12,6 +12,23 @@ components:
       properties:
         id: { type: integer, format: int64 }
         name: { type: string }
+    ItemState:
+      type: string
+      enum: [new, active, archived]
+    NullableLabel:
+      type: [string, "null"]
+    ItemChoice:
+      oneOf:
+        - $ref: '#/components/schemas/Item'
+        - $ref: '#/components/schemas/Error'
+    ItemEnvelope:
+      allOf:
+        - type: object
+          properties:
+            source: { type: string }
+        - type: object
+          properties:
+            item: { $ref: '#/components/schemas/Item' }
     Error:
       type: object
       properties:
