@@ -129,12 +129,19 @@ internal static class XPScriptJsonSchemaValidator
     {
         var errors = new System.Text.Json.Nodes.JsonArray();
         var node = XPScriptNativeJson.ToNode(value);
-        ValidateNode(schema, node, "$", "$", errors, 0);
+        ValidateNode(schema, node, "$", "$", errors, 0, schema);
         return new XPScriptJsonValidationResult(errors);
     }
 
-    private static void ValidateNode(System.Text.Json.Nodes.JsonObject schema, System.Text.Json.Nodes.JsonNode? node, string path, string schemaPath, System.Text.Json.Nodes.JsonArray errors, int depth)
+    private static void ValidateNode(System.Text.Json.Nodes.JsonObject schema, System.Text.Json.Nodes.JsonNode? node, string path, string schemaPath, System.Text.Json.Nodes.JsonArray errors, int depth, System.Text.Json.Nodes.JsonObject? root = null)
     {
+        root ??= schema;
+        if (schema["$ref"] is System.Text.Json.Nodes.JsonValue refValue && refValue.TryGetValue<string>(out var reference) && reference.StartsWith("#/$defs/", StringComparison.Ordinal) && root["$defs"] is System.Text.Json.Nodes.JsonObject defs)
+        {
+            var key = reference["#/$defs/".Length..].Replace("~1", "/").Replace("~0", "~");
+            if (defs[key] is System.Text.Json.Nodes.JsonObject target) { ValidateNode(target, node, path, reference, errors, depth + 1, root); return; }
+            Add(errors, path, schemaPath, "$ref", "Schema reference was not found.", reference, "missing"); return;
+        }
         if (depth > 64) { Add(errors, path, SchemaChild(schemaPath, "depth"), "depth", "Validation nesting exceeds 64 levels.", "<= 64", depth.ToString()); return; }
         if (!MatchesTypeKeyword(node, schema["type"], out var expectedType)) { Add(errors, path, SchemaChild(schemaPath, "type"), "type", "Value does not match the required JSON type.", expectedType, ActualType(node)); return; }
 
@@ -181,7 +188,7 @@ internal static class XPScriptJsonSchemaValidator
                 foreach (var dependency in dependentSchemas)
                     if (obj.ContainsKey(dependency.Key) && dependency.Value is System.Text.Json.Nodes.JsonObject dependentSchema)
                         ValidateNode(dependentSchema, obj, path, SchemaChild(SchemaChild(schemaPath, "dependentSchemas"), dependency.Key), errors, depth + 1);
-            if (properties is not null) foreach (var property in properties) if (property.Value is System.Text.Json.Nodes.JsonObject childSchema && obj.TryGetPropertyValue(property.Key, out var child)) ValidateNode(childSchema, child, Child(path, property.Key), SchemaChild(SchemaChild(schemaPath, "properties"), property.Key), errors, depth + 1);
+            if (properties is not null) foreach (var property in properties) if (property.Value is System.Text.Json.Nodes.JsonObject childSchema && obj.TryGetPropertyValue(property.Key, out var child)) ValidateNode(childSchema, child, Child(path, property.Key), SchemaChild(SchemaChild(schemaPath, "properties"), property.Key), errors, depth + 1, root);
             if (patternProperties is not null)
                 foreach (var pattern in patternProperties)
                     if (pattern.Value is System.Text.Json.Nodes.JsonObject patternSchema)
