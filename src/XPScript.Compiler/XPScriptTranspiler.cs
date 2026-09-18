@@ -134,7 +134,7 @@ public sealed partial class XPScriptTranspiler
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + FileIoExtensionsRuntimeSource.Code + "\n";
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
-        if (runtimeFeatures.RequiresHttp) { generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n"; generated += "\n\n" + AsyncHttpRuntimeSource.Code + "\n"; }
+        if (runtimeFeatures.RequiresHttp) { generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n"; generated += "\n\n" + HttpCoreRuntimeSource.Code + "\n"; generated += "\n\n" + AsyncHttpRuntimeSource.Code + "\n"; }
         if (runtimeFeatures.Ui) generated += "\n\n" + UIExtensionRuntimeSource.Code + "\n";
         if (runtimeFeatures.RequiresHttp && runtimeFeatures.Ui) generated += "\n\n" + HttpUiFormRuntimeSource.Code + "\n";
         if (runtimeFeatures.Database) generated += "\n\n" + CaseInsensitiveDynamicObjectRuntimeSource.Code + "\n";
