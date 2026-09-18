@@ -22,6 +22,8 @@ internal static class CompilerDiagnosticParser
             var pos = match.Groups["pos"].Success ? int.Parse(match.Groups["pos"].Value) : 1;
             var diagnosticSource = match.Groups["file"].Value.Trim();
             var code = DiagnosticSourceLine(sourcePath, source, diagnosticSource, line);
+            var upstreamCode = match.Groups["id"].Value;
+            var classification = CompilerDiagnosticClassifier.ClassifyUpstream(upstreamCode, sourceMapped: true);
             result.Add(new CompileDiagnostic
             {
                 File = DiagnosticFileName(diagnosticSource),
@@ -30,10 +32,12 @@ internal static class CompilerDiagnosticParser
                 Description = Humanize(match.Groups["desc"].Value.Trim()),
                 SourceCode = code,
                 MarkedCode = Mark(code, pos),
-                DiagnosticCode = diagnosticCode,
-                UpstreamCode = match.Groups["id"].Value,
+                DiagnosticCode = string.IsNullOrWhiteSpace(diagnosticCode) ? classification.DiagnosticCode ?? "" : diagnosticCode,
+                UpstreamCode = upstreamCode,
                 Severity = match.Groups["severity"].Success ? match.Groups["severity"].Value : "error",
-                Category = string.IsNullOrWhiteSpace(category) ? "compiler" : category
+                Category = !string.IsNullOrWhiteSpace(category)
+                    ? category
+                    : classification.Category ?? "compiler"
             });
         }
 
