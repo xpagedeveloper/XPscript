@@ -110,6 +110,7 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `JsonValidationResult.ErrorCount` | `result.ErrorCount` | none | Number of validation errors. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.GetError` | `result.GetError(index)` | Zero-based validation error index. | Returns one validation error as XPJsonObject with path, schemaPath, keyword, message, expected, and actual fields. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.Errors` | `result.Errors` | none | Returns validation errors as XPJsonArray. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
+| `JsonValidationResult.FailedPaths` | `result.FailedPaths` | none | Returns the unique failing data paths as XPJsonArray in validation error order. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 | `JsonValidationResult.Json` | `result.Json` | none | Returns the complete validation result as XPJsonDocument. | [xpjsonschema-runtime.xps](../samples/xpjsonschema-runtime.xps) |
 
 

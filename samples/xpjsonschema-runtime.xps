@@ -41,6 +41,9 @@ Sub Main()
     If multiResult.Errors.Get(1).Get("path") <> "$.age" Then Error 5, "Expected second property error path"
     If multiResult.GetError(0).Get("schemaPath") <> "$.properties.name.minLength" Then Error 5, "Expected nested schema path for name failure"
     If multiResult.GetError(1).Get("schemaPath") <> "$.properties.age.minimum" Then Error 5, "Expected nested schema path for age failure"
+    If multiResult.FailedPaths.Count <> 2 Then Error 5, "Expected two unique failed data paths"
+    If multiResult.FailedPaths.Get(0) <> "$.name" Then Error 5, "Expected first failed data path"
+    If multiResult.FailedPaths.Get(1) <> "$.age" Then Error 5, "Expected second failed data path"
 
     Dim inferred As XPJsonSchema
     Set inferred = XPJsonSchema.FromJson(validJson)
