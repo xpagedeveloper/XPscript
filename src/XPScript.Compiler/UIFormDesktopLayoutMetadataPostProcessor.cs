@@ -45,6 +45,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             showValidationErrors = form.ShowValidationErrors,
             showDefaultButtons = form.ShowDefaultButtons,
             gridColumns = form.GridColumns,
+            hasValidationSchema = form.HasValidationSchema,
             fields = fields.Select(field => new
             {
                 name = field.Name,
