@@ -100,6 +100,52 @@ public sealed class CompilerDriver
         }
     }
 
+    public async Task<CompileResult> ValidateWithResultAsync(string sourcePath) =>
+        await ValidateWithResultAsync(sourcePath, CurrentRuntimeIdentifier());
+
+    public async Task<CompileResult> ValidateWithResultAsync(string sourcePath, string runtimeIdentifier)
+    {
+        string source = "";
+        try
+        {
+            if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceExtensionInvalid, "configuration")]).WithOperation("validate");
+
+            if (!File.Exists(sourcePath))
+                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]).WithOperation("validate");
+
+            var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
+            source = await File.ReadAllTextAsync(sourcePath);
+            var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
+            var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
+            var expandedSource = managedReferences.Source;
+            var nativeDependencies = new NativeDependencyPackager(rid).Collect(expandedSource, includeResult.Map, sourcePath);
+            ValidateNativeDependencies(sourcePath, nativeDependencies);
+            ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
+
+            var transpiler = new XPScriptTranspiler();
+            using (ExpandedSourceContext.Begin(expandedSource, sourcePath, includeResult.Map))
+                _ = transpiler.Transpile(expandedSource, sourcePath, rid);
+
+            return CompileResult.Valid();
+        }
+        catch (CompilerException ex)
+        {
+            if (ex.GeneratedDiagnostics.Count > 0 &&
+                ex.GeneratedDiagnostics.Any(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)))
+                return CompileResult.Error(ex.GeneratedDiagnostics).WithOperation("validate");
+
+            var diagnostics = ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category);
+            if (CompilerDiagnosticMode.Debug && ex.GeneratedDiagnostics.Count > 0)
+                diagnostics.AddRange(ex.GeneratedDiagnostics);
+            return CompileResult.Error(diagnostics).WithOperation("validate");
+        }
+        catch (Exception)
+        {
+            return CompileResult.Error([CreateDiagnostic(0, 0, "Validation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithOperation("validate");
+        }
+    }
+
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained) =>
         await CompileAsync(sourcePath, outputPath, selfContained, CurrentRuntimeIdentifier());
 
