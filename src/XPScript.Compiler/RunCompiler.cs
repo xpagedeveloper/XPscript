@@ -19,9 +19,9 @@ internal static class RunCompiler
         try
         {
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-                return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "XPScript source files must use the .xps extension." }]);
+                return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "XPScript source files must use the .xps extension.", DiagnosticCode = CompilerDiagnosticCodes.SourceExtensionInvalid, Category = "configuration" }]);
             if (!File.Exists(sourcePath))
-                return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]);
+                return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found.", DiagnosticCode = CompilerDiagnosticCodes.SourceFileNotFound, Category = "configuration" }]);
 
             source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
             var runnable = await CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, debug, cancellationToken).ConfigureAwait(false);
@@ -39,7 +39,9 @@ internal static class RunCompiler
             return CompileResult.Error([new CompileDiagnostic
             {
                 File = Path.GetFileName(sourcePath),
-                Description = debug ? "Run compilation failed: " + ex : "Run compilation failed: " + ex.Message
+                Description = debug ? "Run compilation failed: " + ex : "Run compilation failed: " + ex.Message,
+                DiagnosticCode = CompilerDiagnosticCodes.InternalCompilationFailed,
+                Category = "compiler"
             }]);
         }
     }
@@ -188,7 +190,9 @@ internal static class RunCompiler
                 File = "Program.cs",
                 Line = int.Parse(match.Groups["line"].Value),
                 Position = int.Parse(match.Groups["pos"].Value),
-                Description = $"{match.Groups["id"].Value}: {match.Groups["desc"].Value.Trim()}"
+                Description = match.Groups["desc"].Value.Trim(),
+                UpstreamCode = match.Groups["id"].Value,
+                Category = "code-generation"
             });
         }
         return result;
