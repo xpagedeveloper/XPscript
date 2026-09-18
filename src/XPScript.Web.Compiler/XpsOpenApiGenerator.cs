@@ -192,7 +192,7 @@ public sealed class XpsOpenApiGenerator
                 throw new XpsOpenApiGenerationException($"Parameter '{name}' uses unsupported location '{location}'. Supported locations are path, query and header.");
             if (parameter["schema"] is not JsonObject schema)
                 throw new XpsOpenApiGenerationException($"Parameter '{name}' in {context} must declare a schema.");
-            var type = GetXpsType(root, schema, $"parameter '{name}'");
+            var type = new XpsType(XpsOpenApiSchema.XpsType(root, schema, $"parameter '{name}'"), XpsOpenApiSchema.IsObjectType(root, schema, $"parameter '{name}'"));
             result.Add(new ParameterModel(name, location, type.TypeName, type.IsObject, ReadBoolean(parameter, "required")));
         }
         return result;
@@ -443,29 +443,6 @@ public sealed class XpsOpenApiGenerator
         foreach (var pair in content)
             if (pair.Key.EndsWith("+json", StringComparison.OrdinalIgnoreCase) && pair.Value is JsonObject media) return media;
         return null;
-    }
-
-    private static XpsType GetXpsType(JsonObject root, JsonObject schema, string context)
-    {
-        if (TryGetReference(schema, out var reference))
-        {
-            _ = ResolveObject(root, schema, context);
-            return new XpsType(ReferenceTypeName(reference, context), true);
-        }
-        var resolved = ResolveObject(root, schema, context);
-        var type = GetPrimaryType(resolved);
-        var format = ReadString(resolved, "format")?.ToLowerInvariant();
-        return type switch
-        {
-            "integer" => new XpsType(format == "int32" ? "Integer" : "Long", false),
-            "number" => new XpsType(format == "float" ? "Single" : "Double", false),
-            "boolean" => new XpsType("Boolean", false),
-            "string" => new XpsType(format is "date" or "date-time" ? "Date" : "String", false),
-            "array" => new XpsType("XPJsonArray", true),
-            "object" => new XpsType("XPJsonObject", true),
-            null => new XpsType("Variant", false),
-            _ => throw new XpsOpenApiGenerationException($"{context} uses unsupported schema type '{type}'.")
-        };
     }
 
     private static string? GetPrimaryType(JsonObject schema)
