@@ -67,6 +67,17 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase)
             ?? throw new XpsWebRouteException($"Exported route procedure '{procedureName}' was not found in the compiled unit.");
 
+        if (descriptor.JsonSchema is not null)
+        {
+            var schemaErrors = ValidateJsonSchemaWithXpRuntime(assembly, context, descriptor.JsonSchema);
+            if (schemaErrors.Count > 0)
+            {
+                XpsWebResponseRestExtensions.Problem(context.Response, 400, "JSON Schema validation failed", "The request body does not satisfy the route XPJsonSchema.", schemaErrors);
+                if (!context.Response.Completed) XpsWebSecurity.ApplyResponseSecurityHeaders(context.Response);
+                return;
+            }
+        }
+
         if (!XpsRestBinder.TryBind(method, context, descriptor, out var arguments, out var errors))
         {
             if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal))
@@ -104,6 +115,45 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
             throw;
         }
+    }
+
+    private static IReadOnlyDictionary<string, string[]> ValidateJsonSchemaWithXpRuntime(Assembly assembly, XpsWebContext context, string schemaPath)
+    {
+        var root = Path.GetFullPath(context.Server.RootPath);
+        var candidate = Path.GetFullPath(Path.Combine(root, schemaPath.Replace('/', Path.DirectorySeparatorChar)));
+        var relative = Path.GetRelativePath(root, candidate);
+        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || !File.Exists(candidate))
+            return new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [$"XPJsonSchema '{schemaPath}' was not found inside the web root."] };
+
+        var schemaType = assembly.GetType("XPScriptJsonSchema", throwOnError: false, ignoreCase: false)
+            ?? throw new XpsWebRouteException("XPJsonSchema runtime was not included in the compiled web unit.");
+        var parse = schemaType.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public)
+            ?? throw new XpsWebRouteException("XPJsonSchema.Parse was not found in the compiled web unit.");
+        var schema = parse.Invoke(null, [File.ReadAllText(candidate)])
+            ?? throw new XpsWebRouteException("XPJsonSchema.Parse returned no schema.");
+        var validate = schemaType.GetMethod("Validate", BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new XpsWebRouteException("XPJsonSchema.Validate was not found in the compiled web unit.");
+        var result = validate.Invoke(schema, [context.Request.BodyText])
+            ?? throw new XpsWebRouteException("XPJsonSchema.Validate returned no result.");
+        var resultType = result.GetType();
+        if ((bool)(resultType.GetProperty("Valid")?.GetValue(result) ?? false)) return new Dictionary<string, string[]>();
+
+        var errors = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var count = (int)(resultType.GetProperty("ErrorCount")?.GetValue(result) ?? 0);
+        var getError = resultType.GetMethod("GetError", BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new XpsWebRouteException("XPJsonValidationResult.GetError was not found.");
+        for (var i = 0; i < count; i++)
+        {
+            var error = getError.Invoke(result, [i]);
+            if (error is null) continue;
+            var get = error.GetType().GetMethod("Get", BindingFlags.Instance | BindingFlags.Public);
+            if (get is null) continue;
+            var path = Convert.ToString(get.Invoke(error, ["path"]), System.Globalization.CultureInfo.InvariantCulture) ?? "$";
+            var message = Convert.ToString(get.Invoke(error, ["message"]), System.Globalization.CultureInfo.InvariantCulture) ?? "JSON Schema validation failed.";
+            if (!errors.TryGetValue(path, out var messages)) errors[path] = messages = [];
+            messages.Add(message);
+        }
+        return errors.ToDictionary(x => x.Key, x => x.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
     }
 
     private static object? TaskResult(Task task)
