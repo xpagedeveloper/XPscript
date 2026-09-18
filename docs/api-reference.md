@@ -287,6 +287,10 @@ See [UIForm](uiform.md) and [extended fields](uiform-fields.md).
 |---|---|---|---|---|
 | `UIForm` | `New UIForm(title)` | form title. | Creates shared desktop/web/browser form. | [customer-form.xps](../demo/desktop-ui/customer-form.xps) |
 | `BindData` | `form.BindData(data)` | `XPJsonObject` or object-root `XPJsonDocument`. | Binds form values to JSON data. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `SetValidationSchema` | `form.SetValidationSchema(schema)` | `XPJsonSchema` or `Nothing`. | Sets or clears JSON Schema validation for the bound form data. Without a schema, form JSON data is valid by default. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `HasValidationSchema` | `form.HasValidationSchema` | none. | True when an `XPJsonSchema` is attached to the form. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `ValidateData` | `form.ValidateData()` | none. | Returns `XPJsonValidationResult` for the bound JSON data. Returns a valid result when no schema is attached. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `IsDataValid` | `form.IsDataValid` | none. | Boolean convenience property for form JSON Schema validation; True when no schema is attached. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `AddTextField` | `form.AddTextField(name, label)` | binding name and display label. | Adds text input. | [customer-form.xps](../demo/desktop-ui/customer-form.xps) |
 | `AddTextArea` | `form.AddTextArea(name, label)` | name and label. | Adds multiline text input. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `AddNumberField` | `form.AddNumberField(name, label)` | name and label. | Adds numeric field. | [ui-form-core.xps](../samples/ui-form-core.xps) |
