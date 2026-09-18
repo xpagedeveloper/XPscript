@@ -269,7 +269,8 @@ try
         }
     }
 
-    Console.WriteLine("OPENAPI-CLIENT-SECURITY=OK");\n    Console.WriteLine("OPENAPI-CLIENT-CORE-ONLY=OK");
+    Console.WriteLine("OPENAPI-CLIENT-SECURITY=OK");
+    Console.WriteLine("OPENAPI-CLIENT-CORE-ONLY=OK");
     Console.WriteLine("OPENAPI-CLIENT-COMPILE=OK");
     Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
     Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
