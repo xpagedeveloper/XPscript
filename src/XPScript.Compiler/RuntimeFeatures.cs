@@ -39,7 +39,7 @@ internal readonly record struct RuntimeFeatures(
                       "NotesJSONObject", "NotesJSONArray", "NotesJSONElement") ||
                   PreprocessorFeatureGate.ContainsCall(
                       code, "XPJsonDocument.Parse", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode"),
-            JsonSchema: jsonSchema,
+            JsonSchema: jsonSchema || PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm"),
             Xml: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPXml") ||
                  PreprocessorFeatureGate.ContainsCall(code, "XPXmlDocument.Parse", "XmlParse", "XmlStringify", "XmlEscape"),
             Csv: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPCsv") ||
