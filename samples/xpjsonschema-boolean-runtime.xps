@@ -57,8 +57,8 @@ Sub Main()
 
     Dim builderPropertiesSchema As New XPJsonSchema
     builderPropertiesSchema.Type = "object"
-    Dim builderProperties As New XPJsonDocument
-    Call builderProperties.Set("forbidden", False)
+    Dim builderProperties As XPJsonDocument
+    Set builderProperties = XPJsonDocument.Parse("{""forbidden"":false}")
     Call builderPropertiesSchema.Set("properties", builderProperties)
     Dim builderForbiddenObject As XPJsonDocument
     Set builderForbiddenObject = XPJsonDocument.Parse("{""forbidden"":123}")
