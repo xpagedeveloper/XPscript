@@ -199,7 +199,7 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "                tabIndex = field.TabIndex,",
                 "                accessKey = field.AccessKey,",
                 "                hotKey = field.HotKey,",
-                "                validationError = field.ValidationError,",
+                "                validationError = string.IsNullOrEmpty(field.ValidationError) ? form.GetValidationError(field.Name) : field.ValidationError,",
                 string.Empty));
 
         generated = ReplaceOnceRequired(
