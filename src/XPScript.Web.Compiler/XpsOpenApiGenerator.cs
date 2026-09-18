@@ -241,7 +241,7 @@ public sealed class XpsOpenApiGenerator
             return new RequestBodyModel(modelName, true, ReadBoolean(requestBody, "required"), schema);
         }
 
-        var scalarType = GetXpsType(root, schema, context);
+        var scalarType = new XpsType(XpsOpenApiSchema.XpsType(root, schema, context), XpsOpenApiSchema.IsObjectType(root, schema, context));
         return new RequestBodyModel(scalarType.TypeName, scalarType.IsObject, ReadBoolean(requestBody, "required"), schema);
     }
 
@@ -314,7 +314,7 @@ public sealed class XpsOpenApiGenerator
             var fieldName = ValidateModelMemberName(property.Key, name);
             if (property.Value is not JsonObject propertySchema)
                 throw new XpsOpenApiGenerationException($"Schema '{name}' property '{property.Key}' must be an object.");
-            var fieldType = GetXpsType(root, propertySchema, $"schema '{name}' property '{property.Key}'");
+            var fieldType = new XpsType(XpsOpenApiSchema.XpsType(root, propertySchema, $"schema '{name}' property '{property.Key}'"), XpsOpenApiSchema.IsObjectType(root, propertySchema, $"schema '{name}' property '{property.Key}'"));
             if (required.Contains(property.Key)) builder.AppendLine("    [Required]");
             var resolvedProperty = ResolveObject(root, propertySchema, $"schema '{name}' property '{property.Key}'");
             if (ReadString(resolvedProperty, "format")?.Equals("email", StringComparison.OrdinalIgnoreCase) == true)
@@ -485,7 +485,7 @@ public sealed class XpsOpenApiGenerator
     private static string DescribeSchemaType(JsonObject root, JsonObject schema, string context)
     {
         if (TryGetReference(schema, out var reference)) return ReferenceTypeName(reference, context);
-        var type = GetXpsType(root, schema, context).TypeName;
+        var type = XpsOpenApiSchema.XpsType(root, schema, context);
         return type;
     }
 
