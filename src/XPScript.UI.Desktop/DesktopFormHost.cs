@@ -54,7 +54,7 @@ public static class DesktopFormHost
         var fieldPanels = new Dictionary<string, StackPanel>(StringComparer.OrdinalIgnoreCase);
         var fieldLabels = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
         var fieldValidationTexts = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
-        var currentValidationErrors = request.Fields.ToDictionary(field => field.Name, field => field.ValidationError, StringComparer.OrdinalIgnoreCase);
+        var currentValidationErrors = request.Fields.ToDictionary(field => field.Name, field => field.ValidationError.Length > 0 ? field.ValidationError : field.SchemaValidationError, StringComparer.OrdinalIgnoreCase);
         var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var customButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
@@ -89,11 +89,12 @@ public static class DesktopFormHost
                 FontSize = 12
             };
             fieldValidationTexts[field.Name] = fieldValidation;
-            if (field.ValidationError.Length > 0)
+            var initialValidationError = field.ValidationError.Length > 0 ? field.ValidationError : field.SchemaValidationError;
+            if (initialValidationError.Length > 0)
             {
-                fieldValidation.Text = field.ValidationError;
+                fieldValidation.Text = initialValidationError;
                 fieldValidation.IsVisible = true;
-                DesktopAccessibilityHost.SetValidationError(editor, field.ValidationError);
+                DesktopAccessibilityHost.SetValidationError(editor, initialValidationError);
             }
             fieldPanel.Children.Add(fieldValidation);
 
