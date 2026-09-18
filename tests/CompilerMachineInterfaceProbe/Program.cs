@@ -50,6 +50,30 @@ foreach (var test in cases)
     Require(jsonDiagnostic.GetProperty("sourceText").GetString() == jsonDiagnostic.GetProperty("code").GetString(), test.Source + " sourceText compatibility");
 }
 
+
+var legacyDiagnostic = new CompileDiagnostic
+{
+    File = "sample.xps",
+    Line = 1,
+    Position = 1,
+    Description = "Example diagnostic.",
+    DiagnosticCode = "XPS2001",
+    UpstreamCode = "CS0029",
+    Category = "type",
+    SourceCode = "value = text",
+    MarkedCode = "value = text"
+};
+var compatibilityJson = JsonSerializer.Serialize(CompileResult.Error([legacyDiagnostic]));
+using (var compatibilityDocument = JsonDocument.Parse(compatibilityJson))
+{
+    var error = compatibilityDocument.RootElement.GetProperty("errors")[0];
+    Require(error.GetProperty("diagnosticCode").GetString() == "XPS2001", "stable diagnosticCode wire field");
+    Require(error.GetProperty("upstreamCode").GetString() == "CS0029", "upstreamCode wire field");
+    Require(error.GetProperty("description").GetString() == "Example diagnostic.", "description must not contain upstream code");
+    Require(error.GetProperty("code").GetString() == "value = text", "legacy code source field");
+    Require(error.GetProperty("sourceText").GetString() == "value = text", "sourceText alias");
+}
+
 Console.WriteLine("CompilerMachineInterfaceProbe OK");
 return 0;
 
