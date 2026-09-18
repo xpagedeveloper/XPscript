@@ -72,6 +72,23 @@ paths:
 }
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorization header", StringComparison.OrdinalIgnoreCase)) { }
 
+var optionalPresenceClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Optional Presence, version: 1.0.0 }
+paths:
+  /values:
+    get:
+      operationId: values
+      parameters:
+        - { name: text, in: query, schema: { type: string } }
+        - { name: count, in: query, schema: { type: integer } }
+        - { name: enabled, in: query, schema: { type: boolean } }
+      responses:
+        '204': { description: ok }
+""", "optional-presence.yaml").Source;
+foreach (var marker in new[] { "Optional Text As Variant = Nothing", "Optional Count As Variant = Nothing", "Optional Enabled As Variant = Nothing", "If Not Text Is Nothing Then", "If Not Count Is Nothing Then", "If Not Enabled Is Nothing Then" })
+    if (!optionalPresenceClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Optional OpenAPI parameters must preserve explicit empty/zero/false values: " + marker);
+
 var nestedRefClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Nested Ref, version: 1.0.0 }
