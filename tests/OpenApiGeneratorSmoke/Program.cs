@@ -108,6 +108,34 @@ paths:
 }
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("both map to XPScript identifier", StringComparison.OrdinalIgnoreCase)) { }
 
+var optionalClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Optional, version: 1.0.0 }
+components:
+  schemas:
+    Filter:
+      type: object
+      properties:
+        name: { type: string }
+paths:
+  /items:
+    post:
+      operationId: optionalValues
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, format: int32 } }
+        - { name: X-Trace, in: header, schema: { type: string } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Filter' }
+      responses:
+        '204': { description: ok }
+""", "optional.yaml").Source;
+foreach (var marker in new[] { "Optional Q As String = \"\"", "Optional Limit As Integer = 0", "Optional XTrace As String = \"\"", "Optional payload As Filter = Nothing", "If Len(Q) > 0 Then url = Http.AddQuery", "If Len(XTrace) > 0 Then Call request.SetHeader", "If Not payload Is Nothing Then" })
+    if (!optionalClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated optional OpenAPI values are missing marker: " + marker);
+
 var unicodeClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Unicode, version: 1.0.0 }
