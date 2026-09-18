@@ -841,9 +841,16 @@ internal static class LSForAllRuntime
     {
         var match = Regex.Match(line, @"^Set\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
         if (!match.Success) return false;
-        var lhsRaw = match.Groups[1].Value; var lhs = TransformObjectReferenceTarget(lhsRaw);
+        var lhsRaw = match.Groups[1].Value;
+        var functionResultClass = _procedureKind == ProcedureKind.Function
+            && lhsRaw.Equals(_currentProcedure, StringComparison.OrdinalIgnoreCase)
+            && _currentReturnType is not null
+            && _classes.ContainsKey(_currentReturnType)
+                ? _currentReturnType
+                : null;
+        var lhs = functionResultClass is not null ? "__result" : TransformObjectReferenceTarget(lhsRaw);
         if (lhs is null) throw new CompilerException($"Set target is not an object reference: {lhsRaw}");
-        var targetClass = ResolveObjectReferenceClass(lhsRaw) ?? throw new CompilerException($"Cannot determine object type for Set target: {lhsRaw}");
+        var targetClass = functionResultClass ?? ResolveObjectReferenceClass(lhsRaw) ?? throw new CompilerException($"Cannot determine object type for Set target: {lhsRaw}");
         var rhsRaw = match.Groups[2].Value.Trim();
         if (rhsRaw.Equals("Nothing", StringComparison.OrdinalIgnoreCase)) { Write(sb, $"{lhs} = new LSRef<{targetClass}>();"); return true; }
 
