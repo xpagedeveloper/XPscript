@@ -159,6 +159,18 @@ jobs:
         run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
       - name: Verify OpenAPI REST generator
         run: dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release
+      - name: Generate OpenAPI API consumer for compile test
+        run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate ./tests/OpenApiGeneratorSmoke/client-ci.yaml -o ./out/generated-openapi-client.xps --force
+      - name: Verify generated OpenAPI API consumer surface
+        shell: bash
+        run: |
+          test -f ./out/generated-openapi-client.xps
+          grep -q 'Public Class ClientCIApi' ./out/generated-openapi-client.xps
+          grep -q 'XPJsonSchema.Parse' ./out/generated-openapi-client.xps
+          grep -q 'XPJsonArray' ./out/generated-openapi-client.xps
+          ! grep -qi 'UIForm' ./out/generated-openapi-client.xps
+      - name: Compile generated OpenAPI API consumer
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi-client.xps -o ./out/generated-openapi-client --runtime=false
       - name: Verify OpenAPI unified CLI generate
         run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./tests/OpenApiGeneratorSmoke/petstore.yaml -o ./out/generated-openapi.xps --force
       - name: Verify OpenAPI unified CLI import
