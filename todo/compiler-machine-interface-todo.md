@@ -51,7 +51,7 @@ The CLI must be a consumer of the shared compiler service rather than the only p
 - [x] Ensure early failures still produce valid structured output.
 - [ ] Ensure JSON mode never mixes human logging into stdout.
 - [ ] Route non-result logging to stderr where appropriate.
-- [ ] Make breaking contract changes explicit through schema versioning.
+- [x] Make breaking contract changes explicit through schema versioning.
 
 Target shape:
 
@@ -196,7 +196,7 @@ security.Shell
 - [x] Add JSON Schema for diagnostics.
 - [x] Choose a stable repository location such as `schemas/`.
 - [x] Validate representative compiler output against the schemas in CI.
-- [ ] Document additive and breaking schema evolution.
+- [x] Document additive and breaking schema evolution.
 
 Suggested files:
 
@@ -342,13 +342,13 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 
 ## 23. Documentation
 
-- [ ] Document compiler-result schema.
-- [ ] Document diagnostic schema and code ranges.
-- [ ] Document severity semantics.
-- [ ] Document validation-only mode.
+- [x] Document compiler-result schema.
+- [x] Document diagnostic schema and code ranges.
+- [x] Document severity semantics.
+- [x] Document validation-only mode.
 - [ ] Document stdin mode if implemented.
 - [ ] Document source-location semantics.
-- [ ] Document versioning/compatibility.
+- [x] Document versioning/compatibility.
 - [ ] Document security/redaction behavior.
 - [ ] Add examples for CI and external tooling.
 
