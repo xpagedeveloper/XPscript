@@ -37,8 +37,8 @@ The CLI must be a consumer of the shared compiler service rather than the only p
 - [ ] Identify diagnostics that are currently created only as formatted strings.
 - [ ] Identify where structured information is lost before reaching CLI output.
 - [ ] Identify reusable source-location, symbol and type metadata.
-- [ ] Define one shared diagnostic model for text, JSON and XML output.
-- [ ] Preserve normal compilation as the authoritative validation path.
+- [x] Define one shared diagnostic model for text, JSON and XML output.
+- [x] Preserve normal compilation as the authoritative validation path.
 
 ## 2. Versioned compiler result contract
 
@@ -72,7 +72,7 @@ Target shape:
 
 ## 3. Stable diagnostic codes
 
-- [ ] Introduce stable diagnostic codes independent of human-readable messages.
+- [x] Introduce stable diagnostic codes independent of human-readable messages.
 - [x] Define code ranges after reviewing the current compiler architecture.
 - [x] Never reuse a code for a different semantic meaning.
 - [x] Add regression tests protecting diagnostic-code stability.
@@ -93,8 +93,8 @@ XPS9xxx internal compiler diagnostics
 
 ## 4. Common diagnostic model
 
-- [ ] Support `code`, `severity`, `category` and `message`.
-- [ ] Support file, start line/column and end line/column where available.
+- [x] Support `code`, `severity`, `category` and `message`.
+- [x] Support file, start line/column and end line/column where available.
 - [ ] Support structured diagnostic properties instead of encoding metadata into `message`.
 - [x] Standardize severities at least as `error`, `warning` and `info`.
 - [x] Preserve the same semantic diagnostic across text, JSON and XML representations.
@@ -357,10 +357,10 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 ### Phase 1: foundation
 
 - [ ] Audit diagnostics and current JSON output.
-- [ ] Define shared diagnostic/result models.
-- [ ] Define diagnostic code policy.
-- [ ] Add schema versioning.
-- [ ] Add regression tests.
+- [x] Define shared diagnostic/result models.
+- [x] Define diagnostic code policy.
+- [x] Add schema versioning.
+- [x] Add regression tests.
 
 ### Phase 2: structured compiler knowledge
 
@@ -373,7 +373,7 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 
 ### Phase 3: machine interface
 
-- [ ] Validation-only operation.
+- [x] Validation-only operation.
 - [ ] Reusable compiler service API.
 - [ ] stdin support if approved by architecture review.
 - [ ] Symbol/diagnostic introspection.
@@ -383,7 +383,7 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 
 - [ ] Golden fixtures.
 - [ ] Cross-platform CI.
-- [ ] JSON Schema validation.
+- [x] JSON Schema validation.
 - [ ] Performance benchmarks.
 - [ ] Security/redaction review.
 
