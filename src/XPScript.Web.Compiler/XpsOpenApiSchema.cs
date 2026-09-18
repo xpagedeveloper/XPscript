@@ -69,6 +69,37 @@ internal static class XpsOpenApiSchema
         return null;
     }
 
+    internal static string StandaloneJsonSchema(JsonObject root, JsonObject schema, string context)
+    {
+        var document = (JsonObject)schema.DeepClone();
+        RewriteComponentReferences(document);
+        if (root["components"] is JsonObject components && components["schemas"] is JsonObject schemas)
+        {
+            var defs = new JsonObject();
+            foreach (var pair in schemas)
+            {
+                if (pair.Value is null) continue;
+                var clone = pair.Value.DeepClone();
+                RewriteComponentReferences(clone);
+                defs[pair.Key] = clone;
+            }
+            if (defs.Count > 0) document["$defs"] = defs;
+        }
+        return document.ToJsonString();
+    }
+
+    private static void RewriteComponentReferences(JsonNode? node)
+    {
+        if (node is JsonObject obj)
+        {
+            if (ReadString(obj, "$ref") is { } reference && reference.StartsWith("#/components/schemas/", StringComparison.Ordinal))
+                obj["$ref"] = "#/$defs/" + reference["#/components/schemas/".Length..];
+            foreach (var pair in obj.ToArray()) RewriteComponentReferences(pair.Value);
+        }
+        else if (node is JsonArray array)
+            foreach (var item in array) RewriteComponentReferences(item);
+    }
+
     internal static bool TryGetReference(JsonObject schema, out string reference)
     {
         reference = ReadString(schema, "$ref") ?? string.Empty;
