@@ -817,9 +817,10 @@ internal sealed class CoreCompatibilityTranspiler
 
     private string RewriteErrorExpressions(string line)
     {
-        // "Error" is also a valid user-defined/public XPScript type name. Do not
-        // rewrite it when it appears in an As Error type annotation.
-        const string errorExpressionPrefix = @"(?<!\bAs\s)(?<![\w.])";
+        // "Error" can also be a user-defined/public XPScript class name. Preserve
+        // it in type annotations and object construction while still rewriting
+        // the LotusScript Error/Error$ expressions.
+        const string errorExpressionPrefix = @"(?<!\bAs\s)(?<!\bNew\s)(?<![\w.])";
         line = Regex.Replace(line, errorExpressionPrefix + @"Error\$?\s*\(", "XPScriptErrorRuntime.Error(", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])Err\b", "XPScriptErrorRuntime.Err", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])Erl\b", "XPScriptErrorRuntime.Erl", RegexOptions.IgnoreCase);
