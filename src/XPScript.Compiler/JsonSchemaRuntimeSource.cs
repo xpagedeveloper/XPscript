@@ -137,10 +137,11 @@ internal static class XPScriptJsonSchemaValidator
     {
         root ??= schema;
         if (depth > 64) { Add(errors, path, SchemaChild(schemaPath, "depth"), "depth", "Validation nesting exceeds 64 levels.", "<= 64", depth.ToString()); return; }
-        if (schema["$ref"] is System.Text.Json.Nodes.JsonValue refValue && refValue.TryGetValue<string>(out var reference) && reference.StartsWith("#/$defs/", StringComparison.Ordinal) && root["$defs"] is System.Text.Json.Nodes.JsonObject defs)
+        if (schema["$ref"] is System.Text.Json.Nodes.JsonValue refValue && refValue.TryGetValue<string>(out var reference))
         {
-            var key = reference["#/$defs/".Length..].Replace("~1", "/").Replace("~0", "~");
-            if (defs[key] is System.Text.Json.Nodes.JsonObject target) { ValidateNode(target, node, path, reference, errors, depth + 1, root); return; }
+            if (!reference.StartsWith("#/", StringComparison.Ordinal)) { Add(errors, path, schemaPath, "$ref", "Only local JSON Pointer schema references are supported.", "local #/... reference", reference); return; }
+            var targetNode = ResolveLocalReference(root, reference);
+            if (targetNode is System.Text.Json.Nodes.JsonObject target) { ValidateNode(target, node, path, reference, errors, depth + 1, root); return; }
             Add(errors, path, schemaPath, "$ref", "Schema reference was not found.", reference, "missing"); return;
         }
         if (!MatchesTypeKeyword(node, schema["type"], out var expectedType)) { Add(errors, path, SchemaChild(schemaPath, "type"), "type", "Value does not match the required JSON type.", expectedType, ActualType(node)); return; }
@@ -252,6 +253,19 @@ internal static class XPScriptJsonSchemaValidator
                 if (TryNumber(schema["multipleOf"], out var multipleOf) && multipleOf > 0 && number % multipleOf != 0) Add(errors, path, SchemaChild(schemaPath, "multipleOf"), "multipleOf", "Number is not a multiple of the required value.", multipleOf.ToString(System.Globalization.CultureInfo.InvariantCulture), number.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
         }
+    }
+
+    private static System.Text.Json.Nodes.JsonNode? ResolveLocalReference(System.Text.Json.Nodes.JsonObject root, string reference)
+    {
+        System.Text.Json.Nodes.JsonNode? current = root;
+        foreach (var encoded in reference[2..].Split('/'))
+        {
+            var token = encoded.Replace("~1", "/").Replace("~0", "~");
+            if (current is System.Text.Json.Nodes.JsonObject obj && obj.TryGetPropertyValue(token, out var child)) current = child;
+            else if (current is System.Text.Json.Nodes.JsonArray array && int.TryParse(token, out var index) && index >= 0 && index < array.Count) current = array[index];
+            else return null;
+        }
+        return current;
     }
 
     private static bool IsValidAgainst(System.Text.Json.Nodes.JsonObject schema, System.Text.Json.Nodes.JsonNode? node, string path, int depth, System.Text.Json.Nodes.JsonObject? root = null) { var branchErrors = new System.Text.Json.Nodes.JsonArray(); ValidateNode(schema, node, path, "$", branchErrors, depth, root); return branchErrors.Count == 0; }
