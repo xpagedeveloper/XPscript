@@ -109,6 +109,18 @@ Require(deterministicDiagnostic.Category == "symbol-resolution", "diagnostic cat
 Require(deterministicDiagnostic.Properties!.Select(p => p.Name).SequenceEqual(["containingScope", "kind", "symbol"]),
     "diagnostic properties must use deterministic ordinal ordering");
 
+var orderedDiagnostics = CompileResult.Error(
+[
+    new CompileDiagnostic { File = "b.xps", Line = 1, Position = 1, DiagnosticCode = "XPS2008", Description = "b" },
+    new CompileDiagnostic { File = "a.xps", Line = 2, Position = 1, DiagnosticCode = "XPS2008", Description = "later" },
+    new CompileDiagnostic { File = "a.xps", Line = 1, Position = 5, DiagnosticCode = "XPS2009", Description = "second" },
+    new CompileDiagnostic { File = "a.xps", Line = 1, Position = 2, DiagnosticCode = "XPS2008", Description = "first" }
+]).Errors;
+Require(orderedDiagnostics.Select(d => $"{d.File}:{d.Line}:{d.Position}:{d.DiagnosticCode}").SequenceEqual(
+    ["a.xps:1:2:XPS2008", "a.xps:1:5:XPS2009", "a.xps:2:1:XPS2008", "b.xps:1:1:XPS2008"]),
+    "diagnostics must use deterministic source ordering");
+
+
 
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
