@@ -817,10 +817,13 @@ internal sealed class CoreCompatibilityTranspiler
 
     private string RewriteErrorExpressions(string line)
     {
-        line = Regex.Replace(line, @"(?<![\w.])Error\$?\s*\(", "XPScriptErrorRuntime.Error(", RegexOptions.IgnoreCase);
+        // "Error" is also a valid user-defined/public XPScript type name. Do not
+        // rewrite it when it appears in an As Error type annotation.
+        const string errorExpressionPrefix = @"(?<!\bAs\s)(?<![\w.])";
+        line = Regex.Replace(line, errorExpressionPrefix + @"Error\$?\s*\(", "XPScriptErrorRuntime.Error(", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])Err\b", "XPScriptErrorRuntime.Err", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])Erl\b", "XPScriptErrorRuntime.Erl", RegexOptions.IgnoreCase);
-        line = Regex.Replace(line, @"(?<![\w.])(?:Error\$(?![\w])|Error\b)(?!\s*\()", "XPScriptErrorRuntime.Error()", RegexOptions.IgnoreCase);
+        line = Regex.Replace(line, errorExpressionPrefix + @"(?:Error\$(?![\w])|Error\b)(?!\s*\()", "XPScriptErrorRuntime.Error()", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])FreeFile\$?\s*\(\s*\)", "LSFileRuntime.FreeFile()", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])FreeFile\b(?!\s*\()", "LSFileRuntime.FreeFile()", RegexOptions.IgnoreCase);
         foreach (var fn in new[] { "EOF", "LOF", "Seek", "Loc" })
