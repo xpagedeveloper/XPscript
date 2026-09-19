@@ -66,6 +66,15 @@ foreach (var symbol in CompilerSymbolCatalog.All)
     Require(!string.IsNullOrWhiteSpace(symbol.Signature), $"symbol signature required: {symbol.Name}");
 }
 
+var parsedSecurityFindings = ApplicationSecurityAudit.Parse(
+    "warning NU1903: Package 'Example.Package' 1.2.3 has a known high severity vulnerability, https://example.invalid/advisory/123");
+Require(parsedSecurityFindings.Count == 1, "dependency audit finding parse");
+Require(parsedSecurityFindings[0].Code == "NU1903", "dependency audit upstream code");
+Require(parsedSecurityFindings[0].Package == "Example.Package", "dependency audit package");
+Require(parsedSecurityFindings[0].Version == "1.2.3", "dependency audit version");
+Require(parsedSecurityFindings[0].Severity == "high", "dependency audit severity");
+Require(parsedSecurityFindings[0].Advisory == "https://example.invalid/advisory/123", "dependency audit advisory");
+
 const string secretCanary = "xps-secret-canary-4f91d2";
 var redactionResult = CompileResult.Error(
 [
