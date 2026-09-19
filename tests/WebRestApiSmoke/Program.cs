@@ -290,25 +290,40 @@ try
     Console.WriteLine("WEB-REST-JSON-SCHEMA-ERROR-CLASSIFICATION=OK");
 
     var schemaFilePath = Path.Combine(root, "schemas", "create-user.schema.json");
-    await File.WriteAllTextAsync(schemaFilePath, """
-{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":40}}}
-""");
-    File.SetLastWriteTimeUtc(schemaFilePath, DateTime.UtcNow.AddSeconds(2));
+    var originalSchemaTimestamp = File.GetLastWriteTimeUtc(schemaFilePath);
+    var restrictiveSchema = """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":119}}}
+""";
+    var permissiveSchema = """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":120}}}
+""";
+    if (Encoding.UTF8.GetByteCount(restrictiveSchema) != Encoding.UTF8.GetByteCount(permissiveSchema))
+        throw new Exception("JSON Schema cache regression requires same-length schema files.");
+
+    await File.WriteAllTextAsync(schemaFilePath, restrictiveSchema);
+    File.SetLastWriteTimeUtc(schemaFilePath, originalSchemaTimestamp);
     var reloadedSchema = await SendAsync(
         dispatcher,
         app,
         "POST",
         "/api/users",
-        "{\"name\":\"Fredrik\",\"email\":\"fredrik@example.com\",\"age\":42}",
+        "{\"name\":\"Fredrik\",\"email\":\"fredrik@example.com\",\"age\":120}",
         "application/json");
     if (reloadedSchema.StatusCode != 400 || !BodyText(reloadedSchema).Contains("$.age", StringComparison.Ordinal))
-        throw new Exception("Updated JSON Schema was not reloaded from the cache.");
+        throw new Exception("Same-length, same-timestamp JSON Schema update was not reloaded from the cache.");
 
-    await File.WriteAllTextAsync(schemaFilePath, """
-{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":120}}}
-""");
-    File.SetLastWriteTimeUtc(schemaFilePath, DateTime.UtcNow.AddSeconds(4));
-    Console.WriteLine("WEB-REST-JSON-SCHEMA-CACHE-RELOAD=OK");
+    await File.WriteAllTextAsync(schemaFilePath, permissiveSchema);
+    File.SetLastWriteTimeUtc(schemaFilePath, originalSchemaTimestamp);
+    var restoredSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{\"name\":\"Fredrik\",\"email\":\"fredrik@example.com\",\"age\":120}",
+        "application/json");
+    if (restoredSchema.StatusCode != 200)
+        throw new Exception($"Same-length, same-timestamp JSON Schema restore was not reloaded from the cache: {restoredSchema.StatusCode}.");
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-CACHE-CONTENT-HASH=OK");
 
     var invalid = await SendAsync(
         dispatcher,
