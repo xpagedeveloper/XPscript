@@ -172,10 +172,10 @@ Minimum representation:
 
 ## 11. Stable documentation IDs
 
-- [ ] Define documentation IDs independent of Markdown paths.
-- [ ] Map language constructs, runtime classes/members, targets, security rules and diagnostics.
-- [ ] Allow diagnostics to reference one or more documentation IDs.
-- [ ] Keep actual documentation retrieval outside the compiler.
+- [x] Define documentation IDs independent of Markdown paths.
+- [x] Map language constructs, runtime classes/members, targets, security rules and diagnostics.
+- [x] Allow diagnostics to reference one or more documentation IDs.
+- [x] Keep actual documentation retrieval outside the compiler.
 
 Examples:
 
