@@ -452,10 +452,10 @@ try
             throw new Exception("Generated XPScript did not compile into the expected REST routes.");
     }
 
-    const string getPetOriginal = "    result.StatusCode = 501\n    HandleGetPet = result";
-    const string getPetEdited = "    Print \"fråga funktionen GetPet\"\n    result.StatusCode = 200\n    result.Data = \"custom-get\"\n    HandleGetPet = result";
-    const string createPetOriginal = "    result.StatusCode = 501\n    HandleCreatePet = result";
-    const string createPetEdited = "    Print \"fråga funktionen CreatePet\"\n    result.StatusCode = 201\n    result.Data = \"custom-create\"\n    HandleCreatePet = result";
+    const string getPetOriginal = "    result.StatusCode = 501\n    Set HandleGetPet = result";
+    const string getPetEdited = "    Print \"fråga funktionen GetPet\"\n    result.StatusCode = 200\n    result.Data = \"custom-get\"\n    Set HandleGetPet = result";
+    const string createPetOriginal = "    result.StatusCode = 501\n    Set HandleCreatePet = result";
+    const string createPetEdited = "    Print \"fråga funktionen CreatePet\"\n    result.StatusCode = 201\n    result.Data = \"custom-create\"\n    Set HandleCreatePet = result";
 
     var userEdited = result.Source
         .Replace(getPetOriginal, getPetEdited, StringComparison.Ordinal)
