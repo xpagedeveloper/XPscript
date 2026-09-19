@@ -73,3 +73,12 @@ xpscript symbols --search XPJson --result-format json
 Symbol definitions contain the public XPScript name, kind, XPScript signature, parameters, return type, target restrictions, stable documentation ID and deprecation state. Lookup is case-insensitive to match XPScript symbol semantics, while output uses canonical casing and deterministic ordering.
 
 The catalog is deliberately an XPScript API contract rather than reflection over implementation assemblies. Internal runtime implementation types such as `XPScriptJsonSchema` must not be exposed. Every symbol documentation ID is cross-checked against the stable compiler documentation catalog.
+
+
+## Remote operation permissions
+
+Future remote compiler hosts must treat validation, compilation and execution as separate capabilities. Permission to call `validate` must not imply permission to publish artifacts or execute submitted XPScript, and permission to compile must not imply permission to execute the resulting application.
+
+The local validation pipeline is intentionally non-executing: it may preprocess and transpile XPScript and invoke the platform compiler to type-check generated C#, but it does not launch the submitted XPScript program. CI includes a sentinel regression that would create a file if submitted `Shell` code were executed and verifies that validation leaves the sentinel absent.
+
+Remote MCP, IDE, CI or service integrations should therefore expose independent authorization decisions for `validate`, `compile` and `execute`. An implementation may grant only a subset. Execution should remain an explicit higher-privilege operation rather than a side effect of validation or compilation.
