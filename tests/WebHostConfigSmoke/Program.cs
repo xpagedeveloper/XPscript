@@ -37,7 +37,7 @@ try
     await VerifyInvalidConfigAsync(cliDll, configDir);
     await VerifyMissingConfigAsync(cliDll, configDir);
     await VerifyAutomaticConfigAsync(cliDll, configDir, automaticConfig);
-    await VerifyApiDocsJsonSchemaAsync(cliDll, siteDir);
+    await VerifyApiDocsJsonSchemaAsync(cliDll, siteDir);\n    await VerifyApiDocsJsonSchemaFailuresAsync(cliDll, parent);
     Console.WriteLine("WEB-HOST-CONFIG-SMOKE=OK");
 }
 finally
@@ -259,6 +259,54 @@ End Sub
     {
         Stop(process);
     }
+}
+
+static async Task VerifyApiDocsJsonSchemaFailuresAsync(string cliDll, string parent)
+{
+    var cases = new (string Name, string SchemaPath, string? SchemaContent)[]
+    {
+        ("traversal", "../outside.schema.json", "{}"),
+        ("non-json", "schemas/schema.txt", "{}"),
+        ("missing", "schemas/missing.schema.json", null),
+        ("invalid-json", "schemas/invalid.schema.json", "{not-json")
+    };
+
+    foreach (var test in cases)
+    {
+        var root = Path.Combine(parent, "apidoc-schema-" + test.Name);
+        Directory.CreateDirectory(Path.Combine(root, "schemas"));
+        if (test.SchemaContent is not null && !test.SchemaPath.StartsWith("..", StringComparison.Ordinal))
+            await File.WriteAllTextAsync(Path.Combine(root, test.SchemaPath.Replace('/', Path.DirectorySeparatorChar)), test.SchemaContent);
+        await File.WriteAllTextAsync(Path.Combine(root, "api.xps"), $"""
+[Anonymous]
+[Post:/api/test]
+[JsonSchema:{{test.SchemaPath}}]
+Sub Test([FromBody] payload As Object)
+    Response.OK(payload)
+End Sub
+""");
+        var result = await RunShortAsync(cliDll, ["web", "--root", root, "--port", GetFreePort().ToString(), "--api-docs"]);
+        if (result.ExitCode == 0)
+            throw new Exception($"API documentation accepted invalid JSON Schema case '{test.Name}'.");
+    }
+
+    var absoluteRoot = Path.Combine(parent, "apidoc-schema-absolute");
+    Directory.CreateDirectory(absoluteRoot);
+    var absoluteSchema = Path.Combine(parent, "absolute.schema.json");
+    await File.WriteAllTextAsync(absoluteSchema, "{}");
+    await File.WriteAllTextAsync(Path.Combine(absoluteRoot, "api.xps"), $"""
+[Anonymous]
+[Post:/api/test]
+[JsonSchema:{{absoluteSchema}}]
+Sub Test([FromBody] payload As Object)
+    Response.OK(payload)
+End Sub
+""");
+    var absoluteResult = await RunShortAsync(cliDll, ["web", "--root", absoluteRoot, "--port", GetFreePort().ToString(), "--api-docs"]);
+    if (absoluteResult.ExitCode == 0)
+        throw new Exception("API documentation accepted an absolute JSON Schema path.");
+
+    Console.WriteLine("WEB-API-DOCS-JSON-SCHEMA-FAILURES=OK");
 }
 
 static Task WriteConfigAsync(string path, object value)
