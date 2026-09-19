@@ -103,11 +103,11 @@ internal static class BrowserWasmServerSideMetadata
             if (!match.Success)
                 throw new XpsWebCompilationException("[ServerSide] must immediately precede a Sub or Function declaration.");
             if (classDepth != 0)
-                throw new XpsWebCompilationException("[ServerSide] class methods are not supported for browser-wasm. Move the server operation to a module Sub or Function.");
+                throw ServerSideRequired(name, "[ServerSide] class methods are not supported for browser-wasm. Move the server operation to a module Sub or Function.", "ClassMethod");
 
             var name = match.Groups[2].Value;
             if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) || name.Equals("Index", StringComparison.OrdinalIgnoreCase))
-                throw new XpsWebCompilationException($"browser-wasm entry procedure '{name}' cannot be [ServerSide]. Move server work into a helper Function or Sub.");
+                throw ServerSideRequired(name, $"browser-wasm entry procedure '{name}' cannot be [ServerSide]. Move server work into a helper Function or Sub.", "BrowserEntryPoint");
             if (!result.TryAdd(name, pending))
                 throw new XpsWebCompilationException($"Duplicate [ServerSide] procedure '{name}'.");
             pending = null;
@@ -166,7 +166,7 @@ internal static class BrowserWasmServerSideMetadata
                     $"browser-wasm procedure '{procedure.Name}' uses server-only state but is not marked [ServerSide]. Add [ServerSide] above the whole Function or Sub.");
         foreach (var name in annotatedProcedures)
             if (!plan.Procedures.Values.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-                throw new XpsWebCompilationException($"[ServerSide] procedure '{name}' could not be converted into a browser-wasm server call.");
+                throw ServerSideRequired(name, $"[ServerSide] procedure '{name}' could not be converted into a browser-wasm server call.", "ServerSide");
     }
 
     private static XpsWebCompilationException ServerSideRequired(string symbol, string message, string currentContext = "Client") =>
