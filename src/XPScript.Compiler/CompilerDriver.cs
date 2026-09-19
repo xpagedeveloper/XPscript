@@ -8,6 +8,7 @@ public sealed class CompilerDriver
 {
     private const string MimeKitVersion = "4.17.0";
     private const long MaximumSourceBytes = 1024L * 1024L;
+    private static readonly TimeSpan ValidationBuildTimeout = TimeSpan.FromMinutes(2);
     private sealed record StagedManagedReference(string Name, string Path);
 
     private static readonly HashSet<string> SupportedRuntimeIdentifiers = new(StringComparer.OrdinalIgnoreCase)
@@ -550,7 +551,29 @@ public sealed class CompilerDriver
             using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start validation build.");
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
             var stderrTask = process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
+            using var timeout = new CancellationTokenSource(ValidationBuildTimeout);
+            try
+            {
+                await process.WaitForExitAsync(timeout.Token);
+            }
+            catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+                try { await process.WaitForExitAsync(); } catch { }
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = DiagnosticFileName(sourcePath),
+                    Description = "Generated-code validation exceeded the 120 second time limit.",
+                    DiagnosticCode = CompilerDiagnosticCodes.ValidationBuildTimedOut,
+                    Severity = "error",
+                    Category = "compiler",
+                    Properties =
+                    [
+                        new CompileDiagnosticProperty { Name = "timeoutSeconds", Value = "120" }
+                    ]
+                };
+                throw new CompilerException(diagnostic.Description, [diagnostic]);
+            }
             var stdout = await stdoutTask;
             var stderr = await stderrTask;
             ApplicationSecurityAudit.Report(stdout + Environment.NewLine + stderr);
