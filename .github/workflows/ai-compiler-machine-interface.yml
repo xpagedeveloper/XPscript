@@ -28,6 +28,9 @@ jobs:
       - name: Machine interface probe
         run: dotnet run --project tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release -- .
 
+      - name: MCP protocol probe
+        run: dotnet run --project tests/CompilerMcpProtocolProbe/CompilerMcpProtocolProbe.csproj -c Release -- .
+
       - name: Benchmark validation startup
         shell: pwsh
         run: |

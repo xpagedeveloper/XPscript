@@ -94,7 +94,7 @@ public static class CompilerMcpServer
             "xpscript_explain" => CompilerDiagnosticCatalog.Find(GetRequiredString(arguments, "diagnosticCode")) ?? throw new McpException(-32602, "Unknown XPScript diagnostic code."),
             _ => throw new McpException(-32602, $"Unknown tool: {name}")
         };
-        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(value, JsonOptions) } }, structuredContent = value, isError = value is CompileResult cr && !cr.Success };
+        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(value, JsonOptions) } }, structuredContent = value, isError = false };
     }
 
     private static async Task<CompileResult> ValidateAsync(CompilerDriver compiler, JsonElement arguments)

@@ -31,7 +31,7 @@ public static class CompilerMcpInstaller
         if (!FindCommand("codex", out var codex)) return Fail("Codex CLI was not found on PATH.");
         var command=CurrentExecutable();
         var check=await RunAsync(codex!, "mcp", "get", "xpscript").ConfigureAwait(false);
-        if (check.ExitCode != 0 || force)
+        if (check.ExitCode != 0 || force || !RegistrationMatches(check.Output, command))
         {
             if (check.ExitCode == 0) await RunAsync(codex!, "mcp", "remove", "xpscript").ConfigureAwait(false);
             var add=await RunAsync(codex!, "mcp", "add", "xpscript", "--", command, "mcp").ConfigureAwait(false);
@@ -48,7 +48,7 @@ public static class CompilerMcpInstaller
         if (!FindCommand("claude", out var claude)) return Fail("Claude Code CLI was not found on PATH.");
         var command=CurrentExecutable();
         var get=await RunAsync(claude!, "mcp", "get", "xpscript").ConfigureAwait(false);
-        if (get.ExitCode != 0 || force)
+        if (get.ExitCode != 0 || force || !RegistrationMatches(get.Output, command))
         {
             if (get.ExitCode == 0) await RunAsync(claude!, "mcp", "remove", "xpscript", "--scope", scope).ConfigureAwait(false);
             var add=await RunAsync(claude!, "mcp", "add", "xpscript", "--scope", scope, "--", command, "mcp").ConfigureAwait(false);
@@ -63,7 +63,17 @@ public static class CompilerMcpInstaller
     private static void InstallSkill(string directory)
     {
         Directory.CreateDirectory(directory);
-        File.WriteAllText(Path.Combine(directory,"SKILL.md"), CompilerMcpSkill.Content, new UTF8Encoding(false));
+        var path=Path.Combine(directory,"SKILL.md");
+        if (!File.Exists(path) || !string.Equals(File.ReadAllText(path), CompilerMcpSkill.Content, StringComparison.Ordinal))
+            File.WriteAllText(path, CompilerMcpSkill.Content, new UTF8Encoding(false));
+    }
+    private static bool RegistrationMatches(string output, string command)
+    {
+        if (string.IsNullOrWhiteSpace(output)) return false;
+        var normalized=output.Replace('\\','/');
+        var executable=command.Replace('\\','/');
+        return normalized.Contains(executable, StringComparison.OrdinalIgnoreCase) &&
+               normalized.Contains("mcp", StringComparison.OrdinalIgnoreCase);
     }
     private static string CurrentExecutable() => Environment.ProcessPath ?? throw new InvalidOperationException("Cannot determine the XPScript compiler executable path.");
     private static string UserHome() => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
