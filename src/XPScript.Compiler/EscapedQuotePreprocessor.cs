@@ -107,8 +107,8 @@ internal sealed class EscapedQuotePreprocessor
         var position = quoteIndex - lineStart + 1;
         var sourcePath = ExpandedSourceContext.Current?.SourcePath;
         var file = string.IsNullOrWhiteSpace(sourcePath) ? "script.xps" : sourcePath;
-        var message = "Possible unescaped quote inside String. Use \\\" or doubled quotes (\\"\\") for a literal quote. If the text between quotes is a variable, concatenate it with & or +.";
-        var lineEnd = source.IndexOfAny(['\\r', '\\n'], lineStart);
+        var message = "Possible unescaped quote inside String. Use \\\" or doubled quotes (\\\"\\\") for a literal quote. If the text between quotes is a variable, concatenate it with & or +.";
+        var lineEnd = source.IndexOfAny(['\r', '\n'], lineStart);
         if (lineEnd < 0) lineEnd = source.Length;
         var sourceLine = CompilerDiagnosticRedaction.MaskStringLiterals(source[lineStart..lineEnd]).TrimEnd();
         var diagnostic = new CompileDiagnostic
