@@ -53,6 +53,14 @@ Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Val
 Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, "Browser WASM active target");
 Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == "server target") == true, "Browser WASM allowed targets");
 
+var nativeTargetCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "native-target-mismatch-error.xps"), "linux-x64");
+var nativeTargetDiagnostic = nativeTargetCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
+Require(nativeTargetDiagnostic is not null, "native target mismatch diagnostic");
+Require(nativeTargetDiagnostic.Category == "target", "native target mismatch category");
+Require(nativeTargetDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "./native-probe.dll") == true, "native target mismatch symbol");
+Require(nativeTargetDiagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "linux-x64") == true, "native target mismatch active target");
+Require(nativeTargetDiagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == ".so or versioned .so.N") == true, "native target mismatch allowed target");
+
 var nothingComparisonCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "nothing-comparison-invalid-error.xps"));
 var nothingComparisonDiagnostic = nothingComparisonCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1002");
 Require(nothingComparisonDiagnostic is not null, "Nothing comparison diagnostic");
