@@ -264,6 +264,29 @@ Sub Main()
     Set invalidRefJson = XPJsonDocument.Parse("{""child"":{}}")
     If refSchema.IsValid(invalidRefJson) Then Error 5, "Expected local $defs/$ref to enforce referenced required properties"
 
+    Dim refItemsSchema As XPJsonSchema
+    Set refItemsSchema = XPJsonSchema.Parse("{""type"":""array"",""$defs"":{""Item"":{""type"":""object"",""required"":[""id""],""properties"":{""id"":{""type"":""integer""}}}},""items"":{""$ref"":""#/$defs/Item""}}")
+    Dim validRefItems As XPJsonDocument
+    Set validRefItems = XPJsonDocument.Parse("[{""id"":1}]")
+    If Not refItemsSchema.IsValid(validRefItems) Then Error 5, "Expected local $ref inside items to resolve against the root schema"
+    Dim invalidRefItems As XPJsonDocument
+    Set invalidRefItems = XPJsonDocument.Parse("[{}]")
+    If refItemsSchema.IsValid(invalidRefItems) Then Error 5, "Expected local $ref inside items to enforce referenced properties"
+
+    Dim refCompositionSchema As XPJsonSchema
+    Set refCompositionSchema = XPJsonSchema.Parse("{""$defs"":{""Named"":{""type"":""object"",""required"":[""name""],""properties"":{""name"":{""type"":""string""}}}},""allOf"":[{""$ref"":""#/$defs/Named""}]}")
+    Dim invalidRefComposition As XPJsonDocument
+    Set invalidRefComposition = XPJsonDocument.Parse("{}")
+    If refCompositionSchema.IsValid(invalidRefComposition) Then Error 5, "Expected local $ref inside allOf to resolve against the root schema"
+
+    Dim missingRefSchema As XPJsonSchema
+    Set missingRefSchema = XPJsonSchema.Parse("{""$ref"":""#/$defs/Missing"",""$defs"":{}}")
+    If missingRefSchema.IsValid(validJson) Then Error 5, "Expected unresolved local $ref to fail validation"
+
+    Dim cyclicRefSchema As XPJsonSchema
+    Set cyclicRefSchema = XPJsonSchema.Parse("{""$ref"":""#/$defs/Self"",""$defs"":{""Self"":{""$ref"":""#/$defs/Self""}}}")
+    If cyclicRefSchema.IsValid(validJson) Then Error 5, "Expected cyclic local $ref to fail validation at the depth guard"
+
     Dim dialectSchema As XPJsonSchema
     Set dialectSchema = XPJsonSchema.Parse("{""$schema"":""https://json-schema.org/draft/2020-12/schema""}")
     If Not dialectSchema.IsValid(validJson) Then Error 5, "Expected $schema metadata not to invalidate an instance"
