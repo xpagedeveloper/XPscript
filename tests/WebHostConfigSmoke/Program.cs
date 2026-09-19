@@ -246,6 +246,13 @@ End Sub
             schema.GetProperty("required")[0].GetString() != "name" ||
             schema.GetProperty("properties").GetProperty("name").GetProperty("type").GetString() != "string")
             throw new Exception("OpenAPI requestBody did not inline the route JSON Schema.");
+        var fallbackRoute = doc.RootElement.GetProperty("paths").EnumerateObject()
+            .SelectMany(path => path.Value.EnumerateObject().Select(method => (path.Name, method.Name, Operation: method.Value)))
+            .FirstOrDefault(item => item.Operation.TryGetProperty("requestBody", out var body) &&
+                body.GetProperty("content").GetProperty("application/json").GetProperty("schema").TryGetProperty("$ref", out var reference) &&
+                reference.GetString() is { } value && value.StartsWith("#/components/schemas/", StringComparison.Ordinal));
+        if (fallbackRoute.Operation.ValueKind == JsonValueKind.Undefined)
+            throw new Exception("OpenAPI did not preserve the typed request-body schema fallback for routes without [JsonSchema].");
         Console.WriteLine("WEB-API-DOCS-JSON-SCHEMA=OK");
     }
     finally
