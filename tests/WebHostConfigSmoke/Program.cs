@@ -268,7 +268,8 @@ static async Task VerifyApiDocsJsonSchemaFailuresAsync(string cliDll, string par
         ("traversal", "../outside.schema.json", "{}", "must stay inside the web root"),
         ("non-json", "schemas/schema.txt", "{}", "must reference a .json file"),
         ("missing", "schemas/missing.schema.json", null, "was not found"),
-        ("invalid-json", "schemas/invalid.schema.json", "{not-json", "invalid JSON")
+        ("invalid-json", "schemas/invalid.schema.json", "{not-json", "invalid JSON"),
+        ("invalid-schema-root", "schemas/array.schema.json", "[]", "object or boolean schema root")
     };
 
     foreach (var test in cases)
