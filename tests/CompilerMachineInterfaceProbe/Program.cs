@@ -95,6 +95,14 @@ Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "actualType") ==
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.SourceCode), "date comparison source");
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.MarkedCode), "date comparison marked source");
 
+var xmlConstructorCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "xml-element-missing-constructor-argument-error.xps"));
+var xmlConstructorDiagnostic = xmlConstructorCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1008");
+Require(xmlConstructorDiagnostic is not null, "native XML constructor diagnostic");
+Require(xmlConstructorDiagnostic.Category == "syntax", "native XML constructor category");
+Require(xmlConstructorDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "XPXmlElement") == true, "native XML constructor symbol");
+Require(xmlConstructorDiagnostic.Properties?.Any(p => p.Name == "symbolKind" && p.Value == "type") == true, "native XML constructor symbol kind");
+Require(xmlConstructorDiagnostic.Properties?.Any(p => p.Name == "expectedArgument") == true, "native XML constructor expected argument");
+
 var callbackCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "aitool-callback-missing-error.xps"));
 var callbackDiagnostic = callbackCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2011");
 Require(callbackDiagnostic is not null, "missing AITool callback diagnostic");
