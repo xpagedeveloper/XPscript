@@ -14,6 +14,28 @@ await File.WriteAllTextAsync(Path.Combine(root, "schemas", "create-user.schema.j
 """);
 await File.WriteAllTextAsync(Path.Combine(root, "schemas", "invalid.schema.json"), "{not-json");
 
+var outsideSchemaRoot = Path.Combine(Path.GetTempPath(), "xps-rest-api-schema-outside-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(outsideSchemaRoot);
+await File.WriteAllTextAsync(Path.Combine(outsideSchemaRoot, "outside.schema.json"), "{}");
+var schemaLinkPath = Path.Combine(root, "schemas", "outside-link.json");
+try
+{
+    File.CreateSymbolicLink(schemaLinkPath, Path.Combine(outsideSchemaRoot, "outside.schema.json"));
+    try
+    {
+        _ = XpsJsonSchemaPath.ResolveInsideRoot(root, "schemas/outside-link.json");
+        throw new Exception("JSON Schema symlink escaping the web root was accepted.");
+    }
+    catch (ArgumentException ex) when (ex.Message.Contains("web root", StringComparison.OrdinalIgnoreCase))
+    {
+    }
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-SYMLINK-CONTAINMENT=OK");
+}
+catch (Exception ex) when (ex is UnauthorizedAccessException or PlatformNotSupportedException or IOException)
+{
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-SYMLINK-CONTAINMENT=SKIPPED");
+}
+
 await File.WriteAllTextAsync(apiPath, """
 Public Class CreateUserRequest
     [Required]
