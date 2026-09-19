@@ -37,7 +37,12 @@ public static class CompilerMcpInstaller
             var add=await RunAsync(codex!, "mcp", "add", "xpscript", "--", command, "mcp").ConfigureAwait(false);
             if (add.ExitCode != 0) return Fail("Could not register XPScript MCP in Codex: " + add.Error);
         }
-        var skillRoot = scope == "project" ? Path.Combine(Environment.CurrentDirectory, ".codex", "skills", "xpscript-development") : Path.Combine(UserHome(), ".codex", "skills", "xpscript-development");
+        // Codex MCP project scope is represented by .codex/config.toml, but the current
+        // Codex CLI MCP add command documents no project-scope switch. Do not claim a
+        // project-scoped MCP registration when only the skill can be project-scoped.
+        if (scope == "project")
+            return Fail("Codex project-scoped MCP installation is not supported by the current Codex CLI. Use --scope user, or configure .codex/config.toml explicitly.");
+        var skillRoot = Path.Combine(UserHome(), ".codex", "skills", "xpscript-development");
         InstallSkill(skillRoot);
         Console.WriteLine($"XPScript MCP and skill are installed for Codex ({scope}). MCP command: {command} mcp");
         return 0;
