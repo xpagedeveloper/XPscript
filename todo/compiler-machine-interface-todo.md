@@ -255,13 +255,13 @@ Exact public API names must follow the existing compiler architecture.
 
 ## 16. Symbol introspection
 
-- [ ] Investigate a machine-readable symbol-description service.
-- [ ] Support exact symbol/type lookup.
-- [ ] Return kind, signature, parameters and return type.
-- [ ] Return target restrictions.
-- [ ] Return documentation ID.
-- [ ] Return deprecation metadata where supported.
-- [ ] Expose only public XPScript language/runtime symbols.
+- [x] Investigate a machine-readable symbol-description service.
+- [x] Support exact symbol/type lookup.
+- [x] Return kind, signature, parameters and return type.
+- [x] Return target restrictions.
+- [x] Return documentation ID.
+- [x] Return deprecation metadata where supported.
+- [x] Expose only public XPScript language/runtime symbols.
 
 Possible CLI consumers:
 
