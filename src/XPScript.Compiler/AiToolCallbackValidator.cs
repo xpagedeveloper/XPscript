@@ -21,20 +21,48 @@ internal sealed class AiToolCallbackValidator
                 continue;
 
             if (!IsIdentifier(callbackName))
-                throw new CompilerException($"{sourceName}: AITool callback name '{callbackName}' is invalid.");
+                throw CallbackDiagnostic(sourceName, CompilerDiagnosticCodes.InvalidCallbackName,
+                    $"AITool callback name '{callbackName}' is invalid.",
+                    ("symbol", callbackName), ("symbolKind", "callback"));
 
             var expectedArity = 1 + registration.Arguments.Count - 3;
             if (!procedures.TryGetValue(callbackName, out var arities))
-                throw new CompilerException($"{sourceName}: AITool callback '{callbackName}' was not found as a module Sub or Function.");
+                throw CallbackDiagnostic(sourceName, CompilerDiagnosticCodes.CallbackNotFound,
+                    $"AITool callback '{callbackName}' was not found as a module Sub or Function.",
+                    ("symbol", callbackName), ("symbolKind", "callback"), ("containingScope", "module"));
 
             if (!arities.Contains(expectedArity))
             {
                 var available = string.Join(", ", arities.OrderBy(value => value));
-                throw new CompilerException(
-                    $"{sourceName}: AITool callback '{callbackName}' must accept {expectedArity} parameter(s) " +
-                    $"(AIToolCall plus {expectedArity - 1} callback context parameter(s)); declared arity: {available}.");
+                throw CallbackDiagnostic(sourceName, CompilerDiagnosticCodes.CallbackArityMismatch,
+                    $"AITool callback '{callbackName}' must accept {expectedArity} parameter(s) " +
+                    $"(AIToolCall plus {expectedArity - 1} callback context parameter(s)); declared arity: {available}.",
+                    ("symbol", callbackName), ("symbolKind", "callback"),
+                    ("expectedArgumentCount", expectedArity.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                    ("availableArgumentCounts", available));
             }
         }
+    }
+
+    private static CompilerException CallbackDiagnostic(
+        string sourceName,
+        string diagnosticCode,
+        string message,
+        params (string Name, string Value)[] properties)
+    {
+        var diagnostic = new CompileDiagnostic
+        {
+            File = sourceName,
+            Description = message,
+            DiagnosticCode = diagnosticCode,
+            Category = "symbol-resolution",
+            Properties = properties.Select(property => new CompileDiagnosticProperty
+            {
+                Name = property.Name,
+                Value = property.Value
+            }).ToList()
+        };
+        return new CompilerException(message, diagnosticCode, "symbol-resolution", [diagnostic]);
     }
 
     private static Dictionary<string, HashSet<int>> CollectModuleProcedures(string source)
