@@ -46,6 +46,9 @@ jobs:
           "validationStartupMs=$($samples -join ',') medianMs=$median" | Tee-Object -FilePath validation-benchmark.txt
           if ($median -gt 30000) { throw "Validation median startup/process time exceeded 30 seconds: $median ms" }
 
+      - name: Benchmark in-process validation
+        run: dotnet run --project tests/CompilerValidationBenchmark/CompilerValidationBenchmark.csproj -c Release -- .
+
       - name: Validate CLI JSON contract
         shell: pwsh
         run: |
