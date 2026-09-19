@@ -39,6 +39,8 @@ public static class CompilerDiagnosticCatalog
             Define("XPS2012", "callback", "The callback parameter count does not match its required contract.", "symbol", "expectedCount", "actualCount"),
             DefineWithDocs("XPS3001", "target", "An API, runtime feature, or native dependency is unavailable for the active target.", ["target.BrowserWasm"], "symbol", "target", "allowedTargets"),
             DefineWithDocs("XPS3002", "execution-context", "Server-only code requires a server-side execution context.", ["target.BrowserWasm", "target.ServerSide"], "symbol", "target", "currentContext", "requiredContext"),
+            DefineWithDocs("XPS7001", "security", "The application dependency security audit could not be completed.", ["security.DependencyAudit"], "upstreamCode"),
+            DefineWithDocs("XPS7002", "security", "The application dependency security audit found a blocking vulnerability.", ["security.DependencyAudit"], "package", "version", "severity", "advisory"),
             Define("XPS8001", "input", "A source file is required."),
             Define("XPS8002", "input", "The source file extension is invalid."),
             Define("XPS8003", "input", "The source file was not found."),
