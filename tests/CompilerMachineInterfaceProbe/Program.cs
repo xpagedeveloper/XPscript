@@ -89,6 +89,19 @@ Require(redactionXml.Contains("[REDACTED]", StringComparison.Ordinal), "XML diag
 
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
+var validationExecutionSentinel = Path.Combine(outputRoot, "validate-must-not-execute.txt");
+var validationExecutionSource = Path.Combine(outputRoot, "validate-must-not-execute.xps");
+var shellCommand = OperatingSystem.IsWindows()
+    ? $"cmd.exe /d /c echo executed>{validationExecutionSentinel}"
+    : $"/bin/sh -c \\"echo executed > '{validationExecutionSentinel}'\\"";
+await File.WriteAllTextAsync(validationExecutionSource,
+    "Sub Main()" + Environment.NewLine +
+    "    Call Shell(\\"" + shellCommand.Replace("\\", "\\\\").Replace("\\"", "\\\\"") + "\\")" + Environment.NewLine +
+    "End Sub" + Environment.NewLine);
+var nonExecutingValidation = await driver.ValidateWithResultAsync(validationExecutionSource);
+Require(nonExecutingValidation.Result == "ok", "validation execution sentinel source should validate");
+Require(!File.Exists(validationExecutionSentinel), "validation must never execute submitted XPScript");
+
 Directory.CreateDirectory(outputRoot);
 
 var cases = new[]
