@@ -112,7 +112,7 @@ Sub Main()
     Set data = XPJson.Parse("{""customer"":{""address"":{""city"":""""}}}")
     Call form.BindData(data)
     Call form.AddTextField("customer", "Customer")
-    Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""customer"":{""type"":""object"",""properties"":{""address"":{""type"":""object"",""properties"":{""city"":{""minLength"":2}}}}}}}}}")
+    Set schema = XPJsonSchema.Parse("{""type"": ""object"", ""properties"": {""customer"": {""type"": ""object"", ""properties"": {""address"": {""type"": ""object"", ""properties"": {""city"": {""minLength"": 2}}}}}}}}")
     Call form.SetValidationSchema(schema)
 End Sub
 """;
