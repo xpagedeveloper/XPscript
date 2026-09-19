@@ -25,6 +25,9 @@ internal static class CompilerDiagnosticCodes
     public const string ConflictingClassMember = "XPS2007";
     public const string UnknownSymbol = "XPS2008";
     public const string UnknownMember = "XPS2009";
+    public const string InvalidCallbackName = "XPS2010";
+    public const string CallbackNotFound = "XPS2011";
+    public const string CallbackArityMismatch = "XPS2012";
 
     // XPS8xxx: project/configuration and compiler invocation.
     public const string SourceFileRequired = "XPS8001";
