@@ -32,11 +32,11 @@ The CLI must be a consumer of the shared compiler service rather than the only p
 
 ## 1. Audit existing compiler diagnostics
 
-- [ ] Locate the implementation of `--result-format json` and document the current contract.
-- [ ] Inventory parser, symbol, type, semantic, target and code-generation diagnostics.
-- [ ] Identify diagnostics that are currently created only as formatted strings.
-- [ ] Identify where structured information is lost before reaching CLI output.
-- [ ] Identify reusable source-location, symbol and type metadata.
+- [x] Locate the implementation of `--result-format json` and document the current contract.
+- [x] Inventory parser, symbol, type, semantic, target and code-generation diagnostics.
+- [x] Identify diagnostics that are currently created only as formatted strings.
+- [x] Identify where structured information is lost before reaching CLI output.
+- [x] Identify reusable source-location, symbol and type metadata.
 - [x] Define one shared diagnostic model for text, JSON and XML output.
 - [x] Preserve normal compilation as the authoritative validation path.
 
