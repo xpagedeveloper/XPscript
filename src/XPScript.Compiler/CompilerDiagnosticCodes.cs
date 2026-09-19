@@ -16,6 +16,8 @@ internal static class CompilerDiagnosticCodes
     public const string InvalidDateComparison = "XPS1007";
     public const string MissingConstructorArgument = "XPS1008";
     public const string InvalidNativeConstructor = "XPS1009";
+    public const string InvalidNativeArgumentList = "XPS1010";
+    public const string RemovedNativeApi = "XPS1011";
 
     // XPS2xxx: type, argument, member and overload validation.
     public const string TypeMismatch = "XPS2001";
