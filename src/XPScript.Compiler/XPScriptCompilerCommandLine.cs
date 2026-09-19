@@ -25,7 +25,67 @@ public static class XPScriptCompilerCommandLine
         if (args[0].Equals("validate", StringComparison.OrdinalIgnoreCase))
             return await ValidateAsync(args[1..]).ConfigureAwait(false);
 
+        if (args[0].Equals("explain", StringComparison.OrdinalIgnoreCase))
+            return Explain(args[1..]);
+
         return await CompileAsync(args).ConfigureAwait(false);
+    }
+
+    public static int Explain(string[] args)
+    {
+        var resultFormat = "text";
+        try
+        {
+            if (args.Length == 0)
+            {
+                Console.Error.WriteLine("explain requires an XPS diagnostic code.");
+                return 1;
+            }
+
+            var code = args[0];
+            for (var i = 1; i < args.Length; i++)
+            {
+                if (args[i] == "--result-format" && i + 1 < args.Length)
+                    resultFormat = args[++i].ToLowerInvariant();
+                else
+                    throw new ArgumentException($"Unknown argument: {args[i]}");
+            }
+
+            if (resultFormat is not ("text" or "json"))
+                throw new ArgumentException("explain --result-format must be text or json.");
+
+            var definition = CompilerDiagnosticCatalog.Find(code);
+            if (definition is null)
+            {
+                Console.Error.WriteLine($"Unknown XPScript diagnostic code: {code}");
+                return 2;
+            }
+
+            if (resultFormat == "json")
+            {
+                Console.WriteLine(JsonSerializer.Serialize(definition, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = true
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"{definition.DiagnosticCode}: {definition.Explanation}");
+                Console.WriteLine($"category: {definition.Category}");
+                Console.WriteLine($"severity: {definition.Severity}");
+                Console.WriteLine($"documentationId: {definition.DocumentationId}");
+                if (definition.Properties.Count > 0)
+                    Console.WriteLine("properties: " + string.Join(", ", definition.Properties));
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return 1;
+        }
     }
 
     public static async Task<int> CompileAsync(string[] args)
