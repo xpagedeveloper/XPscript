@@ -40,6 +40,10 @@ internal static class CompilerDiagnosticCodes
     // XPS7xxx: application security and dependency audit.
     public const string DependencyAuditUnavailable = "XPS7001";
     public const string DependencyVulnerability = "XPS7002";
+    public const string RestrictedSourcePath = "XPS7003";
+    public const string UnsafeDependencyPath = "XPS7004";
+    public const string SecureStagingFailed = "XPS7005";
+    public const string TemporaryWorkspaceSecurityFailed = "XPS7006";
 
     // XPS8xxx: project/configuration and compiler invocation.
     public const string SourceFileRequired = "XPS8001";
