@@ -11,7 +11,8 @@ internal readonly record struct RuntimeFeatures(
     bool Sqlite,
     bool MsSql,
     bool Attachments,
-    bool Ui)
+    bool Ui,
+    bool Ai)
 {
     public bool RequiresHttp => Http || HttpDatabase || Attachments || Ui;
     public bool RequiresJson => Json || JsonSchema || RequiresHttp || Database || Attachments || Ui;
@@ -51,6 +52,7 @@ internal readonly record struct RuntimeFeatures(
             Sqlite: PreprocessorFeatureGate.ContainsTypeReference(code, "XPDBSQLite"),
             MsSql: PreprocessorFeatureGate.ContainsTypeReference(code, "XPDbMsSql"),
             Attachments: attachments,
-            Ui: PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm", "UIListView"));
+            Ui: PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm", "UIListView"),
+            Ai: PreprocessorFeatureGate.ContainsAny(code, "XPAi", "XPAiResponse", "AITool"));
     }
 }
