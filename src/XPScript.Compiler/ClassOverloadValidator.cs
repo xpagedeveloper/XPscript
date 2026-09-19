@@ -154,7 +154,27 @@ internal sealed class ClassOverloadValidator
                 if (seen.TryGetValue(signature, out var previous))
                 {
                     var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(lines[method.Line - 1]).TrimEnd();
-                    throw new CompilerException($"{sourceName}({method.Line},1): Duplicate overload '{method.ClassName}.{method.Name}' has the same effective parameter signature as line {previous.Line}.{Environment.NewLine}  {safeSource}", CompilerDiagnosticCodes.DuplicateOverload, "overload-resolution");
+                    var description = $"Duplicate overload '{method.ClassName}.{method.Name}' has the same effective parameter signature as line {previous.Line}.";
+                    var diagnostic = new CompileDiagnostic
+                    {
+                        File = sourceName,
+                        Line = method.Line,
+                        Position = 1,
+                        Description = description,
+                        DiagnosticCode = CompilerDiagnosticCodes.DuplicateOverload,
+                        Category = "overload-resolution",
+                        Properties =
+                        [
+                            new() { Name = "receiverType", Value = method.ClassName },
+                            new() { Name = "symbol", Value = method.Name },
+                            new() { Name = "symbolKind", Value = "method" },
+                            new() { Name = "signature", Value = FormatSignature(method) },
+                            new() { Name = "previousLine", Value = previous.Line.ToString() }
+                        ],
+                        SourceCode = safeSource,
+                        MarkedCode = safeSource + Environment.NewLine + "^"
+                    };
+                    throw new CompilerException(description, CompilerDiagnosticCodes.DuplicateOverload, "overload-resolution", [diagnostic]);
                 }
                 seen[signature] = method;
             }
