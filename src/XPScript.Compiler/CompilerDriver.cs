@@ -117,7 +117,12 @@ public sealed class CompilerDriver
             var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
             source = await File.ReadAllTextAsync(sourcePath);
             var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
-            var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
+            var preprocessorResult = new SourcePreprocessorPipeline().Transform(
+                includeResult.Source,
+                includeResult.Map,
+                sourcePath,
+                SourcePreprocessorConfigurationContext.Current);
+            var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(preprocessorResult.Source, preprocessorResult.Map, sourcePath);
             var expandedSource = managedReferences.Source;
             var nativeDependencies = new NativeDependencyPackager(rid).Collect(expandedSource, includeResult.Map, sourcePath);
             ValidateNativeDependencies(sourcePath, nativeDependencies);
