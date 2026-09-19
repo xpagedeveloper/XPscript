@@ -48,6 +48,16 @@ internal sealed class NativeHttpJsonPreprocessor
                 @"(?<![A-Za-z0-9_])Set\s+([A-Za-z_]\w*\.(?:Raw|Json|Validation)\s*=)",
                 "$1",
                 RegexOptions.IgnoreCase);
+
+            // ToObject is a public XPJson conversion API, but the native JSON objects are
+            // Variant-backed at the transpiler boundary. A Set assignment from ToObject
+            // therefore becomes a normal value assignment; the target model remains the
+            // strongly typed XPScript object selected by the caller's contract argument.
+            rewritten = Regex.Replace(
+                rewritten,
+                @"(?<![A-Za-z0-9_])Set\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\s*=\s*.+\.ToObject\s*\()",
+                "$1",
+                RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonDocument\.Parse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.Parse\s*\(", "XPScriptJsonSchema.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.FromJson\s*\(", "XPScriptJsonSchema.FromJson(", RegexOptions.IgnoreCase);
