@@ -163,11 +163,11 @@ Minimum representation:
 
 ## 10. ServerSide execution-boundary diagnostics
 
-- [ ] Structure errors for APIs that require server-side execution.
-- [ ] Include current target/context.
-- [ ] Include `requiredContext`, for example `ServerSide`.
-- [ ] Include offending symbol.
-- [ ] Ensure Browser-WASM validation can distinguish client and `[ServerSide]` code.
+- [x] Structure errors for APIs that require server-side execution.
+- [x] Include current target/context.
+- [x] Include `requiredContext`, for example `ServerSide`.
+- [x] Include offending symbol.
+- [x] Ensure Browser-WASM validation can distinguish client and `[ServerSide]` code.
 - [ ] Reuse compiler/runtime metadata for these restrictions.
 
 ## 11. Stable documentation IDs
