@@ -36,7 +36,7 @@ Require(generatedSymbolDiagnostic.UpstreamCode == "CS0103", "generated symbol up
 Require(!string.IsNullOrWhiteSpace(generatedSymbolDiagnostic.SourceCode), "generated symbol source mapping");
 
 
-var quoteSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "escaped-quote-diagnostic-error.xps"));
+var quoteSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "string-quote-invalid-variable.xps"));
 var quoteSyntaxDiagnostic = quoteSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1001");
 Require(quoteSyntaxDiagnostic is not null, "unescaped quote diagnostic");
 Require(quoteSyntaxDiagnostic.Category == "syntax", "unescaped quote category");
