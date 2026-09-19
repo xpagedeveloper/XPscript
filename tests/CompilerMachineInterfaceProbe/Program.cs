@@ -33,6 +33,18 @@ Require(CompilerDocumentationCatalog.All.Select(x => x.Id).SequenceEqual(
     CompilerDocumentationCatalog.All.Select(x => x.Id).OrderBy(x => x, StringComparer.Ordinal)),
     "documentation catalog ordering");
 
+var schemaSymbol = CompilerSymbolCatalog.Find("XPJsonSchema.FromJson");
+Require(schemaSymbol is not null, "XPJsonSchema.FromJson symbol definition");
+Require(schemaSymbol.Kind == "method", "symbol kind");
+Require(schemaSymbol.ReturnType == "XPJsonSchema", "symbol return type");
+Require(schemaSymbol.Parameters.SequenceEqual([new CompilerSymbolParameter("value", "Variant")]), "symbol parameters");
+Require(schemaSymbol.DocumentationId == "api.XPJsonSchema.FromJson", "symbol documentation id");
+Require(!schemaSymbol.Deprecated, "symbol deprecation metadata");
+Require(CompilerSymbolCatalog.Find("xpjsonschema.fromjson") == schemaSymbol, "symbol lookup must be case-insensitive");
+Require(CompilerSymbolCatalog.Search("XPJson").Select(x => x.Name).SequenceEqual(["XPJsonSchema", "XPJsonSchema.FromJson"]), "symbol search ordering");
+Require(CompilerSymbolCatalog.Search("").Select(x => x.Name).SequenceEqual(
+    CompilerSymbolCatalog.All.Select(x => x.Name)), "empty symbol search returns deterministic public catalog");
+
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
