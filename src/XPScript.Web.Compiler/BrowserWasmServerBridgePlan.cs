@@ -200,9 +200,31 @@ internal sealed record BrowserWasmServerBridgePlan(
 
     private static void ValidateRemoteProcedure(ProcedureBlock procedure)
     {
-        if (procedure.ClassDepth != 0) throw new XpsWebCompilationException($"browser-wasm server bridge cannot proxy class method '{procedure.Name}' yet. Move the server-only operation to a module Function or Sub.");
-        if (procedure.Name.Equals("Main", StringComparison.OrdinalIgnoreCase) || procedure.Name.Equals("Index", StringComparison.OrdinalIgnoreCase)) throw new XpsWebCompilationException($"browser-wasm entry procedure '{procedure.Name}' contains server-only code. Move XPAi/XPDB work into a helper Function or Sub so the browser entry point can remain local.");
+        if (procedure.ClassDepth != 0)
+            throw ServerSideContextError(
+                procedure.Name,
+                "ClassMethod",
+                $"browser-wasm server bridge cannot proxy class method '{procedure.Name}' yet. Move the server-only operation to a module Function or Sub.");
+
+        if (procedure.Name.Equals("Main", StringComparison.OrdinalIgnoreCase) || procedure.Name.Equals("Index", StringComparison.OrdinalIgnoreCase))
+            throw ServerSideContextError(
+                procedure.Name,
+                "BrowserEntryPoint",
+                $"browser-wasm entry procedure '{procedure.Name}' contains server-only code. Move XPAi/XPDB work into a helper Function or Sub so the browser entry point can remain local.");
     }
+
+    private static XpsWebCompilationException ServerSideContextError(string symbol, string currentContext, string message) =>
+        new(
+            message,
+            "XPS3002",
+            "execution-context",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["symbol"] = symbol,
+                ["target"] = "browser-wasm",
+                ["currentContext"] = currentContext,
+                ["requiredContext"] = "ServerSide"
+            });
 
     private static void ValidateSerializableSignature(ProcedureBlock procedure)
     {
