@@ -220,7 +220,15 @@ static async Task VerifyApiDocsJsonSchemaAsync(string cliDll, string siteDir)
 [Anonymous]
 [Post:/api/schema-users]
 [JsonSchema:schemas/create-user.schema.json]
-Sub CreateSchemaUser([FromBody] payload As Object)
+Class TypedSchemaUserPayload
+    Public Name As String
+    Public Age As Integer
+End Class
+
+[Anonymous]
+[Post:/api/schema-users]
+[JsonSchema:schemas/create-user.schema.json]
+Sub CreateSchemaUser([FromBody] payload As TypedSchemaUserPayload)
     Response.OK(payload)
 End Sub
 """);
@@ -240,8 +248,8 @@ End Sub
             .GetProperty("content")
             .GetProperty("application/json")
             .GetProperty("schema");
-        if (schema.TryGetProperty("$ref", out _))
-            throw new Exception("OpenAPI requestBody unexpectedly emitted an external JSON Schema reference.");
+        if (schema.TryGetProperty("$ref", out var schemaReference))
+            throw new Exception($"[JsonSchema] did not override the typed [FromBody] schema: {schemaReference.GetString()}");
         if (schema.GetProperty("type").GetString() != "object" ||
             schema.GetProperty("required")[0].GetString() != "name" ||
             schema.GetProperty("properties").GetProperty("name").GetProperty("type").GetString() != "string")
