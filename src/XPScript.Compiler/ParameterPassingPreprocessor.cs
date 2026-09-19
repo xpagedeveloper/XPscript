@@ -13,7 +13,7 @@ internal sealed class ParameterPassingPreprocessor
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ArgumentDeclaration = new(
-        @"^(?<leading>\s*)(?:(?<modifier>ByVal|ByRef)\s+)?(?<name>[A-Za-z_]\w*)(?<rest>.*)$",
+        @"^(?<leading>\s*)(?<optional>Optional\s+)?(?:(?<modifier>ByVal|ByRef)\s+)?(?<name>[A-Za-z_]\w*)(?<rest>.*)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public string Transform(string source)
