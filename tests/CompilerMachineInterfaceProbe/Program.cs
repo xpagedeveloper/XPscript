@@ -87,6 +87,29 @@ var redactionXml = redactionXmlWriter.ToString();
 Require(!redactionXml.Contains(secretCanary, StringComparison.Ordinal), "XML diagnostics must redact credential canaries");
 Require(redactionXml.Contains("[REDACTED]", StringComparison.Ordinal), "XML diagnostics should retain redaction marker");
 
+var deterministicDiagnosticResult = CompileResult.Error(
+[
+    new CompileDiagnostic
+    {
+        DiagnosticCode = " XPS2008 ",
+        Severity = " ERROR ",
+        Category = " Symbol-Resolution ",
+        Properties =
+        [
+            new CompileDiagnosticProperty { Name = "symbol", Value = "MissingValue" },
+            new CompileDiagnosticProperty { Name = "kind", Value = "variable" },
+            new CompileDiagnosticProperty { Name = "containingScope", Value = "Main" }
+        ]
+    }
+]);
+var deterministicDiagnostic = deterministicDiagnosticResult.Errors.Single();
+Require(deterministicDiagnostic.DiagnosticCode == "XPS2008", "diagnostic code normalization");
+Require(deterministicDiagnostic.Severity == "error", "diagnostic severity normalization");
+Require(deterministicDiagnostic.Category == "symbol-resolution", "diagnostic category normalization");
+Require(deterministicDiagnostic.Properties!.Select(p => p.Name).SequenceEqual(["containingScope", "kind", "symbol"]),
+    "diagnostic properties must use deterministic ordinal ordering");
+
+
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
