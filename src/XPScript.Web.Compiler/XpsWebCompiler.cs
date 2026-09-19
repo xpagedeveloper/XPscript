@@ -536,6 +536,22 @@ internal static class Script
 
 public sealed class XpsWebCompilationException : Exception
 {
-    public XpsWebCompilationException(string message) : base(message) { }
-    public XpsWebCompilationException(string message, Exception innerException) : base(message, innerException) { }
+    public XpsWebCompilationException(string message) : this(message, null, null, null, null) { }
+    public XpsWebCompilationException(string message, Exception innerException) : this(message, null, null, null, innerException) { }
+
+    public XpsWebCompilationException(
+        string message,
+        string? diagnosticCode,
+        string? category,
+        IReadOnlyDictionary<string, string>? properties,
+        Exception? innerException = null) : base(message, innerException)
+    {
+        DiagnosticCode = diagnosticCode ?? "";
+        Category = category ?? "";
+        Properties = properties ?? new Dictionary<string, string>(StringComparer.Ordinal);
+    }
+
+    public string DiagnosticCode { get; }
+    public string Category { get; }
+    public IReadOnlyDictionary<string, string> Properties { get; }
 }
