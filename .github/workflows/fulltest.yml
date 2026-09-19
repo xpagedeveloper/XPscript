@@ -1,4 +1,5 @@
 name: FullTest
+# OpenAPI corpus trigger: use current branch workflow definition
 
 on:
   pull_request:
