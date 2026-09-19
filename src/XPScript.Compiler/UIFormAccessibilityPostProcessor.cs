@@ -130,7 +130,7 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "    {",
                 "        var field = FindField(name);",
                 "        var result = XPScriptNativeJson.CreateArray();",
-                "        if (validationError.Length > 0) result.Add(field.ValidationError);",
+                "        if (field.ValidationError.Length > 0) result.Add(field.ValidationError);",
                 "        return result;",
                 "    }",
                 string.Empty,
@@ -230,7 +230,7 @@ internal sealed class UIFormAccessibilityPostProcessor
             "            var required = field.Required ? \" required\" : string.Empty;",
             Block(
                 "            var required = field.Required ? \" required aria-required=\\\"true\\\"\" : string.Empty;",
-                "            var validationError = validationError.Length > 0 ? field.ValidationError : GetValidationError(field.Name);",
+                "            var validationError = field.ValidationError.Length > 0 ? field.ValidationError : GetValidationError(field.Name);",
                 "            var accessibility = BuildAccessibilityAttributes(field, name, validationError);"));
 
         generated = AddAccessibilityAttributesToRenderer(generated);
@@ -302,7 +302,7 @@ internal sealed class UIFormAccessibilityPostProcessor
             "            if (field.AccessibleDescription.Length > 0 || field.AccessibleHelpText.Length > 0)",
             "                html.Append(\"<div class=\\\"xpscript-uiform-help\\\" id=\\\"xps_\").Append(name).Append(\"_help\\\">\").Append(System.Net.WebUtility.HtmlEncode(string.Join(\" \", new[] { field.AccessibleDescription, field.AccessibleHelpText }.Where(text => text.Length > 0)))).Append(\"</div>\");",
             "            if (validationError.Length > 0)",
-            "                html.Append(\"<div class=\\\"xpscript-uiform-error\\\" id=\\\"xps_\").Append(name).Append(\"_error\\\" role=\\\"alert\\\">\").Append(System.Net.WebUtility.HtmlEncode(field.ValidationError)).Append(\"</div>\");",
+            "                html.Append(\"<div class=\\\"xpscript-uiform-error\\\" id=\\\"xps_\").Append(name).Append(\"_error\\\" role=\\\"alert\\\">\").Append(System.Net.WebUtility.HtmlEncode(validationError)).Append(\"</div>\");",
             string.Empty);
         generated = generated.Insert(fieldClose, fieldMessages);
 
