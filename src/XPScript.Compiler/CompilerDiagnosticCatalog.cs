@@ -6,6 +6,7 @@ public sealed record CompilerDiagnosticDefinition(
     string Severity,
     string Explanation,
     string DocumentationId,
+    IReadOnlyList<string> DocumentationIds,
     IReadOnlyList<string> Properties);
 
 public static class CompilerDiagnosticCatalog
@@ -59,6 +60,9 @@ public static class CompilerDiagnosticCatalog
     public static IReadOnlyCollection<CompilerDiagnosticDefinition> All =>
         Definitions.Values.OrderBy(x => x.DiagnosticCode, StringComparer.Ordinal).ToArray();
 
-    private static CompilerDiagnosticDefinition Define(string code, string category, string explanation, params string[] properties) =>
-        new(code, category, "error", explanation, "compiler-diagnostics#" + code.ToLowerInvariant(), properties);
+    private static CompilerDiagnosticDefinition Define(string code, string category, string explanation, params string[] properties)
+    {
+        var documentationId = "diagnostic." + code.ToUpperInvariant();
+        return new(code, category, "error", explanation, documentationId, [documentationId], properties);
+    }
 }
