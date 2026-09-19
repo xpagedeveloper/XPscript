@@ -57,9 +57,8 @@ public sealed partial class XPScriptTranspiler
 
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
-        var originalCode = PreprocessorFeatureGate.CodeOnly(source);
-        var requestedAi = PreprocessorFeatureGate.ContainsAny(originalCode, "XPAi", "XPAiResponse", "AITool");
-        if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase) && requestedAi)
+        var originalFeatures = RuntimeFeatures.Detect(source);
+        if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase) && originalFeatures.Ai)
             throw TargetUnavailable("XPAi", runtimeIdentifier, "server target", "Keep AI credentials and requests on the server.");
 
         source = new MultilineStringPreprocessor().Transform(source, sourceName);
@@ -85,7 +84,7 @@ public sealed partial class XPScriptTranspiler
         source = new IndexedPropertyPreprocessor().Transform(source);
         source = new ObjectFunctionSetPreprocessor().Transform(source);
         var runtimeFeatures = RuntimeFeatures.Detect(source);
-        var usesAi = requestedAi;
+        var usesAi = originalFeatures.Ai || runtimeFeatures.Ai;
         var notesRuntimeFeatures = NotesRuntimeFeatures.Detect(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
         var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
