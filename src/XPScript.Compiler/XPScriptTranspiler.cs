@@ -59,6 +59,8 @@ public sealed partial class XPScriptTranspiler
     {
         var originalCode = PreprocessorFeatureGate.CodeOnly(source);
         var requestedAi = PreprocessorFeatureGate.ContainsTypeReference(originalCode, "XPAi", "XPAiResponse", "AITool");
+        if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase) && requestedAi)
+            throw TargetUnavailable("XPAi", runtimeIdentifier, "server target", "Keep AI credentials and requests on the server.");
 
         source = new MultilineStringPreprocessor().Transform(source, sourceName);
         source = new EscapedQuotePreprocessor().Transform(source);
@@ -107,7 +109,6 @@ public sealed partial class XPScriptTranspiler
         {
             if (usesSqlite) throw TargetUnavailable("XPDBSQLite", runtimeIdentifier, "server or desktop target");
             if (usesMsSql) throw TargetUnavailable("XPDbMsSql", runtimeIdentifier, "server or desktop target");
-            if (usesAi) throw TargetUnavailable("XPAi", runtimeIdentifier, "server target", "Keep AI credentials and requests on the server.");
             if (usesArchive) throw TargetUnavailable("Archive", runtimeIdentifier, "server or desktop target", "Archive file-path operations are not available for browser-wasm targets yet.");
             if (usesSpreadsheet) throw TargetUnavailable("XPSpreadsheet", runtimeIdentifier, "server or desktop target");
             if (usesNetworkTools) throw TargetUnavailable("NetworkTools", runtimeIdentifier, "server or desktop target", "Browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
