@@ -263,12 +263,12 @@ End Sub
 
 static async Task VerifyApiDocsJsonSchemaFailuresAsync(string cliDll, string parent)
 {
-    var cases = new (string Name, string SchemaPath, string? SchemaContent)[]
+    var cases = new (string Name, string SchemaPath, string? SchemaContent, string ExpectedError)[]
     {
-        ("traversal", "../outside.schema.json", "{}"),
-        ("non-json", "schemas/schema.txt", "{}"),
-        ("missing", "schemas/missing.schema.json", null),
-        ("invalid-json", "schemas/invalid.schema.json", "{not-json")
+        ("traversal", "../outside.schema.json", "{}", "must stay inside the web root"),
+        ("non-json", "schemas/schema.txt", "{}", "must reference a .json file"),
+        ("missing", "schemas/missing.schema.json", null, "was not found"),
+        ("invalid-json", "schemas/invalid.schema.json", "{not-json", "invalid JSON")
     };
 
     foreach (var test in cases)
@@ -286,8 +286,8 @@ Sub Test([FromBody] payload As Object)
 End Sub
 """);
         var result = await RunShortAsync(cliDll, ["web", "--root", root, "--port", GetFreePort().ToString(), "--api-docs"]);
-        if (result.ExitCode == 0)
-            throw new Exception($"API documentation accepted invalid JSON Schema case '{test.Name}'.");
+        if (result.ExitCode == 0 || !result.Stderr.Contains(test.ExpectedError, StringComparison.OrdinalIgnoreCase))
+            throw new Exception($"API documentation did not reject JSON Schema case '{test.Name}' with the expected diagnostic '{test.ExpectedError}'. exit={result.ExitCode} stderr={result.Stderr}");
     }
 
     var absoluteRoot = Path.Combine(parent, "apidoc-schema-absolute");
@@ -303,8 +303,8 @@ Sub Test([FromBody] payload As Object)
 End Sub
 """);
     var absoluteResult = await RunShortAsync(cliDll, ["web", "--root", absoluteRoot, "--port", GetFreePort().ToString(), "--api-docs"]);
-    if (absoluteResult.ExitCode == 0)
-        throw new Exception("API documentation accepted an absolute JSON Schema path.");
+    if (absoluteResult.ExitCode == 0 || !absoluteResult.Stderr.Contains("must stay inside the web root", StringComparison.OrdinalIgnoreCase))
+        throw new Exception($"API documentation did not reject an absolute JSON Schema path with the expected diagnostic. exit={absoluteResult.ExitCode} stderr={absoluteResult.Stderr}");
 
     Console.WriteLine("WEB-API-DOCS-JSON-SCHEMA-FAILURES=OK");
 }
