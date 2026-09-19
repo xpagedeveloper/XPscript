@@ -69,6 +69,17 @@ Sub Main()
     If arrayForm.ValidateData().FailedPaths.Get(0) <> "$.items[0].quantity" Then Error 5, "Expected array UIForm schema failure path"
     If arrayForm.GetValidationError("items") = "" Then Error 5, "Expected array schema error to map to parent UIForm field"
 
+    Dim prefixForm As New UIForm("Schema prefix boundary")
+    Dim prefixData As XPJsonDocument
+    Set prefixData = XPJson.Parse("{""username"":""""}")
+    Call prefixForm.BindData(prefixData)
+    Call prefixForm.AddTextField("user", "User")
+    Call prefixForm.AddTextField("username", "Username")
+    Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""username"":{""minLength"":2}}}")
+    Call prefixForm.SetValidationSchema(schema)
+    If prefixForm.GetValidationError("user") <> "" Then Error 5, "Schema error for username must not map to user prefix field"
+    If prefixForm.GetValidationError("username") = "" Then Error 5, "Expected schema error to map to exact username field"
+
     Call first.SetValidationSchema(Nothing)
     If first.HasValidationSchema Then Error 5, "Expected UIForm JSON Schema to be cleared"
     If Not first.IsDataValid Then Error 5, "Expected UIForm data to be valid after clearing schema"
