@@ -1,3 +1,4 @@
+using XPScript.Compiler;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -34,10 +35,6 @@ internal sealed record BrowserWasmServerBridgePlan(
         @"^(?:(?:Dim|Static|Public|Private)\s+)([A-Za-z_]\w*)\s+(?:(?:List)\s+)?As\s+(?:New\s+)?([A-Za-z_]\w*)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    private static readonly Regex ServerType = new(
-        @"\b(XPAi|XPAiResponse|XPDBSQLite|XPDbMsSql)\b",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
     private static readonly HashSet<string> SerializableTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "Variant", "String", "Integer", "Long", "Double", "Single", "Boolean", "Byte", "Currency", "Date"
@@ -64,7 +61,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         foreach (var procedure in procedures)
         {
             var body = BodyText(lines, procedure);
-            if (!ServerType.IsMatch(body)) continue;
+            if (!HasServerRuntimeFeature(body)) continue;
             ValidateRemoteProcedure(procedure);
             remote.Add(procedure);
 
@@ -133,9 +130,15 @@ internal sealed record BrowserWasmServerBridgePlan(
         return new BrowserWasmServerBridgePlan(
             browser.ToString(),
             manifest,
-            remote.Any(x => ServerType.IsMatch(BodyText(lines, x)) && Regex.IsMatch(BodyText(lines, x), @"\bXPAi(?:Response)?\b", RegexOptions.IgnoreCase)),
-            remote.Any(x => Regex.IsMatch(BodyText(lines, x), @"\bXPDBSQLite\b", RegexOptions.IgnoreCase)) || serverStateGlobals.Any(name => moduleGlobals.TryGetValue(name, out var type) && type.Equals("XPDBSQLite", StringComparison.OrdinalIgnoreCase)),
-            remote.Any(x => Regex.IsMatch(BodyText(lines, x), @"\bXPDbMsSql\b", RegexOptions.IgnoreCase)) || serverStateGlobals.Any(name => moduleGlobals.TryGetValue(name, out var type) && type.Equals("XPDbMsSql", StringComparison.OrdinalIgnoreCase)));
+            remote.Any(x => RuntimeFeatures.Detect(BodyText(lines, x)).Ai),
+            remote.Any(x => RuntimeFeatures.Detect(BodyText(lines, x)).Sqlite) || serverStateGlobals.Any(name => moduleGlobals.TryGetValue(name, out var type) && type.Equals("XPDBSQLite", StringComparison.OrdinalIgnoreCase)),
+            remote.Any(x => RuntimeFeatures.Detect(BodyText(lines, x)).MsSql) || serverStateGlobals.Any(name => moduleGlobals.TryGetValue(name, out var type) && type.Equals("XPDbMsSql", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static bool HasServerRuntimeFeature(string source)
+    {
+        var features = RuntimeFeatures.Detect(source);
+        return features.Ai || features.Sqlite || features.MsSql;
     }
 
     private static IReadOnlyList<ProcedureBlock> ParseProcedures(string[] lines)
