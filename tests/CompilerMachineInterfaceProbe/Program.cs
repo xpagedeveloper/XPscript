@@ -36,6 +36,16 @@ Require(generatedSymbolDiagnostic.UpstreamCode == "CS0103", "generated symbol up
 Require(!string.IsNullOrWhiteSpace(generatedSymbolDiagnostic.SourceCode), "generated symbol source mapping");
 
 
+var duplicateOverloadCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "class-method-overloads-duplicate.xps"));
+var duplicateOverloadDiagnostic = duplicateOverloadCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2006");
+Require(duplicateOverloadDiagnostic is not null, "duplicate overload diagnostic");
+Require(duplicateOverloadDiagnostic.Properties is not null, "duplicate overload metadata properties");
+Require(duplicateOverloadDiagnostic.Properties.Any(p => p.Name == "receiverType"), "duplicate overload receiver type");
+Require(duplicateOverloadDiagnostic.Properties.Any(p => p.Name == "symbol"), "duplicate overload symbol");
+Require(duplicateOverloadDiagnostic.Properties.Any(p => p.Name == "symbolKind" && p.Value == "method"), "duplicate overload symbol kind");
+Require(duplicateOverloadDiagnostic.Properties.Any(p => p.Name == "signature"), "duplicate overload signature");
+Require(duplicateOverloadDiagnostic.Properties.Any(p => p.Name == "previousLine"), "duplicate overload previous line");
+
 var memberConflictCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "class-member-conflict-invalid.xps"));
 var memberConflictDiagnostic = memberConflictCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2007");
 Require(memberConflictDiagnostic is not null, "member conflict diagnostic");
