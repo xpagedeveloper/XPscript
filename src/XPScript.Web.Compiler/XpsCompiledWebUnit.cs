@@ -179,6 +179,8 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         object document;
         try
         {
+            if (context.Request.Body.Length > 1_048_576)
+                throw new InvalidOperationException("Request body exceeds the configured 1048576 byte text limit.");
             var node = JsonNode.Parse(
                 context.Request.Body.Span,
                 nodeOptions: null,
