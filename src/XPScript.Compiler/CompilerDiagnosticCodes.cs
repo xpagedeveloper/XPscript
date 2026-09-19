@@ -33,7 +33,7 @@ internal static class CompilerDiagnosticCodes
     public const string CallbackNotFound = "XPS2011";
     public const string CallbackArityMismatch = "XPS2012";
 
-    // XPS8xxx: project/configuration and compiler invocation.
+    // XPS3xxx: target/platform restrictions.\n    public const string TargetApiUnavailable = \"XPS3001\";\n\n    // XPS8xxx: project/configuration and compiler invocation.
     public const string SourceFileRequired = "XPS8001";
     public const string SourceExtensionInvalid = "XPS8002";
     public const string SourceFileNotFound = "XPS8003";
