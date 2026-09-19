@@ -318,6 +318,10 @@ CI benchmark evidence on the GitHub Linux runner shows a median of 1029 ms when 
 - [x] Expose compiler validation, symbol search/description and diagnostic explanation as MCP tools.
 - [x] Keep MCP validation non-executing and separate from compile/run permissions.
 - [ ] Add MCP protocol/contract probes to CI.
+- [x] Ship an XPScript development skill that tells coding agents when to use warm MCP validation/introspection and when to run a full CLI compile.
+- [x] Add `xpscript mcp install codex|claude` to install, validate or update the MCP registration and XPScript skill in supported coding clients.
+- [ ] Add installer integration tests with isolated fake HOME/config roots on Windows, Linux and macOS.
+- [ ] Re-check Codex and Claude Code client configuration formats before each XPScript release and keep installers versioned.
 - [ ] Investigate reusing a warm `CompilerDriver` inside the existing debugger host without changing the debugger protocol.
 - [ ] Let debugger-driven edit/validate cycles use warm validation before a full debug build when semantics permit.
 - [ ] Investigate a warm compiler host for test/run-without-debugger so repeated test runs do not pay process/compiler startup for unchanged compiler state.
