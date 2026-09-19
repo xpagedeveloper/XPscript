@@ -60,4 +60,5 @@ internal static class CompilerDiagnosticCodes
     // diagnostic could not be preserved.
     public const string CompilationFailed = "XPS9001";
     public const string InternalCompilationFailed = "XPS9002";
+    public const string ValidationBuildTimedOut = "XPS9003";
 }
