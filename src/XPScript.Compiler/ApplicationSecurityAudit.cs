@@ -29,7 +29,7 @@ internal static class ApplicationSecurityAudit
                     [SecurityDiagnostic(
                         message,
                         CompilerDiagnosticCodes.DependencyAuditUnavailable,
-                        new("upstreamCode", unavailable.Code))]);
+                        new CompileDiagnosticProperty { Name = "upstreamCode", Value = unavailable.Code })]);
             Console.Error.WriteLine(message);
         }
 
@@ -55,10 +55,10 @@ internal static class ApplicationSecurityAudit
             blocking.Select(f => SecurityDiagnostic(
                 $"Package '{f.Package}' {f.Version} has a known {f.Severity} severity vulnerability.",
                 CompilerDiagnosticCodes.DependencyVulnerability,
-                new("package", f.Package),
-                new("version", f.Version),
-                new("severity", f.Severity),
-                new("advisory", f.Advisory))));
+                new CompileDiagnosticProperty { Name = "package", Value = f.Package },
+                new CompileDiagnosticProperty { Name = "version", Value = f.Version },
+                new CompileDiagnosticProperty { Name = "severity", Value = f.Severity },
+                new CompileDiagnosticProperty { Name = "advisory", Value = f.Advisory })));
     }
 
     internal static UnavailableFinding? ParseUnavailable(string buildOutput)
