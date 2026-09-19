@@ -321,7 +321,7 @@ CI benchmark evidence on the GitHub Linux runner shows a median of 1029 ms when 
 - [x] Ship an XPScript development skill that tells coding agents when to use warm MCP validation/introspection and when to run a full CLI compile.
 - [x] Add `xpscript mcp install codex|claude` to install, validate or update the MCP registration and XPScript skill in supported coding clients.
 - [x] Add installer integration tests with isolated fake HOME/config roots on Windows, Linux and macOS. CI verifies idempotent install/update behavior, skill installation and repair of mismatched MCP registrations on all three platforms.
-- [ ] Re-check Codex and Claude Code client configuration formats before each XPScript release and keep installers versioned.
+- [x] Re-check Codex and Claude Code client configuration formats against current official documentation. Claude supports `local|project|user` MCP scopes; the XPScript installer exposes user/project and passes scope explicitly. Codex documents user config plus project `.codex/config.toml`, but its current `mcp add` CLI syntax has no documented scope switch, so the installer now rejects `--scope project` rather than silently installing a user MCP registration. Re-check these formats before each XPScript release.
 - [ ] Investigate reusing a warm `CompilerDriver` inside the existing debugger host without changing the debugger protocol.
 - [ ] Let debugger-driven edit/validate cycles use warm validation before a full debug build when semantics permit.
 - [ ] Investigate a warm compiler host for test/run-without-debugger so repeated test runs do not pay process/compiler startup for unchanged compiler state.
