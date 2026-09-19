@@ -221,32 +221,68 @@ public static class XPScriptCompilerCommandLine
 
     public static async Task<int> ValidateAsync(string[] args)
     {
+        const int MaxStdinSourceChars = 1_048_576;
         var resultFormat = "text";
         var debug = false;
+        string? stdinRoot = null;
         try
         {
-            if (args.Length == 0)
-            {
-                WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "validate requires an .xps source file." }]).WithOperation("validate"), resultFormat);
-                return 1;
-            }
-
-            var sourcePath = Path.GetFullPath(args[0]);
+            var useStdin = args.Any(x => x.Equals("--stdin", StringComparison.OrdinalIgnoreCase));
+            string? virtualFileName = null;
+            string? sourceArgument = null;
             var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
-            for (var i = 1; i < args.Length; i++)
+
+            for (var i = 0; i < args.Length; i++)
             {
-                if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
+                if (args[i] == "--stdin")
+                    continue;
+                if (args[i] == "--filename" && i + 1 < args.Length)
+                    virtualFileName = args[++i];
+                else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
                     runtimeIdentifier = args[++i].ToLowerInvariant();
                 else if (args[i] == "--result-format" && i + 1 < args.Length)
                     resultFormat = args[++i].ToLowerInvariant();
                 else if (args[i] == "--debug")
                     debug = true;
+                else if (!args[i].StartsWith("--", StringComparison.Ordinal) && sourceArgument is null)
+                    sourceArgument = args[i];
                 else
                     throw new ArgumentException($"Unknown argument: {args[i]}");
             }
 
             if (resultFormat is not ("text" or "json" or "xml"))
                 throw new ArgumentException("--result-format must be text, json, or xml.");
+
+            string sourcePath;
+            if (useStdin)
+            {
+                if (sourceArgument is not null)
+                    throw new ArgumentException("validate --stdin cannot also specify a source file.");
+                virtualFileName ??= "stdin.xps";
+                if (!Path.GetFileName(virtualFileName).Equals(virtualFileName, StringComparison.Ordinal) ||
+                    !Path.GetExtension(virtualFileName).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+                    throw new ArgumentException("--filename must be a simple .xps filename without a directory path.");
+
+                var source = await Console.In.ReadToEndAsync().ConfigureAwait(false);
+                if (source.Length > MaxStdinSourceChars)
+                    throw new ArgumentException($"stdin source exceeds the {MaxStdinSourceChars} character validation limit.");
+
+                stdinRoot = Path.Combine(Path.GetTempPath(), "XPScript", "stdin", Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(stdinRoot);
+                sourcePath = Path.Combine(stdinRoot, virtualFileName);
+                await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
+            }
+            else
+            {
+                if (sourceArgument is null)
+                {
+                    WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "validate requires an .xps source file or --stdin." }]).WithOperation("validate"), resultFormat);
+                    return 1;
+                }
+                if (virtualFileName is not null)
+                    throw new ArgumentException("--filename is only valid with --stdin.");
+                sourcePath = Path.GetFullPath(sourceArgument);
+            }
 
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             var compiler = new CompilerDriver();
@@ -259,6 +295,13 @@ public static class XPScriptCompilerCommandLine
             var result = CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]).WithOperation("validate");
             WriteResult(result, resultFormat is "json" or "xml" ? resultFormat : "text");
             return 1;
+        }
+        finally
+        {
+            if (stdinRoot is not null)
+            {
+                try { Directory.Delete(stdinRoot, recursive: true); } catch { }
+            }
         }
     }
 
