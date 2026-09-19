@@ -26,7 +26,7 @@ public sealed partial class XPScriptTranspiler
         {
             var remapped = SourceMapDiagnostics.Remap(ex.Message, sourceName, includeResult.Map);
             if (string.Equals(remapped, ex.Message, StringComparison.Ordinal)) throw;
-            throw new CompilerException(remapped);
+            throw new CompilerException(remapped, ex.DiagnosticCode, ex.Category, ex.GeneratedDiagnostics);
         }
     }
 
