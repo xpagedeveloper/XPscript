@@ -53,6 +53,7 @@ public static class CompilerDiagnosticCatalog
             Define("XPS8006", "packaging", "The Web/IIS output location is inside the prohibited source location."),
             Define("XPS8007", "preprocessing", "A configured source preprocessor is invalid.", "preprocessor"),
             Define("XPS8008", "preprocessing", "A configured source preprocessor failed.", "preprocessor"),
+            Define("XPS8009", "input", "The XPScript source exceeds the compiler source-size limit.", "maximumBytes", "actualBytes"),
             Define("XPS9001", "compilation", "Compilation failed without a more specific stable XPScript diagnostic."),
             Define("XPS9002", "internal", "The compiler encountered an internal compilation failure.")
         }.ToDictionary(x => x.DiagnosticCode, StringComparer.OrdinalIgnoreCase);
