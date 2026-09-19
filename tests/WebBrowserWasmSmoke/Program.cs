@@ -97,6 +97,16 @@ End Sub
     }
     catch (XpsWebCompilationException ex) when (ex.Message.Contains("not marked [ServerSide]", StringComparison.OrdinalIgnoreCase))
     {
+        if (ex.DiagnosticCode != "XPS3002" || ex.Category != "execution-context")
+            throw new Exception("Missing [ServerSide] diagnostic was not structured as XPS3002.");
+        if (!ex.Properties.TryGetValue("symbol", out var symbol) || symbol != "UnsafeDb")
+            throw new Exception("Missing [ServerSide] diagnostic did not identify the offending procedure.");
+        if (!ex.Properties.TryGetValue("target", out var target) || target != "browser-wasm")
+            throw new Exception("Missing [ServerSide] diagnostic did not identify browser-wasm.");
+        if (!ex.Properties.TryGetValue("currentContext", out var currentContext) || currentContext != "Client")
+            throw new Exception("Missing [ServerSide] diagnostic did not identify the client context.");
+        if (!ex.Properties.TryGetValue("requiredContext", out var requiredContext) || requiredContext != "ServerSide")
+            throw new Exception("Missing [ServerSide] diagnostic did not identify the required context.");
     }
 
     var indexRequest = new XpsWebRequest(
