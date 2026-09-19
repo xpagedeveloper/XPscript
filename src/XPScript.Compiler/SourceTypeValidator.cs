@@ -121,7 +121,8 @@ internal sealed class SourceTypeValidator
 
         if (rhsText.Equals("Nothing", StringComparison.OrdinalIgnoreCase))
         {
-            AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original, "Nothing is valid only for object-reference assignment with Set.", CompilerDiagnosticCodes.TypeMismatch);
+            AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original, "Nothing is valid only for object-reference assignment with Set.", CompilerDiagnosticCodes.TypeMismatch,
+                ("symbol", targetName), ("expectedType", "object reference assigned with Set"), ("actualType", "Nothing"));
             return;
         }
 
@@ -130,7 +131,8 @@ internal sealed class SourceTypeValidator
             if (!variables.TryGetValue(targetName, out var nullTarget)) return;
             if (nullTarget.Type.Equals("Variant", StringComparison.OrdinalIgnoreCase) && !nullTarget.IsArray) return;
 
-            AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original, $"Null can be assigned only to a Variant-compatible value, not {FormatType(nullTarget.Type, nullTarget.IsArray)}.", CompilerDiagnosticCodes.TypeMismatch);
+            AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original, $"Null can be assigned only to a Variant-compatible value, not {FormatType(nullTarget.Type, nullTarget.IsArray)}.", CompilerDiagnosticCodes.TypeMismatch,
+                ("symbol", targetName), ("expectedType", FormatType(nullTarget.Type, nullTarget.IsArray)), ("actualType", "Null"));
             return;
         }
 
