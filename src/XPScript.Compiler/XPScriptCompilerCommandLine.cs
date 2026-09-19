@@ -287,6 +287,15 @@ public static class XPScriptCompilerCommandLine
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             var compiler = new CompilerDriver();
             var result = await compiler.ValidateWithResultAsync(sourcePath, runtimeIdentifier).ConfigureAwait(false);
+            if (useStdin && virtualFileName is not null)
+            {
+                result.Source = new CompileSource { EntryPoint = virtualFileName };
+                foreach (var diagnostic in result.Errors)
+                {
+                    if (!string.IsNullOrWhiteSpace(diagnostic.File))
+                        diagnostic.File = virtualFileName;
+                }
+            }
             WriteResult(result, resultFormat);
             return result.Success ? 0 : 2;
         }
