@@ -9,6 +9,7 @@ public sealed class CompilerDriver
     private const string MimeKitVersion = "4.17.0";
     private const long MaximumSourceBytes = 1024L * 1024L;
     private static readonly TimeSpan ValidationBuildTimeout = TimeSpan.FromMinutes(2);
+    private const int MaximumBuildDiagnosticChars = 256 * 1024;
     private sealed record StagedManagedReference(string Name, string Path);
 
     private static readonly HashSet<string> SupportedRuntimeIdentifiers = new(StringComparer.OrdinalIgnoreCase)
@@ -574,9 +575,9 @@ public sealed class CompilerDriver
                 };
                 throw new CompilerException(diagnostic.Description, [diagnostic]);
             }
-            var stdout = await stdoutTask;
-            var stderr = await stderrTask;
-            ApplicationSecurityAudit.Report(stdout + Environment.NewLine + stderr);
+            var stdout = LimitBuildDiagnosticOutput(await stdoutTask);
+            var stderr = LimitBuildDiagnosticOutput(await stderrTask);
+            ApplicationSecurityAudit.Report(LimitBuildDiagnosticOutput(stdout + Environment.NewLine + stderr));
 
             if (process.ExitCode != 0)
             {
@@ -712,6 +713,13 @@ public sealed class CompilerDriver
             CompilerDiagnosticMode.Debug,
             diagnosticCode,
             category);
+
+    private static string LimitBuildDiagnosticOutput(string value)
+    {
+        if (value.Length <= MaximumBuildDiagnosticChars) return value;
+        return value[..MaximumBuildDiagnosticChars] + Environment.NewLine +
+               "[compiler output truncated after " + MaximumBuildDiagnosticChars + " characters]";
+    }
 
     private static string SanitizeBuildDiagnostics(string text, string tempRoot, string sourcePath)
     {
