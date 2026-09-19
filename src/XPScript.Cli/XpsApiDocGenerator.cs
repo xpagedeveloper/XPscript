@@ -1,3 +1,4 @@
+using XPScript.Web.Runtime;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -133,16 +134,15 @@ internal static class XpsApiDocGenerator
     {
         if (endpoint.JsonSchema is not null)
         {
-            var configuredPath = endpoint.JsonSchema.Trim();
-            if (Path.IsPathRooted(configuredPath) || configuredPath.Any(char.IsControl) ||
-                !configuredPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException($"JSON Schema path '{endpoint.JsonSchema}' must be a relative .json path inside the API root.");
-
-            var rootPath = Path.GetFullPath(root);
-            var schemaPath = Path.GetFullPath(Path.Combine(rootPath, configuredPath));
-            var rootPrefix = rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            if (!schemaPath.StartsWith(rootPrefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-                throw new InvalidOperationException($"JSON Schema path '{endpoint.JsonSchema}' must stay inside the API root.");
+            string schemaPath;
+            try
+            {
+                schemaPath = XpsJsonSchemaPath.ResolveInsideRoot(root, endpoint.JsonSchema);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOperationException($"Invalid JSON Schema path '{endpoint.JsonSchema}': {ex.Message}", ex);
+            }
             if (!File.Exists(schemaPath))
                 throw new FileNotFoundException($"Configured JSON Schema '{endpoint.JsonSchema}' was not found.", schemaPath);
 
