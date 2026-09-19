@@ -272,9 +272,9 @@ xpscriptc symbols --search XPJson --result-format json
 
 ## 17. Diagnostic introspection
 
-- [ ] Provide deterministic lookup of diagnostic definitions.
-- [ ] Return category, severity defaults, explanation and documentation IDs.
-- [ ] Do not use an LLM inside the compiler to explain diagnostics.
+- [x] Provide deterministic lookup of diagnostic definitions.
+- [x] Return category, severity defaults, explanation and documentation IDs.
+- [x] Do not use an LLM inside the compiler to explain diagnostics.
 
 Possible interface:
 
