@@ -84,6 +84,17 @@ Require(
      compoundSyntaxDiagnostic.Properties.Any(p => p.Name == "actualType")),
     "compound syntax expected construct or type metadata");
 
+var dateComparisonCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "date-comparisons-invalid.xps"));
+var dateComparisonDiagnostic = dateComparisonCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1007");
+Require(dateComparisonDiagnostic is not null, "date comparison diagnostic");
+Require(dateComparisonDiagnostic.Category == "syntax", "date comparison category");
+Require(dateComparisonDiagnostic.Line > 0 && dateComparisonDiagnostic.Position > 0, "date comparison location");
+Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "foundOperator") == true, "date comparison operator");
+Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "expectedType") == true, "date comparison expected type");
+Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "actualType") == true, "date comparison actual type");
+Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.SourceCode), "date comparison source");
+Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.MarkedCode), "date comparison marked source");
+
 var duplicateOverloadCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "class-method-overloads-duplicate.xps"));
 var duplicateOverloadDiagnostic = duplicateOverloadCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2006");
 Require(duplicateOverloadDiagnostic is not null, "duplicate overload diagnostic");
