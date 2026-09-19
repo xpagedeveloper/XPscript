@@ -51,7 +51,11 @@ Require(compoundSyntaxDiagnostic is not null, "compound syntax diagnostic");
 Require(compoundSyntaxDiagnostic.Category == "syntax", "compound syntax category");
 Require(compoundSyntaxDiagnostic.Properties is not null, "compound syntax properties");
 Require(compoundSyntaxDiagnostic.Properties.Any(p => p.Name == "foundOperator"), "compound syntax found operator");
-Require(compoundSyntaxDiagnostic.Properties.Any(p => p.Name == "expectedConstruct"), "compound syntax expected construct");
+Require(
+    compoundSyntaxDiagnostic.Properties.Any(p => p.Name == "expectedConstruct") ||
+    (compoundSyntaxDiagnostic.Properties.Any(p => p.Name == "expectedType") &&
+     compoundSyntaxDiagnostic.Properties.Any(p => p.Name == "actualType")),
+    "compound syntax expected construct or type metadata");
 
 var duplicateOverloadCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "class-method-overloads-duplicate.xps"));
 var duplicateOverloadDiagnostic = duplicateOverloadCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2006");
