@@ -1,0 +1,4 @@
+Sub Main()
+    Dim tool As AITool
+    tool.AddFunction("probe", "probe", "MissingCallback")
+End Sub
