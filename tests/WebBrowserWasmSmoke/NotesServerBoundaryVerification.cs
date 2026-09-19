@@ -21,7 +21,7 @@ End Function
 Sub Main()
     Print ReadServerName()
 End Sub
-""", "Notes runtime state");
+""", "Notes runtime state", "ReadServerName", "Client");
 
             VerifyRejected(root, "module-notes.xps", """
 [Platform:browser-wasm]
@@ -31,7 +31,7 @@ Dim session As NotesSession
 Sub Main()
     Print "browser"
 End Sub
-""", "module-level state");
+""", "module-level state", "Notes", "Module");
 
             VerifyRejected(root, "invalid-spinner-delay.xps", """
 [Platform:browser-wasm]
@@ -95,7 +95,13 @@ End Sub
         }
     }
 
-    private static void VerifyRejected(string root, string fileName, string source, string expectedMessage)
+    private static void VerifyRejected(
+        string root,
+        string fileName,
+        string source,
+        string expectedMessage,
+        string? expectedSymbol = null,
+        string? expectedContext = null)
     {
         var path = Path.Combine(root, fileName);
         File.WriteAllText(path, source);
@@ -109,6 +115,17 @@ End Sub
             ex.Message.Contains(expectedMessage, StringComparison.OrdinalIgnoreCase) &&
             ex.Message.Contains("server", StringComparison.OrdinalIgnoreCase))
         {
+            if (expectedSymbol is null) return;
+            if (ex.DiagnosticCode != "XPS3002" || ex.Category != "execution-context")
+                throw new Exception($"{fileName} did not produce structured XPS3002 execution-context metadata.");
+            if (!ex.Properties.TryGetValue("symbol", out var symbol) || symbol != expectedSymbol)
+                throw new Exception($"{fileName} did not identify the expected offending symbol.");
+            if (!ex.Properties.TryGetValue("target", out var target) || target != "browser-wasm")
+                throw new Exception($"{fileName} did not identify browser-wasm.");
+            if (!ex.Properties.TryGetValue("currentContext", out var currentContext) || currentContext != expectedContext)
+                throw new Exception($"{fileName} did not identify the expected current context.");
+            if (!ex.Properties.TryGetValue("requiredContext", out var requiredContext) || requiredContext != "ServerSide")
+                throw new Exception($"{fileName} did not identify ServerSide as the required context.");
         }
     }
 
