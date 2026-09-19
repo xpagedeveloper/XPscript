@@ -35,8 +35,11 @@ jobs:
           1..3 | ForEach-Object {
             $sw = [System.Diagnostics.Stopwatch]::StartNew()
             & dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- validate samples/null-integer-assignment-error.xps --result-format json *> $null
+            $exitCode = $LASTEXITCODE
             $sw.Stop()
+            if ($exitCode -ne 2) { throw "Expected validation exit code 2 during benchmark, got $exitCode" }
             $samples += $sw.ElapsedMilliseconds
+            $global:LASTEXITCODE = 0
           }
           $ordered = $samples | Sort-Object
           $median = $ordered[[math]::Floor($ordered.Count / 2)]
