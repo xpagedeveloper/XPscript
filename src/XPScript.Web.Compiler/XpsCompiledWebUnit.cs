@@ -174,7 +174,7 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             ?? throw new XpsWebRouteException("XPJsonSchema.Validate was not found in the compiled web unit.");
         var nativeJsonType = assembly.GetType("XPScriptNativeJson", throwOnError: false, ignoreCase: false)
             ?? throw new XpsWebRouteException("XPJson runtime was not included in the compiled web unit.");
-        var fromNode = nativeJsonType.GetMethod("FromNode", BindingFlags.Static | BindingFlags.NonPublic)
+        var fromNode = nativeJsonType.GetMethod("DocumentFromNode", BindingFlags.Static | BindingFlags.NonPublic)
             ?? throw new XpsWebRouteException("XPJson runtime node bridge was not found.");
         object document;
         try
