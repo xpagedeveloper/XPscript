@@ -312,6 +312,20 @@ xpscriptc explain XPS2104 --result-format json
 
 CI benchmark evidence on the GitHub Linux runner shows a median of 1029 ms when validation starts a fresh CLI process versus 5 ms for repeated validation through a warmed, reusable `CompilerDriver` in the same process. This makes reusable in-process compiler hosting the preferred path for latency-sensitive IDE/LSP and AI tooling. The CLI remains appropriate for one-shot validation. The existing reusable compiler API satisfies in-process consumers; a persistent external transport/process should be added only when an out-of-process consumer requires it.
 
+## 20a. MCP and warm development hosts
+
+- [x] Add a local MCP stdio transport over the reusable compiler API.
+- [x] Expose compiler validation, symbol search/description and diagnostic explanation as MCP tools.
+- [x] Keep MCP validation non-executing and separate from compile/run permissions.
+- [ ] Add MCP protocol/contract probes to CI.
+- [ ] Investigate reusing a warm `CompilerDriver` inside the existing debugger host without changing the debugger protocol.
+- [ ] Let debugger-driven edit/validate cycles use warm validation before a full debug build when semantics permit.
+- [ ] Investigate a warm compiler host for test/run-without-debugger so repeated test runs do not pay process/compiler startup for unchanged compiler state.
+- [ ] Define cache invalidation for source, Include graph, runtime identifier, preprocessors, dependencies and compiler version before enabling warm compile reuse.
+- [ ] Benchmark debugger and run-without-debugger cold versus warm paths before changing their current execution semantics.
+
+The debugger transport is intentionally unchanged by the MCP work. Warm compilation for debugger and test/run-without-debugger should reuse the compiler service internally and preserve their existing protocols and observable execution behavior.
+
 ## 21. Tests
 
 Add deterministic fixtures covering:
@@ -415,6 +429,6 @@ No LLM, embedding provider, RAG system or AI SDK is required to satisfy this TOD
 - [ ] Provider-specific LLM integration.
 - [ ] Prompt management.
 - [ ] Autonomous code repair.
-- [ ] MCP transport implementation.
+- [x] MCP transport implementation.
 - [ ] Automatic execution or deployment.
 - [ ] A separate AI parser/type checker.

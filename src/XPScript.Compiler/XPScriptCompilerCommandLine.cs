@@ -34,6 +34,9 @@ public static class XPScriptCompilerCommandLine
         if (args[0].Equals("symbols", StringComparison.OrdinalIgnoreCase))
             return Symbols(args[1..]);
 
+        if (args[0].Equals("mcp", StringComparison.OrdinalIgnoreCase))
+            return await CompilerMcpServer.RunAsync(args[1..]).ConfigureAwait(false);
+
         return await CompileAsync(args).ConfigureAwait(false);
     }
 
@@ -728,6 +731,7 @@ XPScript Compiler and Runtime
 Usage:
   {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--embed-assets] [--result-format text|json|xml] [--debug] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
   xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml] [--debug]
+  xpscript mcp
   {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
 
 Supported runtime identifiers:

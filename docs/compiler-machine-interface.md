@@ -82,3 +82,18 @@ Future remote compiler hosts must treat validation, compilation and execution as
 The local validation pipeline is intentionally non-executing: it may preprocess and transpile XPScript and invoke the platform compiler to type-check generated C#, but it does not launch the submitted XPScript program. CI includes a sentinel regression that would create a file if submitted `Shell` code were executed and verifies that validation leaves the sentinel absent.
 
 Remote MCP, IDE, CI or service integrations should therefore expose independent authorization decisions for `validate`, `compile` and `execute`. An implementation may grant only a subset. Execution should remain an explicit higher-privilege operation rather than a side effect of validation or compilation.
+
+
+## MCP server
+
+XPScript exposes a local Model Context Protocol server over standard input/output:
+
+```text
+xpscript mcp
+```
+
+The server implements JSON-RPC MCP initialization, tool discovery and tool calls. It advertises compiler-owned tools for validation, symbol search, exact symbol description and diagnostic explanation. `xpscript_validate` accepts source text plus a virtual simple `.xps` filename and optional runtime identifier, and returns the normal versioned `CompileResult` object. The server keeps one `CompilerDriver` alive for the session so repeated validation uses the measured warm compiler path instead of starting a compiler process for every request.
+
+The MCP transport is local and non-executing. It does not expose compile, run or debugger operations. This keeps AI validation permissions separate from artifact publication and execution permissions.
+
+The existing debugger protocol is not changed by MCP. A later optimization may reuse the same warm compiler-service lifetime inside debugger and run/test hosts after cache invalidation and behavioral equivalence are measured.
