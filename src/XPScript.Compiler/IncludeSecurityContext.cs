@@ -46,7 +46,7 @@ internal sealed class IncludeSourcePolicy
             .ToArray();
 
         if (_roots.Length == 0)
-            throw new CompilerException("Restricted compilation requires at least one allowed source root.");
+            throw RestrictedPath("Restricted compilation requires at least one allowed source root.");
     }
 
     public void EnsureAllowed(string sourcePath, string displayPath)
@@ -71,7 +71,7 @@ internal sealed class IncludeSourcePolicy
     {
         var full = Path.GetFullPath(path);
         if (requireDirectory && !Directory.Exists(full))
-            throw new CompilerException("Allowed source root does not exist or is not a directory: " + SafePath(full));
+            throw RestrictedPath("Allowed source root does not exist or is not a directory: " + SafePath(full));
 
         var root = Path.GetPathRoot(full);
         if (string.IsNullOrWhiteSpace(root)) return full;
@@ -95,17 +95,20 @@ internal sealed class IncludeSourcePolicy
             }
             catch (IOException)
             {
-                throw new CompilerException("Unable to safely resolve a symbolic link or reparse point in Include source path: " + SafePath(path));
+                throw RestrictedPath("Unable to safely resolve a symbolic link or reparse point in Include source path: " + SafePath(path));
             }
 
             if (string.IsNullOrWhiteSpace(target))
-                throw new CompilerException("Unable to safely resolve a symbolic link or reparse point in Include source path: " + SafePath(path));
+                throw RestrictedPath("Unable to safely resolve a symbolic link or reparse point in Include source path: " + SafePath(path));
 
             current = Path.GetFullPath(target);
         }
 
         return Path.GetFullPath(current);
     }
+
+    private static CompilerException RestrictedPath(string message) =>
+        new(message, CompilerDiagnosticCodes.RestrictedSourcePath, "security");
 
     private static string SafePath(string path)
     {
