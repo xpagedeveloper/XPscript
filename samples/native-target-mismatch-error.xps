@@ -1,0 +1,5 @@
+Declare Function NativeProbe Lib "./native-probe.dll" () As Long
+
+Sub Main()
+    Print NativeProbe()
+End Sub
