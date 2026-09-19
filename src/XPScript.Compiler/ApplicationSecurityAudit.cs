@@ -22,7 +22,7 @@ internal static class ApplicationSecurityAudit
         {
             var message = $"Application dependency security check unavailable [{unavailable.Code}]: {unavailable.Message}";
             if (mode == ApplicationSecurityMode.Strict)
-                throw new CompilerException(message);
+                throw new CompilerException(message, CompilerDiagnosticCodes.DependencyAuditUnavailable, "security");
             Console.Error.WriteLine(message);
         }
 
@@ -41,7 +41,9 @@ internal static class ApplicationSecurityAudit
         if (blocking.Length == 0) return;
 
         throw new CompilerException(
-            $"Application dependency security check failed: {blocking.Length} high or critical vulnerability/vulnerabilities detected in packages used by this application.");
+            $"Application dependency security check failed: {blocking.Length} high or critical vulnerability/vulnerabilities detected in packages used by this application.",
+            CompilerDiagnosticCodes.DependencyVulnerability,
+            "security");
     }
 
     internal static UnavailableFinding? ParseUnavailable(string buildOutput)
