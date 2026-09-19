@@ -285,13 +285,13 @@ xpscriptc explain XPS2104 --result-format json
 ## 18. Security and redaction
 
 - [ ] Structure existing security/static diagnostics where appropriate.
-- [ ] Include stable security rule IDs.
-- [ ] Never leak API keys, Authorization headers or credential values.
-- [ ] Review source snippets returned in diagnostics for secret leakage.
+- [x] Include stable security rule IDs.
+- [x] Never leak API keys, Authorization headers or credential values.
+- [x] Review source snippets returned in diagnostics for secret leakage.
 - [ ] Validation must never execute submitted XPScript.
 - [ ] Separate validation, compilation and execution permissions in future remote tooling.
 - [ ] Bound CPU, memory, source size and diagnostic output where practical.
-- [ ] Prevent path traversal through virtual filenames/project paths.
+- [x] Prevent path traversal through virtual filenames/project paths.
 
 ## 19. Determinism
 
