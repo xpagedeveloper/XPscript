@@ -240,9 +240,12 @@ End Sub
             .GetProperty("content")
             .GetProperty("application/json")
             .GetProperty("schema");
-        if (!schema.TryGetProperty("$ref", out var reference) ||
-            reference.GetString() != "../schemas/create-user.schema.json")
-            throw new Exception("OpenAPI requestBody did not reference the route JSON Schema.");
+        if (schema.TryGetProperty("$ref", out _))
+            throw new Exception("OpenAPI requestBody unexpectedly emitted an external JSON Schema reference.");
+        if (schema.GetProperty("type").GetString() != "object" ||
+            schema.GetProperty("required")[0].GetString() != "name" ||
+            schema.GetProperty("properties").GetProperty("name").GetProperty("type").GetString() != "string")
+            throw new Exception("OpenAPI requestBody did not inline the route JSON Schema.");
         Console.WriteLine("WEB-API-DOCS-JSON-SCHEMA=OK");
     }
     finally
