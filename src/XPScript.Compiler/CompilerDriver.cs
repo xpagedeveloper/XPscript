@@ -7,6 +7,7 @@ namespace XPScript.Compiler;
 public sealed class CompilerDriver
 {
     private const string MimeKitVersion = "4.17.0";
+    private const long MaximumSourceBytes = 1024L * 1024L;
     private sealed record StagedManagedReference(string Name, string Path);
 
     private static readonly HashSet<string> SupportedRuntimeIdentifiers = new(StringComparer.OrdinalIgnoreCase)
@@ -48,6 +49,7 @@ public sealed class CompilerDriver
             if (!File.Exists(sourcePath))
                 return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]).WithContext(sourcePath, runtimeIdentifier);
 
+            EnsureSourceSize(sourcePath);
             source = await File.ReadAllTextAsync(sourcePath);
             await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
             return CompileResult.Ok(outputPath).WithContext(sourcePath, runtimeIdentifier);
@@ -80,6 +82,7 @@ public sealed class CompilerDriver
             if (!File.Exists(sourcePath))
                 return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]);
 
+            EnsureSourceSize(sourcePath);
             source = await File.ReadAllTextAsync(sourcePath);
             var executablePath = await CompileForRunAsync(sourcePath, outputDirectory, runtimeIdentifier);
             return CompileResult.Ok(executablePath);
@@ -116,6 +119,7 @@ public sealed class CompilerDriver
                 return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
 
             var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
+            EnsureSourceSize(sourcePath);
             source = await File.ReadAllTextAsync(sourcePath);
             var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
             var preprocessorResult = new SourcePreprocessorPipeline().Transform(
@@ -561,6 +565,27 @@ public sealed class CompilerDriver
         {
             try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
         }
+    }
+
+    private static void EnsureSourceSize(string sourcePath)
+    {
+        var actualBytes = new FileInfo(sourcePath).Length;
+        if (actualBytes <= MaximumSourceBytes) return;
+
+        var diagnostic = new CompileDiagnostic
+        {
+            File = DiagnosticFileName(sourcePath),
+            Description = "XPScript source exceeds the 1 MiB compiler source-size limit.",
+            DiagnosticCode = CompilerDiagnosticCodes.SourceTooLarge,
+            Severity = "error",
+            Category = "input",
+            Properties =
+            [
+                new CompileDiagnosticProperty { Name = "maximumBytes", Value = MaximumSourceBytes.ToString(System.Globalization.CultureInfo.InvariantCulture) },
+                new CompileDiagnosticProperty { Name = "actualBytes", Value = actualBytes.ToString(System.Globalization.CultureInfo.InvariantCulture) }
+            ]
+        };
+        throw new CompilerException(diagnostic.Description, [diagnostic]);
     }
 
     private static string BuildGeneratedProject(
