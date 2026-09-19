@@ -235,6 +235,14 @@ public sealed class CompileDiagnostic
         Category = string.IsNullOrWhiteSpace(Category) ? "compiler" : Category.Trim().ToLowerInvariant();
         DiagnosticCode = NormalizeOptionalCode(DiagnosticCode);
         UpstreamCode = NormalizeOptionalCode(UpstreamCode);
+        Description = CompilerDiagnosticRedactor.Redact(Description);
+        SourceCode = CompilerDiagnosticRedactor.Redact(SourceCode);
+        MarkedCode = CompilerDiagnosticRedactor.Redact(MarkedCode);
+        if (Properties is not null)
+        {
+            foreach (var property in Properties)
+                property.Value = CompilerDiagnosticRedactor.Redact(property.Value);
+        }
         if (EndLine == 0 && Line > 0) EndLine = Line;
         if (EndColumn == 0 && Position > 0) EndColumn = Position;
     }
