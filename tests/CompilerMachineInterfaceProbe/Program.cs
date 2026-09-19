@@ -45,6 +45,16 @@ Require(preprocessorDiagnostic.Category == "configuration", "source preprocessor
 Require(preprocessorDiagnostic.Properties?.Any(p => p.Name == "preprocessor" && p.Value == "replace") == true, "source preprocessor configuration name");
 Require(preprocessorDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "replace:FROM=TO") == true, "source preprocessor expected construct");
 
+var nothingComparisonCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "nothing-comparison-invalid-error.xps"));
+var nothingComparisonDiagnostic = nothingComparisonCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1002");
+Require(nothingComparisonDiagnostic is not null, "Nothing comparison diagnostic");
+Require(nothingComparisonDiagnostic.Category == "syntax", "Nothing comparison category");
+Require(nothingComparisonDiagnostic.Line == 3 && nothingComparisonDiagnostic.Position > 0, "Nothing comparison location");
+Require(nothingComparisonDiagnostic.Properties?.Any(p => p.Name == "foundOperator" && p.Value == "=") == true, "Nothing comparison operator");
+Require(nothingComparisonDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "Is Nothing or Is Not Nothing") == true, "Nothing comparison expected construct");
+Require(!string.IsNullOrWhiteSpace(nothingComparisonDiagnostic.SourceCode), "Nothing comparison source");
+Require(!string.IsNullOrWhiteSpace(nothingComparisonDiagnostic.MarkedCode), "Nothing comparison marked source");
+
 var quoteSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "string-quote-invalid-variable.xps"));
 var quoteSyntaxDiagnostic = quoteSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1001");
 Require(quoteSyntaxDiagnostic is not null, "unescaped quote diagnostic");
