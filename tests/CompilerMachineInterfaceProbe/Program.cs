@@ -45,7 +45,7 @@ Require(incrementSyntaxDiagnostic.Properties is not null, "increment syntax prop
 Require(incrementSyntaxDiagnostic.Properties.Any(p => p.Name == "foundOperator" && p.Value == "++"), "increment syntax found operator");
 Require(incrementSyntaxDiagnostic.Properties.Any(p => p.Name == "expectedConstruct"), "increment syntax expected construct");
 
-var compoundSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "increment-invalid-expression.xps"));
+var compoundSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "compound-invalid-string-numeric.xps"));
 var compoundSyntaxDiagnostic = compoundSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1004");
 Require(compoundSyntaxDiagnostic is not null, "compound syntax diagnostic");
 Require(compoundSyntaxDiagnostic.Category == "syntax", "compound syntax category");
