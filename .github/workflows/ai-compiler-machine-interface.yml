@@ -90,6 +90,46 @@ jobs:
           if ($stdout -match 'Started to compile|Compilation failed for|Compiled .* in') { throw "Human progress leaked into stdout" }
           if ($stderr -notmatch 'Started to compile') { throw "Expected human progress on stderr" }
 
+      - name: Validate stdin machine contract
+        shell: pwsh
+        run: |
+          function Invoke-StdinValidation([string] $source, [string] $filename) {
+            $psi = [System.Diagnostics.ProcessStartInfo]::new()
+            $psi.FileName = 'dotnet'
+            foreach ($arg in @('run','--project','src/XPScript.Compiler/XPScript.Compiler.csproj','-c','Release','--no-build','--','validate','--stdin','--filename',$filename,'--result-format','json')) { $psi.ArgumentList.Add($arg) }
+            $psi.RedirectStandardInput = $true
+            $psi.RedirectStandardOutput = $true
+            $psi.RedirectStandardError = $true
+            $psi.UseShellExecute = $false
+            $process = [System.Diagnostics.Process]::Start($psi)
+            $process.StandardInput.Write($source)
+            $process.StandardInput.Close()
+            $stdout = $process.StandardOutput.ReadToEnd()
+            $stderr = $process.StandardError.ReadToEnd()
+            $process.WaitForExit()
+            return @{ ExitCode = $process.ExitCode; Stdout = $stdout; Stderr = $stderr }
+          }
+
+          $invalid = Invoke-StdinValidation "Sub Main()`nDim value As Integer`nvalue = Nothing`nEnd Sub`n" 'program.xps'
+          if ($invalid.ExitCode -ne 2) { throw "Expected stdin validation exit code 2, got $($invalid.ExitCode). stderr: $($invalid.Stderr)" }
+          $json = $invalid.Stdout | ConvertFrom-Json
+          if ($json.operation -ne 'validate' -or $json.result -ne 'error') { throw "Unexpected stdin validation result" }
+          $diagnostic = $json.errors | Where-Object { $_.diagnosticCode -eq 'XPS2001' } | Select-Object -First 1
+          if (-not $diagnostic) { throw "Missing stdin XPS2001 diagnostic" }
+          if ($diagnostic.file -ne 'program.xps') { throw "Virtual filename was not preserved" }
+          if ($diagnostic.line -le 0 -or $diagnostic.column -le 0) { throw "stdin diagnostic location was not preserved" }
+          if ($invalid.Stdout -match 'Started to|Compiling') { throw "Human logging leaked into stdin JSON stdout" }
+
+          $traversal = Invoke-StdinValidation "Sub Main()`nEnd Sub`n" '../escape.xps'
+          if ($traversal.ExitCode -ne 1) { throw "Expected unsafe virtual filename to be rejected" }
+          $traversalJson = $traversal.Stdout | ConvertFrom-Json
+          if ($traversalJson.result -ne 'error') { throw "Expected structured traversal rejection" }
+
+          $oversized = Invoke-StdinValidation ('x' * 1048577) 'large.xps'
+          if ($oversized.ExitCode -ne 1) { throw "Expected oversized stdin source to be rejected" }
+          $oversizedJson = $oversized.Stdout | ConvertFrom-Json
+          if ($oversizedJson.result -ne 'error') { throw "Expected structured source-size rejection" }
+
       - name: Validate JSON Schema
         shell: pwsh
         run: |
