@@ -186,6 +186,7 @@ internal sealed class CoreCompatibilityTranspiler
         foreach (var part in SplitArguments(raw))
         {
             var clean = Regex.Replace(part.Trim(), @"\b(LMBCS|Unicode)\b", "", RegexOptions.IgnoreCase).Trim();
+            clean = Regex.Replace(clean, @"^\[(?:FromRoute|FromQuery|FromBody|FromHeader)(?::(?:""[^""]+""|[^\]]+))?\]\s*", "", RegexOptions.IgnoreCase).Trim();
             var match = Regex.Match(clean, @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(\(\))?\s*(List)?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
             if (!match.Success) throw new CompilerException("Unsupported parameter declaration: " + part.Trim());
             var mode = match.Groups[1].Value;
@@ -816,10 +817,14 @@ internal sealed class CoreCompatibilityTranspiler
 
     private string RewriteErrorExpressions(string line)
     {
-        line = Regex.Replace(line, @"(?<![\w.])Error\$?\s*\(", "XPScriptErrorRuntime.Error(", RegexOptions.IgnoreCase);
+        // "Error" can also be a user-defined/public XPScript class name. Preserve
+        // it in type annotations and object construction while still rewriting
+        // the LotusScript Error/Error$ expressions.
+        const string errorExpressionPrefix = @"(?<!\bAs\s)(?<!\bNew\s)(?<![\w.])";
+        line = Regex.Replace(line, errorExpressionPrefix + @"Error\$?\s*\(", "XPScriptErrorRuntime.Error(", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])Err\b", "XPScriptErrorRuntime.Err", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])Erl\b", "XPScriptErrorRuntime.Erl", RegexOptions.IgnoreCase);
-        line = Regex.Replace(line, @"(?<![\w.])(?:Error\$(?![\w])|Error\b)(?!\s*\()", "XPScriptErrorRuntime.Error()", RegexOptions.IgnoreCase);
+        line = Regex.Replace(line, errorExpressionPrefix + @"(?:Error\$(?![\w])|Error\b)(?!\s*\()", "XPScriptErrorRuntime.Error()", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])FreeFile\$?\s*\(\s*\)", "LSFileRuntime.FreeFile()", RegexOptions.IgnoreCase);
         line = Regex.Replace(line, @"(?<![\w.])FreeFile\b(?!\s*\()", "LSFileRuntime.FreeFile()", RegexOptions.IgnoreCase);
         foreach (var fn in new[] { "EOF", "LOF", "Seek", "Loc" })

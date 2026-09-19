@@ -1,0 +1,18 @@
+openapi: 3.0.3
+info: { title: Security Corpus, version: 1.0.0 }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer }
+    key: { type: apiKey, in: header, name: X-API-Key }
+security: [ { bearer: [] } ]
+paths:
+  /secure:
+    get:
+      operationId: secure
+      security: [ { bearer: [], key: [] } ]
+      responses: { '204': { description: ok } }
+  /public:
+    get:
+      operationId: publicCall
+      security: []
+      responses: { '204': { description: ok } }

@@ -72,6 +72,279 @@ paths:
 }
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorization header", StringComparison.OrdinalIgnoreCase)) { }
 
+var optionalPresenceClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Optional Presence, version: 1.0.0 }
+paths:
+  /values:
+    get:
+      operationId: values
+      parameters:
+        - { name: text, in: query, schema: { type: string } }
+        - { name: count, in: query, schema: { type: integer } }
+        - { name: enabled, in: query, schema: { type: boolean } }
+      responses:
+        '204': { description: ok }
+""", "optional-presence.yaml").Source;
+foreach (var marker in new[] { "Optional Text As Variant = Nothing", "Optional Count As Variant = Nothing", "Optional Enabled As Variant = Nothing", "If Not Text Is Nothing Then", "If Not Count Is Nothing Then", "If Not Enabled Is Nothing Then" })
+    if (!optionalPresenceClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Optional OpenAPI parameters must preserve explicit empty/zero/false values: " + marker);
+
+var nestedRefClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Nested Ref, version: 1.0.0 }
+components:
+  schemas:
+    Child:
+      type: object
+      required: [name]
+      properties: { name: { type: string } }
+    Parent:
+      type: object
+      required: [child]
+      properties:
+        child: { $ref: '#/components/schemas/Child' }
+paths:
+  /parent:
+    get:
+      operationId: parent
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Parent' }
+""", "nested-ref.yaml").Source;
+if (!nestedRefClient.Contains("#/$defs/Child", StringComparison.Ordinal) || nestedRefClient.Contains("#/components/schemas/Child", StringComparison.Ordinal))
+    throw new Exception("Generated response validation schema must rewrite nested OpenAPI component references to standalone JSON Schema $defs.");
+
+var compositionClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Composition, version: 1.0.0 }
+paths:
+  /choice:
+    post:
+      operationId: choose
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { type: string }
+                - { type: integer }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - { type: string }
+                  - { type: integer }
+""", "composition.yaml").Source;
+if (!compositionClient.Contains("payload As Variant", StringComparison.Ordinal) || !compositionClient.Contains("ResponseType = \"Variant\"", StringComparison.Ordinal))
+    throw new Exception("Mixed oneOf/anyOf schemas must use conservative Variant typing.");
+
+var compositionServer = new XpsOpenApiGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Composition Server, version: 1.0.0 }
+paths:
+  /combined:
+    post:
+      operationId: combined
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { type: object, properties: { a: { type: string } } }
+                - { type: object, properties: { b: { type: integer } } }
+      responses:
+        '200': { description: ok }
+""", "composition-server.yaml").Source;
+if (!compositionServer.Contains("As XPJsonObject", StringComparison.Ordinal))
+    throw new Exception("Object allOf schemas must use XPJsonObject.");
+
+var jsonTypesServer = new XpsOpenApiGenerator().Generate("""
+openapi: 3.1.0
+info: { title: JSON Types Server, version: 1.0.0 }
+paths:
+  /values:
+    post:
+      operationId: jsonTypes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+""", "json-types-server.yaml").Source;
+if (!jsonTypesServer.Contains("As XPJsonArray", StringComparison.Ordinal) || !jsonTypesServer.Contains("OpenAPI responses: 200 XPJsonObject", StringComparison.Ordinal))
+    throw new Exception("REST server generation must reuse public XPJsonArray/XPJsonObject types.");
+
+var overrideServer = new XpsOpenApiGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Server Override, version: 1.0.0 }
+paths:
+  /items:
+    parameters:
+      - { name: q, in: query, required: false, schema: { type: string } }
+    get:
+      operationId: searchItemsServer
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: integer, format: int32 } }
+      responses:
+        '204': { description: ok }
+""", "server-override.yaml").Source;
+if (!overrideServer.Contains("Q As Integer", StringComparison.Ordinal) || overrideServer.Contains("Q As String", StringComparison.Ordinal))
+    throw new Exception("REST server operation-level parameters must override matching path-level parameters.");
+
+var badServerPathRequired = false;
+try { _ = new XpsOpenApiGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Bad Server Path, version: 1.0.0 }
+paths:
+  /items/{id}:
+    get:
+      parameters:
+        - { name: id, in: path, schema: { type: string } }
+      responses: { '204': { description: ok } }
+"""); } catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("required: true", StringComparison.Ordinal)) { badServerPathRequired = true; }
+if (!badServerPathRequired) throw new Exception("REST server path parameters must require required: true.");
+
+var overrideClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Override, version: 1.0.0 }
+paths:
+  /items:
+    parameters:
+      - { name: q, in: query, required: false, schema: { type: string } }
+    get:
+      operationId: searchItems
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: integer, format: int32 } }
+      responses:
+        '204': { description: ok }
+""", "override.yaml").Source;
+if (!overrideClient.Contains("Public Function SearchItems(Q As Integer)", StringComparison.Ordinal) || overrideClient.Contains("Q As String", StringComparison.Ordinal))
+    throw new Exception("Operation-level OpenAPI parameters must override matching path-level parameters.");
+
+try
+{
+    _ = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Collision, version: 1.0.0 }
+paths:
+  /items:
+    get:
+      operationId: collision
+      parameters:
+        - { name: foo-bar, in: query, schema: { type: string } }
+        - { name: foo.bar, in: query, schema: { type: string } }
+      responses:
+        '204': { description: ok }
+""", "collision.yaml");
+    throw new Exception("Colliding generated parameter identifiers must be rejected.");
+}
+catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("both map to XPScript identifier", StringComparison.OrdinalIgnoreCase)) { }
+
+var optionalClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Optional, version: 1.0.0 }
+components:
+  schemas:
+    Filter:
+      type: object
+      properties:
+        name: { type: string }
+paths:
+  /items:
+    post:
+      operationId: optionalValues
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, format: int32 } }
+        - { name: X-Trace, in: header, schema: { type: string } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Filter' }
+      responses:
+        '204': { description: ok }
+""", "optional.yaml").Source;
+foreach (var marker in new[] { "Optional Q As Variant = Nothing", "Optional Limit As Variant = Nothing", "Optional XTrace As Variant = Nothing", "Optional payload As Variant = Nothing", "If Not Q Is Nothing Then url = Http.AddQuery", "If Not XTrace Is Nothing Then Call request.SetHeader", "If Not payload Is Nothing Then" })
+    if (!optionalClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated optional OpenAPI values are missing marker: " + marker);
+
+var arrayClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Arrays, version: 1.0.0 }
+paths:
+  /items:
+    post:
+      operationId: arrayValues
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { type: string }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: integer }
+""", "arrays.yaml").Source;
+if (!arrayClient.Contains("payload As XPJsonArray", StringComparison.Ordinal) ||
+    !arrayClient.Contains("ResponseType = \"XPJsonArray\"", StringComparison.Ordinal) ||
+    !arrayClient.Contains("XPJsonSchema.Parse(", StringComparison.Ordinal))
+    throw new Exception("OpenAPI arrays must use XPJsonArray and XPJsonSchema.");
+
+var nullableClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Nullable, version: 1.0.0 }
+paths:
+  /value:
+    post:
+      operationId: nullableValue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: [string, 'null'] }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: [integer, 'null'] }
+""", "nullable.yaml").Source;
+if (!nullableClient.Contains("payload As String", StringComparison.Ordinal) || !nullableClient.Contains("ResponseType = \"Long\"", StringComparison.Ordinal))
+    throw new Exception("OpenAPI 3.1 nullable type unions must preserve their non-null XPScript type.");
+
+var badPathRequired = false;
+try { _ = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: BadPath, version: 1.0.0 }
+paths:
+  /items/{id}:
+    get:
+      parameters:
+        - { name: id, in: path, schema: { type: string } }
+      responses: { '204': { description: ok } }
+"""); } catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("required: true", StringComparison.Ordinal)) { badPathRequired = true; }
+if (!badPathRequired) throw new Exception("OpenAPI path parameters must require required: true.");
+
 var unicodeClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Unicode, version: 1.0.0 }
@@ -87,6 +360,11 @@ paths:
 """, "unicode.yaml").Source;
 if (!unicodeClient.Contains("Http.EncodePath(City)", StringComparison.Ordinal) || !unicodeClient.Contains("Http.AddQuery(url, \"q\", Q)", StringComparison.Ordinal))
     throw new Exception("OpenAPI Unicode path/query values must flow through XPHttp UTF-8 encoding helpers.");
+
+if (!clientResult.Source.Contains("Public Validation As XPJsonValidationResult", StringComparison.Ordinal) ||
+    !clientResult.Source.Contains("XPJsonSchema.Parse(", StringComparison.Ordinal) ||
+    !clientResult.Source.Contains(".Validate(result.Json)", StringComparison.Ordinal))
+    throw new Exception("Generated OpenAPI JSON responses must expose XPJsonSchema validation results.");
 
 if (clientResult.Source.Contains("UIForm", StringComparison.OrdinalIgnoreCase) || clientResult.Source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal))
     throw new Exception("Generated OpenAPI client must not depend on UIForm runtime.");
@@ -174,10 +452,10 @@ try
             throw new Exception("Generated XPScript did not compile into the expected REST routes.");
     }
 
-    const string getPetOriginal = "    result.StatusCode = 501\n    HandleGetPet = result";
-    const string getPetEdited = "    Print \"fråga funktionen GetPet\"\n    result.StatusCode = 200\n    result.Data = \"custom-get\"\n    HandleGetPet = result";
-    const string createPetOriginal = "    result.StatusCode = 501\n    HandleCreatePet = result";
-    const string createPetEdited = "    Print \"fråga funktionen CreatePet\"\n    result.StatusCode = 201\n    result.Data = \"custom-create\"\n    HandleCreatePet = result";
+    const string getPetOriginal = "    result.StatusCode = 501\n    Set HandleGetPet = result";
+    const string getPetEdited = "    Print \"fråga funktionen GetPet\"\n    result.StatusCode = 200\n    result.Data = \"custom-get\"\n    Set HandleGetPet = result";
+    const string createPetOriginal = "    result.StatusCode = 501\n    Set HandleCreatePet = result";
+    const string createPetEdited = "    Print \"fråga funktionen CreatePet\"\n    result.StatusCode = 201\n    result.Data = \"custom-create\"\n    Set HandleCreatePet = result";
 
     var userEdited = result.Source
         .Replace(getPetOriginal, getPetEdited, StringComparison.Ordinal)
