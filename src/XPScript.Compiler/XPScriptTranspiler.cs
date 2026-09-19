@@ -37,6 +37,24 @@ public sealed partial class XPScriptTranspiler
         return Transpile(source, sourceName, runtimeIdentifier);
     }
 
+    private static CompilerException TargetUnavailable(string symbol, string target, string allowedTargets, string? detail = null)
+    {
+        var message = $"'{symbol}' is not available for target '{target}'." + (string.IsNullOrWhiteSpace(detail) ? "" : " " + detail);
+        var diagnostic = new CompileDiagnostic
+        {
+            Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.TargetApiUnavailable,
+            Category = "target",
+            Properties =
+            [
+                new() { Name = "symbol", Value = symbol },
+                new() { Name = "target", Value = target },
+                new() { Name = "allowedTargets", Value = allowedTargets }
+            ]
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.TargetApiUnavailable, "target", [diagnostic]);
+    }
+
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
         source = new MultilineStringPreprocessor().Transform(source, sourceName);
@@ -82,12 +100,15 @@ public sealed partial class XPScriptTranspiler
         var usesArchive = archiveRequested || usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
         var usesSpreadsheet = spreadsheetRequested || source.Contains("XPScriptSpreadsheet", StringComparison.Ordinal);
         var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
-        if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
-        if (usesMsSql && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPDbMsSql is not available for browser-wasm targets.");
-        if (usesAi && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPAi is not available for browser-wasm targets. Keep AI credentials and requests on the server.");
-        if (usesArchive && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("Archive file-path operations are not available for browser-wasm targets yet. Run archive filesystem work on the server until in-memory Archive support is implemented.");
-        if (usesSpreadsheet && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPSpreadsheet file operations are not available for browser-wasm targets in the basic implementation.");
-        if (usesNetworkTools && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("NetworkTools is not available for browser-wasm targets because browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
+        if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
+        {
+            if (usesSqlite) throw TargetUnavailable("XPDBSQLite", runtimeIdentifier, "server or desktop target");
+            if (usesMsSql) throw TargetUnavailable("XPDbMsSql", runtimeIdentifier, "server or desktop target");
+            if (usesAi) throw TargetUnavailable("XPAi", runtimeIdentifier, "server target", "Keep AI credentials and requests on the server.");
+            if (usesArchive) throw TargetUnavailable("Archive", runtimeIdentifier, "server or desktop target", "Archive file-path operations are not available for browser-wasm targets yet.");
+            if (usesSpreadsheet) throw TargetUnavailable("XPSpreadsheet", runtimeIdentifier, "server or desktop target");
+            if (usesNetworkTools) throw TargetUnavailable("NetworkTools", runtimeIdentifier, "server or desktop target", "Browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
+        }
         var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleObjects.Transform(source);
         var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
