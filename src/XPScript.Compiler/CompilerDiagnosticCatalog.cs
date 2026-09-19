@@ -37,8 +37,8 @@ public static class CompilerDiagnosticCatalog
             Define("XPS2010", "callback", "A callback reference does not contain a valid callback name.", "symbol"),
             Define("XPS2011", "callback", "The named callback cannot be resolved.", "symbol"),
             Define("XPS2012", "callback", "The callback parameter count does not match its required contract.", "symbol", "expectedCount", "actualCount"),
-            Define("XPS3001", "target", "An API, runtime feature, or native dependency is unavailable for the active target.", "symbol", "target", "allowedTargets"),
-            Define("XPS3002", "execution-context", "Server-only code requires a server-side execution context.", "symbol", "target", "currentContext", "requiredContext"),
+            DefineWithDocs("XPS3001", "target", "An API, runtime feature, or native dependency is unavailable for the active target.", ["target.BrowserWasm"], "symbol", "target", "allowedTargets"),
+            DefineWithDocs("XPS3002", "execution-context", "Server-only code requires a server-side execution context.", ["target.BrowserWasm", "target.ServerSide"], "symbol", "target", "currentContext", "requiredContext"),
             Define("XPS8001", "input", "A source file is required."),
             Define("XPS8002", "input", "The source file extension is invalid."),
             Define("XPS8003", "input", "The source file was not found."),
@@ -60,9 +60,18 @@ public static class CompilerDiagnosticCatalog
     public static IReadOnlyCollection<CompilerDiagnosticDefinition> All =>
         Definitions.Values.OrderBy(x => x.DiagnosticCode, StringComparer.Ordinal).ToArray();
 
-    private static CompilerDiagnosticDefinition Define(string code, string category, string explanation, params string[] properties)
+    private static CompilerDiagnosticDefinition Define(string code, string category, string explanation, params string[] properties) =>
+        DefineWithDocs(code, category, explanation, [], properties);
+
+    private static CompilerDiagnosticDefinition DefineWithDocs(
+        string code,
+        string category,
+        string explanation,
+        IReadOnlyList<string> relatedDocumentationIds,
+        params string[] properties)
     {
         var documentationId = "diagnostic." + code.ToUpperInvariant();
-        return new(code, category, "error", explanation, documentationId, [documentationId], properties);
+        var documentationIds = new[] { documentationId }.Concat(relatedDocumentationIds).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        return new(code, category, "error", explanation, documentationId, documentationIds, properties);
     }
 }
