@@ -13,6 +13,7 @@ internal static class CompilerDiagnosticCodes
     public const string InvalidCompoundAssignmentSyntax = "XPS1004";
     public const string EmptyDimDeclaration = "XPS1005";
     public const string UnterminatedStringLiteral = "XPS1006";
+    public const string InvalidDateComparison = "XPS1007";
 
     // XPS2xxx: type, argument, member and overload validation.
     public const string TypeMismatch = "XPS2001";
