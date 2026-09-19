@@ -83,10 +83,27 @@ internal sealed class ClassOverloadValidator
         {
             if (previous.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase)) return;
             var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
-            throw new CompilerException(
-                $"{sourceName}({lineNumber},1): Class '{className}' cannot declare field and property '{name}' with the same name; the conflicting {previous.Kind} was declared on line {previous.Line}.{Environment.NewLine}  {safeSource}",
-                CompilerDiagnosticCodes.ConflictingClassMember,
-                "member-resolution");
+            var description = $"Class '{className}' cannot declare field and property '{name}' with the same name; the conflicting {previous.Kind} was declared on line {previous.Line}.";
+            var diagnostic = new CompileDiagnostic
+            {
+                File = sourceName,
+                Line = lineNumber,
+                Position = 1,
+                Description = description,
+                DiagnosticCode = CompilerDiagnosticCodes.ConflictingClassMember,
+                Category = "member-resolution",
+                Properties =
+                [
+                    new() { Name = "receiverType", Value = className },
+                    new() { Name = "symbol", Value = name },
+                    new() { Name = "symbolKind", Value = kind },
+                    new() { Name = "conflictingSymbolKind", Value = previous.Kind },
+                    new() { Name = "previousLine", Value = previous.Line.ToString() }
+                ],
+                SourceCode = safeSource,
+                MarkedCode = safeSource + Environment.NewLine + "^"
+            };
+            throw new CompilerException(description, CompilerDiagnosticCodes.ConflictingClassMember, "member-resolution", [diagnostic]);
         }
 
         members[name] = (kind, lineNumber);
