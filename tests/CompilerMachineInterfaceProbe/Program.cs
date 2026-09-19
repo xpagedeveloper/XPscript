@@ -93,10 +93,10 @@ var validationExecutionSentinel = Path.Combine(outputRoot, "validate-must-not-ex
 var validationExecutionSource = Path.Combine(outputRoot, "validate-must-not-execute.xps");
 var shellCommand = OperatingSystem.IsWindows()
     ? $"cmd.exe /d /c echo executed>{validationExecutionSentinel}"
-    : $"/bin/sh -c \\"echo executed > '{validationExecutionSentinel}'\\"";
+    : $"/bin/sh -c \\\"echo executed > '{validationExecutionSentinel}'\\\"";
 await File.WriteAllTextAsync(validationExecutionSource,
     "Sub Main()" + Environment.NewLine +
-    "    Call Shell(\\"" + shellCommand.Replace("\\", "\\\\").Replace("\\"", "\\\\"") + "\\")" + Environment.NewLine +
+    "    Call Shell(\\\"" + shellCommand.Replace("\\", "\\\\").Replace("\\\"", "\\\\\"") + "\\\")" + Environment.NewLine +
     "End Sub" + Environment.NewLine);
 var nonExecutingValidation = await driver.ValidateWithResultAsync(validationExecutionSource);
 Require(nonExecutingValidation.Result == "ok", "validation execution sentinel source should validate");
