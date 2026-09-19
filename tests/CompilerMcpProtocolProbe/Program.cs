@@ -17,7 +17,10 @@ var result=validation.GetProperty("result");
 if (result.GetProperty("isError").GetBoolean()) throw new Exception("Compiler diagnostics must not be MCP tool-level errors.");
 var structured=result.GetProperty("structuredContent");
 if (structured.GetProperty("result").GetString() != "error") throw new Exception("Expected compiler validation error result.");
-var diagnostics=structured.GetProperty("errors").EnumerateArray().ToArray();\nif (diagnostics.Length == 0) throw new Exception("Expected at least one structured compiler diagnostic.");\nif (diagnostics.Any(x=>!x.TryGetProperty("diagnosticCode",out var code) || string.IsNullOrWhiteSpace(code.GetString()))) throw new Exception("MCP validation returned a diagnostic without a stable diagnostic code.");\nif (diagnostics.Any(x=>x.TryGetProperty("file",out var file) && file.GetString()!="agent.xps")) throw new Exception("MCP validation did not preserve the virtual filename.");
+var diagnostics=structured.GetProperty("errors").EnumerateArray().ToArray();
+if (diagnostics.Length == 0) throw new Exception("Expected at least one structured compiler diagnostic.");
+if (diagnostics.Any(x=>!x.TryGetProperty("diagnosticCode",out var code) || string.IsNullOrWhiteSpace(code.GetString()))) throw new Exception("MCP validation returned a diagnostic without a stable diagnostic code.");
+if (diagnostics.Any(x=>x.TryGetProperty("file",out var file) && file.GetString()!="agent.xps")) throw new Exception("MCP validation did not preserve the virtual filename.");
 p.StandardInput.Close(); if(!p.WaitForExit(5000)){p.Kill(true);throw new Exception("MCP server did not stop after stdin closed.");}
 if(p.ExitCode!=0) throw new Exception("MCP server exit code "+p.ExitCode+": "+await p.StandardError.ReadToEndAsync());
 Console.WriteLine("MCP protocol probe passed.");
