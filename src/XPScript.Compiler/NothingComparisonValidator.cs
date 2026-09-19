@@ -10,7 +10,7 @@ internal sealed class NothingComparisonValidator
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex OptionalNothingDefault = new(
-        @"(?ix)\\bOptional\\b[^,)]*?=\\s*Nothing\\b",
+        @"(?ix)\bOptional\b[^,)]*?=\s*Nothing\b",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex SetNothingAssignment = new(
