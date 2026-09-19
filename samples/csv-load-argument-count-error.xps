@@ -1,0 +1,4 @@
+Sub Main()
+    Dim doc As Variant
+    doc = XPCsvDocument.Load()
+End Sub
