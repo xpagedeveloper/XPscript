@@ -99,6 +99,11 @@ public sealed class CompileResult
         foreach (var diagnostic in result)
         {
             diagnostic.NormalizeMachineFields();
+            if (diagnostic.Properties is { Count: > 1 })
+                diagnostic.Properties = diagnostic.Properties
+                    .OrderBy(property => property.Name, StringComparer.Ordinal)
+                    .ThenBy(property => property.Value, StringComparer.Ordinal)
+                    .ToList();
 
             var generatedLocation = string.IsNullOrWhiteSpace(diagnostic.File) &&
                                     diagnostic.Line > 0 &&
