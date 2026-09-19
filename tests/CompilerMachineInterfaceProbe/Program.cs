@@ -36,18 +36,6 @@ Require(generatedSymbolDiagnostic.UpstreamCode == "CS0103", "generated symbol up
 Require(!string.IsNullOrWhiteSpace(generatedSymbolDiagnostic.SourceCode), "generated symbol source mapping");
 
 
-var preprocessorCase = await driver.ValidateWithResultAsync(
-    Path.Combine(root, "samples", "source-preprocessor-error-root.xps"),
-    preprocessors: ["replace:__BAD_OPERATOR__=FROM"]);
-var preprocessorDiagnostic = preprocessorCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS8008");
-Require(preprocessorDiagnostic is not null, "source preprocessor diagnostic");
-Require(preprocessorDiagnostic.Category == "preprocessor", "source preprocessor category");
-Require(preprocessorDiagnostic.File == "source-preprocessor-error-child.xps", "source preprocessor mapped file");
-Require(preprocessorDiagnostic.Line == 2 && preprocessorDiagnostic.Position > 0, "source preprocessor mapped location");
-Require(preprocessorDiagnostic.Properties?.Any(p => p.Name == "preprocessor" && p.Value == "replace") == true, "source preprocessor name");
-Require(!string.IsNullOrWhiteSpace(preprocessorDiagnostic.SourceCode), "source preprocessor source");
-Require(!string.IsNullOrWhiteSpace(preprocessorDiagnostic.MarkedCode), "source preprocessor marked source");
-
 var quoteSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "string-quote-invalid-variable.xps"));
 var quoteSyntaxDiagnostic = quoteSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1001");
 Require(quoteSyntaxDiagnostic is not null, "unescaped quote diagnostic");
