@@ -55,7 +55,9 @@ internal sealed class IncludeSourcePolicy
         if (_roots.Any(root => IsWithin(root, candidate))) return;
 
         throw new CompilerException(
-            "Include source path is outside the allowed source roots in restricted compilation: " + SafePath(displayPath));
+            "Include source path is outside the allowed source roots in restricted compilation: " + SafePath(displayPath),
+            CompilerDiagnosticCodes.RestrictedSourcePath,
+            "security");
     }
 
     private bool IsWithin(string root, string candidate)
