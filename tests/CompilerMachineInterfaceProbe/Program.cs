@@ -22,6 +22,16 @@ Require(CompilerDiagnosticCatalog.All.Select(x => x.DiagnosticCode).SequenceEqua
     CompilerDiagnosticCatalog.All.Select(x => x.DiagnosticCode).OrderBy(x => x, StringComparer.Ordinal)),
     "diagnostic catalog ordering");
 
+var documentationKinds = new[] { "language.If", "api.XPJsonSchema", "target.BrowserWasm", "security.Shell" }
+    .Select(CompilerDocumentationCatalog.Find)
+    .ToArray();
+Require(documentationKinds.All(x => x is not null), "stable documentation id lookup");
+Require(documentationKinds.Select(x => x!.Kind).SequenceEqual(["language", "api", "target", "security"]), "stable documentation id kinds");
+Require(CompilerDocumentationCatalog.Find("API.XPAI")?.Id == "api.XPAi", "documentation id lookup must be case-insensitive");
+Require(CompilerDocumentationCatalog.All.Select(x => x.Id).SequenceEqual(
+    CompilerDocumentationCatalog.All.Select(x => x.Id).OrderBy(x => x, StringComparer.Ordinal)),
+    "documentation catalog ordering");
+
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
