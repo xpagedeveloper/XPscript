@@ -89,6 +89,7 @@ Require(redactionXml.Contains("[REDACTED]", StringComparison.Ordinal), "XML diag
 
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(outputRoot);
 var validationExecutionSentinel = Path.Combine(outputRoot, "validate-must-not-execute.txt");
 var validationExecutionSource = Path.Combine(outputRoot, "validate-must-not-execute.xps");
 var shellCommand = OperatingSystem.IsWindows()
