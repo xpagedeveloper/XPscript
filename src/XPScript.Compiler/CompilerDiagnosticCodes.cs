@@ -35,6 +35,7 @@ internal static class CompilerDiagnosticCodes
 
     // XPS3xxx: target/platform and execution-context restrictions.
     public const string TargetApiUnavailable = "XPS3001";
+    public const string ServerSideContextRequired = "XPS3002";
 
     // XPS8xxx: project/configuration and compiler invocation.
     public const string SourceFileRequired = "XPS8001";
