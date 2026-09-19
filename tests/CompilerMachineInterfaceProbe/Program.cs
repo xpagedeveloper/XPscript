@@ -45,6 +45,15 @@ Require(CompilerSymbolCatalog.Search("XPJson").Select(x => x.Name).SequenceEqual
 Require(CompilerSymbolCatalog.Search("").Select(x => x.Name).SequenceEqual(
     CompilerSymbolCatalog.All.Select(x => x.Name)), "empty symbol search returns deterministic public catalog");
 
+foreach (var symbol in CompilerSymbolCatalog.All)
+{
+    Require(!symbol.Name.StartsWith("XPScript", StringComparison.Ordinal), $"internal runtime symbol leaked: {symbol.Name}");
+    Require(CompilerDocumentationCatalog.Find(symbol.DocumentationId) is not null,
+        $"symbol documentation id must resolve: {symbol.Name} -> {symbol.DocumentationId}");
+    Require(!string.IsNullOrWhiteSpace(symbol.Kind), $"symbol kind required: {symbol.Name}");
+    Require(!string.IsNullOrWhiteSpace(symbol.Signature), $"symbol signature required: {symbol.Name}");
+}
+
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
