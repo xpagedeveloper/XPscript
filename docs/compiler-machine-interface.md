@@ -48,3 +48,15 @@ For machine-readable operation, stdout is reserved for the final JSON or XML res
 ## Compatibility
 
 Schema version 1 is additive. Existing fields remain compatible. A breaking rename, removal or semantic change requires a new `schemaVersion`. Stable diagnostic codes must not be reused for a different meaning.
+
+## stdin validation
+
+Machine clients can validate source without creating a project source file:
+
+```text
+xpscript validate --stdin --filename program.xps --result-format json
+```
+
+The compiler reads XPScript source from standard input and runs the normal validation pipeline. `--filename` is a virtual simple `.xps` filename used for `source.entryPoint` and source-mapped diagnostics; directory components are rejected so the virtual name cannot be used for path traversal. Line and column positions refer to the submitted stdin source.
+
+Schema-v1 JSON remains on stdout. Human/debug logging remains separate from the machine result. Stdin validation currently accepts at most 1,048,576 characters. The implementation may use a temporary physical source file internally, but that path is not part of the public machine contract and is removed after validation.
