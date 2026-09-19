@@ -325,7 +325,15 @@ CI benchmark evidence on the GitHub Linux runner shows a median of 1029 ms when 
 - [x] Investigate reusing a warm `CompilerDriver` inside the existing debugger host without changing the debugger protocol. The current debugger core (`DebugSession`/`IDebugTransport`) owns runtime pause/step state and does not own compilation, so warm validation can be added before the existing debug build without changing the protocol or transport types.
 - [ ] Let debugger-driven edit/validate cycles use warm validation before a full debug build when semantics permit.
 - [x] Investigate a warm compiler host for test/run-without-debugger so repeated test runs do not pay process/compiler startup for unchanged compiler state. Normal `run` already has dependency-snapshot artifact reuse through `RunArtifactCache`; a persistent host should therefore target edit/validation and cache-miss compilation rather than duplicate the existing artifact cache.
-- [ ] Define cache invalidation for source, Include graph, runtime identifier, preprocessors, dependencies and compiler version before enabling warm compile reuse.
+- [x] Define cache invalidation for source, Include graph, runtime identifier, preprocessors, dependencies and compiler version before enabling warm compile reuse.
+  - Reuse is keyed by an `XPScriptCompilationSnapshot`, never by source path or timestamps alone.
+  - The snapshot hashes the root source and the fully expanded Include dependency graph by content.
+  - Run snapshots also hash managed references, `ReferenceNative` inputs, declared native dependencies and application icon inputs.
+  - Runtime identifier is part of the snapshot identity.
+  - Source-preprocessor configuration must be represented by a deterministic configuration identity; the current run artifact cache remains disabled when source preprocessors are configured until that identity is available.
+  - Compiler identity is part of the snapshot and run-cache key; changing the compiler invalidates reuse.
+  - Any missing, changed or newly resolved dependency produces a different snapshot or fails snapshot creation, so stale artifacts must not be reused.
+  - Security/restricted-mode context must remain outside reuse unless its effective source roots and relevant configuration are represented in the configuration identity.
 - [ ] Benchmark debugger and run-without-debugger cold versus warm paths before changing their current execution semantics.
 
 The debugger transport is intentionally unchanged by the MCP work. Warm compilation for debugger and test/run-without-debugger should reuse the compiler service internally and preserve their existing protocols and observable execution behavior.
