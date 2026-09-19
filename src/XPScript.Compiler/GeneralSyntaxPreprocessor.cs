@@ -201,7 +201,7 @@ internal sealed class GeneralSyntaxPreprocessor
             var lineStart = 0;
             for (var i = 0; i < source.Length; i++)
             {
-                if (source[i] != '\\n') continue;
+                if (source[i] != '\n') continue;
                 line++;
                 lineStart = i + 1;
             }
