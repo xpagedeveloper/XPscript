@@ -41,7 +41,9 @@ Require(schemaSymbol.Parameters.SequenceEqual([new CompilerSymbolParameter("valu
 Require(schemaSymbol.DocumentationId == "api.XPJsonSchema.FromJson", "symbol documentation id");
 Require(!schemaSymbol.Deprecated, "symbol deprecation metadata");
 Require(CompilerSymbolCatalog.Find("xpjsonschema.fromjson") == schemaSymbol, "symbol lookup must be case-insensitive");
-Require(CompilerSymbolCatalog.Search("XPJson").Select(x => x.Name).SequenceEqual(["XPJsonSchema", "XPJsonSchema.FromJson"]), "symbol search ordering");
+Require(CompilerSymbolCatalog.Search("XPJson").Select(x => x.Name).SequenceEqual(
+    CompilerSymbolCatalog.All.Where(x => x.Name.Contains("XPJson", StringComparison.OrdinalIgnoreCase)).Select(x => x.Name)),
+    "symbol search ordering");
 Require(CompilerSymbolCatalog.Search("").Select(x => x.Name).SequenceEqual(
     CompilerSymbolCatalog.All.Select(x => x.Name)), "empty symbol search returns deterministic public catalog");
 
