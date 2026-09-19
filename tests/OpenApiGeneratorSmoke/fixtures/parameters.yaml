@@ -10,5 +10,6 @@ paths:
       parameters:
         - { name: q, in: query, required: true, schema: { type: string } }
         - { name: x-trace, in: header, schema: { type: string } }
+        - { name: page-size, in: query, schema: { type: integer } }
       responses:
         '200': { description: ok, content: { application/json: { schema: { type: string } } } }
