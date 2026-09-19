@@ -416,7 +416,8 @@ public sealed class XpsWebRouteMetadataParser
             if (attribute.StartsWith("JsonSchema:", StringComparison.OrdinalIgnoreCase))
             {
                 if (jsonSchema is not null) throw new XpsWebRouteMetadataException("A web route may declare only one [JsonSchema:...] rule.");
-                try { jsonSchema = XpsJsonSchemaPath.NormalizeRelative(attribute[11..]); }\n                catch (ArgumentException ex) { throw new XpsWebRouteMetadataException(ex.Message); }
+                try { jsonSchema = XpsJsonSchemaPath.NormalizeRelative(attribute[11..]); }
+                catch (ArgumentException ex) { throw new XpsWebRouteMetadataException(ex.Message); }
             }
         }
         if (methods.Count == 0) throw new XpsWebRouteMetadataException("A web route must declare at least one HTTP method attribute.");
