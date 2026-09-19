@@ -136,35 +136,35 @@ internal static class XPScriptJsonSchemaValidator
     private static void ValidateNode(System.Text.Json.Nodes.JsonObject schema, System.Text.Json.Nodes.JsonNode? node, string path, string schemaPath, System.Text.Json.Nodes.JsonArray errors, int depth, System.Text.Json.Nodes.JsonObject? root = null)
     {
         root ??= schema;
+        if (depth > 64) { Add(errors, path, SchemaChild(schemaPath, "depth"), "depth", "Validation nesting exceeds 64 levels.", "<= 64", depth.ToString()); return; }
         if (schema["$ref"] is System.Text.Json.Nodes.JsonValue refValue && refValue.TryGetValue<string>(out var reference) && reference.StartsWith("#/$defs/", StringComparison.Ordinal) && root["$defs"] is System.Text.Json.Nodes.JsonObject defs)
         {
             var key = reference["#/$defs/".Length..].Replace("~1", "/").Replace("~0", "~");
             if (defs[key] is System.Text.Json.Nodes.JsonObject target) { ValidateNode(target, node, path, reference, errors, depth + 1, root); return; }
             Add(errors, path, schemaPath, "$ref", "Schema reference was not found.", reference, "missing"); return;
         }
-        if (depth > 64) { Add(errors, path, SchemaChild(schemaPath, "depth"), "depth", "Validation nesting exceeds 64 levels.", "<= 64", depth.ToString()); return; }
         if (!MatchesTypeKeyword(node, schema["type"], out var expectedType)) { Add(errors, path, SchemaChild(schemaPath, "type"), "type", "Value does not match the required JSON type.", expectedType, ActualType(node)); return; }
 
         if (schema["allOf"] is System.Text.Json.Nodes.JsonArray allOf)
         {
-            for (var i = 0; i < allOf.Count; i++) if (allOf[i] is System.Text.Json.Nodes.JsonObject childSchema && !IsValidAgainst(childSchema, node, path, depth + 1)) Add(errors, path, SchemaChild(schemaPath, "allOf"), "allOf", "Value does not satisfy every allOf schema.", "all schemas", "schema " + i + " failed");
+            for (var i = 0; i < allOf.Count; i++) if (allOf[i] is System.Text.Json.Nodes.JsonObject childSchema && !IsValidAgainst(childSchema, node, path, depth + 1, root)) Add(errors, path, SchemaChild(schemaPath, "allOf"), "allOf", "Value does not satisfy every allOf schema.", "all schemas", "schema " + i + " failed");
         }
         if (schema["anyOf"] is System.Text.Json.Nodes.JsonArray anyOf)
         {
-            var matches = 0; foreach (var child in anyOf) if (child is System.Text.Json.Nodes.JsonObject childSchema && IsValidAgainst(childSchema, node, path, depth + 1)) matches++;
+            var matches = 0; foreach (var child in anyOf) if (child is System.Text.Json.Nodes.JsonObject childSchema && IsValidAgainst(childSchema, node, path, depth + 1, root)) matches++;
             if (matches == 0) Add(errors, path, SchemaChild(schemaPath, "anyOf"), "anyOf", "Value does not satisfy any anyOf schema.", "at least one schema", "0 schemas");
         }
         if (schema["oneOf"] is System.Text.Json.Nodes.JsonArray oneOf)
         {
-            var matches = 0; foreach (var child in oneOf) if (child is System.Text.Json.Nodes.JsonObject childSchema && IsValidAgainst(childSchema, node, path, depth + 1)) matches++;
+            var matches = 0; foreach (var child in oneOf) if (child is System.Text.Json.Nodes.JsonObject childSchema && IsValidAgainst(childSchema, node, path, depth + 1, root)) matches++;
             if (matches != 1) Add(errors, path, SchemaChild(schemaPath, "oneOf"), "oneOf", "Value must satisfy exactly one oneOf schema.", "1 schema", matches + " schemas");
         }
-        if (schema["not"] is System.Text.Json.Nodes.JsonObject notSchema && IsValidAgainst(notSchema, node, path, depth + 1)) Add(errors, path, SchemaChild(schemaPath, "not"), "not", "Value satisfies a schema that must not match.", "schema mismatch", "schema matched");
+        if (schema["not"] is System.Text.Json.Nodes.JsonObject notSchema && IsValidAgainst(notSchema, node, path, depth + 1, root)) Add(errors, path, SchemaChild(schemaPath, "not"), "not", "Value satisfies a schema that must not match.", "schema mismatch", "schema matched");
         if (schema["if"] is System.Text.Json.Nodes.JsonObject ifSchema)
         {
-            var conditionMatches = IsValidAgainst(ifSchema, node, path, depth + 1);
-            if (conditionMatches && schema["then"] is System.Text.Json.Nodes.JsonObject thenSchema) ValidateNode(thenSchema, node, path, SchemaChild(schemaPath, "then"), errors, depth + 1);
-            else if (!conditionMatches && schema["else"] is System.Text.Json.Nodes.JsonObject elseSchema) ValidateNode(elseSchema, node, path, SchemaChild(schemaPath, "else"), errors, depth + 1);
+            var conditionMatches = IsValidAgainst(ifSchema, node, path, depth + 1, root);
+            if (conditionMatches && schema["then"] is System.Text.Json.Nodes.JsonObject thenSchema) ValidateNode(thenSchema, node, path, SchemaChild(schemaPath, "then"), errors, depth + 1, root);
+            else if (!conditionMatches && schema["else"] is System.Text.Json.Nodes.JsonObject elseSchema) ValidateNode(elseSchema, node, path, SchemaChild(schemaPath, "else"), errors, depth + 1, root);
         }
 
         if (schema["const"] is System.Text.Json.Nodes.JsonNode constNode && !System.Text.Json.Nodes.JsonNode.DeepEquals(node, constNode)) Add(errors, path, SchemaChild(schemaPath, "const"), "const", "Value does not match const.", constNode.ToJsonString(), Display(node));
@@ -187,13 +187,13 @@ internal static class XPScriptJsonSchemaValidator
             if (schema["dependentSchemas"] is System.Text.Json.Nodes.JsonObject dependentSchemas)
                 foreach (var dependency in dependentSchemas)
                     if (obj.ContainsKey(dependency.Key) && dependency.Value is System.Text.Json.Nodes.JsonObject dependentSchema)
-                        ValidateNode(dependentSchema, obj, path, SchemaChild(SchemaChild(schemaPath, "dependentSchemas"), dependency.Key), errors, depth + 1);
+                        ValidateNode(dependentSchema, obj, path, SchemaChild(SchemaChild(schemaPath, "dependentSchemas"), dependency.Key), errors, depth + 1, root);
             if (properties is not null) foreach (var property in properties) if (property.Value is System.Text.Json.Nodes.JsonObject childSchema && obj.TryGetPropertyValue(property.Key, out var child)) ValidateNode(childSchema, child, Child(path, property.Key), SchemaChild(SchemaChild(schemaPath, "properties"), property.Key), errors, depth + 1, root);
             if (patternProperties is not null)
                 foreach (var pattern in patternProperties)
                     if (pattern.Value is System.Text.Json.Nodes.JsonObject patternSchema)
                     {
-                        try { foreach (var property in obj) if (System.Text.RegularExpressions.Regex.IsMatch(property.Key, pattern.Key, System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250))) ValidateNode(patternSchema, property.Value, Child(path, property.Key), SchemaChild(SchemaChild(schemaPath, "patternProperties"), pattern.Key), errors, depth + 1); }
+                        try { foreach (var property in obj) if (System.Text.RegularExpressions.Regex.IsMatch(property.Key, pattern.Key, System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250))) ValidateNode(patternSchema, property.Value, Child(path, property.Key), SchemaChild(SchemaChild(schemaPath, "patternProperties"), pattern.Key), errors, depth + 1, root); }
                         catch (ArgumentException) { Add(errors, path, SchemaChild(schemaPath, "patternProperties"), "patternProperties", "Schema contains an invalid property-name regular expression.", "valid regex", pattern.Key); }
                     }
             foreach (var property in obj)
@@ -207,7 +207,7 @@ internal static class XPScriptJsonSchemaValidator
                 if (schema["additionalProperties"] is System.Text.Json.Nodes.JsonValue ap && ap.TryGetValue<bool>(out var allow) && !allow)
                     Add(errors, Child(path, property.Key), SchemaChild(schemaPath, "additionalProperties"), "additionalProperties", "Additional property is not allowed.", "declared or pattern-matched property", property.Key);
                 else if (schema["additionalProperties"] is System.Text.Json.Nodes.JsonObject additionalSchema)
-                    ValidateNode(additionalSchema, property.Value, Child(path, property.Key), SchemaChild(schemaPath, "additionalProperties"), errors, depth + 1);
+                    ValidateNode(additionalSchema, property.Value, Child(path, property.Key), SchemaChild(schemaPath, "additionalProperties"), errors, depth + 1, root);
             }
         }
         else if (node is System.Text.Json.Nodes.JsonArray array)
@@ -221,7 +221,7 @@ internal static class XPScriptJsonSchemaValidator
             }
             if (schema["contains"] is System.Text.Json.Nodes.JsonObject containsSchema)
             {
-                var matches = 0; for (var i = 0; i < array.Count; i++) if (IsValidAgainst(containsSchema, array[i], path + "[" + i + "]", depth + 1)) matches++;
+                var matches = 0; for (var i = 0; i < array.Count; i++) if (IsValidAgainst(containsSchema, array[i], path + "[" + i + "]", depth + 1, root)) matches++;
                 var minContains = 1; if (schema["minContains"] is System.Text.Json.Nodes.JsonValue minContainsValue && minContainsValue.TryGetValue<int>(out var configuredMin) && configuredMin >= 0) minContains = configuredMin;
                 int? maxContains = null; if (schema["maxContains"] is System.Text.Json.Nodes.JsonValue maxContainsValue && maxContainsValue.TryGetValue<int>(out var configuredMax) && configuredMax >= 0) maxContains = configuredMax;
                 if (matches < minContains) Add(errors, path, SchemaChild(schemaPath, "contains"), "contains", "Array has too few items matching contains.", "at least " + minContains + " matching items", matches + " matching items");
@@ -231,9 +231,9 @@ internal static class XPScriptJsonSchemaValidator
             if (schema["prefixItems"] is System.Text.Json.Nodes.JsonArray prefixItems)
             {
                 prefixCount = prefixItems.Count;
-                for (var i = 0; i < prefixItems.Count && i < array.Count; i++) if (prefixItems[i] is System.Text.Json.Nodes.JsonObject prefixSchema) ValidateNode(prefixSchema, array[i], path + "[" + i + "]", SchemaChild(SchemaChild(schemaPath, "prefixItems"), i.ToString()), errors, depth + 1);
+                for (var i = 0; i < prefixItems.Count && i < array.Count; i++) if (prefixItems[i] is System.Text.Json.Nodes.JsonObject prefixSchema) ValidateNode(prefixSchema, array[i], path + "[" + i + "]", SchemaChild(SchemaChild(schemaPath, "prefixItems"), i.ToString()), errors, depth + 1, root);
             }
-            if (schema["items"] is System.Text.Json.Nodes.JsonObject itemSchema) for (var i = prefixCount; i < array.Count; i++) ValidateNode(itemSchema, array[i], path + "[" + i + "]", SchemaChild(schemaPath, "items"), errors, depth + 1);
+            if (schema["items"] is System.Text.Json.Nodes.JsonObject itemSchema) for (var i = prefixCount; i < array.Count; i++) ValidateNode(itemSchema, array[i], path + "[" + i + "]", SchemaChild(schemaPath, "items"), errors, depth + 1, root);
         }
         else if (node is System.Text.Json.Nodes.JsonValue scalar)
         {
@@ -254,7 +254,7 @@ internal static class XPScriptJsonSchemaValidator
         }
     }
 
-    private static bool IsValidAgainst(System.Text.Json.Nodes.JsonObject schema, System.Text.Json.Nodes.JsonNode? node, string path, int depth) { var branchErrors = new System.Text.Json.Nodes.JsonArray(); ValidateNode(schema, node, path, "$", branchErrors, depth); return branchErrors.Count == 0; }
+    private static bool IsValidAgainst(System.Text.Json.Nodes.JsonObject schema, System.Text.Json.Nodes.JsonNode? node, string path, int depth, System.Text.Json.Nodes.JsonObject? root = null) { var branchErrors = new System.Text.Json.Nodes.JsonArray(); ValidateNode(schema, node, path, "$", branchErrors, depth, root); return branchErrors.Count == 0; }
     private static bool MatchesTypeKeyword(System.Text.Json.Nodes.JsonNode? node, System.Text.Json.Nodes.JsonNode? typeNode, out string expected) { if (typeNode is System.Text.Json.Nodes.JsonValue value && value.TryGetValue<string>(out var single)) { expected = single; return MatchesType(node, single); } if (typeNode is System.Text.Json.Nodes.JsonArray types) { var names = new System.Collections.Generic.List<string>(); foreach (var item in types) { var name = ReadString(item); if (name.Length == 0) continue; names.Add(name); if (MatchesType(node, name)) { expected = types.ToJsonString(); return true; } } expected = types.ToJsonString(); return names.Count == 0; } expected = string.Empty; return true; }
     private static bool MatchesType(System.Text.Json.Nodes.JsonNode? node, string type) => type.ToLowerInvariant() switch { "null" => node is null, "object" => node is System.Text.Json.Nodes.JsonObject, "array" => node is System.Text.Json.Nodes.JsonArray, "boolean" => node is System.Text.Json.Nodes.JsonValue b && b.TryGetValue<bool>(out _), "string" => node is System.Text.Json.Nodes.JsonValue s && s.TryGetValue<string>(out _), "integer" => IsInteger(node), "number" => node is System.Text.Json.Nodes.JsonValue n && TryNumber(n, out _), _ => true };
     private static bool IsInteger(System.Text.Json.Nodes.JsonNode? node) { if (node is not System.Text.Json.Nodes.JsonValue value || value.TryGetValue<bool>(out _)) return false; if (value.TryGetValue<int>(out _) || value.TryGetValue<long>(out _)) return true; return TryNumber(value, out var number) && decimal.Truncate(number) == number; }
