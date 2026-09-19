@@ -153,10 +153,10 @@ Minimum representation:
 
 ## 9. Target/platform diagnostics
 
-- [ ] Structure target-specific failures.
-- [ ] Include active target.
-- [ ] Include offending API/symbol.
-- [ ] Include allowed targets where known.
+- [x] Structure target-specific failures.
+- [x] Include active target.
+- [x] Include offending API/symbol.
+- [x] Include allowed targets where known.
 - [ ] Cover CLI, Desktop, Web, REST and Browser-WASM.
 - [ ] Cover native/platform-specific APIs.
 - [ ] Reuse existing runtime/compiler feature metadata rather than duplicating target rules.
