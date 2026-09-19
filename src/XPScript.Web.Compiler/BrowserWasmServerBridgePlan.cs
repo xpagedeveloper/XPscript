@@ -189,8 +189,8 @@ internal sealed record BrowserWasmServerBridgePlan(
         foreach (var part in SplitArguments(raw))
         {
             var clean = part.Trim();
-            if (Regex.IsMatch(clean, @"\bByRef\b", RegexOptions.IgnoreCase)) throw new XpsWebCompilationException("browser-wasm server bridge does not support ByRef parameters. Split the server operation into a value-returning helper function.");
-            if (Regex.IsMatch(clean, @"\(\)\s*(?:As\b|$)", RegexOptions.IgnoreCase) || Regex.IsMatch(clean, @"\bList\b", RegexOptions.IgnoreCase)) throw new XpsWebCompilationException("browser-wasm server bridge does not support array or List parameters.");
+            if (Regex.IsMatch(clean, @"\bByRef\b", RegexOptions.IgnoreCase)) throw ServerBridgeSignatureError(clean, "ByRef", "ByVal scalar or Variant", "browser-wasm server bridge does not support ByRef parameters. Split the server operation into a value-returning helper function.");
+            if (Regex.IsMatch(clean, @"\(\)\s*(?:As\b|$)", RegexOptions.IgnoreCase) || Regex.IsMatch(clean, @"\bList\b", RegexOptions.IgnoreCase)) throw ServerBridgeSignatureError(clean, "collection", "scalar or Variant", "browser-wasm server bridge does not support array or List parameters.");
             var match = Regex.Match(clean, @"^(?:ByVal\s+)?([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             if (!match.Success) throw new XpsWebCompilationException("browser-wasm server bridge encountered an unsupported procedure parameter: " + clean);
             result.Add(new BrowserWasmServerBridgeParameter(match.Groups[1].Value, string.IsNullOrWhiteSpace(match.Groups[2].Value) ? "Variant" : match.Groups[2].Value));
@@ -228,9 +228,34 @@ internal sealed record BrowserWasmServerBridgePlan(
 
     private static void ValidateSerializableSignature(ProcedureBlock procedure)
     {
-        foreach (var parameter in procedure.Parameters) if (!SerializableTypes.Contains(parameter.TypeName)) throw new XpsWebCompilationException($"browser-wasm server bridge parameter '{parameter.Name}' in '{procedure.Name}' uses non-serializable type '{parameter.TypeName}'. Use a scalar or Variant containing native JSON.");
-        if (procedure.IsFunction && !SerializableTypes.Contains(procedure.ReturnType)) throw new XpsWebCompilationException($"browser-wasm server bridge Function '{procedure.Name}' returns non-serializable type '{procedure.ReturnType}'. Use a scalar or Variant containing native JSON.");
+        foreach (var parameter in procedure.Parameters)
+            if (!SerializableTypes.Contains(parameter.TypeName))
+                throw ServerBridgeSignatureError(
+                    procedure.Name + "." + parameter.Name,
+                    parameter.TypeName,
+                    "scalar or Variant",
+                    $"browser-wasm server bridge parameter '{parameter.Name}' in '{procedure.Name}' uses non-serializable type '{parameter.TypeName}'. Use a scalar or Variant containing native JSON.");
+        if (procedure.IsFunction && !SerializableTypes.Contains(procedure.ReturnType))
+            throw ServerBridgeSignatureError(
+                procedure.Name,
+                procedure.ReturnType,
+                "scalar or Variant",
+                $"browser-wasm server bridge Function '{procedure.Name}' returns non-serializable type '{procedure.ReturnType}'. Use a scalar or Variant containing native JSON.");
     }
+
+    private static XpsWebCompilationException ServerBridgeSignatureError(string symbol, string actualType, string expectedType, string message) =>
+        new(
+            message,
+            "XPS2003",
+            "type",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["symbol"] = symbol,
+                ["target"] = "browser-wasm",
+                ["currentContext"] = "ServerSide",
+                ["actualType"] = actualType,
+                ["expectedType"] = expectedType
+            });
 
     private static int ReadSpinnerDelay(string[] lines, ProcedureBlock procedure)
     {
