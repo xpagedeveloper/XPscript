@@ -37,16 +37,13 @@ Require(!string.IsNullOrWhiteSpace(generatedSymbolDiagnostic.SourceCode), "gener
 
 
 CompileResult preprocessorCase;
-using (SourcePreprocessorConfigurationContext.Push(["replace:__BAD_OPERATOR__=FROM"]))
+using (SourcePreprocessorConfigurationContext.Push(["replace:"]))
     preprocessorCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "source-preprocessor-error-root.xps"));
-var preprocessorDiagnostic = preprocessorCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS8008");
-Require(preprocessorDiagnostic is not null, "source preprocessor diagnostic");
-Require(preprocessorDiagnostic.Category == "preprocessor", "source preprocessor category");
-Require(preprocessorDiagnostic.File == "source-preprocessor-error-child.xps", "source preprocessor mapped file");
-Require(preprocessorDiagnostic.Line == 2 && preprocessorDiagnostic.Position > 0, "source preprocessor mapped location");
-Require(preprocessorDiagnostic.Properties?.Any(p => p.Name == "preprocessor" && p.Value == "replace") == true, "source preprocessor name");
-Require(!string.IsNullOrWhiteSpace(preprocessorDiagnostic.SourceCode), "source preprocessor source");
-Require(!string.IsNullOrWhiteSpace(preprocessorDiagnostic.MarkedCode), "source preprocessor marked source");
+var preprocessorDiagnostic = preprocessorCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS8007");
+Require(preprocessorDiagnostic is not null, "source preprocessor configuration diagnostic");
+Require(preprocessorDiagnostic.Category == "configuration", "source preprocessor configuration category");
+Require(preprocessorDiagnostic.Properties?.Any(p => p.Name == "preprocessor" && p.Value == "replace") == true, "source preprocessor configuration name");
+Require(preprocessorDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "replace:FROM=TO") == true, "source preprocessor expected construct");
 
 var quoteSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "string-quote-invalid-variable.xps"));
 var quoteSyntaxDiagnostic = quoteSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1001");
