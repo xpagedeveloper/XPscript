@@ -95,6 +95,14 @@ Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "actualType") ==
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.SourceCode), "date comparison source");
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.MarkedCode), "date comparison marked source");
 
+var callbackCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "aitool-callback-missing-error.xps"));
+var callbackDiagnostic = callbackCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2011");
+Require(callbackDiagnostic is not null, "missing AITool callback diagnostic");
+Require(callbackDiagnostic.Category == "symbol-resolution", "missing AITool callback category");
+Require(callbackDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingCallback") == true, "missing AITool callback symbol");
+Require(callbackDiagnostic.Properties?.Any(p => p.Name == "symbolKind" && p.Value == "callback") == true, "missing AITool callback symbol kind");
+Require(callbackDiagnostic.Properties?.Any(p => p.Name == "containingScope" && p.Value == "module") == true, "missing AITool callback scope");
+
 var duplicateOverloadCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "class-method-overloads-duplicate.xps"));
 var duplicateOverloadDiagnostic = duplicateOverloadCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2006");
 Require(duplicateOverloadDiagnostic is not null, "duplicate overload diagnostic");
