@@ -102,10 +102,9 @@ internal static class BrowserWasmServerSideMetadata
             var match = ProcedureHeader.Match(trimmed);
             if (!match.Success)
                 throw new XpsWebCompilationException("[ServerSide] must immediately precede a Sub or Function declaration.");
+            var name = match.Groups[2].Value;
             if (classDepth != 0)
                 throw ServerSideRequired(name, "[ServerSide] class methods are not supported for browser-wasm. Move the server operation to a module Sub or Function.", "ClassMethod");
-
-            var name = match.Groups[2].Value;
             if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) || name.Equals("Index", StringComparison.OrdinalIgnoreCase))
                 throw ServerSideRequired(name, $"browser-wasm entry procedure '{name}' cannot be [ServerSide]. Move server work into a helper Function or Sub.", "BrowserEntryPoint");
             if (!result.TryAdd(name, pending))
