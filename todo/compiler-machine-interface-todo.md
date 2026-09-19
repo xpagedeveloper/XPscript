@@ -235,12 +235,12 @@ xpscriptc validate --stdin --filename program.xps --result-format json
 
 ## 15. Reusable compiler service
 
-- [ ] Expose validation behind a reusable compiler API.
-- [ ] Return typed compiler-result and diagnostic objects.
-- [ ] Make CLI consume this API.
-- [ ] Make tests able to invoke it directly.
-- [ ] Design it so IDE/LSP and future MCP tooling can reuse it.
-- [ ] Do not require in-process consumers to shell out to `xpscriptc`.
+- [x] Expose validation behind a reusable compiler API.
+- [x] Return typed compiler-result and diagnostic objects.
+- [x] Make CLI consume this API.
+- [x] Make tests able to invoke it directly.
+- [x] Design it so IDE/LSP and future MCP tooling can reuse it.
+- [x] Do not require in-process consumers to shell out to `xpscriptc`.
 
 Conceptual API only:
 
