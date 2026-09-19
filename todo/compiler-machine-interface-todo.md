@@ -295,12 +295,12 @@ xpscriptc explain XPS2104 --result-format json
 
 ## 19. Determinism
 
-- [ ] Same source, compiler version and options must produce stable diagnostic codes.
-- [ ] Define deterministic diagnostic ordering.
-- [ ] Define deterministic candidate-symbol ordering.
-- [ ] Normalize path representation where needed.
-- [ ] Avoid environment-dependent structured values.
-- [ ] Include enough target/configuration metadata to reproduce validation.
+- [x] Same source, compiler version and options must produce stable diagnostic codes.
+- [x] Define deterministic diagnostic ordering.
+- [x] Define deterministic candidate-symbol ordering.
+- [x] Normalize path representation where needed.
+- [x] Avoid environment-dependent structured values.
+- [x] Include enough target/configuration metadata to reproduce validation.
 
 ## 20. Performance
 
