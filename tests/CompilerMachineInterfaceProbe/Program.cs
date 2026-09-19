@@ -19,6 +19,16 @@ Require(targetDefinition.DocumentationIds.All(id => id.StartsWith("diagnostic.",
 Require(targetDefinition.Properties.SequenceEqual(["symbol", "target", "currentContext", "requiredContext"]), "XPS3002 definition properties");
 Require(CompilerDiagnosticCatalog.Find("xps3002") == targetDefinition, "diagnostic lookup must be case-insensitive");
 Require(CompilerDiagnosticCatalog.Find("XPS9999") is null, "unknown diagnostic lookup");
+var securityUnavailableDefinition = CompilerDiagnosticCatalog.Find("XPS7001");
+Require(securityUnavailableDefinition is not null, "XPS7001 diagnostic definition");
+Require(securityUnavailableDefinition.Category == "security", "XPS7001 category");
+Require(securityUnavailableDefinition.DocumentationIds.Contains("security.DependencyAudit"), "XPS7001 dependency audit documentation");
+var securityVulnerabilityDefinition = CompilerDiagnosticCatalog.Find("XPS7002");
+Require(securityVulnerabilityDefinition is not null, "XPS7002 diagnostic definition");
+Require(securityVulnerabilityDefinition.Category == "security", "XPS7002 category");
+Require(securityVulnerabilityDefinition.Properties.SequenceEqual(["package", "version", "severity", "advisory"]), "XPS7002 properties");
+Require(securityVulnerabilityDefinition.DocumentationIds.Contains("security.DependencyAudit"), "XPS7002 dependency audit documentation");
+
 Require(CompilerDiagnosticCatalog.All.Select(x => x.DiagnosticCode).SequenceEqual(
     CompilerDiagnosticCatalog.All.Select(x => x.DiagnosticCode).OrderBy(x => x, StringComparer.Ordinal)),
     "diagnostic catalog ordering");
