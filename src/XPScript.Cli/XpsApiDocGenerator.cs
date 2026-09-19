@@ -149,6 +149,8 @@ internal static class XpsApiDocGenerator
             try
             {
                 using var document = JsonDocument.Parse(File.ReadAllText(schemaPath));
+                if (document.RootElement.ValueKind is not JsonValueKind.Object and not JsonValueKind.True and not JsonValueKind.False)
+                    throw new InvalidOperationException($"Configured JSON Schema '{endpoint.JsonSchema}' must have an object or boolean schema root.");
                 return document.RootElement.Clone();
             }
             catch (JsonException ex)
