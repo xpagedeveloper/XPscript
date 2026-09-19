@@ -30,7 +30,7 @@ public sealed class SourcePreprocessorException : Exception
     public int Position { get; }
 }
 
-internal static class SourcePreprocessorConfigurationContext
+public static class SourcePreprocessorConfigurationContext
 {
     private static readonly AsyncLocal<IReadOnlyList<string>?> CurrentValue = new();
 
