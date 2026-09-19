@@ -56,6 +56,27 @@ foreach (var symbol in CompilerSymbolCatalog.All)
     Require(!string.IsNullOrWhiteSpace(symbol.Signature), $"symbol signature required: {symbol.Name}");
 }
 
+const string secretCanary = "xps-secret-canary-4f91d2";
+var redactionResult = CompileResult.Error(
+[
+    new CompileDiagnostic
+    {
+        Description = "Authorization: Bearer " + secretCanary,
+        SourceCode = "api_key=" + secretCanary,
+        MarkedCode = "password: " + secretCanary,
+        Properties = [new CompileDiagnosticProperty { Name = "credential", Value = "client_secret=" + secretCanary }]
+    }
+]);
+var redactionJson = System.Text.Json.JsonSerializer.Serialize(redactionResult);
+Require(!redactionJson.Contains(secretCanary, StringComparison.Ordinal), "JSON diagnostics must redact credential canaries");
+Require(redactionJson.Contains("[REDACTED]", StringComparison.Ordinal), "JSON diagnostics should retain redaction marker");
+var redactionXmlSerializer = new System.Xml.Serialization.XmlSerializer(typeof(CompileResult));
+using var redactionXmlWriter = new StringWriter();
+redactionXmlSerializer.Serialize(redactionXmlWriter, redactionResult);
+var redactionXml = redactionXmlWriter.ToString();
+Require(!redactionXml.Contains(secretCanary, StringComparison.Ordinal), "XML diagnostics must redact credential canaries");
+Require(redactionXml.Contains("[REDACTED]", StringComparison.Ordinal), "XML diagnostics should retain redaction marker");
+
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
