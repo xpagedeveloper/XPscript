@@ -20,7 +20,7 @@ internal static class XpsApiDocGenerator
 
         var output = Path.Combine(root, "apidoc");
         Directory.CreateDirectory(output);
-        File.WriteAllText(Path.Combine(output, "openapi.json"), BuildOpenApi(endpoints), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(output, "openapi.json"), BuildOpenApi(root, endpoints), Encoding.UTF8);
         File.WriteAllText(Path.Combine(output, "swagger.json"), BuildSwagger(endpoints), Encoding.UTF8);
         File.WriteAllText(Path.Combine(output, "index.html"), BuildHtml(endpoints), Encoding.UTF8);
         File.WriteAllText(Path.Combine(output, "apidoc.css"), Css, Encoding.UTF8);
@@ -129,19 +129,37 @@ internal static class XpsApiDocGenerator
         if (start < raw.Length) yield return raw[start..];
     }
 
-    private static object? RequestBodySchema(Endpoint endpoint)
+    private static object? RequestBodySchema(string root, Endpoint endpoint)
     {
         if (endpoint.JsonSchema is not null)
         {
-            var schemaPath = endpoint.JsonSchema.Replace('\\', '/').TrimStart('/');
-            if (schemaPath.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(part => part == ".."))
+            var configuredPath = endpoint.JsonSchema.Trim();
+            if (Path.IsPathRooted(configuredPath) || configuredPath.Any(char.IsControl) ||
+                !configuredPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"JSON Schema path '{endpoint.JsonSchema}' must be a relative .json path inside the API root.");
+
+            var rootPath = Path.GetFullPath(root);
+            var schemaPath = Path.GetFullPath(Path.Combine(rootPath, configuredPath));
+            var rootPrefix = rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (!schemaPath.StartsWith(rootPrefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
                 throw new InvalidOperationException($"JSON Schema path '{endpoint.JsonSchema}' must stay inside the API root.");
-            return new Dictionary<string, object> { ["$ref"] = "../" + schemaPath };
+            if (!File.Exists(schemaPath))
+                throw new FileNotFoundException($"Configured JSON Schema '{endpoint.JsonSchema}' was not found.", schemaPath);
+
+            try
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(schemaPath));
+                return document.RootElement.Clone();
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException($"Configured JSON Schema '{endpoint.JsonSchema}' is invalid JSON.", ex);
+            }
         }
         return endpoint.Parameters.FirstOrDefault(p => p.Location == "body") is { } body ? Schema(body.Type) : null;
     }
 
-    private static string BuildOpenApi(List<Endpoint> endpoints)
+    private static string BuildOpenApi(string root, List<Endpoint> endpoints)
     {
         var paths = new Dictionary<string, object>();
         foreach (var group in endpoints.GroupBy(e => e.Route))
@@ -154,7 +172,7 @@ internal static class XpsApiDocGenerator
                     tags = new[] { e.Tag }, summary = e.Summary, description = e.Description,
                     operationId = e.Name,
                     parameters = e.Parameters.Where(p => p.Location != "body").Select(p => new { name = p.Name, @in = p.Location, required = p.Required, description = p.Description, schema = Schema(p.Type) }).ToArray(),
-                    requestBody = RequestBodySchema(e) is { } bodySchema ? new { required = true, content = new Dictionary<string, object> { ["application/json"] = new { schema = bodySchema } } } : null,
+                    requestBody = RequestBodySchema(root, e) is { } bodySchema ? new { required = true, content = new Dictionary<string, object> { ["application/json"] = new { schema = bodySchema } } } : null,
                     responses = Responses31(e)
                 };
             }
