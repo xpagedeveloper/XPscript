@@ -45,6 +45,14 @@ Require(preprocessorDiagnostic.Category == "configuration", "source preprocessor
 Require(preprocessorDiagnostic.Properties?.Any(p => p.Name == "preprocessor" && p.Value == "replace") == true, "source preprocessor configuration name");
 Require(preprocessorDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "replace:FROM=TO") == true, "source preprocessor expected construct");
 
+var browserTargetCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "browser-wasm-target-ai-error.xps"), "browser-wasm");
+var browserTargetDiagnostic = browserTargetCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
+Require(browserTargetDiagnostic is not null, "Browser WASM target diagnostic");
+Require(browserTargetDiagnostic.Category == "target", "Browser WASM target category");
+Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "XPAi") == true, "Browser WASM target symbol");
+Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, "Browser WASM active target");
+Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == "server target") == true, "Browser WASM allowed targets");
+
 var nothingComparisonCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "nothing-comparison-invalid-error.xps"));
 var nothingComparisonDiagnostic = nothingComparisonCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1002");
 Require(nothingComparisonDiagnostic is not null, "Nothing comparison diagnostic");
