@@ -270,23 +270,9 @@ jobs:
           cp ./out/generated-openapi-json-client.xps ./out/generated-openapi-json-client-host.xps
           printf '\nSub Main()\nEnd Sub\n' >> ./out/generated-openapi-json-client-host.xps
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi-json-client-host.xps -o ./out/generated-openapi-json-client --runtime=false
-      - name: Verify OpenAPI REST server generate and compile
+      - name: Verify OpenAPI REST server generation, import, and compilation
         shell: bash
-        run: |
-          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./tests/OpenApiGeneratorSmoke/petstore.yaml -o ./out/generated-openapi.xps --force
-          test -f ./out/generated-openapi.xps
-          grep -Ev '^\[[^]]+\]
-      - name: Verify OpenAPI REST server import and compile
-        shell: bash
-        run: |
-          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi import ./tests/OpenApiGeneratorSmoke/petstore-reimport.yaml -o ./out/generated-openapi.xps
-          test -f ./out/generated-openapi.xps
-          grep -Ev '^\[[^]]+\]
-      - name: Verify OpenAPI JSON REST server generate and compile
-        shell: bash
-        run: |
-          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./tests/OpenApiGeneratorSmoke/petstore.json -o ./out/generated-openapi-json.xps --force
-          grep -Ev '^\[[^]]+\]
+        run: bash ./tests/OpenApiGeneratorSmoke/run-rest-host-ci.sh
       - name: Compile ordinary application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --runtime=false
       - name: Verify generated license notice
