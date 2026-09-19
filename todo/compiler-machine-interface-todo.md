@@ -127,8 +127,8 @@ Minimum representation:
 
 - [x] Structure unknown symbol and unknown member failures.
 - [x] Include requested symbol name.
-- [ ] Include receiver type for failed member resolution.
-- [ ] Include symbol kind and containing scope where useful.
+- [x] Include receiver type for failed member resolution.
+- [x] Include symbol kind and containing scope where useful.
 - [ ] Reuse compiler symbol tables.
 - [ ] Preserve XPScript symbol/casing semantics.
 
@@ -147,8 +147,8 @@ Minimum representation:
 - [x] Include affected symbol where applicable.
 - [x] Structure missing, extra and invalid arguments.
 - [x] Include parameter name/index and expected type.
-- [ ] Include procedure/function signature where useful.
-- [ ] Include ByRef/ByVal compatibility information where relevant.
+- [x] Include procedure/function signature where useful.
+- [x] Include ByRef/ByVal compatibility information where relevant.
 - [x] Include overload candidates if supported by the language model.
 
 ## 9. Target/platform diagnostics
