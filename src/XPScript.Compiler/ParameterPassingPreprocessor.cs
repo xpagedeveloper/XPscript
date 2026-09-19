@@ -47,7 +47,7 @@ internal sealed class ParameterPassingPreprocessor
                     activeParameters[originalName] = generatedName;
 
                     var emittedModifier = modifier.Equals("ByVal", StringComparison.OrdinalIgnoreCase) ? "ByVal " : "";
-                    arguments[argIndex] = declaration.Groups["leading"].Value + emittedModifier + generatedName + declaration.Groups["rest"].Value;
+                    arguments[argIndex] = declaration.Groups["leading"].Value + declaration.Groups["optional"].Value + emittedModifier + generatedName + declaration.Groups["rest"].Value;
                 }
 
                 lines[i] = header.Groups["prefix"].Value + string.Join(",", arguments) + header.Groups["suffix"].Value;
