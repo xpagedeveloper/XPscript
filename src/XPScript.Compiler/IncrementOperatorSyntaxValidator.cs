@@ -131,7 +131,12 @@ internal sealed class IncrementOperatorSyntaxValidator
                 line,
                 operatorIndex + 1,
                 $"Operator '{selectedOperator}' requires a numeric assignable target; '{target}' is {targetType}.",
-                original);
+                original,
+                CompilerDiagnosticCodes.InvalidCompoundAssignmentSyntax,
+                ("foundOperator", selectedOperator),
+                ("symbol", target),
+                ("expectedType", "numeric"),
+                ("actualType", targetType));
         }
 
         if (selectedOperator == "&=" && !targetType.Equals("String", StringComparison.OrdinalIgnoreCase))
@@ -141,7 +146,12 @@ internal sealed class IncrementOperatorSyntaxValidator
                 line,
                 operatorIndex + 1,
                 $"Operator '&=' requires a String or Variant-compatible assignable target; '{target}' is {targetType}.",
-                original);
+                original,
+                CompilerDiagnosticCodes.InvalidCompoundAssignmentSyntax,
+                ("foundOperator", selectedOperator),
+                ("symbol", target),
+                ("expectedType", "String or Variant"),
+                ("actualType", targetType));
         }
     }
 
