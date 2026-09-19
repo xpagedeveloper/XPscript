@@ -28,7 +28,63 @@ public static class XPScriptCompilerCommandLine
         if (args[0].Equals("explain", StringComparison.OrdinalIgnoreCase))
             return Explain(args[1..]);
 
+        if (args[0].Equals("describe", StringComparison.OrdinalIgnoreCase))
+            return Describe(args[1..]);
+
+        if (args[0].Equals("symbols", StringComparison.OrdinalIgnoreCase))
+            return Symbols(args[1..]);
+
         return await CompileAsync(args).ConfigureAwait(false);
+    }
+
+    public static int Describe(string[] args)
+    {
+        var resultFormat = "text";
+        try
+        {
+            if (args.Length == 0) throw new ArgumentException("describe requires an XPScript symbol.");
+            var name = args[0];
+            for (var i = 1; i < args.Length; i++)
+            {
+                if (args[i] == "--result-format" && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
+                else throw new ArgumentException($"Unknown argument: {args[i]}");
+            }
+            if (resultFormat is not ("text" or "json")) throw new ArgumentException("describe --result-format must be text or json.");
+            var definition = CompilerSymbolCatalog.Find(name);
+            if (definition is null) { Console.Error.WriteLine($"Unknown XPScript symbol: {name}"); return 2; }
+            if (resultFormat == "json") Console.WriteLine(JsonSerializer.Serialize(definition, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true }));
+            else
+            {
+                Console.WriteLine(definition.Signature);
+                Console.WriteLine($"kind: {definition.Kind}");
+                Console.WriteLine($"documentationId: {definition.DocumentationId}");
+                if (definition.AllowedTargets.Count > 0) Console.WriteLine("allowedTargets: " + string.Join(", ", definition.AllowedTargets));
+                if (definition.Deprecated) Console.WriteLine("deprecated: true");
+            }
+            return 0;
+        }
+        catch (Exception ex) { Console.Error.WriteLine(ex.Message); return 1; }
+    }
+
+    public static int Symbols(string[] args)
+    {
+        var resultFormat = "text";
+        var query = "";
+        try
+        {
+            for (var i = 0; i < args.Length; i++)
+            {
+                if (args[i] == "--search" && i + 1 < args.Length) query = args[++i];
+                else if (args[i] == "--result-format" && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
+                else throw new ArgumentException($"Unknown argument: {args[i]}");
+            }
+            if (resultFormat is not ("text" or "json")) throw new ArgumentException("symbols --result-format must be text or json.");
+            var definitions = CompilerSymbolCatalog.Search(query);
+            if (resultFormat == "json") Console.WriteLine(JsonSerializer.Serialize(definitions, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true }));
+            else foreach (var definition in definitions) Console.WriteLine(definition.Signature);
+            return 0;
+        }
+        catch (Exception ex) { Console.Error.WriteLine(ex.Message); return 1; }
     }
 
     public static int Explain(string[] args)
