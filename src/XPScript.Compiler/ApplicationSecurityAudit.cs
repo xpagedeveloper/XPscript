@@ -22,7 +22,14 @@ internal static class ApplicationSecurityAudit
         {
             var message = $"Application dependency security check unavailable [{unavailable.Code}]: {unavailable.Message}";
             if (mode == ApplicationSecurityMode.Strict)
-                throw new CompilerException(message, CompilerDiagnosticCodes.DependencyAuditUnavailable, "security");
+                throw new CompilerException(
+                    message,
+                    CompilerDiagnosticCodes.DependencyAuditUnavailable,
+                    "security",
+                    [SecurityDiagnostic(
+                        message,
+                        CompilerDiagnosticCodes.DependencyAuditUnavailable,
+                        new("upstreamCode", unavailable.Code))]);
             Console.Error.WriteLine(message);
         }
 
@@ -40,10 +47,18 @@ internal static class ApplicationSecurityAudit
         var blocking = findings.Where(f => f.Severity is "high" or "critical").ToArray();
         if (blocking.Length == 0) return;
 
+        var blockingMessage = $"Application dependency security check failed: {blocking.Length} high or critical vulnerability/vulnerabilities detected in packages used by this application.";
         throw new CompilerException(
-            $"Application dependency security check failed: {blocking.Length} high or critical vulnerability/vulnerabilities detected in packages used by this application.",
+            blockingMessage,
             CompilerDiagnosticCodes.DependencyVulnerability,
-            "security");
+            "security",
+            blocking.Select(f => SecurityDiagnostic(
+                $"Package '{f.Package}' {f.Version} has a known {f.Severity} severity vulnerability.",
+                CompilerDiagnosticCodes.DependencyVulnerability,
+                new("package", f.Package),
+                new("version", f.Version),
+                new("severity", f.Severity),
+                new("advisory", f.Advisory))));
     }
 
     internal static UnavailableFinding? ParseUnavailable(string buildOutput)
@@ -78,6 +93,18 @@ internal static class ApplicationSecurityAudit
             .ThenBy(f => f.Version, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
+
+
+    private static CompileDiagnostic SecurityDiagnostic(
+        string message,
+        string diagnosticCode,
+        params CompileDiagnosticProperty[] properties) => new()
+    {
+        Description = message,
+        DiagnosticCode = diagnosticCode,
+        Category = "security",
+        Properties = [.. properties]
+    };
 
     private static int SeverityRank(string severity) => severity switch
     {
