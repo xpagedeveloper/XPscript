@@ -161,11 +161,26 @@ internal static class BrowserWasmServerSideMetadata
         ArgumentNullException.ThrowIfNull(annotatedProcedures);
         foreach (var procedure in plan.Procedures.Values)
             if (!annotatedProcedures.Contains(procedure.Name))
-                throw new XpsWebCompilationException($"browser-wasm procedure '{procedure.Name}' uses server-only state but is not marked [ServerSide]. Add [ServerSide] above the whole Function or Sub.");
+                throw ServerSideRequired(
+                    procedure.Name,
+                    $"browser-wasm procedure '{procedure.Name}' uses server-only state but is not marked [ServerSide]. Add [ServerSide] above the whole Function or Sub.");
         foreach (var name in annotatedProcedures)
             if (!plan.Procedures.Values.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
                 throw new XpsWebCompilationException($"[ServerSide] procedure '{name}' could not be converted into a browser-wasm server call.");
     }
+
+    private static XpsWebCompilationException ServerSideRequired(string symbol, string message) =>
+        new(
+            message,
+            "XPS3002",
+            "execution-context",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["symbol"] = symbol,
+                ["target"] = "browser-wasm",
+                ["currentContext"] = "Client",
+                ["requiredContext"] = "ServerSide"
+            });
 
     private static void ValidateNotesBoundary(string[] lines, IReadOnlySet<string> annotatedProcedures)
     {
