@@ -1,6 +1,6 @@
 namespace XPScript.Compiler;
 
-internal readonly record struct RuntimeFeatures(
+public readonly record struct RuntimeFeatures(
     bool Http,
     bool Json,
     bool JsonSchema,
