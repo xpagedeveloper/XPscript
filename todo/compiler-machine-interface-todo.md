@@ -289,7 +289,7 @@ xpscriptc explain XPS2104 --result-format json
 - [x] Never leak API keys, Authorization headers or credential values.
 - [x] Review source snippets returned in diagnostics for secret leakage.
 - [x] Validation must never execute submitted XPScript.
-- [ ] Separate validation, compilation and execution permissions in future remote tooling.
+- [x] Separate validation, compilation and execution permissions in future remote tooling.
 - [ ] Bound CPU, memory, source size and diagnostic output where practical.
 - [x] Prevent path traversal through virtual filenames/project paths.
 
