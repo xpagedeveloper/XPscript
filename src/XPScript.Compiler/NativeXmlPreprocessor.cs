@@ -56,6 +56,25 @@ internal sealed class NativeXmlPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
+    private static CompilerException NativeConstructorDiagnostic(
+        string diagnosticCode,
+        string message,
+        params (string Name, string Value)[] properties)
+    {
+        var diagnostic = new CompileDiagnostic
+        {
+            Description = message,
+            DiagnosticCode = diagnosticCode,
+            Category = "syntax",
+            Properties = properties.Select(property => new CompileDiagnosticProperty
+            {
+                Name = property.Name,
+                Value = property.Value
+            }).ToList()
+        };
+        return new CompilerException(message, diagnosticCode, "syntax", [diagnostic]);
+    }
+
     private static string CreateExpression(string type, string rawArguments)
     {
         var args = rawArguments.Trim();
@@ -63,9 +82,9 @@ internal sealed class NativeXmlPreprocessor
             return string.IsNullOrWhiteSpace(args) ? "XPScriptNativeXml.CreateDocument()" : $"XPScriptNativeXml.Parse({args})";
         if (type.Equals("XPXmlElement", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("XPXmlElement requires an element name argument.");
+            if (string.IsNullOrWhiteSpace(args)) throw NativeConstructorDiagnostic(CompilerDiagnosticCodes.MissingConstructorArgument, "XPXmlElement requires an element name argument.", ("symbol", "XPXmlElement"), ("symbolKind", "type"), ("expectedArgument", "element name"));
             return $"XPScriptNativeXml.CreateElement({args})";
         }
-        throw new CompilerException("Only XPXmlDocument and XPXmlElement can be created with New.");
+        throw NativeConstructorDiagnostic(CompilerDiagnosticCodes.InvalidNativeConstructor, "Only XPXmlDocument and XPXmlElement can be created with New.", ("symbol", type), ("symbolKind", "type"), ("expectedConstruct", "New XPXmlDocument or New XPXmlElement"));
     }
 }
