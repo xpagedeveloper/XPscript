@@ -221,11 +221,11 @@ xpscriptc validate program.xps --result-format json
 
 ## 14. stdin validation
 
-- [ ] Investigate `--stdin` source input.
-- [ ] Support a virtual filename for diagnostics.
-- [ ] Preserve line/column information.
-- [ ] Keep JSON result on stdout and logging on stderr.
-- [ ] Apply source-size and resource limits.
+- [x] Investigate `--stdin` source input.
+- [x] Support a virtual filename for diagnostics.
+- [x] Preserve line/column information.
+- [x] Keep JSON result on stdout and logging on stderr.
+- [x] Apply source-size and resource limits.
 
 Possible interface:
 
@@ -346,7 +346,7 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 - [x] Document diagnostic schema and code ranges.
 - [x] Document severity semantics.
 - [x] Document validation-only mode.
-- [ ] Document stdin mode if implemented.
+- [x] Document stdin mode if implemented.
 - [ ] Document source-location semantics.
 - [x] Document versioning/compatibility.
 - [ ] Document security/redaction behavior.
