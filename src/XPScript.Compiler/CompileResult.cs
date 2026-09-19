@@ -93,12 +93,27 @@ public sealed class CompileResult
         ?? typeof(CompileResult).Assembly.GetName().Version?.ToString()
         ?? "unknown";
 
+    private static string NormalizeDiagnosticPath(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "";
+        try
+        {
+            var fileName = Path.GetFileName(value);
+            return string.IsNullOrWhiteSpace(fileName) ? "" : fileName;
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
     private static List<CompileDiagnostic> NormalizeDiagnostics(IEnumerable<CompileDiagnostic> errors)
     {
         var result = errors.ToList();
         foreach (var diagnostic in result)
         {
             diagnostic.NormalizeMachineFields();
+            diagnostic.File = NormalizeDiagnosticPath(diagnostic.File);
             if (diagnostic.Properties is { Count: > 1 })
                 diagnostic.Properties = diagnostic.Properties
                     .OrderBy(property => property.Name, StringComparer.Ordinal)
