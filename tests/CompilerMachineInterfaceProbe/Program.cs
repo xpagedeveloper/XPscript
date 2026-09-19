@@ -120,6 +120,18 @@ Require(orderedDiagnostics.Select(d => $"{d.File}:{d.Line}:{d.Position}:{d.Diagn
     ["a.xps:1:2:XPS2008", "a.xps:1:5:XPS2009", "a.xps:2:1:XPS2008", "b.xps:1:1:XPS2008"]),
     "diagnostics must use deterministic source ordering");
 
+var normalizedPathDiagnostic = CompileResult.Error(
+[
+    new CompileDiagnostic
+    {
+        File = Path.Combine(Path.GetTempPath(), "machine-specific-root", "nested", "portable.xps"),
+        DiagnosticCode = "XPS2008",
+        Description = "portable path"
+    }
+]).Errors.Single();
+Require(normalizedPathDiagnostic.File == "portable.xps", "diagnostic file paths must not expose environment-specific roots");
+
+
 
 
 var driver = new CompilerDriver();
