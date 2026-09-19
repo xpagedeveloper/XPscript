@@ -102,7 +102,7 @@ foreach (var expected in new[]
         throw new InvalidOperationException("Generated UIForm accessibility surface is missing: " + expected);
 }
 
-var schemaAccessibilitySource = """
+var schemaAccessibilitySource = """"
 Option Declare
 
 Sub Main()
@@ -115,7 +115,7 @@ Sub Main()
     Set schema = XPJsonSchema.Parse("{""type"": ""object"", ""properties"": {""customer"": {""type"": ""object"", ""properties"": {""address"": {""type"": ""object"", ""properties"": {""city"": {""minLength"": 2}}}}}}}}")
     Call form.SetValidationSchema(schema)
 End Sub
-""";
+"""";
 
 var generatedSchemaAccessibility = new XPScriptTranspiler().Transpile(schemaAccessibilitySource, "uiform-schema-accessibility-smoke.xps", "linux-x64");
 foreach (var expected in new[]
