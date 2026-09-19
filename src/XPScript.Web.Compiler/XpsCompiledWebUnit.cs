@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Runtime.Loader;
+using System.Text.Json.Nodes;
 using XPScript.Web.Runtime;
 
 namespace XPScript.Web.Compiler;
@@ -173,13 +174,23 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             ?? throw new XpsWebRouteException("XPJsonSchema.Validate was not found in the compiled web unit.");
         var nativeJsonType = assembly.GetType("XPScriptNativeJson", throwOnError: false, ignoreCase: false)
             ?? throw new XpsWebRouteException("XPJson runtime was not included in the compiled web unit.");
-        var jsonParse = nativeJsonType.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public)
-            ?? throw new XpsWebRouteException("XPJsonDocument.Parse runtime entry point was not found.");
+        var fromNode = nativeJsonType.GetMethod("FromNode", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new XpsWebRouteException("XPJson runtime node bridge was not found.");
         object document;
         try
         {
-            document = jsonParse.Invoke(null, [context.Request.BodyText()])
-                ?? throw new XpsWebRouteException("XPJsonDocument.Parse returned no document.");
+            var node = JsonNode.Parse(
+                context.Request.Body.Span,
+                nodeOptions: null,
+                documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = 64 });
+            document = fromNode.Invoke(null, [node])
+                ?? throw new XpsWebRouteException("XPJson runtime node bridge returned no document.");
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return new SchemaValidationFailure(
+                new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = ["Invalid JSON input."] },
+                []);
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {
