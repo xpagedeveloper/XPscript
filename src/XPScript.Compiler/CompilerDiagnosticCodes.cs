@@ -37,6 +37,10 @@ internal static class CompilerDiagnosticCodes
     public const string TargetApiUnavailable = "XPS3001";
     public const string ServerSideContextRequired = "XPS3002";
 
+    // XPS7xxx: application security and dependency audit.
+    public const string DependencyAuditUnavailable = "XPS7001";
+    public const string DependencyVulnerability = "XPS7002";
+
     // XPS8xxx: project/configuration and compiler invocation.
     public const string SourceFileRequired = "XPS8001";
     public const string SourceExtensionInvalid = "XPS8002";
