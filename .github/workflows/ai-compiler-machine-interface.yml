@@ -23,7 +23,7 @@ jobs:
         run: dotnet restore XPScriptCompiler.slnx
 
       - name: Build
-        run: dotnet build XPScriptCompiler.slnx -c Release --no-restore
+        run: dotnet build XPScriptCompiler.slnx -c Release --no-restore -m:1
 
       - name: Machine interface probe
         run: dotnet run --project tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release -- .
