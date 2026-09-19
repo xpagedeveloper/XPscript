@@ -178,7 +178,7 @@ End Sub
     foreach (var requiredMarker in new[]
     {
         "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result",
-        "multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.regexPattern", "field.dateMinimum", "field.dateMaximum", "field.timeMinimum", "field.timeMaximum", "field.dateTimeMinimum", "field.dateTimeMaximum", "field.monthMinimum", "field.monthMaximum", "field.tooltip",
+        "multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.regexPattern", "field.schemaValidationError", "aria-invalid", "xpscript-uiform-error", "_schema_error", "field.dateMinimum", "field.dateMaximum", "field.timeMinimum", "field.timeMaximum", "field.dateTimeMinimum", "field.dateTimeMaximum", "field.monthMinimum", "field.monthMaximum", "field.tooltip",
         "type === 'separator'", "type === 'spacer'", "export function stageRequestState", "export function consumeRequestState",
         "export function navigate", "export function applyApplicationMetadata", "export function setEventDispatcher",
         "dispatchUiEvent", "change:${field.name", "button:${definition.name", "xpscript:form-error", "mergeByName"

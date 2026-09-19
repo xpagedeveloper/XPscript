@@ -175,10 +175,21 @@ internal sealed class XPScriptUIForm
         for (var i = 0; i < result.ErrorCount; i++)
         {
             var error = result.GetError(i);
-            if (!XPScriptRuntime.CStr(error.Get("path")).Equals("$." + name, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!ValidationPathMatchesField(XPScriptRuntime.CStr(error.Get("path")), name)) continue;
             return XPScriptRuntime.CStr(error.Get("message"));
         }
         return string.Empty;
+    }
+
+    private static bool ValidationPathMatchesField(string path, string fieldName)
+    {
+        if (path.Length < 3 || !path.StartsWith("$.", StringComparison.Ordinal)) return false;
+        var fieldPath = path[2..];
+        if (fieldPath.Equals(fieldName, StringComparison.OrdinalIgnoreCase)) return true;
+        if (!fieldPath.StartsWith(fieldName, StringComparison.OrdinalIgnoreCase)) return false;
+        if (fieldPath.Length == fieldName.Length) return true;
+        var boundary = fieldPath[fieldName.Length];
+        return boundary is '.' or '[';
     }
 
     public void BindData(object? value)

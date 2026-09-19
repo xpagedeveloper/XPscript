@@ -44,6 +44,31 @@ Sub Main()
     If Not first.HasValidationSchema Then Error 5, "Expected UIForm JSON Schema to be configured"
     If first.IsDataValid Then Error 5, "Expected bound JSON data to fail configured schema"
     If first.ValidateData().FailedPaths.Get(0) <> "$.age" Then Error 5, "Expected UIForm schema failure path"
+
+    Dim nestedForm As New UIForm("Nested schema")
+    Dim nestedData As New XPJsonObject
+    Dim customer As New XPJsonObject
+    Dim address As New XPJsonObject
+    Call address.Set("city", "")
+    Call customer.Set("address", address)
+    Call nestedData.Set("customer", customer)
+    Call nestedForm.BindData(nestedData)
+    Call nestedForm.AddTextField("customer", "Customer")
+    Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""customer"":{""type"":""object"",""properties"":{""address"":{""type"":""object"",""properties"":{""city"":{""minLength"":2}}}}}}}}")
+    Call nestedForm.SetValidationSchema(schema)
+    If nestedForm.ValidateData().FailedPaths.Get(0) <> "$.customer.address.city" Then Error 5, "Expected nested UIForm schema failure path"
+    If nestedForm.GetValidationError("customer") = "" Then Error 5, "Expected nested schema error to map to parent UIForm field"
+
+    Dim arrayForm As New UIForm("Array schema")
+    Dim arrayData As XPJsonDocument
+    Set arrayData = XPJson.Parse("{""items"":[{""quantity"":0}]}")
+    Call arrayForm.BindData(arrayData)
+    Call arrayForm.AddTextField("items", "Items")
+    Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""items"":{""type"":""array"",""items"":{""type"":""object"",""properties"":{""quantity"":{""minimum"":1}}}}}}")
+    Call arrayForm.SetValidationSchema(schema)
+    If arrayForm.ValidateData().FailedPaths.Get(0) <> "$.items[0].quantity" Then Error 5, "Expected array UIForm schema failure path"
+    If arrayForm.GetValidationError("items") = "" Then Error 5, "Expected array schema error to map to parent UIForm field"
+
     Call first.SetValidationSchema(Nothing)
     If first.HasValidationSchema Then Error 5, "Expected UIForm JSON Schema to be cleared"
     If Not first.IsDataValid Then Error 5, "Expected UIForm data to be valid after clearing schema"

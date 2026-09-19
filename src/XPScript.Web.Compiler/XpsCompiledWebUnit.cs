@@ -1,6 +1,9 @@
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Runtime.Loader;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Nodes;
 using XPScript.Web.Runtime;
 
 namespace XPScript.Web.Compiler;
@@ -125,7 +128,7 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         }
     }
 
-    private sealed record CachedJsonSchema(DateTime LastWriteTimeUtc, long Length, object Schema);
+    private sealed record CachedJsonSchema(string ContentHash, object Schema);
 
     private sealed record SchemaValidationFailure(
         IReadOnlyDictionary<string, string[]> Errors,
@@ -146,12 +149,12 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         var parse = schemaType.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public)
             ?? throw new XpsWebRouteException("XPJsonSchema.Parse was not found in the compiled web unit.");
         object schema;
-        var schemaFile = new FileInfo(candidate);
+        var schemaBytes = File.ReadAllBytes(candidate);
+        var schemaHash = Convert.ToHexString(SHA256.HashData(schemaBytes));
         lock (_jsonSchemaCacheGate)
         {
             if (_jsonSchemaCache.TryGetValue(candidate, out var cached) &&
-                cached.LastWriteTimeUtc == schemaFile.LastWriteTimeUtc &&
-                cached.Length == schemaFile.Length)
+                cached.ContentHash == schemaHash)
             {
                 schema = cached.Schema;
             }
@@ -159,27 +162,40 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             {
                 try
                 {
-                    schema = parse.Invoke(null, [File.ReadAllText(candidate)])
+                    var schemaText = new UTF8Encoding(false, true).GetString(schemaBytes);
+                    schema = parse.Invoke(null, [schemaText])
                         ?? throw new XpsWebRouteException("XPJsonSchema.Parse returned no schema.");
                 }
                 catch (TargetInvocationException ex) when (ex.InnerException is not null)
                 {
                     throw new XpsWebRouteException($"Configured XPJsonSchema '{schemaPath}' is invalid: {ex.InnerException.Message}", ex.InnerException);
                 }
-                _jsonSchemaCache[candidate] = new CachedJsonSchema(schemaFile.LastWriteTimeUtc, schemaFile.Length, schema);
+                _jsonSchemaCache[candidate] = new CachedJsonSchema(schemaHash, schema);
             }
         }
         var validate = schemaType.GetMethod("Validate", BindingFlags.Instance | BindingFlags.Public)
             ?? throw new XpsWebRouteException("XPJsonSchema.Validate was not found in the compiled web unit.");
         var nativeJsonType = assembly.GetType("XPScriptNativeJson", throwOnError: false, ignoreCase: false)
             ?? throw new XpsWebRouteException("XPJson runtime was not included in the compiled web unit.");
-        var jsonParse = nativeJsonType.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public)
-            ?? throw new XpsWebRouteException("XPJsonDocument.Parse runtime entry point was not found.");
+        var fromNode = nativeJsonType.GetMethod("DocumentFromNode", BindingFlags.Static | BindingFlags.NonPublic)
+            ?? throw new XpsWebRouteException("XPJson runtime node bridge was not found.");
         object document;
         try
         {
-            document = jsonParse.Invoke(null, [context.Request.BodyText()])
-                ?? throw new XpsWebRouteException("XPJsonDocument.Parse returned no document.");
+            if (context.Request.Body.Length > 1_048_576)
+                throw new InvalidOperationException("Request body exceeds the configured 1048576 byte text limit.");
+            var node = JsonNode.Parse(
+                context.Request.Body.Span,
+                nodeOptions: null,
+                documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = 64 });
+            document = fromNode.Invoke(null, [node])
+                ?? throw new XpsWebRouteException("XPJson runtime node bridge returned no document.");
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return new SchemaValidationFailure(
+                new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = ["Invalid JSON input."] },
+                []);
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {
