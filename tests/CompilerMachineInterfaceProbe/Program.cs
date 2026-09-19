@@ -47,6 +47,22 @@ Require(quoteSyntaxDiagnostic.Properties.Any(p => p.Name == "expectedConstruct")
 Require(!string.IsNullOrWhiteSpace(quoteSyntaxDiagnostic.SourceCode), "unescaped quote source");
 Require(!string.IsNullOrWhiteSpace(quoteSyntaxDiagnostic.MarkedCode), "unescaped quote marked source");
 
+var emptyDimCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "general-dim-empty-declaration-error.xps"));
+var emptyDimDiagnostic = emptyDimCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1005");
+Require(emptyDimDiagnostic is not null, "empty Dim diagnostic");
+Require(emptyDimDiagnostic.Category == "syntax", "empty Dim category");
+Require(emptyDimDiagnostic.Line > 0 && emptyDimDiagnostic.Position > 0, "empty Dim location");
+Require(emptyDimDiagnostic.Properties?.Any(p => p.Name == "foundConstruct" && p.Value == "empty Dim declaration") == true, "empty Dim found construct");
+Require(emptyDimDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct") == true, "empty Dim expected construct");
+
+var unterminatedStringCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "general-string-unterminated-error.xps"));
+var unterminatedStringDiagnostic = unterminatedStringCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1006");
+Require(unterminatedStringDiagnostic is not null, "unterminated string diagnostic");
+Require(unterminatedStringDiagnostic.Category == "syntax", "unterminated string category");
+Require(unterminatedStringDiagnostic.Line > 0 && unterminatedStringDiagnostic.Position > 0, "unterminated string location");
+Require(unterminatedStringDiagnostic.Properties?.Any(p => p.Name == "foundConstruct" && p.Value == "unterminated string literal") == true, "unterminated string found construct");
+Require(unterminatedStringDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct") == true, "unterminated string expected construct");
+
 var incrementSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "increment-invalid-prefix.xps"));
 var incrementSyntaxDiagnostic = incrementSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1003");
 Require(incrementSyntaxDiagnostic is not null, "increment syntax diagnostic");
