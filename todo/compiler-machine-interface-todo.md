@@ -168,7 +168,7 @@ Minimum representation:
 - [x] Include `requiredContext`, for example `ServerSide`.
 - [x] Include offending symbol.
 - [x] Ensure Browser-WASM validation can distinguish client and `[ServerSide]` code.
-- [ ] Reuse compiler/runtime metadata for these restrictions.
+- [x] Reuse compiler/runtime metadata for these restrictions.
 
 ## 11. Stable documentation IDs
 
