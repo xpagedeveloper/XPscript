@@ -105,6 +105,19 @@ var nonExecutingValidation = await driver.ValidateWithResultAsync(validationExec
 Require(nonExecutingValidation.Result == "ok", "validation execution sentinel source should validate");
 Require(!File.Exists(validationExecutionSentinel), "validation must never execute submitted XPScript");
 
+var oversizedSource = Path.Combine(outputRoot, "oversized-source.xps");
+await using (var oversizedWriter = new FileStream(oversizedSource, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+{
+    oversizedWriter.SetLength(1024L * 1024L + 1);
+}
+var oversizedValidation = await driver.ValidateWithResultAsync(oversizedSource);
+var oversizedDiagnostic = oversizedValidation.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS8009");
+Require(oversizedDiagnostic is not null, "oversized file source diagnostic");
+Require(oversizedDiagnostic.Category == "input", "oversized file source category");
+Require(oversizedDiagnostic.Properties?.Any(p => p.Name == "maximumBytes" && p.Value == "1048576") == true, "oversized file maximum bytes");
+Require(oversizedDiagnostic.Properties?.Any(p => p.Name == "actualBytes" && p.Value == "1048577") == true, "oversized file actual bytes");
+
+
 Directory.CreateDirectory(outputRoot);
 
 var cases = new[]
