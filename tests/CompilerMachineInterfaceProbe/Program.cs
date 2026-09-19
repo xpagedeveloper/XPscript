@@ -36,6 +36,16 @@ Require(generatedSymbolDiagnostic.UpstreamCode == "CS0103", "generated symbol up
 Require(!string.IsNullOrWhiteSpace(generatedSymbolDiagnostic.SourceCode), "generated symbol source mapping");
 
 
+var memberConflictCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "class-member-conflict-invalid.xps"));
+var memberConflictDiagnostic = memberConflictCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2007");
+Require(memberConflictDiagnostic is not null, "member conflict diagnostic");
+Require(memberConflictDiagnostic.Properties is not null, "member conflict metadata properties");
+Require(memberConflictDiagnostic.Properties.Any(p => p.Name == "receiverType" && p.Value == "InvalidPerson"), "member conflict receiver type");
+Require(memberConflictDiagnostic.Properties.Any(p => p.Name == "symbol" && p.Value == "Name"), "member conflict symbol");
+Require(memberConflictDiagnostic.Properties.Any(p => p.Name == "symbolKind" && p.Value == "property"), "member conflict symbol kind");
+Require(memberConflictDiagnostic.Properties.Any(p => p.Name == "conflictingSymbolKind" && p.Value == "field"), "member conflict previous kind");
+Require(memberConflictDiagnostic.Properties.Any(p => p.Name == "previousLine"), "member conflict previous line");
+
 var overloadMetadataCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "class-method-overloads-no-match.xps"));
 var overloadMetadataDiagnostic = overloadMetadataCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2004");
 Require(overloadMetadataDiagnostic is not null, "overload metadata diagnostic");
