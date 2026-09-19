@@ -18,8 +18,18 @@ public static class CompilerSymbolCatalog
         new[]
         {
             Define("XPJsonSchema", "class", "XPJsonSchema", [], null, "api.XPJsonSchema"),
+            Define("XPJsonSchema.Parse", "method", "XPJsonSchema.Parse(text As String) As XPJsonSchema",
+                [new("text", "String")], "XPJsonSchema", "api.XPJsonSchema.Parse"),
             Define("XPJsonSchema.FromJson", "method", "XPJsonSchema.FromJson(value As Variant) As XPJsonSchema",
                 [new("value", "Variant")], "XPJsonSchema", "api.XPJsonSchema.FromJson"),
+            Define("XPJsonSchema.Validate", "method", "XPJsonSchema.Validate(json As Variant) As XPJsonValidationResult",
+                [new("json", "Variant")], "XPJsonValidationResult", "api.XPJsonSchema.Validate"),
+            Define("XPJsonSchema.IsValid", "method", "XPJsonSchema.IsValid(json As Variant) As Boolean",
+                [new("json", "Variant")], "Boolean", "api.XPJsonSchema.IsValid"),
+            Define("UIForm.SetValidationSchema", "method", "UIForm.SetValidationSchema(schema As XPJsonSchema)",
+                [new("schema", "XPJsonSchema")], null, "api.UIForm.SetValidationSchema"),
+            Define("UIForm.ValidateData", "method", "UIForm.ValidateData() As XPJsonValidationResult",
+                [], "XPJsonValidationResult", "api.UIForm.ValidateData"),
             Define("XPAi", "class", "XPAi", [], null, "api.XPAi")
         }.ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
