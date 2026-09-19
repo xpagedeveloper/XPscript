@@ -169,7 +169,7 @@ internal static class BrowserWasmServerSideMetadata
                 throw new XpsWebCompilationException($"[ServerSide] procedure '{name}' could not be converted into a browser-wasm server call.");
     }
 
-    private static XpsWebCompilationException ServerSideRequired(string symbol, string message) =>
+    private static XpsWebCompilationException ServerSideRequired(string symbol, string message, string currentContext = "Client") =>
         new(
             message,
             "XPS3002",
@@ -178,7 +178,7 @@ internal static class BrowserWasmServerSideMetadata
             {
                 ["symbol"] = symbol,
                 ["target"] = "browser-wasm",
-                ["currentContext"] = "Client",
+                ["currentContext"] = currentContext,
                 ["requiredContext"] = "ServerSide"
             });
 
@@ -207,11 +207,19 @@ internal static class BrowserWasmServerSideMetadata
     private static void ValidateNotesUse(int classDepth, string? currentProcedure, IReadOnlySet<string> annotatedProcedures)
     {
         if (classDepth != 0)
-            throw new XpsWebCompilationException("browser-wasm Notes runtime access is not supported inside class methods. Move Notes work to a module Sub or Function marked [ServerSide].");
+            throw ServerSideRequired(
+                currentProcedure ?? "Notes",
+                "browser-wasm Notes runtime access is not supported inside class methods. Move Notes work to a module Sub or Function marked [ServerSide].",
+                "ClassMethod");
         if (currentProcedure is null)
-            throw new XpsWebCompilationException("browser-wasm Notes runtime objects cannot be module-level state. Create and use Notes objects inside a module Sub or Function marked [ServerSide].");
+            throw ServerSideRequired(
+                "Notes",
+                "browser-wasm Notes runtime objects cannot be module-level state. Create and use Notes objects inside a module Sub or Function marked [ServerSide].",
+                "Module");
         if (!annotatedProcedures.Contains(currentProcedure))
-            throw new XpsWebCompilationException($"browser-wasm procedure '{currentProcedure}' uses Notes runtime state but is not marked [ServerSide]. Notes objects and functions must execute on the web server, never in the client WebAssembly runtime.");
+            throw ServerSideRequired(
+                currentProcedure,
+                $"browser-wasm procedure '{currentProcedure}' uses Notes runtime state but is not marked [ServerSide]. Notes objects and functions must execute on the web server, never in the client WebAssembly runtime.");
     }
 
     private static string BlankStringLiterals(string line)
