@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Runtime.Loader;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Nodes;
 using XPScript.Web.Runtime;
 
@@ -126,7 +128,7 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         }
     }
 
-    private sealed record CachedJsonSchema(DateTime LastWriteTimeUtc, long Length, object Schema);
+    private sealed record CachedJsonSchema(string ContentHash, object Schema);
 
     private sealed record SchemaValidationFailure(
         IReadOnlyDictionary<string, string[]> Errors,
@@ -147,12 +149,12 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         var parse = schemaType.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public)
             ?? throw new XpsWebRouteException("XPJsonSchema.Parse was not found in the compiled web unit.");
         object schema;
-        var schemaFile = new FileInfo(candidate);
+        var schemaBytes = File.ReadAllBytes(candidate);
+        var schemaHash = Convert.ToHexString(SHA256.HashData(schemaBytes));
         lock (_jsonSchemaCacheGate)
         {
             if (_jsonSchemaCache.TryGetValue(candidate, out var cached) &&
-                cached.LastWriteTimeUtc == schemaFile.LastWriteTimeUtc &&
-                cached.Length == schemaFile.Length)
+                cached.ContentHash == schemaHash)
             {
                 schema = cached.Schema;
             }
@@ -160,14 +162,15 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             {
                 try
                 {
-                    schema = parse.Invoke(null, [File.ReadAllText(candidate)])
+                    var schemaText = new UTF8Encoding(false, true).GetString(schemaBytes);
+                    schema = parse.Invoke(null, [schemaText])
                         ?? throw new XpsWebRouteException("XPJsonSchema.Parse returned no schema.");
                 }
                 catch (TargetInvocationException ex) when (ex.InnerException is not null)
                 {
                     throw new XpsWebRouteException($"Configured XPJsonSchema '{schemaPath}' is invalid: {ex.InnerException.Message}", ex.InnerException);
                 }
-                _jsonSchemaCache[candidate] = new CachedJsonSchema(schemaFile.LastWriteTimeUtc, schemaFile.Length, schema);
+                _jsonSchemaCache[candidate] = new CachedJsonSchema(schemaHash, schema);
             }
         }
         var validate = schemaType.GetMethod("Validate", BindingFlags.Instance | BindingFlags.Public)
