@@ -58,7 +58,7 @@ public sealed partial class XPScriptTranspiler
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
         var originalCode = PreprocessorFeatureGate.CodeOnly(source);
-        var requestedAi = PreprocessorFeatureGate.ContainsTypeReference(originalCode, "XPAi", "XPAiResponse", "AITool");
+        var requestedAi = PreprocessorFeatureGate.ContainsAny(originalCode, "XPAi", "XPAiResponse", "AITool");
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase) && requestedAi)
             throw TargetUnavailable("XPAi", runtimeIdentifier, "server target", "Keep AI credentials and requests on the server.");
 
