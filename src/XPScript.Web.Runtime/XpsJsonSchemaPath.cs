@@ -22,9 +22,34 @@ public static class XpsJsonSchemaPath
         var path = NormalizeRelative(value);
         var rootPath = Path.GetFullPath(root);
         var candidate = Path.GetFullPath(Path.Combine(rootPath, path.Replace('/', Path.DirectorySeparatorChar)));
-        var relative = Path.GetRelativePath(rootPath, candidate);
-        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
-            throw new ArgumentException("JsonSchema path must stay inside the web root.", nameof(value));
+        EnsureInsideRoot(rootPath, candidate, nameof(value));
+
+        var current = rootPath;
+        foreach (var segment in Path.GetRelativePath(rootPath, candidate).Split(Path.DirectorySeparatorChar))
+        {
+            current = Path.Combine(current, segment);
+            if (!File.Exists(current) && !Directory.Exists(current))
+                continue;
+
+            var info = Directory.Exists(current)
+                ? (FileSystemInfo)new DirectoryInfo(current)
+                : new FileInfo(current);
+            if ((info.Attributes & FileAttributes.ReparsePoint) == 0)
+                continue;
+
+            var target = info.ResolveLinkTarget(returnFinalTarget: true);
+            if (target is null)
+                throw new ArgumentException("JsonSchema path contains an unresolved symbolic link.", nameof(value));
+            EnsureInsideRoot(rootPath, Path.GetFullPath(target.FullName), nameof(value));
+        }
+
         return candidate;
+    }
+
+    private static void EnsureInsideRoot(string rootPath, string candidate, string paramName)
+    {
+        var relative = Path.GetRelativePath(rootPath, candidate);
+        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) || Path.IsPathRooted(relative))
+            throw new ArgumentException("JsonSchema path must stay inside the web root.", paramName);
     }
 }
