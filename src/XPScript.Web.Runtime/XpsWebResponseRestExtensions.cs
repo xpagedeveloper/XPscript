@@ -58,24 +58,34 @@ public static class XpsWebResponseRestExtensions
         string title,
         string detail,
         IReadOnlyDictionary<string, string[]>? errors)
+        => Problem(response, status, title, detail, errors, null);
+
+    public static void Problem(
+        this XPScript.Web.Runtime.XpsWebResponse response,
+        int status,
+        string title,
+        string detail,
+        IReadOnlyDictionary<string, string[]>? errors,
+        IReadOnlyDictionary<string, object?>? extensions)
     {
         if (status is < 400 or > 599) throw new ArgumentOutOfRangeException(nameof(status), "Problem status must be between 400 and 599.");
-        var payload = errors is null
-            ? new Dictionary<string, object?>
+        var payload = new Dictionary<string, object?>
+        {
+            ["type"] = "about:blank",
+            ["title"] = title ?? string.Empty,
+            ["status"] = status,
+            ["detail"] = detail ?? string.Empty
+        };
+        if (errors is not null) payload["errors"] = errors;
+        if (extensions is not null)
+        {
+            foreach (var extension in extensions)
             {
-                ["type"] = "about:blank",
-                ["title"] = title ?? string.Empty,
-                ["status"] = status,
-                ["detail"] = detail ?? string.Empty
+                if (payload.ContainsKey(extension.Key))
+                    throw new ArgumentException($"Problem Details extension '{extension.Key}' conflicts with a reserved member.", nameof(extensions));
+                payload[extension.Key] = extension.Value;
             }
-            : new Dictionary<string, object?>
-            {
-                ["type"] = "about:blank",
-                ["title"] = title ?? string.Empty,
-                ["status"] = status,
-                ["detail"] = detail ?? string.Empty,
-                ["errors"] = errors
-            };
+        }
         WriteJson(response, status, payload, "application/problem+json; charset=utf-8");
     }
 

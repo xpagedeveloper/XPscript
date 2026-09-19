@@ -8,6 +8,12 @@ var root = Path.Combine(Path.GetTempPath(), "xps-rest-api-smoke-" + Guid.NewGuid
 Directory.CreateDirectory(root);
 var apiPath = Path.Combine(root, "api.xps");
 
+Directory.CreateDirectory(Path.Combine(root, "schemas"));
+await File.WriteAllTextAsync(Path.Combine(root, "schemas", "create-user.schema.json"), """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":120}}}
+""");
+await File.WriteAllTextAsync(Path.Combine(root, "schemas", "invalid.schema.json"), "{not-json");
+
 await File.WriteAllTextAsync(apiPath, """
 Public Class CreateUserRequest
     [Required]
@@ -46,8 +52,25 @@ End Sub
 [Post]
 [Route:/api/users]
 [Cors:*]
+[JsonSchema:schemas/create-user.schema.json]
 Sub CreateUser([FromBody] payload As CreateUserRequest)
     Response.OK(payload)
+End Sub
+
+[Anonymous]
+[Post]
+[Route:/api/schema-missing]
+[JsonSchema:schemas/missing.schema.json]
+Sub MissingSchema()
+    Response.Write("HANDLER-RAN")
+End Sub
+
+[Anonymous]
+[Post]
+[Route:/api/schema-invalid]
+[JsonSchema:schemas/invalid.schema.json]
+Sub InvalidSchema()
+    Response.Write("HANDLER-RAN")
 End Sub
 
 [Anonymous]
@@ -147,6 +170,7 @@ try
     if (parsed.Routes["GetUser"].RouteTemplate != "/api/users/{id}") throw new Exception("[Route] metadata was not retained.");
     if (parsed.Routes["GetUser"].Cors is null || parsed.Routes["GetUser"].RateLimit is null) throw new Exception("CORS or rate limit metadata was not retained.");
     if (parsed.Routes["CreateUser"].ValidationRules?.Count != 5) throw new Exception("Model validation metadata was not collected.");
+    if (parsed.Routes["CreateUser"].JsonSchema != "schemas/create-user.schema.json") throw new Exception("JSON Schema route metadata was not retained.");
     if (parsed.Routes["BindSources"].ParameterBindings?.Count != 3) throw new Exception("Explicit parameter bindings were not retained.");
     if (parsed.Source.Contains("[FromRoute]", StringComparison.OrdinalIgnoreCase)) throw new Exception("Parameter binding syntax was not stripped before compilation.");
 
@@ -198,6 +222,93 @@ try
     }
     if (Header(create, "Access-Control-Allow-Origin") != "*") throw new Exception("Wildcard CORS response header was missing.");
     Console.WriteLine("WEB-REST-CLASS-JSON-BINDING=OK");
+
+    var schemaInvalid = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{\"name\":\"Fredrik\",\"email\":\"fredrik@example.com\",\"age\":12}",
+        "application/json");
+    if (schemaInvalid.StatusCode != 400) throw new Exception($"JSON Schema invalid body returned {schemaInvalid.StatusCode} instead of 400.");
+    var schemaInvalidBody = BodyText(schemaInvalid);
+    if (!schemaInvalidBody.Contains("$.age", StringComparison.Ordinal) || !schemaInvalidBody.Contains("JSON Schema validation failed", StringComparison.Ordinal))
+        throw new Exception("JSON Schema Problem Details did not contain structured field path errors.");
+    using (var schemaProblem = JsonDocument.Parse(schemaInvalid.Body))
+    {
+        var rootElement = schemaProblem.RootElement;
+        if (!rootElement.TryGetProperty("validationErrors", out var validationErrors) || validationErrors.ValueKind != JsonValueKind.Array || validationErrors.GetArrayLength() == 0)
+            throw new Exception("JSON Schema Problem Details did not contain validationErrors.");
+        var ageError = validationErrors.EnumerateArray().FirstOrDefault(item =>
+            item.TryGetProperty("path", out var pathValue) && pathValue.GetString() == "$.age");
+        if (ageError.ValueKind != JsonValueKind.Object ||
+            !ageError.TryGetProperty("schemaPath", out var schemaPathValue) || string.IsNullOrWhiteSpace(schemaPathValue.GetString()) ||
+            !ageError.TryGetProperty("keyword", out var keywordValue) || keywordValue.GetString() != "minimum" ||
+            !ageError.TryGetProperty("message", out var messageValue) || string.IsNullOrWhiteSpace(messageValue.GetString()) ||
+            !ageError.TryGetProperty("expected", out var expectedValue) || expectedValue.GetString() != ">= 18" ||
+            !ageError.TryGetProperty("actual", out var actualValue) || actualValue.GetString() != "12")
+            throw new Exception("JSON Schema Problem Details did not preserve the full XPJsonValidationResult error.");
+    }
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-VALIDATION=OK");
+
+    var malformedJson = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{not-json",
+        "application/json");
+    if (malformedJson.StatusCode != 400)
+        throw new Exception($"Malformed request JSON returned {malformedJson.StatusCode} instead of 400.");
+    if (!BodyText(malformedJson).Contains("body", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Malformed request JSON did not return a body validation error.");
+
+    var missingSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/schema-missing",
+        "{}",
+        "application/json");
+    if (missingSchema.StatusCode != 500)
+        throw new Exception($"Missing configured JSON Schema returned {missingSchema.StatusCode} instead of 500.");
+    if (BodyText(missingSchema).Contains("HANDLER-RAN", StringComparison.Ordinal))
+        throw new Exception("Route handler executed when configured JSON Schema was missing.");
+
+    var invalidSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/schema-invalid",
+        "{}",
+        "application/json");
+    if (invalidSchema.StatusCode != 500)
+        throw new Exception($"Invalid configured JSON Schema returned {invalidSchema.StatusCode} instead of 500.");
+    if (BodyText(invalidSchema).Contains("HANDLER-RAN", StringComparison.Ordinal))
+        throw new Exception("Route handler executed when configured JSON Schema was invalid.");
+
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-ERROR-CLASSIFICATION=OK");
+
+    var schemaFilePath = Path.Combine(root, "schemas", "create-user.schema.json");
+    await File.WriteAllTextAsync(schemaFilePath, """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":40}}}
+""");
+    File.SetLastWriteTimeUtc(schemaFilePath, DateTime.UtcNow.AddSeconds(2));
+    var reloadedSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{\"name\":\"Fredrik\",\"email\":\"fredrik@example.com\",\"age\":42}",
+        "application/json");
+    if (reloadedSchema.StatusCode != 400 || !BodyText(reloadedSchema).Contains("$.age", StringComparison.Ordinal))
+        throw new Exception("Updated JSON Schema was not reloaded from the cache.");
+
+    await File.WriteAllTextAsync(schemaFilePath, """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":120}}}
+""");
+    File.SetLastWriteTimeUtc(schemaFilePath, DateTime.UtcNow.AddSeconds(4));
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-CACHE-RELOAD=OK");
 
     var invalid = await SendAsync(
         dispatcher,

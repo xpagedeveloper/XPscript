@@ -11,7 +11,8 @@ public sealed record XpsWebRouteDescriptor(
     XpsCorsRule? Cors = null,
     XpsRateLimitRule? RateLimit = null,
     IReadOnlyList<XpsValidationRule>? ValidationRules = null,
-    IReadOnlyList<XpsParameterBinding>? ParameterBindings = null);
+    IReadOnlyList<XpsParameterBinding>? ParameterBindings = null,
+    string? JsonSchema = null);
 
 public sealed record XpsWebRouteParseResult(
     string Source,
@@ -279,7 +280,8 @@ public sealed class XpsWebRouteMetadataParser
             attribute.StartsWith("Route:", StringComparison.OrdinalIgnoreCase) ||
             attribute.Equals("Cors", StringComparison.OrdinalIgnoreCase) ||
             attribute.StartsWith("Cors:", StringComparison.OrdinalIgnoreCase) ||
-            attribute.StartsWith("RateLimit:", StringComparison.OrdinalIgnoreCase)) return true;
+            attribute.StartsWith("RateLimit:", StringComparison.OrdinalIgnoreCase) ||
+            attribute.StartsWith("JsonSchema:", StringComparison.OrdinalIgnoreCase)) return true;
         return TryParseHttpMethodRouteAttribute(attribute, out _, out _) || TryParseHttpMethodAttribute(attribute, out _);
     }
 
@@ -379,6 +381,7 @@ public sealed class XpsWebRouteMetadataParser
         string? routeTemplate = null;
         XpsCorsRule? cors = null;
         XpsRateLimitRule? rateLimit = null;
+        string? jsonSchema = null;
 
         foreach (var attribute in attributes)
         {
@@ -408,10 +411,17 @@ public sealed class XpsWebRouteMetadataParser
             {
                 if (rateLimit is not null) throw new XpsWebRouteMetadataException("A web route may declare only one [RateLimit:...] rule.");
                 rateLimit = ParseRateLimit(attribute[10..]);
+                continue;
+            }
+            if (attribute.StartsWith("JsonSchema:", StringComparison.OrdinalIgnoreCase))
+            {
+                if (jsonSchema is not null) throw new XpsWebRouteMetadataException("A web route may declare only one [JsonSchema:...] rule.");
+                try { jsonSchema = XpsJsonSchemaPath.NormalizeRelative(attribute[11..]); }
+                catch (ArgumentException ex) { throw new XpsWebRouteMetadataException(ex.Message); }
             }
         }
         if (methods.Count == 0) throw new XpsWebRouteMetadataException("A web route must declare at least one HTTP method attribute.");
-        return new XpsWebRouteDescriptor(procedureName, new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules, requiredRoles, forbiddenRoles), routeTemplate, cors, rateLimit);
+        return new XpsWebRouteDescriptor(procedureName, new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules, requiredRoles, forbiddenRoles), routeTemplate, cors, rateLimit, JsonSchema: jsonSchema);
     }
 
     private static XpsCorsRule ParseCors(string attribute)
