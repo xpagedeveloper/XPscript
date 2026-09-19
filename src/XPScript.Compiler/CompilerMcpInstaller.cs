@@ -75,8 +75,12 @@ public static class CompilerMcpInstaller
         return normalized.Contains(executable, StringComparison.OrdinalIgnoreCase) &&
                normalized.Contains("mcp", StringComparison.OrdinalIgnoreCase);
     }
-    private static string CurrentExecutable() => Environment.ProcessPath ?? throw new InvalidOperationException("Cannot determine the XPScript compiler executable path.");
-    private static string UserHome() => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    private static string CurrentExecutable() => Environment.GetEnvironmentVariable("XPSCRIPT_MCP_INSTALL_COMMAND") is { Length: > 0 } command
+        ? command
+        : Environment.ProcessPath ?? throw new InvalidOperationException("Cannot determine the XPScript compiler executable path.");
+    private static string UserHome() => Environment.GetEnvironmentVariable("XPSCRIPT_MCP_INSTALL_HOME") is { Length: > 0 } home
+        ? Path.GetFullPath(home)
+        : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
     private static bool FindCommand(string name, out string? path)
     {
         var names=OperatingSystem.IsWindows()?new[]{name+".exe",name+".cmd",name+".bat",name}:new[]{name};
