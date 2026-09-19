@@ -864,8 +864,27 @@ internal static class LSForAllRuntime
             Write(sb, $"{lhs} = LSRef<{className}>.Create(new {className}({TransformArgumentList(newMatch.Groups[2].Value)}));"); return true;
         }
 
+        // Public XPJson ToObject(contract) returns the typed model represented by the
+        // contract argument. Native XPJson values are Variant-backed at this boundary, so
+        // preserve Set semantics by wrapping the converted CLR object in the target LSRef.
+        var jsonToObject = Regex.Match(
+            rhsRaw,
+            @"^(.+)\.ToObject\s*\(\s*([A-Za-z_]\w*)\s*\)\s*$",
+            RegexOptions.IgnoreCase);
+        if (jsonToObject.Success)
+        {
+            var contractName = jsonToObject.Groups[2].Value;
+            if (_objectVariables.TryGetValue(contractName, out var contractClass)
+                && contractClass.Equals(targetClass, StringComparison.OrdinalIgnoreCase))
+            {
+                var converted = TransformExpression(rhsRaw);
+                Write(sb, $"{lhs} = LSRef<{targetClass}>.Create(({targetClass}){converted});");
+                return true;
+            }
+        }
+
         var rhs = TransformObjectReferenceTarget(rhsRaw);
-        if (rhs is null) throw new CompilerException("Set requires Nothing, New Class(...), or another object reference.");
+        if (rhs is null) throw new CompilerException("Set requires Nothing, New Class(...), typed XPJson.ToObject(...), or another object reference.");
         Write(sb, $"{lhs} = {rhs};"); return true;
     }
 
