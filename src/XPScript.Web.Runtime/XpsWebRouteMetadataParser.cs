@@ -416,21 +416,11 @@ public sealed class XpsWebRouteMetadataParser
             if (attribute.StartsWith("JsonSchema:", StringComparison.OrdinalIgnoreCase))
             {
                 if (jsonSchema is not null) throw new XpsWebRouteMetadataException("A web route may declare only one [JsonSchema:...] rule.");
-                jsonSchema = NormalizeJsonSchemaPath(attribute[11..]);
+                try { jsonSchema = XpsJsonSchemaPath.NormalizeRelative(attribute[11..]); }\n                catch (ArgumentException ex) { throw new XpsWebRouteMetadataException(ex.Message); }
             }
         }
         if (methods.Count == 0) throw new XpsWebRouteMetadataException("A web route must declare at least one HTTP method attribute.");
         return new XpsWebRouteDescriptor(procedureName, new XpsRoutePolicy(allowAnonymous, methods, requiredRules, forbiddenRules, requiredRoles, forbiddenRoles), routeTemplate, cors, rateLimit, JsonSchema: jsonSchema);
-    }
-
-    private static string NormalizeJsonSchemaPath(string value)
-    {
-        var path = value.Trim().Replace('\\', '/');
-        if (path.Length is < 1 or > 1024) throw new XpsWebRouteMetadataException("JsonSchema requires a relative schema file path.");
-        if (Path.IsPathRooted(path) || path.StartsWith("/", StringComparison.Ordinal) || path.Split('/').Any(x => x == "..") || path.Any(char.IsControl))
-            throw new XpsWebRouteMetadataException("JsonSchema path must stay inside the web root.");
-        if (!path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) throw new XpsWebRouteMetadataException("JsonSchema path must reference a .json file.");
-        return path;
     }
 
     private static XpsCorsRule ParseCors(string attribute)
