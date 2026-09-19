@@ -36,6 +36,17 @@ Require(generatedSymbolDiagnostic.UpstreamCode == "CS0103", "generated symbol up
 Require(!string.IsNullOrWhiteSpace(generatedSymbolDiagnostic.SourceCode), "generated symbol source mapping");
 
 
+var quoteSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "escaped-quote-diagnostic-error.xps"));
+var quoteSyntaxDiagnostic = quoteSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1001");
+Require(quoteSyntaxDiagnostic is not null, "unescaped quote diagnostic");
+Require(quoteSyntaxDiagnostic.Category == "syntax", "unescaped quote category");
+Require(quoteSyntaxDiagnostic.Line > 0 && quoteSyntaxDiagnostic.Position > 0, "unescaped quote location");
+Require(quoteSyntaxDiagnostic.Properties is not null, "unescaped quote properties");
+Require(quoteSyntaxDiagnostic.Properties.Any(p => p.Name == "foundConstruct" && p.Value == "unescaped quote"), "unescaped quote found construct");
+Require(quoteSyntaxDiagnostic.Properties.Any(p => p.Name == "expectedConstruct"), "unescaped quote expected construct");
+Require(!string.IsNullOrWhiteSpace(quoteSyntaxDiagnostic.SourceCode), "unescaped quote source");
+Require(!string.IsNullOrWhiteSpace(quoteSyntaxDiagnostic.MarkedCode), "unescaped quote marked source");
+
 var incrementSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "increment-invalid-prefix.xps"));
 var incrementSyntaxDiagnostic = incrementSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1003");
 Require(incrementSyntaxDiagnostic is not null, "increment syntax diagnostic");
