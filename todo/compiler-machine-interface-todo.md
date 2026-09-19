@@ -320,7 +320,7 @@ CI benchmark evidence on the GitHub Linux runner shows a median of 1029 ms when 
 - [x] Add MCP protocol/contract probes to CI.
 - [x] Ship an XPScript development skill that tells coding agents when to use warm MCP validation/introspection and when to run a full CLI compile.
 - [x] Add `xpscript mcp install codex|claude` to install, validate or update the MCP registration and XPScript skill in supported coding clients.
-- [ ] Add installer integration tests with isolated fake HOME/config roots on Windows, Linux and macOS. Installer now repairs mismatched executable/MCP registrations and skill content; cross-platform fake-client coverage remains.
+- [x] Add installer integration tests with isolated fake HOME/config roots on Windows, Linux and macOS. CI verifies idempotent install/update behavior, skill installation and repair of mismatched MCP registrations on all three platforms.
 - [ ] Re-check Codex and Claude Code client configuration formats before each XPScript release and keep installers versioned.
 - [ ] Investigate reusing a warm `CompilerDriver` inside the existing debugger host without changing the debugger protocol.
 - [ ] Let debugger-driven edit/validate cycles use warm validation before a full debug build when semantics permit.
