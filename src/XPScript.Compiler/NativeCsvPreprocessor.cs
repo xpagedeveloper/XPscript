@@ -112,21 +112,36 @@ internal sealed class NativeCsvPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
+    private static CompilerException CsvDiagnostic(
+        string diagnosticCode,
+        string message,
+        params (string Name, string Value)[] properties)
+    {
+        var diagnostic = new CompileDiagnostic
+        {
+            Description = message,
+            DiagnosticCode = diagnosticCode,
+            Category = "syntax",
+            Properties = properties.Select(property => new CompileDiagnosticProperty { Name = property.Name, Value = property.Value }).ToList()
+        };
+        return new CompilerException(message, diagnosticCode, "syntax", [diagnostic]);
+    }
+
     private static string RewriteLoad(string rawArguments)
     {
         var args = SplitTopLevelArguments(rawArguments);
         if (args.Count is < 1 or > 4)
-            throw new CompilerException("XPCsvDocument.Load requires path and optional encoding, delimiter, and hasHeaders arguments.");
+            throw CsvDiagnostic(CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.Load requires path and optional encoding, delimiter, and hasHeaders arguments.", ("symbol", "XPCsvDocument.Load"), ("expectedArgumentCount", "1..4"), ("actualArgumentCount", args.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         return "XPScriptSpreadsheetCsvInterop.LoadCsv(" + string.Join(", ", args) + ")";
     }
 
     private static void RejectRemovedFileWriteApis(string line, HashSet<string> documentVariables)
     {
         if (Regex.IsMatch(line, @"^(?:Call\s+)?(?:CsvSave|CsvWriteFile)\b", RegexOptions.IgnoreCase))
-            throw new CompilerException("CSV file output is available only through XPCsvDocument.Save or XPCsvDocument.SaveFile.");
+            throw CsvDiagnostic(CompilerDiagnosticCodes.RemovedNativeApi, "CSV file output is available only through XPCsvDocument.Save or XPCsvDocument.SaveFile.", ("symbol", "CsvSave/CsvWriteFile"), ("expectedConstruct", "XPCsvDocument.Save or XPCsvDocument.SaveFile"));
         foreach (var documentVariable in documentVariables)
             if (Regex.IsMatch(line, $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.WriteFile\b", RegexOptions.IgnoreCase))
-                throw new CompilerException("XPCsvDocument.WriteFile was removed. Use Save or SaveFile.");
+                throw CsvDiagnostic(CompilerDiagnosticCodes.RemovedNativeApi, "XPCsvDocument.WriteFile was removed. Use Save or SaveFile.", ("symbol", "XPCsvDocument.WriteFile"), ("expectedConstruct", "XPCsvDocument.Save or XPCsvDocument.SaveFile"));
     }
 
     private static bool TryRewriteFileWrite(string line, HashSet<string> documentVariables, out string rewritten)
@@ -137,7 +152,7 @@ internal sealed class NativeCsvPreprocessor
             var method = Regex.Match(line, $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.(Save|SaveFile)\s*\((.*)\)\s*$", RegexOptions.IgnoreCase);
             if (!method.Success) continue;
             var args = SplitTopLevelArguments(method.Groups[2].Value);
-            if (args.Count is < 1 or > 2) throw new CompilerException("XPCsvDocument.Save requires path and optional encoding arguments.");
+            if (args.Count is < 1 or > 2) throw CsvDiagnostic(CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.Save requires path and optional encoding arguments.", ("symbol", "XPCsvDocument.Save"), ("expectedArgumentCount", "1..2"), ("actualArgumentCount", args.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             var bytes = args.Count == 1 ? documentVariable + ".ToBytes()" : documentVariable + ".ToBytes(" + args[1] + ")";
             rewritten = "Call XPCrossPlatformRuntime.WriteBytes(" + args[0] + ", " + bytes + ")";
             return true;
@@ -153,7 +168,7 @@ internal sealed class NativeCsvPreprocessor
             var method = Regex.Match(line, $@"^(?:Call\s+)?{Regex.Escape(documentVariable)}\.FromBytes\s*\((.*)\)\s*$", RegexOptions.IgnoreCase);
             if (!method.Success) continue;
             var args = SplitTopLevelArguments(method.Groups[1].Value);
-            if (args.Count is < 1 or > 2) throw new CompilerException("XPCsvDocument.FromBytes requires bytes and an optional encoding argument.");
+            if (args.Count is < 1 or > 2) throw CsvDiagnostic(CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.FromBytes requires bytes and an optional encoding argument.", ("symbol", "XPCsvDocument.FromBytes"), ("expectedArgumentCount", "1..2"), ("actualArgumentCount", args.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             var encoding = args.Count == 1 ? documentVariable + ".Encoding" : args[1];
             rewritten = documentVariable + " = XPScriptNativeCsv.ParseBytes(" + args[0] + ", " + encoding + ", " + documentVariable + ".Delimiter, " + documentVariable + ".HasHeaders)";
             return true;
@@ -185,9 +200,9 @@ internal sealed class NativeCsvPreprocessor
             }
             current.Append(ch);
         }
-        if (quoted || depth != 0) throw new CompilerException("Invalid CSV argument list.");
+        if (quoted || depth != 0) throw CsvDiagnostic(CompilerDiagnosticCodes.InvalidNativeArgumentList, "Invalid CSV argument list.", ("expectedConstruct", "balanced CSV argument list"));
         if (current.Length > 0 || result.Count > 0) result.Add(current.ToString().Trim());
-        if (result.Any(string.IsNullOrWhiteSpace)) throw new CompilerException("CSV arguments cannot be empty.");
+        if (result.Any(string.IsNullOrWhiteSpace)) throw CsvDiagnostic(CompilerDiagnosticCodes.InvalidNativeArgumentList, "CSV arguments cannot be empty.", ("expectedConstruct", "non-empty CSV arguments"));
         return result;
     }
 
@@ -196,6 +211,6 @@ internal sealed class NativeCsvPreprocessor
         var args = rawArguments.Trim();
         if (type.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase))
             return string.IsNullOrWhiteSpace(args) ? "XPScriptNativeCsv.CreateDocument()" : $"XPScriptNativeCsv.Parse({args})";
-        throw new CompilerException("Only XPCsvDocument can be created with New.");
+        throw CsvDiagnostic(CompilerDiagnosticCodes.InvalidNativeConstructor, "Only XPCsvDocument can be created with New.", ("symbol", type), ("symbolKind", "type"), ("expectedConstruct", "New XPCsvDocument"));
     }
 }
