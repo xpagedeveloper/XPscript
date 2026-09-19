@@ -1,0 +1,3 @@
+Sub Main()
+    Dim element As New XPXmlElement()
+End Sub
