@@ -71,7 +71,7 @@ internal sealed class SourcePreprocessorPipeline
         {
             var specification = (rawSpecification ?? string.Empty).Trim();
             if (specification.Length == 0)
-                throw new CompilerException("Source preprocessor specification cannot be empty.");
+                throw ConfigurationFailure("Source preprocessor specification cannot be empty.", ("expectedConstruct", "source preprocessor specification"));
 
             var preprocessor = BuiltInSourcePreprocessorFactory.Create(specification);
             var context = new SourcePreprocessorContext(
@@ -154,8 +154,38 @@ internal sealed class SourcePreprocessorPipeline
         var location = map.Resolve(expandedLine, rootSourcePath, fallback);
         var fileName = Path.GetFileName(location.SourcePath);
         var line = Math.Max(1, location.Line);
-        return new CompilerException(
-            $"{fileName}({line},{error.Position}): Source preprocessor '{name}' failed: {SafeMessage(error.Message)}");
+        var message = $"Source preprocessor '{name}' failed: {SafeMessage(error.Message)}";
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(location.SourceText ?? string.Empty);
+        var diagnostic = new CompileDiagnostic
+        {
+            File = fileName,
+            Line = line,
+            Position = error.Position,
+            Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.SourcePreprocessorFailed,
+            Category = "preprocessor",
+            Properties =
+            [
+                new() { Name = "preprocessor", Value = name }
+            ],
+            SourceCode = safeSource,
+            MarkedCode = safeSource + Environment.NewLine + new string(' ', Math.Max(0, error.Position - 1)) + "^"
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.SourcePreprocessorFailed, "preprocessor", [diagnostic]);
+    }
+
+    internal static CompilerException ConfigurationFailure(
+        string message,
+        params (string Name, string Value)[] properties)
+    {
+        var diagnostic = new CompileDiagnostic
+        {
+            Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSourcePreprocessor,
+            Category = "configuration",
+            Properties = properties.Select(property => new CompileDiagnosticProperty { Name = property.Name, Value = property.Value }).ToList()
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSourcePreprocessor, "configuration", [diagnostic]);
     }
 
     private static string SafeMessage(string value)
@@ -181,21 +211,23 @@ internal static class BuiltInSourcePreprocessorFactory
             var payload = specification[replacePrefix.Length..];
             var separator = payload.IndexOf('=');
             if (separator <= 0)
-                throw new CompilerException(
+                throw SourcePreprocessorPipeline.ConfigurationFailure(
                     "Invalid source preprocessor specification '" + SafeSpecification(specification) +
-                    "'. Expected replace:FROM=TO.");
+                    "'. Expected replace:FROM=TO.",
+                    ("preprocessor", "replace"), ("expectedConstruct", "replace:FROM=TO"));
 
             var from = payload[..separator];
             var to = payload[(separator + 1)..];
             if (ContainsLineBreak(from) || ContainsLineBreak(to))
-                throw new CompilerException("replace source preprocessor does not allow line breaks in FROM or TO.");
+                throw SourcePreprocessorPipeline.ConfigurationFailure("replace source preprocessor does not allow line breaks in FROM or TO.", ("preprocessor", "replace"), ("expectedConstruct", "single-line FROM and TO"));
 
             return new ReplaceSourcePreprocessor(from, to);
         }
 
-        throw new CompilerException(
+        throw SourcePreprocessorPipeline.ConfigurationFailure(
             "Unknown source preprocessor '" + SafeSpecification(specification) +
-            "'. Supported built-ins: identity, replace:FROM=TO.");
+            "'. Supported built-ins: identity, replace:FROM=TO.",
+            ("preprocessor", SafeSpecification(specification)), ("supportedPreprocessors", "identity, replace"));
     }
 
     private static bool ContainsLineBreak(string value) => value.Contains('\r') || value.Contains('\n');
