@@ -71,7 +71,7 @@ jobs:
             dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate "$fixture" -o "$server" --force
             test -f "$server"
             server_host="./out/openapi-corpus/$name-server-host.xps"
-            grep -Ev '^\\[(Anonymous|Authenticated|Get|Post|Put|Patch|Delete|Head|Options)(:[^]]*)?\\]$|^\\[Route(:[^]]+)?\\]
+            grep -Ev '^\\[(Anonymous|Authenticated|Get|Post|Put|Patch|Delete|Head|Options)(:[^]]*)?\\]$|^\\[Route(:[^]]+)?\\]$' "$server" > "$server_host"
             printf '\nSub Main()\nEnd Sub\n' >> "$server_host"
             dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "$server_host" -o "./out/openapi-corpus/$name-server" --runtime=false
             echo "::endgroup::"
