@@ -95,6 +95,14 @@ Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "actualType") ==
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.SourceCode), "date comparison source");
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.MarkedCode), "date comparison marked source");
 
+var csvArgumentCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "csv-load-argument-count-error.xps"));
+var csvArgumentDiagnostic = csvArgumentCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1010");
+Require(csvArgumentDiagnostic is not null, "CSV argument diagnostic");
+Require(csvArgumentDiagnostic.Category == "syntax", "CSV argument category");
+Require(csvArgumentDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "XPCsvDocument.Load") == true, "CSV argument symbol");
+Require(csvArgumentDiagnostic.Properties?.Any(p => p.Name == "expectedArgumentCount" && p.Value == "1..4") == true, "CSV expected argument count");
+Require(csvArgumentDiagnostic.Properties?.Any(p => p.Name == "actualArgumentCount" && p.Value == "0") == true, "CSV actual argument count");
+
 var xmlConstructorCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "xml-element-missing-constructor-argument-error.xps"));
 var xmlConstructorDiagnostic = xmlConstructorCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1008");
 Require(xmlConstructorDiagnostic is not null, "native XML constructor diagnostic");
