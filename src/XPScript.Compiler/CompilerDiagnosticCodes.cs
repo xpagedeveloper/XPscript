@@ -54,6 +54,7 @@ internal static class CompilerDiagnosticCodes
     public const string WebIisOutputInsideSource = "XPS8006";
     public const string InvalidSourcePreprocessor = "XPS8007";
     public const string SourcePreprocessorFailed = "XPS8008";
+    public const string SourceTooLarge = "XPS8009";
 
     // XPS9xxx: compiler pipeline failures where a more specific language
     // diagnostic could not be preserved.
