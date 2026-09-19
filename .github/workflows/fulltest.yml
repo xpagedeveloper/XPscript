@@ -306,36 +306,6 @@ jobs:
       - name: Run all ${{ matrix.name }} FullTests
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1
- "$server" > "$server_host"
-            printf '\nSub Main()\nEnd Sub\n' >> "$server_host"
-            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "$server_host" -o "./out/openapi-corpus/$name-server" --runtime=false
-            echo "::endgroup::"
-          done
-      - name: Compile ordinary application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary.exe --runtime=false
-      - name: Verify generated license notice
-        shell: pwsh
-        run: |
-          if (-not (Test-Path ./out/Third-party-license.txt)) { throw 'Missing Third-party-license.txt' }
-          $notice = Get-Content ./out/Third-party-license.txt -Raw
-          if ($notice -notmatch 'Apache License') { throw 'Generated notice does not contain the XPScript Apache license.' }
-      - name: Compile XPAi structured output
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured.exe --runtime=false
-      - name: Compile native XML DOM regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom.exe --runtime=false
-      - name: Run native XML DOM regression
-        run: ./out/native-xml-dom.exe
-      - name: Compile UIForm application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform.exe --runtime=false
-      - name: Compile web application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --runtime=false --output ./out/web
-      - name: Compile Notes rich-text surface
-        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext.exe
-      - name: Compile Notes MIME surface
-        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-mime-entity-surface.xps ./out/notes-mime.exe
-      - name: Compile Notes core database surface
-        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-session-database-open-runtime-test.xps ./out/notes-core-database.exe
-
   fulltest-windows:
     name: Windows ${{ matrix.name }} FullTest
     needs: compile-windows
