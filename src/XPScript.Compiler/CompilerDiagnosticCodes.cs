@@ -9,6 +9,8 @@ internal static class CompilerDiagnosticCodes
     // XPS1xxx: parser/syntax validation.
     public const string UnescapedStringQuote = "XPS1001";
     public const string InvalidNothingComparison = "XPS1002";
+    public const string InvalidIncrementSyntax = "XPS1003";
+    public const string InvalidCompoundAssignmentSyntax = "XPS1004";
 
     // XPS2xxx: type, argument, member and overload validation.
     public const string TypeMismatch = "XPS2001";
