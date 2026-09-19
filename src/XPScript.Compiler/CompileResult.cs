@@ -119,7 +119,16 @@ public sealed class CompileResult
             diagnostic.Line = 0;
             diagnostic.Position = 0;
         }
-        return result;
+        return result
+            .OrderBy(diagnostic => diagnostic.File, StringComparer.Ordinal)
+            .ThenBy(diagnostic => diagnostic.Line)
+            .ThenBy(diagnostic => diagnostic.Position)
+            .ThenBy(diagnostic => diagnostic.EndLine)
+            .ThenBy(diagnostic => diagnostic.EndColumn)
+            .ThenBy(diagnostic => diagnostic.DiagnosticCode ?? "", StringComparer.Ordinal)
+            .ThenBy(diagnostic => diagnostic.UpstreamCode ?? "", StringComparer.Ordinal)
+            .ThenBy(diagnostic => diagnostic.Description, StringComparer.Ordinal)
+            .ToList();
     }
 }
 
