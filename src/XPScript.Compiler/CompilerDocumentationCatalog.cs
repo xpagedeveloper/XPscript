@@ -22,7 +22,8 @@ public static class CompilerDocumentationCatalog
             Define("api.XPAi", "api", "XPAi"),
             Define("target.BrowserWasm", "target", "browser-wasm"),
             Define("target.ServerSide", "target", "ServerSide"),
-            Define("security.Shell", "security", "Shell")
+            Define("security.Shell", "security", "Shell"),
+            Define("security.DependencyAudit", "security", "dependency-audit")
         }.ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerDocumentationDefinition? Find(string id)
