@@ -22,7 +22,7 @@ internal sealed class DateComparisonValidator
         var userTypes = CollectUserTypes(lines);
         var globals = CollectModuleSymbols(lines);
         var locals = new Dictionary<string, Symbol>(StringComparer.OrdinalIgnoreCase);
-        var diagnostics = new List<string>();
+        var diagnostics = new List<CompileDiagnostic>();
         var inProcedure = false;
         var inClass = false;
 
@@ -89,7 +89,11 @@ internal sealed class DateComparisonValidator
         }
 
         if (diagnostics.Count > 0)
-            throw new CompilerException(string.Join(Environment.NewLine, diagnostics));
+            throw new CompilerException(
+                string.Join(Environment.NewLine, diagnostics.Select(d => $"{d.File}({d.Line},{d.Position}): {d.Description}")),
+                CompilerDiagnosticCodes.InvalidDateComparison,
+                "syntax",
+                diagnostics);
     }
 
     private static Dictionary<string, Symbol> CollectModuleSymbols(IReadOnlyList<string> lines)
@@ -162,7 +166,7 @@ internal sealed class DateComparisonValidator
         int lineNumber,
         IReadOnlyDictionary<string, Symbol> symbols,
         IReadOnlySet<string> userTypes,
-        List<string> diagnostics)
+        List<CompileDiagnostic> diagnostics)
     {
         foreach (var comparison in FindComparisons(condition))
         {
@@ -177,7 +181,24 @@ internal sealed class DateComparisonValidator
             var displayType = offending.IsArray ? offending.Type + "()" : offending.Type;
             var column = Math.Max(1, original.IndexOf(comparison.Operator, StringComparison.Ordinal) + 1);
             var safeSourceLine = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
-            diagnostics.Add($"{sourceName}({lineNumber},{column}): Date cannot be compared with {displayType} using '{comparison.Operator}'. Convert the value explicitly to Date or a supported scalar type first.{Environment.NewLine}  {safeSourceLine}");
+            var message = $"Date cannot be compared with {displayType} using '{comparison.Operator}'. Convert the value explicitly to Date or a supported scalar type first.";
+            diagnostics.Add(new CompileDiagnostic
+            {
+                File = sourceName,
+                Line = lineNumber,
+                Position = column,
+                Description = message,
+                DiagnosticCode = CompilerDiagnosticCodes.InvalidDateComparison,
+                Category = "syntax",
+                Properties =
+                [
+                    new() { Name = "foundOperator", Value = comparison.Operator },
+                    new() { Name = "expectedType", Value = "Date or supported scalar type" },
+                    new() { Name = "actualType", Value = displayType }
+                ],
+                SourceCode = safeSourceLine,
+                MarkedCode = safeSourceLine + Environment.NewLine + new string(' ', Math.Max(0, column - 1)) + "^"
+            });
         }
     }
 
