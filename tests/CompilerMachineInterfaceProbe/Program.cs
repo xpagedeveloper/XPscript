@@ -9,6 +9,18 @@ if (args.Length != 1)
 }
 
 var root = Path.GetFullPath(args[0]);
+var targetDefinition = CompilerDiagnosticCatalog.Find("XPS3002");
+Require(targetDefinition is not null, "XPS3002 diagnostic definition");
+Require(targetDefinition.Category == "execution-context", "XPS3002 definition category");
+Require(targetDefinition.Severity == "error", "XPS3002 definition severity");
+Require(targetDefinition.DocumentationId == "compiler-diagnostics#xps3002", "XPS3002 documentation id");
+Require(targetDefinition.Properties.SequenceEqual(["symbol", "target", "currentContext", "requiredContext"]), "XPS3002 definition properties");
+Require(CompilerDiagnosticCatalog.Find("xps3002") == targetDefinition, "diagnostic lookup must be case-insensitive");
+Require(CompilerDiagnosticCatalog.Find("XPS9999") is null, "unknown diagnostic lookup");
+Require(CompilerDiagnosticCatalog.All.Select(x => x.DiagnosticCode).SequenceEqual(
+    CompilerDiagnosticCatalog.All.Select(x => x.DiagnosticCode).OrderBy(x => x, StringComparer.Ordinal)),
+    "diagnostic catalog ordering");
+
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
