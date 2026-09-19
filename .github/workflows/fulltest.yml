@@ -1,10 +1,8 @@
 name: FullTest
-# OpenAPI corpus trigger: use current branch workflow definition
 
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
