@@ -102,20 +102,21 @@ foreach (var expected in new[]
         throw new InvalidOperationException("Generated UIForm accessibility surface is missing: " + expected);
 }
 
-var schemaAccessibilitySource = """"
-Option Declare
-
-Sub Main()
-    Dim form As New UIForm("Schema accessibility")
-    Dim data As XPJsonDocument
-    Dim schema As XPJsonSchema
-    Set data = XPJson.Parse("{""customer"":{""address"":{""city"":""""}}}")
-    Call form.BindData(data)
-    Call form.AddTextField("customer", "Customer")
-    Set schema = XPJsonSchema.Parse("{""type"": ""object"", ""properties"": {""customer"": {""type"": ""object"", ""properties"": {""address"": {""type"": ""object"", ""properties"": {""city"": {""minLength"": 2}}}}}}}}")
-    Call form.SetValidationSchema(schema)
-End Sub
-"""";
+var schemaAccessibilitySource = string.Join('\n', new[]
+{
+    "Option Declare",
+    "",
+    "Sub Main()",
+    "    Dim form As New UIForm(\"Schema accessibility\")",
+    "    Dim data As XPJsonDocument",
+    "    Dim schema As XPJsonSchema",
+    "    Set data = XPJson.Parse(\"{\"\"customer\"\":{\"\"address\"\":{\"\"city\"\":\"\"\"\"}}}\")",
+    "    Call form.BindData(data)",
+    "    Call form.AddTextField(\"customer\", \"Customer\")",
+    "    Set schema = XPJsonSchema.Parse(\"{\"\"type\"\": \"\"object\"\", \"\"properties\"\": {\"\"customer\"\": {\"\"type\"\": \"\"object\"\", \"\"properties\"\": {\"\"address\"\": {\"\"type\"\": \"\"object\"\", \"\"properties\"\": {\"\"city\"\": {\"\"minLength\"\": 2}}}}}}}}\")",
+    "    Call form.SetValidationSchema(schema)",
+    "End Sub"
+});
 
 var generatedSchemaAccessibility = new XPScriptTranspiler().Transpile(schemaAccessibilitySource, "uiform-schema-accessibility-smoke.xps", "linux-x64");
 foreach (var expected in new[]
