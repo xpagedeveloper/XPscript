@@ -60,3 +60,16 @@ xpscript validate --stdin --filename program.xps --result-format json
 The compiler reads XPScript source from standard input and runs the normal validation pipeline. `--filename` is a virtual simple `.xps` filename used for `source.entryPoint` and source-mapped diagnostics; directory components are rejected so the virtual name cannot be used for path traversal. Line and column positions refer to the submitted stdin source.
 
 Schema-v1 JSON remains on stdout. Human/debug logging remains separate from the machine result. Stdin validation currently accepts at most 1,048,576 characters. The implementation may use a temporary physical source file internally, but that path is not part of the public machine contract and is removed after validation.
+
+## Symbol introspection
+
+The compiler exposes a deterministic catalog of public XPScript language/runtime symbols for IDE, LSP, MCP and AI clients. Exact lookup and search are available without compiling source:
+
+```text
+xpscript describe XPJsonSchema.FromJson --result-format json
+xpscript symbols --search XPJson --result-format json
+```
+
+Symbol definitions contain the public XPScript name, kind, XPScript signature, parameters, return type, target restrictions, stable documentation ID and deprecation state. Lookup is case-insensitive to match XPScript symbol semantics, while output uses canonical casing and deterministic ordering.
+
+The catalog is deliberately an XPScript API contract rather than reflection over implementation assemblies. Internal runtime implementation types such as `XPScriptJsonSchema` must not be exposed. Every symbol documentation ID is cross-checked against the stable compiler documentation catalog.
