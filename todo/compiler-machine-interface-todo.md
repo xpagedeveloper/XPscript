@@ -284,7 +284,7 @@ xpscriptc explain XPS2104 --result-format json
 
 ## 18. Security and redaction
 
-- [ ] Structure existing security/static diagnostics where appropriate.
+- [x] Structure existing security/static diagnostics where appropriate.
 - [x] Include stable security rule IDs.
 - [x] Never leak API keys, Authorization headers or credential values.
 - [x] Review source snippets returned in diagnostics for secret leakage.
