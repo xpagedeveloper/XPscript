@@ -57,6 +57,9 @@ public sealed partial class XPScriptTranspiler
 
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
+        var originalCode = PreprocessorFeatureGate.CodeOnly(source);
+        var requestedAi = PreprocessorFeatureGate.ContainsTypeReference(originalCode, "XPAi", "XPAiResponse", "AITool");
+
         source = new MultilineStringPreprocessor().Transform(source, sourceName);
         source = new EscapedQuotePreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
@@ -80,7 +83,7 @@ public sealed partial class XPScriptTranspiler
         source = new IndexedPropertyPreprocessor().Transform(source);
         source = new ObjectFunctionSetPreprocessor().Transform(source);
         var runtimeFeatures = RuntimeFeatures.Detect(source);
-        var usesAi = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "XPAi", "XPAiResponse", "AITool");
+        var usesAi = requestedAi;
         var notesRuntimeFeatures = NotesRuntimeFeatures.Detect(source);
         source = new NativeHttpJsonPreprocessor().Transform(source);
         var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
