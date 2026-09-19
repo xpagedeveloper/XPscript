@@ -107,11 +107,26 @@ internal sealed class EscapedQuotePreprocessor
         var position = quoteIndex - lineStart + 1;
         var sourcePath = ExpandedSourceContext.Current?.SourcePath;
         var file = string.IsNullOrWhiteSpace(sourcePath) ? "script.xps" : sourcePath;
-        throw new CompilerException(
-            $"{file}({line},{position}): Possible unescaped quote inside String. " +
-            "Use \\\" or doubled quotes (\"\") for a literal quote. " +
-            "If the text between quotes is a variable, concatenate it with & or +.",
-            CompilerDiagnosticCodes.UnescapedStringQuote,
-            "syntax");
+        var message = "Possible unescaped quote inside String. Use \\\" or doubled quotes (\\"\\") for a literal quote. If the text between quotes is a variable, concatenate it with & or +.";
+        var lineEnd = source.IndexOfAny(['\\r', '\\n'], lineStart);
+        if (lineEnd < 0) lineEnd = source.Length;
+        var sourceLine = CompilerDiagnosticRedaction.MaskStringLiterals(source[lineStart..lineEnd]).TrimEnd();
+        var diagnostic = new CompileDiagnostic
+        {
+            File = file,
+            Line = line,
+            Position = position,
+            Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.UnescapedStringQuote,
+            Category = "syntax",
+            Properties =
+            [
+                new() { Name = "foundConstruct", Value = "unescaped quote" },
+                new() { Name = "expectedConstruct", Value = "escaped or doubled quote" }
+            ],
+            SourceCode = sourceLine,
+            MarkedCode = sourceLine + Environment.NewLine + new string(' ', Math.Max(0, position - 1)) + "^"
+        };
+        throw new CompilerException(message, CompilerDiagnosticCodes.UnescapedStringQuote, "syntax", [diagnostic]);
     }
 }
