@@ -28,7 +28,7 @@ The runtime never logs query strings, request or response bodies, cookies, autho
 
 ## Client and request correlation
 
-Every web response receives an `XPSLOGID` correlation cookie when the client does not already have one. The cookie is HttpOnly, SameSite=Lax, valid for 30 days and Secure over HTTPS. Every standard, application, audit, error and exchange entry includes the same `session.id` for that browser or client. The value in the log is a SHA-256 digest. The raw cookie and authentication session identifier are never logged. Each request also has its own `request.id`.
+Every web response receives a site-specific `XPSLOGID_<site-hash>` correlation cookie when the client does not already have one. The cookie is HttpOnly, SameSite=Lax, valid for 30 days and Secure over HTTPS. Every standard, application, audit, error and exchange entry includes the same `session.id` for that browser or client. The value in the log is a SHA-256 digest. The site-specific name prevents collisions when several XPScript applications share one IIS or web domain. The raw cookie and authentication session identifier are never logged. Each request also has its own `request.id`.
 
 ## Full exchange troubleshooting
 
@@ -65,3 +65,8 @@ Attribute names reserved by the runtime cannot be overridden. Attributes whose n
 ## Operations
 
 Give the service identity write access to the log directory and deny access to the web-serving identity where those identities differ. Forward the JSONL files to centralized immutable storage for enterprise retention and alerting. Monitor stderr because compression or retention cleanup failures are reported there.
+
+
+## Platform contract
+
+Kestrel, IIS reverse proxy, FastCGI and CGI use the same correlation helper, cookie lifetime, hash format, `session.id` field, exchange schema and redaction rules. The only transport-dependent cookie attribute is `Secure`. It is present for externally HTTPS requests and absent for HTTP so both protocols work. IIS must preserve the original scheme through ASP.NET Core Module or trusted forwarded headers.
