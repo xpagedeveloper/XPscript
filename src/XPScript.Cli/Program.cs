@@ -72,6 +72,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     var enableStaticFiles = false;
     long? staticMaxBytes = null;
     string? structuredLogPath = null;
+    string? logDirectory = null;
     string? httpsCertificatePath = null;
     string? httpsCertificatePasswordEnvironment = null;
     var protocols = HttpProtocols.Http1AndHttp2;
@@ -136,6 +137,10 @@ static async Task<int> RunWebAsync(string[] commandArgs)
                 break;
             case "--structured-log":
                 structuredLogPath = Path.GetFullPath(RequireValue(commandArgs, ref i));
+                logDirectory ??= Path.GetDirectoryName(structuredLogPath);
+                break;
+            case "--log-directory":
+                logDirectory = Path.GetFullPath(RequireValue(commandArgs, ref i));
                 break;
             case "--static-files":
                 enableStaticFiles = true;
@@ -179,7 +184,8 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         EnableMetricsEndpoint = enableMetrics,
         OperationalEndpointsLocalOnly = !operationalExternal,
         EnableStaticFiles = enableStaticFiles,
-        MaxStaticFileBytes = staticMaxBytes ?? defaults.MaxStaticFileBytes
+        MaxStaticFileBytes = staticMaxBytes ?? defaults.MaxStaticFileBytes,
+        LogOptions = new XpsWebLogOptions { DirectoryPath = logDirectory }
     };
     options.Validate();
 
@@ -227,7 +233,8 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             Console.WriteLine($"Sessions: enabled, in-memory store, cookie {sessionCookieName}, timeout {sessionIdleSeconds}s, SameSite={sessionSameSite}, Secure={sessionSecure}");
         if (enableHealth) Console.WriteLine($"Health endpoint: {options.HealthPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
         if (enableMetrics) Console.WriteLine($"Metrics endpoint: {options.MetricsPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
-        if (structuredLogPath is not null) Console.WriteLine($"Structured request log: {structuredLogPath}");
+        Console.WriteLine($"Mandatory JSONL logs: {options.LogOptions.DirectoryPath ?? XpsWebLogManager.DefaultDirectory(server)}");
+        if (structuredLogPath is not null) Console.WriteLine($"Legacy structured request log: {structuredLogPath}");
         if (options.EnableStaticFiles) Console.WriteLine($"Static files: enabled, max {options.MaxStaticFileBytes} bytes");
 
         await app.StartAsync(shutdown.Token);
@@ -250,6 +257,7 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
     var port = 9000;
     var defaultDocument = "index.xps";
     string? unixSocket = null;
+    string? logDirectory = null;
 
     for (var i = 0; i < commandArgs.Length; i++)
     {
@@ -277,6 +285,9 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
             case "--unix-socket":
                 unixSocket = Path.GetFullPath(RequireValue(commandArgs, ref i));
                 break;
+            case "--log-directory":
+                logDirectory = Path.GetFullPath(RequireValue(commandArgs, ref i));
+                break;
             default:
                 throw new ArgumentException("Unknown fastcgi argument: " + commandArgs[i]);
         }
@@ -288,7 +299,7 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
     await using var dispatcher = new XpsWebDispatcher(root, defaultDocumentName: defaultDocument);
     var options = new XpsFastCgiOptions { Address = address, Port = port };
     var server = CreateServerInfo(root, XpsWebHostingMode.FastCgi, unixSocket ?? address.ToString(), unixSocket is null ? port : null);
-    await using var adapter = new XpsFastCgiAdapter(options, server, dispatcher);
+    await using var adapter = new XpsFastCgiAdapter(options, server, dispatcher, logOptions: new XpsWebLogOptions { DirectoryPath = logDirectory });
     using var shutdown = CreateShutdownToken();
 
     if (unixSocket is not null)
@@ -301,6 +312,7 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
         Console.WriteLine($"XPScript FastCGI root: {root}");
         Console.WriteLine($"Default document: {defaultDocument}");
         Console.WriteLine($"Listening Unix socket: {unixSocket}");
+        Console.WriteLine($"Mandatory JSONL logs: {logDirectory ?? XpsWebLogManager.DefaultDirectory(server)}");
         await WaitForShutdownAsync(shutdown.Token);
         await listener.StopAsync();
         return 0;
@@ -311,6 +323,7 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
     Console.WriteLine($"XPScript FastCGI root: {root}");
     Console.WriteLine($"Default document: {defaultDocument}");
     Console.WriteLine($"Listening: {localEndpoint?.Address}:{localEndpoint?.Port}");
+    Console.WriteLine($"Mandatory JSONL logs: {logDirectory ?? XpsWebLogManager.DefaultDirectory(server)}");
     await WaitForShutdownAsync(shutdown.Token);
     await adapter.StopAsync();
     return 0;
