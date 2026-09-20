@@ -21,15 +21,18 @@ internal static class CompilerDiagnosticParser
             var line = int.Parse(match.Groups["line"].Value);
             var pos = match.Groups["pos"].Success ? int.Parse(match.Groups["pos"].Value) : 1;
             var diagnosticSource = match.Groups["file"].Value.Trim();
-            var code = DiagnosticSourceLine(sourcePath, source, diagnosticSource, line);
             var upstreamCode = match.Groups["id"].Value;
+            var description = match.Groups["desc"].Value.Trim();
+            var code = DiagnosticSourceLine(sourcePath, source, diagnosticSource, line);
             var classification = CompilerDiagnosticClassifier.ClassifyUpstream(upstreamCode, CompilerDiagnosticClassifier.IsSourceMappedPath(diagnosticSource));
+            if (classification.DiagnosticCode is CompilerDiagnosticCodes.UnknownSymbol or CompilerDiagnosticCodes.UnknownMember)
+                code = RecoverDiagnosticSourceLine(sourcePath, source, diagnosticSource, code, description, upstreamCode);
             result.Add(new CompileDiagnostic
             {
                 File = DiagnosticFileName(diagnosticSource),
                 Line = line,
                 Position = pos,
-                Description = Humanize(match.Groups["desc"].Value.Trim()),
+                Description = Humanize(description),
                 SourceCode = code,
                 MarkedCode = Mark(code, pos),
                 DiagnosticCode = string.IsNullOrWhiteSpace(diagnosticCode) ? classification.DiagnosticCode ?? "" : diagnosticCode,
@@ -38,7 +41,7 @@ internal static class CompilerDiagnosticParser
                 Category = !string.IsNullOrWhiteSpace(category)
                     ? category
                     : classification.Category ?? "compiler",
-                Properties = SourceMappedProperties(upstreamCode, match.Groups["desc"].Value, code, pos)
+                Properties = SourceMappedProperties(upstreamCode, description, code, pos)
             });
         }
 
@@ -125,6 +128,38 @@ internal static class CompilerDiagnosticParser
         return sourceMatch.Success
             ? [new CompileDiagnosticProperty { Name = propertyName, Value = sourceMatch.Groups["identifier"].Value }]
             : null;
+    }
+
+    private static string RecoverDiagnosticSourceLine(string rootSourcePath, string rootSource, string diagnosticSourcePath, string currentLine, string description, string upstreamCode)
+    {
+        var properties = SourceMappedProperties(upstreamCode, description, currentLine, 1);
+        var identifier = properties?.FirstOrDefault()?.Value;
+        if (string.IsNullOrWhiteSpace(identifier) || currentLine.Contains(identifier, StringComparison.Ordinal))
+            return currentLine;
+
+        string text;
+        if (IsRootDiagnosticSource(rootSourcePath, diagnosticSourcePath))
+            text = rootSource;
+        else
+        {
+            try
+            {
+                var rootDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(rootSourcePath)) ?? Environment.CurrentDirectory);
+                var resolved = Path.IsPathRooted(diagnosticSourcePath)
+                    ? Path.GetFullPath(diagnosticSourcePath)
+                    : Path.GetFullPath(Path.Combine(rootDirectory, diagnosticSourcePath));
+                if (!Path.GetExtension(resolved).Equals(".xps", StringComparison.OrdinalIgnoreCase) || !File.Exists(resolved))
+                    return currentLine;
+                text = File.ReadAllText(resolved);
+            }
+            catch { return currentLine; }
+        }
+
+        var matches = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')
+            .Where(line => line.Contains(identifier, StringComparison.Ordinal))
+            .Take(2)
+            .ToArray();
+        return matches.Length == 1 ? RedactSourceLine(matches[0]) : currentLine;
     }
 
     private static string DiagnosticSourceLine(string rootSourcePath, string rootSource, string diagnosticSourcePath, int line)
