@@ -8,6 +8,7 @@ namespace XPScript.Compiler;
 
 public static class CompilerDaemonClient
 {
+    private static readonly SemaphoreSlim StartupGate = new(1, 1);
     private static string StatePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XPScript", "daemon-v1.json");
 
     public static async Task<bool> EnsureRunningAsync(CancellationToken cancellationToken = default)
@@ -15,8 +16,15 @@ public static class CompilerDaemonClient
         var hello = await SendAsync("hello").ConfigureAwait(false);
         if (IsCompatible(hello)) return true;
 
-        TryDeleteState();
-        var executable = Environment.ProcessPath;
+        await StartupGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            // Another caller in this process may have started the daemon while we waited.
+            hello = await SendAsync("hello").ConfigureAwait(false);
+            if (IsCompatible(hello)) return true;
+
+            TryDeleteState();
+            var executable = Environment.ProcessPath;
         if (string.IsNullOrWhiteSpace(executable)) return false;
         var startInfo = new ProcessStartInfo(executable)
         {
@@ -58,7 +66,12 @@ public static class CompilerDaemonClient
             }
         }
         catch (OperationCanceledException) { }
-        return false;
+            return false;
+        }
+        finally
+        {
+            StartupGate.Release();
+        }
     }
 
     public static async Task<CompileResult?> CompileForRunAsync(
