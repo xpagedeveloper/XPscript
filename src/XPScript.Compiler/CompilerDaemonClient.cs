@@ -58,6 +58,10 @@ public static class CompilerDaemonClient
         using var process = Process.Start(startInfo);
         if (process is null) return false;
 
+        // The daemon is long-lived while this Process wrapper is intentionally short-lived.
+        // Drain stderr for the daemon lifetime so a redirected pipe can never fill and block it.
+        _ = DrainAsync(process.StandardError);
+
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(10));
         try
@@ -69,6 +73,9 @@ public static class CompilerDaemonClient
                 using var ready = JsonDocument.Parse(line);
                 if (ready.RootElement.TryGetProperty("type", out var type) && type.GetString() == "ready")
                 {
+                    // Ready is the daemon's only stdout protocol frame. Continue draining stdout
+                    // after startup before returning control to the foreground CLI.
+                    _ = DrainAsync(process.StandardOutput);
                     for (var attempt = 0; attempt < 20; attempt++)
                     {
                         hello = await SendAsync("hello").ConfigureAwait(false);
@@ -199,6 +206,17 @@ public static class CompilerDaemonClient
         {
             return null;
         }
+    }
+
+    private static async Task DrainAsync(StreamReader reader)
+    {
+        try
+        {
+            var buffer = new char[4096];
+            while (await reader.ReadAsync(buffer.AsMemory()).ConfigureAwait(false) > 0) { }
+        }
+        catch (ObjectDisposedException) { }
+        catch (IOException) { }
     }
 
     private static async Task<FileStream> AcquireStartupLockAsync(CancellationToken cancellationToken)
