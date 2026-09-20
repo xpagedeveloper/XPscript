@@ -14,6 +14,7 @@ The runtime writes separate files:
 | `application-` | Events written with `Application.Log`. |
 | `security-` | Audit and security events written with `Application.Audit`. |
 | `error-` | Requests that end in a 5xx response or an unhandled exception. |
+| `exchange-` | Opted-in troubleshooting captures with redacted request and response data. |
 
 A file rotates when it reaches 100 MiB or the UTC date changes. Closed files are gzip-compressed. Local retention is 14 days with a 2 GiB total quota. The oldest closed files are removed first when the quota is exceeded.
 
@@ -24,6 +25,23 @@ Each line is one JSON object using schema `xpscript.web.log/1`. The names follow
 Core fields are `timestamp`, `observed_timestamp`, `severity_text`, `severity_number`, `event_name`, `body` and `attributes`. Trace and span IDs are included when a .NET activity is active. Standard attributes include service, environment, site, hosting mode, request ID, HTTP method, path, status, byte counts, duration and client address.
 
 The runtime never logs query strings, request or response bodies, cookies, authorization headers, session identifiers or tokens. Control characters are normalized to prevent log injection.
+
+## Client and request correlation
+
+Every web response receives an `XPSLOGID` correlation cookie when the client does not already have one. The cookie is HttpOnly, SameSite=Lax, valid for 30 days and Secure over HTTPS. Every standard, application, audit, error and exchange entry includes the same `session.id` for that browser or client. The value in the log is a SHA-256 digest. The raw cookie and authentication session identifier are never logged. Each request also has its own `request.id`.
+
+## Full exchange troubleshooting
+
+Set `Application.Log.CaptureExchange = True` during a request to write that request and response to the separate `exchange-` stream. The flag is request-scoped and starts as false on every request.
+
+The capture includes method, path, sanitized query parameters, headers, bodies, status and content types. Authorization, cookies, API keys and secret-bearing JSON or form fields are replaced with `[REDACTED]`. Each body is limited to 256 KiB and records whether it was truncated. Binary bodies use Base64.
+
+```xpscript
+Application.Log.CaptureExchange = True
+Application.Log.Info("support.capture", "Capturing this request for incident INC-1042")
+```
+
+Enable capture only for the affected request. Free-text and non-JSON custom formats cannot be field-redacted reliably.
 
 ## Application events
 
