@@ -172,6 +172,34 @@ jobs:
           if ($status -notmatch 'PID ([0-9]+)') { throw "Daemon did not survive protocol errors: $status" }
           Invoke-XPScript @('daemon','quit') | Out-Null
 
+      - name: Daemon bypass and stale-state recovery probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          $withoutDaemon = Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off','--no-daemon')
+          if ($withoutDaemon -notmatch 'DEBUGGING=False') { throw "--no-daemon run failed: $withoutDaemon" }
+          $status = Invoke-XPScript @('daemon','status')
+          if ($status -notmatch 'not running') { throw "--no-daemon unexpectedly started daemon: $status" }
+
+          $stateDir = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'XPScript'
+          $statePath = Join-Path $stateDir 'daemon-v1.json'
+          New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
+          @{ protocol = 1; port = 1; processId = 2147483647; token = 'stale-token' } | ConvertTo-Json -Compress | Set-Content -NoNewline $statePath
+
+          $recovered = Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off')
+          if ($recovered -notmatch 'DEBUGGING=False') { throw "Run did not recover from stale daemon state: $recovered" }
+          $status = Invoke-XPScript @('daemon','status')
+          if ($status -notmatch 'PID ([0-9]+)') { throw "Daemon did not recover from stale state: $status" }
+          Invoke-XPScript @('daemon','quit') | Out-Null
+
       - name: MCP protocol probe
         run: dotnet run --project tests/CompilerMcpProtocolProbe/CompilerMcpProtocolProbe.csproj -c Release -- .
 
