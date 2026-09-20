@@ -45,7 +45,6 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         var inScript = false;
         var trackNextSimpleAssignment = false;
         var insideGeneratedForRangeHeader = false;
-        var previousNonEmptyLine = "";
 
         foreach (var rawLine in lines)
         {
