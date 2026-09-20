@@ -68,7 +68,8 @@ internal sealed class IncludeSourcePreprocessor
         List<string> dependencies,
         List<IncludeStackEntry> stack,
         List<string> output,
-        List<SourceMap.Location> map)
+        List<SourceMap.Location> map,
+        IReadOnlyList<SourceMap.IncludeFrame> includeTrace)
     {
         sourcePath = Path.GetFullPath(sourcePath);
         var sourceKey = pathIdentity.ComparisonKey(sourcePath);
