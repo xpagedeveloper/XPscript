@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using XPScript.Web.Runtime;
@@ -27,7 +28,7 @@ public sealed class XpsCgiException : Exception
     public XpsCgiException(string message, Exception innerException) : base(message, innerException) { }
 }
 
-public sealed class XpsCgiAdapter
+public sealed class XpsCgiAdapter : IDisposable
 {
     private readonly XpsCgiOptions _options;
     private readonly XpsServerInfo _serverInfo;
@@ -36,6 +37,7 @@ public sealed class XpsCgiAdapter
     private readonly XpsSessionStore? _sessions;
     private readonly Func<XpsWebRequest, XpsWebResponse, IXpsSession?>? _sessionFactory;
     private readonly Func<XpsWebRequest, XpsWebPrincipal>? _principalFactory;
+    private readonly XpsWebLogManager _logger;
 
     public XpsCgiAdapter(
         XpsCgiOptions options,
@@ -44,7 +46,8 @@ public sealed class XpsCgiAdapter
         IXpsApplicationState? application = null,
         XpsSessionStore? sessions = null,
         Func<XpsWebRequest, XpsWebPrincipal>? principalFactory = null,
-        Func<XpsWebRequest, XpsWebResponse, IXpsSession?>? sessionFactory = null)
+        Func<XpsWebRequest, XpsWebResponse, IXpsSession?>? sessionFactory = null,
+        XpsWebLogOptions? logOptions = null)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _options.Validate();
@@ -54,6 +57,7 @@ public sealed class XpsCgiAdapter
         _sessions = sessions;
         _principalFactory = principalFactory;
         _sessionFactory = sessionFactory;
+        _logger = new XpsWebLogManager(_serverInfo, logOptions);
     }
 
     public async Task RunAsync(
@@ -66,18 +70,29 @@ public sealed class XpsCgiAdapter
         ArgumentNullException.ThrowIfNull(stdout);
         ArgumentNullException.ThrowIfNull(environment);
 
+        var started = Stopwatch.GetTimestamp();
+        var requestId = Guid.NewGuid().ToString("N");
         var body = await ReadBodyAsync(stdin, environment, cancellationToken).ConfigureAwait(false);
         var request = CreateRequest(environment, body, cancellationToken);
         var response = new XpsWebResponse();
         var principal = _principalFactory?.Invoke(request) ?? new XpsWebPrincipal(false);
-        var session = _sessionFactory?.Invoke(request, response) ?? _sessions?.Bind(request, response);
-        var context = new XpsWebContext(request, response, _serverInfo, principal, _application, session);
+        try
+        {
+            var session = _sessionFactory?.Invoke(request, response) ?? _sessions?.Bind(request, response);
+            var context = new XpsWebContext(request, response, _serverInfo, principal, _application, session, logger: _logger, requestId: requestId);
 
-        using (XpsWebContextAccessor.Push(context))
-            await _handler.HandleAsync(context).ConfigureAwait(false);
-        if (!response.Completed) response.Complete();
+            using (XpsWebContextAccessor.Push(context))
+                await _handler.HandleAsync(context).ConfigureAwait(false);
+            if (!response.Completed) response.Complete();
 
-        await WriteResponseAsync(stdout, response, request.Method, cancellationToken).ConfigureAwait(false);
+            await WriteResponseAsync(stdout, response, request.Method, cancellationToken).ConfigureAwait(false);
+            _logger.WriteAccess(request, response.StatusCode, response.Body.Length, Stopwatch.GetElapsedTime(started), requestId, "cgi", principal);
+        }
+        catch (Exception ex)
+        {
+            _logger.WriteAccess(request, 500, 0, Stopwatch.GetElapsedTime(started), requestId, "cgi", principal, ex.GetType().FullName);
+            throw;
+        }
     }
 
     private async Task<byte[]> ReadBodyAsync(
@@ -317,4 +332,6 @@ public sealed class XpsCgiAdapter
         504 => "Gateway Timeout",
         _ => "Status"
     };
+
+    public void Dispose() => _logger.Dispose();
 }
