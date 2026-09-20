@@ -160,7 +160,39 @@ public static class CompilerDaemonClient
             if (!response.RootElement.TryGetProperty("result", out var result)) return null;
             return result.Clone();
         }
-        catch { TryDeleteState(); return null; }
+        catch (JsonException)
+        {
+            TryDeleteState();
+            return null;
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return null;
+        }
+        catch (SocketException)
+        {
+            TryDeleteState();
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            // A request timeout does not prove the daemon is stale. In particular,
+            // compilation can legitimately outlive a client-side timeout.
+            return null;
+        }
+        catch (IOException)
+        {
+            // The daemon may still be alive after a transient stream failure.
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static async Task<FileStream> AcquireStartupLockAsync(CancellationToken cancellationToken)
