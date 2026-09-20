@@ -187,7 +187,7 @@ End Sub
 var multipleDiagnosticResult = await driver.ValidateWithResultAsync(multipleDiagnosticSource);
 var unresolvedDiagnostics = multipleDiagnosticResult.Errors.Where(d => d.DiagnosticCode == "XPS2008").ToArray();
 Require(!multipleDiagnosticResult.Success, "multiple diagnostic source must fail validation");
-Require(unresolvedDiagnostics.Length >= 2, "validation must preserve multiple diagnostics");
+Require(unresolvedDiagnostics.Length >= 2, "validation must preserve multiple diagnostics: " + string.Join(" | ", multipleDiagnosticResult.Errors.Select(d => $"{d.File}:{d.Line}:{d.Position} {d.DiagnosticCode}/{d.UpstreamCode} {d.Description}")));
 Require(unresolvedDiagnostics.Any(d => d.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingFirst") == true), "multiple diagnostics missing first symbol");
 Require(unresolvedDiagnostics.Any(d => d.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingSecond") == true), "multiple diagnostics missing second symbol");
 Require(multipleDiagnosticResult.TotalDiagnostics >= 2, "multiple diagnostics total count");
