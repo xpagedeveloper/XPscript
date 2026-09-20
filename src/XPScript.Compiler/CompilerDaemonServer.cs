@@ -10,7 +10,7 @@ public static class CompilerDaemonServer
 {
     public const int ProtocolVersion = 1;
 
-    public static async Task<int> RunAsync(string[] args, CancellationToken shutdown.Token = default)
+    public static async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
     {
         var port = 0;
         var idleTimeout = TimeSpan.FromMinutes(10);
@@ -27,7 +27,7 @@ public static class CompilerDaemonServer
         Console.WriteLine(JsonSerializer.Serialize(new { type = "ready", protocol = ProtocolVersion, port = endpoint.Port, processId = Environment.ProcessId }));
         Console.Out.Flush();
 
-        using var shutdown = CancellationTokenSource.CreateLinkedTokenSource(shutdown.Token);
+        using var shutdown = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var lastActivity = DateTimeOffset.UtcNow;
         var activeRequests = 0;
         void Touch() => lastActivity = DateTimeOffset.UtcNow;
@@ -91,7 +91,7 @@ public static class CompilerDaemonServer
                     if (method == "validate")
                     {
                         var source = root.GetProperty("source").GetString() ?? "";
-                        var result = await driver.ValidateWithResultAsync(source, shutdown.Token: shutdown.Token).ConfigureAwait(false);
+                        var result = await driver.ValidateWithResultAsync(source, cancellationToken: shutdown.Token).ConfigureAwait(false);
                         await WriteAsync(writer, id, result).ConfigureAwait(false);
                         continue;
                     }
