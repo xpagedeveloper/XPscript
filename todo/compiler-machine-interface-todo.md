@@ -349,7 +349,7 @@ Add deterministic fixtures covering:
 - [ ] Unknown members.
 - [x] Type mismatch. Covered by null-to-integer XPS2001/XPS2003 fixtures and structured expected/actual type metadata.
 - [x] Wrong argument count/type. Covered by XPCsvDocument.Load argument-count and overload/type mismatch fixtures.
-- [ ] ByRef/ByVal errors.
+- [x] ByRef/ByVal errors. Native `ByRef` rejection is covered by stable structured diagnostic `XPS2013`; existing overload fixtures verify `ByRef`/`ByVal` parameter-mode metadata.
 - [x] Target restrictions. Covered by native target mismatch XPS3001 fixture.
 - [x] Browser-WASM restrictions. Covered by Browser-WASM XPAi target restriction XPS3001 fixture.
 - [ ] ServerSide-required APIs.
