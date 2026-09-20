@@ -118,9 +118,18 @@ internal static class CompilerDiagnosticParser
 
         // Roslyn's message identifies the unresolved name directly. A mapped XPScript
         // column can point at a containing expression, so the source suffix is fallback only.
-        var quoted = Regex.Match(description, @"'(?<identifier>[A-Za-z_]\w*)'");
-        if (quoted.Success)
-            return [new CompileDiagnosticProperty { Name = propertyName, Value = quoted.Groups["identifier"].Value }];
+        var quotedIdentifiers = Regex.Matches(description, @"'(?<identifier>[A-Za-z_]\w*)'")
+            .Select(match => match.Groups["identifier"].Value)
+            .ToArray();
+        if (quotedIdentifiers.Length > 0)
+        {
+            // CS1061/CS0117 messages quote both the receiver type and the missing member.
+            // The unresolved member is the last quoted identifier; CS0103 has a single quoted symbol.
+            var identifier = normalizedCode is "CS1061" or "CS0117"
+                ? quotedIdentifiers[^1]
+                : quotedIdentifiers[0];
+            return [new CompileDiagnosticProperty { Name = propertyName, Value = identifier }];
+        }
 
         if (string.IsNullOrWhiteSpace(sourceLine) || position <= 0) return null;
         var suffix = position <= sourceLine.Length ? sourceLine.Substring(position - 1) : "";
