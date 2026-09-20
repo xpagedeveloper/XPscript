@@ -186,7 +186,21 @@ public static class CompilerDaemonClient
         await File.WriteAllTextAsync(StatePath, JsonSerializer.Serialize(new { protocol = CompilerDaemonServer.ProtocolVersion, port, processId = Environment.ProcessId, token })).ConfigureAwait(false);
     }
 
-    internal static void DeleteState() => TryDeleteState();
+    internal static void DeleteStateIfOwned(int port, string token)
+    {
+        try
+        {
+            if (!File.Exists(StatePath)) return;
+            using var state = JsonDocument.Parse(File.ReadAllText(StatePath));
+            var root = state.RootElement;
+            if (root.GetProperty("processId").GetInt32() != Environment.ProcessId) return;
+            if (root.GetProperty("port").GetInt32() != port) return;
+            if (!root.TryGetProperty("token", out var tokenElement) ||
+                !string.Equals(tokenElement.GetString(), token, StringComparison.Ordinal)) return;
+            File.Delete(StatePath);
+        }
+        catch { }
+    }
 
     private static void TryDeleteState()
     {
