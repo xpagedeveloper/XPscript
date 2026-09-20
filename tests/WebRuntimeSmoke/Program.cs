@@ -164,12 +164,12 @@ try
     }));
 
     var logDirectory = Path.Combine(outsideRoot, "logs");
+    var rawCorrelation = XpsWebClientCorrelation.GetOrCreate(new Dictionary<string, string>(), out var correlationCreated);
+    if (!correlationCreated || !XpsWebClientCorrelation.IsValid(rawCorrelation))
+        throw new Exception("Client correlation id was not created.");
+    var clientSessionId = XpsWebClientCorrelation.Hash(rawCorrelation);
     using (var logger = new XpsWebLogManager(server, new XpsWebLogOptions { DirectoryPath = logDirectory }))
     {
-        var rawCorrelation = XpsWebClientCorrelation.GetOrCreate(new Dictionary<string, string>(), out var correlationCreated);
-        if (!correlationCreated || !XpsWebClientCorrelation.IsValid(rawCorrelation))
-            throw new Exception("Client correlation id was not created.");
-        var clientSessionId = XpsWebClientCorrelation.Hash(rawCorrelation);
         var context = new XpsWebContext(
             request, response, server, authenticated, app,
             logger: logger, requestId: "request_1234", clientSessionId: clientSessionId);
