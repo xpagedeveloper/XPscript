@@ -230,7 +230,8 @@ internal sealed class UIFormAccessibilityPostProcessor
             "            var required = field.Required ? \" required\" : string.Empty;",
             Block(
                 "            var required = field.Required ? \" required aria-required=\\\"true\\\"\" : string.Empty;",
-                "            var accessibility = BuildAccessibilityAttributes(field, name);"));
+                "            var validationError = field.ValidationError.Length > 0 ? field.ValidationError : GetValidationError(field.Name);",
+                "            var accessibility = BuildAccessibilityAttributes(field, name, validationError);"));
 
         generated = AddAccessibilityAttributesToRenderer(generated);
         generated = AddFieldMessagesAndAnnouncement(generated);
@@ -239,15 +240,15 @@ internal sealed class UIFormAccessibilityPostProcessor
             generated,
             "    private static string NormalizeFieldName(object? value)\n    {",
             Block(
-                "    private string BuildAccessibilityAttributes(XPScriptUIField field, string encodedName)",
+                "    private string BuildAccessibilityAttributes(XPScriptUIField field, string encodedName, string validationError)",
                 "    {",
                 "        var html = new System.Text.StringBuilder();",
                 "        if (field.AccessibleName.Length > 0) html.Append(\" aria-label=\\\"\").Append(System.Net.WebUtility.HtmlEncode(field.AccessibleName)).Append(\"\\\"\");",
                 "        var describedBy = new List<string>();",
                 "        if (field.AccessibleDescription.Length > 0 || field.AccessibleHelpText.Length > 0) describedBy.Add(\"xps_\" + encodedName + \"_help\");",
-                "        if (field.ValidationError.Length > 0) describedBy.Add(\"xps_\" + encodedName + \"_error\");",
+                "        if (validationError.Length > 0) describedBy.Add(\"xps_\" + encodedName + \"_error\");",
                 "        if (describedBy.Count > 0) html.Append(\" aria-describedby=\\\"\").Append(string.Join(\" \", describedBy)).Append(\"\\\"\");",
-                "        if (field.ValidationError.Length > 0) html.Append(\" aria-invalid=\\\"true\\\"\");",
+                "        if (validationError.Length > 0) html.Append(\" aria-invalid=\\\"true\\\"\");",
                 "        if (field.AccessibilityHidden) html.Append(\" aria-hidden=\\\"true\\\" tabindex=\\\"-1\\\"\");",
                 "        else if (!field.IsTabStop || !field.Focusable) html.Append(\" tabindex=\\\"-1\\\"\");",
                 "        else html.Append(\" tabindex=\\\"\").Append(field.TabIndex).Append(\"\\\"\");",
@@ -300,8 +301,8 @@ internal sealed class UIFormAccessibilityPostProcessor
         var fieldMessages = Block(
             "            if (field.AccessibleDescription.Length > 0 || field.AccessibleHelpText.Length > 0)",
             "                html.Append(\"<div class=\\\"xpscript-uiform-help\\\" id=\\\"xps_\").Append(name).Append(\"_help\\\">\").Append(System.Net.WebUtility.HtmlEncode(string.Join(\" \", new[] { field.AccessibleDescription, field.AccessibleHelpText }.Where(text => text.Length > 0)))).Append(\"</div>\");",
-            "            if (field.ValidationError.Length > 0)",
-            "                html.Append(\"<div class=\\\"xpscript-uiform-error\\\" id=\\\"xps_\").Append(name).Append(\"_error\\\" role=\\\"alert\\\">\").Append(System.Net.WebUtility.HtmlEncode(field.ValidationError)).Append(\"</div>\");",
+            "            if (validationError.Length > 0)",
+            "                html.Append(\"<div class=\\\"xpscript-uiform-error\\\" id=\\\"xps_\").Append(name).Append(\"_error\\\" role=\\\"alert\\\">\").Append(System.Net.WebUtility.HtmlEncode(validationError)).Append(\"</div>\");",
             string.Empty);
         generated = generated.Insert(fieldClose, fieldMessages);
 

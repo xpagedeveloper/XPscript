@@ -217,10 +217,15 @@ static async Task VerifyApiDocsJsonSchemaAsync(string cliDll, string siteDir)
 {"type":"object","required":["name"],"properties":{"name":{"type":"string"}}}
 """);
     await File.WriteAllTextAsync(Path.Combine(siteDir, "schema-api.xps"), """
+Class TypedSchemaUserPayload
+    Public Name As String
+    Public Age As Integer
+End Class
+
 [Anonymous]
 [Post:/api/schema-users]
 [JsonSchema:schemas/create-user.schema.json]
-Sub CreateSchemaUser([FromBody] payload As Object)
+Sub CreateSchemaUser([FromBody] payload As TypedSchemaUserPayload)
     Response.OK(payload)
 End Sub
 """);
@@ -240,8 +245,8 @@ End Sub
             .GetProperty("content")
             .GetProperty("application/json")
             .GetProperty("schema");
-        if (schema.TryGetProperty("$ref", out _))
-            throw new Exception("OpenAPI requestBody unexpectedly emitted an external JSON Schema reference.");
+        if (schema.TryGetProperty("$ref", out var schemaReference))
+            throw new Exception($"[JsonSchema] did not override the typed [FromBody] schema: {schemaReference.GetString()}");
         if (schema.GetProperty("type").GetString() != "object" ||
             schema.GetProperty("required")[0].GetString() != "name" ||
             schema.GetProperty("properties").GetProperty("name").GetProperty("type").GetString() != "string")
@@ -268,7 +273,8 @@ static async Task VerifyApiDocsJsonSchemaFailuresAsync(string cliDll, string par
         ("traversal", "../outside.schema.json", "{}", "must stay inside the web root"),
         ("non-json", "schemas/schema.txt", "{}", "must reference a .json file"),
         ("missing", "schemas/missing.schema.json", null, "was not found"),
-        ("invalid-json", "schemas/invalid.schema.json", "{not-json", "invalid JSON")
+        ("invalid-json", "schemas/invalid.schema.json", "{not-json", "invalid JSON"),
+        ("invalid-schema-root", "schemas/array.schema.json", "[]", "object or boolean schema root")
     };
 
     foreach (var test in cases)

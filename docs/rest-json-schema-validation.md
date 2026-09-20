@@ -16,7 +16,7 @@ Sub CreateUser([FromBody] payload As CreateUserRequest)
 End Sub
 ```
 
-The schema path is relative to the web root. Absolute paths, parent-directory traversal, control characters, and non-`.json` paths are rejected by route metadata validation. The resolved schema must remain inside the web root.
+The schema path is relative to the web root. Absolute paths, parent-directory traversal, control characters, and non-`.json` paths are rejected by route metadata validation. Resolution also rejects file or directory symbolic links/reparse points whose resolved target escapes the web root. The same hardened resolver is used by API documentation generation and runtime request validation.
 
 Validation runs before REST binding and before the route procedure executes.
 
@@ -61,7 +61,7 @@ When API documentation is enabled, a route with `[JsonSchema:...]` embeds that J
 
 Routes without `[JsonSchema:...]` keep the existing typed request-body schema generation based on the XPscript parameter type. `[JsonSchema:...]` is the authoritative request schema when it is present.
 
-API documentation generation validates the configured schema path and requires the schema file to exist and contain valid JSON. Invalid paths, missing files, and malformed schema JSON fail API documentation generation instead of emitting a broken OpenAPI document.
+API documentation generation validates the configured schema path and requires the schema file to exist and contain valid JSON whose root is an object or boolean schema. Invalid paths, symlink escapes, missing files, malformed JSON, and unsupported schema root shapes fail API documentation generation instead of emitting a broken OpenAPI document.
 
 Swagger 2.0 generation retains its existing type-derived behavior.
 
