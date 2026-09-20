@@ -292,7 +292,17 @@ internal static class CompilerDiagnosticParser
 
     private static string DiagnosticFileName(string value)
     {
-        try { return Path.GetFileName(value); }
+        try
+        {
+            var normalized = value.Trim().Replace('\\', '/');
+            var marker = normalized.LastIndexOf(".xps", StringComparison.OrdinalIgnoreCase);
+            if (marker >= 0)
+            {
+                var start = normalized.LastIndexOfAny([' ', ':', '[', '('], marker);
+                normalized = normalized[(start + 1)..(marker + 4)];
+            }
+            return Path.GetFileName(normalized);
+        }
         catch { return ""; }
     }
 
