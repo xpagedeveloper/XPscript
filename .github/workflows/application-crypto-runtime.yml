@@ -1,6 +1,8 @@
 name: Application Crypto Runtime
 
 on:
+  push:
+    branches: [feature/application-crypto]
   pull_request:
     branches: [main]
     paths:
