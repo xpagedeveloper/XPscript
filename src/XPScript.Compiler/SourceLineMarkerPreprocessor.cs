@@ -52,7 +52,7 @@ internal sealed class SourceLineMarkerPreprocessor
 
                 if (!continuation && code.Length > 0)
                 {
-                    var expandedLine = i + 1;
+                    var expandedLine = sourceMap is null ? i + 1 : Math.Min(i + 1, sourceMap.Count);
                     var location = sourceMap?.Resolve(expandedLine, sourceName)
                         ?? new SourceMap.Location(sourceName, expandedLine, raw);
                     var sourceId = SafeSourceId(location.SourcePath, sourceName);
