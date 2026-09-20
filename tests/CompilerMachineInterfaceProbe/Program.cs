@@ -120,6 +120,25 @@ Require(orderedDiagnostics.Select(d => $"{d.File}:{d.Line}:{d.Position}:{d.Diagn
     ["a.xps:1:2:XPS2008", "a.xps:1:5:XPS2009", "a.xps:2:1:XPS2008", "b.xps:1:1:XPS2008"]),
     "diagnostics must use deterministic source ordering");
 
+var boundedDiagnostics = CompileResult.Error(
+    Enumerable.Range(1, CompileResult.MaximumDiagnostics + 37)
+        .Select(index => new CompileDiagnostic
+        {
+            File = "bounded.xps",
+            Line = index,
+            Position = 1,
+            DiagnosticCode = "XPS2008",
+            Description = $"diagnostic {index:D3}"
+        }));
+Require(boundedDiagnostics.Errors.Count == CompileResult.MaximumDiagnostics, "machine diagnostics must be capped");
+Require(boundedDiagnostics.DiagnosticsTruncated, "machine diagnostics must report truncation");
+Require(boundedDiagnostics.TotalDiagnostics == CompileResult.MaximumDiagnostics + 37, "machine diagnostics must report total count before truncation");
+Require(boundedDiagnostics.Errors.First().Line == 1 && boundedDiagnostics.Errors.Last().Line == CompileResult.MaximumDiagnostics,
+    "diagnostic truncation must happen after deterministic ordering");
+var boundedJson = JsonSerializer.Serialize(boundedDiagnostics);
+Require(boundedJson.Contains("\"diagnosticsTruncated\":true", StringComparison.Ordinal), "JSON result must expose diagnostic truncation");
+Require(boundedJson.Contains($"\"totalDiagnostics\":{CompileResult.MaximumDiagnostics + 37}", StringComparison.Ordinal), "JSON result must expose total diagnostic count");
+
 var normalizedPathDiagnostic = CompileResult.Error(
 [
     new CompileDiagnostic
