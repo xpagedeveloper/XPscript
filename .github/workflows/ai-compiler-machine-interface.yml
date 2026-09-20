@@ -174,7 +174,7 @@ jobs:
 
           Invoke-XPScript @('daemon','quit') | Out-Null
 
-      - name: Daemon concurrent compilation probe
+      - name: Debug bypasses daemon probe
         shell: pwsh
         run: |
           $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
@@ -187,32 +187,14 @@ jobs:
 
           Invoke-XPScript @('daemon','quit') | Out-Null
           Start-Sleep -Milliseconds 500
+          $before = Invoke-XPScript @('daemon','status')
+          if ($before -notmatch 'not running') { throw "Expected daemon stopped before debug run: $before" }
 
-          function New-DebugRunProcess([string] $source) {
-            $psi = [System.Diagnostics.ProcessStartInfo]::new()
-            $psi.FileName = 'dotnet'
-            foreach ($arg in @('run','--project',$project,'-c','Release','--no-build','--','run',$source,'--debug','--security=off')) { $psi.ArgumentList.Add($arg) }
-            $psi.RedirectStandardOutput = $true
-            $psi.RedirectStandardError = $true
-            $psi.UseShellExecute = $false
-            return [System.Diagnostics.Process]::Start($psi)
-          }
+          $debugRun = Invoke-XPScript @('run','samples/application-is-debugging.xps','--debug','--security=off')
+          if ($debugRun -notmatch 'DEBUGGING=True') { throw "Debug run failed: $debugRun" }
 
-          $p1 = New-DebugRunProcess 'samples/application-is-debugging.xps'
-          $p2 = New-DebugRunProcess 'samples/application-is-debugging.xps'
-          $out1 = $p1.StandardOutput.ReadToEnd()
-          $err1 = $p1.StandardError.ReadToEnd()
-          $out2 = $p2.StandardOutput.ReadToEnd()
-          $err2 = $p2.StandardError.ReadToEnd()
-          $p1.WaitForExit()
-          $p2.WaitForExit()
-          if ($p1.ExitCode -ne 0) { throw "First concurrent debug compilation failed: $out1 $err1" }
-          if ($p2.ExitCode -ne 0) { throw "Second concurrent debug compilation failed: $out2 $err2" }
-          if ($out1 -notmatch 'DEBUGGING=True' -or $out2 -notmatch 'DEBUGGING=True') { throw "Concurrent debug compilations did not both execute successfully" }
-
-          $status = Invoke-XPScript @('daemon','status')
-          if ($status -notmatch 'PID ([0-9]+)') { throw "Shared daemon disappeared during concurrent compilations: $status" }
-          Invoke-XPScript @('daemon','quit') | Out-Null
+          $after = Invoke-XPScript @('daemon','status')
+          if ($after -notmatch 'not running') { throw "--debug unexpectedly started or used daemon: $after" }
 
       - name: Daemon error protocol probe
         shell: pwsh
