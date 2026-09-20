@@ -168,10 +168,16 @@ internal sealed class IncludeSourcePreprocessor
     private static bool IsBrowserWasmSource(string source)
         => NormalizeLines(source).Any(line => WebPlatformPattern.IsMatch(StripComment(line).Trim()));
 
-    private static void AddLine(List<string> output, List<SourceMap.Location> map, string text, string path, int line)
+    private static void AddLine(
+        List<string> output,
+        List<SourceMap.Location> map,
+        string text,
+        string path,
+        int line,
+        IReadOnlyList<SourceMap.IncludeFrame> includeTrace)
     {
         output.Add(text);
-        map.Add(new SourceMap.Location(path, line, text));
+        map.Add(new SourceMap.Location(path, line, text, includeTrace));
     }
 
     private static string[] NormalizeLines(string source) =>
