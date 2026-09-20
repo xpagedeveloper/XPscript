@@ -11,6 +11,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 - [Language and built-in command reference](language-reference.md): statements, operators, scalar/built-in functions and process commands. Every row has syntax, parameters, behavior and a complete `.xps` example.
 - [Application and state reference](application-reference.md): complete `Application` runtime aliases/UI metadata plus `Application.State`, `Process.State`, `Session.State` and `Request.State`.
 - [Application.Crypto](application-crypto.md): versioned authenticated string encryption, key handling, context binding and migration.
+- [Mandatory web logging](web-logging.md): protected JSONL access, application, audit/security and error logs.
 - [File and filesystem command reference](file-io-reference.md): complete file I/O, metadata, filesystem and locking command catalog, including `Seek`, `Loc`, `LOF` and `Reset`.
 - [Desktop UI command reference](desktop-ui-reference.md): `MsgBox`, desktop choice/input dialogs and native open/save file dialogs.
 - [Database UI data sources](database-ui-datasources.md): `QueryArray`, `GetRow`, `SaveRow` and shared `XPJsonObject` binding for UIListView/UIForm across SQLite, SQL Server, Supabase and Domino.
