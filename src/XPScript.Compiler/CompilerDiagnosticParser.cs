@@ -23,8 +23,15 @@ internal static class CompilerDiagnosticParser
             var diagnosticSource = match.Groups["file"].Value.Trim();
             var upstreamCode = match.Groups["id"].Value;
             var description = match.Groups["desc"].Value.Trim();
+            var mapped = RecoverIncludeLocation(sourcePath, diagnosticSource, line, description);
+            if (mapped is not null)
+            {
+                diagnosticSource = mapped.SourcePath;
+                line = mapped.Line;
+                pos = mapped.Position;
+            }
             var code = DiagnosticSourceLine(sourcePath, source, diagnosticSource, line);
-            var classification = CompilerDiagnosticClassifier.ClassifyUpstream(upstreamCode, CompilerDiagnosticClassifier.IsSourceMappedPath(diagnosticSource));
+            var classification = CompilerDiagnosticClassifier.ClassifyUpstream(upstreamCode, mapped is not null || CompilerDiagnosticClassifier.IsSourceMappedPath(diagnosticSource));
             if (classification.DiagnosticCode is CompilerDiagnosticCodes.UnknownSymbol or CompilerDiagnosticCodes.UnknownMember)
                 code = RecoverDiagnosticSourceLine(sourcePath, source, diagnosticSource, code, description, upstreamCode);
             result.Add(new CompileDiagnostic
@@ -41,7 +48,8 @@ internal static class CompilerDiagnosticParser
                 Category = !string.IsNullOrWhiteSpace(category)
                     ? category
                     : classification.Category ?? "compiler",
-                Properties = SourceMappedProperties(upstreamCode, description, code, pos)
+                Properties = SourceMappedProperties(upstreamCode, description, code, pos),
+                IncludeTrace = DiagnosticIncludeTrace(sourcePath, diagnosticSource, line)
             });
         }
 
@@ -103,6 +111,38 @@ internal static class CompilerDiagnosticParser
                 Category = "code-generation"
             });
         }
+    }
+
+    private sealed record RecoveredIncludeLocation(string SourcePath, int Line, int Position);
+
+    private static RecoveredIncludeLocation? RecoverIncludeLocation(string rootSourcePath, string diagnosticSourcePath, int reportedLine, string description)
+    {
+        if (!IsRootDiagnosticSource(rootSourcePath, diagnosticSourcePath)) return null;
+        var context = ExpandedSourceContext.Current;
+        if (context is null) return null;
+
+        // Fallback for generated diagnostics whose #line mapping was lost: match the
+        // diagnostic's source expression against physical included source lines.
+        var quoted = Regex.Matches(description, @"'(?<value>[^']+)'")
+            .Select(m => m.Groups["value"].Value)
+            .Where(v => v.Length > 0)
+            .ToArray();
+
+        var candidates = Enumerable.Range(1, context.Map.Count)
+            .Select(index => context.Map.Resolve(index, rootSourcePath))
+            .Where(location => location.IncludeTrace is { Count: > 0 })
+            .Where(location => quoted.Length == 0 || quoted.Any(value => location.SourceText.Contains(value, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+        if (candidates.Length != 1) return null;
+
+        var candidate = candidates[0];
+        var position = 1;
+        foreach (var value in quoted)
+        {
+            var index = candidate.SourceText.IndexOf(value, StringComparison.OrdinalIgnoreCase);
+            if (index >= 0) { position = index + 1; break; }
+        }
+        return new RecoveredIncludeLocation(candidate.SourcePath, candidate.Line, position);
     }
 
     private static List<CompileIncludeFrame>? DiagnosticIncludeTrace(string rootSourcePath, string diagnosticSourcePath, int line)
