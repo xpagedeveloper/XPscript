@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
 
-internal static class ApplicationSecurityAudit
+public static class ApplicationSecurityAudit
 {
     private static readonly Regex NuGetAuditUnavailable = new(
         @"(?:warning|error)\s+(?<code>NU1900|NU1905):\s*(?<message>[^\r\n]+)",
@@ -61,7 +61,7 @@ internal static class ApplicationSecurityAudit
                 new CompileDiagnosticProperty { Name = "advisory", Value = f.Advisory })));
     }
 
-    internal static UnavailableFinding? ParseUnavailable(string buildOutput)
+    public static UnavailableFinding? ParseUnavailable(string buildOutput)
     {
         var match = NuGetAuditUnavailable.Match(buildOutput ?? string.Empty);
         if (!match.Success) return null;
@@ -70,7 +70,7 @@ internal static class ApplicationSecurityAudit
             match.Groups["message"].Value.Trim());
     }
 
-    internal static IReadOnlyList<Finding> Parse(string buildOutput)
+    public static IReadOnlyList<Finding> Parse(string buildOutput)
     {
         var findings = new List<Finding>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -115,6 +115,6 @@ internal static class ApplicationSecurityAudit
         _ => 0
     };
 
-    internal sealed record UnavailableFinding(string Code, string Message);
-    internal sealed record Finding(string Code, string Package, string Version, string Severity, string Advisory);
+    public sealed record UnavailableFinding(string Code, string Message);
+    public sealed record Finding(string Code, string Package, string Version, string Severity, string Advisory);
 }
