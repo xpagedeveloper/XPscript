@@ -134,6 +134,12 @@ public sealed class CompilerDriver
             var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(preprocessorResult.Source, preprocessorResult.Map, sourcePath);
             var expandedSource = managedReferences.Source;
             diagnosticSourceMap = preprocessorResult.Map;
+
+            // Run source-level syntax validation before transpilation mutates line layout.
+            // These diagnostics already carry physical source coordinates and must not be
+            // repaired later from generated-code positions.
+            new NothingComparisonValidator().Validate(source, sourcePath);
+
             var nativeDependencies = new NativeDependencyPackager(rid).Collect(expandedSource, includeResult.Map, sourcePath);
             ValidateNativeDependencies(sourcePath, nativeDependencies);
             ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
