@@ -195,8 +195,8 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         XpsWebTelemetry? telemetry = null;
         if (structuredLogPath is not null)
         {
-            var logDirectory = Path.GetDirectoryName(structuredLogPath);
-            if (!string.IsNullOrWhiteSpace(logDirectory)) Directory.CreateDirectory(logDirectory);
+            var legacyLogDirectory = Path.GetDirectoryName(structuredLogPath);
+            if (!string.IsNullOrWhiteSpace(legacyLogDirectory)) Directory.CreateDirectory(legacyLogDirectory);
             structuredLogWriter = new StreamWriter(new FileStream(
                 structuredLogPath,
                 FileMode.Append,
