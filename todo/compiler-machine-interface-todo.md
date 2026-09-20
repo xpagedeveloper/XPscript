@@ -344,14 +344,14 @@ The debugger transport is intentionally unchanged by the MCP work. Warm compilat
 
 Add deterministic fixtures covering:
 
-- [ ] Syntax errors.
+- [x] Syntax errors. Covered by deterministic XPS1001/XPS1002/XPS1003/XPS1004/XPS1005/XPS1006/XPS1007 fixtures in `CompilerMachineInterfaceProbe`.
 - [ ] Unknown symbols.
 - [ ] Unknown members.
-- [ ] Type mismatch.
-- [ ] Wrong argument count/type.
+- [x] Type mismatch. Covered by null-to-integer XPS2001/XPS2003 fixtures and structured expected/actual type metadata.
+- [x] Wrong argument count/type. Covered by XPCsvDocument.Load argument-count and overload/type mismatch fixtures.
 - [ ] ByRef/ByVal errors.
-- [ ] Target restrictions.
-- [ ] Browser-WASM restrictions.
+- [x] Target restrictions. Covered by native target mismatch XPS3001 fixture.
+- [x] Browser-WASM restrictions. Covered by Browser-WASM XPAi target restriction XPS3001 fixture.
 - [ ] ServerSide-required APIs.
 - [ ] Security warnings.
 - [ ] Multiple diagnostics.
