@@ -1,3 +1,4 @@
+using System.Text.Json;
 using XPScript.Web.Runtime;
 
 var root = Path.Combine(Path.GetTempPath(), "xps-web-smoke-" + Guid.NewGuid().ToString("N"));
@@ -157,12 +158,45 @@ try
 
     var app = new SmokeApplicationState();
     var server = new XpsServerInfo("site-a", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test");
-    var context = new XpsWebContext(request, response, server, authenticated, app);
-    using (XpsWebContextAccessor.Push(context))
+    AssertThrows<InvalidOperationException>(() => _ = new XpsWebLogManager(server, new XpsWebLogOptions
     {
-        if (!ReferenceEquals(XpsWebContextAccessor.Current, context)) throw new Exception("Web context push failed.");
+        DirectoryPath = Path.Combine(root, "logs")
+    }));
+
+    var logDirectory = Path.Combine(outsideRoot, "logs");
+    using (var logger = new XpsWebLogManager(server, new XpsWebLogOptions { DirectoryPath = logDirectory }))
+    {
+        var context = new XpsWebContext(request, response, server, authenticated, app, logger: logger, requestId: "request_1234");
+        using (XpsWebContextAccessor.Push(context))
+        {
+            if (!ReferenceEquals(XpsWebContextAccessor.Current, context)) throw new Exception("Web context push failed.");
+            XpsWebRuntimeObjects.WriteApplicationLog("info", "order.created", "Order created", "{\"order.id\":42}", false);
+            XpsWebRuntimeObjects.WriteApplicationLog("info", "user.login", "User logged in", null, true);
+            AssertThrows<ArgumentException>(() =>
+                XpsWebRuntimeObjects.WriteApplicationLog("info", "bad.attributes", "Rejected", "{\"password\":\"secret\"}", false));
+        }
+        logger.WriteAccess(request, 500, 7, TimeSpan.FromMilliseconds(12), "request_1234", "kestrel", authenticated, "SmokeException");
     }
     AssertThrows<InvalidOperationException>(() => _ = XpsWebContextAccessor.Current);
+
+    var accessFile = Directory.GetFiles(logDirectory, "access-*.jsonl").Single();
+    var accessLine = File.ReadLines(accessFile).Single();
+    using (var accessJson = JsonDocument.Parse(accessLine))
+    {
+        if (accessJson.RootElement.GetProperty("schema_version").GetString() != XpsWebLogManager.SchemaVersion)
+            throw new Exception("Web log schema version mismatch.");
+        var attributes = accessJson.RootElement.GetProperty("attributes");
+        if (attributes.GetProperty("url.path").GetString() != "/foo/save")
+            throw new Exception("Access log path mismatch.");
+        if (accessLine.Contains("a=1", StringComparison.Ordinal))
+            throw new Exception("Access log leaked the query string.");
+    }
+    if (Directory.GetFiles(logDirectory, "application-*.jsonl").Length != 1)
+        throw new Exception("Application log was not written.");
+    if (Directory.GetFiles(logDirectory, "security-*.jsonl").Length != 1)
+        throw new Exception("Audit log was not written to the security stream.");
+    if (Directory.GetFiles(logDirectory, "error-*.jsonl").Length != 1)
+        throw new Exception("5xx request was not written to the error stream.");
 
     Console.WriteLine("WEB-RUNTIME-SMOKE=OK");
 }
