@@ -29,6 +29,12 @@ public static class XpsWebRuntimeObjects
         XpsWebContextAccessor.Current.Session ??
         throw new InvalidOperationException("Session support is not enabled for this XPScript site.");
 
+    public static bool ApplicationLogCaptureExchange
+    {
+        get => XpsWebContextAccessor.Current.CaptureExchange;
+        set => XpsWebContextAccessor.Current.CaptureExchange = value;
+    }
+
     public static void WriteApplicationLog(string severity, string eventName, string message, string? attributesJson, bool audit)
     {
         var context = XpsWebContextAccessor.Current;
