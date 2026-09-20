@@ -10,7 +10,7 @@ internal sealed class SourceTypeValidator
     private static readonly HashSet<string> NumericTypes = new(StringComparer.OrdinalIgnoreCase)
     { "Byte", "Integer", "Long", "Single", "Double", "Currency" };
 
-    public void Validate(string source, string sourceName)
+    public void Validate(string source, string sourceName, SourceMap? sourceMap = null)
     {
         new IncrementOperatorSyntaxValidator().Validate(source, sourceName);
 
@@ -53,7 +53,7 @@ internal sealed class SourceTypeValidator
                 continue;
             }
 
-            ValidateAssignment(sourceName, i + 1, original, line, variables, diagnostics);
+            ValidateAssignment(sourceName, i + 1, original, line, variables, diagnostics, sourceMap);
 
             foreach (var procedure in procedures.Values)
             {
@@ -83,7 +83,7 @@ internal sealed class SourceTypeValidator
                             if (expected.Type.Equals("Variant", StringComparison.OrdinalIgnoreCase) && !expected.IsArray) continue;
                             var pos = original.IndexOf(args[p].Trim(), StringComparison.Ordinal);
                             AddDiagnostic(diagnostics, sourceName, i + 1, pos >= 0 ? pos + 1 : call.Index + 1, original, $"Null can be passed only to a Variant-compatible parameter. Parameter '{expected.Name}' of '{procedure.Name}' expects {FormatType(expected.Type, expected.IsArray)}.", CompilerDiagnosticCodes.ArgumentTypeMismatch,
-                                ("symbol", procedure.Name), ("parameter", expected.Name), ("parameterIndex", p.ToString()), ("expectedType", FormatType(expected.Type, expected.IsArray)), ("actualType", "Null"));
+                                ("symbol", procedure.Name), ("parameter", expected.Name), ("parameterIndex", p.ToString()), ("expectedType", FormatType(expected.Type, expected.IsArray)), ("actualType", "Null"), sourceMap: sourceMap);
                             continue;
                         }
 
@@ -92,7 +92,7 @@ internal sealed class SourceTypeValidator
 
                         var argumentPos = original.IndexOf(args[p].Trim(), StringComparison.Ordinal);
                         AddDiagnostic(diagnostics, sourceName, i + 1, argumentPos >= 0 ? argumentPos + 1 : call.Index + 1, original, $"Parameter '{expected.Name}' of '{procedure.Name}' expects {FormatType(expected.Type, expected.IsArray)} but received {FormatType(actual.Value.Type, actual.Value.IsArray)}.", CompilerDiagnosticCodes.ArgumentTypeMismatch,
-                            ("symbol", procedure.Name), ("parameter", expected.Name), ("parameterIndex", p.ToString()), ("expectedType", FormatType(expected.Type, expected.IsArray)), ("actualType", FormatType(actual.Value.Type, actual.Value.IsArray)));
+                            ("symbol", procedure.Name), ("parameter", expected.Name), ("parameterIndex", p.ToString()), ("expectedType", FormatType(expected.Type, expected.IsArray)), ("actualType", FormatType(actual.Value.Type, actual.Value.IsArray)), sourceMap: sourceMap);
                     }
                 }
             }
@@ -108,7 +108,8 @@ internal sealed class SourceTypeValidator
         string original,
         string line,
         Dictionary<string, (string Type, bool IsArray)> variables,
-        List<CompileDiagnostic> diagnostics)
+        List<CompileDiagnostic> diagnostics,
+        SourceMap? sourceMap)
     {
         if (Regex.IsMatch(line, @"^Set\b", RegexOptions.IgnoreCase)) return;
 
@@ -122,7 +123,7 @@ internal sealed class SourceTypeValidator
         if (rhsText.Equals("Nothing", StringComparison.OrdinalIgnoreCase))
         {
             AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original, "Nothing is valid only for object-reference assignment with Set.", CompilerDiagnosticCodes.TypeMismatch,
-                ("symbol", targetName), ("expectedType", "object reference assigned with Set"), ("actualType", "Nothing"));
+                ("symbol", targetName), ("expectedType", "object reference assigned with Set"), ("actualType", "Nothing"), sourceMap: sourceMap);
             return;
         }
 
@@ -132,7 +133,7 @@ internal sealed class SourceTypeValidator
             if (nullTarget.Type.Equals("Variant", StringComparison.OrdinalIgnoreCase) && !nullTarget.IsArray) return;
 
             AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original, $"Null can be assigned only to a Variant-compatible value, not {FormatType(nullTarget.Type, nullTarget.IsArray)}.", CompilerDiagnosticCodes.TypeMismatch,
-                ("symbol", targetName), ("expectedType", FormatType(nullTarget.Type, nullTarget.IsArray)), ("actualType", "Null"));
+                ("symbol", targetName), ("expectedType", FormatType(nullTarget.Type, nullTarget.IsArray)), ("actualType", "Null"), sourceMap: sourceMap);
             return;
         }
 
@@ -146,7 +147,7 @@ internal sealed class SourceTypeValidator
         if (IsCompatible(target.Type, target.IsArray, actual.Value.Type, actual.Value.IsArray)) return;
 
         AddDiagnostic(diagnostics, sourceName, lineNumber, pos >= 0 ? pos + 1 : 1, original, $"Unable to assign {FormatType(actual.Value.Type, actual.Value.IsArray)} to {FormatType(target.Type, target.IsArray)}.", CompilerDiagnosticCodes.TypeMismatch,
-            ("symbol", targetName), ("expectedType", FormatType(target.Type, target.IsArray)), ("actualType", FormatType(actual.Value.Type, actual.Value.IsArray)));
+            ("symbol", targetName), ("expectedType", FormatType(target.Type, target.IsArray)), ("actualType", FormatType(actual.Value.Type, actual.Value.IsArray)), sourceMap: sourceMap);
     }
 
     private static Dictionary<string, (string Type, bool IsArray)> CollectModuleVariables(string[] lines)
@@ -311,18 +312,21 @@ internal sealed class SourceTypeValidator
         return line;
     }
 
-    private static void AddDiagnostic(List<CompileDiagnostic> diagnostics, string sourceName, int line, int position, string code, string description, string diagnosticCode, params (string Name, string Value)[] properties)
+    private static void AddDiagnostic(List<CompileDiagnostic> diagnostics, string sourceName, int line, int position, string code, string description, string diagnosticCode, (string Name, string Value)[]? properties = null, SourceMap? sourceMap = null)
     {
         var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(code).TrimEnd();
+        var location = sourceMap?.Resolve(line, sourceName);
+        var diagnosticFile = location is null ? sourceName : location.SourcePath;
+        var diagnosticLine = location?.Line ?? line;
         diagnostics.Add(new CompileDiagnostic
         {
-            File = sourceName,
-            Line = line,
+            File = Path.GetFileName(diagnosticFile),
+            Line = diagnosticLine,
             Position = position,
             Description = description,
             DiagnosticCode = diagnosticCode,
             Category = diagnosticCode == CompilerDiagnosticCodes.ArgumentCountMismatch ? "argument" : "type",
-            Properties = properties.Length == 0 ? null : properties.Select(p => new CompileDiagnosticProperty { Name = p.Name, Value = p.Value }).ToList(),
+            Properties = properties is null || properties.Length == 0 ? null : properties.Select(p => new CompileDiagnosticProperty { Name = p.Name, Value = p.Value }).ToList(),
             SourceCode = safeSource,
             MarkedCode = MarkSource(safeSource, position)
         });
