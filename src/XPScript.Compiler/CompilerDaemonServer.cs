@@ -29,15 +29,16 @@ public static class CompilerDaemonServer
         await CompilerDaemonClient.WriteStateAsync(endpoint.Port).ConfigureAwait(false);
 
         using var shutdown = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var lastActivity = DateTimeOffset.UtcNow;
+        var lastActivityTicks = DateTimeOffset.UtcNow.UtcTicks;
         var activeRequests = 0;
-        void Touch() => lastActivity = DateTimeOffset.UtcNow;
+        void Touch() => Interlocked.Exchange(ref lastActivityTicks, DateTimeOffset.UtcNow.UtcTicks);
 
         var idleMonitor = Task.Run(async () =>
         {
             while (!shutdown.IsCancellationRequested)
             {
                 await Task.Delay(TimeSpan.FromSeconds(5), shutdown.Token).ConfigureAwait(false);
+                var lastActivity = new DateTimeOffset(Interlocked.Read(ref lastActivityTicks), TimeSpan.Zero);
                 if (Volatile.Read(ref activeRequests) == 0 && DateTimeOffset.UtcNow - lastActivity >= idleTimeout)
                     shutdown.Cancel();
             }
@@ -70,10 +71,12 @@ public static class CompilerDaemonServer
             {
                 var line = await reader.ReadLineAsync(shutdown.Token).ConfigureAwait(false);
                 if (line is null) return;
+                var requestStarted = false;
                 try
                 {
                     touch();
                     beginRequest();
+                    requestStarted = true;
                     using var document = JsonDocument.Parse(line);
                     var root = document.RootElement;
                     var id = root.TryGetProperty("id", out var idElement) ? idElement.Clone() : default;
@@ -126,7 +129,7 @@ public static class CompilerDaemonServer
                     await WriteErrorAsync(writer, id, $"Unknown daemon method: {method}").ConfigureAwait(false);
                 }
                 catch (Exception ex) { await writer.WriteLineAsync(JsonSerializer.Serialize(new { error = ex.Message })).ConfigureAwait(false); }
-                finally { endRequest(); }
+                finally { if (requestStarted) endRequest(); }
             }
         }
     }
