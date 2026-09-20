@@ -5,6 +5,16 @@ internal static class ApplicationLogRuntimeSource
     public const string Code = """
 internal static class XPScriptApplicationLogRuntime
 {
+    public static bool CaptureExchange
+    {
+        get => Convert.ToBoolean(GetCaptureProperty().GetValue(null), System.Globalization.CultureInfo.InvariantCulture);
+        set
+        {
+            try { GetCaptureProperty().SetValue(null, value); }
+            catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw ex.InnerException; }
+        }
+    }
+
     public static void Trace(object? eventName, object? message) => Write("trace", eventName, message, null, false);
     public static void Trace(object? eventName, object? message, object? attributes) => Write("trace", eventName, message, attributes, false);
     public static void Debug(object? eventName, object? message) => Write("debug", eventName, message, null, false);
@@ -39,6 +49,16 @@ internal static class XPScriptApplicationLogRuntime
         {
             throw ex.InnerException;
         }
+    }
+
+    private static System.Reflection.PropertyInfo GetCaptureProperty()
+    {
+        var runtimeType = System.Type.GetType("XPScript.Web.Runtime.XpsWebRuntimeObjects, XPScript.Web.Runtime", throwOnError: false)
+            ?? throw new XPScriptRuntimeException(5, "Application.Log.CaptureExchange requires the XPScript web runtime.");
+        return runtimeType.GetProperty(
+            "ApplicationLogCaptureExchange",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            ?? throw new MissingMemberException(runtimeType.FullName, "ApplicationLogCaptureExchange");
     }
 
     private static string? SerializeAttributes(object? attributes)
