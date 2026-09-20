@@ -172,9 +172,30 @@ try
             if (!ReferenceEquals(XpsWebContextAccessor.Current, context)) throw new Exception("Web context push failed.");
             XpsWebRuntimeObjects.WriteApplicationLog("info", "order.created", "Order created", "{\"order.id\":42}", false);
             XpsWebRuntimeObjects.WriteApplicationLog("info", "user.login", "User logged in", null, true);
+            XpsWebRuntimeObjects.ApplicationLogCaptureExchange = true;
+            if (!context.CaptureExchange) throw new Exception("Exchange capture flag did not reach the request context.");
             AssertThrows<ArgumentException>(() =>
                 XpsWebRuntimeObjects.WriteApplicationLog("info", "bad.attributes", "Rejected", "{\"password\":\"secret\"}", false));
         }
+        var captureRequest = new XpsWebRequest(
+            "POST", "/login", "", "token=query-secret",
+            new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Authorization"] = new[] { "Bearer header-secret" },
+                ["Cookie"] = new[] { "session=cookie-secret" },
+                ["Content-Type"] = new[] { "application/json" }
+            },
+            "application/json", 48,
+            "{\"username\":\"fred\",\"password\":\"body-secret\"}"u8.ToArray(),
+            "localhost", "https", "127.0.0.1", "HTTP/1.1", new Dictionary<string, string>());
+        var captureResponse = new XpsWebResponse();
+        captureResponse.ContentType = "application/json";
+        captureResponse.Write("{\"access_token\":\"response-secret\",\"ok\":true}");
+        captureResponse.SetHeader("Set-Cookie", "session=response-cookie-secret");
+        captureResponse.Complete();
+        var captureContext = new XpsWebContext(captureRequest, captureResponse, server, authenticated, app, logger: logger, requestId: "request_capture");
+        captureContext.CaptureExchange = true;
+        logger.WriteExchange(captureContext);
         logger.WriteAccess(request, 500, 7, TimeSpan.FromMilliseconds(12), "request_1234", "kestrel", authenticated, "SmokeException");
     }
     AssertThrows<InvalidOperationException>(() => _ = XpsWebContextAccessor.Current);
@@ -197,6 +218,12 @@ try
         throw new Exception("Audit log was not written to the security stream.");
     if (Directory.GetFiles(logDirectory, "error-*.jsonl").Length != 1)
         throw new Exception("5xx request was not written to the error stream.");
+    var exchangeLine = File.ReadLines(Directory.GetFiles(logDirectory, "exchange-*.jsonl").Single()).Single();
+    if (!exchangeLine.Contains("[REDACTED]", StringComparison.Ordinal))
+        throw new Exception("Exchange capture did not mark redacted values.");
+    foreach (var secret in new[] { "query-secret", "header-secret", "cookie-secret", "body-secret", "response-secret", "response-cookie-secret" })
+        if (exchangeLine.Contains(secret, StringComparison.Ordinal))
+            throw new Exception("Exchange capture leaked a secret: " + secret);
 
     Console.WriteLine("WEB-RUNTIME-SMOKE=OK");
 }
