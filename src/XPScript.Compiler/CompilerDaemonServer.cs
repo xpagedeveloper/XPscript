@@ -89,6 +89,33 @@ public static class CompilerDaemonServer
                         await WriteAsync(writer, id, new { protocol = ProtocolVersion, processId = Environment.ProcessId }).ConfigureAwait(false);
                         continue;
                     }
+                    if (method == "compileRun")
+                    {
+                        var parameters = root.GetProperty("params");
+                        var source = parameters.GetProperty("source").GetString() ?? "";
+                        var outputDirectory = parameters.GetProperty("outputDirectory").GetString() ?? "";
+                        var runtimeIdentifier = parameters.GetProperty("runtimeIdentifier").GetString() ?? "";
+                        var debug = parameters.TryGetProperty("debug", out var debugElement) && debugElement.GetBoolean();
+                        var restricted = parameters.TryGetProperty("restricted", out var restrictedElement) && restrictedElement.GetBoolean();
+                        var securityText = parameters.TryGetProperty("securityMode", out var securityElement) ? securityElement.GetString() : null;
+                        var securityMode = Enum.TryParse<ApplicationSecurityMode>(securityText, true, out var parsedSecurity)
+                            ? parsedSecurity
+                            : ApplicationSecurityMode.Off;
+                        var sourceRoots = parameters.TryGetProperty("sourceRoots", out var rootsElement)
+                            ? rootsElement.EnumerateArray().Select(value => value.GetString() ?? "").Where(value => value.Length > 0).ToArray()
+                            : [];
+                        var sourcePreprocessors = parameters.TryGetProperty("sourcePreprocessors", out var preprocessorsElement)
+                            ? preprocessorsElement.EnumerateArray().Select(value => value.GetString() ?? "").Where(value => value.Length > 0).ToArray()
+                            : [];
+
+                        using var securityScope = ApplicationSecurityModeContext.Push(securityMode);
+                        using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+                        using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
+                        using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
+                        var result = await RunCompiler.CompileWithResultAsync(source, outputDirectory, runtimeIdentifier, debug, shutdown.Token).ConfigureAwait(false);
+                        await WriteAsync(writer, id, result).ConfigureAwait(false);
+                        continue;
+                    }
                     if (method == "validate")
                     {
                         var source = root.GetProperty("source").GetString() ?? "";
