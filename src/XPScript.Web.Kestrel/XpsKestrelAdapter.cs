@@ -39,6 +39,7 @@ public static class XpsKestrelAdapter
         ArgumentNullException.ThrowIfNull(application);
         options.Validate();
         var logManager = new XpsWebLogManager(serverInfo, options.LogOptions);
+        var correlationCookieName = XpsWebClientCorrelation.CookieNameFor(serverInfo.SiteId);
 
         var iisPortText = Environment.GetEnvironmentVariable("ASPNETCORE_PORT");
         var iisToken = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
@@ -114,6 +115,7 @@ public static class XpsKestrelAdapter
             http.Response.Headers["X-Request-Id"] = requestId;
             var correlationValue = XpsWebClientCorrelation.GetOrCreate(
                 http.Request.Cookies.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase),
+                correlationCookieName,
                 out var correlationCreated);
             var clientSessionId = XpsWebClientCorrelation.Hash(correlationValue);
             http.Items[ClientSessionItemKey] = clientSessionId;
@@ -122,7 +124,7 @@ public static class XpsKestrelAdapter
                 http.Response.OnStarting(() =>
                 {
                     http.Response.Cookies.Append(
-                        XpsWebClientCorrelation.CookieName,
+                        correlationCookieName,
                         correlationValue,
                         new Microsoft.AspNetCore.Http.CookieOptions
                         {
