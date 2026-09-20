@@ -396,6 +396,7 @@ public static class XPScriptCompilerCommandLine
         var resultFormat = "text";
         string? tempRoot = null;
         var debug = false;
+        var noDaemon = false;
 
         try
         {
@@ -415,6 +416,12 @@ public static class XPScriptCompilerCommandLine
                 if (parseRunOptions && value == "--")
                 {
                     parseRunOptions = false;
+                    continue;
+                }
+
+                if (parseRunOptions && value == "--no-daemon")
+                {
+                    noDaemon = true;
                     continue;
                 }
 
@@ -488,6 +495,12 @@ public static class XPScriptCompilerCommandLine
 
                 scriptArgs.Add(value);
             }
+
+            // Start/reuse the warm compiler host before normal execution. Compilation
+            // still follows the existing run/debug path until daemon compile requests
+            // are wired in, preserving debugger protocol and process semantics.
+            if (!noDaemon && !await CompilerDaemonClient.EnsureRunningAsync().ConfigureAwait(false))
+                throw new InvalidOperationException("Unable to start or connect to the XPScript compiler daemon.");
 
             var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
             using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
