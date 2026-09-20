@@ -164,9 +164,19 @@ try
     }));
 
     var logDirectory = Path.Combine(outsideRoot, "logs");
-    var rawCorrelation = XpsWebClientCorrelation.GetOrCreate(new Dictionary<string, string>(), out var correlationCreated);
+    var correlationCookieName = XpsWebClientCorrelation.CookieNameFor(server.SiteId);
+    if (!correlationCookieName.StartsWith("XPSLOGID_", StringComparison.Ordinal))
+        throw new Exception("Site-specific correlation cookie name mismatch.");
+    var rawCorrelation = XpsWebClientCorrelation.GetOrCreate(
+        new Dictionary<string, string>(), correlationCookieName, out var correlationCreated);
     if (!correlationCreated || !XpsWebClientCorrelation.IsValid(rawCorrelation))
         throw new Exception("Client correlation id was not created.");
+    var reusedCorrelation = XpsWebClientCorrelation.GetOrCreate(
+        new Dictionary<string, string> { [correlationCookieName] = rawCorrelation },
+        correlationCookieName,
+        out var reusedCreated);
+    if (reusedCreated || reusedCorrelation != rawCorrelation)
+        throw new Exception("Client correlation id was not stable across requests.");
     var clientSessionId = XpsWebClientCorrelation.Hash(rawCorrelation);
     using (var logger = new XpsWebLogManager(server, new XpsWebLogOptions { DirectoryPath = logDirectory }))
     {
