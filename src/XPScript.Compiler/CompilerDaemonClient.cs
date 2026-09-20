@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
@@ -34,6 +35,7 @@ public static class CompilerDaemonClient
             if (IsCompatible(hello)) return true;
 
             TryDeleteState();
+            var authToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
             var executable = Environment.ProcessPath;
         if (string.IsNullOrWhiteSpace(executable)) return false;
         var startInfo = new ProcessStartInfo(executable)
@@ -49,6 +51,7 @@ public static class CompilerDaemonClient
             if (string.IsNullOrWhiteSpace(entryAssembly)) return false;
             startInfo.ArgumentList.Add(entryAssembly);
         }
+        startInfo.Environment["XPSCRIPT_DAEMON_TOKEN"] = authToken;
         startInfo.ArgumentList.Add("daemon");
         startInfo.ArgumentList.Add("--port");
         startInfo.ArgumentList.Add("0");
@@ -142,13 +145,15 @@ public static class CompilerDaemonClient
         {
             using var state = JsonDocument.Parse(await File.ReadAllTextAsync(StatePath).ConfigureAwait(false));
             var port = state.RootElement.GetProperty("port").GetInt32();
+            var token = state.RootElement.TryGetProperty("token", out var tokenElement) ? tokenElement.GetString() : null;
+            if (string.IsNullOrWhiteSpace(token)) { TryDeleteState(); return null; }
             using var client = new TcpClient();
             using var timeout = new CancellationTokenSource(timeoutDuration);
             await client.ConnectAsync("127.0.0.1", port, timeout.Token).ConfigureAwait(false);
             using var stream = client.GetStream();
             using var writer = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
             using var reader = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
-            await writer.WriteLineAsync(JsonSerializer.Serialize(new { id = 1, method, @params = parameters })).ConfigureAwait(false);
+            await writer.WriteLineAsync(JsonSerializer.Serialize(new { id = 1, method, token, @params = parameters })).ConfigureAwait(false);
             var line = await reader.ReadLineAsync(timeout.Token).ConfigureAwait(false);
             if (line is null) return null;
             using var response = JsonDocument.Parse(line);
@@ -174,11 +179,11 @@ public static class CompilerDaemonClient
         }
     }
 
-    internal static async Task WriteStateAsync(int port)
+    internal static async Task WriteStateAsync(int port, string token)
     {
         var directory = Path.GetDirectoryName(StatePath)!;
         Directory.CreateDirectory(directory);
-        await File.WriteAllTextAsync(StatePath, JsonSerializer.Serialize(new { protocol = CompilerDaemonServer.ProtocolVersion, port, processId = Environment.ProcessId })).ConfigureAwait(false);
+        await File.WriteAllTextAsync(StatePath, JsonSerializer.Serialize(new { protocol = CompilerDaemonServer.ProtocolVersion, port, processId = Environment.ProcessId, token })).ConfigureAwait(false);
     }
 
     internal static void DeleteState() => TryDeleteState();
