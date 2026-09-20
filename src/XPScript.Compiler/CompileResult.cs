@@ -9,6 +9,7 @@ public sealed class CompileResult
 {
     public const string CurrentSchema = "xpscript.compiler-result";
     public const int CurrentSchemaVersion = 1;
+    public const int MaximumDiagnostics = 100;
 
     [JsonPropertyName("schema")]
     [XmlElement("schema")]
@@ -53,6 +54,14 @@ public sealed class CompileResult
     [XmlArrayItem("error")]
     public List<CompileDiagnostic> Errors { get; set; } = [];
 
+    [JsonPropertyName("diagnosticsTruncated")]
+    [XmlElement("diagnosticsTruncated")]
+    public bool DiagnosticsTruncated { get; set; }
+
+    [JsonPropertyName("totalDiagnostics")]
+    [XmlElement("totalDiagnostics")]
+    public int TotalDiagnostics { get; set; }
+
     [JsonIgnore]
     [XmlIgnore]
     public bool Success => Result.Equals("ok", StringComparison.OrdinalIgnoreCase);
@@ -82,11 +91,17 @@ public sealed class CompileResult
         return this;
     }
 
-    public static CompileResult Error(IEnumerable<CompileDiagnostic> errors) => new()
+    public static CompileResult Error(IEnumerable<CompileDiagnostic> errors)
     {
-        Result = "error",
-        Errors = NormalizeDiagnostics(errors)
-    };
+        var normalized = NormalizeDiagnostics(errors);
+        return new CompileResult
+        {
+            Result = "error",
+            TotalDiagnostics = normalized.Count,
+            DiagnosticsTruncated = normalized.Count > MaximumDiagnostics,
+            Errors = normalized.Take(MaximumDiagnostics).ToList()
+        };
+    }
 
     private static string GetCompilerVersion() =>
         typeof(CompileResult).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
