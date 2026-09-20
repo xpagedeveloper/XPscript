@@ -240,6 +240,19 @@ public static class CompilerDaemonClient
         var directory = Path.GetDirectoryName(StatePath)!;
         Directory.CreateDirectory(directory);
         await File.WriteAllTextAsync(StatePath, JsonSerializer.Serialize(new { protocol = CompilerDaemonServer.ProtocolVersion, port, processId = Environment.ProcessId, token })).ConfigureAwait(false);
+        RestrictStateFilePermissions();
+    }
+
+    private static void RestrictStateFilePermissions()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        try
+        {
+            File.SetUnixFileMode(StatePath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        }
+        catch (PlatformNotSupportedException) { }
+        catch (UnauthorizedAccessException) { }
+        catch (IOException) { }
     }
 
     internal static void DeleteStateIfOwned(int port, string token)
