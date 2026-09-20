@@ -260,6 +260,12 @@ public sealed class CompileDiagnostic
     [XmlArrayItem("property")]
     public List<CompileDiagnosticProperty>? Properties { get; set; }
 
+    [JsonPropertyName("includeTrace")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [XmlArray("includeTrace")]
+    [XmlArrayItem("include")]
+    public List<CompileIncludeFrame>? IncludeTrace { get; set; }
+
     [JsonPropertyName("sourceText")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [XmlElement("sourceText")]
@@ -317,4 +323,20 @@ public sealed class CompileDiagnosticProperty
     [JsonPropertyName("value")]
     [XmlText]
     public string Value { get; set; } = "";
+}
+
+
+public sealed class CompileIncludeFrame
+{
+    [JsonPropertyName("file")]
+    [XmlElement("file")]
+    public string File { get; set; } = "";
+
+    [JsonPropertyName("line")]
+    [XmlElement("line")]
+    public int Line { get; set; }
+
+    [JsonPropertyName("includedFile")]
+    [XmlElement("includedFile")]
+    public string IncludedFile { get; set; } = "";
 }
