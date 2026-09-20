@@ -78,6 +78,52 @@ jobs:
           $final = Invoke-XPScript @('daemon','status')
           if ($final -notmatch 'not running') { throw "Expected daemon to stop after quit: $final" }
 
+      - name: Daemon idle-timeout probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Start-Sleep -Milliseconds 500
+
+          $psi = [System.Diagnostics.ProcessStartInfo]::new()
+          $psi.FileName = 'dotnet'
+          foreach ($arg in @('run','--project',$project,'-c','Release','--no-build','--','daemon','--port','0','--idle-minutes','0.02')) { $psi.ArgumentList.Add($arg) }
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $psi.UseShellExecute = $false
+          $psi.Environment['XPSCRIPT_DAEMON_TOKEN'] = 'ci-idle-timeout-token'
+          $daemon = [System.Diagnostics.Process]::Start($psi)
+          $readyLine = $daemon.StandardOutput.ReadLine()
+          if (-not $readyLine) { throw "Idle-timeout daemon did not become ready: $($daemon.StandardError.ReadToEnd())" }
+          $ready = $readyLine | ConvertFrom-Json
+          if ($ready.type -ne 'ready') { throw "Unexpected daemon ready response: $readyLine" }
+
+          $status = Invoke-XPScript @('daemon','status')
+          if ($status -notmatch 'PID ([0-9]+)') { throw "Idle-timeout daemon was not discoverable: $status" }
+
+          if (-not $daemon.WaitForExit(10000)) {
+            $daemon.Kill($true)
+            throw "Daemon did not self-stop after idle timeout"
+          }
+          if ($daemon.ExitCode -ne 0) { throw "Idle-timeout daemon exited with code $($daemon.ExitCode): $($daemon.StandardError.ReadToEnd())" }
+
+          Start-Sleep -Milliseconds 250
+          $stopped = Invoke-XPScript @('daemon','status')
+          if ($stopped -notmatch 'not running') { throw "Daemon remained discoverable after idle timeout: $stopped" }
+
+          $restarted = Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off')
+          if ($restarted -notmatch 'DEBUGGING=False') { throw "Run failed after idle shutdown: $restarted" }
+          $restartedStatus = Invoke-XPScript @('daemon','status')
+          if ($restartedStatus -notmatch 'PID ([0-9]+)') { throw "Run did not restart daemon after idle shutdown: $restartedStatus" }
+          Invoke-XPScript @('daemon','quit') | Out-Null
+
       - name: Daemon concurrent cold-start probe
         shell: pwsh
         run: |
