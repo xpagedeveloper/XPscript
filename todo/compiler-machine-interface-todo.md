@@ -334,7 +334,9 @@ CI benchmark evidence on the GitHub Linux runner shows a median of 1029 ms when 
   - Compiler identity is part of the snapshot and run-cache key; changing the compiler invalidates reuse.
   - Any missing, changed or newly resolved dependency produces a different snapshot or fails snapshot creation, so stale artifacts must not be reused.
   - Security/restricted-mode context must remain outside reuse unless its effective source roots and relevant configuration are represented in the configuration identity.
-- [ ] Benchmark debugger and run-without-debugger cold versus warm paths before changing their current execution semantics.
+- [x] Benchmark debugger and run-without-debugger cold versus warm paths before changing their current execution semantics.
+  - GitHub Linux CI baseline after daemon routing: local cold run (`--no-daemon`) 764 ms; daemon cold run 849 ms; warm daemon run median 762 ms. The normal run path is already dominated by `RunArtifactCache`, so the persistent compiler does not materially improve an unchanged cached run.
+  - Fresh debug compilation, where the artifact cache is bypassed, measured 3370 ms locally (`--no-daemon`) versus 3565/1938/2209 ms through the warmed daemon (median 2209 ms), about 34% lower median latency. Keep this benchmark in CI as regression evidence rather than a hard timing contract.
 
 The debugger transport is intentionally unchanged by the MCP work. Warm compilation for debugger and test/run-without-debugger should reuse the compiler service internally and preserve their existing protocols and observable execution behavior.
 
