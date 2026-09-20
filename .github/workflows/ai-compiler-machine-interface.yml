@@ -45,6 +45,9 @@ jobs:
       - name: Machine interface probe
         run: dotnet run --project tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release -- .
 
+      - name: Debugger v6 regression probe
+        run: dotnet run --project tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj -c Release --no-build
+
       - name: Daemon lifecycle probe
         shell: pwsh
         run: |
