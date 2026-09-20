@@ -26,6 +26,7 @@ public static class CompilerDaemonServer
         var endpoint = (IPEndPoint)listener.LocalEndpoint;
         Console.WriteLine(JsonSerializer.Serialize(new { type = "ready", protocol = ProtocolVersion, port = endpoint.Port, processId = Environment.ProcessId }));
         Console.Out.Flush();
+        await CompilerDaemonClient.WriteStateAsync(endpoint.Port).ConfigureAwait(false);
 
         using var shutdown = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var lastActivity = DateTimeOffset.UtcNow;
@@ -53,7 +54,7 @@ public static class CompilerDaemonServer
         }
         catch (OperationCanceledException) when (shutdown.IsCancellationRequested) { }
         try { await idleMonitor.ConfigureAwait(false); } catch (OperationCanceledException) { }
-        finally { listener.Stop(); }
+        finally { listener.Stop(); CompilerDaemonClient.DeleteState(); }
         return 0;
     }
 

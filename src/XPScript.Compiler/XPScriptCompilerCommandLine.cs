@@ -40,7 +40,13 @@ public static class XPScriptCompilerCommandLine
                 : await CompilerMcpServer.RunAsync(args[1..]).ConfigureAwait(false);
 
         if (args[0].Equals("daemon", StringComparison.OrdinalIgnoreCase))
+        {
+            if (args.Length > 1 && args[1].Equals("status", StringComparison.OrdinalIgnoreCase))
+                return await CompilerDaemonClient.StatusAsync().ConfigureAwait(false);
+            if (args.Length > 1 && args[1].Equals("quit", StringComparison.OrdinalIgnoreCase))
+                return await CompilerDaemonClient.QuitAsync().ConfigureAwait(false);
             return await CompilerDaemonServer.RunAsync(args[1..]).ConfigureAwait(false);
+        }
 
         return await CompileAsync(args).ConfigureAwait(false);
     }
