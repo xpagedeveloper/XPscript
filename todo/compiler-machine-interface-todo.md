@@ -346,7 +346,7 @@ Add deterministic fixtures covering:
 
 - [x] Syntax errors. Covered by deterministic XPS1001/XPS1002/XPS1003/XPS1004/XPS1005/XPS1006/XPS1007 fixtures in `CompilerMachineInterfaceProbe`.
 - [x] Unknown symbols. Include/source-map fixture verifies stable `XPS2008`, upstream `CS0103`, symbol metadata and mapped XPScript source location.
-- [ ] Unknown members.
+- [x] Unknown members. (`XPS2009` / Roslyn `CS1061` or `CS0117`, with member metadata and mapped XPScript source verified by the machine-interface probe.)
 - [x] Type mismatch. Covered by null-to-integer XPS2001/XPS2003 fixtures and structured expected/actual type metadata.
 - [x] Wrong argument count/type. Covered by XPCsvDocument.Load argument-count and overload/type mismatch fixtures.
 - [x] ByRef/ByVal errors. Native `ByRef` rejection is covered by stable structured diagnostic `XPS2013`; existing overload fixtures verify `ByRef`/`ByVal` parameter-mode metadata.
