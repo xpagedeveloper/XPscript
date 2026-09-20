@@ -197,3 +197,6 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `ApplicationLogRuntime.Critical` | `Application.Log.Critical(eventName, message [, attributes])` | Event, message, optional attributes. | Writes FATAL. | [application-web-logging.xps](../samples/application-web-logging.xps) |
 | `ApplicationAuditRuntime` | `Application.Audit` | none | Structured security/audit namespace used by generated programs. | [application-web-logging.xps](../samples/application-web-logging.xps) |
 | `ApplicationAuditRuntime.Write` | `Application.Audit.Write(eventName, message [, attributes])` | Event, message, optional attributes. | Writes to the security stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+
+| `Application.Log.CaptureExchange` | `Application.Log.CaptureExchange = True` | Boolean request flag. | Writes a redacted, size-limited request and response capture for the current request. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.CaptureExchange` | `Application.Log.CaptureExchange` | Boolean request flag. | Generated runtime property for exchange capture. | [application-web-logging.xps](../samples/application-web-logging.xps) |
