@@ -136,11 +136,15 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
 
     private SchemaValidationFailure ValidateJsonSchemaWithXpRuntime(Assembly assembly, XpsWebContext context, string schemaPath)
     {
-        var root = Path.GetFullPath(context.Server.RootPath);
-        var candidate = Path.GetFullPath(Path.Combine(root, schemaPath.Replace('/', Path.DirectorySeparatorChar)));
-        var relative = Path.GetRelativePath(root, candidate);
-        if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
-            throw new XpsWebRouteException($"XPJsonSchema '{schemaPath}' resolves outside the web root.");
+        string candidate;
+        try
+        {
+            candidate = XpsJsonSchemaPath.ResolveInsideRoot(context.Server.RootPath, schemaPath);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new XpsWebRouteException($"Invalid XPJsonSchema path '{schemaPath}': {ex.Message}", ex);
+        }
         if (!File.Exists(candidate))
             throw new XpsWebRouteException($"Configured XPJsonSchema '{schemaPath}' was not found inside the web root.");
 
