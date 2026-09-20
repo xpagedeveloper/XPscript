@@ -157,6 +157,8 @@ public static class CompilerDaemonClient
             var line = await reader.ReadLineAsync(timeout.Token).ConfigureAwait(false);
             if (line is null) return null;
             using var response = JsonDocument.Parse(line);
+            if (response.RootElement.TryGetProperty("error", out var error))
+                throw new CompilerDaemonException(error.GetString() ?? "Compiler daemon request failed.");
             if (!response.RootElement.TryGetProperty("result", out var result)) return null;
             return result.Clone();
         }
@@ -183,6 +185,10 @@ public static class CompilerDaemonClient
             // A request timeout does not prove the daemon is stale. In particular,
             // compilation can legitimately outlive a client-side timeout.
             return null;
+        }
+        catch (CompilerDaemonException)
+        {
+            throw;
         }
         catch (IOException)
         {
@@ -238,4 +244,10 @@ public static class CompilerDaemonClient
     {
         try { if (File.Exists(StatePath)) File.Delete(StatePath); } catch { }
     }
+}
+
+
+public sealed class CompilerDaemonException : Exception
+{
+    public CompilerDaemonException(string message) : base(message) { }
 }
