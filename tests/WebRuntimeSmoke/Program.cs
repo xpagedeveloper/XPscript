@@ -166,7 +166,13 @@ try
     var logDirectory = Path.Combine(outsideRoot, "logs");
     using (var logger = new XpsWebLogManager(server, new XpsWebLogOptions { DirectoryPath = logDirectory }))
     {
-        var context = new XpsWebContext(request, response, server, authenticated, app, logger: logger, requestId: "request_1234");
+        var rawCorrelation = XpsWebClientCorrelation.GetOrCreate(new Dictionary<string, string>(), out var correlationCreated);
+        if (!correlationCreated || !XpsWebClientCorrelation.IsValid(rawCorrelation))
+            throw new Exception("Client correlation id was not created.");
+        var clientSessionId = XpsWebClientCorrelation.Hash(rawCorrelation);
+        var context = new XpsWebContext(
+            request, response, server, authenticated, app,
+            logger: logger, requestId: "request_1234", clientSessionId: clientSessionId);
         using (XpsWebContextAccessor.Push(context))
         {
             if (!ReferenceEquals(XpsWebContextAccessor.Current, context)) throw new Exception("Web context push failed.");
@@ -193,10 +199,12 @@ try
         captureResponse.Write("{\"access_token\":\"response-secret\",\"ok\":true}");
         captureResponse.SetHeader("Set-Cookie", "session=response-cookie-secret");
         captureResponse.Complete();
-        var captureContext = new XpsWebContext(captureRequest, captureResponse, server, authenticated, app, logger: logger, requestId: "request_capture");
+        var captureContext = new XpsWebContext(
+            captureRequest, captureResponse, server, authenticated, app,
+            logger: logger, requestId: "request_capture", clientSessionId: clientSessionId);
         captureContext.CaptureExchange = true;
         logger.WriteExchange(captureContext);
-        logger.WriteAccess(request, 500, 7, TimeSpan.FromMilliseconds(12), "request_1234", "kestrel", authenticated, "SmokeException");
+        logger.WriteAccess(request, 500, 7, TimeSpan.FromMilliseconds(12), "request_1234", "kestrel", authenticated, "SmokeException", clientSessionId);
     }
     AssertThrows<InvalidOperationException>(() => _ = XpsWebContextAccessor.Current);
 
@@ -211,9 +219,15 @@ try
             throw new Exception("Access log path mismatch.");
         if (accessLine.Contains("a=1", StringComparison.Ordinal))
             throw new Exception("Access log leaked the query string.");
+        if (attributes.GetProperty("session.id").GetString() != clientSessionId)
+            throw new Exception("Access log client session correlation mismatch.");
+        if (accessLine.Contains(rawCorrelation, StringComparison.Ordinal))
+            throw new Exception("Access log leaked the raw correlation cookie.");
     }
-    if (Directory.GetFiles(logDirectory, "application-*.jsonl").Length != 1)
-        throw new Exception("Application log was not written.");
+    var applicationLine = File.ReadLines(Directory.GetFiles(logDirectory, "application-*.jsonl").Single()).Single();
+    if (!applicationLine.Contains(clientSessionId, StringComparison.Ordinal) ||
+        applicationLine.Contains(rawCorrelation, StringComparison.Ordinal))
+        throw new Exception("Application log client session correlation mismatch.");
     if (Directory.GetFiles(logDirectory, "security-*.jsonl").Length != 1)
         throw new Exception("Audit log was not written to the security stream.");
     if (Directory.GetFiles(logDirectory, "error-*.jsonl").Length != 1)
@@ -221,6 +235,9 @@ try
     var exchangeLine = File.ReadLines(Directory.GetFiles(logDirectory, "exchange-*.jsonl").Single()).Single();
     if (!exchangeLine.Contains("[REDACTED]", StringComparison.Ordinal))
         throw new Exception("Exchange capture did not mark redacted values.");
+    if (!exchangeLine.Contains(clientSessionId, StringComparison.Ordinal) ||
+        exchangeLine.Contains(rawCorrelation, StringComparison.Ordinal))
+        throw new Exception("Exchange log client session correlation mismatch.");
     foreach (var secret in new[] { "query-secret", "header-secret", "cookie-secret", "body-secret", "response-secret", "response-cookie-secret" })
         if (exchangeLine.Contains(secret, StringComparison.Ordinal))
             throw new Exception("Exchange capture leaked a secret: " + secret);
