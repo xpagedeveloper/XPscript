@@ -38,7 +38,7 @@ internal static class CompilerDiagnosticParser
                 Category = !string.IsNullOrWhiteSpace(category)
                     ? category
                     : classification.Category ?? "compiler",
-                Properties = SourceMappedProperties(upstreamCode, code, pos)
+                Properties = SourceMappedProperties(upstreamCode, match.Groups["desc"].Value, code, pos)
             });
         }
 
@@ -102,26 +102,29 @@ internal static class CompilerDiagnosticParser
         }
     }
 
-    private static List<CompileDiagnosticProperty>? SourceMappedProperties(string upstreamCode, string sourceLine, int position)
+    private static List<CompileDiagnosticProperty>? SourceMappedProperties(string upstreamCode, string description, string sourceLine, int position)
     {
-        if (string.IsNullOrWhiteSpace(sourceLine) || position <= 0) return null;
-        var suffix = position <= sourceLine.Length ? sourceLine[(position - 1)..] : "";
-        Match match;
-        switch (upstreamCode.Trim().ToUpperInvariant())
+        var normalizedCode = upstreamCode.Trim().ToUpperInvariant();
+        var propertyName = normalizedCode switch
         {
-            case "CS0103":
-                match = Regex.Match(suffix, @"^(?<symbol>[A-Za-z_]\w*)");
-                if (match.Success)
-                    return [new CompileDiagnosticProperty { Name = "symbol", Value = match.Groups["symbol"].Value }];
-                break;
-            case "CS1061":
-            case "CS0117":
-                match = Regex.Match(suffix, @"^(?<member>[A-Za-z_]\w*)");
-                if (match.Success)
-                    return [new CompileDiagnosticProperty { Name = "member", Value = match.Groups["member"].Value }];
-                break;
-        }
-        return null;
+            "CS0103" => "symbol",
+            "CS1061" or "CS0117" => "member",
+            _ => null
+        };
+        if (propertyName is null) return null;
+
+        // Roslyn's message identifies the unresolved name directly. A mapped XPScript
+        // column can point at a containing expression, so the source suffix is fallback only.
+        var quoted = Regex.Match(description, @"'(?<identifier>[A-Za-z_]\w*)'");
+        if (quoted.Success)
+            return [new CompileDiagnosticProperty { Name = propertyName, Value = quoted.Groups["identifier"].Value }];
+
+        if (string.IsNullOrWhiteSpace(sourceLine) || position <= 0) return null;
+        var suffix = position <= sourceLine.Length ? sourceLine.Substring(position - 1) : "";
+        var sourceMatch = Regex.Match(suffix, @"^(?<identifier>[A-Za-z_]\w*)");
+        return sourceMatch.Success
+            ? [new CompileDiagnosticProperty { Name = propertyName, Value = sourceMatch.Groups["identifier"].Value }]
+            : null;
     }
 
     private static string DiagnosticSourceLine(string rootSourcePath, string rootSource, string diagnosticSourcePath, int line)
