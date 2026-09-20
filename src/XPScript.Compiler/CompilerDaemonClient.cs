@@ -101,7 +101,10 @@ public static class CompilerDaemonClient
         return 0;
     }
 
-    private static Task<JsonElement?> SendAsync(string method) => SendAsync(method, null);\n\n    private static async Task<JsonElement?> SendAsync(string method, object? parameters)\n    {
+    private static Task<JsonElement?> SendAsync(string method) => SendAsync(method, null);
+
+    private static async Task<JsonElement?> SendAsync(string method, object? parameters)
+    {
         if (!File.Exists(StatePath)) return null;
         try
         {
