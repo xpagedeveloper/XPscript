@@ -17,6 +17,7 @@ await File.WriteAllTextAsync(Path.Combine(root, "schemas", "invalid.schema.json"
 var outsideSchemaRoot = Path.Combine(Path.GetTempPath(), "xps-rest-api-schema-outside-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outsideSchemaRoot);
 await File.WriteAllTextAsync(Path.Combine(outsideSchemaRoot, "outside.schema.json"), "{}");
+await File.WriteAllTextAsync(Path.Combine(root, "schemas", "runtime-link.schema.json"), "{}");
 var schemaLinkPath = Path.Combine(root, "schemas", "outside-link.json");
 try
 {
@@ -114,6 +115,14 @@ End Sub
 [Route:/api/schema-invalid]
 [JsonSchema:schemas/invalid.schema.json]
 Sub InvalidSchema()
+    Response.Write("HANDLER-RAN")
+End Sub
+
+[Anonymous]
+[Post]
+[Route:/api/schema-runtime-link]
+[JsonSchema:schemas/runtime-link.schema.json]
+Sub RuntimeLinkedSchema()
     Response.Write("HANDLER-RAN")
 End Sub
 
@@ -294,6 +303,30 @@ try
             throw new Exception("JSON Schema Problem Details did not preserve the full XPJsonValidationResult error.");
     }
     Console.WriteLine("WEB-REST-JSON-SCHEMA-VALIDATION=OK");
+
+    try
+    {
+        File.Delete(Path.Combine(root, "schemas", "runtime-link.schema.json"));
+        File.CreateSymbolicLink(
+            Path.Combine(root, "schemas", "runtime-link.schema.json"),
+            Path.Combine(outsideSchemaRoot, "outside.schema.json"));
+        var runtimeLinkedSchema = await SendAsync(
+            dispatcher,
+            app,
+            "POST",
+            "/api/schema-runtime-link",
+            "{}",
+            "application/json");
+        if (runtimeLinkedSchema.StatusCode != 500)
+            throw new Exception($"Runtime JSON Schema symlink escape returned {runtimeLinkedSchema.StatusCode} instead of 500.");
+        if (BodyText(runtimeLinkedSchema).Contains("HANDLER-RAN", StringComparison.Ordinal))
+            throw new Exception("Route handler executed when runtime JSON Schema escaped the web root through a symlink.");
+        Console.WriteLine("WEB-REST-JSON-SCHEMA-RUNTIME-SYMLINK-CONTAINMENT=OK");
+    }
+    catch (Exception ex) when (ex is UnauthorizedAccessException or PlatformNotSupportedException or IOException)
+    {
+        Console.WriteLine("WEB-REST-JSON-SCHEMA-RUNTIME-SYMLINK-CONTAINMENT=SKIPPED");
+    }
 
     var malformedJson = await SendAsync(
         dispatcher,
