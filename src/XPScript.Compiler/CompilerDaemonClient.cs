@@ -141,6 +141,35 @@ public static class CompilerDaemonClient
         return 0;
     }
 
+    public static async Task<int> RestartAsync()
+    {
+        await SendAsync("shutdown").ConfigureAwait(false);
+
+        // Shutdown is asynchronous. Wait until the old daemon has released its
+        // discovery state before starting the replacement.
+        for (var attempt = 0; attempt < 40; attempt++)
+        {
+            if (await SendAsync("hello").ConfigureAwait(false) is null) break;
+            await Task.Delay(50).ConfigureAwait(false);
+        }
+
+        if (!await EnsureRunningAsync().ConfigureAwait(false))
+        {
+            Console.Error.WriteLine("Unable to restart the XPScript daemon.");
+            return 1;
+        }
+
+        var hello = await SendAsync("hello").ConfigureAwait(false);
+        if (!IsCompatible(hello))
+        {
+            Console.Error.WriteLine("XPScript daemon restarted but did not respond with a compatible protocol.");
+            return 1;
+        }
+
+        Console.WriteLine($"XPScript daemon restarted. PID {hello!.Value.GetProperty("processId").GetInt32()}, protocol {hello.Value.GetProperty("protocol").GetInt32()}.");
+        return 0;
+    }
+
     private static Task<JsonElement?> SendAsync(string method) => SendAsync(method, null, TimeSpan.FromSeconds(2));
 
     private static Task<JsonElement?> SendAsync(string method, object? parameters) => SendAsync(method, parameters, TimeSpan.FromSeconds(2));
