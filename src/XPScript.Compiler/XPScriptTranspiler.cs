@@ -67,9 +67,20 @@ public sealed partial class XPScriptTranspiler
         // Semantic validators must run against the unmodified expanded source so their
         // line numbers still index sourceMap. Source markers insert physical lines and
         // would otherwise shift validator diagnostics away from the include map.
-        new DateComparisonValidator().Validate(source, sourceName);
-        new ClassOverloadValidator().Validate(source, sourceName);
-        new SourceTypeValidator().Validate(source, sourceName);
+        try
+        {
+            new DateComparisonValidator().Validate(source, sourceName);
+            new ClassOverloadValidator().Validate(source, sourceName);
+            new SourceTypeValidator().Validate(source, sourceName);
+        }
+        catch (CompilerException ex)
+        {
+            // Semantic validators operate on the flattened include source. Remap their
+            // coordinates immediately while the exact include map is still available.
+            var remapped = SourceMapDiagnostics.Remap(ex.Message, sourceName, sourceMap);
+            if (string.Equals(remapped, ex.Message, StringComparison.Ordinal)) throw;
+            throw new CompilerException(remapped, ex.DiagnosticCode, ex.Category, ex.GeneratedDiagnostics);
+        }
 
         // Attach runtime/#line markers only after semantic validation. At this point the
         // expanded source still has the exact line layout represented by sourceMap.
