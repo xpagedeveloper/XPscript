@@ -74,7 +74,7 @@ public static class CompilerDaemonClient
             restricted,
             sourceRoots,
             sourcePreprocessors
-        }).ConfigureAwait(false);
+        }, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
         return response is null
             ? null
             : response.Value.Deserialize<CompileResult>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -101,9 +101,11 @@ public static class CompilerDaemonClient
         return 0;
     }
 
-    private static Task<JsonElement?> SendAsync(string method) => SendAsync(method, null);
+    private static Task<JsonElement?> SendAsync(string method) => SendAsync(method, null, TimeSpan.FromSeconds(2));
 
-    private static async Task<JsonElement?> SendAsync(string method, object? parameters)
+    private static Task<JsonElement?> SendAsync(string method, object? parameters) => SendAsync(method, parameters, TimeSpan.FromSeconds(2));
+
+    private static async Task<JsonElement?> SendAsync(string method, object? parameters, TimeSpan timeoutDuration)
     {
         if (!File.Exists(StatePath)) return null;
         try
@@ -111,7 +113,7 @@ public static class CompilerDaemonClient
             using var state = JsonDocument.Parse(await File.ReadAllTextAsync(StatePath).ConfigureAwait(false));
             var port = state.RootElement.GetProperty("port").GetInt32();
             using var client = new TcpClient();
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            using var timeout = new CancellationTokenSource(timeoutDuration);
             await client.ConnectAsync("127.0.0.1", port, timeout.Token).ConfigureAwait(false);
             using var stream = client.GetStream();
             using var writer = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
