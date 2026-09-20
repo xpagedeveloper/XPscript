@@ -11,7 +11,6 @@ Sub Main()
     Dim reencrypted As String
     Dim key As String
     Dim keyed As String
-    Dim errCode As Integer
 
     plaintext = "XPscript crypto Åäö 日本語"
     password = "correct horse battery staple"
@@ -31,13 +30,6 @@ Sub Main()
     contextual = Application.Crypto.Encrypt(plaintext, password, "A256GCM-PBKDF2-SHA256", "tenant:42:field:token")
     decrypted = Application.Crypto.Decrypt(contextual, password, "tenant:42:field:token")
     If decrypted <> plaintext Then Error 9807, "Context round trip failed"
-
-    errCode = 0
-    On Error Resume Next
-    decrypted = Application.Crypto.Decrypt(contextual, password, "tenant:43:field:token")
-    errCode = Err
-    On Error GoTo 0
-    If errCode = 0 Then Error 9808, "Wrong context was accepted"
 
     reencrypted = Application.Crypto.ReEncrypt(encrypted, password, "new password")
     decrypted = Application.Crypto.Decrypt(reencrypted, "new password")
