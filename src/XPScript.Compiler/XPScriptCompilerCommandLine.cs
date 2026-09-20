@@ -39,6 +39,9 @@ public static class XPScriptCompilerCommandLine
                 ? await CompilerMcpInstaller.RunAsync(args[2..]).ConfigureAwait(false)
                 : await CompilerMcpServer.RunAsync(args[1..]).ConfigureAwait(false);
 
+        if (args[0].Equals("daemon", StringComparison.OrdinalIgnoreCase))
+            return await CompilerDaemonServer.RunAsync(args[1..]).ConfigureAwait(false);
+
         return await CompileAsync(args).ConfigureAwait(false);
     }
 
