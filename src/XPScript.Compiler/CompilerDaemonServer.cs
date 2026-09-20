@@ -79,6 +79,7 @@ public static class CompilerDaemonServer
                 var line = await reader.ReadLineAsync(shutdown.Token).ConfigureAwait(false);
                 if (line is null) return;
                 var requestStarted = false;
+                JsonElement id = default;
                 try
                 {
                     touch();
@@ -86,7 +87,7 @@ public static class CompilerDaemonServer
                     requestStarted = true;
                     using var document = JsonDocument.Parse(line);
                     var root = document.RootElement;
-                    var id = root.TryGetProperty("id", out var idElement) ? idElement.Clone() : default;
+                    id = root.TryGetProperty("id", out var idElement) ? idElement.Clone() : default;
                     var method = root.TryGetProperty("method", out var methodElement) ? methodElement.GetString() : null;
                     var requestToken = root.TryGetProperty("token", out var tokenElement) ? tokenElement.GetString() : null;
                     if (!string.Equals(requestToken, authToken, StringComparison.Ordinal))
@@ -141,7 +142,7 @@ public static class CompilerDaemonServer
                     }
                     await WriteErrorAsync(writer, id, $"Unknown daemon method: {method}").ConfigureAwait(false);
                 }
-                catch (Exception ex) { await writer.WriteLineAsync(JsonSerializer.Serialize(new { error = ex.Message })).ConfigureAwait(false); }
+                catch (Exception ex) { await WriteErrorAsync(writer, id, ex.Message).ConfigureAwait(false); }
                 finally { if (requestStarted) endRequest(); }
             }
         }
