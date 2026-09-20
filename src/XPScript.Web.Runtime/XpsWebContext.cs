@@ -236,6 +236,7 @@ public sealed class XpsWebContext
     public IXpsRequestState RequestScope { get; }
     public XpsWebLogManager? Logger { get; }
     public string RequestId { get; }
+    public bool CaptureExchange { get; set; }
     public IReadOnlyDictionary<string, string> RouteValues => _routeValues;
 
     public string Route(string name)
