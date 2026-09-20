@@ -105,6 +105,33 @@ internal static class CompilerDiagnosticParser
         }
     }
 
+    private static List<CompileIncludeFrame>? DiagnosticIncludeTrace(string rootSourcePath, string diagnosticSourcePath, int line)
+    {
+        var context = ExpandedSourceContext.Current;
+        if (context is null || line <= 0) return null;
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var location = Enumerable.Range(1, context.Map.Count)
+            .Select(index => context.Map.Resolve(index, rootSourcePath))
+            .FirstOrDefault(item =>
+            {
+                try
+                {
+                    var diagnosticFull = Path.IsPathRooted(diagnosticSourcePath)
+                        ? Path.GetFullPath(diagnosticSourcePath)
+                        : Path.GetFullPath(diagnosticSourcePath, Path.GetDirectoryName(context.SourcePath) ?? Environment.CurrentDirectory);
+                    return string.Equals(Path.GetFullPath(item.SourcePath), diagnosticFull, comparison) && item.Line == line;
+                }
+                catch { return false; }
+            });
+        if (location?.IncludeTrace is not { Count: > 0 } trace) return null;
+        return trace.Select(frame => new CompileIncludeFrame
+        {
+            File = Path.GetFileName(frame.SourcePath),
+            Line = frame.Line,
+            IncludedFile = Path.GetFileName(frame.IncludedPath)
+        }).ToList();
+    }
+
     private static List<CompileDiagnosticProperty>? SourceMappedProperties(string upstreamCode, string description, string sourceLine, int position)
     {
         var normalizedCode = upstreamCode.Trim().ToUpperInvariant();
