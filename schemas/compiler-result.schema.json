@@ -10,7 +10,9 @@
     "compilerVersion",
     "operation",
     "result",
-    "errors"
+    "errors",
+    "diagnosticsTruncated",
+    "totalDiagnostics"
   ],
   "properties": {
     "schema": {
@@ -60,6 +62,15 @@
           "minLength": 1
         }
       }
+    },
+    "diagnosticsTruncated": {
+      "type": "boolean",
+      "description": "True when diagnostics were truncated to the machine-interface limit."
+    },
+    "totalDiagnostics": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total diagnostics produced before truncation."
     }
   },
   "allOf": [
