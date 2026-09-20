@@ -306,8 +306,8 @@ xpscriptc explain XPS2104 --result-format json
 
 - [x] Benchmark validation startup and processing time.
 - [x] Avoid executable generation in validation-only mode.
-- [ ] Define maximum diagnostics returned.
-- [ ] Report diagnostic truncation explicitly.
+- [x] Define maximum diagnostics returned. Machine results return at most 100 diagnostics while preserving deterministic ordering.
+- [x] Report diagnostic truncation explicitly via `diagnosticsTruncated` and `totalDiagnostics` in the schema-v1 result.
 - [x] Investigate a reusable compiler process/service only if measured startup cost requires it.
 
 CI benchmark evidence on the GitHub Linux runner shows a median of 1029 ms when validation starts a fresh CLI process versus 5 ms for repeated validation through a warmed, reusable `CompilerDriver` in the same process. This makes reusable in-process compiler hosting the preferred path for latency-sensitive IDE/LSP and AI tooling. The CLI remains appropriate for one-shot validation. The existing reusable compiler API satisfies in-process consumers; a persistent external transport/process should be added only when an out-of-process consumer requires it.
