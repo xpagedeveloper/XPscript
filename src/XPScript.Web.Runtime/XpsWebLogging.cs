@@ -89,28 +89,52 @@ public sealed class XpsWebLogManager : IDisposable
         string? errorType = null)
     {
         ArgumentNullException.ThrowIfNull(request);
+        request.Headers.TryGetValue("User-Agent", out var agents);
+        WriteAccess(
+            request.Method, request.Path, request.Scheme, request.Host, request.Protocol,
+            request.RemoteAddress, agents is { Count: > 0 } ? agents[0] : null,
+            Math.Max(0, request.ContentLength ?? request.Body.Length), statusCode, responseBodyBytes,
+            duration, requestId, transport, principal, errorType);
+    }
+
+    public void WriteAccess(
+        string method,
+        string path,
+        string scheme,
+        string host,
+        string protocol,
+        string? remoteAddress,
+        string? userAgent,
+        long requestBodyBytes,
+        int statusCode,
+        long responseBodyBytes,
+        TimeSpan duration,
+        string requestId,
+        string transport,
+        XpsWebPrincipal? principal = null,
+        string? errorType = null)
+    {
         var attributes = BaseAttributes();
-        attributes["request.id"] = requestId;
-        attributes["xpscript.transport"] = transport;
-        attributes["http.request.method"] = request.Method;
-        attributes["url.path"] = request.Path;
-        attributes["url.scheme"] = request.Scheme;
-        attributes["server.address"] = request.Host;
-        attributes["network.protocol.version"] = request.Protocol;
+        attributes["request.id"] = Clean(requestId, 128);
+        attributes["xpscript.transport"] = Clean(transport, 32);
+        attributes["http.request.method"] = Clean(method, 32);
+        attributes["url.path"] = Clean(path, 4096);
+        attributes["url.scheme"] = Clean(scheme, 32);
+        attributes["server.address"] = Clean(host, 512);
+        attributes["network.protocol.version"] = Clean(protocol, 64);
         attributes["http.response.status_code"] = statusCode;
-        attributes["http.request.body.size"] = Math.Max(0, request.ContentLength ?? request.Body.Length);
+        attributes["http.request.body.size"] = Math.Max(0, requestBodyBytes);
         attributes["http.response.body.size"] = Math.Max(0, responseBodyBytes);
         attributes["duration.ms"] = Math.Max(0, duration.TotalMilliseconds);
-        if (!string.IsNullOrWhiteSpace(request.RemoteAddress)) attributes["client.address"] = request.RemoteAddress;
-        if (request.Headers.TryGetValue("User-Agent", out var agents) && agents.Count > 0)
-            attributes["user_agent.original"] = Clean(agents[0], 1024);
+        if (!string.IsNullOrWhiteSpace(remoteAddress)) attributes["client.address"] = Clean(remoteAddress, 128);
+        if (!string.IsNullOrWhiteSpace(userAgent)) attributes["user_agent.original"] = Clean(userAgent, 1024);
         if (principal?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(principal.UserId))
             attributes["user.id"] = Clean(principal.UserId, 256);
         if (!string.IsNullOrWhiteSpace(errorType)) attributes["error.type"] = Clean(errorType, 512);
 
         var severity = statusCode >= 500 ? "ERROR" : statusCode >= 400 ? "WARN" : "INFO";
         Write(XpsWebLogKind.Access, severity, "http.server.request",
-            request.Method + " " + request.Path + " " + statusCode, attributes);
+            Clean(method, 32) + " " + Clean(path, 4096) + " " + statusCode, attributes);
         if (statusCode >= 500 || errorType is not null)
             Write(XpsWebLogKind.Error, "ERROR", "http.server.error",
                 "Request failed with status " + statusCode, attributes);
