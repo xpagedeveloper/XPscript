@@ -37,6 +37,7 @@ public static class XpsKestrelAdapter
         ArgumentNullException.ThrowIfNull(handler);
         ArgumentNullException.ThrowIfNull(application);
         options.Validate();
+        var logManager = new XpsWebLogManager(serverInfo, options.LogOptions);
 
         var iisPortText = Environment.GetEnvironmentVariable("ASPNETCORE_PORT");
         var iisToken = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
@@ -87,23 +88,6 @@ public static class XpsKestrelAdapter
         if (runtimeTelemetry is not null)
             app.Lifetime.ApplicationStopping.Register(runtimeTelemetry.MarkStopping);
 
-        app.Use(async (http, next) =>
-        {
-            var started = Stopwatch.GetTimestamp();
-            var statusCode = StatusCodes.Status500InternalServerError;
-            try
-            {
-                await next();
-                statusCode = http.Response.StatusCode;
-            }
-            finally
-            {
-                var elapsed = Stopwatch.GetElapsedTime(started);
-                var path = http.Request.Path.HasValue ? http.Request.Path.Value! : "/";
-                Console.WriteLine($"{http.Request.Method} {path} {statusCode} {elapsed.TotalMilliseconds:0}ms");
-            }
-        });
-
         if (options.KnownProxies.Count > 0)
         {
             var forwarded = new ForwardedHeadersOptions
@@ -118,6 +102,48 @@ public static class XpsKestrelAdapter
             foreach (var proxy in options.KnownProxies) forwarded.KnownProxies.Add(proxy);
             app.UseForwardedHeaders(forwarded);
         }
+
+        app.Lifetime.ApplicationStopped.Register(logManager.Dispose);
+
+        app.Use(async (http, next) =>
+        {
+            var started = Stopwatch.GetTimestamp();
+            var requestId = Guid.NewGuid().ToString("N");
+            http.TraceIdentifier = requestId;
+            http.Response.Headers["X-Request-Id"] = requestId;
+            string? errorType = null;
+            try
+            {
+                await next();
+            }
+            catch (Exception ex)
+            {
+                errorType = ex.GetType().FullName ?? ex.GetType().Name;
+                throw;
+            }
+            finally
+            {
+                var principal = http.Items.TryGetValue(typeof(XpsWebPrincipal), out var value)
+                    ? value as XpsWebPrincipal
+                    : null;
+                logManager.WriteAccess(
+                    http.Request.Method,
+                    http.Request.Path.HasValue ? http.Request.Path.Value! : "/",
+                    http.Request.Scheme,
+                    http.Request.Host.Value,
+                    http.Request.Protocol,
+                    http.Connection.RemoteIpAddress?.ToString(),
+                    http.Request.Headers.UserAgent.FirstOrDefault(),
+                    Math.Max(0, http.Request.ContentLength ?? 0),
+                    http.Response.StatusCode,
+                    Math.Max(0, http.Response.ContentLength ?? 0),
+                    Stopwatch.GetElapsedTime(started),
+                    requestId,
+                    "kestrel",
+                    principal,
+                    errorType);
+            }
+        });
 
         if (options.EnableDefaultSecurityHeaders)
         {
@@ -293,8 +319,7 @@ public static class XpsKestrelAdapter
 
         app.Run(async http =>
         {
-            var requestId = Guid.NewGuid().ToString("N");
-            http.Response.Headers["X-Request-Id"] = requestId;
+            var requestId = http.TraceIdentifier;
             var declaredRequestBytes = Math.Max(0, http.Request.ContentLength ?? 0);
             using var requestScope = runtimeTelemetry?.BeginRequest("kestrel", http.Request.Method, declaredRequestBytes, requestId);
             try
@@ -302,8 +327,9 @@ public static class XpsKestrelAdapter
                 var request = await CreateRequestAsync(http, options.MaxRequestBodySize);
                 var response = new XpsWebResponse();
                 var principal = principalFactory?.Invoke(http) ?? new XpsWebPrincipal(false);
+                http.Items[typeof(XpsWebPrincipal)] = principal;
                 var session = sessions?.Bind(request, response);
-                var context = new XpsWebContext(request, response, serverInfo, principal, application, session);
+                var context = new XpsWebContext(request, response, serverInfo, principal, application, session, logger: logManager, requestId: requestId);
 
                 using (XpsWebContextAccessor.Push(context))
                     await handler.HandleAsync(context);
