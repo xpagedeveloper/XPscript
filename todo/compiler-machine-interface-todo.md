@@ -352,7 +352,7 @@ Add deterministic fixtures covering:
 - [x] ByRef/ByVal errors. Native `ByRef` rejection is covered by stable structured diagnostic `XPS2013`; existing overload fixtures verify `ByRef`/`ByVal` parameter-mode metadata.
 - [x] Target restrictions. Covered by native target mismatch XPS3001 fixture.
 - [x] Browser-WASM restrictions. Covered by Browser-WASM XPAi target restriction XPS3001 fixture.
-- [ ] ServerSide-required APIs.
+- [x] ServerSide-required APIs. Covered by the Browser-WASM smoke test: an unannotated server-only XPDB procedure must fail with structured `XPS3002` / `execution-context` and verifies `symbol`, `target=browser-wasm`, `currentContext=Client`, and `requiredContext=ServerSide`.
 - [ ] Security warnings.
 - [ ] Multiple diagnostics.
 - [ ] Multiple source files.
