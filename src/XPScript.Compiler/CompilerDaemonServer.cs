@@ -92,7 +92,7 @@ public static class CompilerDaemonServer
                     if (method == "validate")
                     {
                         var source = root.GetProperty("source").GetString() ?? "";
-                        var result = await driver.ValidateWithResultAsync(source, cancellationToken: shutdown.Token).ConfigureAwait(false);
+                        var result = await driver.ValidateWithResultAsync(source).ConfigureAwait(false);
                         await WriteAsync(writer, id, result).ConfigureAwait(false);
                         continue;
                     }
