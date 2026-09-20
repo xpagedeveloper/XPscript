@@ -49,7 +49,7 @@ public sealed class XpsWebLogManager : IDisposable
         "server.address", "network.protocol.version", "client.address", "user_agent.original",
         "http.response.status_code", "http.request.body.size", "http.response.body.size",
         "http.request.resend_count", "error.type", "event.category", "event.outcome",
-        "request.id", "user.id", "duration.ms"
+        "request.id", "session.id", "user.id", "duration.ms"
     };
 
     private readonly object _sync = new();
@@ -87,7 +87,8 @@ public sealed class XpsWebLogManager : IDisposable
         string requestId,
         string transport,
         XpsWebPrincipal? principal = null,
-        string? errorType = null)
+        string? errorType = null,
+        string? sessionId = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         request.Headers.TryGetValue("User-Agent", out var agents);
@@ -95,7 +96,7 @@ public sealed class XpsWebLogManager : IDisposable
             request.Method, request.Path, request.Scheme, request.Host, request.Protocol,
             request.RemoteAddress, agents is { Count: > 0 } ? agents[0] : null,
             Math.Max(0, request.ContentLength ?? request.Body.Length), statusCode, responseBodyBytes,
-            duration, requestId, transport, principal, errorType);
+            duration, requestId, transport, principal, errorType, sessionId);
     }
 
     public void WriteAccess(
@@ -113,10 +114,12 @@ public sealed class XpsWebLogManager : IDisposable
         string requestId,
         string transport,
         XpsWebPrincipal? principal = null,
-        string? errorType = null)
+        string? errorType = null,
+        string? sessionId = null)
     {
         var attributes = BaseAttributes();
         attributes["request.id"] = Clean(requestId, 128);
+        if (!string.IsNullOrWhiteSpace(sessionId)) attributes["session.id"] = Clean(sessionId, 128);
         attributes["xpscript.transport"] = Clean(transport, 32);
         attributes["http.request.method"] = Clean(method, 32);
         attributes["url.path"] = Clean(path, 4096);
@@ -149,6 +152,7 @@ public sealed class XpsWebLogManager : IDisposable
         var attributes = BaseAttributes();
         attributes["event.category"] = "troubleshooting";
         attributes["request.id"] = context.RequestId;
+        if (!string.IsNullOrWhiteSpace(context.ClientSessionId)) attributes["session.id"] = context.ClientSessionId;
         attributes["http.request.method"] = request.Method;
         attributes["url.path"] = request.Path;
         attributes["url.query"] = SanitizeNameValueText(request.QueryString);
@@ -180,6 +184,7 @@ public sealed class XpsWebLogManager : IDisposable
         var attributes = BaseAttributes();
         attributes["event.category"] = audit ? "audit" : "application";
         attributes["request.id"] = context.RequestId;
+        if (!string.IsNullOrWhiteSpace(context.ClientSessionId)) attributes["session.id"] = context.ClientSessionId;
         attributes["http.request.method"] = context.Request.Method;
         attributes["url.path"] = context.Request.Path;
         if (context.Principal.IsAuthenticated && !string.IsNullOrWhiteSpace(context.Principal.UserId))
