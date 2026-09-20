@@ -39,7 +39,7 @@ internal sealed class IncludeSourcePreprocessor
         var stack = new List<IncludeStackEntry>();
         var output = new List<string>();
         var map = new List<SourceMap.Location>();
-        Expand(rootPath, rootSource, pathIdentity, included, dependencies, stack, output, map);
+        Expand(rootPath, rootSource, pathIdentity, included, dependencies, stack, output, map, []);
 
         foreach (var dependency in compileResult.Dependencies)
         {
@@ -97,7 +97,7 @@ internal sealed class IncludeSourcePreprocessor
 
                 if (WebPlatformPattern.IsMatch(code) || ServerSidePattern.IsMatch(code))
                 {
-                    AddLine(output, map, string.Empty, sourcePath, i + 1);
+                    AddLine(output, map, string.Empty, sourcePath, i + 1, includeTrace);
                     continue;
                 }
 
@@ -107,7 +107,7 @@ internal sealed class IncludeSourcePreprocessor
                     if (Regex.IsMatch(code, @"^Include\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                         throw IncludeError(sourcePath, i + 1, "Invalid Include directive. Expected Include \"file.xps\".");
 
-                    AddLine(output, map, raw, sourcePath, i + 1);
+                    AddLine(output, map, raw, sourcePath, i + 1, includeTrace);
                     continue;
                 }
 
@@ -154,7 +154,7 @@ internal sealed class IncludeSourcePreprocessor
                     throw IncludeError(sourcePath, i + 1, "Unable to read included source file: " + SafePath(declaredPath));
                 }
 
-                Expand(includePath, includeSource, pathIdentity, included, dependencies, stack, output, map);
+                var nestedTrace = includeTrace.Concat([new SourceMap.IncludeFrame(sourcePath, i + 1, includePath)]).ToArray();\n                Expand(includePath, includeSource, pathIdentity, included, dependencies, stack, output, map, nestedTrace);
             }
         }
         finally
