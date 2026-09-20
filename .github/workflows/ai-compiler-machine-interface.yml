@@ -81,6 +81,37 @@ jobs:
           $final = Invoke-XPScript @('daemon','status')
           if ($final -notmatch 'not running') { throw "Expected daemon to stop after quit: $final" }
 
+      - name: Daemon restart probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Start-Sleep -Milliseconds 500
+
+          $run = Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off')
+          if ($run -notmatch 'DEBUGGING=False') { throw "Normal run failed before restart: $run" }
+          $before = Invoke-XPScript @('daemon','status')
+          if ($before -notmatch 'PID ([0-9]+)') { throw "Daemon was not running before restart: $before" }
+          $oldPid = $Matches[1]
+
+          $restart = Invoke-XPScript @('daemon','restart')
+          if ($restart -notmatch 'PID ([0-9]+)') { throw "Restart did not report a daemon PID: $restart" }
+          $newPid = $Matches[1]
+          if ($newPid -eq $oldPid) { throw "Restart reused the old daemon PID $oldPid" }
+
+          $after = Invoke-XPScript @('daemon','status')
+          if ($after -notmatch "PID $newPid") { throw "Restarted daemon was not discoverable: $after" }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Start-Sleep -Milliseconds 500
+
       - name: Daemon idle-timeout probe
         shell: pwsh
         run: |
