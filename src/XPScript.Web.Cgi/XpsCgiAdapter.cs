@@ -84,6 +84,7 @@ public sealed class XpsCgiAdapter : IDisposable
             using (XpsWebContextAccessor.Push(context))
                 await _handler.HandleAsync(context).ConfigureAwait(false);
             if (!response.Completed) response.Complete();
+            if (context.CaptureExchange) _logger.WriteExchange(context);
 
             await WriteResponseAsync(stdout, response, request.Method, cancellationToken).ConfigureAwait(false);
             _logger.WriteAccess(request, response.StatusCode, response.Body.Length, Stopwatch.GetElapsedTime(started), requestId, "cgi", principal);
