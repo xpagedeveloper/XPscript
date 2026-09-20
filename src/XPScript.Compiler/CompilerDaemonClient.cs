@@ -54,6 +54,32 @@ public static class CompilerDaemonClient
         return false;
     }
 
+    public static async Task<CompileResult?> CompileForRunAsync(
+        string sourcePath,
+        string outputDirectory,
+        string runtimeIdentifier,
+        bool debug,
+        ApplicationSecurityMode securityMode,
+        bool restricted,
+        IReadOnlyList<string> sourceRoots,
+        IReadOnlyList<string> sourcePreprocessors)
+    {
+        var response = await SendAsync("compileRun", new
+        {
+            source = sourcePath,
+            outputDirectory,
+            runtimeIdentifier,
+            debug,
+            securityMode = securityMode.ToString(),
+            restricted,
+            sourceRoots,
+            sourcePreprocessors
+        }).ConfigureAwait(false);
+        return response is null
+            ? null
+            : response.Value.Deserialize<CompileResult>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
     private static bool IsCompatible(JsonElement? hello) =>
         hello is { } value &&
         value.TryGetProperty("protocol", out var protocol) &&
@@ -75,8 +101,7 @@ public static class CompilerDaemonClient
         return 0;
     }
 
-    private static async Task<JsonElement?> SendAsync(string method)
-    {
+    private static Task<JsonElement?> SendAsync(string method) => SendAsync(method, null);\n\n    private static async Task<JsonElement?> SendAsync(string method, object? parameters)\n    {
         if (!File.Exists(StatePath)) return null;
         try
         {
@@ -88,7 +113,7 @@ public static class CompilerDaemonClient
             using var stream = client.GetStream();
             using var writer = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
             using var reader = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
-            await writer.WriteLineAsync(JsonSerializer.Serialize(new { id = 1, method })).ConfigureAwait(false);
+            await writer.WriteLineAsync(JsonSerializer.Serialize(new { id = 1, method, @params = parameters })).ConfigureAwait(false);
             var line = await reader.ReadLineAsync(timeout.Token).ConfigureAwait(false);
             if (line is null) return null;
             using var response = JsonDocument.Parse(line);
