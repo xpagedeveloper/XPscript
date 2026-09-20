@@ -9,6 +9,7 @@ namespace XPScript.Compiler;
 public static class CompilerDaemonServer
 {
     public const int ProtocolVersion = 1;
+    private static readonly SemaphoreSlim CompileGate = new(1, 1);
 
     public static async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
     {
@@ -135,12 +136,24 @@ public static class CompilerDaemonServer
                             ? preprocessorsElement.EnumerateArray().Select(value => value.GetString() ?? "").Where(value => value.Length > 0).ToArray()
                             : [];
 
-                        using var securityScope = ApplicationSecurityModeContext.Push(securityMode);
-                        using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
-                        using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
-                        using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
-                        var result = await RunCompiler.CompileWithResultAsync(source, outputDirectory, runtimeIdentifier, debug, shutdown.Token).ConfigureAwait(false);
-                        await WriteAsync(writer, id, result).ConfigureAwait(false);
+                        // Compiler request configuration is AsyncLocal-scoped, but the complete
+                        // run compiler pipeline has not yet been proven safe for concurrent writes,
+                        // Roslyn/MSBuild execution, and dependency staging. Serialize compileRun
+                        // requests so multiple IDE/CLI clients can safely share one daemon.
+                        await CompileGate.WaitAsync(shutdown.Token).ConfigureAwait(false);
+                        try
+                        {
+                            using var securityScope = ApplicationSecurityModeContext.Push(securityMode);
+                            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+                            using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
+                            using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
+                            var result = await RunCompiler.CompileWithResultAsync(source, outputDirectory, runtimeIdentifier, debug, shutdown.Token).ConfigureAwait(false);
+                            await WriteAsync(writer, id, result).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            CompileGate.Release();
+                        }
                         continue;
                     }
                     if (method == "validate")
