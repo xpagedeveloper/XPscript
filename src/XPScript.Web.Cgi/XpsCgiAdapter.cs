@@ -76,10 +76,15 @@ public sealed class XpsCgiAdapter : IDisposable
         var request = CreateRequest(environment, body, cancellationToken);
         var response = new XpsWebResponse();
         var principal = _principalFactory?.Invoke(request) ?? new XpsWebPrincipal(false);
+        var correlationValue = XpsWebClientCorrelation.GetOrCreate(request.Cookies, out var correlationCreated);
+        var clientSessionId = XpsWebClientCorrelation.Hash(correlationValue);
+        if (correlationCreated) XpsWebClientCorrelation.SetCookie(response, correlationValue, request.Scheme == "https");
         try
         {
             var session = _sessionFactory?.Invoke(request, response) ?? _sessions?.Bind(request, response);
-            var context = new XpsWebContext(request, response, _serverInfo, principal, _application, session, logger: _logger, requestId: requestId);
+            var context = new XpsWebContext(
+                request, response, _serverInfo, principal, _application, session,
+                logger: _logger, requestId: requestId, clientSessionId: clientSessionId);
 
             using (XpsWebContextAccessor.Push(context))
                 await _handler.HandleAsync(context).ConfigureAwait(false);
@@ -87,11 +92,11 @@ public sealed class XpsCgiAdapter : IDisposable
             if (context.CaptureExchange) _logger.WriteExchange(context);
 
             await WriteResponseAsync(stdout, response, request.Method, cancellationToken).ConfigureAwait(false);
-            _logger.WriteAccess(request, response.StatusCode, response.Body.Length, Stopwatch.GetElapsedTime(started), requestId, "cgi", principal);
+            _logger.WriteAccess(request, response.StatusCode, response.Body.Length, Stopwatch.GetElapsedTime(started), requestId, "cgi", principal, sessionId: clientSessionId);
         }
         catch (Exception ex)
         {
-            _logger.WriteAccess(request, 500, 0, Stopwatch.GetElapsedTime(started), requestId, "cgi", principal, ex.GetType().FullName);
+            _logger.WriteAccess(request, 500, 0, Stopwatch.GetElapsedTime(started), requestId, "cgi", principal, ex.GetType().FullName, clientSessionId);
             throw;
         }
     }
