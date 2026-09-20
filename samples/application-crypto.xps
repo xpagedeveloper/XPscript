@@ -1,0 +1,46 @@
+' Application.Crypto cross-platform runtime regression.
+Option Declare
+
+Sub Main()
+    Dim plaintext As String
+    Dim password As String
+    Dim encrypted As String
+    Dim second As String
+    Dim decrypted As String
+    Dim contextual As String
+    Dim reencrypted As String
+    Dim key As String
+    Dim keyed As String
+
+    plaintext = "XPscript crypto Åäö 日本語"
+    password = "correct horse battery staple"
+
+    encrypted = Application.Crypto.Encrypt(plaintext, password)
+    If Not Application.Crypto.IsEncrypted(encrypted) Then Error 9801, "Encrypted envelope was not recognized"
+    If Application.Crypto.Version(encrypted) <> 1 Then Error 9802, "Unexpected crypto envelope version"
+    If Application.Crypto.Algorithm(encrypted) <> "A256GCM-PBKDF2-SHA256" Then Error 9803, "Unexpected password profile"
+    If Application.Crypto.NeedsUpgrade(encrypted) Then Error 9804, "Current envelope unexpectedly requires upgrade"
+
+    decrypted = Application.Crypto.Decrypt(encrypted, password)
+    If decrypted <> plaintext Then Error 9805, "Password round trip failed"
+
+    second = Application.Crypto.Encrypt(plaintext, password)
+    If second = encrypted Then Error 9806, "Encryption reused salt or nonce"
+
+    contextual = Application.Crypto.Encrypt(plaintext, password, "A256GCM-PBKDF2-SHA256", "tenant:42:field:token")
+    decrypted = Application.Crypto.Decrypt(contextual, password, "tenant:42:field:token")
+    If decrypted <> plaintext Then Error 9807, "Context round trip failed"
+
+    reencrypted = Application.Crypto.ReEncrypt(encrypted, password, "new password")
+    decrypted = Application.Crypto.Decrypt(reencrypted, "new password")
+    If decrypted <> plaintext Then Error 9809, "ReEncrypt round trip failed"
+
+    key = Application.Crypto.GenerateKey()
+    keyed = Application.Crypto.EncryptWithKey(plaintext, key, "tenant:42:keyed")
+    If Application.Crypto.Algorithm(keyed) <> "A256GCM-KEY" Then Error 9810, "Unexpected key profile"
+    decrypted = Application.Crypto.DecryptWithKey(keyed, key, "tenant:42:keyed")
+    If decrypted <> plaintext Then Error 9811, "Key round trip failed"
+
+    Print "APPLICATION_CRYPTO_OK"
+End Sub
+
