@@ -217,9 +217,6 @@ static async Task VerifyApiDocsJsonSchemaAsync(string cliDll, string siteDir)
 {"type":"object","required":["name"],"properties":{"name":{"type":"string"}}}
 """);
     await File.WriteAllTextAsync(Path.Combine(siteDir, "schema-api.xps"), """
-[Anonymous]
-[Post:/api/schema-users]
-[JsonSchema:schemas/create-user.schema.json]
 Class TypedSchemaUserPayload
     Public Name As String
     Public Age As Integer
