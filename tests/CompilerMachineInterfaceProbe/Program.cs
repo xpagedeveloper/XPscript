@@ -156,21 +156,7 @@ var boundedJson = JsonSerializer.Serialize(boundedDiagnostics);
 Require(boundedJson.Contains("\"diagnosticsTruncated\":true", StringComparison.Ordinal), "JSON result must expose diagnostic truncation");
 Require(boundedJson.Contains($"\"totalDiagnostics\":{CompileResult.MaximumDiagnostics + 37}", StringComparison.Ordinal), "JSON result must expose total diagnostic count");
 
-var multipleDiagnosticSource = Path.Combine(outputRoot, "multiple-diagnostics.xps");
-await File.WriteAllTextAsync(multipleDiagnosticSource, """
-Sub Main()
-    MissingFirst()
-    MissingSecond()
-End Sub
-""");
-var multipleDiagnosticResult = await driver.ValidateWithResultAsync(multipleDiagnosticSource);
-var unresolvedDiagnostics = multipleDiagnosticResult.Errors.Where(d => d.DiagnosticCode == "XPS2008").ToArray();
-Require(!multipleDiagnosticResult.Success, "multiple diagnostic source must fail validation");
-Require(unresolvedDiagnostics.Length >= 2, "validation must preserve multiple diagnostics");
-Require(unresolvedDiagnostics.Any(d => d.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingFirst") == true), "multiple diagnostics missing first symbol");
-Require(unresolvedDiagnostics.Any(d => d.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingSecond") == true), "multiple diagnostics missing second symbol");
-Require(multipleDiagnosticResult.TotalDiagnostics >= 2, "multiple diagnostics total count");
-Require(!multipleDiagnosticResult.DiagnosticsTruncated, "small multiple diagnostic result must not be truncated");
+
 
 
 var normalizedPathDiagnostic = CompileResult.Error(
@@ -190,6 +176,22 @@ Require(normalizedPathDiagnostic.File == "portable.xps", "diagnostic file paths 
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
+
+var multipleDiagnosticSource = Path.Combine(outputRoot, "multiple-diagnostics.xps");
+await File.WriteAllTextAsync(multipleDiagnosticSource, """
+Sub Main()
+    MissingFirst()
+    MissingSecond()
+End Sub
+""");
+var multipleDiagnosticResult = await driver.ValidateWithResultAsync(multipleDiagnosticSource);
+var unresolvedDiagnostics = multipleDiagnosticResult.Errors.Where(d => d.DiagnosticCode == "XPS2008").ToArray();
+Require(!multipleDiagnosticResult.Success, "multiple diagnostic source must fail validation");
+Require(unresolvedDiagnostics.Length >= 2, "validation must preserve multiple diagnostics");
+Require(unresolvedDiagnostics.Any(d => d.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingFirst") == true), "multiple diagnostics missing first symbol");
+Require(unresolvedDiagnostics.Any(d => d.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingSecond") == true), "multiple diagnostics missing second symbol");
+Require(multipleDiagnosticResult.TotalDiagnostics >= 2, "multiple diagnostics total count");
+Require(!multipleDiagnosticResult.DiagnosticsTruncated, "small multiple diagnostic result must not be truncated");
 var validationExecutionSentinel = Path.Combine(outputRoot, "validate-must-not-execute.txt");
 var validationExecutionSource = Path.Combine(outputRoot, "validate-must-not-execute.xps");
 var shellCommand = OperatingSystem.IsWindows()
