@@ -1,0 +1,5 @@
+Sub Main()
+    Dim value As String
+    value = "hello"
+    Print value.MissingMember
+End Sub
