@@ -338,6 +338,14 @@ internal sealed class SourceTypeValidator
             DiagnosticCode = diagnosticCode,
             Category = diagnosticCode == CompilerDiagnosticCodes.ArgumentCountMismatch ? "argument" : "type",
             Properties = properties.Length == 0 ? null : properties.Select(p => new CompileDiagnosticProperty { Name = p.Name, Value = p.Value }).ToList(),
+            IncludeTrace = location?.IncludeTrace is { Count: > 0 } trace
+                ? trace.Select(frame => new CompileIncludeFrame
+                {
+                    File = Path.GetFileName(frame.SourcePath),
+                    Line = frame.Line,
+                    IncludedFile = Path.GetFileName(frame.IncludedPath)
+                }).ToList()
+                : null,
             SourceCode = safeSource,
             MarkedCode = MarkSource(safeSource, position)
         });
