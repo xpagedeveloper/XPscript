@@ -251,9 +251,10 @@ Require(generatedSymbolDiagnostic.SourceCode?.Contains("MissingGeneratedProcedur
 var multiSourceValidation = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "include-source-map", "root.xps"));
 Require(!multiSourceValidation.Success, "included source validation must fail");
 Require(multiSourceValidation.Source?.EntryPoint == "root.xps", "included source entry point");
-var includedSourceDiagnostic = multiSourceValidation.Errors.FirstOrDefault(d =>
-    d.File == "compile-error.xps" && d.SourceCode?.Contains("value = \"wrong\"", StringComparison.Ordinal) == true);
+var includedSourceDiagnostic = multiSourceValidation.Errors.FirstOrDefault(d => d.File == "compile-error.xps");
 Require(includedSourceDiagnostic is not null, "included source diagnostic must map to physical include file");
+Require(includedSourceDiagnostic.SourceCode?.Contains("value =", StringComparison.Ordinal) == true, "included source diagnostic must expose mapped source line");
+Require(includedSourceDiagnostic.SourceCode?.Contains("wrong", StringComparison.Ordinal) == false, "included source diagnostic must redact string literals");
 Require(includedSourceDiagnostic.Line == 5, "included source diagnostic must use include-file line number");
 Require(includedSourceDiagnostic.Position > 0, "included source diagnostic position");
 Require(includedSourceDiagnostic.DiagnosticCode is "XPS2001" or "XPS2003", "included source structured type diagnostic");
