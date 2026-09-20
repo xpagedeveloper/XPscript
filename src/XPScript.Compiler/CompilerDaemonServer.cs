@@ -51,17 +51,27 @@ public static class CompilerDaemonServer
             }
         }, shutdown.Token);
 
+        var clientTasks = new HashSet<Task>();
         try
         {
             while (!shutdown.IsCancellationRequested)
             {
                 var client = await listener.AcceptTcpClientAsync(shutdown.Token).ConfigureAwait(false);
                 Touch();
-                _ = HandleClientAsync(client, Touch, () => Interlocked.Increment(ref activeRequests), () => Interlocked.Decrement(ref activeRequests), authToken, shutdown);
+                var clientTask = HandleClientAsync(client, Touch, () => Interlocked.Increment(ref activeRequests), () => Interlocked.Decrement(ref activeRequests), authToken, shutdown);
+                lock (clientTasks) clientTasks.Add(clientTask);
+                _ = clientTask.ContinueWith(completed =>
+                {
+                    lock (clientTasks) clientTasks.Remove(completed);
+                    _ = completed.Exception;
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }
         }
         catch (OperationCanceledException) when (shutdown.IsCancellationRequested) { }
         try { await idleMonitor.ConfigureAwait(false); } catch (OperationCanceledException) { }
+        Task[] pendingClients;
+        lock (clientTasks) pendingClients = clientTasks.ToArray();
+        try { await Task.WhenAll(pendingClients).ConfigureAwait(false); } catch (OperationCanceledException) { } catch { }
         finally { listener.Stop(); CompilerDaemonClient.DeleteStateIfOwned(endpoint.Port, authToken); }
         return 0;
     }
