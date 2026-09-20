@@ -44,7 +44,7 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
         var scriptDeclarationSeen = false;
         var inScript = false;
         var trackNextSimpleAssignment = false;
-        var insideGeneratedForRangeHeader = false;
+        var insideGeneratedForRangeHeader = false;\n        var previousNonEmptyLine = "";
 
         foreach (var rawLine in lines)
         {
@@ -76,7 +76,8 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
             var match = MarkerPattern.Match(rawLine);
             if (!match.Success)
             {
-                if (inScript && ScriptProcedurePattern.IsMatch(rawLine))
+                if (inScript && ScriptProcedurePattern.IsMatch(rawLine) &&
+                    !previousNonEmptyLine.Trim().Equals(NoInliningAttribute, StringComparison.Ordinal))
                 {
                     var indent = Regex.Match(rawLine, @"^\s*").Value;
                     output.Add(indent + NoInliningAttribute);
