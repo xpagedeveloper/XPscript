@@ -12,7 +12,10 @@ public sealed partial class XPScriptTranspiler
     public string Transpile(string source, string sourceName, string runtimeIdentifier)
     {
         var serviceDefinition = XpsServiceScriptParser.Parse(source, sourceName);
-        var includeResult = new IncludeSourcePreprocessor().Transform(serviceDefinition.Source, sourceName);
+        var prepared = ExpandedSourceContext.Current;
+        var includeResult = prepared is not null && prepared.Matches(serviceDefinition.Source, sourceName)
+            ? new IncludeSourcePreprocessor.Result(serviceDefinition.Source, prepared.Map, [Path.GetFullPath(sourceName)])
+            : new IncludeSourcePreprocessor().Transform(serviceDefinition.Source, sourceName);
         try
         {
             var generated = TranspileExpanded(includeResult.Source, sourceName, runtimeIdentifier, includeResult.Map);
