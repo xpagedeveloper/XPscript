@@ -353,7 +353,7 @@ Add deterministic fixtures covering:
 - [x] Target restrictions. Covered by native target mismatch XPS3001 fixture.
 - [x] Browser-WASM restrictions. Covered by Browser-WASM XPAi target restriction XPS3001 fixture.
 - [x] ServerSide-required APIs. Covered by the Browser-WASM smoke test: an unannotated server-only XPDB procedure must fail with structured `XPS3002` / `execution-context` and verifies `symbol`, `target=browser-wasm`, `currentContext=Client`, and `requiredContext=ServerSide`.
-- [ ] Security warnings.
+- [x] Security warnings. Dependency-audit parsing is covered deterministically for NU1900 unavailable-audit warnings plus NU1902/NU1904 vulnerability findings, including deduplication, severity ordering, advisory normalization, and structured XPS7001/XPS7002 catalog metadata.
 - [ ] Multiple diagnostics.
 - [ ] Multiple source files.
 - [ ] Malformed and empty source.
