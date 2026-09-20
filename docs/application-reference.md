@@ -125,3 +125,18 @@ All four state proxies expose the same member set below.
 ## Read-only runtime properties
 
 `Application.Args`, `ArgCount`, `CommandLine`, `ExecutablePath`, `ExecutableFileName`, `ExecutableDirectory`, `TempPath`, `TempFolder`, `Path` and `FileName` are read-only. Assignments to them are rejected by the compiler. `Application.ExitCode` is writable and defaults to `0`. `Application.Id`, `Title`, `Icon`, `Executable.Icon`, `Executable.FileDescription`, `Executable.Product`, `Executable.Company`, `Executable.Version`, `Executable.Copyright`, `Width` and `Height` are intentionally writable metadata properties.
+
+
+## Application.Log and Application.Audit
+
+These APIs are available during web requests. The host always writes access, security and error logs. Application attributes cannot override runtime fields or contain secret-bearing names. See [mandatory web logging](web-logging.md).
+
+| Member | Syntax | Parameters | Behavior | Executable example |
+|---|---|---|---|---|
+| `Application.Log.Trace` | `Application.Log.Trace(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a TRACE event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Debug` | `Application.Log.Debug(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a DEBUG event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Info` | `Application.Log.Info(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an INFO event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Warning` | `Application.Log.Warning(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a WARN event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Error` | `Application.Log.Error(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an ERROR event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Critical` | `Application.Log.Critical(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a FATAL event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Audit.Write` | `Application.Audit.Write(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an immutable-intent audit event to the security JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
