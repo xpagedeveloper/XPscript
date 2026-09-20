@@ -190,6 +190,7 @@ public sealed partial class XPScriptTranspiler
         generated = Regex.Replace(generated, @"(?m)^\s*__lsErrCtx\.Statement\s*=\s*\d+;\s*\r?$\n?", "");
         generated = ScopeErrorProtection(generated);
         foreach (var item in protectedStrings) generated = generated.Replace(item.Key, item.Value, StringComparison.Ordinal);
-        return generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
+        generated = generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
+        return new CompilerSourceLineDirectivePostProcessor().Transform(generated);
     }
 }
