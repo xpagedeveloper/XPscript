@@ -259,6 +259,18 @@ Require(includedSourceDiagnostic.Line == 5, "included source diagnostic must use
 Require(includedSourceDiagnostic.Position > 0, "included source diagnostic position");
 Require(includedSourceDiagnostic.DiagnosticCode is "XPS2001" or "XPS2003", "included source structured type diagnostic");
 
+var nestedSourceValidation = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "include-source-map-nested", "root.xps"));
+Require(!nestedSourceValidation.Success, "nested included source validation must fail");
+var nestedSourceDiagnostic = nestedSourceValidation.Errors.FirstOrDefault(d => d.File == "c.xps" && d.DiagnosticCode is "XPS2001" or "XPS2003");
+Require(nestedSourceDiagnostic is not null, "nested include diagnostic must map to leaf physical file; diagnostics=" + string.Join(" || ", nestedSourceValidation.Errors.Select(d => $"{d.File}:{d.Line}:{d.Position}:{d.DiagnosticCode}:{d.Description}")));
+Require(nestedSourceDiagnostic.Line == 5 && nestedSourceDiagnostic.Position > 0, "nested include diagnostic leaf location");
+Require(nestedSourceDiagnostic.SourceCode?.Contains("value =", StringComparison.Ordinal) == true, "nested include diagnostic source line");
+Require(nestedSourceDiagnostic.SourceCode?.Contains("nested wrong", StringComparison.Ordinal) == false, "nested include diagnostic string redaction");
+Require(nestedSourceDiagnostic.IncludeTrace?.Count == 3, "nested include diagnostic must expose three include frames");
+Require(nestedSourceDiagnostic.IncludeTrace![0].File == "root.xps" && nestedSourceDiagnostic.IncludeTrace[0].Line == 3 && nestedSourceDiagnostic.IncludeTrace[0].IncludedFile == "a.xps", "nested include root frame");
+Require(nestedSourceDiagnostic.IncludeTrace[1].File == "a.xps" && nestedSourceDiagnostic.IncludeTrace[1].Line == 2 && nestedSourceDiagnostic.IncludeTrace[1].IncludedFile == "b.xps", "nested include middle frame");
+Require(nestedSourceDiagnostic.IncludeTrace[2].File == "b.xps" && nestedSourceDiagnostic.IncludeTrace[2].Line == 2 && nestedSourceDiagnostic.IncludeTrace[2].IncludedFile == "c.xps", "nested include leaf frame");
+
 
 
 var unknownMemberCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "include-source-map", "unknown-member-error.xps"));
