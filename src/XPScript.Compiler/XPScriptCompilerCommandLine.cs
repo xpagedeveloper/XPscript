@@ -496,10 +496,10 @@ public static class XPScriptCompilerCommandLine
                 scriptArgs.Add(value);
             }
 
-            // Start/reuse the warm compiler host before normal execution. Compilation
-            // still follows the existing run/debug path until daemon compile requests
-            // are wired in, preserving debugger protocol and process semantics.
-            if (!noDaemon && !await CompilerDaemonClient.EnsureRunningAsync().ConfigureAwait(false))
+            // Debug compilation stays local so generated C#/Roslyn/MSBuild diagnostics
+            // remain directly available to developers and CI. Normal runs use the warm daemon.
+            var useDaemon = !noDaemon && !debug;
+            if (useDaemon && !await CompilerDaemonClient.EnsureRunningAsync().ConfigureAwait(false))
                 throw new InvalidOperationException("Unable to start or connect to the XPScript compiler daemon.");
 
             var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
@@ -551,7 +551,7 @@ public static class XPScriptCompilerCommandLine
                 if (info)
                     WriteProgress($"Started to compile {sourceName}");
 
-                var compileTask = noDaemon
+                var compileTask = !useDaemon
                     ? RunCompiler.CompileWithResultAsync(
                         sourcePath,
                         runOutputDirectory,
