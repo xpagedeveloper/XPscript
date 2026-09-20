@@ -130,7 +130,7 @@ public static class XpsKestrelAdapter
                     http.Request.Method,
                     http.Request.Path.HasValue ? http.Request.Path.Value! : "/",
                     http.Request.Scheme,
-                    http.Request.Host.Value,
+                    http.Request.Host.Value ?? string.Empty,
                     http.Request.Protocol,
                     http.Connection.RemoteIpAddress?.ToString(),
                     http.Request.Headers.UserAgent.FirstOrDefault(),
