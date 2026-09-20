@@ -21,12 +21,19 @@ public static class CompilerDaemonServer
             else { Console.Error.WriteLine($"Unknown daemon argument: {args[i]}"); return 1; }
         }
 
+        var authToken = Environment.GetEnvironmentVariable("XPSCRIPT_DAEMON_TOKEN");
+        if (string.IsNullOrWhiteSpace(authToken))
+        {
+            Console.Error.WriteLine("Compiler daemon requires XPSCRIPT_DAEMON_TOKEN.");
+            return 1;
+        }
+
         var listener = new TcpListener(IPAddress.Loopback, port);
         listener.Start();
         var endpoint = (IPEndPoint)listener.LocalEndpoint;
         Console.WriteLine(JsonSerializer.Serialize(new { type = "ready", protocol = ProtocolVersion, port = endpoint.Port, processId = Environment.ProcessId }));
         Console.Out.Flush();
-        await CompilerDaemonClient.WriteStateAsync(endpoint.Port).ConfigureAwait(false);
+        await CompilerDaemonClient.WriteStateAsync(endpoint.Port, authToken).ConfigureAwait(false);
 
         using var shutdown = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var lastActivityTicks = DateTimeOffset.UtcNow.UtcTicks;
@@ -50,7 +57,7 @@ public static class CompilerDaemonServer
             {
                 var client = await listener.AcceptTcpClientAsync(shutdown.Token).ConfigureAwait(false);
                 Touch();
-                _ = HandleClientAsync(client, Touch, () => Interlocked.Increment(ref activeRequests), () => Interlocked.Decrement(ref activeRequests), shutdown);
+                _ = HandleClientAsync(client, Touch, () => Interlocked.Increment(ref activeRequests), () => Interlocked.Decrement(ref activeRequests), authToken, shutdown);
             }
         }
         catch (OperationCanceledException) when (shutdown.IsCancellationRequested) { }
@@ -59,7 +66,7 @@ public static class CompilerDaemonServer
         return 0;
     }
 
-    private static async Task HandleClientAsync(TcpClient client, Action touch, Action beginRequest, Action endRequest, CancellationTokenSource shutdown)
+    private static async Task HandleClientAsync(TcpClient client, Action touch, Action beginRequest, Action endRequest, string authToken, CancellationTokenSource shutdown)
     {
         using (client)
         using (var stream = client.GetStream())
@@ -81,6 +88,12 @@ public static class CompilerDaemonServer
                     var root = document.RootElement;
                     var id = root.TryGetProperty("id", out var idElement) ? idElement.Clone() : default;
                     var method = root.TryGetProperty("method", out var methodElement) ? methodElement.GetString() : null;
+                    var requestToken = root.TryGetProperty("token", out var tokenElement) ? tokenElement.GetString() : null;
+                    if (!string.Equals(requestToken, authToken, StringComparison.Ordinal))
+                    {
+                        await WriteErrorAsync(writer, id, "Unauthorized daemon request.").ConfigureAwait(false);
+                        continue;
+                    }
                     if (method == "shutdown")
                     {
                         await WriteAsync(writer, id, new { shuttingDown = true }).ConfigureAwait(false);
