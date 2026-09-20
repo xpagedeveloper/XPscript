@@ -218,6 +218,12 @@ Require(preprocessorDiagnostic.Category == "configuration", "source preprocessor
 Require(preprocessorDiagnostic.Properties?.Any(p => p.Name == "preprocessor" && p.Value == "replace") == true, "source preprocessor configuration name");
 Require(preprocessorDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "replace:FROM=TO") == true, "source preprocessor expected construct");
 
+var nativeByRefCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "native-byref-error.xps"));
+var nativeByRefDiagnostic = nativeByRefCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2013");
+Require(nativeByRefDiagnostic is not null, "native ByRef diagnostic");
+Require(nativeByRefDiagnostic.Category == "interop", "native ByRef category");
+Require(nativeByRefDiagnostic.File == "native-byref-error.xps", "native ByRef source file");
+
 var browserTargetCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "browser-wasm-target-ai-error.xps"), "browser-wasm");
 var browserTargetDiagnostic = browserTargetCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
 Require(browserTargetDiagnostic is not null, "Browser WASM target diagnostic");
