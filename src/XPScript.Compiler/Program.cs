@@ -26,7 +26,7 @@ static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
 
 static bool ShouldWriteBanner(string[] arguments)
 {
-    if (arguments.Length > 0 && arguments[0].Equals("mcp", StringComparison.OrdinalIgnoreCase)) return false;
+    if (arguments.Length > 0 && (arguments[0].Equals("mcp", StringComparison.OrdinalIgnoreCase) || arguments[0].Equals("daemon", StringComparison.OrdinalIgnoreCase))) return false;
     for (var i = 0; i < arguments.Length; i++)
     {
         if (!arguments[i].Equals("--result-format", StringComparison.OrdinalIgnoreCase)) continue;
