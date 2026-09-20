@@ -82,12 +82,14 @@ public sealed partial class XPScriptTranspiler
         var usesArchive = archiveRequested || usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
         var usesSpreadsheet = spreadsheetRequested || source.Contains("XPScriptSpreadsheet", StringComparison.Ordinal);
         var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
+        var usesApplicationCrypto = Regex.IsMatch(PreprocessorFeatureGate.CodeOnly(source), @"\bApplication\.Crypto\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
         if (usesMsSql && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPDbMsSql is not available for browser-wasm targets.");
         if (usesAi && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPAi is not available for browser-wasm targets. Keep AI credentials and requests on the server.");
         if (usesArchive && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("Archive file-path operations are not available for browser-wasm targets yet. Run archive filesystem work on the server until in-memory Archive support is implemented.");
         if (usesSpreadsheet && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPSpreadsheet file operations are not available for browser-wasm targets in the basic implementation.");
         if (usesNetworkTools && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("NetworkTools is not available for browser-wasm targets because browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
+        if (usesApplicationCrypto && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("Application.Crypto is not available in browser-wasm client code because .NET AES-GCM is unsupported there. Keep cryptographic operations in server-side code.");
         var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleObjects.Transform(source);
         var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);

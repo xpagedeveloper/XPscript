@@ -50,6 +50,7 @@ internal sealed class ApplicationObjectPreprocessor
 
         source = Regex.Replace(source, @"\bApplication\.Registry\.User\b", "XPScriptApplicationRegistryRuntime.User", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Registry\.System\b", "XPScriptApplicationRegistryRuntime.System", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bApplication\.Crypto\b", "XPScriptApplicationCryptoRuntime", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Secrets\.IsEncrypted\b", "XPScriptApplicationSecretsEncryptionRuntime.IsEncrypted", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Secrets\.Exists\b", "XPScriptApplicationSecretsManagementRuntime.Exists", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Secrets\.Delete\b", "XPScriptApplicationSecretsManagementRuntime.Delete", RegexOptions.IgnoreCase);
