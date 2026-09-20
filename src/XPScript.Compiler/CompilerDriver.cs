@@ -112,6 +112,7 @@ public sealed class CompilerDriver
     public async Task<CompileResult> ValidateWithResultAsync(string sourcePath, string runtimeIdentifier)
     {
         string source = "";
+        IDisposable? sourceContext = null;
         try
         {
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
