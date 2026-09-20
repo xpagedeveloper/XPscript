@@ -45,6 +45,8 @@ public static class XPScriptCompilerCommandLine
                 return await CompilerDaemonClient.StatusAsync().ConfigureAwait(false);
             if (args.Length > 1 && args[1].Equals("quit", StringComparison.OrdinalIgnoreCase))
                 return await CompilerDaemonClient.QuitAsync().ConfigureAwait(false);
+            if (args.Length > 1 && args[1].Equals("restart", StringComparison.OrdinalIgnoreCase))
+                return await CompilerDaemonClient.RestartAsync().ConfigureAwait(false);
             return await CompilerDaemonServer.RunAsync(args[1..]).ConfigureAwait(false);
         }
 
