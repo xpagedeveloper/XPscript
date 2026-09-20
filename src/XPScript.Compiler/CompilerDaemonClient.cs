@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
@@ -24,6 +25,12 @@ public static class CompilerDaemonClient
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
+        if (string.Equals(Path.GetFileNameWithoutExtension(executable), "dotnet", StringComparison.OrdinalIgnoreCase))
+        {
+            var entryAssembly = Assembly.GetEntryAssembly()?.Location;
+            if (string.IsNullOrWhiteSpace(entryAssembly)) return false;
+            startInfo.ArgumentList.Add(entryAssembly);
+        }
         startInfo.ArgumentList.Add("daemon");
         startInfo.ArgumentList.Add("--port");
         startInfo.ArgumentList.Add("0");
