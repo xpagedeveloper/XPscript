@@ -1,0 +1,36 @@
+name: Web Logging FullTest
+
+on:
+  pull_request:
+    paths:
+      - "src/XPScript.Web.*/**"
+      - "src/XPScript.Compiler/**"
+      - "tests/WebRuntimeSmoke/**"
+      - ".github/workflows/web-logging-fulltest.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/XPScript.Web.*/**"
+      - "src/XPScript.Compiler/**"
+      - "tests/WebRuntimeSmoke/**"
+
+permissions:
+  contents: read
+
+jobs:
+  web-logging:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build web host CLI
+        run: dotnet build src/XPScript.Cli/XPScript.Cli.csproj --configuration Release
+      - name: Run web runtime smoke tests
+        run: dotnet run --project tests/WebRuntimeSmoke/WebRuntimeSmoke.csproj --configuration Release

@@ -39,6 +39,7 @@ public sealed class XpsKestrelOptions
     public bool EnableStaticFiles { get; init; }
     public long MaxStaticFileBytes { get; init; } = 32L * 1024 * 1024;
     public string StaticCacheControl { get; init; } = "public, max-age=300";
+    public XpsWebLogOptions LogOptions { get; init; } = new();
     public IReadOnlyDictionary<string, string> StaticFileContentTypes { get; init; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -63,6 +64,8 @@ public sealed class XpsKestrelOptions
     public void Validate()
     {
         if (Port is < 0 or > 65535) throw new ArgumentOutOfRangeException(nameof(Port));
+        ArgumentNullException.ThrowIfNull(LogOptions);
+        LogOptions.Validate();
         if (MaxRequestBodySize is < 0 or > 1024L * 1024L * 1024L)
             throw new ArgumentOutOfRangeException(nameof(MaxRequestBodySize), "Request body limit must be between 0 and 1 GiB.");
         if (MaxConcurrentConnections is < 1 or > 1_000_000)

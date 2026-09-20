@@ -169,3 +169,34 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `ApplicationCryptoRuntime.Version` | `Application.Crypto.Version(value)` | `value`: encrypted envelope. | Validates the envelope and returns its numeric format version. | [application-crypto.xps](../samples/application-crypto.xps) |
 | `ApplicationCryptoRuntime.NeedsUpgrade` | `Application.Crypto.NeedsUpgrade(value)` | `value`: encrypted envelope. | Returns whether the envelope uses an older supported format, cipher or password work factor. | [application-crypto.xps](../samples/application-crypto.xps) |
 | `ApplicationCryptoRuntime.ReEncrypt` | `Application.Crypto.ReEncrypt(value, oldPassword, newPassword [, context])` | `value`: password-based envelope; old and new passwords; optional authenticated `context`. | Decrypts a password-based value and creates a new envelope with the current default profile. | [application-crypto.xps](../samples/application-crypto.xps) |
+
+
+## Application structured web logging
+
+| Member | Syntax | Parameters | Behavior | Example |
+|---|---|---|---|---|
+| `Application.Log.Trace` | `Application.Log.Trace(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a TRACE event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Debug` | `Application.Log.Debug(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a DEBUG event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Info` | `Application.Log.Info(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an INFO event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Warning` | `Application.Log.Warning(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a WARN event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Error` | `Application.Log.Error(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an ERROR event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Critical` | `Application.Log.Critical(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a FATAL event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Audit.Write` | `Application.Audit.Write(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an immutable-intent audit event to the security JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+
+
+## Generated application logging runtime declarations
+
+| Member | Syntax | Parameters | Behavior | Example |
+|---|---|---|---|---|
+| `ApplicationLogRuntime` | `Application.Log` | none | Structured application-log namespace used by generated programs. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Trace` | `Application.Log.Trace(eventName, message [, attributes])` | Event, message, optional attributes. | Writes TRACE. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Debug` | `Application.Log.Debug(eventName, message [, attributes])` | Event, message, optional attributes. | Writes DEBUG. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Info` | `Application.Log.Info(eventName, message [, attributes])` | Event, message, optional attributes. | Writes INFO. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Warning` | `Application.Log.Warning(eventName, message [, attributes])` | Event, message, optional attributes. | Writes WARN. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Error` | `Application.Log.Error(eventName, message [, attributes])` | Event, message, optional attributes. | Writes ERROR. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Critical` | `Application.Log.Critical(eventName, message [, attributes])` | Event, message, optional attributes. | Writes FATAL. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationAuditRuntime` | `Application.Audit` | none | Structured security/audit namespace used by generated programs. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationAuditRuntime.Write` | `Application.Audit.Write(eventName, message [, attributes])` | Event, message, optional attributes. | Writes to the security stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+
+| `Application.Log.CaptureExchange` | `Application.Log.CaptureExchange = True` | Boolean request flag. | Writes a redacted, size-limited request and response capture for the current request. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.CaptureExchange` | `Application.Log.CaptureExchange` | Boolean request flag. | Generated runtime property for exchange capture. | [application-web-logging.xps](../samples/application-web-logging.xps) |

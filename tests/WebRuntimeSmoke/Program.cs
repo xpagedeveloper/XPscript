@@ -1,3 +1,4 @@
+using System.Text.Json;
 using XPScript.Web.Runtime;
 
 var root = Path.Combine(Path.GetTempPath(), "xps-web-smoke-" + Guid.NewGuid().ToString("N"));
@@ -157,12 +158,99 @@ try
 
     var app = new SmokeApplicationState();
     var server = new XpsServerInfo("site-a", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test");
-    var context = new XpsWebContext(request, response, server, authenticated, app);
-    using (XpsWebContextAccessor.Push(context))
+    AssertThrows<InvalidOperationException>(() => _ = new XpsWebLogManager(server, new XpsWebLogOptions
     {
-        if (!ReferenceEquals(XpsWebContextAccessor.Current, context)) throw new Exception("Web context push failed.");
+        DirectoryPath = Path.Combine(root, "logs")
+    }));
+
+    var logDirectory = Path.Combine(outsideRoot, "logs");
+    var correlationCookieName = XpsWebClientCorrelation.CookieNameFor(server.SiteId);
+    if (!correlationCookieName.StartsWith("XPSLOGID_", StringComparison.Ordinal))
+        throw new Exception("Site-specific correlation cookie name mismatch.");
+    var rawCorrelation = XpsWebClientCorrelation.GetOrCreate(
+        new Dictionary<string, string>(), correlationCookieName, out var correlationCreated);
+    if (!correlationCreated || !XpsWebClientCorrelation.IsValid(rawCorrelation))
+        throw new Exception("Client correlation id was not created.");
+    var reusedCorrelation = XpsWebClientCorrelation.GetOrCreate(
+        new Dictionary<string, string> { [correlationCookieName] = rawCorrelation },
+        correlationCookieName,
+        out var reusedCreated);
+    if (reusedCreated || reusedCorrelation != rawCorrelation)
+        throw new Exception("Client correlation id was not stable across requests.");
+    var clientSessionId = XpsWebClientCorrelation.Hash(rawCorrelation);
+    using (var logger = new XpsWebLogManager(server, new XpsWebLogOptions { DirectoryPath = logDirectory }))
+    {
+        var context = new XpsWebContext(
+            request, response, server, authenticated, app,
+            logger: logger, requestId: "request_1234", clientSessionId: clientSessionId);
+        using (XpsWebContextAccessor.Push(context))
+        {
+            if (!ReferenceEquals(XpsWebContextAccessor.Current, context)) throw new Exception("Web context push failed.");
+            XpsWebRuntimeObjects.WriteApplicationLog("info", "order.created", "Order created", "{\"order.id\":42}", false);
+            XpsWebRuntimeObjects.WriteApplicationLog("info", "user.login", "User logged in", null, true);
+            XpsWebRuntimeObjects.ApplicationLogCaptureExchange = true;
+            if (!context.CaptureExchange) throw new Exception("Exchange capture flag did not reach the request context.");
+            AssertThrows<ArgumentException>(() =>
+                XpsWebRuntimeObjects.WriteApplicationLog("info", "bad.attributes", "Rejected", "{\"password\":\"secret\"}", false));
+        }
+        var captureRequest = new XpsWebRequest(
+            "POST", "/login", "", "token=query-secret",
+            new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Authorization"] = new[] { "Bearer header-secret" },
+                ["Cookie"] = new[] { "session=cookie-secret" },
+                ["Content-Type"] = new[] { "application/json" }
+            },
+            "application/json", 48,
+            "{\"username\":\"fred\",\"password\":\"body-secret\"}"u8.ToArray(),
+            "localhost", "https", "127.0.0.1", "HTTP/1.1", new Dictionary<string, string>());
+        var captureResponse = new XpsWebResponse();
+        captureResponse.ContentType = "application/json";
+        captureResponse.Write("{\"access_token\":\"response-secret\",\"ok\":true}");
+        captureResponse.SetHeader("Set-Cookie", "session=response-cookie-secret");
+        captureResponse.Complete();
+        var captureContext = new XpsWebContext(
+            captureRequest, captureResponse, server, authenticated, app,
+            logger: logger, requestId: "request_capture", clientSessionId: clientSessionId);
+        captureContext.CaptureExchange = true;
+        logger.WriteExchange(captureContext);
+        logger.WriteAccess(request, 500, 7, TimeSpan.FromMilliseconds(12), "request_1234", "kestrel", authenticated, "SmokeException", clientSessionId);
     }
     AssertThrows<InvalidOperationException>(() => _ = XpsWebContextAccessor.Current);
+
+    var accessFile = Directory.GetFiles(logDirectory, "access-*.jsonl").Single();
+    var accessLine = File.ReadLines(accessFile).Single();
+    using (var accessJson = JsonDocument.Parse(accessLine))
+    {
+        if (accessJson.RootElement.GetProperty("schema_version").GetString() != XpsWebLogManager.SchemaVersion)
+            throw new Exception("Web log schema version mismatch.");
+        var attributes = accessJson.RootElement.GetProperty("attributes");
+        if (attributes.GetProperty("url.path").GetString() != "/foo/save")
+            throw new Exception("Access log path mismatch.");
+        if (accessLine.Contains("a=1", StringComparison.Ordinal))
+            throw new Exception("Access log leaked the query string.");
+        if (attributes.GetProperty("session.id").GetString() != clientSessionId)
+            throw new Exception("Access log client session correlation mismatch.");
+        if (accessLine.Contains(rawCorrelation, StringComparison.Ordinal))
+            throw new Exception("Access log leaked the raw correlation cookie.");
+    }
+    var applicationLine = File.ReadLines(Directory.GetFiles(logDirectory, "application-*.jsonl").Single()).Single();
+    if (!applicationLine.Contains(clientSessionId, StringComparison.Ordinal) ||
+        applicationLine.Contains(rawCorrelation, StringComparison.Ordinal))
+        throw new Exception("Application log client session correlation mismatch.");
+    if (Directory.GetFiles(logDirectory, "security-*.jsonl").Length != 1)
+        throw new Exception("Audit log was not written to the security stream.");
+    if (Directory.GetFiles(logDirectory, "error-*.jsonl").Length != 1)
+        throw new Exception("5xx request was not written to the error stream.");
+    var exchangeLine = File.ReadLines(Directory.GetFiles(logDirectory, "exchange-*.jsonl").Single()).Single();
+    if (!exchangeLine.Contains("[REDACTED]", StringComparison.Ordinal))
+        throw new Exception("Exchange capture did not mark redacted values.");
+    if (!exchangeLine.Contains(clientSessionId, StringComparison.Ordinal) ||
+        exchangeLine.Contains(rawCorrelation, StringComparison.Ordinal))
+        throw new Exception("Exchange log client session correlation mismatch.");
+    foreach (var secret in new[] { "query-secret", "header-secret", "cookie-secret", "body-secret", "response-secret", "response-cookie-secret" })
+        if (exchangeLine.Contains(secret, StringComparison.Ordinal))
+            throw new Exception("Exchange capture leaked a secret: " + secret);
 
     Console.WriteLine("WEB-RUNTIME-SMOKE=OK");
 }
