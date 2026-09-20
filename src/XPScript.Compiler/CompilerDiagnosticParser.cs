@@ -116,22 +116,34 @@ internal static class CompilerDiagnosticParser
         };
         if (propertyName is null) return null;
 
-        // Roslyn's message identifies the unresolved name directly. A mapped XPScript
-        // column can point at a containing expression, so the source suffix is fallback only.
         var quotedIdentifiers = Regex.Matches(description, @"'(?<identifier>[A-Za-z_]\w*)'")
             .Select(match => match.Groups["identifier"].Value)
             .ToArray();
         if (quotedIdentifiers.Length > 0)
         {
-            // CS1061/CS0117 messages quote both the receiver type and the missing member.
-            // The unresolved member is the last quoted identifier; CS0103 has a single quoted symbol.
-            var identifier = normalizedCode is "CS1061" or "CS0117"
-                ? quotedIdentifiers[^1]
-                : quotedIdentifiers[0];
+            var identifier = normalizedCode switch
+            {
+                "CS1061" when quotedIdentifiers.Length >= 2 => quotedIdentifiers[1],
+                "CS0117" when quotedIdentifiers.Length >= 2 => quotedIdentifiers[1],
+                _ => quotedIdentifiers[0]
+            };
             return [new CompileDiagnosticProperty { Name = propertyName, Value = identifier }];
         }
 
-        if (string.IsNullOrWhiteSpace(sourceLine) || position <= 0) return null;
+        if (string.IsNullOrWhiteSpace(sourceLine)) return null;
+
+        // Prefer an explicit member access from the mapped XPScript line. This is more
+        // reliable than the generated-C# column, which can point at the receiver/expression.
+        if (normalizedCode is "CS1061" or "CS0117")
+        {
+            var memberAccess = Regex.Matches(sourceLine, @"\.\s*(?<identifier>[A-Za-z_]\w*)")
+                .Select(match => match.Groups["identifier"].Value)
+                .LastOrDefault();
+            if (!string.IsNullOrWhiteSpace(memberAccess))
+                return [new CompileDiagnosticProperty { Name = propertyName, Value = memberAccess }];
+        }
+
+        if (position <= 0) return null;
         var suffix = position <= sourceLine.Length ? sourceLine.Substring(position - 1) : "";
         var sourceMatch = Regex.Match(suffix, @"^(?<identifier>[A-Za-z_]\w*)");
         return sourceMatch.Success
