@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
@@ -7,6 +8,56 @@ namespace XPScript.Compiler;
 public static class CompilerDaemonClient
 {
     private static string StatePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XPScript", "daemon-v1.json");
+
+    public static async Task<bool> EnsureRunningAsync(CancellationToken cancellationToken = default)
+    {
+        var hello = await SendAsync("hello").ConfigureAwait(false);
+        if (IsCompatible(hello)) return true;
+
+        TryDeleteState();
+        var executable = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(executable)) return false;
+        var startInfo = new ProcessStartInfo(executable)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        startInfo.ArgumentList.Add("daemon");
+        startInfo.ArgumentList.Add("--port");
+        startInfo.ArgumentList.Add("0");
+        using var process = Process.Start(startInfo);
+        if (process is null) return false;
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+        try
+        {
+            while (!timeout.IsCancellationRequested)
+            {
+                var line = await process.StandardOutput.ReadLineAsync(timeout.Token).ConfigureAwait(false);
+                if (line is null) break;
+                using var ready = JsonDocument.Parse(line);
+                if (ready.RootElement.TryGetProperty("type", out var type) && type.GetString() == "ready")
+                {
+                    for (var attempt = 0; attempt < 20; attempt++)
+                    {
+                        hello = await SendAsync("hello").ConfigureAwait(false);
+                        if (IsCompatible(hello)) return true;
+                        await Task.Delay(50, timeout.Token).ConfigureAwait(false);
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+        return false;
+    }
+
+    private static bool IsCompatible(JsonElement? hello) =>
+        hello is { } value &&
+        value.TryGetProperty("protocol", out var protocol) &&
+        protocol.GetInt32() == CompilerDaemonServer.ProtocolVersion;
 
     public static async Task<int> StatusAsync()
     {
