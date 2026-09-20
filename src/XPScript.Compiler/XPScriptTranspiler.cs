@@ -71,7 +71,7 @@ public sealed partial class XPScriptTranspiler
         {
             new DateComparisonValidator().Validate(source, sourceName);
             new ClassOverloadValidator().Validate(source, sourceName);
-            new SourceTypeValidator().Validate(source, sourceName);
+            new SourceTypeValidator().Validate(source, sourceName, sourceMap);
         }
         catch (CompilerException ex)
         {
