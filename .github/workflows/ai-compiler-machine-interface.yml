@@ -191,7 +191,8 @@ jobs:
           if ($before -notmatch 'not running') { throw "Expected daemon stopped before debug run: $before" }
 
           $debugRun = Invoke-XPScript @('run','samples/application-is-debugging.xps','--debug','--security=off')
-          if ($debugRun -notmatch 'DEBUGGING=True') { throw "Debug run failed: $debugRun" }
+          if ($debugRun -notmatch 'Started to compile application-is-debugging.xps') { throw "Debug run did not perform a local fresh compilation: $debugRun" }
+          if ($debugRun -notmatch 'Program exited with code 0') { throw "Debug run failed: $debugRun" }
 
           $after = Invoke-XPScript @('daemon','status')
           if ($after -notmatch 'not running') { throw "--debug unexpectedly started or used daemon: $after" }
