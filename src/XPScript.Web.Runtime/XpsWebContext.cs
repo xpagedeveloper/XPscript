@@ -214,7 +214,8 @@ public sealed class XpsWebContext
         IXpsSession? session = null,
         IXpsRequestState? requestScope = null,
         XpsWebLogManager? logger = null,
-        string? requestId = null)
+        string? requestId = null,
+        string? clientSessionId = null)
     {
         Request = request ?? throw new ArgumentNullException(nameof(request));
         Response = response ?? throw new ArgumentNullException(nameof(response));
@@ -225,6 +226,7 @@ public sealed class XpsWebContext
         RequestScope = requestScope ?? new XpsRequestState();
         Logger = logger;
         RequestId = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("N") : requestId;
+        ClientSessionId = clientSessionId;
     }
 
     public XpsWebRequest Request { get; }
@@ -237,6 +239,7 @@ public sealed class XpsWebContext
     public XpsWebLogManager? Logger { get; }
     public string RequestId { get; }
     public bool CaptureExchange { get; set; }
+    public string? ClientSessionId { get; }
     public IReadOnlyDictionary<string, string> RouteValues => _routeValues;
 
     public string Route(string name)
