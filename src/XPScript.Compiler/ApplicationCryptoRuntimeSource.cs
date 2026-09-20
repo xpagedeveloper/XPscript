@@ -385,7 +385,7 @@ internal static class XPScriptApplicationCryptoRuntime
         if (value.Length == 0 || value.Any(c => !(char.IsAsciiLetterOrDigit(c) || c is '-' or '_')))
             throw new FormatException();
         var base64 = value.Replace('-', '+').Replace('_', '/');
-        base64 = base64.Length % 4 switch
+        base64 = (base64.Length % 4) switch
         {
             0 => base64,
             2 => base64 + "==",
