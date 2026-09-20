@@ -125,6 +125,53 @@ jobs:
 
           Invoke-XPScript @('daemon','quit') | Out-Null
 
+      - name: Daemon error protocol probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off') | Out-Null
+
+          $statePath = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'XPScript/daemon-v1.json'
+          $state = Get-Content -Raw $statePath | ConvertFrom-Json
+
+          function Invoke-DaemonRequest([string] $json) {
+            $client = [System.Net.Sockets.TcpClient]::new()
+            try {
+              $client.Connect('127.0.0.1', [int]$state.port)
+              $stream = $client.GetStream()
+              $writer = [System.IO.StreamWriter]::new($stream, [System.Text.UTF8Encoding]::new($false), 4096, $true)
+              $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::UTF8, $false, 4096, $true)
+              $writer.AutoFlush = $true
+              $writer.WriteLine($json)
+              return ($reader.ReadLine() | ConvertFrom-Json)
+            } finally {
+              if ($writer) { $writer.Dispose() }
+              if ($reader) { $reader.Dispose() }
+              if ($stream) { $stream.Dispose() }
+              $client.Dispose()
+            }
+          }
+
+          $unauthorized = Invoke-DaemonRequest (@{ id = 41; method = 'hello'; token = 'wrong-token' } | ConvertTo-Json -Compress)
+          if ($unauthorized.id -ne 41) { throw "Unauthorized response lost request id" }
+          if ($unauthorized.error -ne 'Unauthorized daemon request.') { throw "Unexpected unauthorized response: $($unauthorized | ConvertTo-Json -Compress)" }
+
+          $unknown = Invoke-DaemonRequest (@{ id = 42; method = 'definitelyUnknown'; token = $state.token } | ConvertTo-Json -Compress)
+          if ($unknown.id -ne 42) { throw "Unknown-method response lost request id" }
+          if ($unknown.error -notmatch 'Unknown daemon method') { throw "Unexpected unknown-method response: $($unknown | ConvertTo-Json -Compress)" }
+
+          $status = Invoke-XPScript @('daemon','status')
+          if ($status -notmatch 'PID ([0-9]+)') { throw "Daemon did not survive protocol errors: $status" }
+          Invoke-XPScript @('daemon','quit') | Out-Null
+
       - name: MCP protocol probe
         run: dotnet run --project tests/CompilerMcpProtocolProbe/CompilerMcpProtocolProbe.csproj -c Release -- .
 
