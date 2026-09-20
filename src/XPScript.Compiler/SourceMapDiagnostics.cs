@@ -45,16 +45,33 @@ internal static class SourceMapDiagnostics
                     .Select(m => m.Groups["value"].Value)
                     .Where(value => value.Length > 0)
                     .ToArray();
-                if (quoted.Length > 0)
+
+                var included = Enumerable.Range(1, map.Count)
+                    .Select(index => map.Resolve(index, flattenedSourceName))
+                    .Where(item => !IsSamePath(item.SourcePath, flattenedSourceName))
+                    .ToArray();
+
+                var includeCandidates = quoted.Length == 0
+                    ? Array.Empty<SourceMap.Location>()
+                    : included.Where(item => quoted.Any(value => item.SourceText.Contains(value, StringComparison.OrdinalIgnoreCase))).ToArray();
+
+                // Type validators often describe only the inferred types ("String", "Integer"),
+                // not the source tokens. In that case use the reported statement text from the
+                // flattened source and match it against the physical include lines.
+                if (includeCandidates.Length != 1 && expandedLine > 0)
                 {
-                    var includeCandidates = Enumerable.Range(1, map.Count)
-                        .Select(index => map.Resolve(index, flattenedSourceName))
-                        .Where(item => !IsSamePath(item.SourcePath, flattenedSourceName))
-                        .Where(item => quoted.Any(value => item.SourceText.Contains(value, StringComparison.OrdinalIgnoreCase)))
-                        .ToArray();
-                    if (includeCandidates.Length == 1)
-                        location = includeCandidates[0];
+                    var flattenedLines = ExpandedSourceContext.Current?.Source
+                        .Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+                    if (flattenedLines is not null && expandedLine <= flattenedLines.Length)
+                    {
+                        var statement = flattenedLines[expandedLine - 1].Trim();
+                        if (statement.Length > 0)
+                            includeCandidates = included.Where(item => string.Equals(item.SourceText.Trim(), statement, StringComparison.Ordinal)).ToArray();
+                    }
                 }
+
+                if (includeCandidates.Length == 1)
+                    location = includeCandidates[0];
             }
 
             var locationFullPath = SafeFullPath(location.SourcePath);
