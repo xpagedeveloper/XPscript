@@ -248,6 +248,17 @@ Require(generatedSymbolDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.V
 Require(generatedSymbolDiagnostic.Line > 0 && generatedSymbolDiagnostic.Position > 0, "generated symbol source location");
 Require(generatedSymbolDiagnostic.SourceCode?.Contains("MissingGeneratedProcedure", StringComparison.Ordinal) == true, "generated symbol mapped source line");
 
+var multiSourceValidation = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "include-source-map", "root.xps"));
+Require(!multiSourceValidation.Success, "included source validation must fail");
+Require(multiSourceValidation.Source?.EntryPoint == "root.xps", "included source entry point");
+var includedSourceDiagnostic = multiSourceValidation.Errors.FirstOrDefault(d =>
+    d.File == "compile-error.xps" && d.SourceCode?.Contains("value = \"wrong\"", StringComparison.Ordinal) == true);
+Require(includedSourceDiagnostic is not null, "included source diagnostic must map to physical include file");
+Require(includedSourceDiagnostic.Line == 5, "included source diagnostic must use include-file line number");
+Require(includedSourceDiagnostic.Position > 0, "included source diagnostic position");
+Require(includedSourceDiagnostic.DiagnosticCode is "XPS2001" or "XPS2003", "included source structured type diagnostic");
+
+
 
 var unknownMemberCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "include-source-map", "unknown-member-error.xps"));
 var unknownMemberDiagnostic = unknownMemberCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2009");
