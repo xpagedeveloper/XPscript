@@ -9,7 +9,9 @@ namespace XPScript.Compiler;
 public static class CompilerDaemonClient
 {
     private static readonly SemaphoreSlim StartupGate = new(1, 1);
-    private static string StatePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XPScript", "daemon-v1.json");
+    private static string StateDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XPScript");
+    private static string StatePath => Path.Combine(StateDirectory, "daemon-v1.json");
+    private static string StartupLockPath => Path.Combine(StateDirectory, "daemon-v1.lock");
 
     public static async Task<bool> EnsureRunningAsync(CancellationToken cancellationToken = default)
     {
@@ -20,6 +22,14 @@ public static class CompilerDaemonClient
         try
         {
             // Another caller in this process may have started the daemon while we waited.
+            hello = await SendAsync("hello").ConfigureAwait(false);
+            if (IsCompatible(hello)) return true;
+
+            Directory.CreateDirectory(StateDirectory);
+            await using var startupLock = await AcquireStartupLockAsync(cancellationToken).ConfigureAwait(false);
+
+            // A separate xpscript process may have started the daemon while this process
+            // was waiting for the cross-process lock.
             hello = await SendAsync("hello").ConfigureAwait(false);
             if (IsCompatible(hello)) return true;
 
@@ -146,6 +156,22 @@ public static class CompilerDaemonClient
             return result.Clone();
         }
         catch { TryDeleteState(); return null; }
+    }
+
+    private static async Task<FileStream> AcquireStartupLockAsync(CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                return new FileStream(StartupLockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose);
+            }
+            catch (IOException)
+            {
+                await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+            }
+        }
     }
 
     internal static async Task WriteStateAsync(int port)
