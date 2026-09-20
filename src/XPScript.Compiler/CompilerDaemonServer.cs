@@ -62,7 +62,7 @@ public static class CompilerDaemonServer
         }
         catch (OperationCanceledException) when (shutdown.IsCancellationRequested) { }
         try { await idleMonitor.ConfigureAwait(false); } catch (OperationCanceledException) { }
-        finally { listener.Stop(); CompilerDaemonClient.DeleteState(); }
+        finally { listener.Stop(); CompilerDaemonClient.DeleteStateIfOwned(endpoint.Port, authToken); }
         return 0;
     }
 
