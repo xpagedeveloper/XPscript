@@ -61,6 +61,9 @@ public sealed partial class XPScriptTranspiler
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase) && originalFeatures.Ai)
             throw TargetUnavailable("XPAi", runtimeIdentifier, "server target", "Keep AI credentials and requests on the server.");
 
+        // Source markers must be attached while the expanded source still has the exact
+        // line layout represented by sourceMap. Later preprocessors may insert/remove lines.
+        source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         source = new MultilineStringPreprocessor().Transform(source, sourceName);
         source = new EscapedQuotePreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
@@ -71,7 +74,6 @@ public sealed partial class XPScriptTranspiler
         source = new ParameterlessProcedureHeaderPreprocessor().Transform(source);
         source = new SourceLineContinuationPreprocessor().Transform(source);
         source = new ParameterPassingPreprocessor().Transform(source);
-        source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         source = new HclPrintFormattingPreprocessor().Transform(source);
         source = new StatementSeparatorPreprocessor().Transform(source);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
