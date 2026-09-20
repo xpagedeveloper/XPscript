@@ -212,6 +212,14 @@ Require(generatedSymbolDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.V
 Require(generatedSymbolDiagnostic.Line == 2 && generatedSymbolDiagnostic.Position > 0, "generated symbol source location");
 
 
+var unknownMemberCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "include-source-map", "unknown-member-error.xps"));
+var unknownMemberDiagnostic = unknownMemberCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2009");
+Require(unknownMemberDiagnostic is not null, "unknown member diagnostic");
+Require(unknownMemberDiagnostic.Category == "member-resolution", "unknown member category");
+Require(unknownMemberDiagnostic.UpstreamCode is "CS1061" or "CS0117", "unknown member upstream code");
+Require(unknownMemberDiagnostic.Properties?.Any(p => p.Name == "member" && p.Value == "MissingMember") == true, "unknown member metadata");
+Require(unknownMemberDiagnostic.Line == 4 && unknownMemberDiagnostic.Position > 0, "unknown member source location");
+
 CompileResult preprocessorCase;
 using (SourcePreprocessorConfigurationContext.Push(["replace:"]))
     preprocessorCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "source-preprocessor-error-root.xps"));
