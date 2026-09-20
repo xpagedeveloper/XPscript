@@ -136,11 +136,11 @@ public sealed class CompilerDriver
             ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
             var transpiler = new XPScriptTranspiler();
-            string generatedSource;
             using (ExpandedSourceContext.Begin(expandedSource, sourcePath, includeResult.Map))
-                generatedSource = transpiler.Transpile(expandedSource, sourcePath, rid);
-
-            await ValidateGeneratedCodeAsync(sourcePath, rid, generatedSource, managedReferences);
+            {
+                var generatedSource = transpiler.Transpile(expandedSource, sourcePath, rid);
+                await ValidateGeneratedCodeAsync(sourcePath, rid, generatedSource, managedReferences);
+            }
             return CompileResult.Valid().WithContext(sourcePath, rid);
         }
         catch (CompilerException ex)
