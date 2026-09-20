@@ -835,7 +835,6 @@ Use -- before script arguments when an argument could otherwise be interpreted a
                 break;
         }
     }
-}
 
     private static async Task<CompileResult> CompileRunWithDaemonAsync(
         string sourcePath,
@@ -858,4 +857,4 @@ Use -- before script arguments when an argument could otherwise be interpreted a
             sourcePreprocessors).ConfigureAwait(false);
         return result ?? throw new InvalidOperationException("Compiler daemon disconnected during run compilation.");
     }
-
+}
