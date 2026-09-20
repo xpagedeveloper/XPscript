@@ -34,6 +34,29 @@ internal static class SourceMapDiagnostics
             if (!int.TryParse(match.Groups["line"].Value, out var expandedLine)) return match.Value;
 
             var location = map.Resolve(expandedLine, flattenedSourceName);
+
+            // Some semantic validators report the line of the containing statement after
+            // their own token normalization. If that line still resolves to the root,
+            // recover a unique included line from the diagnostic text before giving up.
+            if (IsSamePath(location.SourcePath, flattenedSourceName))
+            {
+                var descriptionProbe = match.Groups["description"].Value;
+                var quoted = Regex.Matches(descriptionProbe, @"'(?<value>[^']+)'")
+                    .Select(m => m.Groups["value"].Value)
+                    .Where(value => value.Length > 0)
+                    .ToArray();
+                if (quoted.Length > 0)
+                {
+                    var includeCandidates = Enumerable.Range(1, map.Count)
+                        .Select(index => map.Resolve(index, flattenedSourceName))
+                        .Where(item => !IsSamePath(item.SourcePath, flattenedSourceName))
+                        .Where(item => quoted.Any(value => item.SourceText.Contains(value, StringComparison.OrdinalIgnoreCase)))
+                        .ToArray();
+                    if (includeCandidates.Length == 1)
+                        location = includeCandidates[0];
+                }
+            }
+
             var locationFullPath = SafeFullPath(location.SourcePath);
             var isRootSource = string.Equals(
                 locationFullPath,
@@ -62,6 +85,12 @@ internal static class SourceMapDiagnostics
             // source line, while description continues to expose only the include filename.
             return $"{locationFullPath}({location.Line},{position}): {fileName}: {description}";
         });
+    }
+
+    private static bool IsSamePath(string left, string right)
+    {
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        return string.Equals(SafeFullPath(left), SafeFullPath(right), comparison);
     }
 
     private static string SafeFullPath(string path)
