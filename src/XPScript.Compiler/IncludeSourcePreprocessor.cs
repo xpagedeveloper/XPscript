@@ -140,7 +140,7 @@ internal sealed class IncludeSourcePreprocessor
 
                 if (included.Contains(includeKey))
                 {
-                    AddLine(output, map, string.Empty, sourcePath, i + 1);
+                    AddLine(output, map, string.Empty, sourcePath, i + 1, includeTrace);
                     continue;
                 }
 
@@ -154,7 +154,8 @@ internal sealed class IncludeSourcePreprocessor
                     throw IncludeError(sourcePath, i + 1, "Unable to read included source file: " + SafePath(declaredPath));
                 }
 
-                var nestedTrace = includeTrace.Concat([new SourceMap.IncludeFrame(sourcePath, i + 1, includePath)]).ToArray();\n                Expand(includePath, includeSource, pathIdentity, included, dependencies, stack, output, map, nestedTrace);
+                var nestedTrace = includeTrace.Concat([new SourceMap.IncludeFrame(sourcePath, i + 1, includePath)]).ToArray();
+                Expand(includePath, includeSource, pathIdentity, included, dependencies, stack, output, map, nestedTrace);
             }
         }
         finally
