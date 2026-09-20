@@ -551,11 +551,21 @@ public static class XPScriptCompilerCommandLine
                 if (info)
                     WriteProgress($"Started to compile {sourceName}");
 
-                var compileTask = RunCompiler.CompileWithResultAsync(
-                    sourcePath,
-                    runOutputDirectory,
-                    currentRuntimeIdentifier,
-                    debug);
+                var compileTask = noDaemon
+                    ? RunCompiler.CompileWithResultAsync(
+                        sourcePath,
+                        runOutputDirectory,
+                        currentRuntimeIdentifier,
+                        debug)
+                    : CompileRunWithDaemonAsync(
+                        sourcePath,
+                        runOutputDirectory,
+                        currentRuntimeIdentifier,
+                        debug,
+                        effectiveSecurityMode,
+                        restricted,
+                        sourceRoots,
+                        sourcePreprocessors);
                 var compileResult = info
                     ? await WaitWithProgressAsync(
                         compileTask,
@@ -826,3 +836,26 @@ Use -- before script arguments when an argument could otherwise be interpreted a
         }
     }
 }
+
+    private static async Task<CompileResult> CompileRunWithDaemonAsync(
+        string sourcePath,
+        string outputDirectory,
+        string runtimeIdentifier,
+        bool debug,
+        ApplicationSecurityMode securityMode,
+        bool restricted,
+        IReadOnlyList<string> sourceRoots,
+        IReadOnlyList<string> sourcePreprocessors)
+    {
+        var result = await CompilerDaemonClient.CompileForRunAsync(
+            sourcePath,
+            outputDirectory,
+            runtimeIdentifier,
+            debug,
+            securityMode,
+            restricted,
+            sourceRoots,
+            sourcePreprocessors).ConfigureAwait(false);
+        return result ?? throw new InvalidOperationException("Compiler daemon disconnected during run compilation.");
+    }
+
