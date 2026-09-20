@@ -252,7 +252,7 @@ var multiSourceValidation = await driver.ValidateWithResultAsync(Path.Combine(ro
 Require(!multiSourceValidation.Success, "included source validation must fail");
 Require(multiSourceValidation.Source?.EntryPoint == "root.xps", "included source entry point");
 var includedSourceDiagnostic = multiSourceValidation.Errors.FirstOrDefault(d => d.File == "compile-error.xps");
-Require(includedSourceDiagnostic is not null, "included source diagnostic must map to physical include file");
+Require(includedSourceDiagnostic is not null, "included source diagnostic must map to physical include file; diagnostics=" + string.Join(" || ", multiSourceValidation.Errors.Select(d => $"{d.File}:{d.Line}:{d.Position}:{d.DiagnosticCode}:{d.UpstreamCode}:{d.Description}")));
 Require(includedSourceDiagnostic.SourceCode?.Contains("value =", StringComparison.Ordinal) == true, "included source diagnostic must expose mapped source line");
 Require(includedSourceDiagnostic.SourceCode?.Contains("wrong", StringComparison.Ordinal) == false, "included source diagnostic must redact string literals");
 Require(includedSourceDiagnostic.Line == 5, "included source diagnostic must use include-file line number");
