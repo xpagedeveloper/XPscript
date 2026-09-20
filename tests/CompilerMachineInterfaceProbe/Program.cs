@@ -29,6 +29,23 @@ Require(securityVulnerabilityDefinition.Category == "security", "XPS7002 categor
 Require(securityVulnerabilityDefinition.Properties.SequenceEqual(["package", "version", "severity", "advisory"]), "XPS7002 properties");
 Require(securityVulnerabilityDefinition.DocumentationIds.Contains("security.DependencyAudit"), "XPS7002 dependency audit documentation");
 
+var auditFindings = ApplicationSecurityAudit.Parse("""
+warning NU1902: Package 'Moderate.Package' 1.2.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-moderate
+warning NU1904: Package 'Critical.Package' 4.5.6 has a known critical severity vulnerability, https://github.com/advisories/GHSA-critical.
+warning NU1904: Package 'Critical.Package' 4.5.6 has a known critical severity vulnerability, https://github.com/advisories/GHSA-critical.
+""");
+Require(auditFindings.Count == 2, "security audit findings must be deduplicated");
+Require(auditFindings[0].Package == "Critical.Package" && auditFindings[0].Severity == "critical", "security audit findings must order critical first");
+Require(auditFindings[0].Advisory == "https://github.com/advisories/GHSA-critical", "security audit advisory normalization");
+Require(auditFindings[1].Package == "Moderate.Package" && auditFindings[1].Severity == "moderate", "security audit moderate finding");
+
+var auditUnavailable = ApplicationSecurityAudit.ParseUnavailable(
+    "warning NU1900: Error occurred while getting package vulnerability data: service unavailable");
+Require(auditUnavailable is not null, "security audit unavailable warning");
+Require(auditUnavailable.Code == "NU1900", "security audit unavailable upstream code");
+Require(auditUnavailable.Message.Contains("service unavailable", StringComparison.Ordinal), "security audit unavailable message");
+
+
 Require(CompilerDiagnosticCatalog.All.Select(x => x.DiagnosticCode).SequenceEqual(
     CompilerDiagnosticCatalog.All.Select(x => x.DiagnosticCode).OrderBy(x => x, StringComparer.Ordinal)),
     "diagnostic catalog ordering");
