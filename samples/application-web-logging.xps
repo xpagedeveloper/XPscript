@@ -2,6 +2,8 @@
 [Post]
 [Route:/api/orders]
 Sub CreateOrder()
+    Application.Log.CaptureExchange = True
+
     Dim fields As New XPJsonObject
     fields.Set("order.id", 42)
     fields.Set("source", "api")
