@@ -10,7 +10,8 @@ public enum XpsWebLogKind
     Access,
     Application,
     Security,
-    Error
+    Error,
+    Exchange
 }
 
 public sealed class XpsWebLogOptions
@@ -138,6 +139,33 @@ public sealed class XpsWebLogManager : IDisposable
         if (statusCode >= 500 || errorType is not null)
             Write(XpsWebLogKind.Error, "ERROR", "http.server.error",
                 "Request failed with status " + statusCode, attributes);
+    }
+
+    public void WriteExchange(XpsWebContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var request = context.Request;
+        var response = context.Response;
+        var attributes = BaseAttributes();
+        attributes["event.category"] = "troubleshooting";
+        attributes["request.id"] = context.RequestId;
+        attributes["http.request.method"] = request.Method;
+        attributes["url.path"] = request.Path;
+        attributes["url.query"] = SanitizeNameValueText(request.QueryString);
+        attributes["url.scheme"] = request.Scheme;
+        attributes["server.address"] = request.Host;
+        attributes["network.protocol.version"] = request.Protocol;
+        attributes["client.address"] = request.RemoteAddress;
+        attributes["http.request.headers"] = SanitizeHeaders(request.Headers);
+        attributes["http.request.body"] = CaptureBody(request.Body, request.ContentType);
+        attributes["http.response.status_code"] = response.StatusCode;
+        attributes["http.response.headers"] = SanitizeHeaders(response.Headers);
+        attributes["http.response.body"] = CaptureBody(response.Body, response.ContentType);
+        attributes["capture.limit.bytes"] = 256 * 1024;
+        if (context.Principal.IsAuthenticated && !string.IsNullOrWhiteSpace(context.Principal.UserId))
+            attributes["user.id"] = Clean(context.Principal.UserId, 256);
+        Write(XpsWebLogKind.Exchange, "DEBUG", "http.exchange.capture",
+            request.Method + " " + request.Path + " " + response.StatusCode, attributes);
     }
 
     public void WriteApplication(
@@ -270,6 +298,108 @@ public sealed class XpsWebLogManager : IDisposable
                 throw new ArgumentException("Sensitive log attribute is prohibited: " + key, nameof(jsonText));
             target[key] = property.Value.Clone();
         }
+    }
+
+    private static Dictionary<string, object?> CaptureBody(ReadOnlyMemory<byte> body, string? contentType)
+    {
+        const int limit = 256 * 1024;
+        var length = Math.Min(body.Length, limit);
+        var captured = body.Slice(0, length).ToArray();
+        var mediaType = (contentType ?? string.Empty).Split(';', 2)[0].Trim().ToLowerInvariant();
+        var result = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["content_type"] = contentType ?? string.Empty,
+            ["original_bytes"] = body.Length,
+            ["captured_bytes"] = length,
+            ["truncated"] = body.Length > limit
+        };
+
+        if (mediaType == "application/json" || mediaType.EndsWith("+json", StringComparison.Ordinal))
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(captured, new JsonDocumentOptions { MaxDepth = 32 });
+                result["encoding"] = "json";
+                result["content"] = SanitizeJson(document.RootElement, null);
+                return result;
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        if (mediaType == "application/x-www-form-urlencoded")
+        {
+            result["encoding"] = "form";
+            result["content"] = SanitizeNameValueText(Encoding.UTF8.GetString(captured));
+            return result;
+        }
+
+        if (mediaType.StartsWith("text/", StringComparison.Ordinal) ||
+            mediaType.Contains("xml", StringComparison.Ordinal) ||
+            mediaType.Contains("javascript", StringComparison.Ordinal))
+        {
+            result["encoding"] = "utf-8";
+            result["content"] = Clean(Encoding.UTF8.GetString(captured), limit);
+            return result;
+        }
+
+        result["encoding"] = "base64";
+        result["content"] = Convert.ToBase64String(captured);
+        return result;
+    }
+
+    private static object? SanitizeJson(JsonElement element, string? propertyName)
+    {
+        if (propertyName is not null && IsSensitive(propertyName)) return "[REDACTED]";
+        return element.ValueKind switch
+        {
+            JsonValueKind.Object => element.EnumerateObject().ToDictionary(
+                x => x.Name,
+                x => SanitizeJson(x.Value, x.Name),
+                StringComparer.Ordinal),
+            JsonValueKind.Array => element.EnumerateArray().Select(x => SanitizeJson(x, null)).ToArray(),
+            JsonValueKind.String => Clean(element.GetString(), 256 * 1024),
+            JsonValueKind.Number => element.TryGetInt64(out var integer) ? integer :
+                element.TryGetDecimal(out var number) ? number : element.GetDouble(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => null
+        };
+    }
+
+    private static Dictionary<string, IReadOnlyList<string>> SanitizeHeaders(
+        IReadOnlyDictionary<string, IReadOnlyList<string>> headers)
+    {
+        var result = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in headers)
+        {
+            var redact = IsSensitive(pair.Key) ||
+                pair.Key.Equals("Proxy-Authorization", StringComparison.OrdinalIgnoreCase) ||
+                pair.Key.Equals("X-Api-Key", StringComparison.OrdinalIgnoreCase);
+            result[pair.Key] = redact
+                ? new[] { "[REDACTED]" }
+                : pair.Value.Select(x => Clean(x, 8192)).ToArray();
+        }
+        return result;
+    }
+
+    private static string SanitizeNameValueText(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return string.Empty;
+        var source = value![0] == '?' ? value[1..] : value;
+        var parts = new List<string>();
+        foreach (var segment in source.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var equals = segment.IndexOf('=');
+            var rawName = equals < 0 ? segment : segment[..equals];
+            var rawValue = equals < 0 ? string.Empty : segment[(equals + 1)..];
+            string name;
+            try { name = Uri.UnescapeDataString(rawName.Replace("+", " ", StringComparison.Ordinal)); }
+            catch (UriFormatException) { name = rawName; }
+            parts.Add(rawName + "=" + (IsSensitive(name) ? "[REDACTED]" : Clean(rawValue, 8192)));
+        }
+        return string.Join("&", parts);
     }
 
     private static string ResolveAndValidateDirectory(XpsServerInfo server, string? configured)
