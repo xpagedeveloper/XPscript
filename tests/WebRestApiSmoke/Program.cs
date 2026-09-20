@@ -36,6 +36,28 @@ catch (Exception ex) when (ex is UnauthorizedAccessException or PlatformNotSuppo
     Console.WriteLine("WEB-REST-JSON-SCHEMA-SYMLINK-CONTAINMENT=SKIPPED");
 }
 
+var outsideSchemaDirectory = Path.Combine(Path.GetTempPath(), "xps-rest-api-schema-dir-outside-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(outsideSchemaDirectory);
+await File.WriteAllTextAsync(Path.Combine(outsideSchemaDirectory, "outside.schema.json"), "{}");
+var schemaDirectoryLink = Path.Combine(root, "schemas", "outside-dir-link");
+try
+{
+    Directory.CreateSymbolicLink(schemaDirectoryLink, outsideSchemaDirectory);
+    try
+    {
+        _ = XpsJsonSchemaPath.ResolveInsideRoot(root, "schemas/outside-dir-link/outside.schema.json");
+        throw new Exception("JSON Schema directory symlink escaping the web root was accepted.");
+    }
+    catch (ArgumentException ex) when (ex.Message.Contains("web root", StringComparison.OrdinalIgnoreCase))
+    {
+    }
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-DIRECTORY-SYMLINK-CONTAINMENT=OK");
+}
+catch (Exception ex) when (ex is UnauthorizedAccessException or PlatformNotSupportedException or IOException)
+{
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-DIRECTORY-SYMLINK-CONTAINMENT=SKIPPED");
+}
+
 await File.WriteAllTextAsync(apiPath, """
 Public Class CreateUserRequest
     [Required]
