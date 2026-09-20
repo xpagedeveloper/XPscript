@@ -76,9 +76,10 @@ public sealed class XpsCgiAdapter : IDisposable
         var request = CreateRequest(environment, body, cancellationToken);
         var response = new XpsWebResponse();
         var principal = _principalFactory?.Invoke(request) ?? new XpsWebPrincipal(false);
-        var correlationValue = XpsWebClientCorrelation.GetOrCreate(request.Cookies, out var correlationCreated);
+        var correlationCookieName = XpsWebClientCorrelation.CookieNameFor(_serverInfo.SiteId);
+        var correlationValue = XpsWebClientCorrelation.GetOrCreate(request.Cookies, correlationCookieName, out var correlationCreated);
         var clientSessionId = XpsWebClientCorrelation.Hash(correlationValue);
-        if (correlationCreated) XpsWebClientCorrelation.SetCookie(response, correlationValue, request.Scheme == "https");
+        if (correlationCreated) XpsWebClientCorrelation.SetCookie(response, correlationCookieName, correlationValue, request.Scheme == "https");
         try
         {
             var session = _sessionFactory?.Invoke(request, response) ?? _sessions?.Bind(request, response);
