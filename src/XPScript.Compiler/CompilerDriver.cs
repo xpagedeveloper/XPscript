@@ -136,11 +136,11 @@ public sealed class CompilerDriver
             ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
             var transpiler = new XPScriptTranspiler();
-            using (ExpandedSourceContext.Begin(expandedSource, sourcePath, includeResult.Map))
-            {
-                var generatedSource = transpiler.Transpile(expandedSource, sourcePath, rid);
-                await ValidateGeneratedCodeAsync(sourcePath, rid, generatedSource, managedReferences);
-            }
+            sourceContext = ExpandedSourceContext.Begin(expandedSource, sourcePath, includeResult.Map);
+            var generatedSource = transpiler.Transpile(expandedSource, sourcePath, rid);
+            await ValidateGeneratedCodeAsync(sourcePath, rid, generatedSource, managedReferences);
+            sourceContext.Dispose();
+            sourceContext = null;
             return CompileResult.Valid().WithContext(sourcePath, rid);
         }
         catch (CompilerException ex)
@@ -157,6 +157,10 @@ public sealed class CompilerDriver
         catch (Exception)
         {
             return CompileResult.Error([CreateDiagnostic(0, 0, "Validation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
+        }
+        finally
+        {
+            sourceContext?.Dispose();
         }
     }
 
