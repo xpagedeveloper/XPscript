@@ -335,6 +335,7 @@ public static class XpsKestrelAdapter
                     await handler.HandleAsync(context);
 
                 response.Complete();
+                if (context.CaptureExchange) logManager.WriteExchange(context);
                 requestScope?.Complete(response.StatusCode, response.Body.Length);
                 await WriteResponseAsync(http, response);
             }
