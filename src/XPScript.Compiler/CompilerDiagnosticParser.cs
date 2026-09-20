@@ -7,7 +7,7 @@ internal static class CompilerDiagnosticParser
 {
     private const string GeneratedMarker = "XPSCRIPT-GENERATED-DIAGNOSTIC|";
 
-    public static List<CompileDiagnostic> Parse(string message, string sourcePath, string source, bool debug, string diagnosticCode = "", string category = "")
+    public static List<CompileDiagnostic> Parse(string message, string sourcePath, string source, bool debug, string diagnosticCode = "", string category = "", SourceMap? sourceMap = null)
     {
         debug = debug || CompilerDiagnosticMode.Debug;
         var result = new List<CompileDiagnostic>();
@@ -23,7 +23,7 @@ internal static class CompilerDiagnosticParser
             var diagnosticSource = match.Groups["file"].Value.Trim();
             var upstreamCode = match.Groups["id"].Value;
             var description = match.Groups["desc"].Value.Trim();
-            var mapped = RecoverIncludeLocation(sourcePath, diagnosticSource, line, description);
+            var mapped = RecoverIncludeLocation(sourcePath, diagnosticSource, line, description, sourceMap);
             if (mapped is not null)
             {
                 diagnosticSource = mapped.SourcePath;
@@ -115,11 +115,12 @@ internal static class CompilerDiagnosticParser
 
     private sealed record RecoveredIncludeLocation(string SourcePath, int Line, int Position);
 
-    private static RecoveredIncludeLocation? RecoverIncludeLocation(string rootSourcePath, string diagnosticSourcePath, int reportedLine, string description)
+    private static RecoveredIncludeLocation? RecoverIncludeLocation(string rootSourcePath, string diagnosticSourcePath, int reportedLine, string description, SourceMap? sourceMap)
     {
         if (!IsRootDiagnosticSource(rootSourcePath, diagnosticSourcePath)) return null;
         var context = ExpandedSourceContext.Current;
-        if (context is null) return null;
+        var map = sourceMap ?? context?.Map;
+        if (map is null) return null;
 
         // Fallback for generated diagnostics whose #line mapping was lost: match the
         // diagnostic's source expression against physical included source lines.
@@ -128,8 +129,8 @@ internal static class CompilerDiagnosticParser
             .Where(v => v.Length > 0)
             .ToArray();
 
-        var candidates = Enumerable.Range(1, context.Map.Count)
-            .Select(index => context.Map.Resolve(index, rootSourcePath))
+        var candidates = Enumerable.Range(1, map.Count)
+            .Select(index => map.Resolve(index, rootSourcePath))
             .Where(location => location.IncludeTrace is { Count: > 0 })
             .Where(location => quoted.Length == 0 || quoted.Any(value => location.SourceText.Contains(value, StringComparison.OrdinalIgnoreCase)))
             .ToArray();
