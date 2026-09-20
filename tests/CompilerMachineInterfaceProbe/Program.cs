@@ -207,6 +207,9 @@ Require(generatedValidation.Errors.Any(d => d.UpstreamCode == "CS0103"), "genera
 var generatedSymbolDiagnostic = generatedValidation.Errors.First(d => d.DiagnosticCode == "XPS2008");
 Require(generatedSymbolDiagnostic.UpstreamCode == "CS0103", "generated symbol upstream code");
 Require(!string.IsNullOrWhiteSpace(generatedSymbolDiagnostic.SourceCode), "generated symbol source mapping");
+Require(generatedSymbolDiagnostic.Category == "symbol-resolution", "generated symbol category");
+Require(generatedSymbolDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingGeneratedProcedure") == true, "generated symbol metadata");
+Require(generatedSymbolDiagnostic.Line == 2 && generatedSymbolDiagnostic.Position > 0, "generated symbol source location");
 
 
 CompileResult preprocessorCase;
