@@ -14,6 +14,7 @@ namespace XPScript.Web.Kestrel;
 
 public static class XpsKestrelAdapter
 {
+    private const string ClientSessionItemKey = "XPScript.ClientSessionId";
     public static WebApplication Build(
         XpsKestrelOptions options,
         XpsServerInfo serverInfo,
@@ -111,6 +112,29 @@ public static class XpsKestrelAdapter
             var requestId = Guid.NewGuid().ToString("N");
             http.TraceIdentifier = requestId;
             http.Response.Headers["X-Request-Id"] = requestId;
+            var correlationValue = XpsWebClientCorrelation.GetOrCreate(
+                http.Request.Cookies.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase),
+                out var correlationCreated);
+            var clientSessionId = XpsWebClientCorrelation.Hash(correlationValue);
+            http.Items[ClientSessionItemKey] = clientSessionId;
+            if (correlationCreated)
+            {
+                http.Response.OnStarting(() =>
+                {
+                    http.Response.Cookies.Append(
+                        XpsWebClientCorrelation.CookieName,
+                        correlationValue,
+                        new Microsoft.AspNetCore.Http.CookieOptions
+                        {
+                            Path = "/",
+                            HttpOnly = true,
+                            Secure = http.Request.IsHttps,
+                            SameSite = SameSiteMode.Lax,
+                            MaxAge = XpsWebClientCorrelation.Lifetime
+                        });
+                    return Task.CompletedTask;
+                });
+            }
             string? errorType = null;
             try
             {
@@ -141,7 +165,8 @@ public static class XpsKestrelAdapter
                     requestId,
                     "kestrel",
                     principal,
-                    errorType);
+                    errorType,
+                    clientSessionId);
             }
         });
 
@@ -329,7 +354,11 @@ public static class XpsKestrelAdapter
                 var principal = principalFactory?.Invoke(http) ?? new XpsWebPrincipal(false);
                 http.Items[typeof(XpsWebPrincipal)] = principal;
                 var session = sessions?.Bind(request, response);
-                var context = new XpsWebContext(request, response, serverInfo, principal, application, session, logger: logManager, requestId: requestId);
+                var context = new XpsWebContext(
+                    request, response, serverInfo, principal, application, session,
+                    logger: logManager,
+                    requestId: requestId,
+                    clientSessionId: http.Items[ClientSessionItemKey] as string);
 
                 using (XpsWebContextAccessor.Push(context))
                     await handler.HandleAsync(context);
