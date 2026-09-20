@@ -75,7 +75,7 @@ Route location, primitive parameter types and return type are inferred from the 
 
 REST routes can declare `[JsonSchema:relative/path.schema.json]`. When present, XPscript embeds the referenced schema directly into the generated OpenAPI 3.1 request body, keeping `openapi.json` self-contained. Without `[JsonSchema:...]`, request-body documentation continues to use the schema inferred from the XPscript parameter type.
 
-Schema paths must be relative `.json` paths inside the web root. API documentation generation fails for rejected paths, missing schema files, or malformed schema JSON rather than generating an invalid specification.
+Schema paths must be relative `.json` paths inside the web root. File and directory symlink/reparse-point targets are also required to remain inside the web root. API documentation generation fails for rejected paths, symlink escapes, missing schema files, malformed JSON, or JSON Schema roots other than an object or boolean rather than generating an invalid specification.
 
 Runtime request validation, structured validation errors, and server-error behavior for configured schemas are described in [REST request JSON Schema validation](rest-json-schema-validation.md).
 
