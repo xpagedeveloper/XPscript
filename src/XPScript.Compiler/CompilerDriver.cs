@@ -113,6 +113,7 @@ public sealed class CompilerDriver
     {
         string source = "";
         IDisposable? sourceContext = null;
+        SourceMap? diagnosticSourceMap = null;
         try
         {
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
@@ -132,6 +133,7 @@ public sealed class CompilerDriver
                 SourcePreprocessorConfigurationContext.Current);
             var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(preprocessorResult.Source, preprocessorResult.Map, sourcePath);
             var expandedSource = managedReferences.Source;
+            diagnosticSourceMap = preprocessorResult.Map;
             var nativeDependencies = new NativeDependencyPackager(rid).Collect(expandedSource, includeResult.Map, sourcePath);
             ValidateNativeDependencies(sourcePath, nativeDependencies);
             ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
@@ -150,7 +152,7 @@ public sealed class CompilerDriver
                 ex.GeneratedDiagnostics.Any(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)))
                 return CompileResult.Error(ex.GeneratedDiagnostics).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
 
-            var diagnostics = ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category);
+            var diagnostics = ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category, diagnosticSourceMap);
             if (CompilerDiagnosticMode.Debug && ex.GeneratedDiagnostics.Count > 0)
                 diagnostics.AddRange(ex.GeneratedDiagnostics);
             return CompileResult.Error(diagnostics).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
@@ -710,14 +712,16 @@ public sealed class CompilerDriver
         string sourcePath,
         string source,
         string diagnosticCode = "",
-        string category = "") =>
+        string category = "",
+        SourceMap? sourceMap = null) =>
         CompilerDiagnosticParser.Parse(
             message,
             sourcePath,
             source,
             CompilerDiagnosticMode.Debug,
             diagnosticCode,
-            category);
+            category,
+            sourceMap);
 
     private static string LimitBuildDiagnosticOutput(string value)
     {
