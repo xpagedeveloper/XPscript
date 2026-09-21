@@ -9,8 +9,10 @@ internal sealed class SourceLineContinuationPreprocessor
         {
             if (!EndsWithContinuation(lines[i])) continue;
 
-            var firstIndent = LeadingWhitespace(lines[i]);
-            var joined = RemoveContinuation(lines[i]).TrimEnd();
+            var openingLineIndex = i;
+            var openingSource = lines[i];
+            var firstIndent = LeadingWhitespace(openingSource);
+            var joined = RemoveContinuation(openingSource).TrimEnd();
             var j = i + 1;
             while (j < lines.Length)
             {
@@ -25,9 +27,9 @@ internal sealed class SourceLineContinuationPreprocessor
 
             if (j >= lines.Length)
             {
-                var line = i + 1;
+                var line = openingLineIndex + 1;
                 var message = $"Line continuation at physical line {line} has no following source line.";
-                var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(lines[i]).TrimEnd();
+                var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(openingSource).TrimEnd();
                 var diagnostic = new CompileDiagnostic
                 {
                     File = Path.GetFileName(sourceName),
