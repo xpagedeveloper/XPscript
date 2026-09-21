@@ -49,6 +49,8 @@ try
     {
         message.Headers.TryAddWithoutValidation("X-Request-Test", "present");
         message.Headers.TryAddWithoutValidation("X-Forwarded-For", "203.0.113.9");
+        message.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
+        message.Headers.TryAddWithoutValidation("X-Forwarded-Host", "evil.example");
         message.Headers.TryAddWithoutValidation("X-Request-Id", "client-spoofed-id");
         message.Content = new StringContent("abc", Encoding.UTF8, "text/plain");
         using var response = await client.SendAsync(message);
@@ -69,6 +71,10 @@ try
         if (!body.Contains("HEADER=present", StringComparison.Ordinal)) throw new Exception("Request header was not transferred.");
         if (body.Contains("REMOTE=203.0.113.9", StringComparison.Ordinal))
             throw new Exception("Untrusted X-Forwarded-For was accepted without KnownProxies.");
+        if (!body.Contains("SCHEME=http", StringComparison.Ordinal))
+            throw new Exception("Untrusted X-Forwarded-Proto changed the request scheme without KnownProxies.");
+        if (!body.Contains("HOST=127.0.0.1", StringComparison.Ordinal) && !body.Contains("HOST=localhost", StringComparison.Ordinal))
+            throw new Exception("Untrusted X-Forwarded-Host changed the request host without KnownProxies.");
     }
 
     using (var head = new HttpRequestMessage(HttpMethod.Head, "/head"))
@@ -213,7 +219,9 @@ sealed class EchoHandler : IXpsWebRequestHandler
             $"QUERY={context.Request.QueryString}\n" +
             $"BODY={body}\n" +
             $"HEADER={requestHeader}\n" +
-            $"REMOTE={context.Request.RemoteAddress}\n");
+            $"REMOTE={context.Request.RemoteAddress}\n" +
+            $"SCHEME={context.Request.Scheme}\n" +
+            $"HOST={context.Request.Host}\n");
         return Task.CompletedTask;
     }
 }
