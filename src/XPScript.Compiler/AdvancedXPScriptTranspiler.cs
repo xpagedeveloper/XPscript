@@ -112,10 +112,21 @@ internal sealed class AdvancedXPScriptTranspiler
             {
                 var diagnosticSource = currentSourceLocation?.SourcePath ?? sourceName;
                 var diagnosticLine = currentSourceLocation?.Line ?? i + 1;
-                throw new CompilerException(
-                    $"{diagnosticSource}({diagnosticLine}): {ex.Message}" +
-                    Environment.NewLine +
-                    $"  {original.Trim()}");
+                var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = Path.GetFileName(diagnosticSource),
+                    Line = diagnosticLine,
+                    Position = 1,
+                    EndLine = diagnosticLine,
+                    EndColumn = Math.Max(2, safeSource.Length + 1),
+                    Description = ex.Message,
+                    DiagnosticCode = string.IsNullOrWhiteSpace(ex.DiagnosticCode) ? "XPS1012" : ex.DiagnosticCode,
+                    Category = string.IsNullOrWhiteSpace(ex.Category) ? "syntax" : ex.Category,
+                    SourceCode = safeSource,
+                    MarkedCode = safeSource + Environment.NewLine + "^"
+                };
+                throw new CompilerException(ex.Message, diagnostic.DiagnosticCode, diagnostic.Category, [diagnostic]);
             }
         }
 
