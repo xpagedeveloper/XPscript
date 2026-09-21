@@ -5,13 +5,14 @@ namespace XPScript.Compiler;
 
 internal sealed class HclPrintFormattingPreprocessor
 {
-    public string Transform(string source)
+    public string Transform(string source, string sourceName = "input.xps")
     {
         var lines = source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length);
 
-        foreach (var raw in lines)
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
+            var raw = lines[lineIndex];
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
             if (line.Length == 0 || !ContainsSpcOrTabOutsideStrings(line))
@@ -34,10 +35,24 @@ internal sealed class HclPrintFormattingPreprocessor
                 continue;
             }
 
-            throw new CompilerException("Spc and Tab are valid only inside Print or Print # statements.");
+            throw SyntaxFailure("Spc and Tab are valid only inside Print or Print # statements.", sourceName, lineIndex + 1, raw, "Print or Print # statement");
         }
 
         return string.Join(Environment.NewLine, output);
+    }
+
+    private static CompilerException SyntaxFailure(string message, string sourceName, int line, string sourceLine, string expectedConstruct)
+    {
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourceName), Line = line, Position = 1, EndLine = line,
+            EndColumn = Math.Max(2, safeSource.Length + 1), Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
+            Properties = [new() { Name = "expectedConstruct", Value = expectedConstruct }],
+            SourceCode = safeSource, MarkedCode = safeSource + Environment.NewLine + "^"
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
     }
 
     private static bool ContainsSpcOrTabOutsideStrings(string line)
