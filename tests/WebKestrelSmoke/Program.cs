@@ -196,6 +196,44 @@ try
         await trustedApp.DisposeAsync();
     }
 
+    // Simulate the IIS out-of-process environment. The IIS integration variables
+    // select the loopback port, but must not disable the application's Host allowlist.
+    var previousIisPort = Environment.GetEnvironmentVariable("ASPNETCORE_PORT");
+    var previousIisToken = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
+    var iisPort = GetFreeTcpPort();
+    Environment.SetEnvironmentVariable("ASPNETCORE_PORT", iisPort.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    Environment.SetEnvironmentVariable("ASPNETCORE_TOKEN", "xpscript-smoke-token");
+    WebApplication? iisApp = null;
+    try
+    {
+        iisApp = XpsKestrelAdapter.Build(
+            new XpsKestrelOptions
+            {
+                Port = 0,
+                AllowedHosts = ["localhost", "127.0.0.1", "::1"]
+            },
+            serverInfo,
+            new EchoHandler(),
+            new SmokeApplicationState());
+        await iisApp.StartAsync();
+        using var iisClient = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{iisPort}") };
+        using var badHost = new HttpRequestMessage(HttpMethod.Get, "/iis-host");
+        badHost.Headers.Host = "evil.example";
+        using var response = await iisClient.SendAsync(badHost);
+        if ((int)response.StatusCode != 400)
+            throw new Exception("IIS out-of-process mode bypassed AllowedHosts.");
+    }
+    finally
+    {
+        if (iisApp is not null)
+        {
+            await iisApp.StopAsync();
+            await iisApp.DisposeAsync();
+        }
+        Environment.SetEnvironmentVariable("ASPNETCORE_PORT", previousIisPort);
+        Environment.SetEnvironmentVariable("ASPNETCORE_TOKEN", previousIisToken);
+    }
+
     var logText = structuredLog.ToString();
     var logLines = logText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
     if (logLines.Length != 3) throw new Exception($"Expected three structured request events, got {logLines.Length}.");
@@ -237,6 +275,15 @@ finally
     if (!stopped) await app.StopAsync();
     await app.DisposeAsync();
     Directory.Delete(root, recursive: true);
+}
+
+static int GetFreeTcpPort()
+{
+    var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+    listener.Start();
+    var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+    listener.Stop();
+    return port;
 }
 
 static void AssertHeader(HttpResponseMessage response, string name, string expected)
