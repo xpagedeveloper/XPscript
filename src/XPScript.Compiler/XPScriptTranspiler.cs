@@ -88,9 +88,13 @@ public sealed partial class XPScriptTranspiler
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
 
+        // Expand multiline strings while the source still has its original physical
+        // line layout. This preserves structured syntax coordinates for unterminated
+        // multiline literals instead of letting generated source markers obscure them.
+        source = new MultilineStringPreprocessor().Transform(source, sourceName);
+
         // Attach runtime/#line markers only after semantic validation and syntax scanning.
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
-        source = new MultilineStringPreprocessor().Transform(source, sourceName);
         source = new EscapedQuotePreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
         source = new IfLayoutPreprocessor().Transform(source);
