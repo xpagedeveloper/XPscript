@@ -20,7 +20,7 @@ public static class CompilerDiagnosticCatalog
             Define("XPS1004", "syntax", "Invalid compound assignment syntax.", "foundOperator", "expectedConstruct", "symbol", "expectedType", "actualType"),
             Define("XPS1005", "syntax", "Empty Dim declaration.", "foundConstruct", "expectedConstruct"),
             Define("XPS1006", "syntax", "Unterminated string literal.", "foundToken", "expectedConstruct"),
-            Define("XPS1007", "syntax", "Invalid date comparison."),
+            Define("XPS1007", "syntax", "Invalid date comparison.", "foundOperator", "expectedType", "actualType"),
             Define("XPS1008", "syntax", "A native constructor is missing a required argument."),
             Define("XPS1009", "syntax", "Invalid native constructor."),
             Define("XPS1010", "syntax", "Invalid native argument list."),
