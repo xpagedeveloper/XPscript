@@ -394,12 +394,12 @@ Require(emptyDimDiagnostic.Properties?.Any(p => p.Name == "foundConstruct" && p.
 Require(emptyDimDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct") == true, "empty Dim expected construct");
 
 var unterminatedStringCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "general-string-unterminated-error.xps"));
-var structuredUnterminatedStringDiagnostic = unterminatedStringCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1006");
-Require(structuredUnterminatedStringDiagnostic is not null, "unterminated string diagnostic");
-Require(structuredUnterminatedStringDiagnostic.Category == "syntax", "unterminated string category");
-Require(structuredUnterminatedStringDiagnostic.Line > 0 && structuredUnterminatedStringDiagnostic.Position > 0, "unterminated string location");
-Require(structuredUnterminatedStringDiagnostic.Properties?.Any(p => p.Name == "foundConstruct" && p.Value == "unterminated string literal") == true, "unterminated string found construct");
-Require(structuredUnterminatedStringDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct") == true, "unterminated string expected construct");
+var legacyUnterminatedStringDiagnostic = unterminatedStringCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1006");
+Require(legacyUnterminatedStringDiagnostic is not null, "unterminated string diagnostic");
+Require(legacyUnterminatedStringDiagnostic.Category == "syntax", "unterminated string category");
+Require(legacyUnterminatedStringDiagnostic.Line > 0 && legacyUnterminatedStringDiagnostic.Position > 0, "unterminated string location");
+Require(legacyUnterminatedStringDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "end-of-file") == true, "unterminated string found token");
+Require(legacyUnterminatedStringDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct") == true, "unterminated string expected construct");
 
 var incrementSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "increment-invalid-prefix.xps"));
 var incrementSyntaxDiagnostic = incrementSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1003");
