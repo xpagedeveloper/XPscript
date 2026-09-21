@@ -1,0 +1,21 @@
+id: xpscript-duplicate-host
+
+info:
+  name: XPScript Duplicate Host Accepted
+  author: xpscript
+  severity: high
+  description: Detects acceptance of ambiguous duplicate Host headers.
+
+http:
+  - raw:
+      - |
+        GET / HTTP/1.1
+        Host: {{Hostname}}
+        Host: attacker.invalid
+        Connection: close
+
+    unsafe: true
+    matchers:
+      - type: status
+        status:
+          - 200
