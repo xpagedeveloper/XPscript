@@ -26,10 +26,10 @@ internal sealed class NativeHttpJsonPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bXPJsonDocument\.Parse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.Parse\s*\(", "XPScriptJsonSchema.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.FromJson\s*\(", "XPScriptJsonSchema.FromJson(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])JsonParse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])JsonStringify\s*\(", "XPScriptNativeJson.Stringify(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])JsonEncode\s*\(", "XPScriptNativeJson.Stringify(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])JsonDecode\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "JsonParse", "XPScriptNativeJson.Parse");
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "JsonStringify", "XPScriptNativeJson.Stringify");
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "JsonEncode", "XPScriptNativeJson.Stringify");
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "JsonDecode", "XPScriptNativeJson.Parse");
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPHttpClient\s*(?:\(\s*\))?", "XPScriptNativeHttp.CreateClient()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPJsonDocument\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateDocument()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPJsonObject\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateObject()", RegexOptions.IgnoreCase);
