@@ -190,16 +190,16 @@ Require(emptySourceValidation.Errors.All(d => !string.IsNullOrWhiteSpace(d.Diagn
 
 var unterminatedStringValidation = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "general-string-unterminated-error.xps"));
 Require(!unterminatedStringValidation.Success, "unterminated string validation must fail");
-var unterminatedStringDiagnostic = unterminatedStringValidation.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1006");
-Require(unterminatedStringDiagnostic is not null, "unterminated string must produce XPS1006");
-Require(unterminatedStringDiagnostic.Category == "syntax", "unterminated string category");
-Require(unterminatedStringDiagnostic.Line == 3 && unterminatedStringDiagnostic.Position > 0, "unterminated string source location");
-Require(unterminatedStringDiagnostic.EndLine == unterminatedStringDiagnostic.Line &&
-        unterminatedStringDiagnostic.EndColumn == unterminatedStringDiagnostic.Position + 1,
+var structuredUnterminatedStringDiagnostic = unterminatedStringValidation.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1006");
+Require(structuredUnterminatedStringDiagnostic is not null, "unterminated string must produce XPS1006");
+Require(structuredUnterminatedStringDiagnostic.Category == "syntax", "unterminated string category");
+Require(structuredUnterminatedStringDiagnostic.Line == 3 && structuredUnterminatedStringDiagnostic.Position > 0, "unterminated string source location");
+Require(structuredUnterminatedStringDiagnostic.EndLine == structuredUnterminatedStringDiagnostic.Line &&
+        structuredUnterminatedStringDiagnostic.EndColumn == structuredUnterminatedStringDiagnostic.Position + 1,
     "unterminated string source range");
-Require(unterminatedStringDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "end-of-file") == true,
+Require(structuredUnterminatedStringDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "end-of-file") == true,
     "unterminated string found token metadata");
-Require(unterminatedStringDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "\"") == true,
+Require(structuredUnterminatedStringDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "\"") == true,
     "unterminated string expected delimiter metadata");
 
 var malformedSourceValidation = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "malformed-source-error.xps"));
@@ -394,12 +394,12 @@ Require(emptyDimDiagnostic.Properties?.Any(p => p.Name == "foundConstruct" && p.
 Require(emptyDimDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct") == true, "empty Dim expected construct");
 
 var unterminatedStringCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "general-string-unterminated-error.xps"));
-var unterminatedStringDiagnostic = unterminatedStringCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1006");
-Require(unterminatedStringDiagnostic is not null, "unterminated string diagnostic");
-Require(unterminatedStringDiagnostic.Category == "syntax", "unterminated string category");
-Require(unterminatedStringDiagnostic.Line > 0 && unterminatedStringDiagnostic.Position > 0, "unterminated string location");
-Require(unterminatedStringDiagnostic.Properties?.Any(p => p.Name == "foundConstruct" && p.Value == "unterminated string literal") == true, "unterminated string found construct");
-Require(unterminatedStringDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct") == true, "unterminated string expected construct");
+var structuredUnterminatedStringDiagnostic = unterminatedStringCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1006");
+Require(structuredUnterminatedStringDiagnostic is not null, "unterminated string diagnostic");
+Require(structuredUnterminatedStringDiagnostic.Category == "syntax", "unterminated string category");
+Require(structuredUnterminatedStringDiagnostic.Line > 0 && structuredUnterminatedStringDiagnostic.Position > 0, "unterminated string location");
+Require(structuredUnterminatedStringDiagnostic.Properties?.Any(p => p.Name == "foundConstruct" && p.Value == "unterminated string literal") == true, "unterminated string found construct");
+Require(structuredUnterminatedStringDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct") == true, "unterminated string expected construct");
 
 var incrementSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "increment-invalid-prefix.xps"));
 var incrementSyntaxDiagnostic = incrementSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1003");
