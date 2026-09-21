@@ -50,11 +50,11 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [ ] Verify bare LF request framing is rejected or safely normalized.
 - [ ] Verify malformed HTTP version tokens.
 - [x] Verify conflicting Content-Length values are rejected.
-- [~] Verify Content-Length plus Transfer-Encoding canonicalization cannot create request smuggling across supported deployment topologies.
-- [ ] Verify duplicate Transfer-Encoding values.
-- [ ] Verify invalid chunk sizes.
-- [ ] Verify chunk extensions and malformed chunk terminators.
-- [ ] Add request smuggling regression probes for CL.TE, TE.CL and duplicate Content-Length variants.
+- [~] Verify Content-Length plus Transfer-Encoding canonicalization cannot create request smuggling across supported deployment topologies. Standalone Kestrel CL.TE desync probe verified safe in run #31. Reverse-proxy topologies remain.
+- [x] Verify duplicate Transfer-Encoding values. Verified safe in run #31.
+- [x] Verify invalid chunk sizes. Verified rejected in run #31.
+- [~] Verify chunk extensions and malformed chunk terminators. Malformed terminator verified rejected in run #31. Chunk extensions remain.
+- [~] Add request smuggling regression probes for CL.TE, TE.CL and duplicate Content-Length variants. CL.TE verified in run #31. TE.CL added and pending CI.
 - [ ] Verify HTTP/1.0 handling.
 - [ ] Verify HTTP/2 behavior separately from HTTP/1.1.
 
