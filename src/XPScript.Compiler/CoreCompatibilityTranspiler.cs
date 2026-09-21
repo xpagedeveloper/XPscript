@@ -267,7 +267,7 @@ internal sealed class CoreCompatibilityTranspiler
             }
             else
             {
-                output.AddRange(TransformProcedure(trimmed, body, proc, currentClass));
+                output.AddRange(TransformProcedure(trimmed, body, proc, currentClass, sourceName));
                 output.Add(lines[j]);
             }
             i = j;
@@ -286,7 +286,7 @@ internal sealed class CoreCompatibilityTranspiler
         return ParseProcedureHeader(line, className);
     }
 
-    private IEnumerable<string> TransformProcedure(string header, List<string> body, ProcedureInfo proc, string? className)
+    private IEnumerable<string> TransformProcedure(string header, List<string> body, ProcedureInfo proc, string? className, string sourceName)
     {
         var output = new List<string>();
         var transformedHeader = TransformProcedureHeader(header, proc);
