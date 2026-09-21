@@ -33,6 +33,15 @@ try
     directorySymlinkCreated = true;
 }
 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException) { }
+var nestedSymlinkCreated = false;
+try
+{
+    var nested = Path.Combine(root, "assets", "nested");
+    Directory.CreateDirectory(nested);
+    Directory.CreateSymbolicLink(Path.Combine(nested, "escape"), outsideRoot);
+    nestedSymlinkCreated = true;
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException) { }
 var rejectedXpsAllowlist = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [".xps"] = "text/plain" };
 try
 {
@@ -193,6 +202,27 @@ try
         using var linkedDirectoryFile = await client.GetAsync("/assets/linked-dir/outside.txt");
         if ((int)linkedDirectoryFile.StatusCode == 200)
             throw new Exception("Static directory symlink escaped the configured web root.");
+    }
+    if (nestedSymlinkCreated)
+    {
+        using var nestedLinkedFile = await client.GetAsync("/assets/nested/escape/outside.txt");
+        if ((int)nestedLinkedFile.StatusCode == 200)
+            throw new Exception("Nested static directory symlink escaped the configured web root.");
+    }
+
+    foreach (var bypassPath in new[]
+    {
+        "/assets/allowed.txt%2e",
+        "/assets/allowed.txt%252e",
+        "/assets/.hidden.txt",
+        "/assets/allowed.txt/extra",
+        "/assets/allowed.xps",
+        "/assets/allowed.XPS"
+    })
+    {
+        using var bypassResponse = await client.GetAsync(bypassPath);
+        if ((int)bypassResponse.StatusCode == 200)
+            throw new Exception($"Static MIME/path allowlist bypass succeeded: {bypassPath}");
     }
 
         await AssertMaxConcurrentConnectionsAsync(new Uri(address));
