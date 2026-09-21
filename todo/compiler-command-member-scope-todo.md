@@ -39,12 +39,12 @@ Resolution rule: lexical keywords are syntax-level restrictions; compiler-reserv
 - [x] Verify `obj.StrLeftBack(...)` remains a member call.
 - [x] Verify `StrLeftBack(...)` still resolves to the reference runtime function.
 - [>] Add representative regressions from every preprocessor family discovered by the audit. JSON/XML/CSV/reference-runtime coverage added; more families remain.
-- [ ] Add negative tests for true language keywords and compiler-reserved `__*` names.
+- [x] Add negative tests for true language keywords and compiler-reserved `__*` names.
 - [x] Run regressions through the real XPScript transpiler/compiler, not only string-level unit tests.
 
 ## 5. Scope collision matrix
 
-- [ ] Test same spelling across type vs member.
+- [x] Test same spelling across type vs member.
 - [x] Test same spelling across two different classes.
 - [x] Test same spelling across member vs global/runtime function.
 - [x] Test same spelling across method parameter vs class member.
