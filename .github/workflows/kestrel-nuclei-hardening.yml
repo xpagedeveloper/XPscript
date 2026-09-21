@@ -85,7 +85,6 @@ jobs:
               location / {
                 include /etc/nginx/fastcgi_params;
                 fastcgi_param SCRIPT_FILENAME ${FASTCGI_ROOT}/index.xps;
-                fastcgi_param SCRIPT_NAME \$uri;
                 fastcgi_param PATH_INFO "";
                 fastcgi_pass 127.0.0.1:${FASTCGI_PORT};
               }
