@@ -45,6 +45,65 @@ Compiler-owned validators should attach semantic data through `CompileDiagnostic
 
 For machine-readable operation, stdout is reserved for the final JSON or XML result. Progress and non-result logging must use stderr. CI verifies this separation.
 
+## Source-location semantics
+
+Machine diagnostics use 1-based XPScript source coordinates. `line` and `column` identify the start location; `endLine` and `endColumn` identify the end location when an exact span is available. Schema version 1 may normalize diagnostics without an exact end span so the end location equals the start location.
+
+Locations refer to the physical XPScript source that owns the diagnostic, not generated C#. For root-source diagnostics, `file` is the root `.xps` filename. For `Include` diagnostics, `file` is the physical included filename and the location is remapped through the compiler source map. Nested includes preserve their include ancestry in `includeTrace` when available.
+
+Generated C# coordinates are an internal implementation detail. They may appear only in explicit debug diagnostics and must not replace the normal XPScript location in the machine contract.
+
+Line-ending style does not change semantic locations: equivalent LF and CRLF source must report the same XPScript line and column. Source mapping is also required to behave equivalently across Windows, Linux and macOS.
+
+For stdin validation, locations are relative to the submitted source text and use the caller-supplied virtual `--filename`. The virtual filename must be a simple `.xps` filename and cannot contain directory traversal.
+
+## Security and redaction
+
+Machine diagnostics are designed to provide repair context without exposing secrets. The compiler may return a redacted XPScript source line in `sourceText` / schema-v1 `code`, but string-literal contents are masked rather than returned verbatim. Secret-bearing values such as API keys, Authorization headers, credentials and sensitive directive values must never be emitted as structured diagnostic properties or source snippets.
+
+Diagnostic descriptions are not a trusted channel for secret transport. Compiler-owned diagnostics should attach only the minimum structured metadata needed to identify the failing symbol, type, argument, target or rule. Internal temporary paths and compiler workspace paths are sanitized before they reach the public result.
+
+Validation is non-executing. Submitted XPScript is parsed, preprocessed, transpiled and type-checked, but the submitted program is not launched. This boundary is regression-tested in CI.
+
+Consumers should treat redacted source text as display context only. Automated repair logic should prefer `diagnosticCode`, source coordinates and structured `properties`.
+
+## CI and external tooling examples
+
+A CI pipeline can fail deterministically on XPScript validation errors while preserving JSON for later inspection:
+
+```bash
+set +e
+xpscript validate program.xps --result-format json > compiler-result.json
+status=$?
+set -e
+
+if [ "$status" -ne 0 ]; then
+  cat compiler-result.json
+  exit "$status"
+fi
+```
+
+PowerShell:
+
+```powershell
+& xpscript validate program.xps --result-format json > compiler-result.json
+if ($LASTEXITCODE -ne 0) {
+    Get-Content compiler-result.json
+    exit $LASTEXITCODE
+}
+```
+
+External tools should parse the result contract rather than scrape console text. A typical flow is:
+
+1. Read `schema` and `schemaVersion`.
+2. Inspect `result` and `errors`.
+3. Match stable `diagnosticCode` values.
+4. Use `file`, line/column and structured `properties`.
+5. Apply a source-level XPScript change.
+6. Re-run validation and consume the next machine result.
+
+For latency-sensitive local integrations, prefer the reusable `CompilerDriver` API or the local MCP server instead of starting a fresh CLI process for every edit. One-shot CI remains a good fit for the CLI.
+
 ## Compatibility
 
 Schema version 1 is additive. Existing fields remain compatible. A breaking rename, removal or semantic change requires a new `schemaVersion`. Stable diagnostic codes must not be reused for a different meaning.
