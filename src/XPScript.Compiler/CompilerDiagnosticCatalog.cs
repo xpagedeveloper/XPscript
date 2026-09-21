@@ -19,7 +19,7 @@ public static class CompilerDiagnosticCatalog
             Define("XPS1003", "syntax", "Invalid increment or decrement syntax."),
             Define("XPS1004", "syntax", "Invalid compound assignment syntax."),
             Define("XPS1005", "syntax", "Empty Dim declaration."),
-            Define("XPS1006", "syntax", "Unterminated string literal."),
+            Define("XPS1006", "syntax", "Unterminated string literal.", "foundToken", "expectedConstruct"),
             Define("XPS1007", "syntax", "Invalid date comparison."),
             Define("XPS1008", "syntax", "A native constructor is missing a required argument."),
             Define("XPS1009", "syntax", "Invalid native constructor."),
