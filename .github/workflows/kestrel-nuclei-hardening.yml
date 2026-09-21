@@ -44,7 +44,7 @@ jobs:
       - name: Create hardening application
         shell: bash
         run: |
-          rm -rf ./.hardening-site ./out/hardening-webiis ./artifacts/hardening
+          rm -rf ./.hardening-site ./out/hardening-webiis ./out/hardening-webiis.zip ./artifacts/hardening
           mkdir -p ./.hardening-site/assets ./artifacts/hardening
 
           cat > ./.hardening-site/index.xps <<'XPS'
@@ -70,7 +70,7 @@ jobs:
       - name: Compile generated web application
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build --             ./.hardening-site/main.xps --target webiis --runtime=false --output ./out/hardening-webiis
-          test -f ./out/hardening-webiis/web.config
+          test -f ./out/hardening-webiis.zip\n          unzip -l ./out/hardening-webiis.zip | grep -qE "(^|[[:space:]])web.config$"
 
       - name: Start XPScript Kestrel host
         shell: bash
