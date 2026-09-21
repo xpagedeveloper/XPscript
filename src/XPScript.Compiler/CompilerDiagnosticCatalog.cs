@@ -25,6 +25,7 @@ public static class CompilerDiagnosticCatalog
             Define("XPS1009", "syntax", "Invalid native constructor.", "symbol", "symbolKind", "expectedConstruct"),
             Define("XPS1010", "syntax", "Invalid native argument list.", "symbol", "expectedArgumentCount", "actualArgumentCount", "expectedConstruct"),
             Define("XPS1011", "syntax", "The source references a removed native API.", "symbol", "expectedConstruct"),
+            Define("XPS1012", "syntax", "Invalid XPScript syntax."),
             Define("XPS2001", "type", "A value does not match the required XPScript type.", "expectedType", "actualType"),
             Define("XPS2002", "invocation", "A call supplies the wrong number of arguments.", "symbol", "expectedCount", "actualCount"),
             Define("XPS2003", "type", "An argument does not match the required parameter type.", "symbol", "parameterIndex", "expectedType", "actualType"),
