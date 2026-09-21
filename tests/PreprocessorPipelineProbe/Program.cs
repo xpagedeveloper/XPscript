@@ -55,6 +55,7 @@ VerifyRuntimeNameScopeMatrix();
 VerifyReservedIdentifierScope();
 VerifyRuntimeValueIdentifierScope();
 VerifySharedCallDetectionScope();
+VerifySharedCallRewriteScope();
 
 void Measure(string label, string source, int iterations)
 {
@@ -627,4 +628,40 @@ End Sub
         throw new Exception("Shared call detection matched a string or comment.");
 
     Console.WriteLine("PREPROCESSOR-SHARED-CALL-DETECTION-SCOPE=OK");
+}
+
+
+void VerifySharedCallRewriteScope()
+{
+    const string source = """
+Sub Main()
+    Dim item As Object
+    Print ToBase64("global")
+    Print item.ToBase64("member")
+    Print "ToBase64(ignored)"
+    ' ToBase64(ignored)
+End Sub
+""";
+    var rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "ToBase64", "Runtime.ToBase64");
+    if (!rewritten.Contains("Runtime.ToBase64(\"global\")", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter failed to rewrite an unqualified runtime call.");
+    if (!rewritten.Contains("item.ToBase64(\"member\")", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter captured receiver member access.");
+    if (!rewritten.Contains("\"ToBase64(ignored)\"", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter modified a string literal.");
+    if (!rewritten.Contains("' ToBase64(ignored)", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter modified a comment.");
+
+    const string declaration = """
+Class RuntimeNames
+    Public Function ToBase64(value As String) As String
+        ToBase64 = value
+    End Function
+End Class
+""";
+    var declarationRewrite = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(declaration, "ToBase64", "Runtime.ToBase64");
+    if (!declarationRewrite.Contains("Function ToBase64(", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter captured a function declaration.");
+
+    Console.WriteLine("PREPROCESSOR-SHARED-CALL-REWRITE-SCOPE=OK");
 }
