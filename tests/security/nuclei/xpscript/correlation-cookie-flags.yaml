@@ -1,0 +1,21 @@
+id: xpscript-correlation-cookie-flags
+
+info:
+  name: XPScript Correlation Cookie Missing Security Flags
+  author: xpscript
+  severity: medium
+  description: Detects an XPScript correlation cookie missing HttpOnly or SameSite=Lax.
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    matchers-condition: and
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - "(?im)^Set-Cookie:\\s*XPSLOGID_[^=]+="
+      - type: dsl
+        dsl:
+          - "contains(to_lower(header), 'set-cookie: xpslogid_') && (!contains(to_lower(header), 'httponly') || !contains(to_lower(header), 'samesite=lax'))"
