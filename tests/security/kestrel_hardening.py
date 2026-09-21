@@ -177,6 +177,19 @@ def run(host, port):
          "\r\nConnection: close\r\n\r\n").encode(),
         {400,431})
 
+    add("oversized-content-length-rejected",
+        b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 1048577\r\nConnection: close\r\n\r\n",
+        {400,413})
+
+    add("encoded-path-control-character-rejected",
+        b"GET /hello%00world HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404},
+        lambda c,h,r: (b"XPSCRIPT-HARDENING" not in r, "encoded NUL path reached application handler"))
+
+    add("extreme-query-string-rejected",
+        ("GET /?" + ("q=" + ("Q" * 9000)) + " HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n").encode(),
+        {400,414})
+
     add("encoded-traversal-does-not-disclose-secret",
         b"GET /assets/%2e%2e/secret.txt HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {400,404},
