@@ -16,6 +16,23 @@ await File.WriteAllTextAsync(Path.Combine(root, "secret.txt"), "STATIC-SECRET");
 await File.WriteAllTextAsync(Path.Combine(root, "config.json"), "{\"secret\":true}");
 await File.WriteAllTextAsync(Path.Combine(root, "source.xps"), "Sub Index()\nEnd Sub");
 await File.WriteAllBytesAsync(Path.Combine(root, "assets", "oversized.txt"), new byte[33]);
+var outsideRoot = Path.Combine(Path.GetTempPath(), "xps-kestrel-outside-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(outsideRoot);
+await File.WriteAllTextAsync(Path.Combine(outsideRoot, "outside.txt"), "OUTSIDE-SECRET");
+var fileSymlinkCreated = false;
+var directorySymlinkCreated = false;
+try
+{
+    File.CreateSymbolicLink(Path.Combine(root, "assets", "linked.txt"), Path.Combine(outsideRoot, "outside.txt"));
+    fileSymlinkCreated = true;
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException) { }
+try
+{
+    Directory.CreateSymbolicLink(Path.Combine(root, "assets", "linked-dir"), outsideRoot);
+    directorySymlinkCreated = true;
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException) { }
 var rejectedXpsAllowlist = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [".xps"] = "text/plain" };
 try
 {
@@ -163,6 +180,19 @@ try
         using var protectedResponse = await client.GetAsync(protectedPath);
         if ((int)protectedResponse.StatusCode == 200)
             throw new Exception($"Protected or oversized static path was served: {protectedPath}");
+    }
+
+    if (fileSymlinkCreated)
+    {
+        using var linkedFile = await client.GetAsync("/assets/linked.txt");
+        if ((int)linkedFile.StatusCode == 200)
+            throw new Exception("Static file symlink escaped the configured web root.");
+    }
+    if (directorySymlinkCreated)
+    {
+        using var linkedDirectoryFile = await client.GetAsync("/assets/linked-dir/outside.txt");
+        if ((int)linkedDirectoryFile.StatusCode == 200)
+            throw new Exception("Static directory symlink escaped the configured web root.");
     }
 
         await AssertMaxConcurrentConnectionsAsync(new Uri(address));
@@ -345,6 +375,7 @@ finally
     if (!stopped) await app.StopAsync();
     await app.DisposeAsync();
     Directory.Delete(root, recursive: true);
+    if (Directory.Exists(outsideRoot)) Directory.Delete(outsideRoot, recursive: true);
 }
 
 static int GetFreeTcpPort()
