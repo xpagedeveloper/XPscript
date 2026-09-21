@@ -386,7 +386,7 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 
 ### Phase 1: foundation
 
-- [ ] Audit diagnostics and current JSON output.
+- [x] Audit diagnostics and current JSON output. Completed by Sections 1-2 and documented in `docs/compiler-machine-interface.md`.
 - [x] Define shared diagnostic/result models.
 - [x] Define diagnostic code policy.
 - [x] Add schema versioning.
@@ -396,26 +396,26 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 
 - [ ] Parser metadata.
 - [ ] Symbol/member metadata.
-- [ ] Type/argument metadata.
+- [x] Type/argument metadata. Covered by Section 8 structured type, argument, parameter and overload diagnostics.
 - [ ] Target/ServerSide metadata.
-- [ ] Documentation IDs.
+- [x] Documentation IDs. Covered by Section 11 stable documentation IDs.
 - [ ] Candidate symbols.
 
 ### Phase 3: machine interface
 
 - [x] Validation-only operation.
-- [ ] Reusable compiler service API.
-- [ ] stdin support if approved by architecture review.
-- [ ] Symbol/diagnostic introspection.
-- [ ] Resource limits.
+- [x] Reusable compiler service API. Covered by Section 15 and used by CLI/tests/MCP.
+- [x] stdin support if approved by architecture review. Implemented and covered by Section 14.
+- [x] Symbol/diagnostic introspection. Implemented and covered by Sections 16-17.
+- [x] Resource limits. Source size, validation timeout and diagnostic output/count limits are covered by Sections 18-20.
 
 ### Phase 4: hardening
 
 - [ ] Golden fixtures.
-- [ ] Cross-platform CI.
+- [x] Cross-platform CI. Section 22 runs the same machine-interface probe on Windows, Linux and macOS.
 - [x] JSON Schema validation.
-- [ ] Performance benchmarks.
-- [ ] Security/redaction review.
+- [x] Performance benchmarks. Section 20 and 20a retain CI benchmark coverage for validation, run cache and debug paths.
+- [x] Security/redaction review. Section 18 regression coverage and Section 23 documentation cover redaction and non-executing validation.
 
 ## Definition of done
 
