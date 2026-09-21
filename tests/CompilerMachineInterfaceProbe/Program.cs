@@ -452,8 +452,8 @@ var multilineSyntaxDiagnostic = multilineSyntaxCase.Errors.FirstOrDefault(d => d
 Require(multilineSyntaxDiagnostic is not null, "multiline string syntax diagnostic");
 Require(multilineSyntaxDiagnostic.Category == "syntax", "multiline string syntax category");
 Require(multilineSyntaxDiagnostic.Line == 3, "multiline string syntax line");
-Require(multilineSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "|") == true, "multiline string found token");
-Require(multilineSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "|") == true, "multiline string expected construct");
+Require(multilineSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "{") == true, "multiline string found token");
+Require(multilineSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "}") == true, "multiline string expected construct");
 
 var separatorSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "empty-statement-separator-error.xps"));
 var separatorSyntaxDiagnostic = separatorSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
