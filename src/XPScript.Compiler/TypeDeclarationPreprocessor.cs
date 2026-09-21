@@ -5,7 +5,7 @@ namespace XPScript.Compiler;
 
 internal sealed class TypeDeclarationPreprocessor
 {
-    private sealed record ArrayField(string Name, string ElementType, string Bounds);
+    private sealed record ArrayField(string Name, string ElementType, string Bounds, int Line, string SourceLine);
     private sealed record NestedField(string Name, string Type);
 
     public string Transform(string source, string sourceName = "input.xps")
@@ -57,7 +57,7 @@ internal sealed class TypeDeclarationPreprocessor
                     continue;
                 }
 
-                arrays.Add(new ArrayField(name, elementType, field.Groups[3].Value.Trim()));
+                arrays.Add(new ArrayField(name, elementType, field.Groups[3].Value.Trim(), i + 1, memberRaw));
                 output.Add("Public " + name + " As Variant");
             }
 
@@ -78,7 +78,7 @@ internal sealed class TypeDeclarationPreprocessor
                     }
                     else
                     {
-                        var bounds = ParseConstantBounds(array.Bounds, optionBase);
+                        var bounds = ParseConstantBounds(array.Bounds, optionBase, sourceName, array.Line, array.SourceLine);
                         var args = new List<string>();
                         for (var dimension = 0; dimension < bounds.Lower.Length; dimension++)
                         {
@@ -132,11 +132,11 @@ internal sealed class TypeDeclarationPreprocessor
         return 0;
     }
 
-    private static (int[] Lower, int[] Upper) ParseConstantBounds(string raw, int optionBase)
+    private static (int[] Lower, int[] Upper) ParseConstantBounds(string raw, int optionBase, string sourceName, int line, string sourceLine)
     {
         var dimensions = SplitArguments(raw);
         if (dimensions.Count is < 1 or > 8)
-            throw new CompilerException("Type array members must have between one and eight dimensions.");
+            throw SyntaxFailure("Type array members must have between one and eight dimensions.", sourceName, line, sourceLine, "one to eight array dimensions");
 
         var lower = new int[dimensions.Count];
         var upper = new int[dimensions.Count];
@@ -150,7 +150,7 @@ internal sealed class TypeDeclarationPreprocessor
                 continue;
             }
             if (!int.TryParse(dimensions[i].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var high))
-                throw new CompilerException("Fixed Type array bounds must be integer constants. Use a dynamic Type array member with ReDim for runtime bounds.");
+                throw SyntaxFailure("Fixed Type array bounds must be integer constants. Use a dynamic Type array member with ReDim for runtime bounds.", sourceName, line, sourceLine, "integer constant array bound");
             lower[i] = optionBase;
             upper[i] = high;
         }
