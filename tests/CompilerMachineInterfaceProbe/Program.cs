@@ -197,9 +197,9 @@ Require(utf8Diagnostic.SourceCode?.Contains("fel 漢字", StringComparison.Ordin
 
 var lfSourcePath = Path.Combine(outputRoot, "line-ending-lf.xps");
 var crlfSourcePath = Path.Combine(outputRoot, "line-ending-crlf.xps");
-var lineEndingSource = "Sub Main()\\n    Dim value As Integer\\n    value = \\"wrong\\"\\nEnd Sub\\n";
-await File.WriteAllTextAsync(lfSourcePath, lineEndingSource.Replace("\\\\n", "\\n", StringComparison.Ordinal));
-await File.WriteAllTextAsync(crlfSourcePath, lineEndingSource.Replace("\\\\n", "\\r\\n", StringComparison.Ordinal));
+var lineEndingSource = "Sub Main()\\n    Dim value As Integer\\n    value = \\\"wrong\\\"\\nEnd Sub\\n";
+await File.WriteAllTextAsync(lfSourcePath, lineEndingSource);
+await File.WriteAllTextAsync(crlfSourcePath, lineEndingSource.Replace("\\n", "\\r\\n", StringComparison.Ordinal));
 var lfValidation = await driver.ValidateWithResultAsync(lfSourcePath);
 var crlfValidation = await driver.ValidateWithResultAsync(crlfSourcePath);
 var lfDiagnostic = lfValidation.Errors.FirstOrDefault(d => d.DiagnosticCode is "XPS2001" or "XPS2003");
