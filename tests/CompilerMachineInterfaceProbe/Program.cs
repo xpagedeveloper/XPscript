@@ -396,6 +396,8 @@ var emptyDimDiagnostic = emptyDimCase.Errors.FirstOrDefault(d => d.DiagnosticCod
 Require(emptyDimDiagnostic is not null, "empty Dim diagnostic");
 Require(emptyDimDiagnostic.Category == "syntax", "empty Dim category");
 Require(emptyDimDiagnostic.Line > 0 && emptyDimDiagnostic.Position > 0, "empty Dim location");
+Require(emptyDimDiagnostic.EndLine == emptyDimDiagnostic.Line &&
+        emptyDimDiagnostic.EndColumn == emptyDimDiagnostic.Position + 1, "empty Dim source range");
 Require(emptyDimDiagnostic.Properties?.Any(p => p.Name == "foundConstruct" && p.Value == "empty Dim declaration") == true, "empty Dim found construct");
 Require(emptyDimDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct") == true, "empty Dim expected construct");
 
