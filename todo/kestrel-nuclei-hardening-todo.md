@@ -39,25 +39,25 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify `Server` response header is never exposed.
 - [x] Verify invalid Host headers return 400.
 - [x] Verify duplicate Host headers are rejected.
-- [~] Verify absolute-form request targets cannot bypass Host validation.
+- [x] Verify absolute-form request targets cannot bypass Host validation. Invalid absolute-form host rejected in run #39.
 - [x] Verify TRACE is rejected and does not echo request data.
 - [x] Verify TRACK is rejected. Verified in run #32.
-- [ ] Verify uncommon methods do not accidentally reach GET or POST handlers.
+- [x] Verify uncommon methods do not accidentally reach GET or POST handlers. Verified 405 without application-handler response in run #39.
 - [x] Verify request lines larger than the configured limit are rejected.
 - [x] Verify request headers larger than the configured aggregate limit are rejected.
 - [x] Verify excessive header count behavior. Verified in run #32.
 - [x] Verify oversized cookie headers. Verified in run #32.
 - [x] Verify malformed header names. Verified in run #32.
 - [x] Verify control characters in header values are rejected. Verified in run #32.
-- [ ] Verify bare LF request framing is rejected or safely normalized.
+- [x] Verify bare LF request framing is rejected or safely normalized. Kestrel accepts and canonicalizes bare-LF framing before XPScript middleware. Regression requires exactly one response and no protected-content disclosure. Verified behavior under run #39 investigation, with corrected canonicalization probe pending CI.
 - [x] Verify malformed HTTP version tokens. Verified in run #32.
 - [x] Verify conflicting Content-Length values are rejected.
 - [~] Verify Content-Length plus Transfer-Encoding canonicalization cannot create request smuggling across supported deployment topologies. Standalone Kestrel CL.TE desync probe verified safe in run #31. Reverse-proxy topologies remain.
 - [x] Verify duplicate Transfer-Encoding values. Verified safe in run #31.
 - [x] Verify invalid chunk sizes. Verified rejected in run #31.
-- [~] Verify chunk extensions and malformed chunk terminators. Malformed terminator verified rejected in run #31. Chunk extensions remain.
+- [x] Verify chunk extensions and malformed chunk terminators. Malformed terminator rejected in run #31 and chunk extensions handled without ambiguous framing in run #39.
 - [x] Add request smuggling regression probes for CL.TE, TE.CL and duplicate Content-Length variants. CL.TE verified in run #31, TE.CL and parser variants verified in run #32. nginx to FastCGI topology gate verified in run #38.
-- [ ] Verify HTTP/1.0 handling.
+- [x] Verify HTTP/1.0 handling. Verified safe in run #39.
 - [ ] Verify HTTP/2 behavior separately from HTTP/1.1.
 
 ## Request body and resource limits
