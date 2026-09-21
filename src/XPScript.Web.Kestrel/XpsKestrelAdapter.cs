@@ -199,7 +199,7 @@ public static class XpsKestrelAdapter
 
         app.Use(async (http, next) =>
         {
-            if (!iisOutOfProcess && !HostAllowed(http.Request.Host.Host, options.AllowedHosts))
+            if (!HostAllowed(http.Request.Host.Host, options.AllowedHosts))
             {
                 http.Response.StatusCode = StatusCodes.Status400BadRequest;
                 if (!HttpMethods.IsHead(http.Request.Method))
