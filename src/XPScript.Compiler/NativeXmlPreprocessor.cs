@@ -26,7 +26,7 @@ internal sealed class NativeXmlPreprocessor
                 var type = dimNew.Groups[2].Value;
                 nativeVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
-                output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value)}");
+                output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value, raw)}");
                 continue;
             }
 
