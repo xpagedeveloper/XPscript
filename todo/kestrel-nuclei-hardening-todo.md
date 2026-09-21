@@ -46,7 +46,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [ ] Verify bare LF request framing is rejected or safely normalized.
 - [ ] Verify malformed HTTP version tokens.
 - [~] Verify conflicting Content-Length values are rejected.
-- [~] Verify Content-Length plus Transfer-Encoding conflicts are rejected.
+- [ ] Fix Content-Length plus Transfer-Encoding conflicts being accepted by standalone Kestrel.
 - [ ] Verify duplicate Transfer-Encoding values.
 - [ ] Verify invalid chunk sizes.
 - [ ] Verify chunk extensions and malformed chunk terminators.
@@ -183,7 +183,21 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Confirmed findings
 
-No confirmed vulnerabilities have been recorded yet. Populate this section only after the branch workflow produces reproducible evidence.
+### CL.TE request framing accepted by standalone Kestrel
+
+- Template or probe ID: `content-length-transfer-encoding-conflict-rejected`
+- Severity: High
+- Affected component: standalone XPScript Kestrel HTTP boundary
+- Reproduction request: HTTP/1.1 POST with both `Content-Length: 4` and `Transfer-Encoding: chunked`, followed by a zero-length chunk
+- Observed response: HTTP 200
+- Expected response: HTTP 400 or connection rejection before application dispatch
+- Root cause: pending code-level investigation. The request reaches the application instead of failing closed at the HTTP boundary.
+- Proposed fix: explicitly reject requests carrying both Content-Length and Transfer-Encoding before XPscript request dispatch, while preserving correct Kestrel/IIS behavior.
+- Regression test: existing raw-socket probe is reproducible and currently fails. Keep it as the authoritative transport-level regression.
+- Nuclei note: the custom `xpscript-cl-te-framing` template did not report this condition in the same run, so Nuclei is not currently reproducing the exact raw-socket framing behavior.
+- Fix commit or pull request: pending
+
+
 
 For each finding record:
 
