@@ -83,6 +83,41 @@ internal static class PreprocessorFeatureGate
             System.Text.RegularExpressions.RegexOptions.CultureInvariant);
     }
 
+    public static string ReplaceUnqualifiedCalls(string source, string name, string replacement)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return ReplaceCodeOnly(source, code => System.Text.RegularExpressions.Regex.Replace(
+            code,
+            @"(?<![A-Za-z0-9_.])" + System.Text.RegularExpressions.Regex.Escape(name) + @"\s*\(",
+            replacement + "(",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant));
+    }
+
+    private static string ReplaceCodeOnly(string source, Func<string, string> transform)
+    {
+        var output = new System.Text.StringBuilder(source.Length + 32);
+        var code = new System.Text.StringBuilder();
+        var inString = false;
+        for (var i = 0; i < source.Length; i++)
+        {
+            var c = source[i];
+            if (!inString && c == '\'')
+            {
+                if (code.Length > 0) { output.Append(transform(code.ToString())); code.Clear(); }
+                var end = source.IndexOfAny(['\r', '\n'], i);
+                if (end < 0) { output.Append(source.AsSpan(i)); return output.ToString(); }
+                output.Append(source.AsSpan(i, end - i)); i = end - 1; continue;
+            }
+            if (c != '"') { if (inString) output.Append(c); else code.Append(c); continue; }
+            if (!inString) { if (code.Length > 0) { output.Append(transform(code.ToString())); code.Clear(); } inString = true; output.Append(c); continue; }
+            output.Append(c);
+            if (i + 1 < source.Length && source[i + 1] == '"') { output.Append(source[++i]); continue; }
+            inString = false;
+        }
+        if (code.Length > 0) output.Append(transform(code.ToString()));
+        return output.ToString();
+    }
+
     public static bool ContainsCall(string codeOnlySource, params ReadOnlySpan<string> names)
     {
         var alternatives = string.Join("|", names.ToArray().Select(System.Text.RegularExpressions.Regex.Escape));
