@@ -460,6 +460,18 @@ Require(csvArgumentDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value
 Require(csvArgumentDiagnostic.Properties?.Any(p => p.Name == "expectedArgumentCount" && p.Value == "1..4") == true, "CSV expected argument count");
 Require(csvArgumentDiagnostic.Properties?.Any(p => p.Name == "actualArgumentCount" && p.Value == "0") == true, "CSV actual argument count");
 
+var removedCsvApiCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "csv-removed-native-api-error.xps"));
+var removedCsvApiDiagnostic = removedCsvApiCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1011");
+Require(removedCsvApiDiagnostic is not null, "removed CSV API diagnostic");
+Require(removedCsvApiDiagnostic.Category == "syntax", "removed CSV API category");
+Require(removedCsvApiDiagnostic.Line > 0 && removedCsvApiDiagnostic.Position > 0, "removed CSV API location");
+Require(removedCsvApiDiagnostic.EndLine == removedCsvApiDiagnostic.Line &&
+        removedCsvApiDiagnostic.EndColumn > removedCsvApiDiagnostic.Position, "removed CSV API source range");
+Require(removedCsvApiDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "CsvSave/CsvWriteFile") == true, "removed CSV API symbol");
+Require(removedCsvApiDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "XPCsvDocument.Save or XPCsvDocument.SaveFile") == true, "removed CSV API replacement");
+Require(!string.IsNullOrWhiteSpace(removedCsvApiDiagnostic.SourceCode), "removed CSV API source");
+Require(!string.IsNullOrWhiteSpace(removedCsvApiDiagnostic.MarkedCode), "removed CSV API marked source");
+
 var xmlConstructorCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "xml-element-missing-constructor-argument-error.xps"));
 var xmlConstructorDiagnostic = xmlConstructorCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1008");
 Require(xmlConstructorDiagnostic is not null, "native XML constructor diagnostic");
