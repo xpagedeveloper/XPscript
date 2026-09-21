@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class StatementSeparatorPreprocessor
 {
-    public string Transform(string source)
+    public string Transform(string source, string sourceName = "input.xps")
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length);
@@ -28,7 +28,7 @@ internal sealed class StatementSeparatorPreprocessor
 
             if (isGeneratedMarker)
             {
-                ExpandLine(raw, output, physicalIndex + 1);
+                ExpandLine(raw, output, physicalIndex + 1, sourceName);
                 continue;
             }
 
@@ -43,13 +43,13 @@ internal sealed class StatementSeparatorPreprocessor
             // valid. Otherwise the marker value is authoritative and must not be
             // replaced with the transformed physical index.
             var effectiveSourceLine = sourceLine > 0 ? sourceLine : physicalIndex + 1;
-            ExpandLine(raw, output, effectiveSourceLine);
+            ExpandLine(raw, output, effectiveSourceLine, sourceName);
         }
 
         return string.Join(Environment.NewLine, output);
     }
 
-    private static void ExpandLine(string raw, List<string> output, int sourceLine)
+    private static void ExpandLine(string raw, List<string> output, int sourceLine, string sourceName)
     {
         var commentIndex = FindCommentStart(raw);
         var code = commentIndex >= 0 ? raw[..commentIndex] : raw;
@@ -155,6 +155,7 @@ internal sealed class StatementSeparatorPreprocessor
                 var message = $"Empty statement between ':' separators on source line {sourceLine}.";
                 var diagnostic = new CompileDiagnostic
                 {
+                    File = Path.GetFileName(sourceName),
                     Line = sourceLine,
                     Position = 1,
                     EndLine = sourceLine,
@@ -166,7 +167,9 @@ internal sealed class StatementSeparatorPreprocessor
                     [
                         new() { Name = "foundToken", Value = ":" },
                         new() { Name = "expectedConstruct", Value = "statement" }
-                    ]
+                    ],
+                    SourceCode = CompilerDiagnosticRedaction.MaskStringLiterals(raw).TrimEnd(),
+                    MarkedCode = CompilerDiagnosticRedaction.MaskStringLiterals(raw).TrimEnd() + Environment.NewLine + "^"
                 };
                 throw new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
             }
