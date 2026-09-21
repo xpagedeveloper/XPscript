@@ -187,6 +187,8 @@ internal sealed class DateComparisonValidator
                 File = sourceName,
                 Line = lineNumber,
                 Position = column,
+                EndLine = lineNumber,
+                EndColumn = column + comparison.Operator.Length,
                 Description = message,
                 DiagnosticCode = CompilerDiagnosticCodes.InvalidDateComparison,
                 Category = "syntax",
