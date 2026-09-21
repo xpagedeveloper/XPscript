@@ -145,6 +145,26 @@ internal sealed class SourceLineMarkerPreprocessor
     private static bool IsProcedureEnd(string code) =>
         Regex.IsMatch(code, @"^End\s+(?:Sub|Function|Property)$", RegexOptions.IgnoreCase);
 
+    internal static bool TryResolveNearestMarker(string sourcePrefix, out int line, out string sourceId)
+    {
+        line = 0;
+        sourceId = string.Empty;
+        var matches = Regex.Matches(sourcePrefix ?? string.Empty, @"__XPSOURCE_(?<line>\d+)_(?<source>[0-9A-Fa-f]+)");
+        if (matches.Count == 0) return false;
+
+        var match = matches[^1];
+        if (!int.TryParse(match.Groups["line"].Value, out line) || line <= 0) return false;
+        try
+        {
+            sourceId = Encoding.UTF8.GetString(Convert.FromHexString(match.Groups["source"].Value));
+        }
+        catch
+        {
+            sourceId = string.Empty;
+        }
+        return true;
+    }
+
     private static bool EndsWithContinuation(string code)
     {
         if (code.Length == 0) return false;
