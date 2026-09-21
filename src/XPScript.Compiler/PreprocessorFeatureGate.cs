@@ -86,11 +86,18 @@ internal static class PreprocessorFeatureGate
     public static string ReplaceUnqualifiedCalls(string source, string name, string replacement)
     {
         ArgumentNullException.ThrowIfNull(source);
-        return ReplaceCodeOnly(source, code => System.Text.RegularExpressions.Regex.Replace(
-            code,
-            @"(?<![A-Za-z0-9_.])" + System.Text.RegularExpressions.Regex.Escape(name) + @"\s*\(",
-            replacement + "(",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant));
+        var callPattern = new System.Text.RegularExpressions.Regex(
+            @"(?<![A-Za-z0-9_.])" + System.Text.RegularExpressions.Regex.Escape(name) + @"\\$?\\s*\\(",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        return ReplaceCodeOnly(source, code => callPattern.Replace(code, match =>
+        {
+            var previousBreak = match.Index > 0 ? code.LastIndexOfAny([\'\\r\', \'\\n\'], match.Index - 1) : -1;
+            var lineStart = previousBreak < 0 ? 0 : previousBreak + 1;
+            var prefix = code[lineStart..match.Index];
+            if (System.Text.RegularExpressions.Regex.IsMatch(prefix, @"^\\s*(?:(?:Public|Private|Static)\\s+)?(?:Sub|Function)\\s+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+                return match.Value;
+            return replacement + "(";
+        }));
     }
 
     private static string ReplaceCodeOnly(string source, Func<string, string> transform)
