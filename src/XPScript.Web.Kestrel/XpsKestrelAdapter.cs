@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Logging;
@@ -109,8 +110,8 @@ public static class XpsKestrelAdapter
 
         app.Use(async (http, next) =>
         {
-            if (http.Request.Headers.ContainsKey("Content-Length") &&
-                http.Request.Headers.ContainsKey("Transfer-Encoding"))
+            var rawTarget = http.Features.Get<IHttpRequestFeature>()?.RawTarget;
+            if (HasEncodedTraversal(rawTarget))
             {
                 http.Response.StatusCode = StatusCodes.Status400BadRequest;
                 http.Response.Headers.Connection = "close";
@@ -488,6 +489,30 @@ public static class XpsKestrelAdapter
 
         relativePath = string.Join('/', segments);
         return true;
+    }
+
+    private static bool HasEncodedTraversal(string? rawTarget)
+    {
+        if (string.IsNullOrEmpty(rawTarget)) return false;
+        var path = rawTarget.Split('?', 2)[0];
+        string decoded;
+        try { decoded = Uri.UnescapeDataString(path); }
+        catch (UriFormatException) { return true; }
+
+        var normalized = decoded.Replace('\\', '/');
+        if (normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+            return true;
+
+        if (ContainsPercentEscape(decoded))
+        {
+            string decodedTwice;
+            try { decodedTwice = Uri.UnescapeDataString(decoded).Replace('\\', '/'); }
+            catch (UriFormatException) { return true; }
+            if (decodedTwice.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+                return true;
+        }
+
+        return false;
     }
 
     private static bool ContainsPercentEscape(string value)
