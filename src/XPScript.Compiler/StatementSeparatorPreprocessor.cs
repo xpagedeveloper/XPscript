@@ -20,11 +20,10 @@ internal sealed class StatementSeparatorPreprocessor
                 var sourceMarker = Regex.Match(raw, @"__XPSOURCE_(\d+)_", RegexOptions.IgnoreCase);
                 if (sourceMarker.Success)
                     sourceLine = int.Parse(sourceMarker.Groups[1].Value);
-                else if (sourceLine == 0)
-                    sourceLine = Math.Max(1, output.Count + 1);
             }
 
-            ExpandLine(raw, output, sourceLine);
+            var effectiveSourceLine = sourceLine > 0 ? sourceLine : Math.Max(1, output.Count + 1);
+            ExpandLine(raw, output, effectiveSourceLine);
         }
 
         return string.Join(Environment.NewLine, output);
