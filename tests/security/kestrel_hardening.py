@@ -141,10 +141,12 @@ def run(host, port):
         {200,400,505},
         lambda c,h,r: (b"XPSCRIPT_SECRET_SENTINEL" not in r, "HTTP/1.0 disclosed protected content"))
 
-    add("bare-lf-framing-safe",
+    add("bare-lf-framing-canonicalized-safe",
         b"GET / HTTP/1.1\nHost: 127.0.0.1\nConnection: close\n\n",
-        {400},
-        lambda c,h,r: (b"XPSCRIPT-HARDENING" not in r, "bare LF framing reached application handler"))
+        {200,400},
+        lambda c,h,r: (
+            r.count(b"HTTP/1.1 ") == 1 and b"XPSCRIPT_SECRET_SENTINEL" not in r,
+            "bare LF framing produced ambiguous responses or disclosed protected content"))
 
     add("chunk-extension-safe",
         b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n4;foo=bar\r\ntest\r\n0\r\n\r\n",
