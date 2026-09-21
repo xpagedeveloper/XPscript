@@ -68,7 +68,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [ ] Verify slow request body enforcement.
 - [x] Verify request headers timeout. Partial-header socket regression verified in run #60.
 - [x] Verify keep-alive timeout. Idle persistent-connection regression verified in run #60.
-- [ ] Verify MaxConcurrentConnections.
+- [x] Verify MaxConcurrentConnections. A two-slot socket regression verified that a third active request is not processed while both configured connection slots are occupied in run #62.
 - [ ] Add bounded concurrency stress test that is safe for CI.
 - [ ] Keep destructive DoS templates out of normal branch CI.
 - [ ] Create a separate opt-in stress profile for expensive resource exhaustion tests.
