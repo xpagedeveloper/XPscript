@@ -182,6 +182,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 ## Nuclei corpus management
 
 - [ ] Review upstream `http/misconfiguration` findings.
+- [x] Add explicit generic web-boundary Nuclei profile for CRLF injection, PUT enablement, TRACE, Host-header injection, web.config, Git metadata/credentials and .DS_Store exposure.
 - [x] Add curated ASP.NET, IIS and .NET Nuclei profile for debug mode, ASP.NET Core development environment, launchSettings.json, ELMAH, Trace.axd, Microsoft runtime errors, NuGet.config, IIS short-name behavior and IIS version disclosure.
 - [x] Add curated JSON security Nuclei profile for appsettings.json, credentials.json, auth.json, JWK/JWKS exposure, Swagger/OpenAPI exposure and generic sensitive config JSON disclosure.
 - [ ] Review upstream `http/exposures` findings.
