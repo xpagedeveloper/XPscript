@@ -82,7 +82,7 @@ internal sealed class HclPrintFormattingPreprocessor
 
     private static string BuildParts(string body, string sourceName, int line, string sourceLine)
     {
-        var parts = SplitPrintItems(body);
+        var parts = SplitPrintItems(body, sourceName, line, sourceLine);
         if (parts.Count == 0) throw SyntaxFailure("Print with Spc/Tab requires at least one print item.", sourceName, line, sourceLine, "print item");
 
         var transformed = new List<string>(parts.Count);
@@ -112,7 +112,7 @@ internal sealed class HclPrintFormattingPreprocessor
         return string.Join(", ", transformed);
     }
 
-    private static List<string> SplitPrintItems(string value)
+    private static List<string> SplitPrintItems(string value, string sourceName, int line, string sourceLine)
     {
         var result = new List<string>();
         var current = new StringBuilder();
@@ -150,8 +150,8 @@ internal sealed class HclPrintFormattingPreprocessor
             current.Append(c);
         }
 
-        if (inString) throw new CompilerException("Unterminated string literal in Print statement.");
-        if (depth != 0) throw new CompilerException("Unbalanced parentheses in Print statement.");
+        if (inString) throw SyntaxFailure("Unterminated string literal in Print statement.", sourceName, line, sourceLine, "closing string quote");
+        if (depth != 0) throw SyntaxFailure("Unbalanced parentheses in Print statement.", sourceName, line, sourceLine, "balanced parentheses");
         result.Add(current.ToString());
         return result;
     }
