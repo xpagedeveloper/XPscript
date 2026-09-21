@@ -217,11 +217,24 @@ try
             new SmokeApplicationState());
         await iisApp.StartAsync();
         using var iisClient = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{iisPort}") };
-        using var badHost = new HttpRequestMessage(HttpMethod.Get, "/iis-host");
-        badHost.Headers.Host = "evil.example";
-        using var response = await iisClient.SendAsync(badHost);
-        if ((int)response.StatusCode != 400)
-            throw new Exception("IIS out-of-process mode bypassed AllowedHosts.");
+        using (var badHost = new HttpRequestMessage(HttpMethod.Get, "/iis-host"))
+        {
+            badHost.Headers.Host = "evil.example";
+            using var response = await iisClient.SendAsync(badHost);
+            if ((int)response.StatusCode != 400)
+                throw new Exception("IIS out-of-process mode bypassed AllowedHosts.");
+        }
+
+        using (var externalHttps = new HttpRequestMessage(HttpMethod.Get, "/iis-scheme"))
+        {
+            externalHttps.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
+            using var response = await iisClient.SendAsync(externalHttps);
+            if ((int)response.StatusCode != 201)
+                throw new Exception($"IIS forwarded scheme request expected 201, got {(int)response.StatusCode}.");
+            var body = await response.Content.ReadAsStringAsync();
+            if (!body.Contains("SCHEME=https", StringComparison.Ordinal))
+                throw new Exception("IIS out-of-process mode did not preserve the external HTTPS scheme.");
+        }
     }
     finally
     {
