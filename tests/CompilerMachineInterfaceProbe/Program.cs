@@ -193,7 +193,8 @@ Require(!unterminatedStringValidation.Success, "unterminated string validation m
 var structuredUnterminatedStringDiagnostic = unterminatedStringValidation.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1006");
 Require(structuredUnterminatedStringDiagnostic is not null, "unterminated string must produce XPS1006");
 Require(structuredUnterminatedStringDiagnostic.Category == "syntax", "unterminated string category");
-Require(structuredUnterminatedStringDiagnostic.Line == 3 && structuredUnterminatedStringDiagnostic.Position > 0, "unterminated string source location");
+Require(structuredUnterminatedStringDiagnostic.Line == 3 && structuredUnterminatedStringDiagnostic.Position > 0,
+    $"unterminated string source location (actual {structuredUnterminatedStringDiagnostic.File}:{structuredUnterminatedStringDiagnostic.Line}:{structuredUnterminatedStringDiagnostic.Position})");
 Require(structuredUnterminatedStringDiagnostic.EndLine == structuredUnterminatedStringDiagnostic.Line &&
         structuredUnterminatedStringDiagnostic.EndColumn == structuredUnterminatedStringDiagnostic.Position + 1,
     "unterminated string source range");
