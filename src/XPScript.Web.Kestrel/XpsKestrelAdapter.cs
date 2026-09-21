@@ -91,7 +91,7 @@ public static class XpsKestrelAdapter
         if (runtimeTelemetry is not null)
             app.Lifetime.ApplicationStopping.Register(runtimeTelemetry.MarkStopping);
 
-        if (options.KnownProxies.Count > 0)
+        if (options.KnownProxies.Count > 0 || iisOutOfProcess)
         {
             var forwarded = new ForwardedHeadersOptions
             {
@@ -103,6 +103,13 @@ public static class XpsKestrelAdapter
             forwarded.KnownProxies.Clear();
             forwarded.KnownIPNetworks.Clear();
             foreach (var proxy in options.KnownProxies) forwarded.KnownProxies.Add(proxy);
+            // IIS out-of-process always reaches the application through the local
+            // ASP.NET Core Module reverse proxy. Trust only that loopback hop.
+            if (iisOutOfProcess)
+            {
+                forwarded.KnownProxies.Add(IPAddress.Loopback);
+                forwarded.KnownProxies.Add(IPAddress.IPv6Loopback);
+            }
             app.UseForwardedHeaders(forwarded);
         }
 
