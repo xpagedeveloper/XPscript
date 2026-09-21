@@ -223,6 +223,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
 
     private static void CopyQuoted(string source, ref int i, StringBuilder sb)
     {
+        var openingIndex = i;
         sb.Append('"');
         for (i++; i < source.Length; i++)
         {
@@ -231,11 +232,12 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             if (i + 1 < source.Length && source[i + 1] == '"') { sb.Append(source[++i]); continue; }
             return;
         }
-        throw new CompilerException("Unterminated string literal.");
+        throw UnterminatedString(source, openingIndex, "\"");
     }
 
     private static void CopyDelimited(string source, ref int i, StringBuilder sb, char close)
     {
+        var openingIndex = i;
         sb.Append('"');
         for (i++; i < source.Length; i++)
         {
@@ -248,6 +250,54 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             if (c == '"') sb.Append("\"\"");
             else if (c != '\r') sb.Append(c);
         }
-        throw new CompilerException("Unterminated alternate string literal.");
+        throw UnterminatedString(source, openingIndex, close.ToString());
+    }
+
+    private static CompilerException UnterminatedString(string source, int openingIndex, string expectedDelimiter)
+    {
+        var prefix = source[..Math.Clamp(openingIndex, 0, source.Length)];
+        var line = prefix.Count(c => c == '\n') + 1;
+        var lineStart = prefix.LastIndexOf('\n');
+        var position = openingIndex - lineStart;
+
+        var file = "";
+        var mappedLine = line;
+        List<CompileIncludeFrame>? includeTrace = null;
+        var context = ExpandedSourceContext.Current;
+        if (context is not null)
+        {
+            var location = context.Map.Resolve(line, context.SourcePath);
+            file = location.SourcePath;
+            mappedLine = location.Line;
+            if (location.IncludeTrace is { Count: > 0 } trace)
+            {
+                includeTrace = trace.Select(frame => new CompileIncludeFrame
+                {
+                    File = Path.GetFileName(frame.SourcePath),
+                    Line = frame.Line,
+                    IncludedFile = Path.GetFileName(frame.IncludedPath)
+                }).ToList();
+            }
+        }
+
+        var diagnostic = new CompileDiagnostic
+        {
+            File = file,
+            Line = mappedLine,
+            Position = position,
+            EndLine = mappedLine,
+            EndColumn = position + 1,
+            Description = "Unterminated string literal.",
+            DiagnosticCode = CompilerDiagnosticCodes.UnterminatedStringLiteral,
+            Severity = "error",
+            Category = "syntax",
+            Properties =
+            [
+                new CompileDiagnosticProperty { Name = "foundToken", Value = "end-of-file" },
+                new CompileDiagnosticProperty { Name = "expectedConstruct", Value = expectedDelimiter }
+            ],
+            IncludeTrace = includeTrace
+        };
+        return new CompilerException(diagnostic.Description, [diagnostic]);
     }
 }
