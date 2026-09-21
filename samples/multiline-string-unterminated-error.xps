@@ -1,0 +1,4 @@
+Sub Main()
+    Dim text As String
+    text = |unterminated
+End Sub
