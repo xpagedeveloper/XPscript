@@ -10,7 +10,6 @@ internal sealed class StatementSeparatorPreprocessor
         var output = new List<string>(lines.Length);
         var sourceLine = 0;
         var pendingSourceLine = 0;
-        var pendingMarkerPhysicalIndex = -1;
 
         for (var physicalIndex = 0; physicalIndex < lines.Length; physicalIndex++)
         {
@@ -21,12 +20,10 @@ internal sealed class StatementSeparatorPreprocessor
             if (marker.Success)
             {
                 pendingSourceLine = int.Parse(marker.Groups[1].Value);
-                pendingMarkerPhysicalIndex = physicalIndex;
             }
             else if (sourceMarker.Success)
             {
                 pendingSourceLine = int.Parse(sourceMarker.Groups[1].Value);
-                pendingMarkerPhysicalIndex = physicalIndex;
             }
 
             if (isGeneratedMarker)
@@ -35,11 +32,10 @@ internal sealed class StatementSeparatorPreprocessor
                 continue;
             }
 
-            if (pendingSourceLine > 0)
+            if (pendingSourceLine > 0 && !string.IsNullOrWhiteSpace(raw))
             {
                 sourceLine = pendingSourceLine;
                 pendingSourceLine = 0;
-                pendingMarkerPhysicalIndex = -1;
             }
 
             // A source marker is inserted immediately before the original statement.
