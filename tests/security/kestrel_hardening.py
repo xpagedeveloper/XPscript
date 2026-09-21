@@ -97,6 +97,41 @@ def run(host, port):
         {400,404},
         lambda c,h,r: (b"XPSCRIPT_SECRET_SENTINEL" not in r, "secret file disclosed"))
 
+    add("mixed-slash-traversal-does-not-disclose-secret",
+        b"GET /assets/..%5csecret.txt HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404},
+        lambda c,h,r: (b"XPSCRIPT_SECRET_SENTINEL" not in r, "secret file disclosed"))
+
+    add("encoded-slash-traversal-does-not-disclose-secret",
+        b"GET /assets/%2e%2e%2fsecret.txt HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404},
+        lambda c,h,r: (b"XPSCRIPT_SECRET_SENTINEL" not in r, "secret file disclosed"))
+
+    add("double-encoded-slash-traversal-does-not-disclose-secret",
+        b"GET /assets/%252e%252e%252fsecret.txt HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404},
+        lambda c,h,r: (b"XPSCRIPT_SECRET_SENTINEL" not in r, "secret file disclosed"))
+
+    add("protected-cache-direct-not-disclosed",
+        b"GET /.xpscript-cache/protected.css HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404},
+        lambda c,h,r: (b"XPSCRIPT_PROTECTED_CACHE_SENTINEL" not in r, "protected cache disclosed"))
+
+    add("protected-cache-traversal-not-disclosed",
+        b"GET /assets/%2e%2e/.xpscript-cache/protected.css HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404},
+        lambda c,h,r: (b"XPSCRIPT_PROTECTED_CACHE_SENTINEL" not in r, "protected cache disclosed"))
+
+    add("protected-cache-double-encoded-traversal-not-disclosed",
+        b"GET /assets/%252e%252e/.xpscript-cache/protected.css HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404},
+        lambda c,h,r: (b"XPSCRIPT_PROTECTED_CACHE_SENTINEL" not in r, "protected cache disclosed"))
+
+    add("operational-route-traversal-not-reachable",
+        b"GET /assets/%2e%2e/_xps/metrics HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404},
+        lambda c,h,r: (b"xpscript_web_requests_total" not in r, "metrics endpoint reached through traversal"))
+
     add("source-file-not-disclosed",
         b"GET /index.xps HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {200,404},
