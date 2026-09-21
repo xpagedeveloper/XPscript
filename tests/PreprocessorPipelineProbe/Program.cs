@@ -54,6 +54,7 @@ VerifyRuntimeFunctionMemberScope();
 VerifyRuntimeNameScopeMatrix();
 VerifyReservedIdentifierScope();
 VerifyRuntimeValueIdentifierScope();
+VerifySharedCallDetectionScope();
 
 void Measure(string label, string source, int iterations)
 {
@@ -591,4 +592,39 @@ End Sub
         throw new Exception("Application/Body were incorrectly rejected or rewritten in receiver member scope.");
 
     Console.WriteLine("PREPROCESSOR-RUNTIME-VALUE-IDENTIFIER-SCOPE=OK");
+}
+
+
+void VerifySharedCallDetectionScope()
+{
+    const string memberOnly = """
+Sub Main()
+    Dim item As Object
+    Print item.JsonParse("member")
+End Sub
+""";
+    var code = PreprocessorFeatureGate.CodeOnly(memberOnly);
+    if (PreprocessorFeatureGate.ContainsCall(code, "JsonParse"))
+        throw new Exception("Shared call detection incorrectly classified member access as an unqualified runtime call.");
+
+    const string globalCall = """
+Sub Main()
+    Print JsonParse("{}")
+End Sub
+""";
+    code = PreprocessorFeatureGate.CodeOnly(globalCall);
+    if (!PreprocessorFeatureGate.ContainsCall(code, "JsonParse"))
+        throw new Exception("Shared call detection failed to recognize an unqualified runtime call.");
+
+    const string lexicalNoise = """
+Sub Main()
+    Print "JsonParse(ignored)"
+    ' JsonParse(ignored)
+End Sub
+""";
+    code = PreprocessorFeatureGate.CodeOnly(lexicalNoise);
+    if (PreprocessorFeatureGate.ContainsCall(code, "JsonParse"))
+        throw new Exception("Shared call detection matched a string or comment.");
+
+    Console.WriteLine("PREPROCESSOR-SHARED-CALL-DETECTION-SCOPE=OK");
 }
