@@ -381,7 +381,9 @@ Require(quoteSyntaxDiagnostic is not null, "unescaped quote diagnostic");
 Require(quoteSyntaxDiagnostic.Category == "syntax", "unescaped quote category");
 Require(quoteSyntaxDiagnostic.Line > 0 && quoteSyntaxDiagnostic.Position > 0, "unescaped quote location");
 Require(quoteSyntaxDiagnostic.Properties is not null, "unescaped quote properties");
-Require(quoteSyntaxDiagnostic.Properties.Any(p => p.Name == "foundConstruct" && p.Value == "unescaped quote"), "unescaped quote found construct");
+Require(quoteSyntaxDiagnostic.Properties.Any(p => p.Name == "foundToken" && p.Value == "\""), "unescaped quote found token");
+Require(quoteSyntaxDiagnostic.EndLine == quoteSyntaxDiagnostic.Line &&
+        quoteSyntaxDiagnostic.EndColumn == quoteSyntaxDiagnostic.Position + 1, "unescaped quote source range");
 Require(quoteSyntaxDiagnostic.Properties.Any(p => p.Name == "expectedConstruct"), "unescaped quote expected construct");
 Require(!string.IsNullOrWhiteSpace(quoteSyntaxDiagnostic.SourceCode), "unescaped quote source");
 Require(!string.IsNullOrWhiteSpace(quoteSyntaxDiagnostic.MarkedCode), "unescaped quote marked source");
