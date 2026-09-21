@@ -29,6 +29,11 @@ Require(securityVulnerabilityDefinition.Category == "security", "XPS7002 categor
 Require(securityVulnerabilityDefinition.Properties.SequenceEqual(["package", "version", "severity", "advisory"]), "XPS7002 properties");
 Require(securityVulnerabilityDefinition.DocumentationIds.Contains("security.DependencyAudit"), "XPS7002 dependency audit documentation");
 
+var unterminatedStringDefinition = CompilerDiagnosticCatalog.Find("XPS1006");
+Require(unterminatedStringDefinition is not null, "XPS1006 diagnostic definition");
+Require(unterminatedStringDefinition.Category == "syntax", "XPS1006 category");
+Require(unterminatedStringDefinition.Properties.SequenceEqual(["foundToken", "expectedConstruct"]), "XPS1006 properties");
+
 var auditFindings = ApplicationSecurityAudit.Parse("""
 warning NU1902: Package 'Moderate.Package' 1.2.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-moderate
 warning NU1904: Package 'Critical.Package' 4.5.6 has a known critical severity vulnerability, https://github.com/advisories/GHSA-critical.
@@ -182,6 +187,20 @@ var emptySourceValidation = await driver.ValidateWithResultAsync(emptySourcePath
 Require(!emptySourceValidation.Success, "empty source validation must fail");
 Require(emptySourceValidation.Errors.Count > 0, "empty source validation must return a diagnostic");
 Require(emptySourceValidation.Errors.All(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)), "empty source diagnostics must be structured");
+
+var unterminatedStringValidation = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "general-string-unterminated-error.xps"));
+Require(!unterminatedStringValidation.Success, "unterminated string validation must fail");
+var unterminatedStringDiagnostic = unterminatedStringValidation.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1006");
+Require(unterminatedStringDiagnostic is not null, "unterminated string must produce XPS1006");
+Require(unterminatedStringDiagnostic.Category == "syntax", "unterminated string category");
+Require(unterminatedStringDiagnostic.Line == 3 && unterminatedStringDiagnostic.Position > 0, "unterminated string source location");
+Require(unterminatedStringDiagnostic.EndLine == unterminatedStringDiagnostic.Line &&
+        unterminatedStringDiagnostic.EndColumn == unterminatedStringDiagnostic.Position + 1,
+    "unterminated string source range");
+Require(unterminatedStringDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "end-of-file") == true,
+    "unterminated string found token metadata");
+Require(unterminatedStringDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "\"") == true,
+    "unterminated string expected delimiter metadata");
 
 var malformedSourceValidation = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "malformed-source-error.xps"));
 Require(!malformedSourceValidation.Success, "malformed source validation must fail");
