@@ -15,6 +15,12 @@ internal sealed class StatementSeparatorPreprocessor
             var marker = Regex.Match(raw, @"XPSourceLineRuntime\.Set\((\d+)\)", RegexOptions.IgnoreCase);
             if (marker.Success)
                 sourceLine = int.Parse(marker.Groups[1].Value);
+            else
+            {
+                var sourceMarker = Regex.Match(raw, @"__XPSOURCE_(\d+)_", RegexOptions.IgnoreCase);
+                if (sourceMarker.Success)
+                    sourceLine = int.Parse(sourceMarker.Groups[1].Value);
+            }
 
             ExpandLine(raw, output, sourceLine);
         }
