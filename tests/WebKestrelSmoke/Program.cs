@@ -10,6 +10,12 @@ using XPScript.Web.Runtime;
 
 var root = Path.Combine(Path.GetTempPath(), "xps-kestrel-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
+Directory.CreateDirectory(Path.Combine(root, "assets"));
+await File.WriteAllTextAsync(Path.Combine(root, "assets", "allowed.txt"), "STATIC-ALLOWED");
+await File.WriteAllTextAsync(Path.Combine(root, "secret.txt"), "STATIC-SECRET");
+await File.WriteAllTextAsync(Path.Combine(root, "config.json"), "{\"secret\":true}");
+await File.WriteAllTextAsync(Path.Combine(root, "source.xps"), "Sub Index()\nEnd Sub");
+await File.WriteAllBytesAsync(Path.Combine(root, "assets", "oversized.txt"), new byte[33]);
 var structuredLog = new StringWriter();
 var telemetry = new XpsWebTelemetry(new XpsWebJsonLineEventSink(structuredLog));
 
@@ -17,6 +23,8 @@ var options = new XpsKestrelOptions
 {
     Port = 0,
     MaxRequestBodySize = 64,
+    EnableStaticFiles = true,
+    MaxStaticFileBytes = 32,
     MaxConcurrentConnections = 2,
     RequestHeadersTimeout = TimeSpan.FromSeconds(1),
     KeepAliveTimeout = TimeSpan.FromSeconds(1),
@@ -130,7 +138,19 @@ try
         _ = ReadRequestId(response);
     }
 
-    await AssertMaxConcurrentConnectionsAsync(new Uri(address));
+    using (var staticAllowed = await client.GetAsync("/assets/allowed.txt"))
+    {
+        if ((int)staticAllowed.StatusCode != 200 || await staticAllowed.Content.ReadAsStringAsync() != "STATIC-ALLOWED")
+            throw new Exception("Allowed static asset was not served as expected.");
+    }
+    foreach (var protectedPath in new[] { "/secret.txt", "/config.json", "/source.xps", "/assets/oversized.txt" })
+    {
+        using var protectedResponse = await client.GetAsync(protectedPath);
+        if ((int)protectedResponse.StatusCode == 200)
+            throw new Exception($"Protected or oversized static path was served: {protectedPath}");
+    }
+
+        await AssertMaxConcurrentConnectionsAsync(new Uri(address));
     await AssertBoundedConcurrencyStressAsync(client);
     await AssertSlowRequestBodyAsync(new Uri(address));
     await AssertRequestHeadersTimeoutAsync(new Uri(address));
