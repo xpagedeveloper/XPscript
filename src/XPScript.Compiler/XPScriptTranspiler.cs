@@ -82,8 +82,13 @@ public sealed partial class XPScriptTranspiler
             throw new CompilerException(remapped, ex.DiagnosticCode, ex.Category, ex.GeneratedDiagnostics);
         }
 
-        // Attach runtime/#line markers only after semantic validation. At this point the
-        // expanded source still has the exact line layout represented by sourceMap.
+        // Validate/normalize string delimiters while the source still has the exact
+        // physical line layout represented by sourceMap. Running this after marker and
+        // compatibility preprocessors would report transformed coordinates.
+        var operatorArray = new OperatorArrayCompatibilityPreprocessor();
+        source = operatorArray.NormalizeSource(source);
+
+        // Attach runtime/#line markers only after semantic validation and syntax scanning.
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         source = new MultilineStringPreprocessor().Transform(source, sourceName);
         source = new EscapedQuotePreprocessor().Transform(source);
@@ -140,8 +145,6 @@ public sealed partial class XPScriptTranspiler
         source = new TypeCoercionPreprocessor().Transform(source);
         source = new StringConcatenationPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
-        var operatorArray = new OperatorArrayCompatibilityPreprocessor();
-        source = operatorArray.NormalizeSource(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
         protectedSource = new HclSelectedCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new CrossPlatformPreprocessor().Transform(protectedSource);
