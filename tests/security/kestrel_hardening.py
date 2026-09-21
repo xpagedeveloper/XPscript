@@ -181,6 +181,11 @@ def run(host, port):
         b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 1048577\r\nConnection: close\r\n\r\n",
         {400,413})
 
+    add("chunked-body-over-limit-rejected",
+        b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n100001\r\n",
+        {400,413},
+        lambda c,h,r: (b"XPSCRIPT-HARDENING" not in r, "oversized chunked body reached application handler"))
+
     add("encoded-path-control-character-rejected",
         b"GET /hello%00world HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {400,404},
