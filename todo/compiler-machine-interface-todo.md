@@ -364,10 +364,10 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 
 ## 22. Cross-platform CI
 
-- [ ] Run machine-interface tests on Windows.
-- [ ] Run on Linux.
-- [ ] Run on macOS.
-- [ ] Verify equivalent diagnostic codes and source positions.
+- [x] Run machine-interface tests on Windows. Verified by the cross-platform matrix job in AI Compiler Machine Interface CI.
+- [x] Run on Linux. Verified by the cross-platform matrix job in AI Compiler Machine Interface CI.
+- [x] Run on macOS. Verified by the cross-platform matrix job in AI Compiler Machine Interface CI.
+- [x] Verify equivalent diagnostic codes and source positions. The same CompilerMachineInterfaceProbe runs on Windows, Linux and macOS and now passes on all three platforms, including source-mapped diagnostics.
 - [x] Validate JSON output against the published schemas.
 
 ## 23. Documentation
