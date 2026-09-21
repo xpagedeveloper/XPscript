@@ -23,11 +23,11 @@ Resolution rule: lexical keywords are syntax-level restrictions; compiler-reserv
 ## 3. Audit all command/function preprocessors
 
 - [x] Inventory the primary global function rewrite paths in `AdvancedXPScriptTranspiler`, `CoreCompatibilityTranspiler`, `CrossPlatformPreprocessor`, `HashFunctionsPreprocessor`, `ReferenceRuntimeExtensionsPreprocessor`, and the native JSON/XML/CSV preprocessors. Continue auditing feature-specific preprocessors as regressions identify additional global rewrites.
-- [>] Verify every global-call rewrite rejects member access such as `.Name(...)`. Core/runtime, cross-platform, hash, reference-runtime, JSON, XML, and CSV paths have been checked/fixed.
+- [>] Verify every global-call rewrite rejects member access such as `.Name(...)`. Core/runtime, cross-platform, hash, reference-runtime, JSON, XML, CSV, file-I/O, text-I/O, operator/array and shared `PreprocessorFeatureGate.ContainsCall` paths have been checked/fixed.
 - [x] Audit `NativeHttpJsonPreprocessor`, especially `JsonParse`, `JsonStringify`, `JsonEncode`, and `JsonDecode`.
 - [x] Audit `ReferenceRuntimeExtensionsPreprocessor`; preserve its existing member-access exclusion behavior.
-- [>] Audit HTTP, JSON, XML, CSV, database, Notes, UI, AI, filesystem, string, date, application, and compatibility preprocessors for the same class of bug. JSON/XML/CSV, reference runtime, hash, cross-platform, HCL selected compatibility, core runtime, Notes runtime, Archive, Spreadsheet, UI extension, NetworkTools, and SystemInventory paths checked so far. The latter object preprocessors operate on explicit receiver/type syntax rather than unqualified global function names.
-- [ ] Replace fragile regex-only resolution with a shared helper/token-aware mechanism where practical.
+- [>] Audit HTTP, JSON, XML, CSV, database, Notes, UI, AI, filesystem, string, date, application, and compatibility preprocessors for the same class of bug. JSON/XML/CSV, reference runtime, hash, cross-platform, HCL selected compatibility, core runtime, Notes runtime, Archive, Spreadsheet, UI extension, NetworkTools, SystemInventory, file-I/O, text-I/O, operator/array, date-object and type-coercion paths checked so far. The latter object preprocessors operate on explicit receiver/type syntax rather than unqualified global function names.
+- [>] Replace fragile regex-only resolution with a shared helper/token-aware mechanism where practical. Shared `PreprocessorFeatureGate.ContainsCall` now uses code-only input and excludes receiver/member access; remaining direct rewrite sites are being audited before broader consolidation.
 
 ## 4. Regression tests
 
