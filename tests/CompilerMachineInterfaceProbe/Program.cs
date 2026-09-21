@@ -451,7 +451,7 @@ var separatorSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root
 var separatorSyntaxDiagnostic = separatorSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
 Require(separatorSyntaxDiagnostic is not null, "statement separator syntax diagnostic");
 Require(separatorSyntaxDiagnostic.Category == "syntax", "statement separator syntax category");
-Require(separatorSyntaxDiagnostic.Line == 2, "statement separator syntax line");
+Require(separatorSyntaxDiagnostic.Line == 2, $"statement separator syntax line: actual={separatorSyntaxDiagnostic.Line}, file={separatorSyntaxDiagnostic.File}, source={separatorSyntaxDiagnostic.SourceCode}, marked={separatorSyntaxDiagnostic.MarkedCode}");
 Require(separatorSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == ":") == true, "statement separator found token");
 Require(separatorSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "statement") == true, "statement separator expected construct");
 
