@@ -152,7 +152,16 @@ internal sealed class SourceLineMarkerPreprocessor
         var matches = Regex.Matches(sourcePrefix ?? string.Empty, @"__XPSOURCE_(?<line>\d+)_(?<source>[0-9A-Fa-f]+)");
         if (matches.Count == 0) return false;
 
+        // A marker line contains the marker call itself. Preprocessors can later insert
+        // unrelated quoted text after it, so only accept a marker when the unterminated
+        // token is on the immediately following non-empty source line.
         var match = matches[^1];
+        var afterMarker = sourcePrefix[(match.Index + match.Length)..];
+        var markerLineEnd = afterMarker.IndexOf('\n');
+        if (markerLineEnd < 0) return false;
+        var between = afterMarker[(markerLineEnd + 1)..];
+        if (between.Contains('\n')) return false;
+
         if (!int.TryParse(match.Groups["line"].Value, out line) || line <= 0) return false;
         try
         {
