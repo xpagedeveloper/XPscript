@@ -451,7 +451,7 @@ var continuationSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(r
 var continuationSyntaxDiagnostic = continuationSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
 Require(continuationSyntaxDiagnostic is not null, "line continuation syntax diagnostic");
 Require(continuationSyntaxDiagnostic.Category == "syntax", "line continuation syntax category");
-Require(continuationSyntaxDiagnostic.Line == 2, "line continuation syntax line");
+Require(continuationSyntaxDiagnostic.Line == 2, $"line continuation syntax line: actual={continuationSyntaxDiagnostic.Line}, file={continuationSyntaxDiagnostic.File}, source={continuationSyntaxDiagnostic.SourceCode}, marked={continuationSyntaxDiagnostic.MarkedCode}");
 Require(continuationSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "_") == true, "line continuation found token");
 Require(continuationSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "following source line") == true, "line continuation expected construct");
 
