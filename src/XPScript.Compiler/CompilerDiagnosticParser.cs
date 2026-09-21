@@ -20,7 +20,7 @@ internal static class CompilerDiagnosticParser
         {
             var line = int.Parse(match.Groups["line"].Value);
             var pos = match.Groups["pos"].Success ? int.Parse(match.Groups["pos"].Value) : 1;
-            var diagnosticSource = match.Groups["file"].Value.Trim();
+            var diagnosticSource = NormalizeDiagnosticSourcePath(match.Groups["file"].Value);
             var upstreamCode = match.Groups["id"].Value;
             var description = match.Groups["desc"].Value.Trim();
             var mapped = RecoverIncludeLocation(sourcePath, diagnosticSource, line, description, sourceMap);
@@ -329,6 +329,27 @@ internal static class CompilerDiagnosticParser
         if (string.IsNullOrEmpty(code) || position <= 0) return code;
         var caret = Math.Clamp(position - 1, 0, code.Length);
         return code + Environment.NewLine + new string(' ', caret) + "^";
+    }
+
+    private static string NormalizeDiagnosticSourcePath(string value)
+    {
+        var normalized = value.Trim();
+        if (normalized.Length == 0) return normalized;
+
+        // MSBuild/Roslyn output can prepend logger text before the physical source path,
+        // especially on macOS runners. Keep the actual .xps path so source-line recovery
+        // is independent of the platform-specific build logger format.
+        var marker = normalized.LastIndexOf(".xps", StringComparison.OrdinalIgnoreCase);
+        if (marker < 0) return normalized;
+
+        normalized = normalized[..(marker + 4)];
+        var absoluteUnix = normalized.LastIndexOf(" /", StringComparison.Ordinal);
+        var absoluteWindows = normalized.LastIndexOfAny([' ', '\t']);
+        var start = Math.Max(absoluteUnix >= 0 ? absoluteUnix + 1 : -1, absoluteWindows >= 0 ? absoluteWindows + 1 : -1);
+        if (start > 0)
+            normalized = normalized[start..];
+
+        return normalized.Trim();
     }
 
     private static string DiagnosticFileName(string value)
