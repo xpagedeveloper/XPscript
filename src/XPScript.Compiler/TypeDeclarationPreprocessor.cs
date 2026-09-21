@@ -10,11 +10,7 @@ internal sealed class TypeDeclarationPreprocessor
 
     public string Transform(string source, string sourceName = "input.xps")
     {
-        var lines = source.Replace("\r
-", "
-").Replace('\r', '
-').Split('
-').ToList();
+        var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
         var optionBase = DetectOptionBase(lines);
         var typeNames = CollectTypeNames(lines);
         var output = new List<string>(lines.Count + 16);
@@ -204,7 +200,7 @@ internal sealed class TypeDeclarationPreprocessor
 
     private static string FirstToken(string value)
     {
-        var match = Regex.Match(value.TrimStart(), @"^\\S+");
+        var match = Regex.Match(value.TrimStart(), @"^\S+");
         return match.Success ? match.Value : "unknown";
     }
 
