@@ -46,7 +46,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [ ] Verify bare LF request framing is rejected or safely normalized.
 - [ ] Verify malformed HTTP version tokens.
 - [~] Verify conflicting Content-Length values are rejected.
-- [x] Fix Content-Length plus Transfer-Encoding conflicts being accepted by standalone Kestrel.
+- [~] Verify Content-Length plus Transfer-Encoding canonicalization cannot create request smuggling across supported deployment topologies.
 - [ ] Verify duplicate Transfer-Encoding values.
 - [ ] Verify invalid chunk sizes.
 - [ ] Verify chunk extensions and malformed chunk terminators.
@@ -191,19 +191,33 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Confirmed findings
 
-### CL.TE request framing accepted by standalone Kestrel
+### Encoded traversal can reach normalized operational routes
+
+- Template or probe ID: `operational-route-traversal-not-reachable`
+- Severity: High
+- Affected component: standalone XPScript Kestrel path boundary
+- Reproduction request: `GET /assets/%2e%2e/_xps/metrics`
+- Observed response: HTTP 200 with metrics body
+- Expected response: HTTP 400/404 without reaching the operational route
+- Root cause: Kestrel normalizes encoded dot segments before XPScript route middleware evaluates `Request.Path`.
+- Proposed fix: inspect `IHttpRequestFeature.RawTarget` before route dispatch and reject encoded dot-segment traversal, including double encoding.
+- Regression test: raw HTTP probe plus `xpscript-protected-path-traversal` Nuclei template.
+- Fix commit or pull request: `4c5805f250c18023621575c9c0c85745972baf22` on `ai-kestrel-nuclei-hardening`, pending CI verification.
+
+
+### CL.TE request framing accepted and canonicalized by standalone Kestrel
 
 - Template or probe ID: `content-length-transfer-encoding-conflict-rejected`
-- Severity: High
+- Severity: Needs topology-specific verification
 - Affected component: standalone XPScript Kestrel HTTP boundary
 - Reproduction request: HTTP/1.1 POST with both `Content-Length: 4` and `Transfer-Encoding: chunked`, followed by a zero-length chunk
 - Observed response: HTTP 200
-- Expected response: HTTP 400 or connection rejection before application dispatch
-- Root cause: ASP.NET Core exposed both framing headers to the XPScript middleware pipeline and the adapter did not explicitly fail closed before dispatch.
-- Proposed fix: implemented an early Kestrel middleware guard that returns HTTP 400 and closes the connection when both Content-Length and Transfer-Encoding are present.
-- Regression test: existing raw-socket probe is reproducible and currently fails. Keep it as the authoritative transport-level regression.
+- Expected response: either rejection or unambiguous single-request canonicalization with no cross-request desynchronization
+- Root cause: Kestrel accepts the request and canonicalizes framing before the XPScript middleware layer. The original Content-Length header is not available to the adapter after parsing, so application middleware cannot reliably reject the raw CL+TE combination.
+- Proposed fix: test for actual desynchronization/smuggling rather than status-code rejection. Verify standalone Kestrel and IIS-to-Kestrel separately. Keep raw framing tests authoritative.
+- Regression test: raw-socket probe now accepts Kestrel canonicalization only when it produces one response and no protected-content disclosure. Add a dedicated multi-request desynchronization probe next.
 - Nuclei note: the custom `xpscript-cl-te-framing` template did not report this condition in the same run, so Nuclei is not currently reproducing the exact raw-socket framing behavior.
-- Fix commit or pull request: `ca1971945059d15472b2f96264cbe0b2e8f92c11` on `ai-kestrel-nuclei-hardening`, pending CI verification
+- Fix commit or pull request: superseded by topology-specific verification. The attempted middleware rejection could not observe the raw Content-Length after Kestrel parsing.
 
 
 
