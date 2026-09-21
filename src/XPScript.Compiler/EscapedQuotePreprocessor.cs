@@ -116,12 +116,14 @@ internal sealed class EscapedQuotePreprocessor
             File = file,
             Line = line,
             Position = position,
+            EndLine = line,
+            EndColumn = position + 1,
             Description = message,
             DiagnosticCode = CompilerDiagnosticCodes.UnescapedStringQuote,
             Category = "syntax",
             Properties =
             [
-                new() { Name = "foundConstruct", Value = "unescaped quote" },
+                new() { Name = "foundToken", Value = "\"" },
                 new() { Name = "expectedConstruct", Value = "escaped or doubled quote" }
             ],
             SourceCode = sourceLine,
