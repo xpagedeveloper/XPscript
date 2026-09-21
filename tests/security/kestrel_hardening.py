@@ -90,6 +90,28 @@ def run(host, port):
         b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 4\r\nContent-Length: 5\r\nConnection: close\r\n\r\nABCDE",
         {400})
 
+    add("cl-te-desync-no-second-request",
+        b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\nConnection: keep-alive\r\n\r\n0\r\n\r\nGET /secret.txt HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {200,400},
+        lambda c,h,r: (
+            r.count(b"HTTP/1.1 ") == 1 and b"XPSCRIPT_SECRET_SENTINEL" not in r,
+            "CL.TE payload executed or exposed a second request"))
+
+    add("duplicate-transfer-encoding-safe",
+        b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n0\r\n\r\n",
+        {200,400,501},
+        lambda c,h,r: (
+            r.count(b"HTTP/1.1 ") <= 1 and b"XPSCRIPT_SECRET_SENTINEL" not in r,
+            "duplicate Transfer-Encoding caused ambiguous framing"))
+
+    add("invalid-chunk-size-rejected",
+        b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\nZ\r\nboom\r\n0\r\n\r\n",
+        {400})
+
+    add("malformed-chunk-terminator-rejected",
+        b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n4\r\ntestX\r\n0\r\n\r\n",
+        {400})
+
     add("encoded-traversal-does-not-disclose-secret",
         b"GET /assets/%2e%2e/secret.txt HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {400,404},
