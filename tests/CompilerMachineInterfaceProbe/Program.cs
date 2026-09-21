@@ -447,6 +447,14 @@ Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "actualType") ==
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.SourceCode), "date comparison source");
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.MarkedCode), "date comparison marked source");
 
+var continuationSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "dangling-line-continuation-error.xps"));
+var continuationSyntaxDiagnostic = continuationSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(continuationSyntaxDiagnostic is not null, "line continuation syntax diagnostic");
+Require(continuationSyntaxDiagnostic.Category == "syntax", "line continuation syntax category");
+Require(continuationSyntaxDiagnostic.Line == 2, "line continuation syntax line");
+Require(continuationSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "_") == true, "line continuation found token");
+Require(continuationSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "following source line") == true, "line continuation expected construct");
+
 var multilineSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "multiline-string-unterminated-error.xps"));
 var multilineSyntaxDiagnostic = multilineSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
 Require(multilineSyntaxDiagnostic is not null, "multiline string syntax diagnostic: " + string.Join(" | ", multilineSyntaxCase.Errors.Select(d => $"{d.DiagnosticCode}:{d.Category}:line={d.Line}:{d.Description}")));
