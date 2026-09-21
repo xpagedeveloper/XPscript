@@ -92,6 +92,23 @@ static List<byte[]> BuildFixedCorpus(byte[] valid, string root)
         ["QUERY_STRING"] = ""
     }));
 
+    foreach (var traversal in new[]
+    {
+        "/assets/%2e%2e/_xps/metrics",
+        "/assets/%252e%252e/_xps/metrics",
+        "/assets/..%5csecret.txt",
+        "/assets/%2e%2e%2fsecret.txt"
+    })
+    {
+        result.Add(BuildRequestWithParams(new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "GET",
+            ["SCRIPT_NAME"] = traversal,
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "index.xps"),
+            ["QUERY_STRING"] = ""
+        }));
+    }
+
     result.Add(BuildRequestWithDuplicateParam("REQUEST_METHOD", "GET", "POST"));
     result.Add(BuildRequestWithRawParamBytes([0x01, 0x01, 0xff, 0x61]));
     result.Add(BuildRequestWithRawParamBytes(BuildOversizedParamName()));
