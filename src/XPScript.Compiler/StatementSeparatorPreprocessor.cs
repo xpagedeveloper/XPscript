@@ -9,28 +9,32 @@ internal sealed class StatementSeparatorPreprocessor
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length);
         var sourceLine = 0;
+        var pendingSourceLine = 0;
 
         for (var physicalIndex = 0; physicalIndex < lines.Length; physicalIndex++)
         {
             var raw = lines[physicalIndex];
             var marker = Regex.Match(raw, @"XPSourceLineRuntime\.Set\((\d+)\)", RegexOptions.IgnoreCase);
+            var sourceMarker = Regex.Match(raw, @"__XPSOURCE_(\d+)_", RegexOptions.IgnoreCase);
+            var isGeneratedMarker = marker.Success || sourceMarker.Success;
             if (marker.Success)
-                sourceLine = int.Parse(marker.Groups[1].Value);
-            else
+                pendingSourceLine = int.Parse(marker.Groups[1].Value);
+            else if (sourceMarker.Success)
+                pendingSourceLine = int.Parse(sourceMarker.Groups[1].Value);
+
+            if (isGeneratedMarker)
             {
-                var sourceMarker = Regex.Match(raw, @"__XPSOURCE_(\d+)_", RegexOptions.IgnoreCase);
-                if (sourceMarker.Success)
-                    sourceLine = int.Parse(sourceMarker.Groups[1].Value);
+                ExpandLine(raw, output, physicalIndex + 1);
+                continue;
             }
 
-            // Source markers describe the following original source statement. Marker
-            // lines themselves are compiler-generated and can make output.Count diverge
-            // from the physical XPScript line. When no marker has been seen yet, use the
-            // current input index rather than the number of transformed output lines.
-            var isGeneratedMarker = marker.Success || Regex.IsMatch(raw, @"__XPSOURCE_\d+_", RegexOptions.IgnoreCase);
-            var effectiveSourceLine = sourceLine > 0 && !isGeneratedMarker
-                ? sourceLine
-                : physicalIndex + 1;
+            if (pendingSourceLine > 0)
+            {
+                sourceLine = pendingSourceLine;
+                pendingSourceLine = 0;
+            }
+
+            var effectiveSourceLine = sourceLine > 0 ? sourceLine : physicalIndex + 1;
             ExpandLine(raw, output, effectiveSourceLine);
         }
 
