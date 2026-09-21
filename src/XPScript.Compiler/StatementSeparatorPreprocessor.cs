@@ -10,8 +10,9 @@ internal sealed class StatementSeparatorPreprocessor
         var output = new List<string>(lines.Length);
         var sourceLine = 0;
 
-        foreach (var raw in lines)
+        for (var physicalIndex = 0; physicalIndex < lines.Length; physicalIndex++)
         {
+            var raw = lines[physicalIndex];
             var marker = Regex.Match(raw, @"XPSourceLineRuntime\.Set\((\d+)\)", RegexOptions.IgnoreCase);
             if (marker.Success)
                 sourceLine = int.Parse(marker.Groups[1].Value);
@@ -22,7 +23,11 @@ internal sealed class StatementSeparatorPreprocessor
                     sourceLine = int.Parse(sourceMarker.Groups[1].Value);
             }
 
-            var effectiveSourceLine = sourceLine > 0 ? sourceLine : Math.Max(1, output.Count + 1);
+            // Source markers describe the following original source statement. Marker
+            // lines themselves are compiler-generated and can make output.Count diverge
+            // from the physical XPScript line. When no marker has been seen yet, use the
+            // current input index rather than the number of transformed output lines.
+            var effectiveSourceLine = sourceLine > 0 ? sourceLine : physicalIndex + 1;
             ExpandLine(raw, output, effectiveSourceLine);
         }
 
