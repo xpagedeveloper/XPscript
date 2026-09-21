@@ -17,7 +17,7 @@ var options = new XpsKestrelOptions
 {
     Port = 0,
     MaxRequestBodySize = 64,
-    MaxConcurrentConnections = 32,
+    MaxConcurrentConnections = 2,
     RequestHeadersTimeout = TimeSpan.FromSeconds(1),
     KeepAliveTimeout = TimeSpan.FromSeconds(1),
     AllowedHosts = ["localhost", "127.0.0.1", "::1"],
@@ -128,6 +128,7 @@ try
         _ = ReadRequestId(response);
     }
 
+    await AssertMaxConcurrentConnectionsAsync(new Uri(address));
     await AssertRequestHeadersTimeoutAsync(new Uri(address));
     await AssertKeepAliveTimeoutAsync(new Uri(address));
 
@@ -333,6 +334,46 @@ static string ReadRequestId(HttpResponseMessage response)
 
 static bool IsValidRequestId(string? value) => value is { Length: 32 } && value.All(Uri.IsHexDigit);
 
+
+static async Task AssertMaxConcurrentConnectionsAsync(Uri baseAddress)
+{
+    using var first = new TcpClient();
+    using var second = new TcpClient();
+    using var third = new TcpClient();
+    await first.ConnectAsync(baseAddress.Host, baseAddress.Port);
+    await second.ConnectAsync(baseAddress.Host, baseAddress.Port);
+
+    // Keep both admitted connections occupied with incomplete request headers.
+    var partial = Encoding.ASCII.GetBytes("GET / HTTP/1.1\r\nHost: ");
+    await first.GetStream().WriteAsync(partial);
+    await second.GetStream().WriteAsync(partial);
+
+    await third.ConnectAsync(baseAddress.Host, baseAddress.Port);
+    var request = Encoding.ASCII.GetBytes($"GET /concurrency HTTP/1.1\r\nHost: {baseAddress.Host}:{baseAddress.Port}\r\nConnection: close\r\n\r\n");
+    await third.GetStream().WriteAsync(request);
+    await third.GetStream().FlushAsync();
+
+    var buffer = new byte[1024];
+    using var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(750));
+    try
+    {
+        var read = await third.GetStream().ReadAsync(buffer, timeout.Token);
+        if (read > 0 && Encoding.ASCII.GetString(buffer, 0, read).Contains("201", StringComparison.Ordinal))
+            throw new Exception("MaxConcurrentConnections admitted a third active connection above the configured limit.");
+    }
+    catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+    {
+        // Queuing is acceptable: the third connection must not be processed while both slots are occupied.
+    }
+    catch (IOException)
+    {
+        // Immediate rejection/reset is also acceptable.
+    }
+    catch (SocketException)
+    {
+        // Immediate rejection/reset is also acceptable.
+    }
+}
 
 static async Task AssertRequestHeadersTimeoutAsync(Uri baseAddress)
 {
