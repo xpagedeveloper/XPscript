@@ -16,8 +16,8 @@ public static class CompilerDiagnosticCatalog
         {
             Define("XPS1001", "syntax", "Unescaped string quote.", "foundToken", "expectedConstruct"),
             Define("XPS1002", "syntax", "Invalid comparison with Nothing.", "foundOperator", "expectedConstruct"),
-            Define("XPS1003", "syntax", "Invalid increment or decrement syntax."),
-            Define("XPS1004", "syntax", "Invalid compound assignment syntax."),
+            Define("XPS1003", "syntax", "Invalid increment or decrement syntax.", "foundOperator", "expectedConstruct"),
+            Define("XPS1004", "syntax", "Invalid compound assignment syntax.", "foundOperator", "expectedConstruct", "symbol", "expectedType", "actualType"),
             Define("XPS1005", "syntax", "Empty Dim declaration."),
             Define("XPS1006", "syntax", "Unterminated string literal.", "foundToken", "expectedConstruct"),
             Define("XPS1007", "syntax", "Invalid date comparison."),
