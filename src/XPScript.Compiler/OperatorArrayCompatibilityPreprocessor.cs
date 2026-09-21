@@ -271,6 +271,9 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             // physical source id so root files and includes retain their real locations.
             if (SourceLineMarkerPreprocessor.TryResolveNearestMarker(prefix, out var markerLine, out var markerSource))
             {
+                // The marker is emitted immediately before the physical statement.
+                // Subsequent preprocessing may insert additional lines, so the encoded
+                // marker line is the authoritative original XPScript coordinate.
                 mappedLine = markerLine;
                 file = string.IsNullOrWhiteSpace(markerSource) ? context.SourcePath : markerSource;
             }
