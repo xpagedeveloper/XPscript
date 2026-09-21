@@ -28,15 +28,15 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             }
             if (line.TrimStart().StartsWith("'", StringComparison.Ordinal)) { output.Add(line); continue; }
 
-            line = Regex.Replace(line, @"(?<![\w.])Array\s*\(", "LSOperatorArrayRuntime.CreateArray(", RegexOptions.IgnoreCase);
-            line = Regex.Replace(line, @"(?<![\w.])ArrayAppend\s*\(", "LSOperatorArrayRuntime.ArrayAppend(", RegexOptions.IgnoreCase);
-            line = Regex.Replace(line, @"(?<![\w.])ArrayGetIndex\s*\(", "LSOperatorArrayRuntime.ArrayGetIndex(", RegexOptions.IgnoreCase);
-            line = Regex.Replace(line, @"(?<![\w.])ArrayUnique\s*\(", "LSOperatorArrayRuntime.ArrayUnique(", RegexOptions.IgnoreCase);
-            line = Regex.Replace(line, @"(?<![\w.])ArraySort\s*\(", "LSOperatorArrayRuntime.ArraySort(", RegexOptions.IgnoreCase);
-            line = Regex.Replace(line, @"(?<![\w.])ArraySplice\s*\(", "LSOperatorArrayRuntime.ArraySplice(", RegexOptions.IgnoreCase);
-            line = Regex.Replace(line, @"(?<![\w.])ArraySlice\s*\(", "LSOperatorArrayRuntime.ArraySlice(", RegexOptions.IgnoreCase);
-            line = Regex.Replace(line, @"(?<![\w.])Explode\$?\s*\(", "LSOperatorArrayRuntime.Explode(", RegexOptions.IgnoreCase);
-            line = Regex.Replace(line, @"(?<![\w.])Join\$?\s*\(", "LSOperatorArrayRuntime.Join(", RegexOptions.IgnoreCase);
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
 
             line = RewriteLogicalComparisonCondition(line);
             line = RewriteSymbolOperator(line, '^', "Pow");
