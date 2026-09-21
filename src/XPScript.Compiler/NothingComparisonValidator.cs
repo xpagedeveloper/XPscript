@@ -44,13 +44,14 @@ internal sealed class NothingComparisonValidator
                 File = sourceName,
                 Line = i + 1,
                 Position = position,
+                EndLine = i + 1,
+                EndColumn = position + match.Length,
                 Description = message,
                 DiagnosticCode = CompilerDiagnosticCodes.InvalidNothingComparison,
                 Category = "syntax",
                 Properties =
                 [
                     new() { Name = "foundOperator", Value = op },
-                    new() { Name = "foundConstruct", Value = "Nothing comparison" },
                     new() { Name = "expectedConstruct", Value = "Is Nothing or Is Not Nothing" }
                 ],
                 SourceCode = safeSource,
