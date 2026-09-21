@@ -447,6 +447,16 @@ Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "actualType") ==
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.SourceCode), "date comparison source");
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.MarkedCode), "date comparison marked source");
 
+var coreSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-missing-procedure-terminator-error.xps"));
+var coreSyntaxDiagnostic = coreSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(coreSyntaxDiagnostic is not null, "core syntax diagnostic");
+Require(coreSyntaxDiagnostic.Category == "syntax", "core syntax category");
+Require(coreSyntaxDiagnostic.Line == 1 && coreSyntaxDiagnostic.Position > 0, "core syntax location");
+Require(coreSyntaxDiagnostic.EndLine == coreSyntaxDiagnostic.Line &&
+        coreSyntaxDiagnostic.EndColumn > coreSyntaxDiagnostic.Position, "core syntax source range");
+Require(!string.IsNullOrWhiteSpace(coreSyntaxDiagnostic.SourceCode), "core syntax source");
+Require(!string.IsNullOrWhiteSpace(coreSyntaxDiagnostic.MarkedCode), "core syntax marked source");
+
 var genericSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "general-unsupported-statement-error.xps"));
 var genericSyntaxDiagnostic = genericSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
 Require(genericSyntaxDiagnostic is not null, "generic syntax diagnostic");
