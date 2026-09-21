@@ -2,6 +2,10 @@
 
 Branch purpose: track security findings and remediation work discovered by the dedicated Nuclei and raw HTTP hardening workflow.
 
+## Cross-host remediation rule
+
+Every security finding discovered through the Kestrel hardening campaign must be assessed and remediated across Kestrel, CGI and FastCGI. A finding is not considered complete until the equivalent attack has a regression test for all applicable hosting modes, or the TODO documents why a transport is technically not applicable. Prefer fixes in the shared XPScript.Web.Runtime layer when the security invariant is transport-independent. Keep adapter-specific validation when the raw protocol/request representation differs.
+
 The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This branch is intentionally separate so findings and remediation planning can evolve independently from the scanner implementation.
 
 ## Status legend
