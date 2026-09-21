@@ -10,6 +10,7 @@ internal sealed class StatementSeparatorPreprocessor
         var output = new List<string>(lines.Length);
         var sourceLine = 0;
         var pendingSourceLine = 0;
+        var pendingMarkerPhysicalIndex = -1;
 
         for (var physicalIndex = 0; physicalIndex < lines.Length; physicalIndex++)
         {
@@ -18,9 +19,15 @@ internal sealed class StatementSeparatorPreprocessor
             var sourceMarker = Regex.Match(raw, @"__XPSOURCE_(\d+)_", RegexOptions.IgnoreCase);
             var isGeneratedMarker = marker.Success || sourceMarker.Success;
             if (marker.Success)
+            {
                 pendingSourceLine = int.Parse(marker.Groups[1].Value);
+                pendingMarkerPhysicalIndex = physicalIndex;
+            }
             else if (sourceMarker.Success)
+            {
                 pendingSourceLine = int.Parse(sourceMarker.Groups[1].Value);
+                pendingMarkerPhysicalIndex = physicalIndex;
+            }
 
             if (isGeneratedMarker)
             {
@@ -32,8 +39,13 @@ internal sealed class StatementSeparatorPreprocessor
             {
                 sourceLine = pendingSourceLine;
                 pendingSourceLine = 0;
+                pendingMarkerPhysicalIndex = -1;
             }
 
+            // A source marker is inserted immediately before the original statement.
+            // If another preprocessor inserted lines between them, sourceLine remains
+            // valid. Otherwise the marker value is authoritative and must not be
+            // replaced with the transformed physical index.
             var effectiveSourceLine = sourceLine > 0 ? sourceLine : physicalIndex + 1;
             ExpandLine(raw, output, effectiveSourceLine);
         }
