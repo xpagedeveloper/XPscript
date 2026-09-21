@@ -38,15 +38,7 @@ internal sealed class CoreCompatibilityTranspiler
         Reset();
         var lines = Normalize(source);
         Analyze(lines);
-        string transformed;
-        try
-        {
-            transformed = TransformModule(lines);
-        }
-        catch (CompilerException ex) when (ex.GeneratedDiagnostics.Count == 0)
-        {
-            throw StructuredSyntaxFailure(ex, sourceName, lines);
-        }
+        var transformed = TransformModule(lines, sourceName);
         var generated = new AdvancedXPScriptTranspiler().Transpile(transformed, sourceName);
         generated = InjectScriptMembers(generated);
         generated = PostProcessMarkers(generated);
@@ -54,38 +46,20 @@ internal sealed class CoreCompatibilityTranspiler
         return generated;
     }
 
-    private static CompilerException StructuredSyntaxFailure(CompilerException exception, string sourceName, string[] lines)
+    private static CompilerException SyntaxFailure(string message, string sourceName, int line, string sourceLine, string expectedConstruct, string? foundToken = null)
     {
-        var lineNumber = FindRelevantLine(exception.Message, lines);
-        var sourceLine = lineNumber > 0 && lineNumber <= lines.Length ? lines[lineNumber - 1] : string.Empty;
         var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
         var diagnostic = new CompileDiagnostic
         {
-            File = Path.GetFileName(sourceName),
-            Line = lineNumber,
-            Position = 1,
-            EndLine = lineNumber,
-            EndColumn = Math.Max(2, safeSource.Length + 1),
-            Description = exception.Message,
-            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
-            Category = "syntax",
-            SourceCode = safeSource,
-            MarkedCode = safeSource + Environment.NewLine + "^"
+            File = Path.GetFileName(sourceName), Line = line, Position = 1, EndLine = line,
+            EndColumn = Math.Max(2, safeSource.Length + 1), Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
+            Properties = string.IsNullOrWhiteSpace(foundToken)
+                ? [new() { Name = "expectedConstruct", Value = expectedConstruct }]
+                : [new() { Name = "foundToken", Value = foundToken }, new() { Name = "expectedConstruct", Value = expectedConstruct }],
+            SourceCode = safeSource, MarkedCode = safeSource + Environment.NewLine + "^"
         };
-        return new CompilerException(exception.Message, diagnostic.DiagnosticCode, diagnostic.Category, [diagnostic]);
-    }
-
-    private static int FindRelevantLine(string message, string[] lines)
-    {
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var line = StripComment(lines[i]).Trim();
-            if (line.Length == 0) continue;
-            if (message.Contains("procedure terminator", StringComparison.OrdinalIgnoreCase) &&
-                Regex.IsMatch(line, @"^(?:Static\s+)?(?:(?:Public|Private)\s+)?(?:Sub|Function)\b", RegexOptions.IgnoreCase))
-                return i + 1;
-        }
-        return lines.Length > 0 ? 1 : 0;
+        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
     }
 
     private void Reset()
@@ -239,7 +213,7 @@ internal sealed class CoreCompatibilityTranspiler
         return result;
     }
 
-    private string TransformModule(string[] lines)
+    private string TransformModule(string[] lines, string sourceName)
     {
         var output = new List<string>();
         string? currentClass = null;
@@ -283,7 +257,7 @@ internal sealed class CoreCompatibilityTranspiler
                 if (Regex.IsMatch(StripComment(lines[j]).Trim(), endPattern, RegexOptions.IgnoreCase)) break;
                 body.Add(lines[j]);
             }
-            if (j >= lines.Length) throw new CompilerException("Missing procedure terminator.");
+            if (j >= lines.Length) throw SyntaxFailure("Missing procedure terminator.", sourceName, i + 1, raw, "End Sub or End Function", "end-of-file");
 
             if (proc.Name.Equals("__property__", StringComparison.Ordinal))
             {
@@ -334,7 +308,7 @@ internal sealed class CoreCompatibilityTranspiler
         var staticNames = DiscoverStaticLocals(body, proc, className, arrays, scalarTypes);
 
         var common = TransformCommonBody(body, proc, className, proc.IsStatic);
-        var withAndSelect = TransformWithAndSelect(common);
+        var withAndSelect = TransformWithAndSelect(common, sourceName);
 
         foreach (var originalLine in withAndSelect)
         {
@@ -458,14 +432,16 @@ internal sealed class CoreCompatibilityTranspiler
         return result;
     }
 
-    private List<string> TransformWithAndSelect(IEnumerable<string> lines)
+    private List<string> TransformWithAndSelect(IEnumerable<string> lines, string sourceName)
     {
         var result = new List<string>();
         var withStack = new Stack<string>();
         var selectStack = new Stack<(string Variable, bool HasCase)>();
 
-        foreach (var raw in lines)
+        var sourceLines = lines.ToList();
+        for (var lineIndex = 0; lineIndex < sourceLines.Count; lineIndex++)
         {
+            var raw = sourceLines[lineIndex];
             var indent = Regex.Match(raw, @"^\s*").Value;
             var line = StripComment(raw).Trim();
 
@@ -478,7 +454,7 @@ internal sealed class CoreCompatibilityTranspiler
             }
             if (Regex.IsMatch(line, @"^End\s+With$", RegexOptions.IgnoreCase))
             {
-                if (withStack.Count == 0) throw new CompilerException("Unexpected End With.");
+                if (withStack.Count == 0) throw SyntaxFailure("Unexpected End With.", sourceName, lineIndex + 1, raw, "With statement", "End With");
                 withStack.Pop();
                 continue;
             }
@@ -517,8 +493,8 @@ internal sealed class CoreCompatibilityTranspiler
             result.Add(indent + rewritten);
         }
 
-        if (withStack.Count > 0) throw new CompilerException("Missing End With.");
-        if (selectStack.Count > 0) throw new CompilerException("Missing End Select.");
+        if (withStack.Count > 0) throw SyntaxFailure("Missing End With.", sourceName, Math.Max(1, sourceLines.Count), sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End With", "end-of-file");
+        if (selectStack.Count > 0) throw SyntaxFailure("Missing End Select.", sourceName, Math.Max(1, sourceLines.Count), sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End Select", "end-of-file");
         return result;
     }
 
