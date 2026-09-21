@@ -514,5 +514,22 @@ End Sub
     if (!generated.Contains("model.XPJsonDocument", StringComparison.Ordinal))
         throw new Exception("Runtime type name was incorrectly reserved in class-member scope.");
 
+    const string[] keywordSources =
+    [
+        "Class If\nEnd Class",
+        "Sub Main()\n    Dim End As String\nEnd Sub"
+    ];
+    foreach (var keywordSource in keywordSources)
+    {
+        try
+        {
+            _ = transpiler.Transpile(keywordSource, "reserved-language-keyword.xps", "win-x64");
+            throw new Exception("Language keyword was accepted as an identifier.");
+        }
+        catch (CompilerException)
+        {
+        }
+    }
+
     Console.WriteLine("PREPROCESSOR-RESERVED-IDENTIFIER-SCOPE=OK");
 }
