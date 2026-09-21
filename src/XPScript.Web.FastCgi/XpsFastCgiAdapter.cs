@@ -195,7 +195,10 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
             using (var stream = client.GetStream())
                 await ProcessConnectionAsync(stream, cancellationToken).ConfigureAwait(false);
         }
-        catch (XpsFastCgiProtocolException) { }
+        catch (XpsFastCgiProtocolException ex)
+        {
+            Console.Error.WriteLine($"FastCGI protocol error: {ex.Message}");
+        }
         catch (IOException) { }
         catch (SocketException) { }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
