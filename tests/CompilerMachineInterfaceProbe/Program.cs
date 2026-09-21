@@ -439,6 +439,8 @@ var dateComparisonDiagnostic = dateComparisonCase.Errors.FirstOrDefault(d => d.D
 Require(dateComparisonDiagnostic is not null, "date comparison diagnostic");
 Require(dateComparisonDiagnostic.Category == "syntax", "date comparison category");
 Require(dateComparisonDiagnostic.Line > 0 && dateComparisonDiagnostic.Position > 0, "date comparison location");
+Require(dateComparisonDiagnostic.EndLine == dateComparisonDiagnostic.Line &&
+        dateComparisonDiagnostic.EndColumn > dateComparisonDiagnostic.Position, "date comparison source range");
 Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "foundOperator") == true, "date comparison operator");
 Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "expectedType") == true, "date comparison expected type");
 Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "actualType") == true, "date comparison actual type");
