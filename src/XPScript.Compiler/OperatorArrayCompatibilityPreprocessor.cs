@@ -28,14 +28,14 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             }
             if (line.TrimStart().StartsWith("'", StringComparison.Ordinal)) { output.Add(line); continue; }
 
-            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
-            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
-            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
-            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
-            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
-            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
-            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
-            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "ArrayAppend", "LSOperatorArrayRuntime.ArrayAppend");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "ArrayGetIndex", "LSOperatorArrayRuntime.ArrayGetIndex");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "ArrayUnique", "LSOperatorArrayRuntime.ArrayUnique");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "ArraySort", "LSOperatorArrayRuntime.ArraySort");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "ArraySplice", "LSOperatorArrayRuntime.ArraySplice");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "ArraySlice", "LSOperatorArrayRuntime.ArraySlice");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Explode", "LSOperatorArrayRuntime.Explode");
+            line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Join", "LSOperatorArrayRuntime.Join");
             line = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "Array", "LSOperatorArrayRuntime.CreateArray");
 
             line = RewriteLogicalComparisonCondition(line);
