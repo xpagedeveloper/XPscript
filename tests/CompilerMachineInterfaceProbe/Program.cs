@@ -447,6 +447,16 @@ Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "actualType") ==
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.SourceCode), "date comparison source");
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.MarkedCode), "date comparison marked source");
 
+var genericSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "general-unsupported-statement-error.xps"));
+var genericSyntaxDiagnostic = genericSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(genericSyntaxDiagnostic is not null, "generic syntax diagnostic");
+Require(genericSyntaxDiagnostic.Category == "syntax", "generic syntax category");
+Require(genericSyntaxDiagnostic.Line == 2 && genericSyntaxDiagnostic.Position > 0, "generic syntax location");
+Require(genericSyntaxDiagnostic.EndLine == genericSyntaxDiagnostic.Line &&
+        genericSyntaxDiagnostic.EndColumn > genericSyntaxDiagnostic.Position, "generic syntax source range");
+Require(!string.IsNullOrWhiteSpace(genericSyntaxDiagnostic.SourceCode), "generic syntax source");
+Require(!string.IsNullOrWhiteSpace(genericSyntaxDiagnostic.MarkedCode), "generic syntax marked source");
+
 var csvArgumentCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "csv-load-argument-count-error.xps"));
 var csvArgumentDiagnostic = csvArgumentCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1010");
 Require(csvArgumentDiagnostic is not null, "CSV argument diagnostic");
