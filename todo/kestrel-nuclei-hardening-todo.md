@@ -77,12 +77,12 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify double encoded traversal cannot escape the assets directory.
 - [x] Verify mixed slash traversal.
 - [x] Verify backslash traversal.
-- [ ] Verify overlong and repeated dot segments.
+- [~] Verify overlong and repeated dot segments. Added nested `....//` and backslash variants, pending CI.
 - [x] Verify encoded slash and encoded backslash behavior.
-- [ ] Verify null byte variants.
-- [ ] Verify Unicode separator and normalization variants.
-- [ ] Verify Windows drive-style path input is rejected.
-- [ ] Verify UNC-style path input is rejected.
+- [~] Verify null byte variants. Added encoded and double-encoded null suffix probes, pending CI.
+- [~] Verify Unicode separator and normalization variants. Added full-width dot and Unicode division-slash probes plus overlong UTF-8 separator probes, pending CI.
+- [~] Verify Windows drive-style path input is rejected. Added drive-style probe, pending CI.
+- [~] Verify UNC-style path input is rejected. Added UNC-style probe, pending CI.
 - [x] Verify direct `.xps` source disclosure is impossible.
 - [ ] Verify application log directories are never served through static files. Runtime already forces logs outside web root, but add explicit external-log reachability regression.
 - [ ] Verify configuration files are never served through static files.
