@@ -421,6 +421,27 @@ jobs:
           python -m pip install --disable-pip-version-check jsonschema==4.25.1
           python tests/validate_compiler_schema.py
 
+  machine-interface-cross-platform:
+    name: machine-interface (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore machine-interface probe
+        run: dotnet restore tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj
+      - name: Build machine-interface probe
+        run: dotnet build tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release --no-restore
+      - name: Machine interface probe
+        run: dotnet run --project tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release --no-build -- .
+
   mcp-installer:
     strategy:
       matrix:
