@@ -414,6 +414,8 @@ Require(incrementSyntaxDiagnostic.Category == "syntax", "increment syntax catego
 Require(incrementSyntaxDiagnostic.Line > 0 && incrementSyntaxDiagnostic.Position > 0, "increment syntax location");
 Require(incrementSyntaxDiagnostic.Properties is not null, "increment syntax properties");
 Require(incrementSyntaxDiagnostic.Properties.Any(p => p.Name == "foundOperator" && p.Value == "++"), "increment syntax found operator");
+Require(incrementSyntaxDiagnostic.EndLine == incrementSyntaxDiagnostic.Line &&
+        incrementSyntaxDiagnostic.EndColumn == incrementSyntaxDiagnostic.Position + 2, "increment syntax source range");
 Require(incrementSyntaxDiagnostic.Properties.Any(p => p.Name == "expectedConstruct"), "increment syntax expected construct");
 
 var compoundSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "compound-invalid-string-numeric.xps"));
@@ -422,6 +424,8 @@ Require(compoundSyntaxDiagnostic is not null, "compound syntax diagnostic");
 Require(compoundSyntaxDiagnostic.Category == "syntax", "compound syntax category");
 Require(compoundSyntaxDiagnostic.Properties is not null, "compound syntax properties");
 Require(compoundSyntaxDiagnostic.Properties.Any(p => p.Name == "foundOperator"), "compound syntax found operator");
+Require(compoundSyntaxDiagnostic.EndLine == compoundSyntaxDiagnostic.Line &&
+        compoundSyntaxDiagnostic.EndColumn > compoundSyntaxDiagnostic.Position, "compound syntax source range");
 Require(
     compoundSyntaxDiagnostic.Properties.Any(p => p.Name == "expectedConstruct") ||
     (compoundSyntaxDiagnostic.Properties.Any(p => p.Name == "expectedType") &&
