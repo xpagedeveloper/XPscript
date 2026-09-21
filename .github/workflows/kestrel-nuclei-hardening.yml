@@ -48,6 +48,64 @@ jobs:
           dotnet run --project ./tests/WebCgiSmoke/WebCgiSmoke.csproj -c Release
           dotnet run --project ./tests/WebFastCgiAdversarialSmoke/WebFastCgiAdversarialSmoke.csproj -c Release
 
+      - name: Run nginx to FastCGI topology security regressions
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+          FASTCGI_PORT=19091
+          NGINX_PORT=18081
+          mkdir -p ./artifacts/hardening
+          dotnet run --project ./tests/WebFastCgiNginxHost/WebFastCgiNginxHost.csproj -c Release -- ./.hardening-fastcgi "${FASTCGI_PORT}" > ./artifacts/hardening/fastcgi-nginx-host.log 2>&1 &
+          echo $! > ./artifacts/hardening/fastcgi-nginx-host.pid
+          mkdir -p ./.hardening-fastcgi
+          cat > ./.hardening-fastcgi/index.xps <<'XPS'
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Response.ContentType = "text/plain; charset=utf-8"
+              Response.Write("XPSCRIPT-FASTCGI-HARDENING")
+          End Sub
+          XPS
+          for i in {1..30}; do
+            if grep -q "XPS-FASTCGI-NGINX-HOST=READY" ./artifacts/hardening/fastcgi-nginx-host.log; then break; fi
+            sleep 1
+          done
+          grep -q "XPS-FASTCGI-NGINX-HOST=READY" ./artifacts/hardening/fastcgi-nginx-host.log
+          cat > /tmp/xpscript-hardening-nginx.conf <<EOF
+          events {}
+          http {
+            access_log off;
+            server {
+              listen 127.0.0.1:${NGINX_PORT};
+              server_name 127.0.0.1;
+              location / {
+                include /etc/nginx/fastcgi_params;
+                fastcgi_param SCRIPT_FILENAME $document_root/index.xps;
+                fastcgi_param SCRIPT_NAME $uri;
+                fastcgi_param PATH_INFO "";
+                fastcgi_pass 127.0.0.1:${FASTCGI_PORT};
+              }
+            }
+          }
+          EOF
+          sudo nginx -c /tmp/xpscript-hardening-nginx.conf
+          trap 'sudo nginx -c /tmp/xpscript-hardening-nginx.conf -s stop || true; kill "$(cat ./artifacts/hardening/fastcgi-nginx-host.pid)" || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS "http://127.0.0.1:${NGINX_PORT}/" | grep -q "XPSCRIPT-FASTCGI-HARDENING"; then break; fi
+            sleep 1
+          done
+          curl -fsS "http://127.0.0.1:${NGINX_PORT}/" | grep -q "XPSCRIPT-FASTCGI-HARDENING"
+          for path in \
+            '/assets/%2e%2e/_xps/metrics' \
+            '/assets/%252e%252e/_xps/metrics' \
+            '/assets/%2e%2e/secret.txt' \
+            '/assets/%252e%252e/secret.txt' \
+            '/assets/..%5csecret.txt'; do
+            code=$(curl --path-as-is -sS -o /tmp/xps-fastcgi-body -w '%{http_code}' "http://127.0.0.1:${NGINX_PORT}${path}" || true)
+            test "${code}" != "200"
+          done
+
       - name: Create hardening application
         shell: bash
         run: |
