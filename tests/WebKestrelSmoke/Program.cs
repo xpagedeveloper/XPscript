@@ -341,8 +341,13 @@ static bool IsValidRequestId(string? value) => value is { Length: 32 } && value.
 
 static async Task AssertBoundedConcurrencyStressAsync(HttpClient client)
 {
-    const int requestCount = 24;
-    using var gate = new SemaphoreSlim(8);
+    var stressProfile = string.Equals(
+        Environment.GetEnvironmentVariable("XPSCRIPT_KESTREL_STRESS_PROFILE"),
+        "1",
+        StringComparison.Ordinal);
+    var requestCount = stressProfile ? 256 : 24;
+    var maxClientConcurrency = stressProfile ? 32 : 8;
+    using var gate = new SemaphoreSlim(maxClientConcurrency);
     var tasks = Enumerable.Range(0, requestCount).Select(async i =>
     {
         await gate.WaitAsync();
