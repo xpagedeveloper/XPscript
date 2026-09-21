@@ -1,0 +1,20 @@
+id: xpscript-invalid-host
+
+info:
+  name: XPScript Invalid Host Accepted
+  author: xpscript
+  severity: high
+  description: Detects failure of the standalone Kestrel Host allowlist.
+
+http:
+  - raw:
+      - |
+        GET / HTTP/1.1
+        Host: attacker.invalid
+        Connection: close
+
+    unsafe: true
+    matchers:
+      - type: status
+        status:
+          - 200
