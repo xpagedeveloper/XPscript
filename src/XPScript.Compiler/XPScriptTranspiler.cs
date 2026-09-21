@@ -105,7 +105,7 @@ public sealed partial class XPScriptTranspiler
         source = new IfLayoutPreprocessor().Transform(source);
         source = new ParameterlessProcedureHeaderPreprocessor().Transform(source);
         source = new ParameterPassingPreprocessor().Transform(source);
-        source = new HclPrintFormattingPreprocessor().Transform(source);
+        source = new HclPrintFormattingPreprocessor().Transform(source, sourceName);
         source = new StatementSeparatorPreprocessor().Transform(source, sourceName);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
