@@ -8,7 +8,7 @@ internal sealed class TypeDeclarationPreprocessor
     private sealed record ArrayField(string Name, string ElementType, string Bounds);
     private sealed record NestedField(string Name, string Type);
 
-    public string Transform(string source)
+    public string Transform(string source, string sourceName = "input.xps")
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
         var optionBase = DetectOptionBase(lines);
@@ -46,7 +46,7 @@ internal sealed class TypeDeclarationPreprocessor
 
                 var field = Regex.Match(memberLine, @"^([A-Za-z_]\w*)\s*(\(([^)]*)\))?\s+As\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
                 if (!field.Success)
-                    throw new CompilerException("Unsupported Type member declaration.");
+                    throw SyntaxFailure("Unsupported Type member declaration.", sourceName, i + 1, memberRaw, "Type member declaration");
 
                 var name = field.Groups[1].Value;
                 var elementType = field.Groups[4].Value;
@@ -62,7 +62,7 @@ internal sealed class TypeDeclarationPreprocessor
             }
 
             if (!foundEnd)
-                throw new CompilerException("Missing End Type for '" + typeName + "'.");
+                throw SyntaxFailure("Missing End Type for '" + typeName + "'.", sourceName, Math.Max(1, i), lines[Math.Max(0, Math.Min(lines.Count - 1, i - 1))], "End Type");
 
             if (arrays.Count > 0 || nestedFields.Count > 0)
             {
