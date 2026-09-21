@@ -50,6 +50,7 @@ VerifyArchiveGZipSurface();
 VerifyArchiveTraversalGuard();
 VerifyArchiveDependencyInjection();
 VerifyNestedArgumentComparison();
+VerifyRuntimeFunctionMemberScope();
 
 void Measure(string label, string source, int iterations)
 {
@@ -355,4 +356,42 @@ End Sub
     if (!generated.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Nested function-call comparison was not emitted as C# equality.");
     Console.WriteLine("PREPROCESSOR-NESTED-COMPARISON=OK");
+}
+
+
+void VerifyRuntimeFunctionMemberScope()
+{
+    const string source = """
+Class RuntimeNameCollision
+    Public JsonParse As String
+
+    Public Function JsonStringify(value As String) As String
+        JsonStringify = value
+    End Function
+
+    Public Function StrLeftBack(value As String, delimiter As String) As String
+        StrLeftBack = value
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New RuntimeNameCollision
+    Dim parsed As Variant
+    item.JsonParse = "member"
+    Print item.JsonStringify("member")
+    Print item.StrLeftBack("a/b", "/")
+    Set parsed = JsonParse("{""ok"":true}")
+    Print StrLeftBack("a/b", "/")
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "preprocessor-runtime-member-scope.xps", "win-x64");
+    if (!generated.Contains("item.JsonStringify(\"member\")", StringComparison.Ordinal)
+        || !generated.Contains("item.StrLeftBack(\"a/b\", \"/\")", StringComparison.Ordinal))
+        throw new Exception("Runtime/global function rewriting captured a class member call.");
+    if (!generated.Contains("XPScriptNativeJson.Parse(", StringComparison.Ordinal))
+        throw new Exception("Unqualified JsonParse call no longer resolves to the native JSON runtime.");
+    if (!generated.Contains("XPScriptReferenceRuntime.StrLeftBack(", StringComparison.Ordinal))
+        throw new Exception("Unqualified StrLeftBack call no longer resolves to the reference runtime.");
+    Console.WriteLine("PREPROCESSOR-RUNTIME-MEMBER-SCOPE=OK");
 }
