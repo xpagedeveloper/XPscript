@@ -452,7 +452,7 @@ var typeArraySyntaxDiagnostic = typeArraySyntaxCase.Errors.FirstOrDefault(d => d
 Require(typeArraySyntaxDiagnostic is not null, "type array bound syntax diagnostic");
 Require(typeArraySyntaxDiagnostic.Category == "syntax", "type array bound syntax category");
 Require(typeArraySyntaxDiagnostic.Line == 2, "type array bound syntax line");
-Require(typeArraySyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "integer constant array bound") == true, "type array bound expected construct: " + string.Join(", ", typeArraySyntaxDiagnostic.Properties?.Select(p => $"{p.Name}={p.Value}") ?? []));
+Require(typeArraySyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "integer constant array bound") == true, "type array bound expected construct: " + string.Join(", ", typeArraySyntaxDiagnostic.Properties?.Select(p => $"{p.Name}={p.Value}") ?? []) + $"; line={typeArraySyntaxDiagnostic.Line}; source={typeArraySyntaxDiagnostic.SourceCode}; marked={typeArraySyntaxDiagnostic.MarkedCode}");
 Require(!string.IsNullOrWhiteSpace(typeArraySyntaxDiagnostic.SourceCode), "type array bound source");
 Require(!string.IsNullOrWhiteSpace(typeArraySyntaxDiagnostic.MarkedCode), "type array bound marked source");
 
