@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           rm -rf ./.hardening-site ./out/hardening-webiis ./out/hardening-webiis.zip ./artifacts/hardening
-          mkdir -p ./.hardening-site/assets ./artifacts/hardening
+          mkdir -p ./.hardening-site/assets ./.hardening-site/.xpscript-cache ./artifacts/hardening
 
           cat > ./.hardening-site/index.xps <<'XPS'
           [Anonymous]
@@ -67,6 +67,7 @@ jobs:
           cp ./.hardening-site/index.xps ./.hardening-site/main.xps
           printf 'XPSCRIPT_PUBLIC_ASSET\n' > ./.hardening-site/assets/public.txt
           printf 'XPSCRIPT_SECRET_SENTINEL\n' > ./.hardening-site/secret.txt
+          printf 'XPSCRIPT_PROTECTED_CACHE_SENTINEL\n' > ./.hardening-site/.xpscript-cache/protected.css
 
       - name: Compile generated web application
         run: |
@@ -113,6 +114,45 @@ jobs:
             cat ./artifacts/hardening/nuclei-xpscript.jsonl
             exit 1
           fi
+
+      - name: Run curated ASP.NET IIS and .NET Nuclei templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei" \
+            -u "http://127.0.0.1:${HARDENING_PORT}" \
+            -t ./artifacts/nuclei-templates/http/misconfiguration/aspx-debug-mode.yaml \
+            -t ./artifacts/nuclei-templates/http/misconfiguration/microsoft/aspnetcore-dev-env.yaml \
+            -t ./artifacts/nuclei-templates/http/misconfiguration/iis-shortname-detect.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/files/aspnet-launchsettings-exposure.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/logs/elmah-log-file.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/logs/trace-axd-expose.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/logs/microsoft-runtime-error.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/nuget-config-exposure.yaml \
+            -t ./artifacts/nuclei-templates/http/technologies/microsoft/microsoft-iis-version.yaml \
+            -jsonl-export ./artifacts/hardening/nuclei-dotnet-iis.jsonl \
+            -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-dotnet-iis.exit-code
+
+      - name: Run curated JSON security Nuclei templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei" \
+            -u "http://127.0.0.1:${HARDENING_PORT}" \
+            -t ./artifacts/nuclei-templates/http/exposures/files/appsettings-file-disclosure.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/files/credentials-json.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/files/auth-json.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/tokens/jwk-json-leak.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/apis/swagger-api.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/config-json-exposure-fuzz.yaml \
+            -jsonl-export ./artifacts/hardening/nuclei-json-security.jsonl \
+            -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-json-security.exit-code
 
       - name: Run selected upstream Nuclei HTTP templates
         shell: bash
