@@ -106,7 +106,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify ForwardLimit=1 prevents chained spoofing. Multi-hop forwarded-header regression verified in run #48.
 - [x] Verify forwarded Host cannot bypass AllowedHosts. Trusted forwarded host outside the allowlist returned 400 in run #48.
 - [ ] Verify IIS out-of-process mode preserves the external scheme correctly.
-- [ ] Verify IIS out-of-process mode does not weaken Host validation unexpectedly.
+- [x] Verify IIS out-of-process mode does not weaken Host validation unexpectedly. Host allowlist is enforced in IIS out-of-process mode and invalid Host returned 400 in run #51.
 - [ ] Add a Windows IIS hardening workflow after standalone Kestrel coverage stabilizes.
 
 ## Cookies and sessions
