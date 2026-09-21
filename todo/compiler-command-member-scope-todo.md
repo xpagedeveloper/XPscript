@@ -57,4 +57,4 @@ Resolution rule: lexical keywords are syntax-level restrictions; compiler-reserv
 - [x] All affected compiler tests pass on Windows, Linux, and macOS. FullTest run 399 passed on exact branch HEAD.
 - [x] Existing runtime function calls remain backward compatible. FullTest and runtime regression suites passed.
 - [x] Existing valid member/property names are not renamed or rejected merely because they match an XPScript command/runtime API name. Scope regressions pass through the real transpiler/compiler.
-- [ ] Add documentation describing the difference between XPScript keywords, compiler-reserved identifiers, runtime functions, and scoped user symbols.
+- [x] Add documentation describing the difference between XPScript keywords, compiler-reserved identifiers, runtime functions, and scoped user symbols.
