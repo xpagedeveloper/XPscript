@@ -109,6 +109,19 @@ public static class XpsKestrelAdapter
 
         app.Use(async (http, next) =>
         {
+            if (http.Request.Headers.ContainsKey("Content-Length") &&
+                http.Request.Headers.ContainsKey("Transfer-Encoding"))
+            {
+                http.Response.StatusCode = StatusCodes.Status400BadRequest;
+                http.Response.Headers.Connection = "close";
+                return;
+            }
+
+            await next();
+        });
+
+        app.Use(async (http, next) =>
+        {
             var started = Stopwatch.GetTimestamp();
             var requestId = Guid.NewGuid().ToString("N");
             http.TraceIdentifier = requestId;
