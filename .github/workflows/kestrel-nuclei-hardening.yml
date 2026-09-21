@@ -160,6 +160,27 @@ jobs:
           set -e
           echo "${status}" > ./artifacts/hardening/nuclei-json-security.exit-code
 
+      - name: Run generic web boundary Nuclei templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei" \
+            -u "http://127.0.0.1:${HARDENING_PORT}" \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/crlf-injection-generic.yaml \
+            -t ./artifacts/nuclei-templates/http/misconfiguration/put-method-enabled.yaml \
+            -t ./artifacts/nuclei-templates/http/miscellaneous/http-trace.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/host-header-injection.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/web-config.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/git-config.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/git-credentials-disclosure.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/exposed-gitignore.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/files/ds-store-file.yaml \
+            -jsonl-export ./artifacts/hardening/nuclei-web-boundary.jsonl \
+            -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-web-boundary.exit-code
+
       - name: Run selected upstream Nuclei HTTP templates
         shell: bash
         run: |
