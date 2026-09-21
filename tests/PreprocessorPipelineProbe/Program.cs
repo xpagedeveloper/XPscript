@@ -52,6 +52,7 @@ VerifyArchiveDependencyInjection();
 VerifyNestedArgumentComparison();
 VerifyRuntimeFunctionMemberScope();
 VerifyRuntimeNameScopeMatrix();
+VerifyReservedIdentifierScope();
 
 void Measure(string label, string source, int iterations)
 {
@@ -466,4 +467,52 @@ End Sub
         throw new Exception("Scope matrix no longer resolves an unqualified SHA256 call to the hash runtime.");
 
     Console.WriteLine("PREPROCESSOR-RUNTIME-NAME-SCOPE-MATRIX=OK");
+}
+
+
+void VerifyReservedIdentifierScope()
+{
+    const string legalMemberSource = """
+Class XPJsonDocument
+End Class
+""";
+    try
+    {
+        _ = transpiler.Transpile(legalMemberSource, "reserved-type-negative.xps", "win-x64");
+        throw new Exception("Reserved runtime type name was accepted as a user type.");
+    }
+    catch (CompilerException ex) when (ex.Message.Contains("Type name is reserved", StringComparison.Ordinal))
+    {
+    }
+
+    const string compilerStateSource = """
+Sub Main()
+    Dim __generated As String
+End Sub
+""";
+    try
+    {
+        _ = transpiler.Transpile(compilerStateSource, "reserved-compiler-state.xps", "win-x64");
+        throw new Exception("Compiler-reserved __ identifier was accepted.");
+    }
+    catch (CompilerException ex) when (ex.Message.Contains("compiler-generated state", StringComparison.Ordinal))
+    {
+    }
+
+    const string typeVsMemberSource = """
+Class UserModel
+    Public XPJsonDocument As String
+End Class
+
+Sub Main()
+    Dim model As New UserModel
+    model.XPJsonDocument = "member"
+    Print model.XPJsonDocument
+End Sub
+""";
+    var generated = transpiler.Transpile(typeVsMemberSource, "reserved-type-vs-member.xps", "win-x64");
+    if (!generated.Contains("model.XPJsonDocument", StringComparison.Ordinal))
+        throw new Exception("Runtime type name was incorrectly reserved in class-member scope.");
+
+    Console.WriteLine("PREPROCESSOR-RESERVED-IDENTIFIER-SCOPE=OK");
 }
