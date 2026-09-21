@@ -72,7 +72,7 @@ jobs:
         run: |
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build --             ./.hardening-site/main.xps --target webiis --runtime=false --output ./out/hardening-webiis
           test -f ./out/hardening-webiis.zip
-          unzip -l ./out/hardening-webiis.zip | grep -qE "(^|[[:space:]])web.config$"
+          unzip -l ./out/hardening-webiis.zip | grep -qE "(^|[[:space:]])site/web.config$"
 
       - name: Start XPScript Kestrel host
         shell: bash
