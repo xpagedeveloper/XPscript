@@ -449,7 +449,7 @@ Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.MarkedCode), "date c
 
 var multilineSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "multiline-string-unterminated-error.xps"));
 var multilineSyntaxDiagnostic = multilineSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
-Require(multilineSyntaxDiagnostic is not null, "multiline string syntax diagnostic");
+Require(multilineSyntaxDiagnostic is not null, "multiline string syntax diagnostic: " + string.Join(" | ", multilineSyntaxCase.Errors.Select(d => $"{d.DiagnosticCode}:{d.Category}:line={d.Line}:{d.Description}")));
 Require(multilineSyntaxDiagnostic.Category == "syntax", "multiline string syntax category");
 Require(multilineSyntaxDiagnostic.Line == 3, "multiline string syntax line");
 Require(multilineSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "{") == true, "multiline string found token");
