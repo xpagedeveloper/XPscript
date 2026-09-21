@@ -99,9 +99,9 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Host, proxy and forwarded headers
 
-- [ ] Verify untrusted X-Forwarded-For is ignored when no known proxy is configured.
-- [ ] Verify untrusted X-Forwarded-Proto is ignored when no known proxy is configured.
-- [ ] Verify untrusted X-Forwarded-Host is ignored when no known proxy is configured.
+- [x] Verify untrusted X-Forwarded-For is ignored when no known proxy is configured. Runtime regression verified in run #45.
+- [x] Verify untrusted X-Forwarded-Proto is ignored when no known proxy is configured. Runtime regression verified in run #45.
+- [x] Verify untrusted X-Forwarded-Host is ignored when no known proxy is configured. Runtime regression verified in run #45.
 - [ ] Verify only configured KnownProxies can influence forwarded headers.
 - [ ] Verify ForwardLimit=1 prevents chained spoofing.
 - [ ] Verify forwarded Host cannot bypass AllowedHosts.
