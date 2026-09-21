@@ -72,22 +72,22 @@ internal sealed class StatementSeparatorPreprocessor
             output.Add(indent + label.Groups["label"].Value + ":");
             var tail = label.Groups["tail"].Value;
             if (!string.IsNullOrWhiteSpace(tail))
-                AddStatements(output, SplitTopLevelColons(tail), indent, comment, sourceLine);
+                AddStatements(output, SplitTopLevelColons(tail), indent, comment, sourceLine, sourceName, raw);
             else if (!string.IsNullOrEmpty(comment))
                 output[^1] += " " + comment;
             return;
         }
 
-        if (TryExpandSingleLineIf(code, comment, output, sourceLine))
+        if (TryExpandSingleLineIf(code, comment, output, sourceLine, sourceName, raw))
             return;
 
-        if (TryExpandInlineElseIf(code, comment, output, sourceLine))
+        if (TryExpandInlineElseIf(code, comment, output, sourceLine, sourceName, raw))
             return;
 
-        AddStatements(output, SplitTopLevelColons(code), indent, comment, sourceLine);
+        AddStatements(output, SplitTopLevelColons(code), indent, comment, sourceLine, sourceName, raw);
     }
 
-    private static bool TryExpandSingleLineIf(string code, string comment, List<string> output, int sourceLine)
+    private static bool TryExpandSingleLineIf(string code, string comment, List<string> output, int sourceLine, string sourceName, string raw)
     {
         var indent = Regex.Match(code, @"^\s*").Value;
         var trimmed = code.Trim();
@@ -109,17 +109,17 @@ internal sealed class StatementSeparatorPreprocessor
         var falseTail = elseIndex >= 0 ? tail[(elseIndex + 4)..].Trim() : null;
 
         output.Add($"{indent}If {condition} Then");
-        AddStatements(output, SplitTopLevelColons(trueTail), indent + "    ", string.Empty, sourceLine);
+        AddStatements(output, SplitTopLevelColons(trueTail), indent + "    ", string.Empty, sourceLine, sourceName, raw);
         if (falseTail is not null)
         {
             output.Add(indent + "Else");
-            AddStatements(output, SplitTopLevelColons(falseTail), indent + "    ", string.Empty, sourceLine);
+            AddStatements(output, SplitTopLevelColons(falseTail), indent + "    ", string.Empty, sourceLine, sourceName, raw);
         }
         output.Add(indent + "End If" + (string.IsNullOrEmpty(comment) ? string.Empty : " " + comment));
         return true;
     }
 
-    private static bool TryExpandInlineElseIf(string code, string comment, List<string> output, int sourceLine)
+    private static bool TryExpandInlineElseIf(string code, string comment, List<string> output, int sourceLine, string sourceName, string raw)
     {
         var indent = Regex.Match(code, @"^\s*").Value;
         var trimmed = code.Trim();
@@ -136,7 +136,7 @@ internal sealed class StatementSeparatorPreprocessor
             return false;
 
         output.Add($"{indent}ElseIf {condition} Then");
-        AddStatements(output, SplitTopLevelColons(tail), indent + "    ", comment, sourceLine);
+        AddStatements(output, SplitTopLevelColons(tail), indent + "    ", comment, sourceLine, sourceName, raw);
         return true;
     }
 
@@ -145,7 +145,9 @@ internal sealed class StatementSeparatorPreprocessor
         IReadOnlyList<string> statements,
         string indent,
         string trailingComment,
-        int sourceLine)
+        int sourceLine,
+        string sourceName,
+        string raw)
     {
         for (var i = 0; i < statements.Count; i++)
         {
