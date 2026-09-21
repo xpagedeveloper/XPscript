@@ -87,15 +87,16 @@ public sealed partial class XPScriptTranspiler
         // the compatibility string scan.
         source = new MultilineStringPreprocessor().Transform(source, sourceName);
 
+        // Resolve and validate physical line continuations while the source still has
+        // its original physical layout. NormalizeSource also consumes continuations, so
+        // this must run first to preserve dangling-continuation coordinates.
+        source = new SourceLineContinuationPreprocessor().Transform(source, sourceName);
+
         // Validate/normalize ordinary string delimiters while the source still has the
         // physical line layout represented by sourceMap. Running this after marker and
         // compatibility preprocessors would report transformed coordinates.
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
-
-        // Resolve and validate physical line continuations before generated source
-        // markers are inserted so dangling continuations retain original coordinates.
-        source = new SourceLineContinuationPreprocessor().Transform(source, sourceName);
 
         // Attach runtime/#line markers only after semantic validation and syntax scanning.
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
