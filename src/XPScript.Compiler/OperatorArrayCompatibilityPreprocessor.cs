@@ -266,17 +266,30 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         var context = ExpandedSourceContext.Current;
         if (context is not null)
         {
-            var location = context.Map.Resolve(line, context.SourcePath);
-            file = location.SourcePath;
-            mappedLine = location.Line;
-            if (location.IncludeTrace is { Count: > 0 } trace)
+            // SourceLineMarkerPreprocessor may already have inserted synthetic marker
+            // lines before this scanner runs. Prefer the nearest marker so diagnostics
+            // keep the original physical XPScript line rather than the transformed line.
+            var markerMatches = Regex.Matches(prefix, @"__XPSOURCE_(?<line>\d+)_");
+            if (markerMatches.Count > 0 &&
+                int.TryParse(markerMatches[^1].Groups["line"].Value, out var markerLine))
             {
-                includeTrace = trace.Select(frame => new CompileIncludeFrame
+                mappedLine = markerLine;
+                file = context.SourcePath;
+            }
+            else
+            {
+                var location = context.Map.Resolve(line, context.SourcePath);
+                file = location.SourcePath;
+                mappedLine = location.Line;
+                if (location.IncludeTrace is { Count: > 0 } trace)
                 {
-                    File = Path.GetFileName(frame.SourcePath),
-                    Line = frame.Line,
-                    IncludedFile = Path.GetFileName(frame.IncludedPath)
-                }).ToList();
+                    includeTrace = trace.Select(frame => new CompileIncludeFrame
+                    {
+                        File = Path.GetFileName(frame.SourcePath),
+                        Line = frame.Line,
+                        IncludedFile = Path.GetFileName(frame.IncludedPath)
+                    }).ToList();
+                }
             }
         }
 
