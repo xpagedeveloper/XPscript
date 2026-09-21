@@ -175,6 +175,38 @@ Require(normalizedPathDiagnostic.File == "portable.xps", "diagnostic file paths 
 
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
+var emptySourcePath = Path.Combine(outputRoot, "empty-source.xps");
+await File.WriteAllTextAsync(emptySourcePath, string.Empty);
+var emptySourceValidation = await driver.ValidateWithResultAsync(emptySourcePath);
+Require(!emptySourceValidation.Success, "empty source validation must fail");
+Require(emptySourceValidation.Errors.Count > 0, "empty source validation must return a diagnostic");
+Require(emptySourceValidation.Errors.All(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)), "empty source diagnostics must be structured");
+
+var malformedSourceValidation = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "malformed-source-error.xps"));
+Require(!malformedSourceValidation.Success, "malformed source validation must fail");
+Require(malformedSourceValidation.Errors.Count > 0, "malformed source validation must return a diagnostic");
+Require(malformedSourceValidation.Errors.Any(d => d.Line > 0 && d.Position > 0), "malformed source diagnostic location");
+
+var utf8SourceValidation = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "utf8-nonascii-error.xps"));
+Require(!utf8SourceValidation.Success, "UTF-8 source validation must fail");
+var utf8Diagnostic = utf8SourceValidation.Errors.FirstOrDefault(d => d.DiagnosticCode is "XPS2001" or "XPS2003");
+Require(utf8Diagnostic is not null, "UTF-8 source structured type diagnostic");
+Require(utf8Diagnostic.Line == 3 && utf8Diagnostic.Position > 0, "UTF-8 source diagnostic location");
+Require(utf8Diagnostic.SourceCode?.Contains("räknare", StringComparison.Ordinal) == true, "UTF-8 source must preserve supported non-ASCII identifiers");
+Require(utf8Diagnostic.SourceCode?.Contains("fel 漢字", StringComparison.Ordinal) == false, "UTF-8 source diagnostic must redact non-ASCII string literals");
+
+var lfSourcePath = Path.Combine(outputRoot, "line-ending-lf.xps");
+var crlfSourcePath = Path.Combine(outputRoot, "line-ending-crlf.xps");
+var lineEndingSource = "Sub Main()\\n    Dim value As Integer\\n    value = \\"wrong\\"\\nEnd Sub\\n";
+await File.WriteAllTextAsync(lfSourcePath, lineEndingSource.Replace("\\\\n", "\\n", StringComparison.Ordinal));
+await File.WriteAllTextAsync(crlfSourcePath, lineEndingSource.Replace("\\\\n", "\\r\\n", StringComparison.Ordinal));
+var lfValidation = await driver.ValidateWithResultAsync(lfSourcePath);
+var crlfValidation = await driver.ValidateWithResultAsync(crlfSourcePath);
+var lfDiagnostic = lfValidation.Errors.FirstOrDefault(d => d.DiagnosticCode is "XPS2001" or "XPS2003");
+var crlfDiagnostic = crlfValidation.Errors.FirstOrDefault(d => d.DiagnosticCode is "XPS2001" or "XPS2003");
+Require(lfDiagnostic is not null && crlfDiagnostic is not null, "line-ending diagnostics");
+Require(lfDiagnostic.Line == crlfDiagnostic.Line && lfDiagnostic.Position == crlfDiagnostic.Position, "LF and CRLF diagnostic locations must match");
+
 Directory.CreateDirectory(outputRoot);
 
 var multipleDiagnosticSource = Path.Combine(outputRoot, "multiple-diagnostics.xps");
