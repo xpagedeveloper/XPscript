@@ -121,7 +121,7 @@ internal sealed class AdvancedXPScriptTranspiler
                     EndLine = diagnosticLine,
                     EndColumn = Math.Max(2, safeSource.Length + 1),
                     Description = ex.Message,
-                    DiagnosticCode = string.IsNullOrWhiteSpace(ex.DiagnosticCode) ? "XPS1012" : ex.DiagnosticCode,
+                    DiagnosticCode = string.IsNullOrWhiteSpace(ex.DiagnosticCode) ? CompilerDiagnosticCodes.InvalidSyntax : ex.DiagnosticCode,
                     Category = string.IsNullOrWhiteSpace(ex.Category) ? "syntax" : ex.Category,
                     SourceCode = safeSource,
                     MarkedCode = safeSource + Environment.NewLine + "^"
