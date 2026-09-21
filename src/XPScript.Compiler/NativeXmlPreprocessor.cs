@@ -40,9 +40,9 @@ internal sealed class NativeXmlPreprocessor
 
             var rewritten = line;
             rewritten = Regex.Replace(rewritten, @"\bXPXmlDocument\.Parse\s*\(", "XPScriptNativeXml.Parse(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])XmlParse\s*\(", "XPScriptNativeXml.Parse(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])XmlStringify\s*\(", "XPScriptNativeXml.Stringify(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])XmlEscape\s*\(", "XPScriptNativeXml.Escape(", RegexOptions.IgnoreCase);
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "XmlParse", "XPScriptNativeXml.Parse");
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "XmlStringify", "XPScriptNativeXml.Stringify");
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "XmlEscape", "XPScriptNativeXml.Escape");
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPXmlDocument\s*(?:\(\s*\))?", "XPScriptNativeXml.CreateDocument()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPXmlElement\s*\((.*)\)", "XPScriptNativeXml.CreateElement($1)", RegexOptions.IgnoreCase);
 
