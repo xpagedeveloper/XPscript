@@ -27,6 +27,7 @@ try
     await RunHeadRegression(root, scriptPath);
     await RunExecutableRegression(root, scriptPath);
     await RunInvalidBodyRegression(root, scriptPath);
+    await RunTraversalRegression(root, scriptPath);
     Console.WriteLine("WEB-CGI-SMOKE=OK");
 }
 finally
@@ -153,6 +154,32 @@ static async Task RunInvalidBodyRegression(string root, string scriptPath)
     }
     catch (XpsCgiException)
     {
+    }
+}
+
+static async Task RunTraversalRegression(string root, string scriptPath)
+{
+    foreach (var path in new[]
+    {
+        "/assets/%2e%2e/_xps/metrics",
+        "/assets/%252e%252e/_xps/metrics",
+        "/assets/..%5csecret.txt",
+        "/assets/%2e%2e%2fsecret.txt"
+    })
+    {
+        var environment = BaseEnvironment(root, scriptPath);
+        environment["SCRIPT_NAME"] = path;
+        var server = new XpsServerInfo("cgi-traversal", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+        using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new EchoHandler());
+        await using var stdout = new MemoryStream();
+        try
+        {
+            await adapter.RunAsync(Stream.Null, stdout, environment);
+            throw new Exception("CGI adapter accepted traversal path: " + path);
+        }
+        catch (XpsCgiException)
+        {
+        }
     }
 }
 
