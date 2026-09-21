@@ -82,16 +82,16 @@ public sealed partial class XPScriptTranspiler
             throw new CompilerException(remapped, ex.DiagnosticCode, ex.Category, ex.GeneratedDiagnostics);
         }
 
-        // Validate/normalize string delimiters while the source still has the exact
+        // Expand multiline strings before the ordinary string scanner. Multiline
+        // delimiters are language syntax and must not be misclassified as XPS1006 by
+        // the compatibility string scan.
+        source = new MultilineStringPreprocessor().Transform(source, sourceName);
+
+        // Validate/normalize ordinary string delimiters while the source still has the
         // physical line layout represented by sourceMap. Running this after marker and
         // compatibility preprocessors would report transformed coordinates.
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
-
-        // Expand multiline strings while the source still has its original physical
-        // line layout. This preserves structured syntax coordinates for unterminated
-        // multiline literals instead of letting generated source markers obscure them.
-        source = new MultilineStringPreprocessor().Transform(source, sourceName);
 
         // Attach runtime/#line markers only after semantic validation and syntax scanning.
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
