@@ -20,6 +20,8 @@ var options = new XpsKestrelOptions
     MaxConcurrentConnections = 2,
     RequestHeadersTimeout = TimeSpan.FromSeconds(1),
     KeepAliveTimeout = TimeSpan.FromSeconds(1),
+    MinRequestBodyDataRateBytesPerSecond = 1024,
+    MinRequestBodyDataRateGracePeriod = TimeSpan.FromSeconds(1),
     AllowedHosts = ["localhost", "127.0.0.1", "::1"],
     EnableHealthEndpoint = true,
     EnableMetricsEndpoint = true
@@ -130,6 +132,7 @@ try
 
     await AssertMaxConcurrentConnectionsAsync(new Uri(address));
     await AssertBoundedConcurrencyStressAsync(client);
+    await AssertSlowRequestBodyAsync(new Uri(address));
     await AssertRequestHeadersTimeoutAsync(new Uri(address));
     await AssertKeepAliveTimeoutAsync(new Uri(address));
 
@@ -397,6 +400,38 @@ static async Task AssertMaxConcurrentConnectionsAsync(Uri baseAddress)
     catch (SocketException)
     {
         // Immediate rejection/reset is also acceptable.
+    }
+}
+
+static async Task AssertSlowRequestBodyAsync(Uri baseAddress)
+{
+    using var tcp = new TcpClient();
+    await tcp.ConnectAsync(baseAddress.Host, baseAddress.Port);
+    await using var stream = tcp.GetStream();
+    var headers = Encoding.ASCII.GetBytes($"POST /slow-body HTTP/1.1\r\nHost: {baseAddress.Host}:{baseAddress.Port}\r\nContent-Length: 32\r\nContent-Type: application/octet-stream\r\nConnection: close\r\n\r\n");
+    await stream.WriteAsync(headers);
+    await stream.WriteAsync(new byte[] { (byte)'A' });
+    await stream.FlushAsync();
+
+    // The configured 1 KiB/s minimum with a one-second grace period must abort
+    // a body that stops making progress well before the request can reach the handler.
+    await Task.Delay(TimeSpan.FromSeconds(3));
+    var buffer = new byte[1024];
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+    try
+    {
+        var read = await stream.ReadAsync(buffer, timeout.Token);
+        var text = Encoding.ASCII.GetString(buffer, 0, read);
+        if (read > 0 && text.Contains("201", StringComparison.Ordinal))
+            throw new Exception("Slow request body reached the application handler despite the configured minimum data rate.");
+    }
+    catch (IOException)
+    {
+        // Kestrel may abort/reset the connection when the minimum request body rate is violated.
+    }
+    catch (SocketException)
+    {
+        // Connection reset is an acceptable enforcement result.
     }
 }
 
