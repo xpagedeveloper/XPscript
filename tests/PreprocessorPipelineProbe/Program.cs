@@ -53,6 +53,7 @@ VerifyNestedArgumentComparison();
 VerifyRuntimeFunctionMemberScope();
 VerifyRuntimeNameScopeMatrix();
 VerifyReservedIdentifierScope();
+VerifyRuntimeValueIdentifierScope();
 
 void Measure(string label, string source, int iterations)
 {
@@ -532,4 +533,62 @@ End Sub
     }
 
     Console.WriteLine("PREPROCESSOR-RESERVED-IDENTIFIER-SCOPE=OK");
+}
+
+
+void VerifyRuntimeValueIdentifierScope()
+{
+    foreach (var reserved in new[] { "Application", "Body" })
+    {
+        var variableSource = $"Sub Main()\n    Dim {reserved} As String\nEnd Sub";
+        try
+        {
+            _ = transpiler.Transpile(variableSource, "reserved-runtime-value.xps", "win-x64");
+            throw new Exception($"Reserved runtime value {reserved} was accepted as a local variable.");
+        }
+        catch (CompilerException ex) when (ex.Message.Contains("reserved by the XPScript runtime", StringComparison.Ordinal))
+        {
+        }
+
+        var parameterSource = $"Sub Echo({reserved} As String)\nEnd Sub";
+        try
+        {
+            _ = transpiler.Transpile(parameterSource, "reserved-runtime-parameter.xps", "win-x64");
+            throw new Exception($"Reserved runtime value {reserved} was accepted as a parameter.");
+        }
+        catch (CompilerException ex) when (ex.Message.Contains("reserved by the XPScript runtime", StringComparison.Ordinal))
+        {
+        }
+
+        var procedureSource = $"Sub {reserved}()\nEnd Sub";
+        try
+        {
+            _ = transpiler.Transpile(procedureSource, "reserved-runtime-procedure.xps", "win-x64");
+            throw new Exception($"Reserved runtime value {reserved} was accepted as a procedure name.");
+        }
+        catch (CompilerException ex) when (ex.Message.Contains("reserved by the XPScript runtime", StringComparison.Ordinal))
+        {
+        }
+    }
+
+    const string memberSource = """
+Class RuntimeValueMembers
+    Public Application As String
+    Public Body As String
+End Class
+
+Sub Main()
+    Dim item As New RuntimeValueMembers
+    item.Application = "application-member"
+    item.Body = "body-member"
+    Print item.Application
+    Print item.Body
+End Sub
+""";
+    var generated = transpiler.Transpile(memberSource, "runtime-value-member-scope.xps", "win-x64");
+    if (!generated.Contains("item.Application", StringComparison.Ordinal) ||
+        !generated.Contains("item.Body", StringComparison.Ordinal))
+        throw new Exception("Application/Body were incorrectly rejected or rewritten in receiver member scope.");
+
+    Console.WriteLine("PREPROCESSOR-RUNTIME-VALUE-IDENTIFIER-SCOPE=OK");
 }
