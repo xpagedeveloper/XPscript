@@ -17,7 +17,7 @@ Resolution rule: lexical keywords are syntax-level restrictions; compiler-reserv
 - [x] Audit `ReservedIdentifierPreprocessor` by declaration kind and scope.
 - [x] Keep compiler-generated `__*` protection.
 - [x] Keep runtime type-name protection only where a type declaration would actually collide.
-- [ ] Verify runtime value names such as `Application` and `Body` are restricted only in scopes where the collision is real.
+- [x] Verify runtime value names such as `Application` and `Body` are restricted only in scopes where the collision is real. Locals, parameters and procedure declarations remain reserved; receiver member access is allowed and covered by regression.
 - [x] Ensure ordinary runtime commands/functions are not added to a global reserved-name list.
 
 ## 3. Audit all command/function preprocessors
