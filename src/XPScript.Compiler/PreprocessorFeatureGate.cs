@@ -88,7 +88,7 @@ internal static class PreprocessorFeatureGate
         var alternatives = string.Join("|", names.ToArray().Select(System.Text.RegularExpressions.Regex.Escape));
         return System.Text.RegularExpressions.Regex.IsMatch(
             codeOnlySource,
-            @"(?i)(?<![A-Za-z0-9_])(?:" + alternatives + @")\s*\(",
+            @"(?i)(?<![A-Za-z0-9_.])(?:" + alternatives + @")\s*\(",
             System.Text.RegularExpressions.RegexOptions.CultureInvariant);
     }
 }
