@@ -372,6 +372,14 @@ Class RuntimeNameCollision
     Public Function StrLeftBack(value As String, delimiter As String) As String
         StrLeftBack = value
     End Function
+
+    Public Function CsvParse(value As String) As String
+        CsvParse = value
+    End Function
+
+    Public Function XmlParse(value As String) As String
+        XmlParse = value
+    End Function
 End Class
 
 Sub Main()
@@ -380,6 +388,8 @@ Sub Main()
     item.JsonParse = "member"
     Print item.JsonStringify("member")
     Print item.StrLeftBack("a/b", "/")
+    Print item.CsvParse("member")
+    Print item.XmlParse("member")
     Set parsed = JsonParse("{""ok"":true}")
     Print StrLeftBack("a/b", "/")
 End Sub
@@ -387,7 +397,9 @@ End Sub
 
     var generated = transpiler.Transpile(source, "preprocessor-runtime-member-scope.xps", "win-x64");
     if (!generated.Contains("item.JsonStringify(\"member\")", StringComparison.Ordinal)
-        || !generated.Contains("item.StrLeftBack(\"a/b\", \"/\")", StringComparison.Ordinal))
+        || !generated.Contains("item.StrLeftBack(\"a/b\", \"/\")", StringComparison.Ordinal)
+        || !generated.Contains("item.CsvParse(\"member\")", StringComparison.Ordinal)
+        || !generated.Contains("item.XmlParse(\"member\")", StringComparison.Ordinal))
         throw new Exception("Runtime/global function rewriting captured a class member call.");
     if (!generated.Contains("XPScriptNativeJson.Parse(", StringComparison.Ordinal))
         throw new Exception("Unqualified JsonParse call no longer resolves to the native JSON runtime.");
