@@ -49,7 +49,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify oversized cookie headers. Verified in run #32.
 - [x] Verify malformed header names. Verified in run #32.
 - [x] Verify control characters in header values are rejected. Verified in run #32.
-- [x] Verify bare LF request framing is rejected or safely normalized. Kestrel accepts and canonicalizes bare-LF framing before XPScript middleware. Regression requires exactly one response and no protected-content disclosure. Verified behavior under run #39 investigation, with corrected canonicalization probe pending CI.
+- [x] Verify bare LF request framing is rejected or safely normalized. Kestrel accepts and canonicalizes bare-LF framing before XPScript middleware. Regression requires exactly one response and no protected-content disclosure. Corrected canonicalization probe verified in run #40.
 - [x] Verify malformed HTTP version tokens. Verified in run #32.
 - [x] Verify conflicting Content-Length values are rejected.
 - [~] Verify Content-Length plus Transfer-Encoding canonicalization cannot create request smuggling across supported deployment topologies. Standalone Kestrel CL.TE desync probe verified safe in run #31. Reverse-proxy topologies remain.
@@ -62,8 +62,8 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Request body and resource limits
 
-- [ ] Verify request bodies above MaxRequestBodySize return 413.
-- [ ] Verify chunked bodies above MaxRequestBodySize return 413.
+- [x] Verify request bodies above MaxRequestBodySize return 413. Oversized Content-Length request verified with 413 in run #42.
+- [x] Verify chunked bodies above MaxRequestBodySize return 413. Complete 1,048,577-byte chunked request verified in run #44.
 - [ ] Verify in-memory request body handling never exceeds configured limits.
 - [ ] Verify slow request body enforcement.
 - [ ] Verify request headers timeout.
@@ -157,9 +157,9 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [ ] Verify malformed UTF-8 paths fail safely.
 - [ ] Verify non-ASCII paths and query strings.
 - [ ] Verify Unicode normalization does not create route aliases that bypass authorization.
-- [ ] Verify encoded control characters in route paths.
+- [x] Verify encoded control characters in route paths. Encoded NUL path rejected before application handler in run #42.
 - [ ] Verify query parser behavior with duplicate keys.
-- [ ] Verify extreme query-string sizes.
+- [x] Verify extreme query-string sizes. Oversized query/request-line probe verified with 414 in run #42.
 - [ ] Verify form parser abuse cases.
 - [ ] Verify JSON parser malformed and deeply nested input.
 - [ ] Verify multipart parser malformed boundaries and oversized fields.
