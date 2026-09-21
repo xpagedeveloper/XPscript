@@ -59,10 +59,16 @@ internal sealed class NativeXmlPreprocessor
     private static CompilerException NativeConstructorDiagnostic(
         string diagnosticCode,
         string message,
+        string sourceLine,
         params (string Name, string Value)[] properties)
     {
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
+        var position = Math.Max(1, sourceLine.IndexOf("New", StringComparison.OrdinalIgnoreCase) + 1);
         var diagnostic = new CompileDiagnostic
         {
+            File = Path.GetFileName(ExpandedSourceContext.Current?.SourcePath ?? "script.xps"),
+            Position = position,
+            EndColumn = position + 3,
             Description = message,
             DiagnosticCode = diagnosticCode,
             Category = "syntax",
@@ -70,21 +76,23 @@ internal sealed class NativeXmlPreprocessor
             {
                 Name = property.Name,
                 Value = property.Value
-            }).ToList()
+            }).ToList(),
+            SourceCode = safeSource,
+            MarkedCode = safeSource + Environment.NewLine + new string(' ', Math.Max(0, position - 1)) + "^"
         };
         return new CompilerException(message, diagnosticCode, "syntax", [diagnostic]);
     }
 
-    private static string CreateExpression(string type, string rawArguments)
+    private static string CreateExpression(string type, string rawArguments, string sourceLine)
     {
         var args = rawArguments.Trim();
         if (type.Equals("XPXmlDocument", StringComparison.OrdinalIgnoreCase))
             return string.IsNullOrWhiteSpace(args) ? "XPScriptNativeXml.CreateDocument()" : $"XPScriptNativeXml.Parse({args})";
         if (type.Equals("XPXmlElement", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(args)) throw NativeConstructorDiagnostic(CompilerDiagnosticCodes.MissingConstructorArgument, "XPXmlElement requires an element name argument.", ("symbol", "XPXmlElement"), ("symbolKind", "type"), ("expectedArgument", "element name"));
+            if (string.IsNullOrWhiteSpace(args)) throw NativeConstructorDiagnostic(CompilerDiagnosticCodes.MissingConstructorArgument, "XPXmlElement requires an element name argument.", sourceLine, ("symbol", "XPXmlElement"), ("symbolKind", "type"), ("expectedArgument", "element name"));
             return $"XPScriptNativeXml.CreateElement({args})";
         }
-        throw NativeConstructorDiagnostic(CompilerDiagnosticCodes.InvalidNativeConstructor, "Only XPXmlDocument and XPXmlElement can be created with New.", ("symbol", type), ("symbolKind", "type"), ("expectedConstruct", "New XPXmlDocument or New XPXmlElement"));
+        throw NativeConstructorDiagnostic(CompilerDiagnosticCodes.InvalidNativeConstructor, "Only XPXmlDocument and XPXmlElement can be created with New.", sourceLine, ("symbol", type), ("symbolKind", "type"), ("expectedConstruct", "New XPXmlDocument or New XPXmlElement"));
     }
 }
