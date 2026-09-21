@@ -175,6 +175,7 @@ Require(normalizedPathDiagnostic.File == "portable.xps", "diagnostic file paths 
 
 var driver = new CompilerDriver();
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(outputRoot);
 var emptySourcePath = Path.Combine(outputRoot, "empty-source.xps");
 await File.WriteAllTextAsync(emptySourcePath, string.Empty);
 var emptySourceValidation = await driver.ValidateWithResultAsync(emptySourcePath);
@@ -199,7 +200,7 @@ var lfSourcePath = Path.Combine(outputRoot, "line-ending-lf.xps");
 var crlfSourcePath = Path.Combine(outputRoot, "line-ending-crlf.xps");
 var lineEndingSource = "Sub Main()\n    Dim value As Integer\n    value = \"wrong\"\nEnd Sub\n";
 await File.WriteAllTextAsync(lfSourcePath, lineEndingSource);
-await File.WriteAllTextAsync(crlfSourcePath, lineEndingSource.Replace("\\n", "\\r\\n", StringComparison.Ordinal));
+await File.WriteAllTextAsync(crlfSourcePath, lineEndingSource.Replace("\n", "\r\n", StringComparison.Ordinal));
 var lfValidation = await driver.ValidateWithResultAsync(lfSourcePath);
 var crlfValidation = await driver.ValidateWithResultAsync(crlfSourcePath);
 var lfDiagnostic = lfValidation.Errors.FirstOrDefault(d => d.DiagnosticCode is "XPS2001" or "XPS2003");
@@ -207,7 +208,6 @@ var crlfDiagnostic = crlfValidation.Errors.FirstOrDefault(d => d.DiagnosticCode 
 Require(lfDiagnostic is not null && crlfDiagnostic is not null, "line-ending diagnostics");
 Require(lfDiagnostic.Line == crlfDiagnostic.Line && lfDiagnostic.Position == crlfDiagnostic.Position, "LF and CRLF diagnostic locations must match");
 
-Directory.CreateDirectory(outputRoot);
 
 var multipleDiagnosticSource = Path.Combine(outputRoot, "multiple-diagnostics.xps");
 await File.WriteAllTextAsync(multipleDiagnosticSource, """
