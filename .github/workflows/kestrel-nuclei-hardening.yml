@@ -111,7 +111,7 @@ jobs:
       - name: Create hardening application
         shell: bash
         run: |
-          rm -rf ./.hardening-site ./out/hardening-webiis ./out/hardening-webiis.zip ./artifacts/hardening
+          rm -rf ./.hardening-site ./out/hardening-webiis ./out/hardening-webiis.zip
           mkdir -p ./.hardening-site/assets ./.hardening-site/.xpscript-cache ./artifacts/hardening
 
           cat > ./.hardening-site/index.xps <<'XPS'
@@ -269,3 +269,59 @@ jobs:
           if test -f ./artifacts/hardening/kestrel.pid; then
             kill "$(cat ./artifacts/hardening/kestrel.pid)" 2>/dev/null || true
           fi
+
+  windows-iis:
+    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Create and compile WebIIS hardening application
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./.hardening-iis | Out-Null
+          @'
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Response.ContentType = "text/plain; charset=utf-8"
+              Response.Write("XPSCRIPT-IIS-HARDENING")
+          End Sub
+          '@ | Set-Content -Encoding utf8 ./.hardening-iis/main.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./.hardening-iis/main.xps --target webiis --runtime=false --output ./out/hardening-iis
+          if (-not (Test-Path ./out/hardening-iis.zip)) { throw "WebIIS package was not generated." }
+          Expand-Archive -Force ./out/hardening-iis.zip ./out/hardening-iis-expanded
+          if (-not (Test-Path ./out/hardening-iis-expanded/site/web.config)) { throw "Generated WebIIS package has no site/web.config." }
+
+      - name: Validate IIS deployment contract
+        shell: pwsh
+        run: |
+          [xml]$config = Get-Content ./out/hardening-iis-expanded/site/web.config
+          $aspNetCore = $config.configuration.location.'system.webServer'.aspNetCore
+          if ($null -eq $aspNetCore) { throw "Generated web.config has no aspNetCore handler configuration." }
+          if ($aspNetCore.hostingModel -ne "outofprocess") { throw "WebIIS package must use out-of-process hosting." }
+          if ([string]::IsNullOrWhiteSpace($aspNetCore.processPath)) { throw "WebIIS package has no processPath." }
+          $handlers = $config.configuration.location.'system.webServer'.handlers.add
+          if ($null -eq $handlers) { throw "Generated web.config has no IIS handler mapping." }
+
+      - name: Upload Windows IIS hardening artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-iis-hardening
+          path: |
+            ./out/hardening-iis.zip
+            ./out/hardening-iis-expanded/site/web.config
+          retention-days: 3
+
