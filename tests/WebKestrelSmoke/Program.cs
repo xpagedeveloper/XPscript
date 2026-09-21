@@ -16,6 +16,21 @@ await File.WriteAllTextAsync(Path.Combine(root, "secret.txt"), "STATIC-SECRET");
 await File.WriteAllTextAsync(Path.Combine(root, "config.json"), "{\"secret\":true}");
 await File.WriteAllTextAsync(Path.Combine(root, "source.xps"), "Sub Index()\nEnd Sub");
 await File.WriteAllBytesAsync(Path.Combine(root, "assets", "oversized.txt"), new byte[33]);
+var rejectedXpsAllowlist = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [".xps"] = "text/plain" };
+try
+{
+    new XpsKestrelOptions { StaticFileContentTypes = rejectedXpsAllowlist }.Validate();
+    throw new Exception(".xps was accepted in the static MIME allowlist.");
+}
+catch (ArgumentException) { }
+
+try
+{
+    new XpsKestrelOptions { StaticCacheControl = "public, max-age=300\\r\\nX-Injected: yes" }.Validate();
+    throw new Exception("CRLF was accepted in StaticCacheControl.");
+}
+catch (ArgumentException) { }
+
 var structuredLog = new StringWriter();
 var telemetry = new XpsWebTelemetry(new XpsWebJsonLineEventSink(structuredLog));
 
