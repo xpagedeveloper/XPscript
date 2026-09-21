@@ -27,7 +27,10 @@ internal sealed class StatementSeparatorPreprocessor
             // lines themselves are compiler-generated and can make output.Count diverge
             // from the physical XPScript line. When no marker has been seen yet, use the
             // current input index rather than the number of transformed output lines.
-            var effectiveSourceLine = sourceLine > 0 ? sourceLine : physicalIndex + 1;
+            var isGeneratedMarker = marker.Success || Regex.IsMatch(raw, @"__XPSOURCE_\d+_", RegexOptions.IgnoreCase);
+            var effectiveSourceLine = sourceLine > 0 && !isGeneratedMarker
+                ? sourceLine
+                : physicalIndex + 1;
             ExpandLine(raw, output, effectiveSourceLine);
         }
 
