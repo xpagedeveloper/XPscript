@@ -46,7 +46,7 @@ internal sealed class TypeDeclarationPreprocessor
 
                 var field = Regex.Match(memberLine, @"^(?:(?:Public|Private)\s+)?([A-Za-z_]\w*)\s*(\((.*)\))?\s+As\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
                 if (!field.Success)
-                    throw SyntaxFailure("Unsupported Type member declaration.", sourceName, i + 1, memberRaw, "Type member declaration");
+                    throw SyntaxFailure("Unsupported Type member declaration.", sourceName, i + 1, memberRaw, "Type member declaration", FirstToken(memberLine));
 
                 var name = field.Groups[1].Value;
                 var elementType = field.Groups[4].Value;
@@ -62,7 +62,7 @@ internal sealed class TypeDeclarationPreprocessor
             }
 
             if (!foundEnd)
-                throw SyntaxFailure("Missing End Type for '" + typeName + "'.", sourceName, Math.Max(1, i), lines[Math.Max(0, Math.Min(lines.Count - 1, i - 1))], "End Type");
+                throw SyntaxFailure("Missing End Type for '" + typeName + "'.", sourceName, Math.Max(1, i), lines[Math.Max(0, Math.Min(lines.Count - 1, i - 1))], "End Type", "end-of-file");
 
             if (arrays.Count > 0 || nestedFields.Count > 0)
             {
@@ -176,7 +176,7 @@ internal sealed class TypeDeclarationPreprocessor
         return result;
     }
 
-    private static CompilerException SyntaxFailure(string message, string sourceName, int line, string sourceLine, string expectedConstruct)
+    private static CompilerException SyntaxFailure(string message, string sourceName, int line, string sourceLine, string expectedConstruct, string? foundToken = null)
     {
         var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
         var diagnostic = new CompileDiagnostic
@@ -189,14 +189,14 @@ internal sealed class TypeDeclarationPreprocessor
             Description = message,
             DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
             Category = "syntax",
-            Properties = [new() { Name = "expectedConstruct", Value = expectedConstruct }],
+            Properties = string.IsNullOrWhiteSpace(foundToken)\n                ? [new() { Name = "expectedConstruct", Value = expectedConstruct }]\n                : [new() { Name = "foundToken", Value = foundToken }, new() { Name = "expectedConstruct", Value = expectedConstruct }],
             SourceCode = safeSource,
             MarkedCode = safeSource + Environment.NewLine + "^"
         };
         return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
     }
 
-    private static string EscapeXPScriptString(string value) => value.Replace("\"", "\"\"", StringComparison.Ordinal);
+    private static string FirstToken(string value)\n    {\n        var match = Regex.Match(value.TrimStart(), @"^\\S+");\n        return match.Success ? match.Value : "unknown";\n    }\n\n    private static string EscapeXPScriptString(string value) => value.Replace("\"", "\"\"", StringComparison.Ordinal);
 
     private static string StripComment(string line)
     {
