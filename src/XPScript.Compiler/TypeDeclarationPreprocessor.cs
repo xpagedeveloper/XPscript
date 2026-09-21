@@ -176,6 +176,26 @@ internal sealed class TypeDeclarationPreprocessor
         return result;
     }
 
+    private static CompilerException SyntaxFailure(string message, string sourceName, int line, string sourceLine, string expectedConstruct)
+    {
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourceName),
+            Line = line,
+            Position = 1,
+            EndLine = line,
+            EndColumn = Math.Max(2, safeSource.Length + 1),
+            Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
+            Category = "syntax",
+            Properties = [new() { Name = "expectedConstruct", Value = expectedConstruct }],
+            SourceCode = safeSource,
+            MarkedCode = safeSource + Environment.NewLine + "^"
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
+    }
+
     private static string EscapeXPScriptString(string value) => value.Replace("\"", "\"\"", StringComparison.Ordinal);
 
     private static string StripComment(string line)
