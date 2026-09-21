@@ -162,6 +162,12 @@ internal sealed class IncrementOperatorSyntaxValidator
         return Math.Min(first, second);
     }
 
+    private static int OperatorWidth((string Name, string Value)[] properties)
+    {
+        var foundOperator = properties.FirstOrDefault(p => p.Name == "foundOperator").Value;
+        return string.IsNullOrEmpty(foundOperator) ? 1 : foundOperator.Length;
+    }
+
     private static string NormalizeType(string type) => type.Trim() switch
     {
         var x when x.Equals("Int", StringComparison.OrdinalIgnoreCase) => "Integer",
@@ -177,6 +183,8 @@ internal sealed class IncrementOperatorSyntaxValidator
             File = sourceName,
             Line = line,
             Position = position,
+            EndLine = line,
+            EndColumn = position + OperatorWidth(properties),
             Description = message,
             DiagnosticCode = string.IsNullOrWhiteSpace(diagnosticCode) ? null : diagnosticCode,
             Category = "syntax",
