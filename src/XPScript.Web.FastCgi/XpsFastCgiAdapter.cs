@@ -343,7 +343,35 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
         if (!path.StartsWith("/", StringComparison.Ordinal)) path = "/" + path;
         if (!string.IsNullOrEmpty(pathInfo) && pathInfo != "/" && !path.EndsWith(pathInfo, StringComparison.Ordinal))
             path += pathInfo.StartsWith("/", StringComparison.Ordinal) ? pathInfo : "/" + pathInfo;
+        if (HasTraversal(path)) throw new XpsFastCgiProtocolException("Request path contains traversal segments.");
         return path;
+    }
+
+    private static bool HasTraversal(string path)
+    {
+        string decoded;
+        try { decoded = Uri.UnescapeDataString(path); }
+        catch (UriFormatException) { return true; }
+
+        var normalized = decoded.Replace('\\', '/');
+        if (normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+            return true;
+
+        if (ContainsPercentEscape(decoded))
+        {
+            try { normalized = Uri.UnescapeDataString(decoded).Replace('\\', '/'); }
+            catch (UriFormatException) { return true; }
+            if (normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool ContainsPercentEscape(string value)
+    {
+        for (var i = 0; i + 2 < value.Length; i++)
+            if (value[i] == '%' && Uri.IsHexDigit(value[i + 1]) && Uri.IsHexDigit(value[i + 2])) return true;
+        return false;
     }
 
     private static string Required(IReadOnlyDictionary<string, string> parameters, string name) =>
