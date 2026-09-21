@@ -267,14 +267,12 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         if (context is not null)
         {
             // SourceLineMarkerPreprocessor may already have inserted synthetic marker
-            // lines before this scanner runs. Prefer the nearest marker so diagnostics
-            // keep the original physical XPScript line rather than the transformed line.
-            var markerMatches = Regex.Matches(prefix, @"__XPSOURCE_(?<line>\d+)_");
-            if (markerMatches.Count > 0 &&
-                int.TryParse(markerMatches[^1].Groups["line"].Value, out var markerLine))
+            // lines before this scanner runs. Resolve both the original line and encoded
+            // physical source id so root files and includes retain their real locations.
+            if (SourceLineMarkerPreprocessor.TryResolveNearestMarker(prefix, out var markerLine, out var markerSource))
             {
                 mappedLine = markerLine;
-                file = context.SourcePath;
+                file = string.IsNullOrWhiteSpace(markerSource) ? context.SourcePath : markerSource;
             }
             else
             {
