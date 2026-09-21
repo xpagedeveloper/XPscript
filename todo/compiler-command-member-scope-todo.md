@@ -33,7 +33,7 @@ Resolution rule: lexical keywords are syntax-level restrictions; compiler-reserv
 
 - [x] Add a class property whose name matches a runtime/global function.
 - [x] Add a class method whose name matches a runtime/global function.
-- [ ] Add a parameter/local whose name matches a runtime/global function where syntactically valid.
+- [x] Add a parameter/local whose name matches a runtime/global function where syntactically valid.
 - [x] Verify `obj.JsonParse(...)` remains a member call.
 - [x] Verify `JsonParse(...)` still resolves to the native JSON runtime function.
 - [x] Verify `obj.StrLeftBack(...)` remains a member call.
@@ -45,11 +45,11 @@ Resolution rule: lexical keywords are syntax-level restrictions; compiler-reserv
 ## 5. Scope collision matrix
 
 - [ ] Test same spelling across type vs member.
-- [ ] Test same spelling across two different classes.
-- [ ] Test same spelling across member vs global/runtime function.
-- [ ] Test same spelling across method parameter vs class member.
-- [ ] Test same spelling across local vs class member.
-- [ ] Test overloaded/member-call syntax separately from property access.
+- [x] Test same spelling across two different classes.
+- [x] Test same spelling across member vs global/runtime function.
+- [x] Test same spelling across method parameter vs class member.
+- [x] Test same spelling across local vs class member.
+- [x] Test overloaded/member-call syntax separately from property access.
 - [ ] Verify generated OpenAPI code follows the same scope rules instead of maintaining a broader pseudo-reserved list.
 
 ## 6. Completion gate
