@@ -129,6 +129,7 @@ try
     }
 
     await AssertMaxConcurrentConnectionsAsync(new Uri(address));
+    await AssertBoundedConcurrencyStressAsync(client);
     await AssertRequestHeadersTimeoutAsync(new Uri(address));
     await AssertKeepAliveTimeoutAsync(new Uri(address));
 
@@ -334,6 +335,30 @@ static string ReadRequestId(HttpResponseMessage response)
 
 static bool IsValidRequestId(string? value) => value is { Length: 32 } && value.All(Uri.IsHexDigit);
 
+
+static async Task AssertBoundedConcurrencyStressAsync(HttpClient client)
+{
+    const int requestCount = 24;
+    using var gate = new SemaphoreSlim(8);
+    var tasks = Enumerable.Range(0, requestCount).Select(async i =>
+    {
+        await gate.WaitAsync();
+        try
+        {
+            using var response = await client.GetAsync($"/stress/{i}");
+            if ((int)response.StatusCode != 201)
+                throw new Exception($"Bounded concurrency request {i} expected 201, got {(int)response.StatusCode}.");
+            var body = await response.Content.ReadAsStringAsync();
+            if (!body.Contains($"PATH=/stress/{i}", StringComparison.Ordinal))
+                throw new Exception($"Bounded concurrency request {i} received an unexpected response.");
+        }
+        finally
+        {
+            gate.Release();
+        }
+    });
+    await Task.WhenAll(tasks);
+}
 
 static async Task AssertMaxConcurrentConnectionsAsync(Uri baseAddress)
 {
