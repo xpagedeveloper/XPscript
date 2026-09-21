@@ -4,6 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeCsvPreprocessor
 {
+    private static readonly AsyncLocal<(int Line, string Source)?> CurrentDiagnosticLine = new();
     private const string NativeCsvTypePattern = "XPCsvDocument|XPCsvHeaderCollection|XPCsvRowCollection|XPCsvRow|XPCsvColumnCollection|XPCsvColumn";
 
     public string Transform(string source)
@@ -17,8 +18,10 @@ internal sealed class NativeCsvPreprocessor
         var rowVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var iteratorId = 0;
 
-        foreach (var raw in lines)
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
+            var raw = lines[lineIndex];
+            CurrentDiagnosticLine.Value = (lineIndex + 1, raw);
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
 
@@ -117,12 +120,21 @@ internal sealed class NativeCsvPreprocessor
         string message,
         params (string Name, string Value)[] properties)
     {
+        var current = CurrentDiagnosticLine.Value;
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(current?.Source ?? string.Empty).TrimEnd();
+        var position = Math.Max(1, (current?.Source ?? string.Empty).IndexOf(properties.FirstOrDefault(p => p.Name == "symbol").Value ?? string.Empty, StringComparison.OrdinalIgnoreCase) + 1);
         var diagnostic = new CompileDiagnostic
         {
+            Line = current?.Line ?? 0,
+            Position = position,
+            EndLine = current?.Line ?? 0,
+            EndColumn = position + 1,
             Description = message,
             DiagnosticCode = diagnosticCode,
             Category = "syntax",
-            Properties = properties.Select(property => new CompileDiagnosticProperty { Name = property.Name, Value = property.Value }).ToList()
+            Properties = properties.Select(property => new CompileDiagnosticProperty { Name = property.Name, Value = property.Value }).ToList(),
+            SourceCode = safeSource,
+            MarkedCode = safeSource.Length == 0 ? null : safeSource + Environment.NewLine + new string(' ', Math.Max(0, position - 1)) + "^"
         };
         return new CompilerException(message, diagnosticCode, "syntax", [diagnostic]);
     }
