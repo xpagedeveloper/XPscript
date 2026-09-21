@@ -28,28 +28,28 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Add XPScript-specific Nuclei templates.
 - [x] Add raw TCP HTTP probes for cases that normal HTTP clients may normalize.
 - [x] Upload hardening result artifacts with 3 day retention.
-- [ ] Review first successful workflow execution.
+- [x] Review first successful workflow execution. Run #30 completed successfully with Kestrel, CGI and FastCGI regression gates.
 - [ ] Record all upstream Nuclei findings and classify each as confirmed, false positive, dependency issue, or not applicable.
 - [ ] Add confirmed findings below with reproduction details.
 
 ## HTTP protocol and Kestrel boundary
 
-- [~] Verify `Server` response header is never exposed.
-- [~] Verify invalid Host headers return 400.
-- [~] Verify duplicate Host headers are rejected.
+- [x] Verify `Server` response header is never exposed.
+- [x] Verify invalid Host headers return 400.
+- [x] Verify duplicate Host headers are rejected.
 - [~] Verify absolute-form request targets cannot bypass Host validation.
-- [~] Verify TRACE is rejected and does not echo request data.
+- [x] Verify TRACE is rejected and does not echo request data.
 - [ ] Verify TRACK is rejected.
 - [ ] Verify uncommon methods do not accidentally reach GET or POST handlers.
-- [~] Verify request lines larger than the configured limit are rejected.
-- [~] Verify request headers larger than the configured aggregate limit are rejected.
+- [x] Verify request lines larger than the configured limit are rejected.
+- [x] Verify request headers larger than the configured aggregate limit are rejected.
 - [ ] Verify excessive header count behavior.
 - [ ] Verify oversized cookie headers.
 - [ ] Verify malformed header names.
 - [ ] Verify control characters in header values are rejected.
 - [ ] Verify bare LF request framing is rejected or safely normalized.
 - [ ] Verify malformed HTTP version tokens.
-- [~] Verify conflicting Content-Length values are rejected.
+- [x] Verify conflicting Content-Length values are rejected.
 - [~] Verify Content-Length plus Transfer-Encoding canonicalization cannot create request smuggling across supported deployment topologies.
 - [ ] Verify duplicate Transfer-Encoding values.
 - [ ] Verify invalid chunk sizes.
@@ -73,17 +73,17 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Path traversal and static files
 
-- [~] Verify `/assets/%2e%2e/...` traversal cannot escape the assets directory.
-- [~] Verify double encoded traversal cannot escape the assets directory.
-- [~] Verify mixed slash traversal.
-- [~] Verify backslash traversal.
+- [x] Verify `/assets/%2e%2e/...` traversal cannot escape the assets directory.
+- [x] Verify double encoded traversal cannot escape the assets directory.
+- [x] Verify mixed slash traversal.
+- [x] Verify backslash traversal.
 - [ ] Verify overlong and repeated dot segments.
-- [~] Verify encoded slash and encoded backslash behavior.
+- [x] Verify encoded slash and encoded backslash behavior.
 - [ ] Verify null byte variants.
 - [ ] Verify Unicode separator and normalization variants.
 - [ ] Verify Windows drive-style path input is rejected.
 - [ ] Verify UNC-style path input is rejected.
-- [~] Verify direct `.xps` source disclosure is impossible.
+- [x] Verify direct `.xps` source disclosure is impossible.
 - [ ] Verify application log directories are never served through static files. Runtime already forces logs outside web root, but add explicit external-log reachability regression.
 - [ ] Verify configuration files are never served through static files.
 - [ ] Verify secrets files are never served through static files.
@@ -126,9 +126,9 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Security headers
 
-- [~] Verify X-Content-Type-Options is present by default.
-- [~] Verify X-Frame-Options is present by default.
-- [~] Verify Referrer-Policy is present by default.
+- [x] Verify X-Content-Type-Options is present by default.
+- [x] Verify X-Frame-Options is present by default.
+- [x] Verify Referrer-Policy is present by default.
 - [ ] Decide whether Content-Security-Policy should be provided by default for generated UI/browser applications.
 - [ ] Decide whether Permissions-Policy should be provided by default.
 - [ ] Verify application response headers cannot inject CRLF.
@@ -207,7 +207,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - Root cause: Kestrel normalizes encoded dot segments before XPScript route middleware evaluates `Request.Path`.
 - Proposed fix: inspect `IHttpRequestFeature.RawTarget` before route dispatch and reject encoded dot-segment traversal, including double encoding.
 - Regression test: raw HTTP probe plus `xpscript-protected-path-traversal` Nuclei template.
-- Fix commit or pull request: `4c5805f250c18023621575c9c0c85745972baf22` on `ai-kestrel-nuclei-hardening`, pending CI verification.
+- Fix commits: Kestrel `4c5805f250c18023621575c9c0c85745972baf22`, CGI `3dcb69703389fdb1809d5c370cc4b97211aff2a8`, FastCGI `4d5086da58d39794e64e4bde59903ce810a79e93`, with regression coverage in `e2610d8f98981ea89dbd0ce9656b9694b256e38a` and `ede77748e950642ecd2a78360faf80bbd8691ffd`. Verified by successful hardening run #30.
 
 
 ### CL.TE request framing accepted and canonicalized by standalone Kestrel
