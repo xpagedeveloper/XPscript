@@ -143,6 +143,8 @@ internal sealed class GeneralSyntaxPreprocessor
             File = file,
             Line = line,
             Position = position,
+            EndLine = line,
+            EndColumn = position + 1,
             Description = message,
             DiagnosticCode = diagnosticCode,
             Category = "syntax",
