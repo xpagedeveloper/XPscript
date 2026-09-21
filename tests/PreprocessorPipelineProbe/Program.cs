@@ -51,6 +51,7 @@ VerifyArchiveTraversalGuard();
 VerifyArchiveDependencyInjection();
 VerifyNestedArgumentComparison();
 VerifyRuntimeFunctionMemberScope();
+VerifyRuntimeNameScopeMatrix();
 
 void Measure(string label, string source, int iterations)
 {
@@ -406,4 +407,63 @@ End Sub
     if (!generated.Contains("XPScriptReferenceRuntime.StrLeftBack(", StringComparison.Ordinal))
         throw new Exception("Unqualified StrLeftBack call no longer resolves to the reference runtime.");
     Console.WriteLine("PREPROCESSOR-RUNTIME-MEMBER-SCOPE=OK");
+}
+
+
+void VerifyRuntimeNameScopeMatrix()
+{
+    const string source = """
+Class FirstScope
+    Public JsonParse As String
+    Public Function SHA256(value As String) As String
+        SHA256 = value
+    End Function
+End Class
+
+Class SecondScope
+    Public JsonParse As String
+    Public Function SHA256(value As String) As String
+        SHA256 = value
+    End Function
+End Class
+
+Class ParameterScope
+    Public Function Echo(JsonParse As String) As String
+        Dim SHA256 As String
+        SHA256 = JsonParse
+        Echo = SHA256
+    End Function
+End Class
+
+Sub Main()
+    Dim first As New FirstScope
+    Dim second As New SecondScope
+    Dim scoped As New ParameterScope
+    first.JsonParse = "first"
+    second.JsonParse = "second"
+    Print first.JsonParse
+    Print second.JsonParse
+    Print first.SHA256("member-one")
+    Print second.SHA256("member-two")
+    Print scoped.Echo("parameter")
+    Print SHA256("global")
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "preprocessor-runtime-name-scope-matrix.xps", "win-x64");
+    foreach (var marker in new[]
+    {
+        "first.JsonParse",
+        "second.JsonParse",
+        "first.SHA256(\"member-one\")",
+        "second.SHA256(\"member-two\")",
+        "scoped.Echo(\"parameter\")"
+    })
+        if (!generated.Contains(marker, StringComparison.Ordinal))
+            throw new Exception("Scope matrix lost user symbol/member: " + marker);
+
+    if (!generated.Contains("XPScriptHashRuntime.SHA256(\"global\")", StringComparison.Ordinal))
+        throw new Exception("Scope matrix no longer resolves an unqualified SHA256 call to the hash runtime.");
+
+    Console.WriteLine("PREPROCESSOR-RUNTIME-NAME-SCOPE-MATRIX=OK");
 }
