@@ -10,7 +10,7 @@ Resolution rule: lexical keywords are syntax-level restrictions; compiler-reserv
 - [x] Distinguish lexical/syntax keywords from runtime API names and compiler rewrite markers.
 - [x] Define when an unqualified function call resolves to a built-in/runtime function.
 - [x] Define member-access behavior so `object.Name` / `object.Name(...)` is never treated as an unqualified global command solely because `Name` matches a runtime function.
-- [ ] Verify case-insensitive resolution consistently.
+- [x] Verify case-insensitive resolution consistently. Relevant rewrite paths use `RegexOptions.IgnoreCase` and scoped symbol sets use case-insensitive comparers.
 
 ## 2. Audit reserved identifier validation
 
@@ -26,7 +26,7 @@ Resolution rule: lexical keywords are syntax-level restrictions; compiler-reserv
 - [>] Verify every global-call rewrite rejects member access such as `.Name(...)`. Core/runtime, cross-platform, hash, reference-runtime, JSON, XML, and CSV paths have been checked/fixed.
 - [x] Audit `NativeHttpJsonPreprocessor`, especially `JsonParse`, `JsonStringify`, `JsonEncode`, and `JsonDecode`.
 - [x] Audit `ReferenceRuntimeExtensionsPreprocessor`; preserve its existing member-access exclusion behavior.
-- [>] Audit HTTP, JSON, XML, CSV, database, Notes, UI, AI, filesystem, string, date, application, and compatibility preprocessors for the same class of bug. JSON/XML/CSV, reference runtime, hash, cross-platform, and core runtime paths checked so far.
+- [>] Audit HTTP, JSON, XML, CSV, database, Notes, UI, AI, filesystem, string, date, application, and compatibility preprocessors for the same class of bug. JSON/XML/CSV, reference runtime, hash, cross-platform, HCL selected compatibility, core runtime, Notes runtime, Archive, Spreadsheet, UI extension, NetworkTools, and SystemInventory paths checked so far. The latter object preprocessors operate on explicit receiver/type syntax rather than unqualified global function names.
 - [ ] Replace fragile regex-only resolution with a shared helper/token-aware mechanism where practical.
 
 ## 4. Regression tests
