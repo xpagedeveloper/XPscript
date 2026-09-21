@@ -175,6 +175,28 @@ def run(host, port):
         {400,404},
         lambda c,h,r: (b"XPSCRIPT_SECRET_SENTINEL" not in r, "secret file disclosed"))
 
+    traversal_cases = [
+        ("triple-encoded-traversal", "/assets/%25252e%25252e/secret.txt"),
+        ("nested-dot-traversal", "/assets/....//secret.txt"),
+        ("nested-dot-backslash-traversal", "/assets/....%5c%5csecret.txt"),
+        ("mixed-encoded-dot-traversal", "/assets/.%2e/secret.txt"),
+        ("mixed-case-encoded-traversal", "/assets/%2E%2e/secret.txt"),
+        ("double-encoded-backslash-traversal", "/assets/%252e%252e%255csecret.txt"),
+        ("overlong-utf8-slash-traversal", "/assets/..%c0%afsecret.txt"),
+        ("overlong-utf8-backslash-traversal", "/assets/..%c1%9csecret.txt"),
+        ("encoded-null-traversal", "/assets/%2e%2e/secret.txt%00.css"),
+        ("double-encoded-null-traversal", "/assets/%252e%252e/secret.txt%2500.css"),
+        ("windows-drive-path", "/assets/C:%5cWindows%5cwin.ini"),
+        ("unc-style-path", "/assets/%5c%5clocalhost%5cshare%5csecret.txt"),
+        ("encoded-unicode-fullwidth-dot", "/assets/%EF%BC%8E%EF%BC%8E/secret.txt"),
+        ("encoded-unicode-division-slash", "/assets/..%E2%88%95secret.txt"),
+    ]
+    for name, path in traversal_cases:
+        add(name + "-does-not-disclose-secret",
+            f"GET {path} HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n".encode("ascii"),
+            {400,404},
+            lambda c,h,r: (b"XPSCRIPT_SECRET_SENTINEL" not in r, "secret file disclosed"))
+
     add("protected-cache-direct-not-disclosed",
         b"GET /.xpscript-cache/protected.css HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {400,404},
