@@ -71,16 +71,16 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 - [~] Verify `/assets/%2e%2e/...` traversal cannot escape the assets directory.
 - [~] Verify double encoded traversal cannot escape the assets directory.
-- [ ] Verify mixed slash traversal.
-- [ ] Verify backslash traversal.
+- [~] Verify mixed slash traversal.
+- [~] Verify backslash traversal.
 - [ ] Verify overlong and repeated dot segments.
-- [ ] Verify encoded slash and encoded backslash behavior.
+- [~] Verify encoded slash and encoded backslash behavior.
 - [ ] Verify null byte variants.
 - [ ] Verify Unicode separator and normalization variants.
 - [ ] Verify Windows drive-style path input is rejected.
 - [ ] Verify UNC-style path input is rejected.
 - [~] Verify direct `.xps` source disclosure is impossible.
-- [ ] Verify application log directories are never served through static files.
+- [ ] Verify application log directories are never served through static files. Runtime already forces logs outside web root, but add explicit external-log reachability regression.
 - [ ] Verify configuration files are never served through static files.
 - [ ] Verify secrets files are never served through static files.
 - [ ] Verify symlink inside `assets` cannot resolve outside the web root.
@@ -142,6 +142,12 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Routing and runtime behavior
 
+- [ ] Add explicit JSON parser hardening route to the generated test application so malformed, deeply nested, duplicate-key and oversized JSON can be tested at the XPScript API layer.
+- [ ] Verify malformed JSON fails without stack traces or filesystem paths.
+- [ ] Verify deeply nested JSON is bounded.
+- [ ] Verify oversized JSON is bounded by MaxRequestBodySize.
+- [ ] Verify duplicate JSON property behavior is deterministic and documented.
+
 - [ ] Verify malformed UTF-8 paths fail safely.
 - [ ] Verify non-ASCII paths and query strings.
 - [ ] Verify Unicode normalization does not create route aliases that bypass authorization.
@@ -172,6 +178,8 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 ## Nuclei corpus management
 
 - [ ] Review upstream `http/misconfiguration` findings.
+- [x] Add curated ASP.NET, IIS and .NET Nuclei profile for debug mode, ASP.NET Core development environment, launchSettings.json, ELMAH, Trace.axd, Microsoft runtime errors, NuGet.config, IIS short-name behavior and IIS version disclosure.
+- [x] Add curated JSON security Nuclei profile for appsettings.json, credentials.json, auth.json, JWK/JWKS exposure, Swagger/OpenAPI exposure and generic sensitive config JSON disclosure.
 - [ ] Review upstream `http/exposures` findings.
 - [ ] Add applicable generic fuzzing templates in a controlled phase.
 - [ ] Add applicable generic vulnerability templates in a controlled phase.
