@@ -24,14 +24,14 @@ internal sealed class HclPrintFormattingPreprocessor
             var filePrint = Regex.Match(line, @"^Print\s+#([^,]+)\s*,\s*(.*)$", RegexOptions.IgnoreCase);
             if (filePrint.Success)
             {
-                output.Add(indent + $"Print #{filePrint.Groups[1].Value}, LSHclPrintRuntime.Format({BuildParts(filePrint.Groups[2].Value)})");
+                output.Add(indent + $"Print #{filePrint.Groups[1].Value}, LSHclPrintRuntime.Format({BuildParts(filePrint.Groups[2].Value, sourceName, lineIndex + 1, raw)})");
                 continue;
             }
 
             var consolePrint = Regex.Match(line, @"^Print\s+(.+)$", RegexOptions.IgnoreCase);
             if (consolePrint.Success)
             {
-                output.Add(indent + $"Print LSHclPrintRuntime.Format({BuildParts(consolePrint.Groups[1].Value)})");
+                output.Add(indent + $"Print LSHclPrintRuntime.Format({BuildParts(consolePrint.Groups[1].Value, sourceName, lineIndex + 1, raw)})");
                 continue;
             }
 
@@ -80,10 +80,10 @@ internal sealed class HclPrintFormattingPreprocessor
         return false;
     }
 
-    private static string BuildParts(string body)
+    private static string BuildParts(string body, string sourceName, int line, string sourceLine)
     {
         var parts = SplitPrintItems(body);
-        if (parts.Count == 0) throw new CompilerException("Print with Spc/Tab requires at least one print item.");
+        if (parts.Count == 0) throw SyntaxFailure("Print with Spc/Tab requires at least one print item.", sourceName, line, sourceLine, "print item");
 
         var transformed = new List<string>(parts.Count);
         foreach (var raw in parts)
@@ -108,7 +108,7 @@ internal sealed class HclPrintFormattingPreprocessor
             transformed.Add("LSHclPrintRuntime.Text(" + part + ")");
         }
 
-        if (transformed.Count == 0) throw new CompilerException("Print with Spc/Tab requires at least one print item.");
+        if (transformed.Count == 0) throw SyntaxFailure("Print with Spc/Tab requires at least one print item.", sourceName, line, sourceLine, "print item");
         return string.Join(", ", transformed);
     }
 
