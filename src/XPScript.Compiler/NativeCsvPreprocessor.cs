@@ -134,7 +134,7 @@ internal sealed class NativeCsvPreprocessor
             Category = "syntax",
             Properties = properties.Select(property => new CompileDiagnosticProperty { Name = property.Name, Value = property.Value }).ToList(),
             SourceCode = safeSource,
-            MarkedCode = safeSource.Length == 0 ? null : safeSource + Environment.NewLine + new string(' ', Math.Max(0, position - 1)) + "^"
+            MarkedCode = safeSource.Length == 0 ? string.Empty : safeSource + Environment.NewLine + new string(' ', Math.Max(0, position - 1)) + "^"
         };
         return new CompilerException(message, diagnosticCode, "syntax", [diagnostic]);
     }
