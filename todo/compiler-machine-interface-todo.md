@@ -355,7 +355,7 @@ Add deterministic fixtures covering:
 - [x] ServerSide-required APIs. Covered by the Browser-WASM smoke test: an unannotated server-only XPDB procedure must fail with structured `XPS3002` / `execution-context` and verifies `symbol`, `target=browser-wasm`, `currentContext=Client`, and `requiredContext=ServerSide`.
 - [x] Security warnings. Dependency-audit parsing is covered deterministically for NU1900 unavailable-audit warnings plus NU1902/NU1904 vulnerability findings, including deduplication, severity ordering, advisory normalization, and structured XPS7001/XPS7002 catalog metadata.
 - [x] Multiple diagnostics. Machine-interface validation verifies multiple independent XPS2008 diagnostics, per-symbol metadata, total diagnostic count, and non-truncated small result sets.
-- [ ] Multiple source files.
+- [x] Multiple source files. Recursive include source mapping is covered through three nested include levels, including leaf file/line/position, redacted source text, deterministic include ancestry, and duplicate include normalization.
 - [ ] Malformed and empty source.
 - [ ] UTF-8/non-ASCII source according to language support.
 - [ ] LF and CRLF location consistency.
