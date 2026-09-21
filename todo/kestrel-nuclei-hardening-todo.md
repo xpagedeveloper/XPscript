@@ -29,6 +29,8 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Add raw TCP HTTP probes for cases that normal HTTP clients may normalize.
 - [x] Upload hardening result artifacts with 3 day retention.
 - [x] Review first successful workflow execution. Run #30 completed successfully with Kestrel, CGI and FastCGI regression gates.
+- [x] Verify real nginx to XPScript FastCGI topology. Run #38 completed successfully while retaining strict duplicate FastCGI parameter rejection.
+- [x] Verify advanced Kestrel traversal corpus end-to-end. Run #38 completed successfully.
 - [ ] Record all upstream Nuclei findings and classify each as confirmed, false positive, dependency issue, or not applicable.
 - [ ] Add confirmed findings below with reproduction details.
 
@@ -39,22 +41,22 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify duplicate Host headers are rejected.
 - [~] Verify absolute-form request targets cannot bypass Host validation.
 - [x] Verify TRACE is rejected and does not echo request data.
-- [ ] Verify TRACK is rejected.
+- [x] Verify TRACK is rejected. Verified in run #32.
 - [ ] Verify uncommon methods do not accidentally reach GET or POST handlers.
 - [x] Verify request lines larger than the configured limit are rejected.
 - [x] Verify request headers larger than the configured aggregate limit are rejected.
-- [ ] Verify excessive header count behavior.
-- [ ] Verify oversized cookie headers.
-- [ ] Verify malformed header names.
-- [ ] Verify control characters in header values are rejected.
+- [x] Verify excessive header count behavior. Verified in run #32.
+- [x] Verify oversized cookie headers. Verified in run #32.
+- [x] Verify malformed header names. Verified in run #32.
+- [x] Verify control characters in header values are rejected. Verified in run #32.
 - [ ] Verify bare LF request framing is rejected or safely normalized.
-- [ ] Verify malformed HTTP version tokens.
+- [x] Verify malformed HTTP version tokens. Verified in run #32.
 - [x] Verify conflicting Content-Length values are rejected.
 - [~] Verify Content-Length plus Transfer-Encoding canonicalization cannot create request smuggling across supported deployment topologies. Standalone Kestrel CL.TE desync probe verified safe in run #31. Reverse-proxy topologies remain.
 - [x] Verify duplicate Transfer-Encoding values. Verified safe in run #31.
 - [x] Verify invalid chunk sizes. Verified rejected in run #31.
 - [~] Verify chunk extensions and malformed chunk terminators. Malformed terminator verified rejected in run #31. Chunk extensions remain.
-- [~] Add request smuggling regression probes for CL.TE, TE.CL and duplicate Content-Length variants. CL.TE verified in run #31. TE.CL added and pending CI.
+- [x] Add request smuggling regression probes for CL.TE, TE.CL and duplicate Content-Length variants. CL.TE verified in run #31, TE.CL and parser variants verified in run #32. nginx to FastCGI topology gate verified in run #38.
 - [ ] Verify HTTP/1.0 handling.
 - [ ] Verify HTTP/2 behavior separately from HTTP/1.1.
 
@@ -77,12 +79,12 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify double encoded traversal cannot escape the assets directory.
 - [x] Verify mixed slash traversal.
 - [x] Verify backslash traversal.
-- [~] Verify overlong and repeated dot segments. Added nested `....//` and backslash variants, pending CI.
+- [x] Verify overlong and repeated dot segments. Advanced traversal corpus verified in run #38.
 - [x] Verify encoded slash and encoded backslash behavior.
-- [~] Verify null byte variants. Added encoded and double-encoded null suffix probes, pending CI.
-- [~] Verify Unicode separator and normalization variants. Added full-width dot and Unicode division-slash probes plus overlong UTF-8 separator probes, pending CI.
-- [~] Verify Windows drive-style path input is rejected. Added drive-style probe, pending CI.
-- [~] Verify UNC-style path input is rejected. Added UNC-style probe, pending CI.
+- [x] Verify null byte variants. Encoded and double-encoded null suffix probes verified in run #38.
+- [x] Verify Unicode separator and normalization variants. Full-width dot, Unicode division-slash and overlong UTF-8 separator probes verified in run #38.
+- [x] Verify Windows drive-style path input is rejected. Verified in run #38.
+- [x] Verify UNC-style path input is rejected. Verified in run #38.
 - [x] Verify direct `.xps` source disclosure is impossible.
 - [ ] Verify application log directories are never served through static files. Runtime already forces logs outside web root, but add explicit external-log reachability regression.
 - [ ] Verify configuration files are never served through static files.
