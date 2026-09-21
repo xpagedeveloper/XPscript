@@ -127,6 +127,31 @@ def run(host, port):
         b"TRACK / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {400,404,405,501})
 
+    add("uncommon-method-not-routed",
+        b"BREW / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404,405,501},
+        lambda c,h,r: (b"XPSCRIPT-HARDENING" not in r, "uncommon method reached application handler"))
+
+    add("absolute-form-invalid-host-rejected",
+        b"GET http://attacker.invalid/ HTTP/1.1\r\nHost: attacker.invalid\r\nConnection: close\r\n\r\n",
+        {400})
+
+    add("http-1-0-safe",
+        b"GET / HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {200,400,505},
+        lambda c,h,r: (b"XPSCRIPT_SECRET_SENTINEL" not in r, "HTTP/1.0 disclosed protected content"))
+
+    add("bare-lf-framing-safe",
+        b"GET / HTTP/1.1\nHost: 127.0.0.1\nConnection: close\n\n",
+        {400},
+        lambda c,h,r: (b"XPSCRIPT-HARDENING" not in r, "bare LF framing reached application handler"))
+
+    add("chunk-extension-safe",
+        b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n4;foo=bar\r\ntest\r\n0\r\n\r\n",
+        {200,400},
+        lambda c,h,r: (r.count(b"HTTP/1.1 ") <= 1 and b"XPSCRIPT_SECRET_SENTINEL" not in r,
+                       "chunk extension caused ambiguous framing or protected-content disclosure"))
+
     add("malformed-http-version-rejected",
         b"GET / HTTP/1.X\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {400,505})
