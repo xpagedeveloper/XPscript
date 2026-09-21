@@ -10,7 +10,11 @@ internal sealed class TypeDeclarationPreprocessor
 
     public string Transform(string source, string sourceName = "input.xps")
     {
-        var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
+        var lines = source.Replace("\r
+", "
+").Replace('\r', '
+').Split('
+').ToList();
         var optionBase = DetectOptionBase(lines);
         var typeNames = CollectTypeNames(lines);
         var output = new List<string>(lines.Count + 16);
@@ -189,14 +193,22 @@ internal sealed class TypeDeclarationPreprocessor
             Description = message,
             DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
             Category = "syntax",
-            Properties = string.IsNullOrWhiteSpace(foundToken)\n                ? [new() { Name = "expectedConstruct", Value = expectedConstruct }]\n                : [new() { Name = "foundToken", Value = foundToken }, new() { Name = "expectedConstruct", Value = expectedConstruct }],
+            Properties = string.IsNullOrWhiteSpace(foundToken)
+                ? [new() { Name = "expectedConstruct", Value = expectedConstruct }]
+                : [new() { Name = "foundToken", Value = foundToken }, new() { Name = "expectedConstruct", Value = expectedConstruct }],
             SourceCode = safeSource,
             MarkedCode = safeSource + Environment.NewLine + "^"
         };
         return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
     }
 
-    private static string FirstToken(string value)\n    {\n        var match = Regex.Match(value.TrimStart(), @"^\\S+");\n        return match.Success ? match.Value : "unknown";\n    }\n\n    private static string EscapeXPScriptString(string value) => value.Replace("\"", "\"\"", StringComparison.Ordinal);
+    private static string FirstToken(string value)
+    {
+        var match = Regex.Match(value.TrimStart(), @"^\\S+");
+        return match.Success ? match.Value : "unknown";
+    }
+
+    private static string EscapeXPScriptString(string value) => value.Replace("\"", "\"\"", StringComparison.Ordinal);
 
     private static string StripComment(string line)
     {
