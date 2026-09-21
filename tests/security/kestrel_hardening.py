@@ -79,9 +79,12 @@ def run(host, port):
         ("GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Large: " + ("B" * 40000) + "\r\nConnection: close\r\n\r\n").encode(),
         {400,431})
 
-    add("content-length-transfer-encoding-conflict-rejected",
+    add("content-length-transfer-encoding-framing-safe",
         b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n0\r\n\r\n",
-        {400})
+        {200,400},
+        lambda c,h,r: (
+            r.count(b"HTTP/1.1 ") == 1 and b"XPSCRIPT_SECRET_SENTINEL" not in r,
+            "ambiguous framing produced multiple responses or disclosed protected content"))
 
     add("conflicting-content-length-rejected",
         b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 4\r\nContent-Length: 5\r\nConnection: close\r\n\r\nABCDE",
