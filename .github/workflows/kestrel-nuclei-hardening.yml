@@ -1,0 +1,142 @@
+name: Kestrel Nuclei Hardening
+
+on:
+  push:
+    branches:
+      - ai-kestrel-nuclei-hardening
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kestrel-hardening-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hardening:
+    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HARDENING_PORT: "18081"
+      NUCLEI_VERSION: "v3.11.1"
+      NUCLEI_TEMPLATES_SHA: "883b9d5b0f45857738f35446cdb1b03e09d969d5"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24.2"
+
+      - name: Build XPScript compiler and CLI
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+          dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore -p:SkipUnifiedPublish=true
+
+      - name: Create hardening application
+        shell: bash
+        run: |
+          rm -rf ./.hardening-site ./out/hardening-webiis ./artifacts/hardening
+          mkdir -p ./.hardening-site/assets ./artifacts/hardening
+
+          cat > ./.hardening-site/index.xps <<'XPS'
+          [Anonymous]
+          [Get]
+          [Post]
+          Sub Index()
+              Response.ContentType = "text/plain; charset=utf-8"
+              Response.SetHeader("X-XPScript-Hardening", "ok")
+              Response.Write("XPSCRIPT-HARDENING\n")
+              Response.Write("METHOD=" & Request.Method & "\n")
+              Response.Write("PATH=" & Request.Path & "\n")
+              Response.Write("QUERY=" & Request.QueryString & "\n")
+              Response.Write("HEADER=" & Request.Header("X-Test") & "\n")
+              Response.Write("COOKIE=" & Request.Cookie("client") & "\n")
+          End Sub
+          XPS
+
+          cp ./.hardening-site/index.xps ./.hardening-site/main.xps
+          printf 'XPSCRIPT_PUBLIC_ASSET\n' > ./.hardening-site/assets/public.txt
+          printf 'XPSCRIPT_SECRET_SENTINEL\n' > ./.hardening-site/secret.txt
+
+      - name: Compile generated web application
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build --             ./.hardening-site/main.xps --target webiis --runtime=false --output ./out/hardening-webiis
+          test -f ./out/hardening-webiis/web.config
+
+      - name: Start XPScript Kestrel host
+        shell: bash
+        run: |
+          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -p:SkipUnifiedPublish=true --             web --root ./.hardening-site --address 127.0.0.1 --port "${HARDENING_PORT}"             --host 127.0.0.1 --static-files --health --metrics --sessions             > ./artifacts/hardening/kestrel.stdout.log 2> ./artifacts/hardening/kestrel.stderr.log &
+          echo $! > ./artifacts/hardening/kestrel.pid
+
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail "http://127.0.0.1:${HARDENING_PORT}/" | grep -q XPSCRIPT-HARDENING; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat ./artifacts/hardening/kestrel.stderr.log
+          exit 1
+
+      - name: Install pinned Nuclei
+        run: |
+          go install "github.com/projectdiscovery/nuclei/v3/cmd/nuclei@${NUCLEI_VERSION}"
+          "${HOME}/go/bin/nuclei" -version
+
+      - name: Fetch pinned Nuclei templates
+        run: |
+          git clone --filter=blob:none https://github.com/projectdiscovery/nuclei-templates.git ./artifacts/nuclei-templates
+          git -C ./artifacts/nuclei-templates checkout "${NUCLEI_TEMPLATES_SHA}"
+
+      - name: Run XPScript Nuclei regression templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei"             -u "http://127.0.0.1:${HARDENING_PORT}"             -t ./tests/security/nuclei/xpscript             -jsonl-export ./artifacts/hardening/nuclei-xpscript.jsonl             -silent
+          status=$?
+          set -e
+          test "${status}" -eq 0
+          if test -s ./artifacts/hardening/nuclei-xpscript.jsonl; then
+            echo "XPScript-specific hardening findings detected."
+            cat ./artifacts/hardening/nuclei-xpscript.jsonl
+            exit 1
+          fi
+
+      - name: Run selected upstream Nuclei HTTP templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei"             -u "http://127.0.0.1:${HARDENING_PORT}"             -t ./artifacts/nuclei-templates/http/misconfiguration             -t ./artifacts/nuclei-templates/http/exposures             -severity info,low,medium,high,critical             -exclude-tags dos,fuzz,intrusive             -jsonl-export ./artifacts/hardening/nuclei-upstream.jsonl             -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-upstream.exit-code
+
+      - name: Run raw HTTP hardening probes
+        run: |
+          python3 ./tests/security/kestrel_hardening.py             --host 127.0.0.1             --port "${HARDENING_PORT}"             --json ./artifacts/hardening/raw-http-results.json
+
+      - name: Upload hardening artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kestrel-hardening
+          path: ./artifacts/hardening
+          retention-days: 3
+
+      - name: Stop Kestrel
+        if: always()
+        shell: bash
+        run: |
+          if test -f ./artifacts/hardening/kestrel.pid; then
+            kill "$(cat ./artifacts/hardening/kestrel.pid)" 2>/dev/null || true
+          fi
