@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -111,6 +112,16 @@ try
         oversized.Content = new ByteArrayContent(new byte[65]);
         using var response = await client.SendAsync(oversized);
         if ((int)response.StatusCode != 413) throw new Exception($"Oversized request expected 413, got {(int)response.StatusCode}.");
+        _ = ReadRequestId(response);
+    }
+
+    using (var chunked = new HttpRequestMessage(HttpMethod.Post, "/chunked-oversized"))
+    {
+        chunked.Headers.TransferEncodingChunked = true;
+        chunked.Content = new UnknownLengthContent(new byte[65]);
+        using var response = await client.SendAsync(chunked);
+        if ((int)response.StatusCode != 413)
+            throw new Exception($"Chunked in-memory body limit expected 413, got {(int)response.StatusCode}.");
         _ = ReadRequestId(response);
     }
 
@@ -315,6 +326,16 @@ static string ReadRequestId(HttpResponseMessage response)
 }
 
 static bool IsValidRequestId(string? value) => value is { Length: 32 } && value.All(Uri.IsHexDigit);
+
+sealed class UnknownLengthContent(byte[] bytes) : HttpContent
+{
+    protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => stream.WriteAsync(bytes).AsTask();
+    protected override bool TryComputeLength(out long length)
+    {
+        length = 0;
+        return false;
+    }
+}
 
 sealed class EchoHandler : IXpsWebRequestHandler
 {
