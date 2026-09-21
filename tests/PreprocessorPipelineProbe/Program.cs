@@ -640,6 +640,8 @@ Sub Main()
     Print item.ToBase64("member")
     Print "ToBase64(ignored)"
     ' ToBase64(ignored)
+    Rem ToBase64(ignored-rem)
+    Print ToBase64$("global-dollar")
 End Sub
 """;
     var rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "ToBase64", "Runtime.ToBase64");
@@ -650,7 +652,11 @@ End Sub
     if (!rewritten.Contains("\"ToBase64(ignored)\"", StringComparison.Ordinal))
         throw new Exception("Shared call rewriter modified a string literal.");
     if (!rewritten.Contains("' ToBase64(ignored)", StringComparison.Ordinal))
-        throw new Exception("Shared call rewriter modified a comment.");
+        throw new Exception("Shared call rewriter modified an apostrophe comment.");
+    if (!rewritten.Contains("Rem ToBase64(ignored-rem)", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter modified a Rem comment.");
+    if (!rewritten.Contains("Runtime.ToBase64(\"global-dollar\")", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter failed to rewrite a dollar-suffixed runtime call.");
 
     const string declaration = """
 Class RuntimeNames
