@@ -142,6 +142,60 @@ try
         if ((int)postHealth.StatusCode != 405) throw new Exception("Operational endpoint must reject non-GET/HEAD methods.");
     }
 
+    // A trusted loopback proxy may supply forwarded values, but ForwardLimit=1 means
+    // only the right-most hop is consumed. This prevents a client-supplied value
+    // earlier in the chain from becoming the effective remote address.
+    var trustedOptions = new XpsKestrelOptions
+    {
+        Port = 0,
+        AllowedHosts = ["localhost", "127.0.0.1", "::1", "public.example"],
+        KnownProxies = [System.Net.IPAddress.Loopback]
+    };
+    var trustedApp = XpsKestrelAdapter.Build(
+        trustedOptions,
+        serverInfo,
+        new EchoHandler(),
+        new SmokeApplicationState());
+    try
+    {
+        await trustedApp.StartAsync();
+        var trustedServer = trustedApp.Services.GetRequiredService<IServer>();
+        var trustedAddresses = trustedServer.Features.Get<IServerAddressesFeature>()?.Addresses
+            ?? throw new Exception("Trusted-proxy Kestrel did not expose server addresses.");
+        using var trustedClient = new HttpClient { BaseAddress = new Uri(trustedAddresses.Single()) };
+
+        using (var forwarded = new HttpRequestMessage(HttpMethod.Get, "/proxy"))
+        {
+            forwarded.Headers.TryAddWithoutValidation("X-Forwarded-For", "198.51.100.77, 203.0.113.44");
+            forwarded.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "http, https");
+            forwarded.Headers.TryAddWithoutValidation("X-Forwarded-Host", "evil.example, public.example");
+            using var response = await trustedClient.SendAsync(forwarded);
+            if ((int)response.StatusCode != 201) throw new Exception($"Trusted proxy request expected 201, got {(int)response.StatusCode}.");
+            var body = await response.Content.ReadAsStringAsync();
+            if (!body.Contains("REMOTE=203.0.113.44", StringComparison.Ordinal))
+                throw new Exception("Configured KnownProxy did not apply the nearest forwarded client address.");
+            if (!body.Contains("SCHEME=https", StringComparison.Ordinal))
+                throw new Exception("Configured KnownProxy did not apply the nearest forwarded scheme.");
+            if (!body.Contains("HOST=public.example", StringComparison.Ordinal))
+                throw new Exception("Configured KnownProxy did not apply the nearest forwarded host.");
+            if (body.Contains("REMOTE=198.51.100.77", StringComparison.Ordinal))
+                throw new Exception("ForwardLimit=1 allowed a chained client-supplied address to become effective.");
+        }
+
+        using (var badForwardedHost = new HttpRequestMessage(HttpMethod.Get, "/proxy-host"))
+        {
+            badForwardedHost.Headers.TryAddWithoutValidation("X-Forwarded-Host", "evil.example");
+            using var response = await trustedClient.SendAsync(badForwardedHost);
+            if ((int)response.StatusCode != 400)
+                throw new Exception("Forwarded Host bypassed AllowedHosts.");
+        }
+    }
+    finally
+    {
+        await trustedApp.StopAsync();
+        await trustedApp.DisposeAsync();
+    }
+
     var logText = structuredLog.ToString();
     var logLines = logText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
     if (logLines.Length != 3) throw new Exception($"Expected three structured request events, got {logLines.Length}.");
