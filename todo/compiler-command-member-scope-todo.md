@@ -22,11 +22,11 @@ Resolution rule: lexical keywords are syntax-level restrictions; compiler-reserv
 
 ## 3. Audit all command/function preprocessors
 
-- [ ] Inventory every preprocessor that rewrites a named command/function using regex or textual replacement.
-- [ ] Verify every global-call rewrite rejects member access such as `.Name(...)`.
+- [x] Inventory the primary global function rewrite paths in `AdvancedXPScriptTranspiler`, `CoreCompatibilityTranspiler`, `CrossPlatformPreprocessor`, `HashFunctionsPreprocessor`, `ReferenceRuntimeExtensionsPreprocessor`, and the native JSON/XML/CSV preprocessors. Continue auditing feature-specific preprocessors as regressions identify additional global rewrites.
+- [>] Verify every global-call rewrite rejects member access such as `.Name(...)`. Core/runtime, cross-platform, hash, reference-runtime, JSON, XML, and CSV paths have been checked/fixed.
 - [x] Audit `NativeHttpJsonPreprocessor`, especially `JsonParse`, `JsonStringify`, `JsonEncode`, and `JsonDecode`.
 - [x] Audit `ReferenceRuntimeExtensionsPreprocessor`; preserve its existing member-access exclusion behavior.
-- [ ] Audit HTTP, JSON, XML, CSV, database, Notes, UI, AI, filesystem, string, date, application, and compatibility preprocessors for the same class of bug.
+- [>] Audit HTTP, JSON, XML, CSV, database, Notes, UI, AI, filesystem, string, date, application, and compatibility preprocessors for the same class of bug. JSON/XML/CSV, reference runtime, hash, cross-platform, and core runtime paths checked so far.
 - [ ] Replace fragile regex-only resolution with a shared helper/token-aware mechanism where practical.
 
 ## 4. Regression tests
@@ -38,7 +38,7 @@ Resolution rule: lexical keywords are syntax-level restrictions; compiler-reserv
 - [x] Verify `JsonParse(...)` still resolves to the native JSON runtime function.
 - [x] Verify `obj.StrLeftBack(...)` remains a member call.
 - [x] Verify `StrLeftBack(...)` still resolves to the reference runtime function.
-- [ ] Add representative regressions from every preprocessor family discovered by the audit.
+- [>] Add representative regressions from every preprocessor family discovered by the audit. JSON/XML/CSV/reference-runtime coverage added; more families remain.
 - [ ] Add negative tests for true language keywords and compiler-reserved `__*` names.
 - [x] Run regressions through the real XPScript transpiler/compiler, not only string-level unit tests.
 
