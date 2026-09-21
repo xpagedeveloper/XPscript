@@ -64,7 +64,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 - [x] Verify request bodies above MaxRequestBodySize return 413. Oversized Content-Length request verified with 413 in run #42.
 - [x] Verify chunked bodies above MaxRequestBodySize return 413. Complete 1,048,577-byte chunked request verified in run #44.
-- [ ] Verify in-memory request body handling never exceeds configured limits.
+- [x] Verify in-memory request body handling never exceeds configured limits. Unknown-length chunked request exceeding the 64-byte in-memory limit verified with 413 in run #58.
 - [ ] Verify slow request body enforcement.
 - [ ] Verify request headers timeout.
 - [ ] Verify keep-alive timeout.
