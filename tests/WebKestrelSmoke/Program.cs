@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -17,6 +18,8 @@ var options = new XpsKestrelOptions
     Port = 0,
     MaxRequestBodySize = 64,
     MaxConcurrentConnections = 32,
+    RequestHeadersTimeout = TimeSpan.FromSeconds(1),
+    KeepAliveTimeout = TimeSpan.FromSeconds(1),
     AllowedHosts = ["localhost", "127.0.0.1", "::1"],
     EnableHealthEndpoint = true,
     EnableMetricsEndpoint = true
@@ -124,6 +127,9 @@ try
             throw new Exception($"Chunked in-memory body limit expected 413, got {(int)response.StatusCode}.");
         _ = ReadRequestId(response);
     }
+
+    await AssertRequestHeadersTimeoutAsync(new Uri(address));
+    await AssertKeepAliveTimeoutAsync(new Uri(address));
 
     using (var health = await client.GetAsync("/_xps/health"))
     {
@@ -326,6 +332,57 @@ static string ReadRequestId(HttpResponseMessage response)
 }
 
 static bool IsValidRequestId(string? value) => value is { Length: 32 } && value.All(Uri.IsHexDigit);
+
+
+static async Task AssertRequestHeadersTimeoutAsync(Uri baseAddress)
+{
+    using var tcp = new TcpClient();
+    await tcp.ConnectAsync(baseAddress.Host, baseAddress.Port);
+    await using var stream = tcp.GetStream();
+    var partial = Encoding.ASCII.GetBytes("GET / HTTP/1.1\r\nHost: ");
+    await stream.WriteAsync(partial);
+    await stream.FlushAsync();
+    await Task.Delay(TimeSpan.FromSeconds(2));
+    var buffer = new byte[1024];
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+    var read = await stream.ReadAsync(buffer, timeout.Token);
+    var text = Encoding.ASCII.GetString(buffer, 0, read);
+    if (!text.Contains("408", StringComparison.Ordinal) && read != 0)
+        throw new Exception($"Request headers timeout expected connection close or 408, got: {text}");
+}
+
+static async Task AssertKeepAliveTimeoutAsync(Uri baseAddress)
+{
+    using var tcp = new TcpClient();
+    await tcp.ConnectAsync(baseAddress.Host, baseAddress.Port);
+    await using var stream = tcp.GetStream();
+    var request = Encoding.ASCII.GetBytes($"GET /keepalive HTTP/1.1\r\nHost: {baseAddress.Host}:{baseAddress.Port}\r\n\r\n");
+    await stream.WriteAsync(request);
+    await stream.FlushAsync();
+    var buffer = new byte[4096];
+    using (var firstTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+    {
+        var read = await stream.ReadAsync(buffer, firstTimeout.Token);
+        if (read == 0 || !Encoding.ASCII.GetString(buffer, 0, read).Contains("201", StringComparison.Ordinal))
+            throw new Exception("Keep-alive timeout setup request did not complete.");
+    }
+    await Task.Delay(TimeSpan.FromSeconds(2));
+    try
+    {
+        await stream.WriteAsync(request);
+        await stream.FlushAsync();
+        using var secondTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var read = await stream.ReadAsync(buffer, secondTimeout.Token);
+        if (read != 0)
+            throw new Exception("Idle keep-alive connection remained usable beyond configured timeout.");
+    }
+    catch (IOException)
+    {
+    }
+    catch (SocketException)
+    {
+    }
+}
 
 sealed class UnknownLengthContent(byte[] bytes) : HttpContent
 {
