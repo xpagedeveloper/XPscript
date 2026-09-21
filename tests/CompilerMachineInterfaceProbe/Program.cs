@@ -447,6 +447,15 @@ Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "actualType") ==
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.SourceCode), "date comparison source");
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.MarkedCode), "date comparison marked source");
 
+var typeArraySyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "type-array-nonconstant-bound-error.xps"));
+var typeArraySyntaxDiagnostic = typeArraySyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(typeArraySyntaxDiagnostic is not null, "type array bound syntax diagnostic");
+Require(typeArraySyntaxDiagnostic.Category == "syntax", "type array bound syntax category");
+Require(typeArraySyntaxDiagnostic.Line == 2, "type array bound syntax line");
+Require(typeArraySyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "integer constant array bound") == true, "type array bound expected construct");
+Require(!string.IsNullOrWhiteSpace(typeArraySyntaxDiagnostic.SourceCode), "type array bound source");
+Require(!string.IsNullOrWhiteSpace(typeArraySyntaxDiagnostic.MarkedCode), "type array bound marked source");
+
 var continuationSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "dangling-line-continuation-error.xps"));
 var continuationSyntaxDiagnostic = continuationSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
 Require(continuationSyntaxDiagnostic is not null, "line continuation syntax diagnostic");
