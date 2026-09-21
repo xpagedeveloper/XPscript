@@ -112,6 +112,44 @@ def run(host, port):
         b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n4\r\ntestX\r\n0\r\n\r\n",
         {400})
 
+    add("te-cl-desync-no-second-request",
+        b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\nContent-Length: 44\r\nConnection: keep-alive\r\n\r\n0\r\n\r\nGET /secret.txt HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {200,400},
+        lambda c,h,r: (
+            r.count(b"HTTP/1.1 ") == 1 and b"XPSCRIPT_SECRET_SENTINEL" not in r,
+            "TE.CL payload executed or exposed a second request"))
+
+    add("obfuscated-transfer-encoding-rejected",
+        b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding : chunked\r\nConnection: close\r\n\r\n0\r\n\r\n",
+        {400})
+
+    add("track-not-successful",
+        b"TRACK / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404,405,501})
+
+    add("malformed-http-version-rejected",
+        b"GET / HTTP/1.X\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,505})
+
+    add("malformed-header-name-rejected",
+        b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nBad Header: value\r\nConnection: close\r\n\r\n",
+        {400})
+
+    add("header-control-character-rejected",
+        b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Test: good\x00bad\r\nConnection: close\r\n\r\n",
+        {400})
+
+    add("excessive-header-count-rejected",
+        ("GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n" +
+         "".join(f"X-H-{i}: v\r\n" for i in range(150)) +
+         "Connection: close\r\n\r\n").encode(),
+        {400,431})
+
+    add("oversized-cookie-rejected",
+        ("GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nCookie: session=" + ("C" * 40000) +
+         "\r\nConnection: close\r\n\r\n").encode(),
+        {400,431})
+
     add("encoded-traversal-does-not-disclose-secret",
         b"GET /assets/%2e%2e/secret.txt HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {400,404},
