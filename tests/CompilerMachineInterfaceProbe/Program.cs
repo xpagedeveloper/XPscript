@@ -370,7 +370,10 @@ var nothingComparisonDiagnostic = nothingComparisonCase.Errors.FirstOrDefault(d 
 Require(nothingComparisonDiagnostic is not null, "Nothing comparison diagnostic");
 Require(nothingComparisonDiagnostic.Category == "syntax", "Nothing comparison category");
 Require(nothingComparisonDiagnostic.Line == 3 && nothingComparisonDiagnostic.Position > 0, "Nothing comparison location");
+Require(nothingComparisonDiagnostic.EndLine == nothingComparisonDiagnostic.Line &&
+        nothingComparisonDiagnostic.EndColumn > nothingComparisonDiagnostic.Position, "Nothing comparison source range");
 Require(nothingComparisonDiagnostic.Properties?.Any(p => p.Name == "foundOperator" && p.Value == "=") == true, "Nothing comparison operator");
+Require(nothingComparisonDiagnostic.Properties?.All(p => p.Name != "foundConstruct") == true, "Nothing comparison catalog metadata only");
 Require(nothingComparisonDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "Is Nothing or Is Not Nothing") == true, "Nothing comparison expected construct");
 Require(!string.IsNullOrWhiteSpace(nothingComparisonDiagnostic.SourceCode), "Nothing comparison source");
 Require(!string.IsNullOrWhiteSpace(nothingComparisonDiagnostic.MarkedCode), "Nothing comparison marked source");
