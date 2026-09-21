@@ -447,6 +447,14 @@ Require(dateComparisonDiagnostic.Properties?.Any(p => p.Name == "actualType") ==
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.SourceCode), "date comparison source");
 Require(!string.IsNullOrWhiteSpace(dateComparisonDiagnostic.MarkedCode), "date comparison marked source");
 
+var separatorSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "empty-statement-separator-error.xps"));
+var separatorSyntaxDiagnostic = separatorSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(separatorSyntaxDiagnostic is not null, "statement separator syntax diagnostic");
+Require(separatorSyntaxDiagnostic.Category == "syntax", "statement separator syntax category");
+Require(separatorSyntaxDiagnostic.Line == 2, "statement separator syntax line");
+Require(separatorSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == ":") == true, "statement separator found token");
+Require(separatorSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "statement") == true, "statement separator expected construct");
+
 var coreSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-missing-procedure-terminator-error.xps"));
 var coreSyntaxDiagnostic = coreSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
 Require(coreSyntaxDiagnostic is not null, "core syntax diagnostic");
