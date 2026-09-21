@@ -226,6 +226,13 @@ internal static class CompilerDiagnosticParser
         if (string.IsNullOrWhiteSpace(identifier) || currentLine.Contains(identifier, StringComparison.Ordinal))
             return currentLine;
 
+        var rootMatches = rootSource.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')
+            .Where(line => line.Contains(identifier, StringComparison.Ordinal))
+            .Take(2)
+            .ToArray();
+        if (rootMatches.Length == 1)
+            return RedactSourceLine(rootMatches[0]);
+
         string text;
         if (IsRootDiagnosticSource(rootSourcePath, diagnosticSourcePath))
             text = rootSource;
