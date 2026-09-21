@@ -377,10 +377,10 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 - [x] Document severity semantics.
 - [x] Document validation-only mode.
 - [x] Document stdin mode if implemented.
-- [ ] Document source-location semantics.
+- [x] Document source-location semantics. Defined in `docs/compiler-machine-interface.md`, including 1-based coordinates, include remapping, CRLF/LF equivalence, stdin virtual filenames and generated-C# boundaries.
 - [x] Document versioning/compatibility.
-- [ ] Document security/redaction behavior.
-- [ ] Add examples for CI and external tooling.
+- [x] Document security/redaction behavior. Defined in `docs/compiler-machine-interface.md`, including source-line masking, secret handling, path sanitization and non-executing validation.
+- [x] Add examples for CI and external tooling. Bash, PowerShell and machine-consumer flows are documented in `docs/compiler-machine-interface.md`.
 
 ## 24. Implementation order
 
