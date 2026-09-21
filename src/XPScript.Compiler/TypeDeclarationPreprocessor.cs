@@ -44,7 +44,7 @@ internal sealed class TypeDeclarationPreprocessor
                 }
                 if (memberLine.Length == 0) continue;
 
-                var field = Regex.Match(memberLine, @"^([A-Za-z_]\w*)\s*(\(([^)]*)\))?\s+As\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
+                var field = Regex.Match(memberLine, @"^([A-Za-z_]\w*)\s*(\((.*)\))?\s+As\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
                 if (!field.Success)
                     throw SyntaxFailure("Unsupported Type member declaration.", sourceName, i + 1, memberRaw, "Type member declaration");
 
