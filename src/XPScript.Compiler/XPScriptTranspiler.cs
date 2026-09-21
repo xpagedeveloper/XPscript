@@ -99,7 +99,7 @@ public sealed partial class XPScriptTranspiler
         source = new ReservedIdentifierPreprocessor().Transform(source);
         source = new IfLayoutPreprocessor().Transform(source);
         source = new ParameterlessProcedureHeaderPreprocessor().Transform(source);
-        source = new SourceLineContinuationPreprocessor().Transform(source);
+        source = new SourceLineContinuationPreprocessor().Transform(source, sourceName);
         source = new ParameterPassingPreprocessor().Transform(source);
         source = new HclPrintFormattingPreprocessor().Transform(source);
         source = new StatementSeparatorPreprocessor().Transform(source, sourceName);
