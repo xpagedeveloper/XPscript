@@ -38,12 +38,54 @@ internal sealed class CoreCompatibilityTranspiler
         Reset();
         var lines = Normalize(source);
         Analyze(lines);
-        var transformed = TransformModule(lines);
+        string transformed;
+        try
+        {
+            transformed = TransformModule(lines);
+        }
+        catch (CompilerException ex) when (ex.GeneratedDiagnostics.Count == 0)
+        {
+            throw StructuredSyntaxFailure(ex, sourceName, lines);
+        }
         var generated = new AdvancedXPScriptTranspiler().Transpile(transformed, sourceName);
         generated = InjectScriptMembers(generated);
         generated = PostProcessMarkers(generated);
         generated += "\n\n" + CoreCompatibilityRuntimeSource.Code + "\n";
         return generated;
+    }
+
+    private static CompilerException StructuredSyntaxFailure(CompilerException exception, string sourceName, string[] lines)
+    {
+        var lineNumber = FindRelevantLine(exception.Message, lines);
+        var sourceLine = lineNumber > 0 && lineNumber <= lines.Length ? lines[lineNumber - 1] : string.Empty;
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourceName),
+            Line = lineNumber,
+            Position = 1,
+            EndLine = lineNumber,
+            EndColumn = Math.Max(2, safeSource.Length + 1),
+            Description = exception.Message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
+            Category = "syntax",
+            SourceCode = safeSource,
+            MarkedCode = safeSource + Environment.NewLine + "^"
+        };
+        return new CompilerException(exception.Message, diagnostic.DiagnosticCode, diagnostic.Category, [diagnostic]);
+    }
+
+    private static int FindRelevantLine(string message, string[] lines)
+    {
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = StripComment(lines[i]).Trim();
+            if (line.Length == 0) continue;
+            if (message.Contains("procedure terminator", StringComparison.OrdinalIgnoreCase) &&
+                Regex.IsMatch(line, @"^(?:Static\s+)?(?:(?:Public|Private)\s+)?(?:Sub|Function)\b", RegexOptions.IgnoreCase))
+                return i + 1;
+        }
+        return lines.Length > 0 ? 1 : 0;
     }
 
     private void Reset()
