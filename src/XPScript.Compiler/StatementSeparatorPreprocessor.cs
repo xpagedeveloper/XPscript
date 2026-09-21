@@ -124,7 +124,25 @@ internal sealed class StatementSeparatorPreprocessor
         {
             var statement = statements[i].Trim();
             if (statement.Length == 0)
-                throw new CompilerException($"Empty statement between ':' separators on source line {sourceLine}.");
+            {
+                var message = $"Empty statement between ':' separators on source line {sourceLine}.";
+                var diagnostic = new CompileDiagnostic
+                {
+                    Line = sourceLine,
+                    Position = 1,
+                    EndLine = sourceLine,
+                    EndColumn = 2,
+                    Description = message,
+                    DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
+                    Category = "syntax",
+                    Properties =
+                    [
+                        new() { Name = "foundToken", Value = ":" },
+                        new() { Name = "expectedConstruct", Value = "statement" }
+                    ]
+                };
+                throw new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
+            }
 
             var suffix = i == statements.Count - 1 && !string.IsNullOrEmpty(trailingComment)
                 ? " " + trailingComment
