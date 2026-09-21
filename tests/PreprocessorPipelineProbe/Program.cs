@@ -56,6 +56,7 @@ VerifyReservedIdentifierScope();
 VerifyRuntimeValueIdentifierScope();
 VerifySharedCallDetectionScope();
 VerifySharedCallRewriteScope();
+VerifyOperatorArrayCallScope();
 
 void Measure(string label, string source, int iterations)
 {
@@ -670,4 +671,40 @@ End Class
         throw new Exception("Shared call rewriter captured a function declaration.");
 
     Console.WriteLine("PREPROCESSOR-SHARED-CALL-REWRITE-SCOPE=OK");
+}
+
+
+void VerifyOperatorArrayCallScope()
+{
+    const string source = """
+Class ArrayRuntimeNames
+    Public Function ArrayAppend(value As String) As String
+        ArrayAppend = value
+    End Function
+
+    Public Function Join(value As String) As String
+        Join = value
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New ArrayRuntimeNames
+    Dim values As Variant
+    Print item.ArrayAppend("member")
+    Print item.Join("member")
+    values = Array("one", "two")
+    Print Join$(values, ",")
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "preprocessor-operator-array-call-scope.xps", "win-x64");
+    if (!generated.Contains("item.ArrayAppend(\"member\")", StringComparison.Ordinal)
+        || !generated.Contains("item.Join(\"member\")", StringComparison.Ordinal))
+        throw new Exception("Operator/array runtime rewriting captured a class member call.");
+    if (!generated.Contains("LSOperatorArrayRuntime.CreateArray(", StringComparison.Ordinal))
+        throw new Exception("Unqualified Array call no longer resolves to the operator/array runtime.");
+    if (!generated.Contains("LSOperatorArrayRuntime.Join(", StringComparison.Ordinal))
+        throw new Exception("Dollar-suffixed Join$ call no longer resolves to the operator/array runtime.");
+
+    Console.WriteLine("PREPROCESSOR-OPERATOR-ARRAY-CALL-SCOPE=OK");
 }
