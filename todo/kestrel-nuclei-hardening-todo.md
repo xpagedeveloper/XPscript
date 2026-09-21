@@ -93,9 +93,9 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [ ] Verify symlinked static files outside `assets` cannot escape the web root when static files are enabled.
 - [ ] Verify directory symlinks and nested symlinks.
 - [ ] Verify static file MIME allowlist cannot be bypassed.
-- [ ] Verify `.xps` can never be added to the static MIME allowlist.
+- [x] Verify `.xps` can never be added to the static MIME allowlist. Option validation regression verified in run #74.
 - [x] Verify oversized static files are rejected. A file exceeding `MaxStaticFileBytes` is rejected in run #72.
-- [ ] Verify static cache headers cannot be injected with CRLF.
+- [x] Verify static cache headers cannot be injected with CRLF. `StaticCacheControl` validation regression verified in run #74.
 
 ## Host, proxy and forwarded headers
 
