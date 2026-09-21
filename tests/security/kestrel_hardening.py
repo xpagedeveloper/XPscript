@@ -97,10 +97,14 @@ def run(host, port):
         {400,404},
         lambda c,h,r: (b"XPSCRIPT_SECRET_SENTINEL" not in r, "secret file disclosed"))
 
-    add("source-file-not-served",
+    add("source-file-not-disclosed",
         b"GET /index.xps HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
-        {404},
-        lambda c,h,r: (b"Sub Index" not in r, "XPScript source disclosed"))
+        {200,404},
+        lambda c,h,r: (
+            b"Sub Index" not in r and
+            b"[Anonymous]" not in r and
+            b"Response.Write" not in r,
+            "XPScript source disclosed"))
 
     add("security-headers-present",
         b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
