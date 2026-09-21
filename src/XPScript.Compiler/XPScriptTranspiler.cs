@@ -93,13 +93,16 @@ public sealed partial class XPScriptTranspiler
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
 
+        // Resolve and validate physical line continuations before generated source
+        // markers are inserted so dangling continuations retain original coordinates.
+        source = new SourceLineContinuationPreprocessor().Transform(source, sourceName);
+
         // Attach runtime/#line markers only after semantic validation and syntax scanning.
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         source = new EscapedQuotePreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source);
         source = new IfLayoutPreprocessor().Transform(source);
         source = new ParameterlessProcedureHeaderPreprocessor().Transform(source);
-        source = new SourceLineContinuationPreprocessor().Transform(source, sourceName);
         source = new ParameterPassingPreprocessor().Transform(source);
         source = new HclPrintFormattingPreprocessor().Transform(source);
         source = new StatementSeparatorPreprocessor().Transform(source, sourceName);
