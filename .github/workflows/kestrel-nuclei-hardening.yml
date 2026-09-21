@@ -42,6 +42,12 @@ jobs:
           dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
           dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore -p:SkipUnifiedPublish=true
 
+      - name: Run CGI and FastCGI cross-host security regressions
+        shell: bash
+        run: |
+          dotnet run --project ./tests/WebCgiSmoke/WebCgiSmoke.csproj -c Release
+          dotnet run --project ./tests/WebFastCgiAdversarialSmoke/WebFastCgiAdversarialSmoke.csproj -c Release
+
       - name: Create hardening application
         shell: bash
         run: |
