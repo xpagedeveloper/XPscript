@@ -57,6 +57,18 @@ try
 }
 catch (ArgumentException) { }
 
+var externalLogRoot = Path.Combine(Path.GetTempPath(), "xps-kestrel-logs-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(externalLogRoot);
+await File.WriteAllTextAsync(Path.Combine(externalLogRoot, "access.log"), "EXTERNAL-LOG-SECRET");
+try
+{
+    new XpsWebLogManager(
+        new XpsServerInfo("invalid-log-root", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"),
+        new XpsWebLogOptions { DirectoryPath = Path.Combine(root, "logs") });
+    throw new Exception("Web logging accepted a directory inside the web root.");
+}
+catch (InvalidOperationException) { }
+
 var structuredLog = new StringWriter();
 var telemetry = new XpsWebTelemetry(new XpsWebJsonLineEventSink(structuredLog));
 
@@ -191,7 +203,15 @@ try
             throw new Exception($"Protected or oversized static path was served: {protectedPath}");
     }
 
-    if (fileSymlinkCreated)
+    foreach (var logProbe in new[] { "/logs/access.log", "/../" + Path.GetFileName(externalLogRoot) + "/access.log", "/assets/../logs/access.log" })
+    {
+        using var logResponse = await client.GetAsync(logProbe);
+        var logBody = await logResponse.Content.ReadAsStringAsync();
+        if ((int)logResponse.StatusCode == 200 || logBody.Contains("EXTERNAL-LOG-SECRET", StringComparison.Ordinal))
+            throw new Exception($"External log directory became web reachable: {logProbe}");
+    }
+
+        if (fileSymlinkCreated)
     {
         using var linkedFile = await client.GetAsync("/assets/linked.txt");
         if ((int)linkedFile.StatusCode == 200)
@@ -406,6 +426,7 @@ finally
     await app.DisposeAsync();
     Directory.Delete(root, recursive: true);
     if (Directory.Exists(outsideRoot)) Directory.Delete(outsideRoot, recursive: true);
+    if (Directory.Exists(externalLogRoot)) Directory.Delete(externalLogRoot, recursive: true);
 }
 
 static int GetFreeTcpPort()
