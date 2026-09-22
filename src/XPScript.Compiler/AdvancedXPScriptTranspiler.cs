@@ -79,6 +79,7 @@ internal sealed class AdvancedXPScriptTranspiler
     private string? _currentClass;
     private string? _currentProcedure;
     private string? _currentReturnType;
+    private string? _currentReturnObjectClass;
     private string? _currentProperty;
     private ProcedureKind _procedureKind;
     private int _indent;
@@ -205,6 +206,7 @@ internal static class LSForAllRuntime
         _currentClass = null;
         _currentProcedure = null;
         _currentReturnType = null;
+        _currentReturnObjectClass = null;
         _currentProperty = null;
         _procedureKind = ProcedureKind.None;
         _variableTypes.Clear();
@@ -495,6 +497,7 @@ internal static class LSForAllRuntime
 
         _currentProcedure = nameFn;
         _currentReturnType = returnType;
+        _currentReturnObjectClass = _classes.ContainsKey(xpscriptReturnType) ? xpscriptReturnType : null;
         _procedureKind = ProcedureKind.Function;
         _variableTypes.Clear();
         _objectVariables.Clear();
@@ -542,6 +545,7 @@ internal static class LSForAllRuntime
     {
         _currentProcedure = null;
         _currentReturnType = null;
+        _currentReturnObjectClass = null;
         _currentProperty = null;
         _procedureKind = ProcedureKind.None;
         _variableTypes.Clear();
@@ -841,9 +845,15 @@ internal static class LSForAllRuntime
     {
         var match = Regex.Match(line, @"^Set\s+([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
         if (!match.Success) return false;
-        var lhsRaw = match.Groups[1].Value; var lhs = TransformObjectReferenceTarget(lhsRaw);
+        var lhsRaw = match.Groups[1].Value;
+        var functionResultClass = _procedureKind == ProcedureKind.Function
+            && lhsRaw.Equals(_currentProcedure, StringComparison.OrdinalIgnoreCase)
+            && _currentReturnObjectClass is not null
+                ? _currentReturnObjectClass
+                : null;
+        var lhs = functionResultClass is not null ? "__result" : TransformObjectReferenceTarget(lhsRaw);
         if (lhs is null) throw new CompilerException($"Set target is not an object reference: {lhsRaw}");
-        var targetClass = ResolveObjectReferenceClass(lhsRaw) ?? throw new CompilerException($"Cannot determine object type for Set target: {lhsRaw}");
+        var targetClass = functionResultClass ?? ResolveObjectReferenceClass(lhsRaw) ?? throw new CompilerException($"Cannot determine object type for Set target: {lhsRaw}");
         var rhsRaw = match.Groups[2].Value.Trim();
         if (rhsRaw.Equals("Nothing", StringComparison.OrdinalIgnoreCase)) { Write(sb, $"{lhs} = new LSRef<{targetClass}>();"); return true; }
 
@@ -854,8 +864,27 @@ internal static class LSForAllRuntime
             Write(sb, $"{lhs} = LSRef<{className}>.Create(new {className}({TransformArgumentList(newMatch.Groups[2].Value)}));"); return true;
         }
 
+        // Public XPJson ToObject(contract) returns the typed model represented by the
+        // contract argument. Native XPJson values are Variant-backed at this boundary, so
+        // preserve Set semantics by wrapping the converted CLR object in the target LSRef.
+        var jsonToObject = Regex.Match(
+            rhsRaw,
+            @"^(.+)\.ToObject\s*\(\s*([A-Za-z_]\w*)\s*\)\s*$",
+            RegexOptions.IgnoreCase);
+        if (jsonToObject.Success)
+        {
+            var contractName = jsonToObject.Groups[2].Value;
+            if (_objectVariables.TryGetValue(contractName, out var contractClass)
+                && contractClass.Equals(targetClass, StringComparison.OrdinalIgnoreCase))
+            {
+                var converted = TransformExpression(rhsRaw);
+                Write(sb, $"{lhs} = LSRef<{targetClass}>.Create(({targetClass}){converted});");
+                return true;
+            }
+        }
+
         var rhs = TransformObjectReferenceTarget(rhsRaw);
-        if (rhs is null) throw new CompilerException("Set requires Nothing, New Class(...), or another object reference.");
+        if (rhs is null) throw new CompilerException("Set requires Nothing, New Class(...), typed XPJson.ToObject(...), or another object reference.");
         Write(sb, $"{lhs} = {rhs};"); return true;
     }
 
@@ -952,7 +981,7 @@ internal static class LSForAllRuntime
 
     private (string Name, string XPScriptType, bool IsList, bool IsByRef) ParseArgumentDeclaration(string raw)
     {
-        var match = Regex.Match(raw, @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(?:(List))?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
+        var match = Regex.Match(raw, @"^(?:\[(?:FromRoute|FromQuery|FromBody|FromHeader)(?::(?:\""[^\""]+\""|[^\]]+))?\]\s*)?(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(?:(List))?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
         if (!match.Success) throw new CompilerException($"Unsupported argument declaration: {raw}");
         return (match.Groups[2].Value, string.IsNullOrWhiteSpace(match.Groups[4].Value) ? "Variant" : match.Groups[4].Value, !string.IsNullOrWhiteSpace(match.Groups[3].Value), match.Groups[1].Value.Equals("ByRef", StringComparison.OrdinalIgnoreCase));
     }
