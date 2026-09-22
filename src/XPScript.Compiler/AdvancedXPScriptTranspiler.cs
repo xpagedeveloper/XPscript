@@ -710,7 +710,7 @@ internal static class LSForAllRuntime
         throw new CompilerException($"Unsupported statement: {line}");
     }
 
-    private static List<DiagnosticProperty>? ParserMetadata(string message, string line)
+    private static List<CompileDiagnosticProperty>? ParserMetadata(string message, string line)
     {
         if (message.StartsWith("Unsupported statement:", StringComparison.Ordinal))
             return [new() { Name = "foundToken", Value = line }, new() { Name = "expectedConstruct", Value = "supported XPScript statement" }];
