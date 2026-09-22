@@ -671,6 +671,18 @@ End Class
     if (!declarationRewrite.Contains("Function ToBase64(", StringComparison.Ordinal))
         throw new Exception("Shared call rewriter captured a function declaration.");
 
+    foreach (var declarationForm in new[]
+    {
+        "Public Static Function ToBase64(value As String) As String",
+        "Private Property Get ToBase64(index As Integer) As String",
+        "Public Declare Function ToBase64 Lib \"native\" (value As String) As String"
+    })
+    {
+        var formRewrite = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(declarationForm, "ToBase64", "Runtime.ToBase64");
+        if (!formRewrite.Contains("ToBase64(", StringComparison.Ordinal) || formRewrite.Contains("Runtime.ToBase64(", StringComparison.Ordinal))
+            throw new Exception("Shared call rewriter captured declaration form: " + declarationForm);
+    }
+
     Console.WriteLine("PREPROCESSOR-SHARED-CALL-REWRITE-SCOPE=OK");
 }
 
