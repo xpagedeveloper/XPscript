@@ -268,7 +268,7 @@ internal sealed class CoreCompatibilityTranspiler
             }
             else
             {
-                output.AddRange(TransformProcedure(trimmed, body, proc, currentClass, sourceName));
+                output.AddRange(TransformProcedure(trimmed, body, proc, currentClass, sourceName, i + 2));
                 output.Add(lines[j]);
             }
             i = j;
@@ -287,7 +287,7 @@ internal sealed class CoreCompatibilityTranspiler
         return ParseProcedureHeader(line, className);
     }
 
-    private IEnumerable<string> TransformProcedure(string header, List<string> body, ProcedureInfo proc, string? className, string sourceName)
+    private IEnumerable<string> TransformProcedure(string header, List<string> body, ProcedureInfo proc, string? className, string sourceName, int bodyStartLine)
     {
         var output = new List<string>();
         var transformedHeader = TransformProcedureHeader(header, proc);
@@ -309,7 +309,7 @@ internal sealed class CoreCompatibilityTranspiler
         var staticNames = DiscoverStaticLocals(body, proc, className, arrays, scalarTypes);
 
         var common = TransformCommonBody(body, proc, className, proc.IsStatic);
-        var withAndSelect = TransformWithAndSelect(common, sourceName);
+        var withAndSelect = TransformWithAndSelect(common, sourceName, bodyStartLine);
 
         foreach (var originalLine in withAndSelect)
         {
@@ -433,7 +433,7 @@ internal sealed class CoreCompatibilityTranspiler
         return result;
     }
 
-    private List<string> TransformWithAndSelect(IEnumerable<string> lines, string sourceName)
+    private List<string> TransformWithAndSelect(IEnumerable<string> lines, string sourceName, int bodyStartLine)
     {
         var result = new List<string>();
         var withStack = new Stack<string>();
@@ -455,7 +455,7 @@ internal sealed class CoreCompatibilityTranspiler
             }
             if (Regex.IsMatch(line, @"^End\s+With$", RegexOptions.IgnoreCase))
             {
-                if (withStack.Count == 0) throw SyntaxFailure("Unexpected End With.", sourceName, lineIndex + 1, raw, "With statement", "End With");
+                if (withStack.Count == 0) throw SyntaxFailure("Unexpected End With.", sourceName, bodyStartLine + lineIndex, raw, "With statement", "End With");
                 withStack.Pop();
                 continue;
             }
@@ -494,8 +494,8 @@ internal sealed class CoreCompatibilityTranspiler
             result.Add(indent + rewritten);
         }
 
-        if (withStack.Count > 0) throw SyntaxFailure("Missing End With.", sourceName, Math.Max(1, sourceLines.Count), sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End With", "end-of-file");
-        if (selectStack.Count > 0) throw SyntaxFailure("Missing End Select.", sourceName, Math.Max(1, sourceLines.Count), sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End Select", "end-of-file");
+        if (withStack.Count > 0) throw SyntaxFailure("Missing End With.", sourceName, Math.Max(bodyStartLine, bodyStartLine + sourceLines.Count - 1), sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End With", "end-of-file");
+        if (selectStack.Count > 0) throw SyntaxFailure("Missing End Select.", sourceName, Math.Max(bodyStartLine, bodyStartLine + sourceLines.Count - 1), sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End Select", "end-of-file");
         return result;
     }
 
