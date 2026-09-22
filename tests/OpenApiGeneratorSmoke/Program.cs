@@ -1096,12 +1096,12 @@ try
     // Client-only generated sources do not export web routes. Compile them through the
     // language transpiler directly; XpsWebCompiler intentionally requires at least one route.
     _ = new XPScriptTranspiler().TranspileRestricted(
-        crossScopeRuntimeNames.Source,
+        crossScopeRuntimeNames.Source + "\nSub Main()\nEnd Sub\n",
         crossScopeRuntimePath,
         CompilerDriver.CurrentRuntimeIdentifier(),
         [root]);
     _ = new XPScriptTranspiler().TranspileRestricted(
-        compilerReservedClient.Source,
+        compilerReservedClient.Source + "\nSub Main()\nEnd Sub\n",
         compilerReservedPath,
         CompilerDriver.CurrentRuntimeIdentifier(),
         [root]);
