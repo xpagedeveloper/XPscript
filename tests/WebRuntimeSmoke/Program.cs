@@ -83,6 +83,31 @@ try
     if (cookieInjectionResponse.Headers.ContainsKey("Set-Cookie"))
         throw new Exception("Rejected cookie injection mutated response headers.");
 
+    // Security policy defaults are shared across Kestrel, CGI and FastCGI.
+    var htmlSecurityResponse = new XpsWebResponse { ContentType = "text/html; charset=utf-8" };
+    htmlSecurityResponse.Complete();
+    var defaultCsp = htmlSecurityResponse.Headers["Content-Security-Policy"].Single();
+    if (!defaultCsp.Contains("default-src 'self'", StringComparison.Ordinal) ||
+        !defaultCsp.Contains("object-src 'none'", StringComparison.Ordinal) ||
+        !defaultCsp.Contains("frame-ancestors 'none'", StringComparison.Ordinal))
+        throw new Exception("Default HTML Content-Security-Policy is missing required restrictions.");
+    if (htmlSecurityResponse.Headers["Permissions-Policy"].Single() != "camera=(), microphone=(), geolocation=()")
+        throw new Exception("Default Permissions-Policy mismatch.");
+
+    var nonHtmlSecurityResponse = new XpsWebResponse { ContentType = "application/json; charset=utf-8" };
+    nonHtmlSecurityResponse.Complete();
+    if (nonHtmlSecurityResponse.Headers.ContainsKey("Content-Security-Policy"))
+        throw new Exception("Content-Security-Policy was unexpectedly applied to a non-HTML response.");
+    if (!nonHtmlSecurityResponse.Headers.ContainsKey("Permissions-Policy"))
+        throw new Exception("Permissions-Policy was not applied to a non-HTML response.");
+
+    var wasmSecurityResponse = new XpsWebResponse { ContentType = "text/html; charset=utf-8" };
+    XpsWebSecurity.ApplyBrowserWasmResponseSecurityHeaders(wasmSecurityResponse);
+    var wasmCsp = wasmSecurityResponse.Headers["Content-Security-Policy"].Single();
+    if (!wasmCsp.Contains("'wasm-unsafe-eval'", StringComparison.Ordinal) ||
+        !wasmCsp.Contains("object-src 'none'", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM Content-Security-Policy mismatch.");
+
     var response = new XpsWebResponse();
     response.SetHeader("X-Test", "ok");
     response.Write("hello");
