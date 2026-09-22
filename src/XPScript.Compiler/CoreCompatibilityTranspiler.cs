@@ -204,7 +204,13 @@ internal sealed class CoreCompatibilityTranspiler
         {
             var clean = Regex.Replace(part.Trim(), @"\b(LMBCS|Unicode)\b", "", RegexOptions.IgnoreCase).Trim();
             var match = Regex.Match(clean, @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(\(\))?\s*(List)?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
-            if (!match.Success) throw SyntaxFailure("Unsupported parameter declaration: " + part.Trim(), sourceName, lineNumber, sourceLine ?? raw, "parameter declaration", part.Trim());
+            if (!match.Success)
+            {
+                var foundToken = part.Trim();
+                if (foundToken.StartsWith("Optional ", StringComparison.OrdinalIgnoreCase))
+                    foundToken = foundToken["Optional ".Length..].TrimStart();
+                throw SyntaxFailure("Unsupported parameter declaration: " + part.Trim(), sourceName, lineNumber, sourceLine ?? raw, "parameter declaration", foundToken);
+            }
             var mode = match.Groups[1].Value;
             var byRef = mode.Equals("ByRef", StringComparison.OrdinalIgnoreCase) || (treatOmittedAsByRef && !mode.Equals("ByVal", StringComparison.OrdinalIgnoreCase));
             var name = match.Groups[2].Value;
