@@ -329,12 +329,12 @@ internal sealed class TypeCoercionPreprocessor
         {
             if (code.Length == 0) return;
             var text = code.ToString();
-            text = Regex.Replace(text, @"(?<![\w.])IsNull\s*\(", "XPScriptNullRuntime.IsNull(", RegexOptions.IgnoreCase);
-            text = Regex.Replace(text, @"(?<![\w.])IsEmpty\s*\(", "XPScriptNullRuntime.IsEmpty(", RegexOptions.IgnoreCase);
-            text = Regex.Replace(text, @"(?<![\w.])IsObject\s*\(", "XPScriptNullRuntime.IsObject(", RegexOptions.IgnoreCase);
-            text = Regex.Replace(text, @"(?<![\w.])IsScalar\s*\(", "XPScriptNullRuntime.IsScalar(", RegexOptions.IgnoreCase);
-            text = Regex.Replace(text, @"(?<![\w.])DataType\s*\(", "XPScriptNullRuntime.DataType(", RegexOptions.IgnoreCase);
-            text = Regex.Replace(text, @"(?<![\w.])TypeName\s*\(", "XPScriptNullRuntime.TypeName(", RegexOptions.IgnoreCase);
+            text = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(text, "IsNull", "XPScriptNullRuntime.IsNull");
+            text = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(text, "IsEmpty", "XPScriptNullRuntime.IsEmpty");
+            text = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(text, "IsObject", "XPScriptNullRuntime.IsObject");
+            text = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(text, "IsScalar", "XPScriptNullRuntime.IsScalar");
+            text = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(text, "DataType", "XPScriptNullRuntime.DataType");
+            text = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(text, "TypeName", "XPScriptNullRuntime.TypeName");
             text = Regex.Replace(text, @"(?<![\w.])Null\b", "XPScriptNullRuntime.NullValue", RegexOptions.IgnoreCase);
             output.Append(text);
             code.Clear();

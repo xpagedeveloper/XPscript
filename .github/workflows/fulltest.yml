@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, compiler-command-member-scope]
   workflow_dispatch:
 
 permissions:

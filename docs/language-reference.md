@@ -20,6 +20,14 @@ Every row has a command title, syntax, parameter description, short behavior des
 - [Native and managed interop](#native-and-managed-interop)
 - [Compiler CLI](#compiler-cli)
 
+## Identifier scopes and reserved names
+
+XPScript resolves identifiers by syntactic scope. Language keywords such as `If`, `Class`, `Function`, and `End` are syntax and cannot be reused where the grammar requires an identifier. Names beginning with `__` are reserved for compiler-generated state. Runtime type names are reserved only for declarations that would collide with generated/runtime types, and runtime value identifiers such as `Application` and `Body` are reserved where they denote the built-in runtime value.
+
+Runtime function names are not globally reserved identifiers. An unqualified call such as `JsonParse(text)`, `SHA256(text)`, or `StrLeftBack(text, 2)` can resolve to the corresponding runtime function, while the same spelling remains legal for a class member when the grammar permits it. Receiver syntax always belongs to the receiver's scope, so `item.JsonParse(...)` is a member call and must not be rewritten as the global `JsonParse(...)` function.
+
+This distinction also applies to properties, methods, parameters, locals, enum members, and symbols in different classes: sharing a spelling with a runtime API does not by itself reserve that spelling. Only actual syntax keywords and compiler/runtime names with a real declaration-scope collision are restricted.
+
 ## Declarations and procedures
 
 | Command | Syntax | Parameters | Description | Example |
