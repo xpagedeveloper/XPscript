@@ -149,10 +149,10 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 ## Routing and runtime behavior
 
 - [ ] Add explicit JSON parser hardening route to the generated test application so malformed, deeply nested, duplicate-key and oversized JSON can be tested at the XPScript API layer.
-- [ ] Verify malformed JSON fails without stack traces or filesystem paths.
-- [ ] Verify deeply nested JSON is bounded.
-- [ ] Verify oversized JSON is bounded by MaxRequestBodySize.
-- [ ] Verify duplicate JSON property behavior is deterministic and documented.
+- [x] Verify malformed JSON fails without stack traces or filesystem paths. REST integration regression returns 400 and rejects stack trace/source-path leakage; verified in run #133.
+- [x] Verify deeply nested JSON is bounded. REST integration regression rejects JSON deeper than the parser limit with 400; verified in run #133.
+- [x] Verify oversized JSON is bounded by MaxRequestBodySize. REST request-body parsing rejects payloads above the configured 4 MiB JSON limit with 400; transport-level MaxRequestBodySize remains covered separately; verified in run #133.
+- [x] Verify duplicate JSON property behavior is deterministic and documented. System.Text.Json last-value-wins behavior is asserted through the XPScript REST binding pipeline; verified in run #133.
 
 - [ ] Verify malformed UTF-8 paths fail safely.
 - [ ] Verify non-ASCII paths and query strings.
@@ -161,7 +161,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [ ] Verify query parser behavior with duplicate keys.
 - [x] Verify extreme query-string sizes. Oversized query/request-line probe verified with 414 in run #42.
 - [ ] Verify form parser abuse cases.
-- [ ] Verify JSON parser malformed and deeply nested input.
+- [x] Verify JSON parser malformed and deeply nested input. Covered through the REST integration pipeline; verified in run #133.
 - [ ] Verify multipart parser malformed boundaries and oversized fields.
 - [ ] Verify unexpected methods cannot reach a route with the wrong method attribute.
 - [ ] Verify error responses never expose stack traces.
