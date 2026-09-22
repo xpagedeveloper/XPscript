@@ -23,6 +23,7 @@ End Sub
 
 try
 {
+    await RunDuplicateCookieRegression(root, scriptPath);
     await RunAdapterRegression(root, scriptPath);
     await RunHeadRegression(root, scriptPath);
     await RunExecutableRegression(root, scriptPath);
@@ -33,6 +34,19 @@ try
 finally
 {
     Directory.Delete(parent, recursive: true);
+}
+
+static async Task RunDuplicateCookieRegression(string root, string scriptPath)
+{
+    var environment = BaseEnvironment(root, scriptPath);
+    environment["HTTP_COOKIE"] = "client=first; client=second";
+    var server = new XpsServerInfo("cgi-duplicate-cookie", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new EchoHandler());
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(Stream.Null, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    if (!text.EndsWith("GET|||first|", StringComparison.Ordinal))
+        throw new Exception("CGI duplicate cookie handling was not deterministic: " + text);
 }
 
 static async Task RunAdapterRegression(string root, string scriptPath)
