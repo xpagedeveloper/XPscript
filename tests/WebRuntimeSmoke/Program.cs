@@ -94,6 +94,39 @@ try
     if (htmlSecurityResponse.Headers["Permissions-Policy"].Single() != "camera=(), microphone=(), geolocation=()")
         throw new Exception("Default Permissions-Policy mismatch.");
 
+    // Run JSON request hardening regressions early because this parser is shared by all web hosts.
+    XpsWebRequest JsonRequest(string body, string contentType = "application/json") => new(
+        "POST", "/json-hardening", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Content-Type"] = new[] { contentType }
+        },
+        contentType, System.Text.Encoding.UTF8.GetByteCount(body),
+        System.Text.Encoding.UTF8.GetBytes(body),
+        "localhost", "https", "127.0.0.1", "HTTP/1.1", new Dictionary<string, string>());
+
+    var validJsonBody = new XpsRequestBody(JsonRequest("{\"value\":1}"));
+    var validJson = validJsonBody.Json<Dictionary<string, int>>();
+    if (validJson["value"] != 1) throw new Exception("Valid JSON request body was not parsed.");
+
+    var malformedJsonBody = new XpsRequestBody(JsonRequest("{\"value\":"));
+    var malformedJson = AssertThrows<XpsRestBindingException>(() => malformedJsonBody.Json<Dictionary<string, int>>());
+    if (malformedJson.Message != "Request body contains invalid JSON.")
+        throw new Exception("Malformed JSON exposed an unexpected parser error.");
+
+    var deepJson = new string('[', 65) + "0" + new string(']', 65);
+    AssertThrows<XpsRestBindingException>(() => new XpsRequestBody(JsonRequest(deepJson)).Json<object>());
+
+    var duplicateJson = new XpsRequestBody(JsonRequest("{\"value\":1,\"value\":2}")).Json<Dictionary<string, int>>();
+    if (duplicateJson["value"] != 2)
+        throw new Exception("Duplicate JSON property behavior changed; System.Text.Json last-value-wins is expected.");
+
+    var oversizedJson = "{\"value\":\"" + new string('x', 1024) + "\"}";
+    var oversizedBody = new XpsRequestBody(JsonRequest(oversizedJson));
+    var oversizedError = AssertThrows<XpsRestBindingException>(() => oversizedBody.Json<Dictionary<string, string>>(128));
+    if (!oversizedError.Message.Contains("exceeds the configured 128 byte limit", StringComparison.Ordinal))
+        throw new Exception("Oversized JSON body did not fail with the bounded request error.");
+
     var nonHtmlSecurityResponse = new XpsWebResponse { ContentType = "application/json; charset=utf-8" };
     nonHtmlSecurityResponse.Complete();
     if (nonHtmlSecurityResponse.Headers.ContainsKey("Content-Security-Policy"))
