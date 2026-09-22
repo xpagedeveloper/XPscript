@@ -11,7 +11,7 @@ if (args.Length != 1)
 var root = Path.GetFullPath(args[0]);
 var goldenFixtures = new (string File, string? Target, string DiagnosticCode, string Category, string[] Properties)[]
 {
-    ("core-unexpected-end-select-error.xps", null, "XPS1012", "syntax", ["expectedConstruct", "foundToken"]),
+    ("core-invalid-deftype-range-error.xps", null, "XPS1012", "syntax", ["expectedConstruct", "foundToken"]),
     ("browser-wasm-target-ai-error.xps", "browser-wasm", "XPS3001", "target", ["allowedTargets", "symbol", "target"]),
     ("null-integer-parameter-error.xps", null, "XPS2003", "type-checking", ["actualType", "expectedType", "parameter"])
 };
