@@ -281,11 +281,11 @@ sealed class JsonBodyHandler : IXpsWebRequestHandler
     {
         try
         {
-            _ = context.Body.Json<Dictionary<string, string>>();
+            _ = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(context.Request.Body.Span);
             context.Response.StatusCode = 200;
             context.Response.Write("OK");
         }
-        catch (XpsRestBindingException)
+        catch (System.Text.Json.JsonException)
         {
             context.Response.StatusCode = 400;
             context.Response.Write("Invalid JSON");
