@@ -53,17 +53,38 @@ public static class CompilerSymbolCatalog
     public static IReadOnlyCollection<CompilerSymbolDefinition> All =>
         Definitions.Values.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();
 
-    public static IReadOnlyList<CompilerSymbolDefinition> Candidates(string requestedName, int limit = 5)
+    public static IReadOnlyList<CompilerSymbolDefinition> Candidates(string requestedName, int limit = 5) =>
+        Candidates(requestedName, receiverType: null, limit);
+
+    public static IReadOnlyList<CompilerSymbolDefinition> Candidates(string requestedName, string? receiverType, int limit = 5)
     {
         if (string.IsNullOrWhiteSpace(requestedName) || limit <= 0) return [];
         var requested = requestedName.Trim();
-        return Definitions.Values
-            .Select(definition => (Definition: definition, Distance: EditDistance(requested, definition.Name)))
+        var receiver = receiverType?.Trim();
+        var candidates = Definitions.Values.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(receiver))
+        {
+            var prefix = receiver + ".";
+            candidates = candidates.Where(definition => definition.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return candidates
+            .Select(definition =>
+            {
+                var candidateName = MemberName(definition.Name);
+                return (Definition: definition, Distance: EditDistance(requested, candidateName));
+            })
             .OrderBy(item => item.Distance)
             .ThenBy(item => item.Definition.Name, StringComparer.Ordinal)
             .Take(Math.Min(limit, 10))
             .Select(item => item.Definition)
             .ToArray();
+    }
+
+    private static string MemberName(string name)
+    {
+        var separator = name.LastIndexOf('.');
+        return separator >= 0 && separator + 1 < name.Length ? name[(separator + 1)..] : name;
     }
 
     private static int EditDistance(string left, string right)
