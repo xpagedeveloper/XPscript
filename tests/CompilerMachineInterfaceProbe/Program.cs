@@ -187,7 +187,7 @@ Require(unsupportedParameterDiagnostic.Category == "syntax", "unsupported parame
 Require(unsupportedParameterDiagnostic.File == "core-unsupported-parameter-error.xps", "unsupported parameter file");
 Require(unsupportedParameterDiagnostic.Line == 1 && unsupportedParameterDiagnostic.Position > 0, "unsupported parameter source location");
 Require(unsupportedParameterDiagnostic.EndLine == 1 && unsupportedParameterDiagnostic.EndColumn > unsupportedParameterDiagnostic.Position, "unsupported parameter source range");
-Require(unsupportedParameterDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "Optional value As Integer") == true, "unsupported parameter found token");
+Require(unsupportedParameterDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "ByVal ByRef value As Integer") == true, "unsupported parameter found token");
 Require(unsupportedParameterDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "parameter declaration") == true, "unsupported parameter expected construct");
 
 var corePhysicalRangeCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-unexpected-end-with-error.xps"));
