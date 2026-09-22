@@ -72,6 +72,7 @@ A runtime/global function name must not become globally reserved merely because 
  retains its specialized `#fileNo` syntax with member exclusion, and Property Let is a declaration-only compatibility rewrite.
   - Audited TypeDeclarationPreprocessor, XPScriptTranspiler helper rewrites, and UIForm generated-code postprocessors: these operate on declarations, tracked list variables, compiler-generated labels, or generated C# runtime structure rather than user-level unqualified command/function resolution.
   - Audited ModuleGlobals, ModuleObjectGlobals, and IndexedProperty preprocessors: module array/object rewrites are symbol-tracked and member-aware, while indexed-property lowering intentionally preserves an optional receiver and rewrites it to generated getter/setter members.
+  - Audited JsonHttpCompatibility, NotesMimeType, NotesDocumentSendWarning, and ServerSideMetadata preprocessors: these are tracked-type/receiver compatibility handling or metadata stripping and do not rewrite unqualified global command/function names.
 ## 4. Regression tests
 
 - [x] Add a class property whose name matches a runtime/global function.
