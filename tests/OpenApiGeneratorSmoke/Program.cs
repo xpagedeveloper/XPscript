@@ -356,7 +356,7 @@ paths:
       responses:
         '204': { description: ok }
 """, "optional.yaml").Source;
-foreach (var marker in new[] { "Optional Q As Variant = Nothing", "Optional Limit As Variant = Nothing", "Optional XTrace As Variant = Nothing", "Optional payload As Variant = Nothing", "If Not Q Is Nothing Then url = Http.AddQuery", "If Not XTrace Is Nothing Then Call request.SetHeader", "If Not payload Is Nothing Then" })
+foreach (var marker in new[] { "Optional Q As Variant = Nothing", "Optional Limit As Variant = Nothing", "Optional XTrace As Variant = Nothing", "Optional Payload As Variant = Nothing", "If Not Q Is Nothing Then url = Http.AddQuery", "If Not XTrace Is Nothing Then Call request.SetHeader", "If Not payload Is Nothing Then" })
     if (!optionalClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated optional OpenAPI values are missing marker: " + marker);
 
 var arrayClient = new XpsOpenApiClientGenerator().Generate("""
@@ -603,12 +603,12 @@ paths:
 if (!parameterSuffixSource.Contains("Optional ApiEnd As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiKey As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiKey2 As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("Optional url As Variant", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Optional Url As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional payload As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Dim ApiUrl As String", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiPayload As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("Http.AddQuery(ApiUrl, \"end\", ApiEnd)", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("ApiRequest.SetHeader(\"api key\", CStr(ApiKey2))", StringComparison.Ordinal))
+    !parameterSuffixSource.Contains("ApiUrl = Http.AddQuery(ApiUrl, \"end\", ApiEnd)", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("request.SetHeader(\"api key\", CStr(ApiKey2))", StringComparison.Ordinal))
     throw new Exception("OpenAPI parameter identifiers must preserve names unless a real procedure-scope collision requires disambiguation. Generated source:\n" + parameterSuffixSource);
 
 var generatedTypeCollisionRejected = false;
