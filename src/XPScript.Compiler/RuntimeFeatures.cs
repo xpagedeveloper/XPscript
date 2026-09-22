@@ -12,7 +12,10 @@ public readonly record struct RuntimeFeatures(
     bool MsSql,
     bool Attachments,
     bool Ui,
-    bool Ai)
+    bool Ai,
+    bool Archive = false,
+    bool Spreadsheet = false,
+    bool NetworkTools = false)
 {
     public bool RequiresHttp => Http || HttpDatabase || Attachments || Ui;
     public bool RequiresJson => Json || JsonSchema || RequiresHttp || Database || Attachments || Ui;
@@ -25,6 +28,9 @@ public readonly record struct RuntimeFeatures(
         if (Ai) yield return ("XPAi", "server target", "Keep AI credentials and requests on the server.");
         if (Sqlite) yield return ("XPDBSQLite", "server or desktop target", null);
         if (MsSql) yield return ("XPDbMsSql", "server or desktop target", null);
+        if (Archive) yield return ("Archive", "server or desktop target", "Archive file-path operations are not available for browser-wasm targets yet.");
+        if (Spreadsheet) yield return ("XPSpreadsheet", "server or desktop target", null);
+        if (NetworkTools) yield return ("NetworkTools", "server or desktop target", "Browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
     }
 
     public static RuntimeFeatures Detect(string source)
@@ -62,6 +68,9 @@ public readonly record struct RuntimeFeatures(
             MsSql: PreprocessorFeatureGate.ContainsTypeReference(code, "XPDbMsSql"),
             Attachments: attachments,
             Ui: PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm", "UIListView"),
-            Ai: PreprocessorFeatureGate.ContainsAny(code, "XPAi", "XPAiResponse", "AITool"));
+            Ai: PreprocessorFeatureGate.ContainsAny(code, "XPAi", "XPAiResponse", "AITool"),
+            Archive: PreprocessorFeatureGate.ContainsTypeReference(code, "Archive", "ArchiveEntry"),
+            Spreadsheet: PreprocessorFeatureGate.ContainsTypeReference(code, "XPSpreadsheet", "XPWorksheet", "XPCell"),
+            NetworkTools: PreprocessorFeatureGate.ContainsTypeReference(code, "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo"));
     }
 }
