@@ -54,6 +54,7 @@ VerifyRuntimeFunctionMemberScope();
 VerifyRuntimeNameScopeMatrix();
 VerifyReservedIdentifierScope();
 VerifyRuntimeValueIdentifierScope();
+VerifyJsonNameMetadata();
 VerifySharedCallDetectionScope();
 VerifySharedCallRewriteScope();
 VerifyOperatorArrayCallScope();
@@ -787,4 +788,24 @@ End Sub
         throw new Exception("Dollar-suffixed Join$ call no longer resolves to the operator/array runtime.");
 
     Console.WriteLine("PREPROCESSOR-OPERATOR-ARRAY-CALL-SCOPE=OK");
+}
+
+
+void VerifyJsonNameMetadata()
+{
+    const string source = """
+Class AliasPayload
+    [JsonName("class")]
+    Public Class_2 As String
+    [JsonName("api-key")]
+    Public ApiKey As String
+End Class
+Sub Main()
+End Sub
+""";
+    var generated = transpiler.Transpile(source, "json-name-metadata.xps", "win-x64");
+    if (!generated.Contains("[System.Text.Json.Serialization.JsonPropertyName(\"class\")]", StringComparison.Ordinal)
+        || !generated.Contains("[System.Text.Json.Serialization.JsonPropertyName(\"api-key\")]", StringComparison.Ordinal))
+        throw new Exception("JsonName metadata was not emitted as JsonPropertyName attributes.");
+    Console.WriteLine("PREPROCESSOR-JSON-NAME-METADATA=OK");
 }
