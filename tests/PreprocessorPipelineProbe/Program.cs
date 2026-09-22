@@ -57,6 +57,7 @@ VerifyRuntimeValueIdentifierScope();
 VerifySharedCallDetectionScope();
 VerifySharedCallRewriteScope();
 VerifyOperatorArrayCallScope();
+VerifyMigratedRuntimeFamilyCallScope();
 
 void Measure(string label, string source, int iterations)
 {
@@ -673,6 +674,73 @@ End Class
     Console.WriteLine("PREPROCESSOR-SHARED-CALL-REWRITE-SCOPE=OK");
 }
 
+
+
+void VerifyMigratedRuntimeFamilyCallScope()
+{
+    const string source = """
+Class MigratedRuntimeNames
+    Public Function FileExists(value As String) As String
+        FileExists = value
+    End Function
+
+    Public Function FullTrim(value As String) As String
+        FullTrim = value
+    End Function
+
+    Public Function JsonDecode(value As String) As String
+        JsonDecode = value
+    End Function
+
+    Public Function XmlEscape(value As String) As String
+        XmlEscape = value
+    End Function
+
+    Public Function CsvEscape(value As String) As String
+        CsvEscape = value
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New MigratedRuntimeNames
+    Print item.FileExists("member")
+    Print item.FullTrim("member")
+    Print item.JsonDecode("member")
+    Print item.XmlEscape("member")
+    Print item.CsvEscape("member")
+    Print FileExists("global")
+    Print FullTrim(" global ")
+    Print JsonDecode("{""ok"":true}")
+    Print XmlEscape("<global>")
+    Print CsvEscape("global")
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "preprocessor-migrated-runtime-family-call-scope.xps", "win-x64");
+    foreach (var marker in new[]
+    {
+        "item.FileExists(\"member\")",
+        "item.FullTrim(\"member\")",
+        "item.JsonDecode(\"member\")",
+        "item.XmlEscape(\"member\")",
+        "item.CsvEscape(\"member\")"
+    })
+        if (!generated.Contains(marker, StringComparison.Ordinal))
+            throw new Exception("Migrated runtime family rewriting captured a member call: " + marker);
+
+    foreach (var marker in new[]
+    {
+        "XPCrossPlatformRuntime.FileExists(",
+        "LSHclSelectedRuntime.FullTrim(",
+        "XPScriptNativeJson.Parse(",
+        "XPScriptNativeXml.Escape(",
+        "XPScriptNativeCsv.Escape("
+    })
+        if (!generated.Contains(marker, StringComparison.Ordinal))
+            throw new Exception("Migrated runtime family no longer resolves its unqualified global call: " + marker);
+
+    Console.WriteLine("PREPROCESSOR-MIGRATED-RUNTIME-FAMILY-CALL-SCOPE=OK");
+}
 
 void VerifyOperatorArrayCallScope()
 {
