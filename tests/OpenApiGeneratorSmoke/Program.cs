@@ -303,7 +303,7 @@ paths:
       responses:
         '204': { description: ok }
 """, "collision.yaml").Source;
-if (!collisionClient.Contains("Optional FooBar As Variant", StringComparison.Ordinal) || !collisionClient.Contains("Optional FooBar_2 As Variant", StringComparison.Ordinal))
+if (!collisionClient.Contains("Optional FooBar As Variant", StringComparison.Ordinal) || !collisionClient.Contains("Optional FooBar2 As Variant", StringComparison.Ordinal))
     throw new Exception("Colliding generated parameter identifiers must receive numeric suffixes.");
 
 var modelAliasClient = new XpsOpenApiClientGenerator().Generate("""
@@ -328,7 +328,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Payload' }
 """, "model-alias.yaml").Source;
-foreach (var marker in new[] { "[JsonName(\"class\")]", "Public ApiClass As String", "[JsonName(\"api-key\")]", "Public ApiKey As String", "[JsonName(\"api key\")]", "Public ApiKey_2 As Long", "[JsonName(\"PascalName\")]", "Public PascalName As Boolean" })
+foreach (var marker in new[] { "[JsonName(\"class\")]", "Public ApiClass As String", "[JsonName(\"api-key\")]", "Public ApiKey As String", "[JsonName(\"api key\")]", "Public ApiKey2 As Long", "[JsonName(\"PascalName\")]", "Public PascalName As Boolean" })
     if (!modelAliasClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Model property alias/suffix generation is missing marker: " + marker);
 
 var optionalClient = new XpsOpenApiClientGenerator().Generate("""
@@ -442,10 +442,10 @@ paths:
       responses:
         '204': { description: ok }
 """, "security-collision.yaml").Source;
-if (!securityCollisionSource.Contains("Sub SetHeader_2(", StringComparison.Ordinal) ||
+if (!securityCollisionSource.Contains("Sub SetHeader2(", StringComparison.Ordinal) ||
     !securityCollisionSource.Contains("Sub SetApiKey(", StringComparison.Ordinal) ||
-    !securityCollisionSource.Contains("Sub SetApiKey_2(", StringComparison.Ordinal) ||
-    !securityCollisionSource.Contains("Function SetHeader_3(", StringComparison.Ordinal))
+    !securityCollisionSource.Contains("Sub SetApiKey2(", StringComparison.Ordinal) ||
+    !securityCollisionSource.Contains("Function SetHeader3(", StringComparison.Ordinal))
     throw new Exception("Generated API member collisions must be resolved with deterministic numeric suffixes.");
 
 var keywordEnumMemberRejected = false;
@@ -519,8 +519,8 @@ paths:
               schema: { $ref: '#/components/schemas/api key' }
 """, "colliding-components.yaml");
 if (!collidingComponentClient.Source.Contains("Public Class ApiKey", StringComparison.Ordinal) ||
-    !collidingComponentClient.Source.Contains("Public Class ApiKey_2", StringComparison.Ordinal) ||
-    !collidingComponentClient.Source.Contains("Public ApiKey_2 As ApiKey_2", StringComparison.Ordinal))
+    !collidingComponentClient.Source.Contains("Public Class ApiKey2", StringComparison.Ordinal) ||
+    !collidingComponentClient.Source.Contains("Public ApiKey2 As ApiKey2", StringComparison.Ordinal))
     throw new Exception("Colliding OpenAPI component identifiers must receive numeric suffixes while references preserve the original schema identity.");
 
 var keywordPropertyClient = new XpsOpenApiClientGenerator().Generate("""
@@ -602,11 +602,11 @@ paths:
 """, "parameter-suffix.yaml").Source;
 if (!parameterSuffixSource.Contains("Optional ApiEnd As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiKey As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("Optional ApiKey_2 As Variant", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Optional ApiKey2 As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiUrl As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiPayload As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Http.AddQuery(url, \"end\", ApiEnd)", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("request.SetHeader(\"api key\", CStr(ApiKey_2))", StringComparison.Ordinal))
+    !parameterSuffixSource.Contains("request.SetHeader(\"api key\", CStr(ApiKey2))", StringComparison.Ordinal))
     throw new Exception("OpenAPI parameter identifiers must preserve names unless a real procedure-scope collision requires disambiguation.");
 
 var generatedTypeCollisionRejected = false;
@@ -638,7 +638,7 @@ paths:
       responses:
         '204': { description: ok }
 """, "api-member-collision.yaml").Source;
-if (!apiMemberCollisionSource.Contains("Function SetHeader_2(", StringComparison.Ordinal))
+if (!apiMemberCollisionSource.Contains("Function SetHeader2(", StringComparison.Ordinal))
     throw new Exception("OpenAPI operation names that collide with generated API members must receive a numeric suffix.");
 
 var authMemberCollisionSource = new XpsOpenApiClientGenerator().Generate("""
@@ -690,8 +690,8 @@ paths:
               schema: { $ref: '#/components/schemas/StringValue' }
 """, "scalar-response-collision.yaml").Source;
 if (!scalarResponseCollisionClient.Contains("Public StringValue As StringValue", StringComparison.Ordinal) ||
-    !scalarResponseCollisionClient.Contains("Public StringValue_2 As String", StringComparison.Ordinal) ||
-    !scalarResponseCollisionClient.Contains("result.StringValue_2 = result.Json.ToObject(\"\")", StringComparison.Ordinal))
+    !scalarResponseCollisionClient.Contains("Public StringValue2 As String", StringComparison.Ordinal) ||
+    !scalarResponseCollisionClient.Contains("result.StringValue2 = result.Json.ToObject(\"\")", StringComparison.Ordinal))
     throw new Exception("Scalar response value fields that collide with model response fields must receive a numeric suffix.");
 
 var scalarResponseClient = new XpsOpenApiClientGenerator().Generate("""
@@ -758,8 +758,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/StatusCode' }
 """, "response-collision.yaml").Source;
-if (!responseCollisionClient.Contains("Public StatusCode_2 As StatusCode", StringComparison.Ordinal) ||
-    !responseCollisionClient.Contains("result.StatusCode_2 = result.Json.ToObject(mappedStatusCode)", StringComparison.Ordinal))
+if (!responseCollisionClient.Contains("Public StatusCode2 As StatusCode", StringComparison.Ordinal) ||
+    !responseCollisionClient.Contains("result.StatusCode2 = result.Json.ToObject(mappedStatusCode)", StringComparison.Ordinal))
     throw new Exception("Response model names that collide with reserved response envelope members must receive a numeric suffix.");
 
 var dictionaryClient = new XpsOpenApiClientGenerator().Generate("""
