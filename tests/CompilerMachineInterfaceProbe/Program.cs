@@ -190,6 +190,16 @@ Require(unsupportedParameterDiagnostic.EndLine == 1 && unsupportedParameterDiagn
 Require(unsupportedParameterDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "ByVal ByRef value As Integer") == true, "unsupported parameter found token");
 Require(unsupportedParameterDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "parameter declaration") == true, "unsupported parameter expected construct");
 
+var unexpectedEndSelectCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-unexpected-end-select-error.xps"));
+var unexpectedEndSelectDiagnostic = unexpectedEndSelectCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(unexpectedEndSelectDiagnostic is not null, "unexpected End Select diagnostic");
+Require(unexpectedEndSelectDiagnostic.Category == "syntax", "unexpected End Select category");
+Require(unexpectedEndSelectDiagnostic.File == "core-unexpected-end-select-error.xps", "unexpected End Select file");
+Require(unexpectedEndSelectDiagnostic.Line == 4 && unexpectedEndSelectDiagnostic.Position > 0, $"unexpected End Select source location: actual={unexpectedEndSelectDiagnostic.Line}");
+Require(unexpectedEndSelectDiagnostic.EndLine == 4 && unexpectedEndSelectDiagnostic.EndColumn > unexpectedEndSelectDiagnostic.Position, "unexpected End Select source range");
+Require(unexpectedEndSelectDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "End Select") == true, "unexpected End Select found token");
+Require(unexpectedEndSelectDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "Select Case statement") == true, "unexpected End Select expected construct");
+
 var corePhysicalRangeCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-unexpected-end-with-error.xps"));
 var corePhysicalRangeDiagnostic = corePhysicalRangeCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
 Require(corePhysicalRangeDiagnostic is not null, "core physical range diagnostic");
