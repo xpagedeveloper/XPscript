@@ -132,6 +132,14 @@ public sealed class XpsWebRouteMetadataParser
                     continue;
                 }
 
+                // JsonName is compiler metadata for class members, not web-route metadata.
+                // Preserve it so the compiler/transpiler can consume it after route parsing.
+                if (currentClass is not null && attribute.StartsWith("JsonName(", StringComparison.OrdinalIgnoreCase))
+                {
+                    output.AppendLine(raw);
+                    continue;
+                }
+
                 if (attribute.StartsWith("RoutePrefix:", StringComparison.OrdinalIgnoreCase))
                 {
                     if (currentClass is not null) throw new XpsWebRouteMetadataException("RoutePrefix cannot be declared inside a Class.");
