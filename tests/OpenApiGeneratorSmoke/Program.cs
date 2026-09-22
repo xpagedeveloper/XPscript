@@ -1,3 +1,4 @@
+using XPScript.Compiler;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
