@@ -489,6 +489,8 @@ Require(coreSyntaxDiagnostic.EndLine == coreSyntaxDiagnostic.Line &&
         coreSyntaxDiagnostic.EndColumn > coreSyntaxDiagnostic.Position, "core syntax source range");
 Require(!string.IsNullOrWhiteSpace(coreSyntaxDiagnostic.SourceCode), "core syntax source");
 Require(!string.IsNullOrWhiteSpace(coreSyntaxDiagnostic.MarkedCode), "core syntax marked source");
+Require(coreSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "end-of-file") == true, "core syntax found token");
+Require(coreSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "End Sub or End Function") == true, "core syntax expected construct");
 
 var genericSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "general-unsupported-statement-error.xps"));
 var genericSyntaxDiagnostic = genericSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
@@ -499,6 +501,8 @@ Require(genericSyntaxDiagnostic.EndLine == genericSyntaxDiagnostic.Line &&
         genericSyntaxDiagnostic.EndColumn > genericSyntaxDiagnostic.Position, "generic syntax source range");
 Require(!string.IsNullOrWhiteSpace(genericSyntaxDiagnostic.SourceCode), "generic syntax source");
 Require(!string.IsNullOrWhiteSpace(genericSyntaxDiagnostic.MarkedCode), "generic syntax marked source");
+Require(genericSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "TotallyUnsupportedStatement") == true, "generic syntax found token");
+Require(genericSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "supported XPScript statement") == true, "generic syntax expected construct");
 
 var csvArgumentCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "csv-load-argument-count-error.xps"));
 var csvArgumentDiagnostic = csvArgumentCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1010");
