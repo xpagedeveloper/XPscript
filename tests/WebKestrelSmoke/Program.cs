@@ -93,6 +93,28 @@ var serverInfo = new XpsServerInfo(
     XpsWebHostingMode.Kestrel,
     DateTimeOffset.UtcNow,
     "test");
+
+// Validate configurable response headers before starting the slower Kestrel/Nuclei regressions.
+foreach (var forbiddenHeader in new[] { "Content-Length", "Transfer-Encoding", "Connection", "Keep-Alive", "Upgrade", "Set-Cookie", "Server" })
+{
+    var invalidHeaderOptions = new XpsKestrelOptions
+    {
+        DefaultSecurityHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [forbiddenHeader] = "test"
+        }
+    };
+    AssertThrows<ArgumentException>(() => invalidHeaderOptions.Validate());
+}
+var crlfHeaderOptions = new XpsKestrelOptions
+{
+    DefaultSecurityHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["X-Test"] = "safe\r\nInjected: true"
+    }
+};
+AssertThrows<ArgumentException>(() => crlfHeaderOptions.Validate());
+
 var app = XpsKestrelAdapter.Build(
     options,
     serverInfo,
