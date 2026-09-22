@@ -183,7 +183,7 @@ var goldenFixtures = new (string File, string? Target, string DiagnosticCode, st
 {
     ("core-invalid-deftype-range-error.xps", null, "XPS1012", "syntax", ["expectedConstruct", "foundToken"]),
     ("browser-wasm-target-ai-error.xps", "browser-wasm", "XPS3001", "target", ["allowedTargets", "symbol", "target"]),
-    ("null-integer-parameter-error.xps", null, "XPS2003", "type-checking", ["actualType", "expectedType", "parameter"])
+    ("null-integer-parameter-error.xps", null, "XPS2003", "type", ["actualType", "expectedType", "parameter"])
 };
 foreach (var fixture in goldenFixtures)
 {
