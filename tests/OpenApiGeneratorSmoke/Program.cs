@@ -129,6 +129,34 @@ foreach (var marker in new[]
         throw new Exception("Generated XPScript is missing expected marker: " + marker);
 }
 
+var scopeCollision = generator.Generate("""
+openapi: 3.1.0
+info:
+  title: Scope Collision
+  version: 1.0.0
+components:
+  schemas:
+    CollisionModel:
+      type: object
+      properties:
+        JsonParse: { type: string }
+        StrLeftBack: { type: string }
+paths:
+  /collision:
+    get:
+      operationId: collision
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollisionModel'
+""", "scope-collision.yaml");
+foreach (var marker in new[] { "Public JsonParse As String", "Public StrLeftBack As String" })
+    if (!scopeCollision.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("Generated OpenAPI scope-collision model is missing member: " + marker);
+
 var openApi30 = generator.Generate("""
 openapi: 3.0.3
 info:
@@ -153,6 +181,9 @@ var root = Path.Combine(Path.GetTempPath(), "xps-openapi-generator-smoke-" + Gui
 Directory.CreateDirectory(root);
 try
 {
+    var scopeCollisionPath = Path.Combine(root, "scope-collision.xps");
+    await File.WriteAllTextAsync(scopeCollisionPath, scopeCollision.Source);
+
     var clientPath = Path.Combine(root, "petstore-client.xps");
     await File.WriteAllTextAsync(clientPath, clientResult.Source);
 
@@ -168,6 +199,11 @@ try
         throw new Exception("Generated POST body binding did not match the OpenAPI requestBody.");
 
     var compiler = new XpsWebCompiler();
+    await using (var scopeCollisionUnit = await compiler.CompileAsync(scopeCollisionPath, root))
+    {
+        if (!scopeCollisionUnit.Routes.ContainsKey("EndpointCollision"))
+            throw new Exception("Generated OpenAPI scope-collision XPScript did not compile into the expected REST route.");
+    }
     await using (var unit = await compiler.CompileAsync(sourcePath, root))
     {
         if (!unit.Routes.ContainsKey("EndpointGetPet") || !unit.Routes.ContainsKey("EndpointCreatePet"))
@@ -273,6 +309,7 @@ try
     Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
     Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
     Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
+    Console.WriteLine("OPENAPI-SCOPE-COLLISION-COMPILE=OK");
     Console.WriteLine("OPENAPI-EDITED-HANDLERS-COMPILE=OK");
     Console.WriteLine("OPENAPI-PRINT-PRESERVATION=OK");
     Console.WriteLine("OPENAPI-ADDITIVE-REIMPORT-PRESERVE=OK");

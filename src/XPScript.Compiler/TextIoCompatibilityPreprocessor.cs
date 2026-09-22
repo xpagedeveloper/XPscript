@@ -122,10 +122,10 @@ internal sealed class TextIoCompatibilityPreprocessor
             }
 
             // New standalone string helpers are normal functions at the XPScript surface.
-            var transformed = Regex.Replace(line, @"(?<![\w.])ToBase64\$?\s*\(", "XPScriptTextIO.ToBase64(", RegexOptions.IgnoreCase);
-            transformed = Regex.Replace(transformed, @"(?<![\w.])FromBase64\$?\s*\(", "XPScriptTextIO.FromBase64(", RegexOptions.IgnoreCase);
-            transformed = Regex.Replace(transformed, @"(?<![\w.])UrlEncode\$?\s*\(", "XPScriptTextIO.UrlEncode(", RegexOptions.IgnoreCase);
-            transformed = Regex.Replace(transformed, @"(?<![\w.])UrlDecode\$?\s*\(", "XPScriptTextIO.UrlDecode(", RegexOptions.IgnoreCase);
+            var transformed = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(line, "ToBase64", "XPScriptTextIO.ToBase64");
+            transformed = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(transformed, "FromBase64", "XPScriptTextIO.FromBase64");
+            transformed = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(transformed, "UrlEncode", "XPScriptTextIO.UrlEncode");
+            transformed = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(transformed, "UrlDecode", "XPScriptTextIO.UrlDecode");
 
             foreach (var fileNo in _specialFileNumbers)
             {

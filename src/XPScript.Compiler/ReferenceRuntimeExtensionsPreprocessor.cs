@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace XPScript.Compiler;
 
 internal sealed class ReferenceRuntimeExtensionsPreprocessor
@@ -15,11 +13,7 @@ internal sealed class ReferenceRuntimeExtensionsPreprocessor
     {
         foreach (var function in Functions)
         {
-            source = Regex.Replace(
-                source,
-                $@"(?<![\w.]){Regex.Escape(function)}\$?\s*\(",
-                $"XPScriptReferenceRuntime.{function}(",
-                RegexOptions.IgnoreCase);
+            source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, function, $"XPScriptReferenceRuntime.{function}");
         }
         return source;
     }

@@ -28,29 +28,13 @@ internal sealed class CrossPlatformPreprocessor
             "XPCrossPlatformRuntime.Platform()",
             RegexOptions.IgnoreCase);
 
-        source = Regex.Replace(
-            source,
-            @"(?<![\w.])FileExists\s*\(",
-            "XPCrossPlatformRuntime.FileExists(",
-            RegexOptions.IgnoreCase);
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "FileExists", "XPCrossPlatformRuntime.FileExists");
 
-        source = Regex.Replace(
-            source,
-            @"(?<![\w.])DirExists\s*\(",
-            "XPCrossPlatformRuntime.DirExists(",
-            RegexOptions.IgnoreCase);
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "DirExists", "XPCrossPlatformRuntime.DirExists");
 
-        source = Regex.Replace(
-            source,
-            @"(?<![\w.])IsFile\s*\(",
-            "XPCrossPlatformRuntime.IsFile(",
-            RegexOptions.IgnoreCase);
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "IsFile", "XPCrossPlatformRuntime.IsFile");
 
-        source = Regex.Replace(
-            source,
-            @"(?<![\w.])IsDir\s*\(",
-            "XPCrossPlatformRuntime.IsDir(",
-            RegexOptions.IgnoreCase);
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "IsDir", "XPCrossPlatformRuntime.IsDir");
 
         foreach (var function in new[]
         {
@@ -58,11 +42,7 @@ internal sealed class CrossPlatformPreprocessor
             "ReadFile", "ReadLines", "ReadBytes", "WriteFile", "AppendFile", "WriteLines", "WriteBytes"
         })
         {
-            source = Regex.Replace(
-                source,
-                $@"(?<![\w.]){Regex.Escape(function)}\s*\(",
-                $"XPCrossPlatformRuntime.{function}(",
-                RegexOptions.IgnoreCase);
+            source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, function, $"XPCrossPlatformRuntime.{function}");
         }
 
         source = Regex.Replace(
@@ -71,29 +51,13 @@ internal sealed class CrossPlatformPreprocessor
             "XPCrossPlatformRuntime.PathValue(",
             RegexOptions.IgnoreCase);
 
-        source = Regex.Replace(
-            source,
-            @"(?<![\w.])Dir\s*\(",
-            "XPCrossPlatformRuntime.Dir(",
-            RegexOptions.IgnoreCase);
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "Dir", "XPCrossPlatformRuntime.Dir");
 
-        source = Regex.Replace(
-            source,
-            @"(?<![\w.])StrTemplate\s*\(",
-            "XPCrossPlatformRuntime.StrTemplate(",
-            RegexOptions.IgnoreCase);
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "StrTemplate", "XPCrossPlatformRuntime.StrTemplate");
 
-        source = Regex.Replace(
-            source,
-            @"(?<![\w.])ShellArgs\s*\(",
-            "XPCrossPlatformRuntime.ShellArgs(",
-            RegexOptions.IgnoreCase);
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "ShellArgs", "XPCrossPlatformRuntime.ShellArgs");
 
-        source = Regex.Replace(
-            source,
-            @"(?<![\w.])Shell\s*\(",
-            "XPCrossPlatformRuntime.Shell(",
-            RegexOptions.IgnoreCase);
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "Shell", "XPCrossPlatformRuntime.Shell");
 
         return source;
     }
