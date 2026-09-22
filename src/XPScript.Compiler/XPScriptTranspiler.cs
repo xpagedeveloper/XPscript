@@ -121,7 +121,7 @@ public sealed partial class XPScriptTranspiler
         var notesRuntimeFeatures = NotesRuntimeFeatures.Detect(source);
         source = new NativeHttpJsonPreprocessor().Transform(source, sourceName);
         var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
-        source = new ArchiveObjectPreprocessor().Transform(source);
+        source = new ArchiveObjectPreprocessor().Transform(source, sourceName);
         var spreadsheetRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "XPSpreadsheet", "XPWorksheet", "XPCell");
         source = new SpreadsheetObjectPreprocessor().Transform(source);
         var networkToolsRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo");
