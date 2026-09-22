@@ -129,17 +129,17 @@ Minimum representation:
 - [x] Include requested symbol name.
 - [x] Include receiver type for failed member resolution.
 - [x] Include symbol kind and containing scope where useful.
-- [ ] Reuse compiler symbol tables.
-- [ ] Preserve XPScript symbol/casing semantics.
+- [x] Reuse compiler symbol tables.
+- [x] Preserve XPScript symbol/casing semantics.
 
 ## 7. Candidate symbols
 
-- [ ] Investigate returning valid nearby candidates for failed symbol/member lookup.
-- [ ] Limit candidate count.
-- [ ] Include canonical name, symbol kind and signature.
-- [ ] Make ordering deterministic.
-- [ ] Guarantee candidates exist in the current compiler/runtime.
-- [ ] Do not maintain a separate AI-only symbol catalog.
+- [x] Investigate returning valid nearby candidates for failed symbol/member lookup.
+- [x] Limit candidate count.
+- [x] Include canonical name, symbol kind and signature.
+- [x] Make ordering deterministic.
+- [x] Guarantee candidates exist in the current compiler/runtime.
+- [x] Do not maintain a separate AI-only symbol catalog.
 
 ## 8. Type and argument diagnostics
 
