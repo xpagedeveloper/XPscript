@@ -45,6 +45,7 @@ try
     if (!getOutput.Contains("QUERY=q=one&q=two", StringComparison.Ordinal)) throw new Exception("FastCGI query mapping failed.");
     if (!getOutput.Contains("HEADER=present", StringComparison.Ordinal)) throw new Exception("FastCGI header mapping failed.");
     if (!getOutput.Contains("COOKIE=abc", StringComparison.Ordinal)) throw new Exception("FastCGI cookie mapping failed.");
+    AssertCorrelationCookie(getOutput, server.SiteId, secure: false);
 
     var headInput = BuildRequest(
         3,
@@ -91,6 +92,7 @@ try
     if (!postOutput.Contains("METHOD=POST", StringComparison.Ordinal)) throw new Exception("FastCGI POST method mapping failed.");
     if (!postOutput.Contains("BODY=hello=world", StringComparison.Ordinal)) throw new Exception("FastCGI STDIN body mapping failed.");
     if (!postOutput.Contains("SCHEME=https", StringComparison.Ordinal)) throw new Exception("FastCGI HTTPS mapping failed.");
+    AssertCorrelationCookie(postOutput, server.SiteId, secure: true);
 
     var escapeInput = BuildRequest(
         9,
@@ -136,6 +138,16 @@ try
 finally
 {
     Directory.Delete(root, recursive: true);
+}
+
+static void AssertCorrelationCookie(string response, string siteId, bool secure)
+{
+    var cookieName = XpsWebClientCorrelation.CookieNameFor(siteId);
+    var line = response.Split("\r\n", StringSplitOptions.None).Single(x => x.StartsWith("Set-Cookie: " + cookieName + "=", StringComparison.Ordinal));
+    if (!line.Contains("; HttpOnly", StringComparison.OrdinalIgnoreCase)) throw new Exception("FastCGI correlation cookie is missing HttpOnly.");
+    if (!line.Contains("; SameSite=Lax", StringComparison.OrdinalIgnoreCase)) throw new Exception("FastCGI correlation cookie is missing SameSite=Lax.");
+    if (!line.Contains("; Max-Age=" + ((long)XpsWebClientCorrelation.Lifetime.TotalSeconds), StringComparison.OrdinalIgnoreCase)) throw new Exception("FastCGI correlation cookie lifetime mismatch.");
+    if (line.Contains("; Secure", StringComparison.OrdinalIgnoreCase) != secure) throw new Exception("FastCGI correlation cookie Secure attribute mismatch.");
 }
 
 static byte[] BuildRequest(ushort requestId, IReadOnlyDictionary<string, string> parameters, byte[] body)
