@@ -86,7 +86,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify Windows drive-style path input is rejected. Verified in run #38.
 - [x] Verify UNC-style path input is rejected. Verified in run #38.
 - [x] Verify direct `.xps` source disclosure is impossible.
-- [ ] Verify application log directories are never served through static files. Runtime already forces logs outside web root, but add explicit external-log reachability regression.
+- [x] Verify application log directories are never served through static files. Runtime rejects log directories inside the web root and external-log reachability regressions are verified in run #80.
 - [x] Verify configuration files are never served through static files. Direct `/config.json` disclosure is rejected in run #72.
 - [x] Verify secrets files are never served through static files. Direct `/secret.txt` disclosure is rejected in run #72.
 - [x] Verify symlink inside `assets` cannot resolve outside the web root. File symlink escape regression verified in run #76.
