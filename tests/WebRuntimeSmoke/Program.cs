@@ -74,6 +74,15 @@ try
     if (request.Method != "POST") throw new Exception("HTTP method normalization failed.");
     if (request.Headers["X-Test"].Count != 2) throw new Exception("Multi-value header preservation failed.");
 
+    // Run response-cookie injection regressions early: these protect a shared invariant used by Kestrel, CGI and FastCGI.
+    var cookieInjectionResponse = new XpsWebResponse();
+    AssertThrows<ArgumentException>(() => cookieInjectionResponse.SetHeader("Set-Cookie", "session=trusted\r\nSet-Cookie: session=attacker"));
+    AssertThrows<ArgumentException>(() => cookieInjectionResponse.AppendHeader("Set-Cookie", "session=trusted\nSet-Cookie: session=attacker"));
+    AssertThrows<ArgumentException>(() => cookieInjectionResponse.SetCookie("session", "trusted\r\nSet-Cookie: session=attacker"));
+    AssertThrows<ArgumentException>(() => cookieInjectionResponse.SetCookie("session\r\nX-Evil", "attacker"));
+    if (cookieInjectionResponse.Headers.ContainsKey("Set-Cookie"))
+        throw new Exception("Rejected cookie injection mutated response headers.");
+
     var response = new XpsWebResponse();
     response.SetHeader("X-Test", "ok");
     response.Write("hello");
