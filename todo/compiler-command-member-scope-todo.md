@@ -75,6 +75,7 @@ A runtime/global function name must not become globally reserved merely because 
   - Audited JsonHttpCompatibility, NotesMimeType, NotesDocumentSendWarning, and ServerSideMetadata preprocessors: these are tracked-type/receiver compatibility handling or metadata stripping and do not rewrite unqualified global command/function names.
   - Audited AI session/prompt runtime postprocessors, AI tool callback validation, and the configurable source-preprocessor pipeline: AI postprocessors patch generated C# runtime code, callback validation is declaration/registration-aware, and configurable source preprocessing is intentionally lexical user-configured replacement rather than built-in command resolution.
   - Audited IncludeSource, SourceLineMarker, and NotesSessionAutoDetect preprocessors: include/line-marker handling is directive/instrumentation-specific and NotesSession rewriting targets explicit construction syntax, not unqualified runtime calls.
+  - Audited UdtValueSemantics, HclPrintFormatting, ParameterlessProcedureHeader, VariantIndex, and ExtendedCompatibility paths: UDT/Variant handling is tracked-symbol based, procedure-header handling is declaration-only, Print formatting is statement-context constrained, and extended compatibility rewrites either explicit receiver/type syntax or whole statement forms rather than generic member-name capture.
 ## 4. Regression tests
 
 - [x] Add a class property whose name matches a runtime/global function.
