@@ -207,9 +207,7 @@ internal sealed class CoreCompatibilityTranspiler
             if (!match.Success)
             {
                 var foundToken = part.Trim();
-                if (foundToken.StartsWith("Optional ", StringComparison.OrdinalIgnoreCase))
-                    foundToken = foundToken["Optional ".Length..].TrimStart();
-                throw SyntaxFailure("Unsupported parameter declaration: " + part.Trim(), sourceName, lineNumber, sourceLine ?? raw, "parameter declaration", foundToken);
+                throw SyntaxFailure("Unsupported parameter declaration: " + foundToken, sourceName, lineNumber, sourceLine ?? raw, "parameter declaration", foundToken);
             }
             var mode = match.Groups[1].Value;
             var byRef = mode.Equals("ByRef", StringComparison.OrdinalIgnoreCase) || (treatOmittedAsByRef && !mode.Equals("ByVal", StringComparison.OrdinalIgnoreCase));
