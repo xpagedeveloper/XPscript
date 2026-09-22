@@ -1,0 +1,14 @@
+openapi: 3.1.0
+info: { title: Composition Corpus, version: 1.0.0 }
+components:
+  schemas:
+    A: { type: object, properties: { a: { type: string } } }
+    B: { type: object, properties: { b: { type: integer } } }
+    Combined: { allOf: [ { $ref: '#/components/schemas/A' }, { $ref: '#/components/schemas/B' } ] }
+    Choice: { oneOf: [ { $ref: '#/components/schemas/A' }, { $ref: '#/components/schemas/B' } ] }
+paths:
+  /combined:
+    get:
+      operationId: composition
+      responses:
+        '200': { description: ok, content: { application/json: { schema: { $ref: '#/components/schemas/Combined' } } } }
