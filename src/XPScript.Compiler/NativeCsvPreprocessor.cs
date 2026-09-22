@@ -68,10 +68,10 @@ internal sealed class NativeCsvPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.Load\s*\(([^)]*)\)", m => RewriteLoad(m.Groups[1].Value), RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.ParseBytes\s*\(", "XPScriptNativeCsv.ParseBytes(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.Parse\s*\(", "XPScriptNativeCsv.Parse(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bCsvParseBytes\s*\(", "XPScriptNativeCsv.ParseBytes(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bCsvParse\s*\(", "XPScriptNativeCsv.Parse(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bCsvStringify\s*\(", "XPScriptNativeCsv.Stringify(", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bCsvEscape\s*\(", "XPScriptNativeCsv.Escape(", RegexOptions.IgnoreCase);
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "CsvParseBytes", "XPScriptNativeCsv.ParseBytes");
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "CsvParse", "XPScriptNativeCsv.Parse");
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "CsvStringify", "XPScriptNativeCsv.Stringify");
+            rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "CsvEscape", "XPScriptNativeCsv.Escape");
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPCsvDocument\s*(?:\(\s*\))?", "XPScriptNativeCsv.CreateDocument()", RegexOptions.IgnoreCase);
 
             foreach (var documentVariable in documentVariables)
