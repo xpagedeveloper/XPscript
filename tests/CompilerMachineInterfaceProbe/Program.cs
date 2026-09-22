@@ -9,27 +9,6 @@ if (args.Length != 1)
 }
 
 var root = Path.GetFullPath(args[0]);
-var goldenFixtures = new (string File, string? Target, string DiagnosticCode, string Category, string[] Properties)[]
-{
-    ("core-invalid-deftype-range-error.xps", null, "XPS1012", "syntax", ["expectedConstruct", "foundToken"]),
-    ("browser-wasm-target-ai-error.xps", "browser-wasm", "XPS3001", "target", ["allowedTargets", "symbol", "target"]),
-    ("null-integer-parameter-error.xps", null, "XPS2003", "type-checking", ["actualType", "expectedType", "parameter"])
-};
-foreach (var fixture in goldenFixtures)
-{
-    var fixturePath = Path.Combine(root, "samples", fixture.File);
-    var first = await new CompilerDriver().ValidateWithResultAsync(fixturePath, fixture.Target);
-    var diagnostic = first.Errors.FirstOrDefault(d => d.DiagnosticCode == fixture.DiagnosticCode);
-    Require(diagnostic is not null,
-        $"golden fixture {fixture.File} expected {fixture.DiagnosticCode}; actual: {string.Join(", ", first.Errors.Select(d => d.DiagnosticCode ?? "<none>"))}");
-    Require(diagnostic.Category == fixture.Category, $"golden fixture {fixture.File} category");
-    Require(diagnostic.Properties is not null, $"golden fixture {fixture.File} properties");
-    Require(fixture.Properties.All(name => diagnostic.Properties.Any(p => p.Name == name)), $"golden fixture {fixture.File} property contract");
-
-    var second = await new CompilerDriver().ValidateWithResultAsync(fixturePath, fixture.Target);
-    Require(JsonSerializer.Serialize(first) == JsonSerializer.Serialize(second), $"golden fixture {fixture.File} deterministic machine result");
-}
-
 var targetDefinition = CompilerDiagnosticCatalog.Find("XPS3002");
 Require(targetDefinition is not null, "XPS3002 diagnostic definition");
 Require(targetDefinition.Category == "execution-context", "XPS3002 definition category");
@@ -200,6 +179,28 @@ Require(normalizedPathDiagnostic.File == "portable.xps", "diagnostic file paths 
 
 
 var driver = new CompilerDriver();
+var goldenFixtures = new (string File, string? Target, string DiagnosticCode, string Category, string[] Properties)[]
+{
+    ("core-invalid-deftype-range-error.xps", null, "XPS1012", "syntax", ["expectedConstruct", "foundToken"]),
+    ("browser-wasm-target-ai-error.xps", "browser-wasm", "XPS3001", "target", ["allowedTargets", "symbol", "target"]),
+    ("null-integer-parameter-error.xps", null, "XPS2003", "type-checking", ["actualType", "expectedType", "parameter"])
+};
+foreach (var fixture in goldenFixtures)
+{
+    var fixturePath = Path.Combine(root, "samples", fixture.File);
+    var first = await new CompilerDriver().ValidateWithResultAsync(fixturePath, fixture.Target);
+    var diagnostic = first.Errors.FirstOrDefault(d => d.DiagnosticCode == fixture.DiagnosticCode);
+    Require(diagnostic is not null,
+        $"golden fixture {fixture.File} expected {fixture.DiagnosticCode}; actual: {string.Join(", ", first.Errors.Select(d => d.DiagnosticCode ?? "<none>"))}");
+    Require(diagnostic.Category == fixture.Category, $"golden fixture {fixture.File} category");
+    Require(diagnostic.Properties is not null, $"golden fixture {fixture.File} properties");
+    Require(fixture.Properties.All(name => diagnostic.Properties.Any(p => p.Name == name)), $"golden fixture {fixture.File} property contract");
+
+    var second = await new CompilerDriver().ValidateWithResultAsync(fixturePath, fixture.Target);
+    Require(JsonSerializer.Serialize(first) == JsonSerializer.Serialize(second), $"golden fixture {fixture.File} deterministic machine result");
+}
+
+
 var symbolCandidates = CompilerSymbolCatalog.Candidates("XPJsonScheam", 3);
 Require(symbolCandidates.Count > 0 && symbolCandidates.Count <= 3, "symbol candidate limit");
 Require(symbolCandidates[0].Name == "XPJsonSchema", "symbol candidate canonical name");
