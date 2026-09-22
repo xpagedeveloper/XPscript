@@ -1092,9 +1092,20 @@ try
     if (parsed.Routes["EndpointCreatePet"].ParameterBindings?.Count != 1)
         throw new Exception("Generated POST body binding did not match the OpenAPI requestBody.");
 
+    // Client-only generated sources do not export web routes. Compile them through the
+    // language transpiler directly; XpsWebCompiler intentionally requires at least one route.
+    _ = new XPScriptTranspiler().TranspileRestricted(
+        crossScopeRuntimeNames.Source,
+        crossScopeRuntimePath,
+        CompilerDriver.CurrentRuntimeIdentifier(),
+        [root]);
+    _ = new XPScriptTranspiler().TranspileRestricted(
+        compilerReservedClient.Source,
+        compilerReservedPath,
+        CompilerDriver.CurrentRuntimeIdentifier(),
+        [root]);
+
     var compiler = new XpsWebCompiler();
-    await using (var crossScopeRuntimeUnit = await compiler.CompileAsync(crossScopeRuntimePath, root)) { }
-    await using (var compilerReservedUnit = await compiler.CompileAsync(compilerReservedPath, root)) { }
     await using (var scopeCollisionUnit = await compiler.CompileAsync(scopeCollisionPath, root))
     {
         if (!scopeCollisionUnit.Routes.ContainsKey("EndpointCollision"))
