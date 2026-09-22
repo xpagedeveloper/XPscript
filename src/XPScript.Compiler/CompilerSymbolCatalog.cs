@@ -14,6 +14,8 @@ public sealed record CompilerSymbolDefinition(
 
 public static class CompilerSymbolCatalog
 {
+    // This is the compiler-owned public symbol table used by resolution-facing machine APIs.
+    // Diagnostics/candidate lookup must reuse this table rather than maintain an AI-only catalog.
     private static readonly IReadOnlyDictionary<string, CompilerSymbolDefinition> Definitions =
         new[]
         {
@@ -50,6 +52,36 @@ public static class CompilerSymbolCatalog
 
     public static IReadOnlyCollection<CompilerSymbolDefinition> All =>
         Definitions.Values.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();
+
+    public static IReadOnlyList<CompilerSymbolDefinition> Candidates(string requestedName, int limit = 5)
+    {
+        if (string.IsNullOrWhiteSpace(requestedName) || limit <= 0) return [];
+        var requested = requestedName.Trim();
+        return Definitions.Values
+            .Select(definition => (Definition: definition, Distance: EditDistance(requested, definition.Name)))
+            .OrderBy(item => item.Distance)
+            .ThenBy(item => item.Definition.Name, StringComparer.Ordinal)
+            .Take(Math.Min(limit, 10))
+            .Select(item => item.Definition)
+            .ToArray();
+    }
+
+    private static int EditDistance(string left, string right)
+    {
+        left = left.ToUpperInvariant();
+        right = right.ToUpperInvariant();
+        var previous = Enumerable.Range(0, right.Length + 1).ToArray();
+        var current = new int[right.Length + 1];
+        for (var i = 1; i <= left.Length; i++)
+        {
+            current[0] = i;
+            for (var j = 1; j <= right.Length; j++)
+                current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1),
+                    previous[j - 1] + (left[i - 1] == right[j - 1] ? 0 : 1));
+            (previous, current) = (current, previous);
+        }
+        return previous[right.Length];
+    }
 
     private static CompilerSymbolDefinition Define(
         string name,
