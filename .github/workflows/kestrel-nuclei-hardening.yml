@@ -131,6 +131,10 @@ jobs:
               Response.Write("COOKIE=" & Request.Cookie("client") & "\n")
           End Sub
 
+          XPS
+
+          cp ./.hardening-site/index.xps ./.hardening-site/main.xps
+          cat > ./.hardening-site/json-hardening.xps <<'XPS'
           [Anonymous]
           [Post]
           [Route:/api/json-hardening]
@@ -138,8 +142,6 @@ jobs:
               Response.OK(payload)
           End Sub
           XPS
-
-          cp ./.hardening-site/index.xps ./.hardening-site/main.xps
           printf 'XPSCRIPT_PUBLIC_ASSET\n' > ./.hardening-site/assets/public.txt
           printf 'XPSCRIPT_SECRET_SENTINEL\n' > ./.hardening-site/secret.txt
           printf 'XPSCRIPT_PROTECTED_CACHE_SENTINEL\n' > ./.hardening-site/.xpscript-cache/protected.css
