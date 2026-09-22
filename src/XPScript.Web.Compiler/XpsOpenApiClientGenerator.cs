@@ -283,7 +283,7 @@ public sealed class XpsOpenApiClientGenerator
         foreach (var p in op.Parameters.Where(y => y.Location == "path")) b.AppendLine($"        {urlName} = Replace({urlName}, \"{{{EscapeXps(p.Name)}}}\", Http.EncodePath({p.GeneratedName}))"); foreach (var p in op.Parameters.Where(y => y.Location == "query")) { var line = $"{urlName} = Http.AddQuery({urlName}, \"{EscapeXps(p.Name)}\", {p.GeneratedName})"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); } foreach (var p in op.Parameters.Where(y => y.Location == "header")) { var line = $"Call {requestName}.SetHeader(\"{EscapeXps(p.Name)}\", CStr({p.GeneratedName}))"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); }
         EmitSecurity(b, op, securitySchemes, urlName, requestName);
         b.AppendLine($"        {requestName}.Method = \"{op.Method}\""); b.AppendLine($"        {requestName}.Url = {urlName}"); if (op.Body is not null) { if (!op.Body.Required) b.AppendLine($"        If Not {payloadName} Is Nothing Then"); var indent = op.Body.Required ? "        " : "            "; b.AppendLine(indent + $"Call {requestName}.SetHeader(\"Content-Type\", \"application/json\")"); b.AppendLine(indent + $"{requestName}.Body = JsonStringify({payloadName})"); if (!op.Body.Required) b.AppendLine("        End If"); } b.AppendLine($"        Set {rawName} = Http.Send({requestName})");
-        b.AppendLine($"        Set {resultName}.Raw = {rawName}"); b.AppendLine($"        {resultName}.StatusCode = {rawName}.StatusCode"); b.AppendLine($"        {resultName}.IsSuccess = {rawName}.IsSuccess"); b.AppendLine($"        If Len({rawName}.Body) > 0 Then Set {resultName}.Json = {rawName}.Json()"); EmitResponseValidation(b, op, root, rawName, resultName); EmitResponseMapping(b, op, models, responseMembers, rawName, resultName); b.AppendLine($"        Set {op.Name} = {resultName}"); b.AppendLine("    End Function");
+        b.AppendLine($"        Set {resultName}.Raw = {rawName}"); b.AppendLine($"        {resultName}.StatusCode = {rawName}.StatusCode"); b.AppendLine($"        {resultName}.IsSuccess = {rawName}.IsSuccess"); b.AppendLine($"        If Len({rawName}.Body) > 0 Then Set {resultName}.Json = {rawName}.Json()"); EmitResponseValidation(b, op, root, rawName, resultName); EmitResponseMapping(b, op, models, responseMembers, rawName, resultName, parameterNames); b.AppendLine($"        Set {op.Name} = {resultName}"); b.AppendLine("    End Function");
     }
     private static void EmitSecurity(StringBuilder b, ClientOperation op, Dictionary<string, ClientSecurityScheme> securitySchemes, string urlName, string requestName)
     {
@@ -350,14 +350,19 @@ public sealed class XpsOpenApiClientGenerator
     {
         return XpsOpenApiSchema.StandaloneJsonSchema(root, schema, "OpenAPI client response schema");
     }
-    private static void EmitResponseMapping(StringBuilder b, ClientOperation op, Dictionary<string, JsonObject> models, IReadOnlyDictionary<string, string> responseMembers, string rawName, string resultName)
+    private static void EmitResponseMapping(StringBuilder b, ClientOperation op, Dictionary<string, JsonObject> models, IReadOnlyDictionary<string, string> responseMembers, string rawName, string resultName, HashSet<string> parameterNames)
     {
         var mappedTypes = op.Responses.Where(y => y.TypeName is not null && models.ContainsKey(y.TypeName))
             .Select(y => y.TypeName!).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var mappedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var usedLocalNames = new HashSet<string>(parameterNames, StringComparer.OrdinalIgnoreCase);
+        foreach (var name in new[] { rawName, resultName }) usedLocalNames.Add(name);
         foreach (var type in mappedTypes)
         {
-            b.AppendLine($"        Dim mapped{type} As {type}");
-            b.AppendLine($"        Set mapped{type} = New {type}");
+            var mappedName = UniqueIdentifier("ApiMapped" + type, usedLocalNames, avoidKeywords: true);
+            mappedNames[type] = mappedName;
+            b.AppendLine($"        Dim {mappedName} As {type}");
+            b.AppendLine($"        Set {mappedName} = New {type}");
         }
 
         var first = true;
@@ -369,7 +374,7 @@ public sealed class XpsOpenApiClientGenerator
             {
                 b.AppendLine($"            {resultName}.ResponseType = \"{EscapeXps(response.TypeName)}\"");
                 if (models.ContainsKey(response.TypeName))
-                    b.AppendLine($"            If Not {resultName}.Json Is Nothing Then Set {resultName}.{responseMembers[response.TypeName]} = {resultName}.Json.ToObject(mapped{response.TypeName})");
+                    b.AppendLine($"            If Not {resultName}.Json Is Nothing Then Set {resultName}.{responseMembers[response.TypeName]} = {resultName}.Json.ToObject({mappedNames[response.TypeName]})");
                 else
                     b.AppendLine($"            If Not {resultName}.Json Is Nothing Then {resultName}.{responseMembers[response.TypeName]} = {resultName}.Json.ToObject({DefaultValue(response.TypeName)})");
             }
