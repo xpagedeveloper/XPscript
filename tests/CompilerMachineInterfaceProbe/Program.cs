@@ -191,7 +191,7 @@ foreach (var fixture in goldenFixtures)
     var first = await new CompilerDriver().ValidateWithResultAsync(fixturePath, fixture.Target);
     var diagnostic = first.Errors.FirstOrDefault(d => d.DiagnosticCode == fixture.DiagnosticCode);
     Require(diagnostic is not null,
-        $"golden fixture {fixture.File} expected {fixture.DiagnosticCode}; actual: {string.Join(", ", first.Errors.Select(d => d.DiagnosticCode ?? "<none>"))}");
+        $"golden fixture {fixture.File} expected {fixture.DiagnosticCode}; actual: {string.Join(", ", first.Errors.Select(d => (d.DiagnosticCode ?? "<none>") + " [" + d.Description + "]"))}");
     Require(diagnostic.Category == fixture.Category, $"golden fixture {fixture.File} category");
     Require(diagnostic.Properties is not null, $"golden fixture {fixture.File} properties");
     Require(fixture.Properties.All(name => diagnostic.Properties.Any(p => p.Name == name)), $"golden fixture {fixture.File} property contract");
