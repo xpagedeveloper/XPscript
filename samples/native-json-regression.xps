@@ -1,5 +1,12 @@
 Option Declare
 
+Class JsonAliasPayload
+    [JsonName("api-key")]
+    Public ApiKey As String
+    [JsonName("end")]
+    Public End_2 As String
+End Class
+
 Class JsonBoundaryPerson
     Public Id As Integer
     Private mName As String
@@ -29,6 +36,9 @@ Sub Main()
     Dim nullValue As Variant
     Dim missingPerson As JsonBoundaryPerson
     Dim person As JsonBoundaryPerson
+    Dim aliasPayload As JsonAliasPayload
+    Dim aliasRoundTrip As JsonAliasPayload
+    Dim aliasDocument As XPJsonDocument
 
     Set document = XPJsonDocument.Parse("{""name"":""Alice"",""active"":true}")
     Print "DOCUMENT=" & document.Stringify()
@@ -65,6 +75,16 @@ Sub Main()
     person.Name = " anna "
     person.Password = "do-not-serialize"
     Print "CLASSJSON=" & JsonStringify(person)
+
+    Set aliasPayload = New JsonAliasPayload
+    aliasPayload.ApiKey = "secret"
+    aliasPayload.End_2 = "done"
+    Print "ALIASJSON=" & JsonStringify(aliasPayload)
+    Set aliasDocument = JsonParse("{""api-key"":""incoming"",""end"":""finished""}")
+    Set aliasRoundTrip = New JsonAliasPayload
+    Set aliasRoundTrip = aliasDocument.ToObject(aliasRoundTrip)
+    Print "ALIASREAD=" & aliasRoundTrip.ApiKey & "|" & aliasRoundTrip.End_2
+    Print "ALIASROUNDTRIP=" & JsonStringify(aliasRoundTrip)
 
     Set decoded = JsonDecode("{""ok"":true}")
     Print "DECODE=" & decoded.Stringify()
