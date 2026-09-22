@@ -20,6 +20,24 @@ try
     };
     await using var adapter = new XpsFastCgiAdapter(options, server, new EchoHandler());
 
+    var duplicateCookieInput = BuildRequest(
+        13,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "GET",
+            ["SCRIPT_NAME"] = "/index.xps",
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["HTTP_COOKIE"] = "client=first; client=second",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "index.xps")
+        },
+        []);
+    var duplicateCookieStream = new FragmentedDuplexStream(duplicateCookieInput, 3);
+    await adapter.ProcessConnectionAsync(duplicateCookieStream);
+    var duplicateCookieOutput = ParseResponse(duplicateCookieStream.Written);
+    if (!duplicateCookieOutput.Contains("COOKIE=first\n", StringComparison.Ordinal))
+        throw new Exception("FastCGI duplicate cookie handling was not deterministic: " + duplicateCookieOutput);
+
     var getInput = BuildRequest(
         1,
         new Dictionary<string, string>
