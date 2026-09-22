@@ -87,12 +87,14 @@ public sealed class XpsOpenApiClientGenerator
     }
     private static List<ClientParameter> AssignParameterIdentifiers(IReadOnlyList<ClientParameter> parameters, bool hasBody)
     {
-        var used = new HashSet<string>(new[] { "url", "raw", "request", "result" }, StringComparer.OrdinalIgnoreCase);
-        if (hasBody) used.Add("payload");
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var localNames = new HashSet<string>(new[] { "url", "raw", "request", "result" }, StringComparer.OrdinalIgnoreCase);
+        if (hasBody) localNames.Add("payload");
         var result = new List<ClientParameter>(parameters.Count);
         foreach (var parameter in parameters)
         {
             var identifier = UniqueIdentifier(ToIdentifier(parameter.Name), used, avoidKeywords: true);
+            if (localNames.Contains(identifier)) identifier = UniqueIdentifier("Api" + identifier, used, avoidKeywords: true);
             result.Add(parameter with { GeneratedName = identifier });
         }
         return result;
@@ -308,13 +310,13 @@ public sealed class XpsOpenApiClientGenerator
         {
             var condition = alternative.Count == 0 ? "True" : string.Join(" And ", alternative.Select(name =>
             {
-                var scheme = securitySchemes[name]; var auth = "Auth" + ToIdentifier(scheme.Name);
+                var scheme = securitySchemes[name]; var auth = "Auth" + scheme.GeneratedName;
                 return scheme.Kind == "basic" ? $"Len({auth}Authorization) > 0" : $"Len({auth}) > 0";
             }));
             b.AppendLine($"        {(first ? "If" : "ElseIf")} {condition} Then");
             foreach (var schemeName in alternative)
             {
-                var scheme = securitySchemes[schemeName]; var auth = "Auth" + ToIdentifier(scheme.Name);
+                var scheme = securitySchemes[schemeName]; var auth = "Auth" + scheme.GeneratedName;
                 if (scheme.Kind == "apikey" && scheme.Location == "header") b.AppendLine($"            Call request.SetHeader(\"{EscapeXps(scheme.WireName!)}\", {auth})");
                 else if (scheme.Kind == "apikey" && scheme.Location == "query") b.AppendLine($"            url = Http.AddQuery(url, \"{EscapeXps(scheme.WireName!)}\", {auth})");
                 else if (scheme.Kind == "bearer") b.AppendLine($"            Call request.SetBearerToken({auth})");
@@ -393,8 +395,7 @@ public sealed class XpsOpenApiClientGenerator
     }
     private static void EmitOptionalValue(StringBuilder b, ClientParameter parameter, string statement)
     {
-        var name = ToIdentifier(parameter.Name);
-        b.AppendLine($"        If Not {name} Is Nothing Then {statement}");
+        b.AppendLine($"        If Not {parameter.GeneratedName} Is Nothing Then {statement}");
     }
     private static string DefaultValue(string typeName) => typeName switch
     {
