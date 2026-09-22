@@ -53,6 +53,7 @@ public static class XpsKestrelAdapter
 
         var runtimeTelemetry = telemetry ??
             (options.EnableHealthEndpoint || options.EnableMetricsEndpoint ? new XpsWebTelemetry() : null);
+        var operationalAllowedNetworks = options.OperationalAllowedNetworks.Select(XpsIpNetwork.Parse).ToArray();
         var connectionCounter = new XpsKestrelConnectionCounter();
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
@@ -229,7 +230,7 @@ public static class XpsKestrelAdapter
                     return;
                 }
 
-                if (options.OperationalEndpointsLocalOnly && !IsLoopback(http.Connection.RemoteIpAddress))
+                if (!OperationalEndpointAllowed(http.Connection.RemoteIpAddress, options, operationalAllowedNetworks))
                 {
                     http.Response.StatusCode = StatusCodes.Status404NotFound;
                     return;
@@ -551,6 +552,17 @@ public static class XpsKestrelAdapter
     }
 
     private static bool IsLoopback(IPAddress? address) => address is not null && IPAddress.IsLoopback(address);
+
+    private static bool OperationalEndpointAllowed(
+        IPAddress? address,
+        XpsKestrelOptions options,
+        IReadOnlyList<XpsIpNetwork> allowedNetworks)
+    {
+        if (address is null) return false;
+        if (IPAddress.IsLoopback(address)) return true;
+        if (allowedNetworks.Any(network => network.Contains(address))) return true;
+        return !options.OperationalEndpointsLocalOnly && allowedNetworks.Count == 0;
+    }
 
     private sealed class RequestBodyTooLargeException : Exception { }
 }
