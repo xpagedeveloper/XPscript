@@ -30,6 +30,7 @@ A runtime/global function name must not become globally reserved merely because 
 - [x] Audit `ReferenceRuntimeExtensionsPreprocessor`; preserve its existing member-access exclusion behavior.
 - [>] Audit HTTP, JSON, XML, CSV, database, Notes, UI, AI, filesystem, string, date, application, and compatibility preprocessors for the same class of bug. JSON/XML/CSV, reference runtime, hash, cross-platform, HCL selected compatibility, core runtime, Notes runtime, Archive, Spreadsheet, UI extension, NetworkTools, SystemInventory, file-I/O, text-I/O, operator/array, date-object and type-coercion paths checked so far. The latter object preprocessors operate on explicit receiver/type syntax rather than unqualified global function names.
 - [>] Replace fragile regex-only resolution with a shared helper/token-aware mechanism where practical. Shared `PreprocessorFeatureGate.ContainsCall` now uses code-only input and excludes receiver/member access; Text I/O, hash, reference-runtime, type-coercion, operator/array, HCL selected compatibility, cross-platform, JSON, XML, and CSV global calls now use the shared scoped rewriter; remaining direct rewrite sites are being audited before broader consolidation.
+  - Audited Archive, Spreadsheet, and native-library platform preprocessors: their remaining rewrites are receiver/type/declaration-specific rather than unqualified global-call resolution, so they should stay specialized.
 
 ## 4. Regression tests
 
@@ -40,7 +41,7 @@ A runtime/global function name must not become globally reserved merely because 
 - [x] Verify `JsonParse(...)` still resolves to the native JSON runtime function.
 - [x] Verify `obj.StrLeftBack(...)` remains a member call.
 - [x] Verify `StrLeftBack(...)` still resolves to the reference runtime function.
-- [>] Add representative regressions from every preprocessor family discovered by the audit. JSON/XML/CSV/reference-runtime and operator/array coverage added; HCL and cross-platform migrations are also covered by the full compiler suite; more targeted family regressions remain.
+- [>] Add representative regressions from every preprocessor family discovered by the audit. JSON/XML/CSV/reference-runtime and operator/array coverage added. Cross-platform, HCL, JSON, XML, and CSV member-vs-global resolution now also has an explicit migrated-family regression, verified by FullTest run 465; more targeted family regressions remain.
 - [x] Add negative tests for true language keywords and compiler-reserved `__*` names.
 - [x] Run regressions through the real XPScript transpiler/compiler, not only string-level unit tests.
 
@@ -56,7 +57,7 @@ A runtime/global function name must not become globally reserved merely because 
 
 ## 6. Completion gate
 
-- [x] All affected compiler tests pass on Windows, Linux, and macOS. FullTest run 461 passed on exact branch HEAD `502627e8` across Windows, Ubuntu, and macOS after the HCL, cross-platform, JSON, XML, and CSV shared-rewriter migrations.
+- [x] All affected compiler tests pass on Windows, Linux, and macOS. FullTest run 465 passed on exact branch HEAD `3b5196fe` across Windows, Ubuntu, and macOS with the explicit cross-platform/HCL/JSON/XML/CSV member-vs-global scope regression.
 - [x] Existing runtime function calls remain backward compatible. FullTest and runtime regression suites passed.
 - [x] Existing valid member/property names are not renamed or rejected merely because they match an XPScript command/runtime API name. Scope regressions pass through the real transpiler/compiler.
 - [x] Add documentation describing the difference between XPScript keywords, compiler-reserved identifiers, runtime functions, and scoped user symbols.
