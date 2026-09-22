@@ -499,8 +499,10 @@ internal sealed class CoreCompatibilityTranspiler
                 continue;
             }
 
-            if (Regex.IsMatch(rewritten, @"^End\s+Select$", RegexOptions.IgnoreCase) && selectStack.Count > 0)
+            if (Regex.IsMatch(rewritten, @"^End\s+Select$", RegexOptions.IgnoreCase))
             {
+                if (selectStack.Count == 0)
+                    throw SyntaxFailure("Unexpected End Select.", sourceName, physicalLine, raw, "Select Case statement", "End Select");
                 var context = selectStack.Pop();
                 if (context.HasCase) result.Add(indent + "End If");
                 continue;
