@@ -154,7 +154,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify oversized JSON is bounded by MaxRequestBodySize. REST request-body parsing rejects payloads above the configured 4 MiB JSON limit; real Kestrel HTTP regression accepts bounded 400/413 or an early transport close and verifies the host remains healthy; verified in run #139.
 - [x] Verify duplicate JSON property behavior is deterministic and documented. System.Text.Json last-value-wins behavior is asserted through the XPScript REST binding pipeline and real Kestrel HTTP route; verified in run #139.
 
-- [ ] Verify malformed UTF-8 paths fail safely.
+- [x] Verify malformed UTF-8 paths fail safely. Raw invalid UTF-8 and invalid percent-encoded UTF-8 paths are rejected without reaching the application or leaking diagnostics; verified in run #145.
 - [ ] Verify non-ASCII paths and query strings.
 - [ ] Verify Unicode normalization does not create route aliases that bypass authorization.
 - [x] Verify encoded control characters in route paths. Encoded NUL path rejected before application handler in run #42.
