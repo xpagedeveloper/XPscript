@@ -328,7 +328,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Payload' }
 """, "model-alias.yaml").Source;
-foreach (var marker in new[] { "[JsonName(\"class\")]", "Public Class_2 As String", "[JsonName(\"api-key\")]", "Public ApiKey As String", "[JsonName(\"api key\")]", "Public ApiKey_2 As Long", "[JsonName(\"PascalName\")]", "Public PascalName As Boolean" })
+foreach (var marker in new[] { "[JsonName(\"class\")]", "Public ApiClass As String", "[JsonName(\"api-key\")]", "Public ApiKey As String", "[JsonName(\"api key\")]", "Public ApiKey_2 As Long", "[JsonName(\"PascalName\")]", "Public PascalName As Boolean" })
     if (!modelAliasClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Model property alias/suffix generation is missing marker: " + marker);
 
 var optionalClient = new XpsOpenApiClientGenerator().Generate("""
@@ -544,8 +544,8 @@ paths:
               schema: { $ref: '#/components/schemas/Item' }
 """, "keyword-property.yaml");
 if (!keywordPropertyClient.Source.Contains("[JsonName(\"end\")]", StringComparison.Ordinal) ||
-    !keywordPropertyClient.Source.Contains("Public End_2 As String", StringComparison.Ordinal))
-    throw new Exception("OpenAPI model properties that map to XPScript keywords must be suffixed while preserving their JSON wire name.");
+    !keywordPropertyClient.Source.Contains("Public ApiEnd As String", StringComparison.Ordinal))
+    throw new Exception("OpenAPI model properties that map to XPScript lexical keywords must use a safe identifier while preserving their JSON wire name.");
 
 var reservedApiClass = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
@@ -576,9 +576,9 @@ paths:
       responses:
         '204': { description: ok }
 """, "keyword-operation.yaml");
-if (!keywordOperationClient.Source.Contains("Public Function Class_2(", StringComparison.Ordinal) ||
-    !keywordOperationClient.Source.Contains("Public Function Class_2_2(", StringComparison.Ordinal))
-    throw new Exception("Reserved and colliding OpenAPI operation identifiers must receive deterministic numeric suffixes.");
+if (!keywordOperationClient.Source.Contains("Public Function ApiClass(", StringComparison.Ordinal) ||
+    !keywordOperationClient.Source.Contains("Public Function Class_2(", StringComparison.Ordinal))
+    throw new Exception("Lexical-keyword OpenAPI operations must use a safe name while real same-scope collisions remain deterministic.");
 
 var parameterSuffixSource = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
@@ -600,7 +600,7 @@ paths:
       responses:
         '204': { description: ok }
 """, "parameter-suffix.yaml").Source;
-if (!parameterSuffixSource.Contains("Optional End_2 As Variant", StringComparison.Ordinal) ||
+if (!parameterSuffixSource.Contains("Optional ApiEnd As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiKey As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiKey_2 As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional Url_2 As Variant", StringComparison.Ordinal) ||
