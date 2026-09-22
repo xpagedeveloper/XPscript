@@ -179,6 +179,12 @@ Require(normalizedPathDiagnostic.File == "portable.xps", "diagnostic file paths 
 
 
 var driver = new CompilerDriver();
+var symbolCandidates = CompilerSymbolCatalog.Candidates("XPJsonScheam", 3);
+Require(symbolCandidates.Count > 0 && symbolCandidates.Count <= 3, "symbol candidate limit");
+Require(symbolCandidates[0].Name == "XPJsonSchema", "symbol candidate canonical name");
+Require(symbolCandidates.All(candidate => CompilerSymbolCatalog.Find(candidate.Name) is not null), "symbol candidates must come from compiler symbol table");
+Require(symbolCandidates.SequenceEqual(symbolCandidates.OrderBy(candidate => candidate == symbolCandidates[0] ? 0 : 1)), "symbol candidate deterministic result");
+
 
 var unsupportedParameterCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-unsupported-parameter-error.xps"));
 var unsupportedParameterDiagnostic = unsupportedParameterCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
