@@ -418,9 +418,11 @@ var browserTargetRestrictions = new (string Source, string Symbol, string Allowe
     ("Dim sheet As XPSpreadsheet", "XPSpreadsheet", "server or desktop target"),
     ("Dim tools As NetworkTools", "NetworkTools", "server or desktop target")
 };
+var browserTargetRestrictionPath = Path.Combine(outputRoot, "browser-target-restriction.xps");
 foreach (var restriction in browserTargetRestrictions)
 {
-    var result = await driver.ValidateSourceAsync(restriction.Source, "browser-target-restriction.xps", "browser-wasm");
+    await File.WriteAllTextAsync(browserTargetRestrictionPath, restriction.Source);
+    var result = await driver.ValidateWithResultAsync(browserTargetRestrictionPath, "browser-wasm");
     var diagnostic = result.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
     Require(diagnostic is not null, $"Browser WASM {restriction.Symbol} target diagnostic");
     Require(diagnostic.Category == "target", $"Browser WASM {restriction.Symbol} target category");
