@@ -604,7 +604,7 @@ if (!parameterSuffixSource.Contains("Optional ApiEnd As Variant", StringComparis
     !parameterSuffixSource.Contains("Optional ApiKey As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiKey2 As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional Url As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("Optional payload As Variant", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Optional Payload As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Dim ApiUrl As String", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiPayload As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("ApiUrl = Http.AddQuery(ApiUrl, \"end\", ApiEnd)", StringComparison.Ordinal) ||
