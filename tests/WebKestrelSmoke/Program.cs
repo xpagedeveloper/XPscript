@@ -333,6 +333,56 @@ try
             throw new Exception("Metrics HEAD endpoint returned a response body.");
     }
 
+    // CIDR allowlists are the preferred external operational endpoint policy.
+    var cidrOperationalOptions = new XpsKestrelOptions
+    {
+        Port = 0,
+        AllowedHosts = ["localhost", "127.0.0.1", "::1"],
+        KnownProxies = [System.Net.IPAddress.Loopback],
+        EnableHealthEndpoint = true,
+        EnableMetricsEndpoint = true,
+        OperationalAllowedNetworks = ["203.0.113.0/24", "2001:db8::/32"]
+    };
+    var cidrOperationalApp = XpsKestrelAdapter.Build(
+        cidrOperationalOptions, serverInfo, new EchoHandler(), new SmokeApplicationState());
+    try
+    {
+        await cidrOperationalApp.StartAsync();
+        var cidrServer = cidrOperationalApp.Services.GetRequiredService<IServer>();
+        var cidrAddresses = cidrServer.Features.Get<IServerAddressesFeature>()?.Addresses
+            ?? throw new Exception("CIDR-operational Kestrel did not expose server addresses.");
+        using var cidrClient = new HttpClient { BaseAddress = new Uri(cidrAddresses.Single()) };
+
+        using (var allowed = new HttpRequestMessage(HttpMethod.Get, "/_xps/health"))
+        {
+            allowed.Headers.TryAddWithoutValidation("X-Forwarded-For", "203.0.113.44");
+            using var response = await cidrClient.SendAsync(allowed);
+            if ((int)response.StatusCode != 200) throw new Exception("Allowed operational CIDR was rejected.");
+            AssertOperationalPayloadSafe(await response.Content.ReadAsStringAsync(), "CIDR health");
+        }
+        using (var denied = new HttpRequestMessage(HttpMethod.Get, "/_xps/health"))
+        {
+            denied.Headers.TryAddWithoutValidation("X-Forwarded-For", "198.51.100.44");
+            using var response = await cidrClient.SendAsync(denied);
+            if ((int)response.StatusCode != 404) throw new Exception("Client outside operational CIDR was exposed.");
+        }
+    }
+    finally
+    {
+        await cidrOperationalApp.StopAsync();
+        await cidrOperationalApp.DisposeAsync();
+    }
+
+    foreach (var invalidCidr in new[] { "", "203.0.113.0", "203.0.113.0/33", "2001:db8::/129", "not-an-ip/24" })
+    {
+        try
+        {
+            new XpsKestrelOptions { OperationalAllowedNetworks = [invalidCidr] }.Validate();
+            throw new Exception("Invalid operational CIDR was accepted: " + invalidCidr);
+        }
+        catch (ArgumentException) { }
+    }
+
     // Explicit external operational mode is opt-in. Verify the opt-in actually exposes
     // only the bounded operational payloads to a client arriving through a trusted proxy.
     var externalOperationalOptions = new XpsKestrelOptions
