@@ -32,6 +32,7 @@ A runtime/global function name must not become globally reserved merely because 
 - [>] Replace fragile regex-only resolution with a shared helper/token-aware mechanism where practical. Shared `PreprocessorFeatureGate.ContainsCall` now uses code-only input and excludes receiver/member access; Text I/O, hash, reference-runtime, type-coercion, operator/array, HCL selected compatibility, cross-platform, JSON, XML, and CSV global calls now use the shared scoped rewriter; remaining direct rewrite sites are being audited before broader consolidation.
   - Audited Archive, Spreadsheet, and native-library platform preprocessors: their remaining rewrites are receiver/type/declaration-specific rather than unqualified global-call resolution, so they should stay specialized.
   - Audited LanguageExtensions, ApplicationObject, and GeneralSyntax preprocessors: optional-call and enum rewrites already exclude receiver scope; Application rewrites target the reserved runtime root explicitly; general syntax rewrites language constructs rather than global command names.
+  - Audited AdvancedXPScriptTranspiler runtime-function lowering and DateObjectPreprocessor: parenthesized runtime functions and Date receiver rewrites already use member-aware `(?<![\w.])` boundaries. CoreCompatibilityTranspiler delegates final expression lowering to AdvancedXPScriptTranspiler, so these paths preserve receiver/member scope.
 
 ## 4. Regression tests
 
