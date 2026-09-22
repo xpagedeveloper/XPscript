@@ -333,6 +333,45 @@ try
             throw new Exception("Metrics HEAD endpoint returned a response body.");
     }
 
+    // Explicit external operational mode is opt-in. Verify the opt-in actually exposes
+    // only the bounded operational payloads to a client arriving through a trusted proxy.
+    var externalOperationalOptions = new XpsKestrelOptions
+    {
+        Port = 0,
+        AllowedHosts = ["localhost", "127.0.0.1", "::1"],
+        KnownProxies = [System.Net.IPAddress.Loopback],
+        EnableHealthEndpoint = true,
+        EnableMetricsEndpoint = true,
+        OperationalEndpointsLocalOnly = false
+    };
+    var externalOperationalApp = XpsKestrelAdapter.Build(
+        externalOperationalOptions,
+        serverInfo,
+        new EchoHandler(),
+        new SmokeApplicationState());
+    try
+    {
+        await externalOperationalApp.StartAsync();
+        var externalOperationalServer = externalOperationalApp.Services.GetRequiredService<IServer>();
+        var externalOperationalAddresses = externalOperationalServer.Features.Get<IServerAddressesFeature>()?.Addresses
+            ?? throw new Exception("External-operational Kestrel did not expose server addresses.");
+        using var externalOperationalClient = new HttpClient { BaseAddress = new Uri(externalOperationalAddresses.Single()) };
+        foreach (var operationalPath in new[] { "/_xps/health", "/_xps/metrics" })
+        {
+            using var operational = new HttpRequestMessage(HttpMethod.Get, operationalPath);
+            operational.Headers.TryAddWithoutValidation("X-Forwarded-For", "203.0.113.44");
+            using var response = await externalOperationalClient.SendAsync(operational);
+            if ((int)response.StatusCode != 200)
+                throw new Exception($"Explicit external operational endpoint {operationalPath} expected 200, got {(int)response.StatusCode}.");
+            AssertOperationalPayloadSafe(await response.Content.ReadAsStringAsync(), operationalPath);
+        }
+    }
+    finally
+    {
+        await externalOperationalApp.StopAsync();
+        await externalOperationalApp.DisposeAsync();
+    }
+
     // A trusted loopback proxy may supply forwarded values, but ForwardLimit=1 means
     // only the right-most hop is consumed. This prevents a client-supplied value
     // earlier in the chain from becoming the effective remote address.
