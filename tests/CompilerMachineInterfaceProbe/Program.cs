@@ -480,6 +480,17 @@ Require(separatorSyntaxDiagnostic.Line == 2, $"statement separator syntax line: 
 Require(separatorSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == ":") == true, "statement separator found token");
 Require(separatorSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "statement") == true, "statement separator expected construct");
 
+var corePhysicalRangeCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-unexpected-end-with-error.xps"));
+var corePhysicalRangeDiagnostic = corePhysicalRangeCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(corePhysicalRangeDiagnostic is not null, "core physical range diagnostic");
+Require(corePhysicalRangeDiagnostic.Category == "syntax", "core physical range category");
+Require(corePhysicalRangeDiagnostic.File == "core-unexpected-end-with-error.xps", "core physical range file");
+Require(corePhysicalRangeDiagnostic.Line == 4, $"core physical range line: actual={corePhysicalRangeDiagnostic.Line}");
+Require(corePhysicalRangeDiagnostic.EndLine == 4 && corePhysicalRangeDiagnostic.EndColumn > corePhysicalRangeDiagnostic.Position, "core physical source range");
+Require(corePhysicalRangeDiagnostic.SourceCode?.Contains("End With", StringComparison.OrdinalIgnoreCase) == true, "core physical source text");
+Require(corePhysicalRangeDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "End With") == true, "core physical found token");
+Require(corePhysicalRangeDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "With statement") == true, "core physical expected construct");
+
 var coreSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-missing-procedure-terminator-error.xps"));
 var coreSyntaxDiagnostic = coreSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
 Require(coreSyntaxDiagnostic is not null, "core syntax diagnostic");
