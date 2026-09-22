@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/XPScript.Web.Compiler/XPScript.Web.Compiler.csproj" />
+    <ProjectReference Include="../../src/XPScript.Compiler/XPScript.Compiler.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="petstore.yaml" CopyToOutputDirectory="PreserveNewest" />
