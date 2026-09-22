@@ -142,7 +142,7 @@ public sealed partial class XPScriptTranspiler
         var usesExtendedArchive = source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
         var usesArchive = archiveRequested || usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
         var usesSpreadsheet = spreadsheetRequested || source.Contains("XPScriptSpreadsheet", StringComparison.Ordinal);
-        var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
+        var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);\n        var usesApplicationCrypto = Regex.IsMatch(PreprocessorFeatureGate.CodeOnly(source), @"\\bApplication\\.Crypto\\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
         {
             var detectedFeatures = runtimeFeatures with
