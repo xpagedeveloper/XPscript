@@ -609,7 +609,7 @@ if (!parameterSuffixSource.Contains("Optional ApiEnd As Variant", StringComparis
     !parameterSuffixSource.Contains("Optional ApiPayload As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Http.AddQuery(ApiUrl, \"end\", ApiEnd)", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("ApiRequest.SetHeader(\"api key\", CStr(ApiKey2))", StringComparison.Ordinal))
-    throw new Exception("OpenAPI parameter identifiers must preserve names unless a real procedure-scope collision requires disambiguation.");
+    throw new Exception("OpenAPI parameter identifiers must preserve names unless a real procedure-scope collision requires disambiguation. Generated source:\n" + parameterSuffixSource);
 
 var generatedTypeCollisionRejected = false;
 try { _ = new XpsOpenApiClientGenerator().Generate("""
