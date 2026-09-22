@@ -995,6 +995,56 @@ foreach (var marker in new[] { "Public JsonParse As String", "Public StrLeftBack
     if (!scopeCollision.Source.Contains(marker, StringComparison.Ordinal))
         throw new Exception("Generated OpenAPI scope-collision model is missing member: " + marker);
 
+var crossScopeRuntimeNames = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Cross Scope Runtime Names, version: 1.0.0 }
+components:
+  schemas:
+    First:
+      type: object
+      properties:
+        JsonParse: { type: string }
+    Second:
+      type: object
+      properties:
+        jsonparse: { type: string }
+paths:
+  /runtime:
+    get:
+      operationId: JsonParse
+      parameters:
+        - { name: StrLeftBack, in: query, schema: { type: string } }
+      responses:
+        '204': { description: ok }
+""", "cross-scope-runtime-names.yaml");
+foreach (var marker in new[] { "Public JsonParse As String", "Public Jsonparse As String", "Public Function JsonParse(", "Optional StrLeftBack As Variant" })
+    if (!crossScopeRuntimeNames.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("Runtime/global identifier was renamed even though its declaration scope permits it: " + marker);
+
+var compilerReservedClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Compiler Reserved, version: 1.0.0 }
+components:
+  schemas:
+    Reserved:
+      type: object
+      properties:
+        __state: { type: string }
+paths:
+  /reserved:
+    get:
+      operationId: __dispatch
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Reserved' }
+""", "compiler-reserved.yaml");
+foreach (var marker in new[] { "[JsonName(\"__state\")]", "Public Api__state As String", "Public Function Api__dispatch(" })
+    if (!compilerReservedClient.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("Compiler-reserved __ identifier was not protected: " + marker);
+
 var openApi30 = generator.Generate("""
 openapi: 3.0.3
 info:
@@ -1021,6 +1071,10 @@ try
 {
     var scopeCollisionPath = Path.Combine(root, "scope-collision.xps");
     await File.WriteAllTextAsync(scopeCollisionPath, scopeCollision.Source);
+    var crossScopeRuntimePath = Path.Combine(root, "cross-scope-runtime-names.xps");
+    await File.WriteAllTextAsync(crossScopeRuntimePath, crossScopeRuntimeNames.Source);
+    var compilerReservedPath = Path.Combine(root, "compiler-reserved.xps");
+    await File.WriteAllTextAsync(compilerReservedPath, compilerReservedClient.Source);
 
     var clientPath = Path.Combine(root, "petstore-client.xps");
     await File.WriteAllTextAsync(clientPath, clientResult.Source);
@@ -1037,6 +1091,8 @@ try
         throw new Exception("Generated POST body binding did not match the OpenAPI requestBody.");
 
     var compiler = new XpsWebCompiler();
+    await using (var crossScopeRuntimeUnit = await compiler.CompileAsync(crossScopeRuntimePath, root)) { }
+    await using (var compilerReservedUnit = await compiler.CompileAsync(compilerReservedPath, root)) { }
     await using (var scopeCollisionUnit = await compiler.CompileAsync(scopeCollisionPath, root))
     {
         if (!scopeCollisionUnit.Routes.ContainsKey("EndpointCollision"))
