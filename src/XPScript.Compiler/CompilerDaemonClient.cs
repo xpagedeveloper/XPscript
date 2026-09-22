@@ -213,7 +213,9 @@ public static class CompilerDaemonClient
         }
         catch (SocketException)
         {
-            TryDeleteState();
+            // A concurrent cold-start client may observe the newly written state file
+            // before the winning daemon is accepting connections. Do not delete state
+            // here: another process owns it and will become reachable momentarily.
             return null;
         }
         catch (OperationCanceledException)
