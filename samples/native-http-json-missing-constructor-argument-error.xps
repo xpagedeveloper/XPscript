@@ -1,0 +1,3 @@
+Sub Main()
+    Dim db As New XPDBSQLite()
+End Sub
