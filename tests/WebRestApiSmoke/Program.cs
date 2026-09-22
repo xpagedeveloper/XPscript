@@ -230,6 +230,25 @@ try
     await using var dispatcher = new XpsWebDispatcher(root);
     var app = new XpsApplicationState();
 
+    // Keep JSON parser hardening first so parser regressions fail before the broader REST suite.
+    var earlyMalformedJson = await SendAsync(
+        dispatcher, app, "POST", "/api/users", "{not-json", "application/json");
+    if (earlyMalformedJson.StatusCode != 400)
+        throw new Exception($"Malformed request JSON returned {earlyMalformedJson.StatusCode} instead of 400.");
+    var earlyMalformedBody = BodyText(earlyMalformedJson);
+    if (!earlyMalformedBody.Contains("body", StringComparison.OrdinalIgnoreCase) ||
+        earlyMalformedBody.Contains("StackTrace", StringComparison.OrdinalIgnoreCase) ||
+        earlyMalformedBody.Contains(".cs:", StringComparison.OrdinalIgnoreCase) ||
+        earlyMalformedBody.Contains("/home/", StringComparison.OrdinalIgnoreCase) ||
+        earlyMalformedBody.Contains("\\Users\\", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Malformed request JSON leaked parser diagnostics or paths.");
+
+    var earlyDeepJson = new string('[', 65) + "0" + new string(']', 65);
+    var deepJsonResponse = await SendAsync(
+        dispatcher, app, "POST", "/api/users", earlyDeepJson, "application/json");
+    if (deepJsonResponse.StatusCode != 400)
+        throw new Exception($"Deeply nested request JSON returned {deepJsonResponse.StatusCode} instead of 400.");
+
     var get = await SendAsync(dispatcher, app, "GET", "/api/users/42", origin: "https://example.com");
     if (get.StatusCode != 200) throw new Exception($"REST GET returned {get.StatusCode}.");
     if (BodyText(get) != "\"user-42\"") throw new Exception("Function return value was not automatically serialized as JSON.");
