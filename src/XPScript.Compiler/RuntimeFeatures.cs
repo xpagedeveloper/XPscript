@@ -18,6 +18,15 @@ public readonly record struct RuntimeFeatures(
     public bool RequiresJson => Json || JsonSchema || RequiresHttp || Database || Attachments || Ui;
     public bool RequiresHttpDatabaseTypes => HttpDatabase || Attachments;
 
+    public IEnumerable<(string Symbol, string AllowedTargets, string? Detail)> UnavailableFor(string runtimeIdentifier)
+    {
+        if (!runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
+            yield break;
+        if (Ai) yield return ("XPAi", "server target", "Keep AI credentials and requests on the server.");
+        if (Sqlite) yield return ("XPDBSQLite", "server or desktop target", null);
+        if (MsSql) yield return ("XPDbMsSql", "server or desktop target", null);
+    }
+
     public static RuntimeFeatures Detect(string source)
     {
         ArgumentNullException.ThrowIfNull(source);
