@@ -431,6 +431,22 @@ foreach (var restriction in browserTargetRestrictions)
     Require(diagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == restriction.AllowedTargets) == true, $"Browser WASM {restriction.Symbol} allowed targets");
 }
 
+var supportedTargetContexts = new[]
+{
+    ("CLI", ""),
+    ("Desktop", "win-x64"),
+    ("Web", "webiis"),
+    ("REST", "webiis"),
+    ("Browser-WASM", "browser-wasm")
+};
+var supportedTargetContextPath = Path.Combine(outputRoot, "supported-target-context.xps");
+await File.WriteAllTextAsync(supportedTargetContextPath, "Dim value As Integer\nvalue = 1");
+foreach (var targetContext in supportedTargetContexts)
+{
+    var result = await driver.ValidateWithResultAsync(supportedTargetContextPath, targetContext.Item2);
+    Require(result.Errors.All(d => d.DiagnosticCode != "XPS3001"), $"{targetContext.Item1} supported target context");
+}
+
 var nativeTargetCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "native-target-mismatch-error.xps"), "linux-x64");
 var nativeTargetDiagnostic = nativeTargetCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
 Require(nativeTargetDiagnostic is not null, "native target mismatch diagnostic");
