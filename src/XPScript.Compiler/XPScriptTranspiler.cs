@@ -122,15 +122,15 @@ public sealed partial class XPScriptTranspiler
         var usesAi = originalFeatures.Ai || runtimeFeatures.Ai;
         var notesRuntimeFeatures = NotesRuntimeFeatures.Detect(source);
         source = new NativeHttpJsonPreprocessor().Transform(source, sourceName);
-        var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
+        var archiveRequested = runtimeFeatures.Archive;
         source = new ArchiveObjectPreprocessor().Transform(source, sourceName);
         // Attach runtime/#line markers only after source-coordinate-sensitive parser
         // preprocessors have emitted diagnostics. Inserting markers earlier changes
         // physical line numbers seen by Type/Enum/native constructor validation.
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
-        var spreadsheetRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "XPSpreadsheet", "XPWorksheet", "XPCell");
+        var spreadsheetRequested = runtimeFeatures.Spreadsheet;
         source = new SpreadsheetObjectPreprocessor().Transform(source);
-        var networkToolsRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo");
+        var networkToolsRequested = runtimeFeatures.NetworkTools;
         source = new NetworkToolsObjectPreprocessor().Transform(source);
         source = source.Replace("XPScriptDatabaseAttachmentRuntime.ForSqlite(", "XPScriptDatabaseAttachmentApi.ForSqlite(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForMsSql(", "XPScriptDatabaseAttachmentApi.ForMsSql(", StringComparison.Ordinal)
@@ -145,13 +145,15 @@ public sealed partial class XPScriptTranspiler
         var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
         {
-            var runtimeTargetRestriction = runtimeFeatures.UnavailableFor(runtimeIdentifier)
-                .FirstOrDefault(restriction => restriction.Symbol is "XPDBSQLite" or "XPDbMsSql");
+            var detectedFeatures = runtimeFeatures with
+            {
+                Archive = usesArchive,
+                Spreadsheet = usesSpreadsheet,
+                NetworkTools = usesNetworkTools
+            };
+            var runtimeTargetRestriction = detectedFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(runtimeTargetRestriction.Symbol))
                 throw TargetUnavailable(runtimeTargetRestriction.Symbol, runtimeIdentifier, runtimeTargetRestriction.AllowedTargets, runtimeTargetRestriction.Detail);
-            if (usesArchive) throw TargetUnavailable("Archive", runtimeIdentifier, "server or desktop target", "Archive file-path operations are not available for browser-wasm targets yet.");
-            if (usesSpreadsheet) throw TargetUnavailable("XPSpreadsheet", runtimeIdentifier, "server or desktop target");
-            if (usesNetworkTools) throw TargetUnavailable("NetworkTools", runtimeIdentifier, "server or desktop target", "Browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
         }
         var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleObjects.Transform(source);
