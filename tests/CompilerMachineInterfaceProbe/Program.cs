@@ -183,6 +183,10 @@ var symbolCandidates = CompilerSymbolCatalog.Candidates("XPJsonScheam", 3);
 Require(symbolCandidates.Count > 0 && symbolCandidates.Count <= 3, "symbol candidate limit");
 Require(symbolCandidates[0].Name == "XPJsonSchema", "symbol candidate canonical name");
 Require(symbolCandidates.All(candidate => CompilerSymbolCatalog.Find(candidate.Name) is not null), "symbol candidates must come from compiler symbol table");
+var memberCandidates = CompilerSymbolCatalog.Candidates("Valdiate", "XPJsonSchema", 3);
+Require(memberCandidates.Count > 0 && memberCandidates[0].Name == "XPJsonSchema.Validate", "member candidates respect receiver scope");
+Require(memberCandidates.All(candidate => candidate.Name.StartsWith("XPJsonSchema.", StringComparison.OrdinalIgnoreCase)), "member candidates stay in receiver scope");
+Require(CompilerSymbolCatalog.Find("xpjsonschema.validate")?.Name == "XPJsonSchema.Validate", "symbol lookup preserves canonical casing");
 Require(symbolCandidates.SequenceEqual(symbolCandidates.OrderBy(candidate => candidate == symbolCandidates[0] ? 0 : 1)), "symbol candidate deterministic result");
 
 
