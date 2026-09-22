@@ -131,8 +131,8 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify X-Content-Type-Options is present by default.
 - [x] Verify X-Frame-Options is present by default.
 - [x] Verify Referrer-Policy is present by default.
-- [ ] Decide whether Content-Security-Policy should be provided by default for generated UI/browser applications.
-- [ ] Decide whether Permissions-Policy should be provided by default.
+- [x] Provide Content-Security-Policy by default for generated UI/browser applications. Shared runtime HTML defaults and the Browser-WASM-specific policy are covered by regression tests; verified in run #126.
+- [x] Provide Permissions-Policy by default. Camera, microphone and geolocation are disabled unless an application explicitly overrides the header; shared runtime regression verified in run #126.
 - [x] Verify application response headers cannot inject CRLF. Shared response validation and configurable default-header validation reject CR/LF; verified through run #109.
 - [x] Verify forbidden hop-by-hop headers cannot be configured as default security headers. Content-Length, Transfer-Encoding, Connection, Keep-Alive and Upgrade are rejected; verified in run #109.
 - [x] Verify Server cannot be reintroduced through configurable default headers. Server is rejected from DefaultSecurityHeaders; verified in run #109.
