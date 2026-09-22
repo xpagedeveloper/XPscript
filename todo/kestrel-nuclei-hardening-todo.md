@@ -118,8 +118,8 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [ ] Verify correlation cookie lifetime.
 - [ ] Verify raw correlation cookie value is never logged.
 - [ ] Verify logs contain only the hashed session correlation identifier.
-- [ ] Verify two clients receive independent correlation identifiers.
-- [ ] Verify session fixation resistance.
+- [x] Verify two clients receive independent correlation identifiers. Runtime regression verified in run #82.
+- [x] Verify session fixation resistance. Client-supplied correlation identifiers are not accepted as authoritative; regression verified in run #82.
 - [ ] Verify malformed cookies do not break request isolation.
 - [ ] Verify duplicate cookie name behavior.
 - [ ] Verify oversized cookie input fails safely.
