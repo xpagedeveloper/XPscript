@@ -214,8 +214,10 @@ public static class CompilerDaemonClient
         catch (SocketException)
         {
             // A concurrent cold-start client may observe the newly written state file
-            // before the winning daemon is accepting connections. Do not delete state
-            // here: another process owns it and will become reachable momentarily.
+            // before the winning daemon is accepting connections. Only remove state
+            // when its recorded owner is definitely gone; otherwise another process
+            // owns it and may become reachable momentarily.
+            TryDeleteStateIfOwnerExited();
             return null;
         }
         catch (OperationCanceledException)
@@ -300,6 +302,33 @@ public static class CompilerDaemonClient
             File.Delete(StatePath);
         }
         catch { }
+    }
+
+    private static void TryDeleteStateIfOwnerExited()
+    {
+        try
+        {
+            if (!File.Exists(StatePath)) return;
+            using var state = JsonDocument.Parse(File.ReadAllText(StatePath));
+            if (!state.RootElement.TryGetProperty("processId", out var processIdElement)) return;
+            var processId = processIdElement.GetInt32();
+            try
+            {
+                using var owner = Process.GetProcessById(processId);
+                if (!owner.HasExited) return;
+            }
+            catch (ArgumentException)
+            {
+                // No process with the recorded id exists.
+            }
+            TryDeleteState();
+        }
+        catch (JsonException) { TryDeleteState(); }
+        catch (FileNotFoundException) { }
+        catch (DirectoryNotFoundException) { }
+        catch (InvalidOperationException) { }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private static void TryDeleteState()
