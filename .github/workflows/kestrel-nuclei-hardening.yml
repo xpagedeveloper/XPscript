@@ -135,10 +135,14 @@ jobs:
 
           cp ./.hardening-site/index.xps ./.hardening-site/main.xps
           cat > ./.hardening-site/json-hardening.xps <<'XPS'
+          Public Class JsonHardeningRequest
+              Public Value As String
+          End Class
+
           [Anonymous]
           [Post]
           [Route:/api/json-hardening]
-          Sub JsonHardening([FromBody] payload As Variant)
+          Sub JsonHardening([FromBody] payload As JsonHardeningRequest)
               Response.OK(payload)
           End Sub
           XPS
