@@ -356,7 +356,7 @@ paths:
       responses:
         '204': { description: ok }
 """, "optional.yaml").Source;
-foreach (var marker in new[] { "Optional Q As Variant = Nothing", "Optional Limit As Variant = Nothing", "Optional XTrace As Variant = Nothing", "Optional Payload As Variant = Nothing", "If Not Q Is Nothing Then url = Http.AddQuery", "If Not XTrace Is Nothing Then Call request.SetHeader", "If Not payload Is Nothing Then" })
+foreach (var marker in new[] { "Optional Q As Variant = Nothing", "Optional Limit As Variant = Nothing", "Optional XTrace As Variant = Nothing", "Optional payload As Variant = Nothing", "If Not Q Is Nothing Then url = Http.AddQuery", "If Not XTrace Is Nothing Then Call request.SetHeader", "If Not payload Is Nothing Then" })
     if (!optionalClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated optional OpenAPI values are missing marker: " + marker);
 
 var arrayClient = new XpsOpenApiClientGenerator().Generate("""
