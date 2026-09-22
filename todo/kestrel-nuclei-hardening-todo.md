@@ -139,11 +139,11 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Health and metrics
 
-- [ ] Verify health endpoint is local-only by default.
-- [ ] Verify metrics endpoint is local-only by default.
-- [ ] Verify non-GET and non-HEAD methods receive 405.
+- [x] Verify health endpoint is local-only by default. Local access remains available while trusted-proxy requests with a non-loopback effective client are hidden with 404; verified in run #113.
+- [x] Verify metrics endpoint is local-only by default. Local access remains available while trusted-proxy requests with a non-loopback effective client are hidden with 404; verified in run #113.
+- [x] Verify non-GET and non-HEAD methods receive 405. POST is rejected with 405 and Allow: GET, HEAD while HEAD returns no body; verified through run #111.
 - [ ] Verify operational endpoints do not leak secrets, tokens, paths, environment variables or source.
-- [ ] Verify operational endpoints remain protected behind reverse proxy configurations.
+- [x] Verify operational endpoints remain protected behind reverse proxy configurations. Trusted forwarded client addresses are evaluated after proxy processing and external clients receive 404; verified in run #113.
 - [ ] Test `--operational-external` separately and document the security implications.
 
 ## Routing and runtime behavior
