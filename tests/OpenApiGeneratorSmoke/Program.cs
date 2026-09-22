@@ -603,7 +603,9 @@ paths:
 if (!parameterSuffixSource.Contains("Optional ApiEnd As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiKey As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiKey2 As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("Optional ApiUrl As Variant", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Optional url As Variant", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Optional payload As Variant", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Dim ApiUrl As String", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiPayload As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Http.AddQuery(url, \"end\", ApiEnd)", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("request.SetHeader(\"api key\", CStr(ApiKey2))", StringComparison.Ordinal))
