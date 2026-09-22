@@ -218,16 +218,23 @@ jobs:
         shell: pwsh
         run: |
           $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
-          $previousNativeErrorPreference = $PSNativeCommandUseErrorActionPreference
-          $PSNativeCommandUseErrorActionPreference = $false
-          try {
-            $output = & dotnet run --project $project -c Release --no-build -- run samples/core-invalid-deftype-range-error.xps --debug --security=off 2>&1
-            $exitCode = $LASTEXITCODE
+          $psi = [System.Diagnostics.ProcessStartInfo]::new()
+          $psi.FileName = 'dotnet'
+          $psi.UseShellExecute = $false
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          foreach ($arg in @('run','--project',$project,'-c','Release','--no-build','--','run','samples/core-invalid-deftype-range-error.xps','--debug','--security=off')) {
+            $psi.ArgumentList.Add($arg)
           }
-          finally {
-            $PSNativeCommandUseErrorActionPreference = $previousNativeErrorPreference
-          }
-          $text = ($output -join [Environment]::NewLine)
+          $process = [System.Diagnostics.Process]::new()
+          $process.StartInfo = $psi
+          if (-not $process.Start()) { throw "Unable to start debug validation regression process" }
+          $stdout = $process.StandardOutput.ReadToEndAsync()
+          $stderr = $process.StandardError.ReadToEndAsync()
+          $process.WaitForExit()
+          $text = (($stdout.GetAwaiter().GetResult()), ($stderr.GetAwaiter().GetResult()) -join [Environment]::NewLine)
+          $exitCode = $process.ExitCode
+          $process.Dispose()
           if ($exitCode -ne 1) { throw "Expected debug validation failure exit code 1, got $exitCode. Output: $text" }
           if ($text -notmatch 'XPS1012') { throw "Expected structured validation diagnostic XPS1012. Output: $text" }
           if ($text -match 'Started to compile core-invalid-deftype-range-error.xps') { throw "Invalid debug edit reached full compilation. Output: $text" }
