@@ -111,11 +111,11 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Cookies and sessions
 
-- [ ] Verify correlation cookie has HttpOnly.
+- [x] Verify correlation cookie has HttpOnly. Kestrel regression verified in run #84.
 - [ ] Verify correlation cookie uses Secure on HTTPS.
-- [ ] Verify correlation cookie omits Secure on HTTP by design.
-- [ ] Verify correlation cookie SameSite value.
-- [ ] Verify correlation cookie lifetime.
+- [x] Verify correlation cookie omits Secure on HTTP by design. Kestrel regression verified in run #84.
+- [x] Verify correlation cookie SameSite value. SameSite=Lax verified in run #84.
+- [x] Verify correlation cookie lifetime. 30-day Max-Age verified in run #84.
 - [ ] Verify raw correlation cookie value is never logged.
 - [ ] Verify logs contain only the hashed session correlation identifier.
 - [x] Verify two clients receive independent correlation identifiers. Runtime regression verified in run #82.
