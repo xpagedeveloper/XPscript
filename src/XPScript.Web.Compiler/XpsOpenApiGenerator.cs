@@ -23,14 +23,12 @@ public sealed class XpsOpenApiGenerator
 {
     private static readonly string[] HttpMethods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"];
     private static readonly Regex IdentifierPattern = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant);
-    private static readonly HashSet<string> ReservedIdentifiers = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> LexicalKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
-        "And", "Application", "As", "Body", "Boolean", "ByRef", "ByVal", "Byte", "Call", "Case", "Class",
-        "Const", "Currency", "Date", "Dim", "Do", "Double", "Each", "Else", "ElseIf", "Empty", "End", "Error",
-        "Exit", "False", "For", "Function", "If", "Integer", "Long", "Loop", "Me", "Mod", "New", "Next", "Nothing",
-        "Not", "Null", "Object", "On", "Option", "Or", "Private", "Public", "Request", "Response", "Return", "Select",
-        "Session", "Set", "Single", "Static", "Step", "String", "Sub", "Then", "To", "True", "Variant", "Wend", "While",
-        "With", "Xor"
+        "And", "As", "Boolean", "ByRef", "ByVal", "Call", "Case", "Class", "Const", "Date", "Dim", "Do", "Double",
+        "Each", "Else", "ElseIf", "End", "Enum", "Exit", "False", "For", "Function", "If", "Integer", "Long", "Loop",
+        "Mod", "New", "Next", "Nothing", "Not", "Object", "On", "Option", "Or", "Private", "Public", "Select", "Set",
+        "Single", "Static", "Step", "String", "Sub", "Then", "To", "True", "Variant", "Wend", "While", "With", "Xor"
     };
 
     public XpsOpenApiGenerationResult GenerateFile(string specificationPath)
@@ -470,8 +468,8 @@ public sealed class XpsOpenApiGenerator
 
     private static string ValidateModelMemberName(string name, string modelName)
     {
-        if (!IdentifierPattern.IsMatch(name) || ReservedIdentifiers.Contains(name))
-            throw new XpsOpenApiGenerationException($"Schema '{modelName}' property '{name}' cannot be represented losslessly as an XPScript field name. Rename the OpenAPI property to a valid non-reserved XPScript identifier.");
+        if (!IdentifierPattern.IsMatch(name) || IsDeclarationReserved(name))
+            throw new XpsOpenApiGenerationException($"Schema '{modelName}' property '{name}' cannot be represented losslessly as an XPScript field name. Rename the OpenAPI property to a valid XPScript identifier in that declaration scope.");
         return name;
     }
 
@@ -483,9 +481,11 @@ public sealed class XpsOpenApiGenerator
         var joined = string.Concat(parts.Select(Pascalize));
         if (joined.Length == 0 || char.IsDigit(joined[0])) joined = "Api" + joined;
         if (!IdentifierPattern.IsMatch(joined)) throw new XpsOpenApiGenerationException($"{context} cannot be converted to an XPScript identifier.");
-        if (ReservedIdentifiers.Contains(joined)) joined = "Api" + joined;
+        if (IsDeclarationReserved(joined)) joined = "Api" + joined;
         return joined;
     }
+
+    private static bool IsDeclarationReserved(string identifier) => identifier.StartsWith("__", StringComparison.OrdinalIgnoreCase) || LexicalKeywords.Contains(identifier);
 
     private static string Pascalize(string value) => value.Length == 0 ? value : char.ToUpperInvariant(value[0]) + value[1..];
 
