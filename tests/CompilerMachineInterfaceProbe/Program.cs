@@ -410,6 +410,25 @@ Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Val
 Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, "Browser WASM active target");
 Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == "server target") == true, "Browser WASM allowed targets");
 
+var browserTargetRestrictions = new (string Source, string Symbol, string AllowedTargets)[]
+{
+    ("Dim db As XPDBSQLite", "XPDBSQLite", "server or desktop target"),
+    ("Dim db As XPDbMsSql", "XPDbMsSql", "server or desktop target"),
+    ("Dim archive As Archive", "Archive", "server or desktop target"),
+    ("Dim sheet As XPSpreadsheet", "XPSpreadsheet", "server or desktop target"),
+    ("Dim tools As NetworkTools", "NetworkTools", "server or desktop target")
+};
+foreach (var restriction in browserTargetRestrictions)
+{
+    var result = await driver.ValidateSourceAsync(restriction.Source, "browser-target-restriction.xps", "browser-wasm");
+    var diagnostic = result.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
+    Require(diagnostic is not null, $"Browser WASM {restriction.Symbol} target diagnostic");
+    Require(diagnostic.Category == "target", $"Browser WASM {restriction.Symbol} target category");
+    Require(diagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == restriction.Symbol) == true, $"Browser WASM {restriction.Symbol} target symbol");
+    Require(diagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, $"Browser WASM {restriction.Symbol} active target");
+    Require(diagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == restriction.AllowedTargets) == true, $"Browser WASM {restriction.Symbol} allowed targets");
+}
+
 var nativeTargetCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "native-target-mismatch-error.xps"), "linux-x64");
 var nativeTargetDiagnostic = nativeTargetCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
 Require(nativeTargetDiagnostic is not null, "native target mismatch diagnostic");
