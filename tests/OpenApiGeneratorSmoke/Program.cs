@@ -603,11 +603,11 @@ paths:
 if (!parameterSuffixSource.Contains("Optional ApiEnd As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiKey As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiKey_2 As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("Optional Url_2 As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("Optional Payload_2 As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("Http.AddQuery(url, \"end\", End_2)", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Optional ApiUrl As Variant", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Optional ApiPayload As Variant", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Http.AddQuery(url, \"end\", ApiEnd)", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("request.SetHeader(\"api key\", CStr(ApiKey_2))", StringComparison.Ordinal))
-    throw new Exception("OpenAPI parameter identifiers must be suffixed without changing their wire names.");
+    throw new Exception("OpenAPI parameter identifiers must preserve names unless a real procedure-scope collision requires disambiguation.");
 
 var generatedTypeCollisionRejected = false;
 try { _ = new XpsOpenApiClientGenerator().Generate("""
