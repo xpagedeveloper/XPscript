@@ -411,7 +411,7 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 
 ### Phase 4: hardening
 
-- [ ] Golden fixtures.
+- [x] Golden fixtures. `CompilerMachineInterfaceProbe` verifies deterministic machine-field contracts for syntax (`XPS1012`), Browser-WASM target (`XPS3001`) and type/argument (`XPS2003`) diagnostics without depending on exact human-readable message wording; CI #544 passes the probe cross-platform.
 - [x] Cross-platform CI. Section 22 runs the same machine-interface probe on Windows, Linux and macOS.
 - [x] JSON Schema validation.
 - [x] Performance benchmarks. Section 20 and 20a retain CI benchmark coverage for validation, run cache and debug paths.
