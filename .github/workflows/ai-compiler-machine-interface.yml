@@ -25,6 +25,53 @@ jobs:
       - name: Build
         run: dotnet build XPScriptCompiler.slnx -c Release --no-restore -m:1
 
+      - name: Daemon concurrent cold-start probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Start-Sleep -Milliseconds 500
+
+          function New-XPScriptRunProcess {
+            $psi = [System.Diagnostics.ProcessStartInfo]::new()
+            $psi.FileName = 'dotnet'
+            foreach ($arg in @('run','--project',$project,'-c','Release','--no-build','--','run','samples/application-is-debugging.xps','--security=off')) { $psi.ArgumentList.Add($arg) }
+            $psi.RedirectStandardOutput = $true
+            $psi.RedirectStandardError = $true
+            $psi.UseShellExecute = $false
+            return [System.Diagnostics.Process]::Start($psi)
+          }
+
+          $p1 = New-XPScriptRunProcess
+          $p2 = New-XPScriptRunProcess
+          $out1 = $p1.StandardOutput.ReadToEnd()
+          $err1 = $p1.StandardError.ReadToEnd()
+          $out2 = $p2.StandardOutput.ReadToEnd()
+          $err2 = $p2.StandardError.ReadToEnd()
+          $p1.WaitForExit()
+          $p2.WaitForExit()
+          if ($p1.ExitCode -ne 0) { throw "First concurrent run failed: $out1 $err1" }
+          if ($p2.ExitCode -ne 0) { throw "Second concurrent run failed: $out2 $err2" }
+          if ($out1 -notmatch 'DEBUGGING=False' -or $out2 -notmatch 'DEBUGGING=False') { throw "Concurrent runs did not both execute successfully" }
+
+          $status1 = Invoke-XPScript @('daemon','status')
+          if ($status1 -notmatch 'PID ([0-9]+)') { throw "Concurrent cold start did not leave a daemon running: $status1" }
+          $pid1 = $Matches[1]
+          Start-Sleep -Milliseconds 250
+          $status2 = Invoke-XPScript @('daemon','status')
+          if ($status2 -notmatch 'PID ([0-9]+)') { throw "Daemon disappeared after concurrent cold start: $status2" }
+          $pid2 = $Matches[1]
+          if ($pid1 -ne $pid2) { throw "Concurrent cold start produced unstable daemon PID: $pid1 then $pid2" }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+
       - name: Machine interface probe
         run: dotnet run --project tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release -- .
 
@@ -139,53 +186,6 @@ jobs:
           if ($restarted -notmatch 'DEBUGGING=False') { throw "Run failed after idle shutdown: $restarted" }
           $restartedStatus = Invoke-XPScript @('daemon','status')
           if ($restartedStatus -notmatch 'PID ([0-9]+)') { throw "Run did not restart daemon after idle shutdown: $restartedStatus" }
-          Invoke-XPScript @('daemon','quit') | Out-Null
-
-      - name: Daemon concurrent cold-start probe
-        shell: pwsh
-        run: |
-          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
-          function Invoke-XPScript([string[]] $arguments) {
-            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
-            $output = & dotnet @all 2>&1
-            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
-            return ($output -join "`n")
-          }
-
-          Invoke-XPScript @('daemon','quit') | Out-Null
-          Start-Sleep -Milliseconds 500
-
-          function New-XPScriptRunProcess {
-            $psi = [System.Diagnostics.ProcessStartInfo]::new()
-            $psi.FileName = 'dotnet'
-            foreach ($arg in @('run','--project',$project,'-c','Release','--no-build','--','run','samples/application-is-debugging.xps','--security=off')) { $psi.ArgumentList.Add($arg) }
-            $psi.RedirectStandardOutput = $true
-            $psi.RedirectStandardError = $true
-            $psi.UseShellExecute = $false
-            return [System.Diagnostics.Process]::Start($psi)
-          }
-
-          $p1 = New-XPScriptRunProcess
-          $p2 = New-XPScriptRunProcess
-          $out1 = $p1.StandardOutput.ReadToEnd()
-          $err1 = $p1.StandardError.ReadToEnd()
-          $out2 = $p2.StandardOutput.ReadToEnd()
-          $err2 = $p2.StandardError.ReadToEnd()
-          $p1.WaitForExit()
-          $p2.WaitForExit()
-          if ($p1.ExitCode -ne 0) { throw "First concurrent run failed: $out1 $err1" }
-          if ($p2.ExitCode -ne 0) { throw "Second concurrent run failed: $out2 $err2" }
-          if ($out1 -notmatch 'DEBUGGING=False' -or $out2 -notmatch 'DEBUGGING=False') { throw "Concurrent runs did not both execute successfully" }
-
-          $status1 = Invoke-XPScript @('daemon','status')
-          if ($status1 -notmatch 'PID ([0-9]+)') { throw "Concurrent cold start did not leave a daemon running: $status1" }
-          $pid1 = $Matches[1]
-          Start-Sleep -Milliseconds 250
-          $status2 = Invoke-XPScript @('daemon','status')
-          if ($status2 -notmatch 'PID ([0-9]+)') { throw "Daemon disappeared after concurrent cold start: $status2" }
-          $pid2 = $Matches[1]
-          if ($pid1 -ne $pid2) { throw "Concurrent cold start produced unstable daemon PID: $pid1 then $pid2" }
-
           Invoke-XPScript @('daemon','quit') | Out-Null
 
       - name: Debug bypasses daemon probe
