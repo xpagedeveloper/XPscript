@@ -165,7 +165,7 @@ public sealed class CompilerDriver
         }
         catch (Exception ex)
         {
-            var description = CompilerDiagnosticRedaction.SanitizeExceptionMessage(ex, "Validation failed.");
+            var description = "Validation failed: " + ex.GetType().Name + ".";
             return CompileResult.Error([CreateDiagnostic(0, 0, description, "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
         }
         finally
