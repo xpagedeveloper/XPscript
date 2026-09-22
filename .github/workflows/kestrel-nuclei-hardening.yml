@@ -45,6 +45,7 @@ jobs:
       - name: Run CGI and FastCGI cross-host security regressions
         shell: bash
         run: |
+          dotnet run --project ./tests/WebRuntimeSmoke/WebRuntimeSmoke.csproj -c Release
           dotnet run --project ./tests/WebCgiSmoke/WebCgiSmoke.csproj -c Release
           dotnet run --project ./tests/WebFastCgiSmoke/WebFastCgiSmoke.csproj -c Release
           dotnet run --project ./tests/WebFastCgiAdversarialSmoke/WebFastCgiAdversarialSmoke.csproj -c Release
