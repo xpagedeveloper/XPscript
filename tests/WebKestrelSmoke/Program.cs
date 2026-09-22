@@ -377,6 +377,18 @@ try
                 throw new Exception("Trusted HTTPS proxy did not produce a Secure correlation cookie.");
         }
 
+        // Operational endpoints are local-only by default. Once a trusted reverse proxy
+        // supplies a non-loopback client address, the endpoint must disappear rather than
+        // exposing health or metrics to the external client.
+        foreach (var operationalPath in new[] { "/_xps/health", "/_xps/metrics" })
+        {
+            using var operational = new HttpRequestMessage(HttpMethod.Get, operationalPath);
+            operational.Headers.TryAddWithoutValidation("X-Forwarded-For", "203.0.113.44");
+            using var response = await trustedClient.SendAsync(operational);
+            if ((int)response.StatusCode != 404)
+                throw new Exception($"Operational endpoint {operationalPath} was exposed through a trusted reverse proxy.");
+        }
+
         using (var badForwardedHost = new HttpRequestMessage(HttpMethod.Get, "/proxy-host"))
         {
             badForwardedHost.Headers.TryAddWithoutValidation("X-Forwarded-Host", "evil.example");
