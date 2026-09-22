@@ -20,20 +20,21 @@ internal sealed class ArchiveObjectPreprocessor
         "Name", "FullName", "Extension", "Size", "CompressedSize", "CompressionRatio", "Created", "Modified", "IsEncrypted", "CRC"
     ];
 
-    public string Transform(string source)
+    public string Transform(string source, string sourceName = "input.xps")
     {
         var codeOnly = PreprocessorFeatureGate.CodeOnly(source);
         if (!PreprocessorFeatureGate.ContainsTypeReference(codeOnly, "Archive", "ArchiveEntry")) return source;
 
-        new ArchiveCapabilityValidator().Validate(source, "archive.xps");
+        new ArchiveCapabilityValidator().Validate(source, sourceName);
 
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 16);
         var archiveVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var archiveEntryVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var raw in lines)
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
+            var raw = lines[lineIndex];
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
 
@@ -44,7 +45,7 @@ internal sealed class ArchiveObjectPreprocessor
                 archiveVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
                 var args = dimNew.Groups[2].Value.Trim();
-                output.Add(indent + $"{name} = {CreateArchiveExpression(args)}");
+                output.Add(indent + $"{name} = {CreateArchiveExpression(args, sourceName, lineIndex + 1, raw)}");
                 continue;
             }
 
@@ -63,7 +64,7 @@ internal sealed class ArchiveObjectPreprocessor
                 archiveEntryVariables.Add(forAll.Groups[1].Value);
 
             var rewritten = Regex.Replace(line, @"\bNew\s+Archive\s*(?:\(\s*\))?", "XPScriptArchiveFactory.Create()", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\s*\((.*)\)", m => CreateArchiveExpression(m.Groups[1].Value), RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\s*\((.*)\)", m => CreateArchiveExpression(m.Groups[1].Value, sourceName, lineIndex + 1, raw), RegexOptions.IgnoreCase);
 
             foreach (var archiveName in archiveVariables.OrderByDescending(x => x.Length))
             {
@@ -134,13 +135,13 @@ internal sealed class ArchiveObjectPreprocessor
     private static CompilerException RemovedIsDirectoryException() =>
         new("ArchiveEntry.IsDirectory is not available. Use ArchiveEntry.IsFile or ArchiveEntry.IsFolder.");
 
-    private static string CreateArchiveExpression(string rawArguments)
+    private static string CreateArchiveExpression(string rawArguments, string sourceName, int line, string sourceLine)
     {
         var args = SplitArguments(rawArguments);
         if (args.Count == 0) return "XPScriptArchiveFactory.Create()";
         if (args.Count == 1) return $"XPScriptArchiveFactory.Create({args[0]})";
         if (args.Count != 2)
-            throw new CompilerException("Archive constructor expects filename or Byte array and optional extendedSupport Boolean.");
+            throw SyntaxFailure(sourceName, line, sourceLine, rawArguments, "Archive(filenameOrBytes [, extendedSupport])");
 
         var extended = args[1].Trim();
         if (extended.Equals("True", StringComparison.OrdinalIgnoreCase))
@@ -148,7 +149,19 @@ internal sealed class ArchiveObjectPreprocessor
         if (extended.Equals("False", StringComparison.OrdinalIgnoreCase))
             return $"XPScriptArchiveFactory.Create({args[0]}, false)";
 
-        throw new CompilerException("Archive extendedSupport must be the literal True or False so dependencies can be resolved at compile time.");
+        throw SyntaxFailure(sourceName, line, sourceLine, extended, "True or False literal");
+    }
+
+    private static CompilerException SyntaxFailure(string sourceName, int line, string sourceLine, string found, string expected)
+    {
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourceName), Line = line, Position = 1, EndLine = line, EndColumn = Math.Max(1, safeSource.Length + 1),
+            Description = $"Invalid Archive constructor syntax; expected {expected}.", DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
+            Properties = [new() { Name = "foundToken", Value = found }, new() { Name = "expectedConstruct", Value = expected }], SourceCode = safeSource
+        };
+        return new CompilerException(diagnostic.Description, diagnostic.DiagnosticCode, diagnostic.Category, [diagnostic]);
     }
 
     private static List<string> SplitArguments(string value)
