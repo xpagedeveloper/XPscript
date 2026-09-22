@@ -521,7 +521,7 @@ paths:
 if (!collidingComponentClient.Source.Contains("Public Class ApiKey", StringComparison.Ordinal) ||
     !collidingComponentClient.Source.Contains("Public Class ApiKey2", StringComparison.Ordinal) ||
     !collidingComponentClient.Source.Contains("Public ApiKey2 As ApiKey2", StringComparison.Ordinal))
-    throw new Exception("Colliding OpenAPI component identifiers must receive deterministic same-scope names while references preserve the original schema identity.");
+    throw new Exception("Colliding OpenAPI component identifiers must receive deterministic same-scope names while references preserve the original schema identity. Generated source:\n" + collidingComponentClient.Source);
 
 var keywordPropertyClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
