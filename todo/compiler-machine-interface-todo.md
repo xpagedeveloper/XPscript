@@ -394,12 +394,12 @@ Golden tests should verify machine fields, not unnecessarily depend on exact hum
 
 ### Phase 2: structured compiler knowledge
 
-- [ ] Parser metadata.
-- [ ] Symbol/member metadata.
+- [x] Parser metadata. Covered by structured syntax diagnostics (`foundToken`, `expectedConstruct`) and parser/source-range regression probes.
+- [x] Symbol/member metadata. Covered by `CompilerSymbolCatalog` kind/signature/parameter/return-type/documentation/deprecation metadata and scoped member lookup.
 - [x] Type/argument metadata. Covered by Section 8 structured type, argument, parameter and overload diagnostics.
-- [ ] Target/ServerSide metadata.
+- [x] Target/ServerSide metadata. Covered by structured XPS3001/XPS3002 target/context properties and Sections 9-10.
 - [x] Documentation IDs. Covered by Section 11 stable documentation IDs.
-- [ ] Candidate symbols.
+- [x] Candidate symbols. Covered by deterministic compiler-owned symbol/member candidates and receiver-scoped regression probes.
 
 ### Phase 3: machine interface
 
