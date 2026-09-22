@@ -329,6 +329,12 @@ try
                 throw new Exception("Configured KnownProxy did not apply the nearest forwarded host.");
             if (body.Contains("REMOTE=198.51.100.77", StringComparison.Ordinal))
                 throw new Exception("ForwardLimit=1 allowed a chained client-supplied address to become effective.");
+            var correlationCookieName = XpsWebClientCorrelation.CookieNameFor(serverInfo.SiteId);
+            var correlationCookie = response.Headers.TryGetValues("Set-Cookie", out var setCookies)
+                ? setCookies.SingleOrDefault(value => value.StartsWith(correlationCookieName + "=", StringComparison.Ordinal))
+                : null;
+            if (correlationCookie is null || !correlationCookie.Contains("; Secure", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Trusted HTTPS proxy did not produce a Secure correlation cookie.");
         }
 
         using (var badForwardedHost = new HttpRequestMessage(HttpMethod.Get, "/proxy-host"))
@@ -383,6 +389,12 @@ try
             var body = await response.Content.ReadAsStringAsync();
             if (!body.Contains("SCHEME=https", StringComparison.Ordinal))
                 throw new Exception("IIS out-of-process mode did not preserve the external HTTPS scheme.");
+            var correlationCookieName = XpsWebClientCorrelation.CookieNameFor(serverInfo.SiteId);
+            var correlationCookie = response.Headers.TryGetValues("Set-Cookie", out var setCookies)
+                ? setCookies.SingleOrDefault(value => value.StartsWith(correlationCookieName + "=", StringComparison.Ordinal))
+                : null;
+            if (correlationCookie is null || !correlationCookie.Contains("; Secure", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("IIS trusted forwarded HTTPS request did not produce a Secure correlation cookie.");
         }
     }
     finally
