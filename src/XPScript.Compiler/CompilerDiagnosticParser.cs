@@ -195,7 +195,7 @@ internal static class CompilerDiagnosticParser
                 "CS0117" when quotedIdentifiers.Length >= 2 => quotedIdentifiers[1],
                 _ => quotedIdentifiers[0]
             };
-            return [new CompileDiagnosticProperty { Name = propertyName, Value = identifier }];
+            return SymbolProperties(propertyName, identifier);
         }
 
         if (string.IsNullOrWhiteSpace(sourceLine)) return null;
@@ -208,15 +208,30 @@ internal static class CompilerDiagnosticParser
                 .Select(match => match.Groups["identifier"].Value)
                 .LastOrDefault();
             if (!string.IsNullOrWhiteSpace(memberAccess))
-                return [new CompileDiagnosticProperty { Name = propertyName, Value = memberAccess }];
+                return SymbolProperties(propertyName, memberAccess);
         }
 
         if (position <= 0) return null;
         var suffix = position <= sourceLine.Length ? sourceLine.Substring(position - 1) : "";
         var sourceMatch = Regex.Match(suffix, @"^(?<identifier>[A-Za-z_]\w*)");
         return sourceMatch.Success
-            ? [new CompileDiagnosticProperty { Name = propertyName, Value = sourceMatch.Groups["identifier"].Value }]
+            ? SymbolProperties(propertyName, sourceMatch.Groups["identifier"].Value)
             : null;
+    }
+
+    private static List<CompileDiagnosticProperty> SymbolProperties(string propertyName, string identifier)
+    {
+        var properties = new List<CompileDiagnosticProperty>
+        {
+            new() { Name = propertyName, Value = identifier }
+        };
+        foreach (var candidate in CompilerSymbolCatalog.Candidates(identifier))
+        {
+            properties.Add(new CompileDiagnosticProperty { Name = "candidate", Value = candidate.Name });
+            properties.Add(new CompileDiagnosticProperty { Name = "candidateKind", Value = candidate.Kind });
+            properties.Add(new CompileDiagnosticProperty { Name = "candidateSignature", Value = candidate.Signature });
+        }
+        return properties;
     }
 
     private static string RecoverDiagnosticSourceLine(string rootSourcePath, string rootSource, string diagnosticSourcePath, string currentLine, string description, string upstreamCode)
