@@ -103,7 +103,9 @@ public sealed class XpsWebCompiler
 
         if (parsed.Routes.Count == 0) throw new XpsWebCompilationException("Web source must export at least one route using web route attributes.");
 
-        var compilerSource = EnsureCompilerEntryPoint(NormalizeVariantSetAssignments(parsed.Source));\n        if (parsed.Routes.Values.Any(route => route.JsonSchema is not null))\n            compilerSource += "\\nDim __xps_rest_json_schema_runtime As XPJsonSchema\\n";
+        var compilerSource = EnsureCompilerEntryPoint(NormalizeVariantSetAssignments(parsed.Source));
+        if (parsed.Routes.Values.Any(route => route.JsonSchema is not null))
+            compilerSource += "\nDim __xps_rest_json_schema_runtime As XPJsonSchema\n";
         string generated;
         try
         {
