@@ -188,7 +188,10 @@ var goldenFixtures = new (string File, string? Target, string DiagnosticCode, st
 foreach (var fixture in goldenFixtures)
 {
     var fixturePath = Path.Combine(root, "samples", fixture.File);
-    var first = await new CompilerDriver().ValidateWithResultAsync(fixturePath, fixture.Target);
+    var firstDriver = new CompilerDriver();
+    var first = fixture.Target is null
+        ? await firstDriver.ValidateWithResultAsync(fixturePath)
+        : await firstDriver.ValidateWithResultAsync(fixturePath, fixture.Target);
     var diagnostic = first.Errors.FirstOrDefault(d => d.DiagnosticCode == fixture.DiagnosticCode);
     Require(diagnostic is not null,
         $"golden fixture {fixture.File} expected {fixture.DiagnosticCode}; actual: {string.Join(", ", first.Errors.Select(d => (d.DiagnosticCode ?? "<none>") + " [" + d.Description + "]"))}");
@@ -196,7 +199,10 @@ foreach (var fixture in goldenFixtures)
     Require(diagnostic.Properties is not null, $"golden fixture {fixture.File} properties");
     Require(fixture.Properties.All(name => diagnostic.Properties.Any(p => p.Name == name)), $"golden fixture {fixture.File} property contract");
 
-    var second = await new CompilerDriver().ValidateWithResultAsync(fixturePath, fixture.Target);
+    var secondDriver = new CompilerDriver();
+    var second = fixture.Target is null
+        ? await secondDriver.ValidateWithResultAsync(fixturePath)
+        : await secondDriver.ValidateWithResultAsync(fixturePath, fixture.Target);
     Require(JsonSerializer.Serialize(first) == JsonSerializer.Serialize(second), $"golden fixture {fixture.File} deterministic machine result");
 }
 
