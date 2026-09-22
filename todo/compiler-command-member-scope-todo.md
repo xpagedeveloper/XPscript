@@ -71,6 +71,7 @@ A runtime/global function name must not become globally reserved merely because 
   - Audited AdvancedXPScriptTranspiler runtime-function lowering and DateObjectPreprocessor: parenthesized runtime functions and Date receiver rewrites already use member-aware `(?<![\w.])` boundaries. CoreCompatibilityTranspiler delegates final expression lowering to AdvancedXPScriptTranspiler, so these paths preserve receiver/member scope.
  retains its specialized `#fileNo` syntax with member exclusion, and Property Let is a declaration-only compatibility rewrite.
   - Audited TypeDeclarationPreprocessor, XPScriptTranspiler helper rewrites, and UIForm generated-code postprocessors: these operate on declarations, tracked list variables, compiler-generated labels, or generated C# runtime structure rather than user-level unqualified command/function resolution.
+  - Audited ModuleGlobals, ModuleObjectGlobals, and IndexedProperty preprocessors: module array/object rewrites are symbol-tracked and member-aware, while indexed-property lowering intentionally preserves an optional receiver and rewrites it to generated getter/setter members.
 ## 4. Regression tests
 
 - [x] Add a class property whose name matches a runtime/global function.
