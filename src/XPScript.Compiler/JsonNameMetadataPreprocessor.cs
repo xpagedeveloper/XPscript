@@ -44,7 +44,7 @@ internal sealed class JsonNameMetadataPreprocessor
         foreach (var mapping in Mappings)
         {
             var escaped = mapping.JsonName.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
-            var classPattern = $@"\\bclass\\s+{Regex.Escape(mapping.ClassName)}\\b[^{{]*\\{{";
+            var classPattern = $@"\\bclass\\s+(?:XPScriptClass_)?{Regex.Escape(mapping.ClassName)}\\b[^{{]*\\{{";
             var classMatch = Regex.Match(generated, classPattern, RegexOptions.CultureInvariant);
             if (!classMatch.Success) throw new CompilerException($"[JsonName] generated class '{mapping.ClassName}' was not found.");
             var openBrace = generated.IndexOf('{', classMatch.Index);
