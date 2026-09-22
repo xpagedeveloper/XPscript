@@ -34,18 +34,6 @@ Require(unterminatedStringDefinition is not null, "XPS1006 diagnostic definition
 Require(unterminatedStringDefinition.Category == "syntax", "XPS1006 category");
 Require(unterminatedStringDefinition.Properties.SequenceEqual(["foundToken", "expectedConstruct"]), "XPS1006 properties");
 
-var corePhysicalRangeCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-unexpected-end-with-error.xps"));
-var corePhysicalRangeDiagnostic = corePhysicalRangeCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
-Require(corePhysicalRangeDiagnostic is not null, "core physical range diagnostic");
-Require(corePhysicalRangeDiagnostic.Category == "syntax", "core physical range category");
-Require(corePhysicalRangeDiagnostic.File == "core-unexpected-end-with-error.xps", "core physical range file");
-Require(corePhysicalRangeDiagnostic.Line == 4, $"core physical range line: actual={corePhysicalRangeDiagnostic.Line}");
-Require(corePhysicalRangeDiagnostic.EndLine == 4 && corePhysicalRangeDiagnostic.EndColumn > corePhysicalRangeDiagnostic.Position, "core physical source range");
-Require(corePhysicalRangeDiagnostic.SourceCode?.Contains("End With", StringComparison.OrdinalIgnoreCase) == true, "core physical source text");
-Require(corePhysicalRangeDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "End With") == true, "core physical found token");
-Require(corePhysicalRangeDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "With statement") == true, "core physical expected construct");
-
-
 var auditFindings = ApplicationSecurityAudit.Parse("""
 warning NU1902: Package 'Moderate.Package' 1.2.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-moderate
 warning NU1904: Package 'Critical.Package' 4.5.6 has a known critical severity vulnerability, https://github.com/advisories/GHSA-critical.
@@ -191,6 +179,18 @@ Require(normalizedPathDiagnostic.File == "portable.xps", "diagnostic file paths 
 
 
 var driver = new CompilerDriver();
+
+var corePhysicalRangeCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-unexpected-end-with-error.xps"));
+var corePhysicalRangeDiagnostic = corePhysicalRangeCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(corePhysicalRangeDiagnostic is not null, "core physical range diagnostic");
+Require(corePhysicalRangeDiagnostic.Category == "syntax", "core physical range category");
+Require(corePhysicalRangeDiagnostic.File == "core-unexpected-end-with-error.xps", "core physical range file");
+Require(corePhysicalRangeDiagnostic.Line == 4, $"core physical range line: actual={corePhysicalRangeDiagnostic.Line}");
+Require(corePhysicalRangeDiagnostic.EndLine == 4 && corePhysicalRangeDiagnostic.EndColumn > corePhysicalRangeDiagnostic.Position, "core physical source range");
+Require(corePhysicalRangeDiagnostic.SourceCode?.Contains("End With", StringComparison.OrdinalIgnoreCase) == true, "core physical source text");
+Require(corePhysicalRangeDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "End With") == true, "core physical found token");
+Require(corePhysicalRangeDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "With statement") == true, "core physical expected construct");
+
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
 var emptySourcePath = Path.Combine(outputRoot, "empty-source.xps");
