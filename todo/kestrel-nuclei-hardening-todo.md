@@ -120,9 +120,9 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify logs contain only the hashed session correlation identifier. Shared runtime regression verified in run #93.
 - [x] Verify two clients receive independent correlation identifiers. Shared runtime regression verified in run #93.
 - [x] Verify session fixation resistance. Correlation cookies are server-authenticated with HMAC and forged client values are rotated; shared runtime regression verified in run #93.
-- [ ] Verify malformed cookies do not break request isolation.
+- [x] Verify malformed cookies do not break request isolation. Shared runtime regression verified in run #100.
 - [ ] Verify duplicate cookie name behavior.
-- [ ] Verify oversized cookie input fails safely.
+- [x] Verify oversized cookie input fails safely. 16 KiB malformed correlation-cookie input is safely rotated; verified in run #100.
 - [ ] Verify session cookies cannot be injected through response headers.
 - [ ] Verify Secure session cookie configuration behaves correctly behind trusted reverse proxies.
 
