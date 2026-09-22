@@ -20,6 +20,34 @@ try
     };
     await using var adapter = new XpsFastCgiAdapter(options, server, new EchoHandler());
 
+    var malformedJsonBody = Encoding.UTF8.GetBytes("{not-json");
+    var malformedJsonInput = BuildRequest(
+        15,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "POST",
+            ["SCRIPT_NAME"] = "/json.xps",
+            ["CONTENT_TYPE"] = "application/json",
+            ["CONTENT_LENGTH"] = malformedJsonBody.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "json.xps")
+        },
+        malformedJsonBody);
+    var malformedJsonStream = new FragmentedDuplexStream(malformedJsonInput, 3);
+    await using (var jsonAdapter = new XpsFastCgiAdapter(options, server, new JsonBodyHandler()))
+    {
+        await jsonAdapter.ProcessConnectionAsync(malformedJsonStream);
+    }
+    var malformedJsonOutput = ParseResponse(malformedJsonStream.Written);
+    if (!malformedJsonOutput.Contains("Status: 400", StringComparison.Ordinal))
+        throw new Exception("FastCGI malformed JSON did not map to 400: " + malformedJsonOutput);
+    if (malformedJsonOutput.Contains("stacktrace", StringComparison.OrdinalIgnoreCase) ||
+        malformedJsonOutput.Contains(".cs:", StringComparison.OrdinalIgnoreCase) ||
+        malformedJsonOutput.Contains("/home/", StringComparison.OrdinalIgnoreCase) ||
+        malformedJsonOutput.Contains("\\users\\", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("FastCGI malformed JSON response leaked diagnostics: " + malformedJsonOutput);
+
     var duplicateCookieInput = BuildRequest(
         13,
         new Dictionary<string, string>
@@ -240,6 +268,26 @@ static string ParseResponse(byte[] raw)
     }
     if (!sawEnd) throw new Exception("FastCGI response did not contain END_REQUEST.");
     return Encoding.UTF8.GetString(stdout.ToArray());
+}
+
+
+sealed class JsonBodyHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        try
+        {
+            _ = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(context.Request.Body.Span);
+            context.Response.StatusCode = 200;
+            context.Response.Write("OK");
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            context.Response.StatusCode = 400;
+            context.Response.Write("Invalid JSON");
+        }
+        return Task.CompletedTask;
+    }
 }
 
 sealed class EchoHandler : IXpsWebRequestHandler
