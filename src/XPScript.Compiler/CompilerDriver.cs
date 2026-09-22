@@ -163,9 +163,10 @@ public sealed class CompilerDriver
                 diagnostics.AddRange(ex.GeneratedDiagnostics);
             return CompileResult.Error(diagnostics).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return CompileResult.Error([CreateDiagnostic(0, 0, "Validation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
+            var description = CompilerDiagnosticRedaction.SanitizeExceptionMessage(ex, "Validation failed.");
+            return CompileResult.Error([CreateDiagnostic(0, 0, description, "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
         }
         finally
         {
