@@ -117,11 +117,11 @@ Minimum representation:
 
 ## 5. Parser diagnostics
 
-- [ ] Convert parser failures to structured diagnostics.
-- [ ] Include the token/construct found where available.
-- [ ] Include expected token/construct information where available.
-- [ ] Include precise source ranges.
-- [ ] Do not reconstruct parser metadata by parsing error messages.
+- [x] Convert parser failures to structured diagnostics.
+- [x] Include the token/construct found where available.
+- [x] Include expected token/construct information where available.
+- [x] Include precise source ranges.
+- [x] Do not reconstruct parser metadata by parsing error messages.
 
 ## 6. Symbol diagnostics
 
