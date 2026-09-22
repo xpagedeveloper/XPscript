@@ -16,29 +16,29 @@ internal sealed class HclSelectedCompatibilityPreprocessor
     {
         if (!PreprocessorFeatureGate.ContainsAny(source, FeatureMarkers)) return source;
 
-        source = ReplaceCall(source, "ArrayReplace", "LSHclArrayRuntime.ArrayReplace");
-        source = ReplaceCall(source, "CreateObject", "LSHclSelectedRuntime.CreateObject");
-        source = ReplaceCall(source, "GetObject", "LSHclSelectedRuntime.GetObject");
-        source = ReplaceCall(source, "InputBox", "LSHclSelectedRuntime.InputBox");
-        source = ReplaceCall(source, "Implode", "LSHclSelectedRuntime.Implode");
-        source = ReplaceCall(source, "IsDefined", "LSHclPlatformConstantRuntime.IsDefined");
-        source = ReplaceCall(source, "FullTrim", "LSHclSelectedRuntime.FullTrim");
-        source = ReplaceCall(source, "LenB", "LSHclSelectedRuntime.LenB");
-        source = ReplaceCall(source, "Len", "LSHclSelectedRuntime.Len");
-        source = ReplaceCall(source, "UString", "LSHclSelectedRuntime.UString", allowDollarSuffix: true);
-        source = ReplaceCall(source, "Rnd", "LSHclSelectedRuntime.Rnd");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "ArrayReplace", "LSHclArrayRuntime.ArrayReplace");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "CreateObject", "LSHclSelectedRuntime.CreateObject");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "GetObject", "LSHclSelectedRuntime.GetObject");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "InputBox", "LSHclSelectedRuntime.InputBox");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "Implode", "LSHclSelectedRuntime.Implode");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "IsDefined", "LSHclPlatformConstantRuntime.IsDefined");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "FullTrim", "LSHclSelectedRuntime.FullTrim");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "LenB", "LSHclSelectedRuntime.LenB");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "Len", "LSHclSelectedRuntime.Len");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "UString", "LSHclSelectedRuntime.UString");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "Rnd", "LSHclSelectedRuntime.Rnd");
 
-        source = ReplaceCall(source, "InputBP", "LSHclPlatformStringRuntime.InputBP", allowDollarSuffix: true);
-        source = ReplaceCall(source, "InStrBP", "LSHclPlatformStringRuntime.InStrBP");
-        source = ReplaceCall(source, "InStrC", "LSHclPlatformStringRuntime.InStrC");
-        source = ReplaceCall(source, "LeftBP", "LSHclPlatformStringRuntime.LeftBP", allowDollarSuffix: true);
-        source = ReplaceCall(source, "LeftC", "LSHclPlatformStringRuntime.LeftC", allowDollarSuffix: true);
-        source = ReplaceCall(source, "LenBP", "LSHclPlatformStringRuntime.LenBP");
-        source = ReplaceCall(source, "LenC", "LSHclPlatformStringRuntime.LenC");
-        source = ReplaceCall(source, "MidBP", "LSHclPlatformStringRuntime.MidBP", allowDollarSuffix: true);
-        source = ReplaceCall(source, "MidC", "LSHclPlatformStringRuntime.MidC", allowDollarSuffix: true);
-        source = ReplaceCall(source, "RightBP", "LSHclPlatformStringRuntime.RightBP", allowDollarSuffix: true);
-        source = ReplaceCall(source, "RightC", "LSHclPlatformStringRuntime.RightC", allowDollarSuffix: true);
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "InputBP", "LSHclPlatformStringRuntime.InputBP");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "InStrBP", "LSHclPlatformStringRuntime.InStrBP");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "InStrC", "LSHclPlatformStringRuntime.InStrC");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "LeftBP", "LSHclPlatformStringRuntime.LeftBP");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "LeftC", "LSHclPlatformStringRuntime.LeftC");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "LenBP", "LSHclPlatformStringRuntime.LenBP");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "LenC", "LSHclPlatformStringRuntime.LenC");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "MidBP", "LSHclPlatformStringRuntime.MidBP");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "MidC", "LSHclPlatformStringRuntime.MidC");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "RightBP", "LSHclPlatformStringRuntime.RightBP");
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "RightC", "LSHclPlatformStringRuntime.RightC");
 
         source = Regex.Replace(
             source,
@@ -77,13 +77,4 @@ internal sealed class HclSelectedCompatibilityPreprocessor
         return new HashFunctionsPreprocessor().Transform(source);
     }
 
-    private static string ReplaceCall(string source, string name, string target, bool allowDollarSuffix = false)
-    {
-        var suffix = allowDollarSuffix ? @"\$?" : string.Empty;
-        return Regex.Replace(
-            source,
-            $@"(?<![\w.]){Regex.Escape(name)}{suffix}\s*\(",
-            target + "(",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    }
 }

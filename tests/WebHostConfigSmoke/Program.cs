@@ -37,6 +37,7 @@ try
     await VerifyInvalidConfigAsync(cliDll, configDir);
     await VerifyMissingConfigAsync(cliDll, configDir);
     await VerifyAutomaticConfigAsync(cliDll, configDir, automaticConfig);
+    await VerifyApiDocsJsonSchemaAsync(cliDll, siteDir);\n    await VerifyApiDocsJsonSchemaFailuresAsync(cliDll, parent);
     Console.WriteLine("WEB-HOST-CONFIG-SMOKE=OK");
 }
 finally
@@ -206,6 +207,112 @@ static async Task VerifyAutomaticConfigAsync(string cliDll, string configDir, st
         Stop(process);
         File.Delete(automaticConfig);
     }
+}
+
+static async Task VerifyApiDocsJsonSchemaAsync(string cliDll, string siteDir)
+{
+    var schemaDir = Path.Combine(siteDir, "schemas");
+    Directory.CreateDirectory(schemaDir);
+    await File.WriteAllTextAsync(Path.Combine(schemaDir, "create-user.schema.json"), """
+{"type":"object","required":["name"],"properties":{"name":{"type":"string"}}}
+""");
+    await File.WriteAllTextAsync(Path.Combine(siteDir, "schema-api.xps"), """
+Class TypedSchemaUserPayload
+    Public Name As String
+    Public Age As Integer
+End Class
+
+[Anonymous]
+[Post:/api/schema-users]
+[JsonSchema:schemas/create-user.schema.json]
+Sub CreateSchemaUser([FromBody] payload As TypedSchemaUserPayload)
+    Response.OK(payload)
+End Sub
+""");
+
+    var port = GetFreePort();
+    using var process = Start(cliDll, ["web", "--root", siteDir, "--port", port.ToString(), "--api-docs"]);
+    try
+    {
+        await WaitForTcpAsync(port, process, TimeSpan.FromSeconds(30));
+        var openApiPath = Path.Combine(siteDir, "apidoc", "openapi.json");
+        if (!File.Exists(openApiPath)) throw new Exception("API documentation did not generate openapi.json.");
+        using var doc = JsonDocument.Parse(await File.ReadAllTextAsync(openApiPath));
+        var schema = doc.RootElement.GetProperty("paths")
+            .GetProperty("/api/schema-users")
+            .GetProperty("post")
+            .GetProperty("requestBody")
+            .GetProperty("content")
+            .GetProperty("application/json")
+            .GetProperty("schema");
+        if (schema.TryGetProperty("$ref", out var schemaReference))
+            throw new Exception($"[JsonSchema] did not override the typed [FromBody] schema: {schemaReference.GetString()}");
+        if (schema.GetProperty("type").GetString() != "object" ||
+            schema.GetProperty("required")[0].GetString() != "name" ||
+            schema.GetProperty("properties").GetProperty("name").GetProperty("type").GetString() != "string")
+            throw new Exception("OpenAPI requestBody did not inline the route JSON Schema.");
+        var fallbackRoute = doc.RootElement.GetProperty("paths").EnumerateObject()
+            .SelectMany(path => path.Value.EnumerateObject().Select(method => (path.Name, method.Name, Operation: method.Value)))
+            .FirstOrDefault(item => item.Operation.TryGetProperty("requestBody", out var body) &&
+                body.GetProperty("content").GetProperty("application/json").GetProperty("schema").TryGetProperty("$ref", out var reference) &&
+                reference.GetString() is { } value && value.StartsWith("#/components/schemas/", StringComparison.Ordinal));
+        if (fallbackRoute.Operation.ValueKind == JsonValueKind.Undefined)
+            throw new Exception("OpenAPI did not preserve the typed request-body schema fallback for routes without [JsonSchema].");
+        Console.WriteLine("WEB-API-DOCS-JSON-SCHEMA=OK");
+    }
+    finally
+    {
+        Stop(process);
+    }
+}
+
+static async Task VerifyApiDocsJsonSchemaFailuresAsync(string cliDll, string parent)
+{
+    var cases = new (string Name, string SchemaPath, string? SchemaContent, string ExpectedError)[]
+    {
+        ("traversal", "../outside.schema.json", "{}", "must stay inside the web root"),
+        ("non-json", "schemas/schema.txt", "{}", "must reference a .json file"),
+        ("missing", "schemas/missing.schema.json", null, "was not found"),
+        ("invalid-json", "schemas/invalid.schema.json", "{not-json", "invalid JSON"),
+        ("invalid-schema-root", "schemas/array.schema.json", "[]", "object or boolean schema root")
+    };
+
+    foreach (var test in cases)
+    {
+        var root = Path.Combine(parent, "apidoc-schema-" + test.Name);
+        Directory.CreateDirectory(Path.Combine(root, "schemas"));
+        if (test.SchemaContent is not null && !test.SchemaPath.StartsWith("..", StringComparison.Ordinal))
+            await File.WriteAllTextAsync(Path.Combine(root, test.SchemaPath.Replace('/', Path.DirectorySeparatorChar)), test.SchemaContent);
+        await File.WriteAllTextAsync(Path.Combine(root, "api.xps"), $"""
+[Anonymous]
+[Post:/api/test]
+[JsonSchema:{{test.SchemaPath}}]
+Sub Test([FromBody] payload As Object)
+    Response.OK(payload)
+End Sub
+""");
+        var result = await RunShortAsync(cliDll, ["web", "--root", root, "--port", GetFreePort().ToString(), "--api-docs"]);
+        if (result.ExitCode == 0 || !result.Stderr.Contains(test.ExpectedError, StringComparison.OrdinalIgnoreCase))
+            throw new Exception($"API documentation did not reject JSON Schema case '{test.Name}' with the expected diagnostic '{test.ExpectedError}'. exit={result.ExitCode} stderr={result.Stderr}");
+    }
+
+    var absoluteRoot = Path.Combine(parent, "apidoc-schema-absolute");
+    Directory.CreateDirectory(absoluteRoot);
+    var absoluteSchema = Path.Combine(parent, "absolute.schema.json");
+    await File.WriteAllTextAsync(absoluteSchema, "{}");
+    await File.WriteAllTextAsync(Path.Combine(absoluteRoot, "api.xps"), $"""
+[Anonymous]
+[Post:/api/test]
+[JsonSchema:{{absoluteSchema}}]
+Sub Test([FromBody] payload As Object)
+    Response.OK(payload)
+End Sub
+""");
+    var absoluteResult = await RunShortAsync(cliDll, ["web", "--root", absoluteRoot, "--port", GetFreePort().ToString(), "--api-docs"]);
+    if (absoluteResult.ExitCode == 0 || !absoluteResult.Stderr.Contains("must stay inside the web root", StringComparison.OrdinalIgnoreCase))
+        throw new Exception($"API documentation did not reject an absolute JSON Schema path with the expected diagnostic. exit={absoluteResult.ExitCode} stderr={absoluteResult.Stderr}");
+
+    Console.WriteLine("WEB-API-DOCS-JSON-SCHEMA-FAILURES=OK");
 }
 
 static Task WriteConfigAsync(string path, object value)

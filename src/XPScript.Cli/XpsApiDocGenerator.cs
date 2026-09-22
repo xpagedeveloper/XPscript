@@ -1,3 +1,4 @@
+using XPScript.Web.Runtime;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -7,6 +8,7 @@ internal static class XpsApiDocGenerator
 {
     private static readonly Regex PrefixPattern = new(@"^\s*\[RoutePrefix:(.+)\]\s*$", RegexOptions.IgnoreCase);
     private static readonly Regex RoutePattern = new(@"^\s*\[(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS):([^\]]+)\]\s*$", RegexOptions.IgnoreCase);
+    private static readonly Regex JsonSchemaPattern = new(@"^\s*\[JsonSchema:([^\]]+)\]\s*$", RegexOptions.IgnoreCase);
     private static readonly Regex ProcedurePattern = new(@"^\s*(?:Public\s+|Private\s+)?(Sub|Function)\s+([A-Za-z_]\w*)\s*\((.*)\)\s*(?:As\s+([A-Za-z_]\w*(?:\(\))?))?", RegexOptions.IgnoreCase);
     private static readonly Regex ParamPattern = new(@"^(?:(?:ByVal|ByRef)\s+)?(?:\[(?:FromRoute|FromQuery|FromBody|FromHeader)(?::[^\]]+)?\]\s*)?([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*(?:\(\))?))?", RegexOptions.IgnoreCase);
 
@@ -19,7 +21,7 @@ internal static class XpsApiDocGenerator
 
         var output = Path.Combine(root, "apidoc");
         Directory.CreateDirectory(output);
-        File.WriteAllText(Path.Combine(output, "openapi.json"), BuildOpenApi(endpoints), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(output, "openapi.json"), BuildOpenApi(root, endpoints), Encoding.UTF8);
         File.WriteAllText(Path.Combine(output, "swagger.json"), BuildSwagger(endpoints), Encoding.UTF8);
         File.WriteAllText(Path.Combine(output, "index.html"), BuildHtml(endpoints), Encoding.UTF8);
         File.WriteAllText(Path.Combine(output, "apidoc.css"), Css, Encoding.UTF8);
@@ -32,6 +34,7 @@ internal static class XpsApiDocGenerator
         var docs = new List<string>();
         string? method = null;
         string? route = null;
+        string? jsonSchema = null;
         var tag = ToTitle(Path.GetFileNameWithoutExtension(file));
 
         foreach (var raw in lines)
@@ -45,6 +48,9 @@ internal static class XpsApiDocGenerator
                 docs.Add(trimmed[3..].Trim());
                 continue;
             }
+
+            var sm = JsonSchemaPattern.Match(raw);
+            if (sm.Success) { jsonSchema = sm.Groups[1].Value.Trim(); continue; }
 
             var rm = RoutePattern.Match(raw);
             if (rm.Success)
@@ -67,8 +73,8 @@ internal static class XpsApiDocGenerator
             var parameters = ParseParameters(proc.Groups[3].Value, route, parsedDocs.ParamDocs);
             var returnType = string.IsNullOrWhiteSpace(proc.Groups[4].Value) ? null : proc.Groups[4].Value;
             endpoints.Add(new Endpoint(method, Combine(prefix, route), proc.Groups[2].Value, parsedDocs.Summary, parsedDocs.Description,
-                parsedDocs.Tag, parameters, parsedDocs.Responses, returnType, Path.GetRelativePath(root, file)));
-            method = null; route = null; docs.Clear();
+                parsedDocs.Tag, parameters, parsedDocs.Responses, returnType, Path.GetRelativePath(root, file), jsonSchema));
+            method = null; route = null; jsonSchema = null; docs.Clear();
         }
     }
 
@@ -124,7 +130,38 @@ internal static class XpsApiDocGenerator
         if (start < raw.Length) yield return raw[start..];
     }
 
-    private static string BuildOpenApi(List<Endpoint> endpoints)
+    private static object? RequestBodySchema(string root, Endpoint endpoint)
+    {
+        if (endpoint.JsonSchema is not null)
+        {
+            string schemaPath;
+            try
+            {
+                schemaPath = XpsJsonSchemaPath.ResolveInsideRoot(root, endpoint.JsonSchema);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOperationException($"Invalid JSON Schema path '{endpoint.JsonSchema}': {ex.Message}", ex);
+            }
+            if (!File.Exists(schemaPath))
+                throw new FileNotFoundException($"Configured JSON Schema '{endpoint.JsonSchema}' was not found.", schemaPath);
+
+            try
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(schemaPath));
+                if (document.RootElement.ValueKind is not JsonValueKind.Object and not JsonValueKind.True and not JsonValueKind.False)
+                    throw new InvalidOperationException($"Configured JSON Schema '{endpoint.JsonSchema}' must have an object or boolean schema root.");
+                return document.RootElement.Clone();
+            }
+            catch (JsonException ex)
+            {
+                throw new InvalidOperationException($"Configured JSON Schema '{endpoint.JsonSchema}' is invalid JSON.", ex);
+            }
+        }
+        return endpoint.Parameters.FirstOrDefault(p => p.Location == "body") is { } body ? Schema(body.Type) : null;
+    }
+
+    private static string BuildOpenApi(string root, List<Endpoint> endpoints)
     {
         var paths = new Dictionary<string, object>();
         foreach (var group in endpoints.GroupBy(e => e.Route))
@@ -137,7 +174,7 @@ internal static class XpsApiDocGenerator
                     tags = new[] { e.Tag }, summary = e.Summary, description = e.Description,
                     operationId = e.Name,
                     parameters = e.Parameters.Where(p => p.Location != "body").Select(p => new { name = p.Name, @in = p.Location, required = p.Required, description = p.Description, schema = Schema(p.Type) }).ToArray(),
-                    requestBody = e.Parameters.FirstOrDefault(p => p.Location == "body") is { } body ? new { required = true, content = new Dictionary<string, object> { ["application/json"] = new { schema = Schema(body.Type) } } } : null,
+                    requestBody = RequestBodySchema(root, e) is { } bodySchema ? new { required = true, content = new Dictionary<string, object> { ["application/json"] = new { schema = bodySchema } } } : null,
                     responses = Responses31(e)
                 };
             }
@@ -201,7 +238,7 @@ internal static class XpsApiDocGenerator
     private static string ToTitle(string value) => value.Length == 0 ? "General" : char.ToUpperInvariant(value[0]) + value[1..];
 
     private static readonly JsonSerializerOptions JsonIndented = new() { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
-    private sealed record Endpoint(string Method, string Route, string Name, string Summary, string Description, string Tag, List<Parameter> Parameters, List<ResponseDoc> Responses, string? ReturnType, string Source);
+    private sealed record Endpoint(string Method, string Route, string Name, string Summary, string Description, string Tag, List<Parameter> Parameters, List<ResponseDoc> Responses, string? ReturnType, string Source, string? JsonSchema);
     private sealed record Parameter(string Name, string Type, string Location, bool Required, string Description);
     private sealed record ResponseDoc(int Code, string Description);
     private sealed record ParsedDocs(string Summary, string Description, string Tag, Dictionary<string, string> ParamDocs, List<ResponseDoc> Responses);

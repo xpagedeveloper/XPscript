@@ -323,3 +323,8 @@ The persistent compiler cache contains executable .NET assemblies generated from
 REST endpoints should use explicit CORS origins when browser callers are known. Do not use `[Cors:*]` for credentialed or sensitive APIs. Rate limits complement authentication and authorization but do not replace them.
 
 See [Getting started](getting-started.md) for host setup and parameters and [UIForm](uiform.md) for forms.
+
+
+## Mandatory structured logs
+
+Every Kestrel, FastCGI and CGI request is logged automatically. Logging cannot be disabled, and the validated log directory must be outside the web root. Applications can add structured events with `Application.Log` and audit events with `Application.Audit`. See [mandatory web logging](web-logging.md) for schema, rotation, retention and sensitive-data rules.

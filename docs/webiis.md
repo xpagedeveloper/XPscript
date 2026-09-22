@@ -231,3 +231,8 @@ The `WebIIS IIS E2E` GitHub Actions workflow provisions a real IIS instance on `
 - Keep ASP.NET Core Hosting Bundle, IIS, the .NET SDK used for runtime compilation and installed workloads patched.
 
 For alternative IIS topologies such as reverse proxy or CGI, see [Hosting XPScript on IIS](iis-hosting.md).
+
+
+## Structured logging and client correlation
+
+Mandatory logging uses the same runtime contract as direct Kestrel, FastCGI and CGI hosting. Each XPScript site gets a stable site-specific `XPSLOGID_<site-hash>` cookie name, which avoids collisions when IIS hosts multiple applications on one domain. Logs contain only its SHA-256-derived `session.id`, never the raw cookie. ASP.NET Core Module preserves the external HTTP or HTTPS scheme so the runtime applies the `Secure` cookie attribute only for HTTPS. See [mandatory web logging](web-logging.md).

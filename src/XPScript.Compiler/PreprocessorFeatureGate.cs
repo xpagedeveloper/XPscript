@@ -83,12 +83,54 @@ internal static class PreprocessorFeatureGate
             System.Text.RegularExpressions.RegexOptions.CultureInvariant);
     }
 
+    public static string ReplaceUnqualifiedCalls(string source, string name, string replacement)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var callPattern = new System.Text.RegularExpressions.Regex(
+            @"(?<![A-Za-z0-9_.])" + System.Text.RegularExpressions.Regex.Escape(name) + @"\$?\s*\(",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        return ReplaceCodeOnly(source, code => callPattern.Replace(code, match =>
+        {
+            var previousBreak = match.Index > 0 ? code.LastIndexOfAny(['\r', '\n'], match.Index - 1) : -1;
+            var lineStart = previousBreak < 0 ? 0 : previousBreak + 1;
+            var prefix = code[lineStart..match.Index];
+            if (System.Text.RegularExpressions.Regex.IsMatch(prefix, @"^\s*(?:(?:Public|Private|Static)\s+)*(?:(?:Declare\s+)?(?:Sub|Function)|Property\s+(?:Get|Let|Set))\s+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+                return match.Value;
+            return replacement + "(";
+        }));
+    }
+
+    private static string ReplaceCodeOnly(string source, Func<string, string> transform)
+    {
+        var output = new System.Text.StringBuilder(source.Length + 32);
+        var code = new System.Text.StringBuilder();
+        var inString = false;
+        for (var i = 0; i < source.Length; i++)
+        {
+            var c = source[i];
+            if (!inString && c == '\'')
+            {
+                if (code.Length > 0) { output.Append(transform(code.ToString())); code.Clear(); }
+                var end = source.IndexOfAny(['\r', '\n'], i);
+                if (end < 0) { output.Append(source.AsSpan(i)); return output.ToString(); }
+                output.Append(source.AsSpan(i, end - i)); i = end - 1; continue;
+            }
+            if (c != '"') { if (inString) output.Append(c); else code.Append(c); continue; }
+            if (!inString) { if (code.Length > 0) { output.Append(transform(code.ToString())); code.Clear(); } inString = true; output.Append(c); continue; }
+            output.Append(c);
+            if (i + 1 < source.Length && source[i + 1] == '"') { output.Append(source[++i]); continue; }
+            inString = false;
+        }
+        if (code.Length > 0) output.Append(transform(code.ToString()));
+        return output.ToString();
+    }
+
     public static bool ContainsCall(string codeOnlySource, params ReadOnlySpan<string> names)
     {
         var alternatives = string.Join("|", names.ToArray().Select(System.Text.RegularExpressions.Regex.Escape));
         return System.Text.RegularExpressions.Regex.IsMatch(
             codeOnlySource,
-            @"(?i)(?<![A-Za-z0-9_])(?:" + alternatives + @")\s*\(",
+            @"(?i)(?<![A-Za-z0-9_.])(?:" + alternatives + @")\s*\(",
             System.Text.RegularExpressions.RegexOptions.CultureInvariant);
     }
 }

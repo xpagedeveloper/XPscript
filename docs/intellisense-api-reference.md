@@ -153,3 +153,50 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `HttpMultipart.GetMediaTypeParameter` | `response.ContentType` | none | Internal HTTP media-type parameter parser used by response decoding. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
 | `HttpUiFormHelpers.SetBearerToken` | `client.SetBearerToken(token)` | bearer token. | Compatibility runtime declaration; public callers use XPHttpClient. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
 | `HttpUiFormHelpers.SetBasicAuth` | `client.SetBasicAuth(username, password)` | username and password. | Compatibility runtime declaration; public callers use XPHttpClient. | [openapi-client-consumer.xps](../samples/openapi-client-consumer.xps) |
+
+## Application.Crypto
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `ApplicationCryptoRuntime` | `Application.Crypto` | none | Internal runtime implementation behind the public `Application.Crypto` facade for versioned authenticated string encryption. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `ApplicationCryptoRuntime.Encrypt` | `Application.Crypto.Encrypt(value, password [, algorithm [, context]])` | `value`: plaintext; `password`: non-empty password; optional `algorithm` and authenticated `context`. | Encrypts UTF-8 text with the current password-based authenticated-encryption profile and returns a self-describing envelope. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `ApplicationCryptoRuntime.Decrypt` | `Application.Crypto.Decrypt(value, password [, context])` | `value`: encrypted envelope; `password`: password; optional authenticated `context`. | Authenticates and decrypts a password-based envelope using the algorithm and parameters recorded in it. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `ApplicationCryptoRuntime.GenerateKey` | `Application.Crypto.GenerateKey()` | none | Generates a cryptographically random 256-bit key encoded as standard Base64. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `ApplicationCryptoRuntime.EncryptWithKey` | `Application.Crypto.EncryptWithKey(value, key [, context])` | `value`: plaintext; `key`: Base64-encoded 256-bit key; optional authenticated `context`. | Encrypts UTF-8 text with a supplied AES-256 key and returns a self-describing authenticated envelope. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `ApplicationCryptoRuntime.DecryptWithKey` | `Application.Crypto.DecryptWithKey(value, key [, context])` | `value`: encrypted envelope; `key`: Base64-encoded 256-bit key; optional authenticated `context`. | Authenticates and decrypts a key-based envelope. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `ApplicationCryptoRuntime.IsEncrypted` | `Application.Crypto.IsEncrypted(value)` | `value`: string to inspect. | Returns whether the value starts with an XPscript encrypted-envelope prefix. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `ApplicationCryptoRuntime.Algorithm` | `Application.Crypto.Algorithm(value)` | `value`: encrypted envelope. | Validates the envelope and returns its algorithm profile identifier. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `ApplicationCryptoRuntime.Version` | `Application.Crypto.Version(value)` | `value`: encrypted envelope. | Validates the envelope and returns its numeric format version. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `ApplicationCryptoRuntime.NeedsUpgrade` | `Application.Crypto.NeedsUpgrade(value)` | `value`: encrypted envelope. | Returns whether the envelope uses an older supported format, cipher or password work factor. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `ApplicationCryptoRuntime.ReEncrypt` | `Application.Crypto.ReEncrypt(value, oldPassword, newPassword [, context])` | `value`: password-based envelope; old and new passwords; optional authenticated `context`. | Decrypts a password-based value and creates a new envelope with the current default profile. | [application-crypto.xps](../samples/application-crypto.xps) |
+
+
+## Application structured web logging
+
+| Member | Syntax | Parameters | Behavior | Example |
+|---|---|---|---|---|
+| `Application.Log.Trace` | `Application.Log.Trace(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a TRACE event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Debug` | `Application.Log.Debug(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a DEBUG event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Info` | `Application.Log.Info(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an INFO event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Warning` | `Application.Log.Warning(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a WARN event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Error` | `Application.Log.Error(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an ERROR event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Critical` | `Application.Log.Critical(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a FATAL event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Audit.Write` | `Application.Audit.Write(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an immutable-intent audit event to the security JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+
+
+## Generated application logging runtime declarations
+
+| Member | Syntax | Parameters | Behavior | Example |
+|---|---|---|---|---|
+| `ApplicationLogRuntime` | `Application.Log` | none | Structured application-log namespace used by generated programs. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Trace` | `Application.Log.Trace(eventName, message [, attributes])` | Event, message, optional attributes. | Writes TRACE. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Debug` | `Application.Log.Debug(eventName, message [, attributes])` | Event, message, optional attributes. | Writes DEBUG. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Info` | `Application.Log.Info(eventName, message [, attributes])` | Event, message, optional attributes. | Writes INFO. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Warning` | `Application.Log.Warning(eventName, message [, attributes])` | Event, message, optional attributes. | Writes WARN. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Error` | `Application.Log.Error(eventName, message [, attributes])` | Event, message, optional attributes. | Writes ERROR. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.Critical` | `Application.Log.Critical(eventName, message [, attributes])` | Event, message, optional attributes. | Writes FATAL. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationAuditRuntime` | `Application.Audit` | none | Structured security/audit namespace used by generated programs. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationAuditRuntime.Write` | `Application.Audit.Write(eventName, message [, attributes])` | Event, message, optional attributes. | Writes to the security stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+
+| `Application.Log.CaptureExchange` | `Application.Log.CaptureExchange = True` | Boolean request flag. | Writes a redacted, size-limited request and response capture for the current request. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `ApplicationLogRuntime.CaptureExchange` | `Application.Log.CaptureExchange` | Boolean request flag. | Generated runtime property for exchange capture. | [application-web-logging.xps](../samples/application-web-logging.xps) |

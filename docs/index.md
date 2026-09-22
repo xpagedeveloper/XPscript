@@ -10,6 +10,8 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 - [Runnable demo catalog](../demo/README.md): small programs for console, desktop UI, browser WebAssembly, web/REST, Kestrel, FastCGI, CGI, WebIIS, SQLite, SQL Server, HTTP databases, HTTP client and XPAi/AITool.
 - [Language and built-in command reference](language-reference.md): statements, operators, scalar/built-in functions and process commands. Every row has syntax, parameters, behavior and a complete `.xps` example.
 - [Application and state reference](application-reference.md): complete `Application` runtime aliases/UI metadata plus `Application.State`, `Process.State`, `Session.State` and `Request.State`.
+- [Application.Crypto](application-crypto.md): versioned authenticated string encryption, key handling, context binding and migration.
+- [Mandatory web logging](web-logging.md): protected JSONL access, application, audit/security and error logs.
 - [File and filesystem command reference](file-io-reference.md): complete file I/O, metadata, filesystem and locking command catalog, including `Seek`, `Loc`, `LOF` and `Reset`.
 - [Desktop UI command reference](desktop-ui-reference.md): `MsgBox`, desktop choice/input dialogs and native open/save file dialogs.
 - [Database UI data sources](database-ui-datasources.md): `QueryArray`, `GetRow`, `SaveRow` and shared `XPJsonObject` binding for UIListView/UIForm across SQLite, SQL Server, Supabase and Domino.
@@ -27,7 +29,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 2. [Getting started](getting-started.md), install/build, compile, run, CGI, FastCGI, Kestrel, test hosting and command-line parameters.
 3. [Programming language](language.md), syntax, variables, procedures, control flow, types and coding rules.
 4. [Language and built-in command reference](language-reference.md), the primary language/built-in catalog with parameters and executable examples.
-5. [Application and state reference](application-reference.md), complete executable/runtime path aliases, UI metadata and state-scope API.
+5. [Application and state reference](application-reference.md), complete executable/runtime path aliases, UI metadata and state-scope API. See [Application.Crypto](application-crypto.md) for authenticated string encryption.
 6. [File and filesystem command reference](file-io-reference.md), complete file handles, text/binary I/O, positioning, reset, locking, metadata and filesystem commands.
 7. [Desktop UI command reference](desktop-ui-reference.md), `MsgBox`, `ShowDialog` and desktop file pickers.
 8. [Database UI data sources](database-ui-datasources.md), complete list/row/document JSON binding and native save semantics for UIListView and shared UIForm data.

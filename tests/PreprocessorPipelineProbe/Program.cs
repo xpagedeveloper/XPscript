@@ -50,6 +50,14 @@ VerifyArchiveGZipSurface();
 VerifyArchiveTraversalGuard();
 VerifyArchiveDependencyInjection();
 VerifyNestedArgumentComparison();
+VerifyRuntimeFunctionMemberScope();
+VerifyRuntimeNameScopeMatrix();
+VerifyReservedIdentifierScope();
+VerifyRuntimeValueIdentifierScope();
+VerifySharedCallDetectionScope();
+VerifySharedCallRewriteScope();
+VerifyOperatorArrayCallScope();
+VerifyMigratedRuntimeFamilyCallScope();
 
 void Measure(string label, string source, int iterations)
 {
@@ -355,4 +363,428 @@ End Sub
     if (!generated.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Nested function-call comparison was not emitted as C# equality.");
     Console.WriteLine("PREPROCESSOR-NESTED-COMPARISON=OK");
+}
+
+
+void VerifyRuntimeFunctionMemberScope()
+{
+    const string source = """
+Class RuntimeNameCollision
+    Public JsonParse As String
+
+    Public Function JsonStringify(value As String) As String
+        JsonStringify = value
+    End Function
+
+    Public Function StrLeftBack(value As String, delimiter As String) As String
+        StrLeftBack = value
+    End Function
+
+    Public Function CsvParse(value As String) As String
+        CsvParse = value
+    End Function
+
+    Public Function XmlParse(value As String) As String
+        XmlParse = value
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New RuntimeNameCollision
+    Dim parsed As Variant
+    item.JsonParse = "member"
+    Print item.JsonStringify("member")
+    Print item.StrLeftBack("a/b", "/")
+    Print item.CsvParse("member")
+    Print item.XmlParse("member")
+    Set parsed = JsonParse("{""ok"":true}")
+    Print StrLeftBack("a/b", "/")
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "preprocessor-runtime-member-scope.xps", "win-x64");
+    if (!generated.Contains("item.JsonStringify(\"member\")", StringComparison.Ordinal)
+        || !generated.Contains("item.StrLeftBack(\"a/b\", \"/\")", StringComparison.Ordinal)
+        || !generated.Contains("item.CsvParse(\"member\")", StringComparison.Ordinal)
+        || !generated.Contains("item.XmlParse(\"member\")", StringComparison.Ordinal))
+        throw new Exception("Runtime/global function rewriting captured a class member call.");
+    if (!generated.Contains("XPScriptNativeJson.Parse(", StringComparison.Ordinal))
+        throw new Exception("Unqualified JsonParse call no longer resolves to the native JSON runtime.");
+    if (!generated.Contains("XPScriptReferenceRuntime.StrLeftBack(", StringComparison.Ordinal))
+        throw new Exception("Unqualified StrLeftBack call no longer resolves to the reference runtime.");
+    Console.WriteLine("PREPROCESSOR-RUNTIME-MEMBER-SCOPE=OK");
+}
+
+
+void VerifyRuntimeNameScopeMatrix()
+{
+    const string source = """
+Class FirstScope
+    Public JsonParse As String
+    Public Function SHA256(value As String) As String
+        SHA256 = value
+    End Function
+End Class
+
+Class SecondScope
+    Public JsonParse As String
+    Public Function SHA256(value As String) As String
+        SHA256 = value
+    End Function
+End Class
+
+Class ParameterScope
+    Public Function Echo(JsonParse As String) As String
+        Dim SHA256 As String
+        SHA256 = JsonParse
+        Echo = SHA256
+    End Function
+End Class
+
+Sub Main()
+    Dim first As New FirstScope
+    Dim second As New SecondScope
+    Dim scoped As New ParameterScope
+    first.JsonParse = "first"
+    second.JsonParse = "second"
+    Print first.JsonParse
+    Print second.JsonParse
+    Print first.SHA256("member-one")
+    Print second.SHA256("member-two")
+    Print scoped.Echo("parameter")
+    Print SHA256("global")
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "preprocessor-runtime-name-scope-matrix.xps", "win-x64");
+    foreach (var marker in new[]
+    {
+        "first.JsonParse",
+        "second.JsonParse",
+        "first.SHA256(\"member-one\")",
+        "second.SHA256(\"member-two\")",
+        "scoped.Echo(\"parameter\")"
+    })
+        if (!generated.Contains(marker, StringComparison.Ordinal))
+            throw new Exception("Scope matrix lost user symbol/member: " + marker);
+
+    if (!generated.Contains("XPScriptHashRuntime.SHA256(\"global\")", StringComparison.Ordinal))
+        throw new Exception("Scope matrix no longer resolves an unqualified SHA256 call to the hash runtime.");
+
+    Console.WriteLine("PREPROCESSOR-RUNTIME-NAME-SCOPE-MATRIX=OK");
+}
+
+
+void VerifyReservedIdentifierScope()
+{
+    const string legalMemberSource = """
+Class XPJsonDocument
+End Class
+""";
+    try
+    {
+        _ = transpiler.Transpile(legalMemberSource, "reserved-type-negative.xps", "win-x64");
+        throw new Exception("Reserved runtime type name was accepted as a user type.");
+    }
+    catch (CompilerException ex) when (ex.Message.Contains("Type name is reserved", StringComparison.Ordinal))
+    {
+    }
+
+    const string compilerStateSource = """
+Sub Main()
+    Dim __generated As String
+End Sub
+""";
+    try
+    {
+        _ = transpiler.Transpile(compilerStateSource, "reserved-compiler-state.xps", "win-x64");
+        throw new Exception("Compiler-reserved __ identifier was accepted.");
+    }
+    catch (CompilerException ex) when (ex.Message.Contains("compiler-generated state", StringComparison.Ordinal))
+    {
+    }
+
+    const string typeVsMemberSource = """
+Class UserModel
+    Public XPJsonDocument As String
+End Class
+
+Sub Main()
+    Dim model As New UserModel
+    model.XPJsonDocument = "member"
+    Print model.XPJsonDocument
+End Sub
+""";
+    var generated = transpiler.Transpile(typeVsMemberSource, "reserved-type-vs-member.xps", "win-x64");
+    if (!generated.Contains("model.XPJsonDocument", StringComparison.Ordinal))
+        throw new Exception("Runtime type name was incorrectly reserved in class-member scope.");
+
+    const string[] keywordSources =
+    [
+        "Class If\nEnd Class",
+        "Sub Main()\n    Dim End As String\nEnd Sub"
+    ];
+    foreach (var keywordSource in keywordSources)
+    {
+        try
+        {
+            _ = transpiler.Transpile(keywordSource, "reserved-language-keyword.xps", "win-x64");
+            throw new Exception("Language keyword was accepted as an identifier.");
+        }
+        catch (CompilerException)
+        {
+        }
+    }
+
+    Console.WriteLine("PREPROCESSOR-RESERVED-IDENTIFIER-SCOPE=OK");
+}
+
+
+void VerifyRuntimeValueIdentifierScope()
+{
+    foreach (var reserved in new[] { "Application", "Body" })
+    {
+        var variableSource = $"Sub Main()\n    Dim {reserved} As String\nEnd Sub";
+        try
+        {
+            _ = transpiler.Transpile(variableSource, "reserved-runtime-value.xps", "win-x64");
+            throw new Exception($"Reserved runtime value {reserved} was accepted as a local variable.");
+        }
+        catch (CompilerException ex) when (ex.Message.Contains("reserved by the XPScript runtime", StringComparison.Ordinal))
+        {
+        }
+
+        var parameterSource = $"Sub Echo({reserved} As String)\nEnd Sub";
+        try
+        {
+            _ = transpiler.Transpile(parameterSource, "reserved-runtime-parameter.xps", "win-x64");
+            throw new Exception($"Reserved runtime value {reserved} was accepted as a parameter.");
+        }
+        catch (CompilerException ex) when (ex.Message.Contains("reserved by the XPScript runtime", StringComparison.Ordinal))
+        {
+        }
+
+        var procedureSource = $"Sub {reserved}()\nEnd Sub";
+        try
+        {
+            _ = transpiler.Transpile(procedureSource, "reserved-runtime-procedure.xps", "win-x64");
+            throw new Exception($"Reserved runtime value {reserved} was accepted as a procedure name.");
+        }
+        catch (CompilerException ex) when (ex.Message.Contains("reserved by the XPScript runtime", StringComparison.Ordinal))
+        {
+        }
+    }
+
+    const string memberSource = """
+Class RuntimeValueMembers
+    Public Application As String
+    Public Body As String
+End Class
+
+Sub Main()
+    Dim item As New RuntimeValueMembers
+    item.Application = "application-member"
+    item.Body = "body-member"
+    Print item.Application
+    Print item.Body
+End Sub
+""";
+    var generated = transpiler.Transpile(memberSource, "runtime-value-member-scope.xps", "win-x64");
+    if (!generated.Contains("item.Application", StringComparison.Ordinal) ||
+        !generated.Contains("item.Body", StringComparison.Ordinal))
+        throw new Exception("Application/Body were incorrectly rejected or rewritten in receiver member scope.");
+
+    Console.WriteLine("PREPROCESSOR-RUNTIME-VALUE-IDENTIFIER-SCOPE=OK");
+}
+
+
+void VerifySharedCallDetectionScope()
+{
+    const string memberOnly = """
+Sub Main()
+    Dim item As Object
+    Print item.JsonParse("member")
+End Sub
+""";
+    var code = PreprocessorFeatureGate.CodeOnly(memberOnly);
+    if (PreprocessorFeatureGate.ContainsCall(code, "JsonParse"))
+        throw new Exception("Shared call detection incorrectly classified member access as an unqualified runtime call.");
+
+    const string globalCall = """
+Sub Main()
+    Print JsonParse("{}")
+End Sub
+""";
+    code = PreprocessorFeatureGate.CodeOnly(globalCall);
+    if (!PreprocessorFeatureGate.ContainsCall(code, "JsonParse"))
+        throw new Exception("Shared call detection failed to recognize an unqualified runtime call.");
+
+    const string lexicalNoise = """
+Sub Main()
+    Print "JsonParse(ignored)"
+    ' JsonParse(ignored)
+End Sub
+""";
+    code = PreprocessorFeatureGate.CodeOnly(lexicalNoise);
+    if (PreprocessorFeatureGate.ContainsCall(code, "JsonParse"))
+        throw new Exception("Shared call detection matched a string or comment.");
+
+    Console.WriteLine("PREPROCESSOR-SHARED-CALL-DETECTION-SCOPE=OK");
+}
+
+
+void VerifySharedCallRewriteScope()
+{
+    const string source = """
+Sub Main()
+    Dim item As Object
+    Print ToBase64("global")
+    Print item.ToBase64("member")
+    Print "ToBase64(ignored)"
+    ' ToBase64(ignored)
+    Rem ToBase64(ignored-rem)
+    Print ToBase64$("global-dollar")
+End Sub
+""";
+    var rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "ToBase64", "Runtime.ToBase64");
+    if (!rewritten.Contains("Runtime.ToBase64(\"global\")", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter failed to rewrite an unqualified runtime call.");
+    if (!rewritten.Contains("item.ToBase64(\"member\")", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter captured receiver member access.");
+    if (!rewritten.Contains("\"ToBase64(ignored)\"", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter modified a string literal.");
+    if (!rewritten.Contains("' ToBase64(ignored)", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter modified an apostrophe comment.");
+    if (!rewritten.Contains("Rem ToBase64(ignored-rem)", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter modified a Rem comment.");
+    if (!rewritten.Contains("Runtime.ToBase64(\"global-dollar\")", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter failed to rewrite a dollar-suffixed runtime call.");
+
+    const string declaration = """
+Class RuntimeNames
+    Public Function ToBase64(value As String) As String
+        ToBase64 = value
+    End Function
+End Class
+""";
+    var declarationRewrite = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(declaration, "ToBase64", "Runtime.ToBase64");
+    if (!declarationRewrite.Contains("Function ToBase64(", StringComparison.Ordinal))
+        throw new Exception("Shared call rewriter captured a function declaration.");
+
+    foreach (var declarationForm in new[]
+    {
+        "Public Static Function ToBase64(value As String) As String",
+        "Private Property Get ToBase64(index As Integer) As String",
+        "Public Declare Function ToBase64 Lib \"native\" (value As String) As String"
+    })
+    {
+        var formRewrite = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(declarationForm, "ToBase64", "Runtime.ToBase64");
+        if (!formRewrite.Contains("ToBase64(", StringComparison.Ordinal) || formRewrite.Contains("Runtime.ToBase64(", StringComparison.Ordinal))
+            throw new Exception("Shared call rewriter captured declaration form: " + declarationForm);
+    }
+
+    Console.WriteLine("PREPROCESSOR-SHARED-CALL-REWRITE-SCOPE=OK");
+}
+
+
+
+void VerifyMigratedRuntimeFamilyCallScope()
+{
+    const string source = """
+Class MigratedRuntimeNames
+    Public Function FileExists(value As String) As String
+        FileExists = value
+    End Function
+
+    Public Function FullTrim(value As String) As String
+        FullTrim = value
+    End Function
+
+    Public Function JsonDecode(value As String) As String
+        JsonDecode = value
+    End Function
+
+    Public Function XmlEscape(value As String) As String
+        XmlEscape = value
+    End Function
+
+    Public Function CsvEscape(value As String) As String
+        CsvEscape = value
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New MigratedRuntimeNames
+    Print item.FileExists("member")
+    Print item.FullTrim("member")
+    Print item.JsonDecode("member")
+    Print item.XmlEscape("member")
+    Print item.CsvEscape("member")
+    Print FileExists("global")
+    Print FullTrim(" global ")
+    Print JsonDecode("{""ok"":true}")
+    Print XmlEscape("<global>")
+    Print CsvEscape("global")
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "preprocessor-migrated-runtime-family-call-scope.xps", "win-x64");
+    foreach (var marker in new[]
+    {
+        "item.FileExists(\"member\")",
+        "item.FullTrim(\"member\")",
+        "item.JsonDecode(\"member\")",
+        "item.XmlEscape(\"member\")",
+        "item.CsvEscape(\"member\")"
+    })
+        if (!generated.Contains(marker, StringComparison.Ordinal))
+            throw new Exception("Migrated runtime family rewriting captured a member call: " + marker);
+
+    foreach (var marker in new[]
+    {
+        "XPCrossPlatformRuntime.FileExists(",
+        "LSHclSelectedRuntime.FullTrim(",
+        "XPScriptNativeJson.Parse(",
+        "XPScriptNativeXml.Escape(",
+        "XPScriptNativeCsv.Escape("
+    })
+        if (!generated.Contains(marker, StringComparison.Ordinal))
+            throw new Exception("Migrated runtime family no longer resolves its unqualified global call: " + marker);
+
+    Console.WriteLine("PREPROCESSOR-MIGRATED-RUNTIME-FAMILY-CALL-SCOPE=OK");
+}
+
+void VerifyOperatorArrayCallScope()
+{
+    const string source = """
+Class ArrayRuntimeNames
+    Public Function ArrayAppend(value As String) As String
+        ArrayAppend = value
+    End Function
+
+    Public Function Join(value As String) As String
+        Join = value
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New ArrayRuntimeNames
+    Dim values As Variant
+    Print item.ArrayAppend("member")
+    Print item.Join("member")
+    values = Array("one", "two")
+    Print Join$(values, ",")
+End Sub
+""";
+
+    var generated = transpiler.Transpile(source, "preprocessor-operator-array-call-scope.xps", "win-x64");
+    if (!generated.Contains("item.ArrayAppend(\"member\")", StringComparison.Ordinal)
+        || !generated.Contains("item.Join(\"member\")", StringComparison.Ordinal))
+        throw new Exception("Operator/array runtime rewriting captured a class member call.");
+    if (!generated.Contains("LSOperatorArrayRuntime.CreateArray(", StringComparison.Ordinal))
+        throw new Exception("Unqualified Array call no longer resolves to the operator/array runtime.");
+    if (!generated.Contains("LSOperatorArrayRuntime.Join(", StringComparison.Ordinal))
+        throw new Exception("Dollar-suffixed Join$ call no longer resolves to the operator/array runtime.");
+
+    Console.WriteLine("PREPROCESSOR-OPERATOR-ARRAY-CALL-SCOPE=OK");
 }

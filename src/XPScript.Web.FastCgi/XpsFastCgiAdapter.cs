@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
@@ -15,6 +16,7 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
     private readonly XpsSessionStore? _sessions;
     private readonly Func<XpsWebRequest, XpsWebPrincipal>? _principalFactory;
     private readonly SemaphoreSlim _connections;
+    private readonly XpsWebLogManager _logger;
     private TcpListener? _listener;
     private CancellationTokenSource? _shutdown;
     private Task? _acceptLoop;
@@ -25,7 +27,8 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
         IXpsWebRequestHandler handler,
         IXpsApplicationState? application = null,
         XpsSessionStore? sessions = null,
-        Func<XpsWebRequest, XpsWebPrincipal>? principalFactory = null)
+        Func<XpsWebRequest, XpsWebPrincipal>? principalFactory = null,
+        XpsWebLogOptions? logOptions = null)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _options.Validate();
@@ -34,6 +37,7 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
         _application = application ?? new XpsApplicationState();
         _sessions = sessions;
         _principalFactory = principalFactory;
+        _logger = new XpsWebLogManager(_serverInfo, logOptions);
         _connections = new SemaphoreSlim(_options.MaxConcurrentConnections, _options.MaxConcurrentConnections);
     }
 
@@ -200,15 +204,33 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
 
     private async Task ExecuteRequestAsync(Stream stream, ushort requestId, IReadOnlyDictionary<string, string> parameters, byte[] body, CancellationToken cancellationToken)
     {
+        var started = Stopwatch.GetTimestamp();
+        var id = Guid.NewGuid().ToString("N");
         var request = CreateRequest(parameters, body, cancellationToken);
         var response = new XpsWebResponse();
         var principal = _principalFactory?.Invoke(request) ?? new XpsWebPrincipal(false);
-        var session = _sessions?.Bind(request, response);
-        var context = new XpsWebContext(request, response, _serverInfo, principal, _application, session);
-        using (XpsWebContextAccessor.Push(context))
-            await _handler.HandleAsync(context).ConfigureAwait(false);
-        if (!response.Completed) response.Complete();
-        await XpsFastCgiProtocol.WriteStreamAsync(stream, XpsFastCgiRecordType.Stdout, requestId, BuildResponseBytes(response, request.Method), cancellationToken).ConfigureAwait(false);
+        var correlationCookieName = XpsWebClientCorrelation.CookieNameFor(_serverInfo.SiteId);
+        var correlationValue = XpsWebClientCorrelation.GetOrCreate(request.Cookies, correlationCookieName, out var correlationCreated);
+        var clientSessionId = XpsWebClientCorrelation.Hash(correlationValue);
+        if (correlationCreated) XpsWebClientCorrelation.SetCookie(response, correlationCookieName, correlationValue, request.Scheme == "https");
+        try
+        {
+            var session = _sessions?.Bind(request, response);
+            var context = new XpsWebContext(
+                request, response, _serverInfo, principal, _application, session,
+                logger: _logger, requestId: id, clientSessionId: clientSessionId);
+            using (XpsWebContextAccessor.Push(context))
+                await _handler.HandleAsync(context).ConfigureAwait(false);
+            if (!response.Completed) response.Complete();
+            if (context.CaptureExchange) _logger.WriteExchange(context);
+            await XpsFastCgiProtocol.WriteStreamAsync(stream, XpsFastCgiRecordType.Stdout, requestId, BuildResponseBytes(response, request.Method), cancellationToken).ConfigureAwait(false);
+            _logger.WriteAccess(request, response.StatusCode, response.Body.Length, Stopwatch.GetElapsedTime(started), id, "fastcgi", principal, sessionId: clientSessionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.WriteAccess(request, 500, 0, Stopwatch.GetElapsedTime(started), id, "fastcgi", principal, ex.GetType().FullName, clientSessionId);
+            throw;
+        }
     }
 
     private XpsWebRequest CreateRequest(IReadOnlyDictionary<string, string> parameters, byte[] body, CancellationToken cancellationToken)
@@ -373,5 +395,6 @@ public sealed class XpsFastCgiAdapter : IAsyncDisposable
     {
         await StopAsync().ConfigureAwait(false);
         _connections.Dispose();
+        _logger.Dispose();
     }
 }

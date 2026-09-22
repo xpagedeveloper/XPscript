@@ -86,6 +86,23 @@ All four state proxies expose the same member set below.
 | `State.Count` | `scope.Count` | none | Returns the number of keys in the scope. | [application-object.xps](../samples/application-object.xps) |
 | `State.Keys` | `scope.Keys` | none | Returns the state keys ordered case-insensitively by the local runtime. | [application-object.xps](../samples/application-object.xps) |
 
+## Cryptography
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `Application.Crypto.Encrypt` | `Application.Crypto.Encrypt(value, password [, algorithm [, context]])` | plaintext, password, optional profile and optional authenticated context | Encrypts UTF-8 text with the current password profile and returns a versioned XPscript envelope. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `Application.Crypto.Decrypt` | `Application.Crypto.Decrypt(value, password [, context])` | encrypted envelope, password and optional authenticated context | Authenticates and decrypts a password-based envelope. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `Application.Crypto.GenerateKey` | `Application.Crypto.GenerateKey()` | none | Returns a random Base64-encoded 256-bit key. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `Application.Crypto.EncryptWithKey` | `Application.Crypto.EncryptWithKey(value, key [, context])` | plaintext, Base64 256-bit key and optional context | Encrypts UTF-8 text without applying a password KDF. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `Application.Crypto.DecryptWithKey` | `Application.Crypto.DecryptWithKey(value, key [, context])` | encrypted envelope, Base64 256-bit key and optional context | Authenticates and decrypts a key-based envelope. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `Application.Crypto.IsEncrypted` | `Application.Crypto.IsEncrypted(value)` | value | Returns whether the value has an XPscript encrypted-envelope prefix. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `Application.Crypto.Algorithm` | `Application.Crypto.Algorithm(value)` | encrypted envelope | Returns the validated encryption profile identifier. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `Application.Crypto.Version` | `Application.Crypto.Version(value)` | encrypted envelope | Returns the validated envelope format version. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `Application.Crypto.NeedsUpgrade` | `Application.Crypto.NeedsUpgrade(value)` | encrypted envelope | Returns whether the supported envelope uses an older profile or weaker parameters. | [application-crypto.xps](../samples/application-crypto.xps) |
+| `Application.Crypto.ReEncrypt` | `Application.Crypto.ReEncrypt(value, oldPassword, newPassword [, context])` | encrypted envelope, old password, new password and optional context | Rewrites a password envelope with the current default profile. | [application-crypto.xps](../samples/application-crypto.xps) |
+
+`Application.Crypto` uses versioned authenticated envelopes. Password and raw-key operations are deliberately separate. The API is available on Windows, Linux, macOS and server-side web targets, but not in browser-WASM client code. See [Application.Crypto](application-crypto.md) for envelope, compatibility and key-storage rules.
+
 ## Persistent settings and secrets
 
 | Member | Syntax | Parameters | Description | Example |
@@ -108,3 +125,20 @@ All four state proxies expose the same member set below.
 ## Read-only runtime properties
 
 `Application.Args`, `ArgCount`, `CommandLine`, `ExecutablePath`, `ExecutableFileName`, `ExecutableDirectory`, `TempPath`, `TempFolder`, `Path` and `FileName` are read-only. Assignments to them are rejected by the compiler. `Application.ExitCode` is writable and defaults to `0`. `Application.Id`, `Title`, `Icon`, `Executable.Icon`, `Executable.FileDescription`, `Executable.Product`, `Executable.Company`, `Executable.Version`, `Executable.Copyright`, `Width` and `Height` are intentionally writable metadata properties.
+
+
+## Application.Log and Application.Audit
+
+These APIs are available during web requests. The host always writes access, security and error logs. Application attributes cannot override runtime fields or contain secret-bearing names. See [mandatory web logging](web-logging.md).
+
+| Member | Syntax | Parameters | Behavior | Executable example |
+|---|---|---|---|---|
+| `Application.Log.Trace` | `Application.Log.Trace(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a TRACE event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Debug` | `Application.Log.Debug(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a DEBUG event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Info` | `Application.Log.Info(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an INFO event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Warning` | `Application.Log.Warning(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a WARN event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Error` | `Application.Log.Error(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an ERROR event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Log.Critical` | `Application.Log.Critical(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a FATAL event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+| `Application.Audit.Write` | `Application.Audit.Write(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an immutable-intent audit event to the security JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+
+| `Application.Log.CaptureExchange` | `Application.Log.CaptureExchange = True` | Boolean, request-scoped. | Captures the current request and response in the redacted exchange troubleshooting stream. It resets to false for every request. | [application-web-logging.xps](../samples/application-web-logging.xps) |

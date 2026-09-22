@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace XPScript.Compiler;
 
 internal sealed class HashFunctionsPreprocessor
@@ -22,11 +20,7 @@ internal sealed class HashFunctionsPreprocessor
 
         foreach (var function in Functions)
         {
-            source = Regex.Replace(
-                source,
-                $@"(?<![A-Za-z0-9_\.]){Regex.Escape(function)}\s*\(",
-                $"XPScriptHashRuntime.{function}(",
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, function, $"XPScriptHashRuntime.{function}");
         }
 
         return source;

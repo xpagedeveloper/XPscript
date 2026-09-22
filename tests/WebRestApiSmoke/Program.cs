@@ -8,6 +8,57 @@ var root = Path.Combine(Path.GetTempPath(), "xps-rest-api-smoke-" + Guid.NewGuid
 Directory.CreateDirectory(root);
 var apiPath = Path.Combine(root, "api.xps");
 
+Directory.CreateDirectory(Path.Combine(root, "schemas"));
+await File.WriteAllTextAsync(Path.Combine(root, "schemas", "create-user.schema.json"), """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":120}}}
+""");
+await File.WriteAllTextAsync(Path.Combine(root, "schemas", "invalid.schema.json"), "{not-json");
+
+var outsideSchemaRoot = Path.Combine(Path.GetTempPath(), "xps-rest-api-schema-outside-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(outsideSchemaRoot);
+await File.WriteAllTextAsync(Path.Combine(outsideSchemaRoot, "outside.schema.json"), "{}");
+await File.WriteAllTextAsync(Path.Combine(root, "schemas", "runtime-link.schema.json"), "{}");
+var schemaLinkPath = Path.Combine(root, "schemas", "outside-link.json");
+try
+{
+    File.CreateSymbolicLink(schemaLinkPath, Path.Combine(outsideSchemaRoot, "outside.schema.json"));
+    try
+    {
+        _ = XpsJsonSchemaPath.ResolveInsideRoot(root, "schemas/outside-link.json");
+        throw new Exception("JSON Schema symlink escaping the web root was accepted.");
+    }
+    catch (ArgumentException ex) when (ex.Message.Contains("web root", StringComparison.OrdinalIgnoreCase))
+    {
+    }
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-SYMLINK-CONTAINMENT=OK");
+}
+catch (Exception ex) when (ex is UnauthorizedAccessException or PlatformNotSupportedException or IOException)
+{
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-SYMLINK-CONTAINMENT=SKIPPED");
+}
+
+var outsideSchemaDirectory = Path.Combine(Path.GetTempPath(), "xps-rest-api-schema-dir-outside-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(outsideSchemaDirectory);
+await File.WriteAllTextAsync(Path.Combine(outsideSchemaDirectory, "outside.schema.json"), "{}");
+var schemaDirectoryLink = Path.Combine(root, "schemas", "outside-dir-link");
+try
+{
+    Directory.CreateSymbolicLink(schemaDirectoryLink, outsideSchemaDirectory);
+    try
+    {
+        _ = XpsJsonSchemaPath.ResolveInsideRoot(root, "schemas/outside-dir-link/outside.schema.json");
+        throw new Exception("JSON Schema directory symlink escaping the web root was accepted.");
+    }
+    catch (ArgumentException ex) when (ex.Message.Contains("web root", StringComparison.OrdinalIgnoreCase))
+    {
+    }
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-DIRECTORY-SYMLINK-CONTAINMENT=OK");
+}
+catch (Exception ex) when (ex is UnauthorizedAccessException or PlatformNotSupportedException or IOException)
+{
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-DIRECTORY-SYMLINK-CONTAINMENT=SKIPPED");
+}
+
 await File.WriteAllTextAsync(apiPath, """
 Public Class CreateUserRequest
     [Required]
@@ -46,8 +97,33 @@ End Sub
 [Post]
 [Route:/api/users]
 [Cors:*]
+[JsonSchema:schemas/create-user.schema.json]
 Sub CreateUser([FromBody] payload As CreateUserRequest)
     Response.OK(payload)
+End Sub
+
+[Anonymous]
+[Post]
+[Route:/api/schema-missing]
+[JsonSchema:schemas/missing.schema.json]
+Sub MissingSchema()
+    Response.Write("HANDLER-RAN")
+End Sub
+
+[Anonymous]
+[Post]
+[Route:/api/schema-invalid]
+[JsonSchema:schemas/invalid.schema.json]
+Sub InvalidSchema()
+    Response.Write("HANDLER-RAN")
+End Sub
+
+[Anonymous]
+[Post]
+[Route:/api/schema-runtime-link]
+[JsonSchema:schemas/runtime-link.schema.json]
+Sub RuntimeLinkedSchema()
+    Response.Write("HANDLER-RAN")
 End Sub
 
 [Anonymous]
@@ -147,6 +223,7 @@ try
     if (parsed.Routes["GetUser"].RouteTemplate != "/api/users/{id}") throw new Exception("[Route] metadata was not retained.");
     if (parsed.Routes["GetUser"].Cors is null || parsed.Routes["GetUser"].RateLimit is null) throw new Exception("CORS or rate limit metadata was not retained.");
     if (parsed.Routes["CreateUser"].ValidationRules?.Count != 5) throw new Exception("Model validation metadata was not collected.");
+    if (parsed.Routes["CreateUser"].JsonSchema != "schemas/create-user.schema.json") throw new Exception("JSON Schema route metadata was not retained.");
     if (parsed.Routes["BindSources"].ParameterBindings?.Count != 3) throw new Exception("Explicit parameter bindings were not retained.");
     if (parsed.Source.Contains("[FromRoute]", StringComparison.OrdinalIgnoreCase)) throw new Exception("Parameter binding syntax was not stripped before compilation.");
 
@@ -198,6 +275,132 @@ try
     }
     if (Header(create, "Access-Control-Allow-Origin") != "*") throw new Exception("Wildcard CORS response header was missing.");
     Console.WriteLine("WEB-REST-CLASS-JSON-BINDING=OK");
+
+    var schemaInvalid = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{\"name\":\"Fredrik\",\"email\":\"fredrik@example.com\",\"age\":12}",
+        "application/json");
+    if (schemaInvalid.StatusCode != 400) throw new Exception($"JSON Schema invalid body returned {schemaInvalid.StatusCode} instead of 400.");
+    var schemaInvalidBody = BodyText(schemaInvalid);
+    if (!schemaInvalidBody.Contains("$.age", StringComparison.Ordinal) || !schemaInvalidBody.Contains("JSON Schema validation failed", StringComparison.Ordinal))
+        throw new Exception("JSON Schema Problem Details did not contain structured field path errors.");
+    using (var schemaProblem = JsonDocument.Parse(schemaInvalid.Body))
+    {
+        var rootElement = schemaProblem.RootElement;
+        if (!rootElement.TryGetProperty("validationErrors", out var validationErrors) || validationErrors.ValueKind != JsonValueKind.Array || validationErrors.GetArrayLength() == 0)
+            throw new Exception("JSON Schema Problem Details did not contain validationErrors.");
+        var ageError = validationErrors.EnumerateArray().FirstOrDefault(item =>
+            item.TryGetProperty("path", out var pathValue) && pathValue.GetString() == "$.age");
+        if (ageError.ValueKind != JsonValueKind.Object ||
+            !ageError.TryGetProperty("schemaPath", out var schemaPathValue) || string.IsNullOrWhiteSpace(schemaPathValue.GetString()) ||
+            !ageError.TryGetProperty("keyword", out var keywordValue) || keywordValue.GetString() != "minimum" ||
+            !ageError.TryGetProperty("message", out var messageValue) || string.IsNullOrWhiteSpace(messageValue.GetString()) ||
+            !ageError.TryGetProperty("expected", out var expectedValue) || expectedValue.GetString() != ">= 18" ||
+            !ageError.TryGetProperty("actual", out var actualValue) || actualValue.GetString() != "12")
+            throw new Exception("JSON Schema Problem Details did not preserve the full XPJsonValidationResult error.");
+    }
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-VALIDATION=OK");
+
+    try
+    {
+        File.Delete(Path.Combine(root, "schemas", "runtime-link.schema.json"));
+        File.CreateSymbolicLink(
+            Path.Combine(root, "schemas", "runtime-link.schema.json"),
+            Path.Combine(outsideSchemaRoot, "outside.schema.json"));
+        var runtimeLinkedSchema = await SendAsync(
+            dispatcher,
+            app,
+            "POST",
+            "/api/schema-runtime-link",
+            "{}",
+            "application/json");
+        if (runtimeLinkedSchema.StatusCode != 500)
+            throw new Exception($"Runtime JSON Schema symlink escape returned {runtimeLinkedSchema.StatusCode} instead of 500.");
+        if (BodyText(runtimeLinkedSchema).Contains("HANDLER-RAN", StringComparison.Ordinal))
+            throw new Exception("Route handler executed when runtime JSON Schema escaped the web root through a symlink.");
+        Console.WriteLine("WEB-REST-JSON-SCHEMA-RUNTIME-SYMLINK-CONTAINMENT=OK");
+    }
+    catch (Exception ex) when (ex is UnauthorizedAccessException or PlatformNotSupportedException or IOException)
+    {
+        Console.WriteLine("WEB-REST-JSON-SCHEMA-RUNTIME-SYMLINK-CONTAINMENT=SKIPPED");
+    }
+
+    var malformedJson = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{not-json",
+        "application/json");
+    if (malformedJson.StatusCode != 400)
+        throw new Exception($"Malformed request JSON returned {malformedJson.StatusCode} instead of 400.");
+    if (!BodyText(malformedJson).Contains("body", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Malformed request JSON did not return a body validation error.");
+
+    var missingSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/schema-missing",
+        "{}",
+        "application/json");
+    if (missingSchema.StatusCode != 500)
+        throw new Exception($"Missing configured JSON Schema returned {missingSchema.StatusCode} instead of 500.");
+    if (BodyText(missingSchema).Contains("HANDLER-RAN", StringComparison.Ordinal))
+        throw new Exception("Route handler executed when configured JSON Schema was missing.");
+
+    var invalidSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/schema-invalid",
+        "{}",
+        "application/json");
+    if (invalidSchema.StatusCode != 500)
+        throw new Exception($"Invalid configured JSON Schema returned {invalidSchema.StatusCode} instead of 500.");
+    if (BodyText(invalidSchema).Contains("HANDLER-RAN", StringComparison.Ordinal))
+        throw new Exception("Route handler executed when configured JSON Schema was invalid.");
+
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-ERROR-CLASSIFICATION=OK");
+
+    var schemaFilePath = Path.Combine(root, "schemas", "create-user.schema.json");
+    var originalSchemaTimestamp = File.GetLastWriteTimeUtc(schemaFilePath);
+    var restrictiveSchema = """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":119}}}
+""";
+    var permissiveSchema = """
+{"type":"object","required":["name","email","age"],"properties":{"name":{"type":"string","minLength":1,"maxLength":40},"email":{"type":"string"},"age":{"type":"integer","minimum":18,"maximum":120}}}
+""";
+    if (Encoding.UTF8.GetByteCount(restrictiveSchema) != Encoding.UTF8.GetByteCount(permissiveSchema))
+        throw new Exception("JSON Schema cache regression requires same-length schema files.");
+
+    await File.WriteAllTextAsync(schemaFilePath, restrictiveSchema);
+    File.SetLastWriteTimeUtc(schemaFilePath, originalSchemaTimestamp);
+    var reloadedSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{\"name\":\"Fredrik\",\"email\":\"fredrik@example.com\",\"age\":120}",
+        "application/json");
+    if (reloadedSchema.StatusCode != 400 || !BodyText(reloadedSchema).Contains("$.age", StringComparison.Ordinal))
+        throw new Exception("Same-length, same-timestamp JSON Schema update was not reloaded from the cache.");
+
+    await File.WriteAllTextAsync(schemaFilePath, permissiveSchema);
+    File.SetLastWriteTimeUtc(schemaFilePath, originalSchemaTimestamp);
+    var restoredSchema = await SendAsync(
+        dispatcher,
+        app,
+        "POST",
+        "/api/users",
+        "{\"name\":\"Fredrik\",\"email\":\"fredrik@example.com\",\"age\":120}",
+        "application/json");
+    if (restoredSchema.StatusCode != 200)
+        throw new Exception($"Same-length, same-timestamp JSON Schema restore was not reloaded from the cache: {restoredSchema.StatusCode}.");
+    Console.WriteLine("WEB-REST-JSON-SCHEMA-CACHE-CONTENT-HASH=OK");
 
     var invalid = await SendAsync(
         dispatcher,

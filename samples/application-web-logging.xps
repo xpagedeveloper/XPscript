@@ -1,0 +1,14 @@
+[Anonymous]
+[Post]
+[Route:/api/orders]
+Sub CreateOrder()
+    Application.Log.CaptureExchange = True
+
+    Dim fields As New XPJsonObject
+    fields.Set("order.id", 42)
+    fields.Set("source", "api")
+
+    Application.Log.Info("order.created", "Order was created", fields)
+    Application.Audit.Write("order.created.audit", "Order creation was accepted", fields)
+    Response.Created("/api/orders/42", fields)
+End Sub

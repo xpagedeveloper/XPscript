@@ -470,3 +470,10 @@ Before presenting code as valid XPscript, check:
 This file is a living LLM contract for XPscript. Any PR that changes user-visible language syntax, built-ins, runtime classes, constructors, object lifecycle, function signatures, filesystem behavior, database/AI/XML APIs, iteration behavior, or recommended idioms should review and update this file in the same PR when the change affects code generation guidance.
 
 Keep this skill concise and operational. Link to authoritative docs for exhaustive reference instead of duplicating the entire language manual.
+
+
+## Structured web logging
+
+Web hosts always emit protected JSONL access, security and error logs. Use `Application.Log.Trace/Debug/Info/Warning/Error/Critical(eventName, message [, attributes])` for application events and `Application.Audit.Write(eventName, message [, attributes])` for security/audit events. The optional attributes value must be an `XPJsonObject`. Never place credentials, tokens, cookies, session identifiers, personal data or request bodies in log messages or attributes. The runtime rejects sensitive attribute names and reserves protocol fields. Log directories must remain outside the web root. See `docs/web-logging.md` and `samples/application-web-logging.xps`.
+
+For targeted web troubleshooting, set `Application.Log.CaptureExchange = True` only in the affected request. It writes a redacted, 256 KiB-per-body exchange record. Use the automatic hashed `session.id` to group requests from one browser or client and `request.id` for one request. Never log the raw `XPSLOGID` cookie.

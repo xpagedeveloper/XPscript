@@ -1,0 +1,54 @@
+name: Application Crypto Runtime
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/ApplicationCryptoRuntimeSource.cs'
+      - 'src/XPScript.Compiler/ApplicationObjectPreprocessor.cs'
+      - 'src/XPScript.Compiler/ApplicationSystemLogRuntimeSource.cs'
+      - 'src/XPScript.Compiler/XPScriptTranspiler.cs'
+      - 'samples/application-crypto.xps'
+      - '.github/workflows/application-crypto-runtime.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            output: ./out/application-crypto.exe
+          - name: Ubuntu
+            os: ubuntu-latest
+            output: ./out/application-crypto
+          - name: macOS
+            os: macos-latest
+            output: ./out/application-crypto
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile Application.Crypto regression
+        shell: pwsh
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/application-crypto.xps -o ${{ matrix.output }} --runtime=false
+      - name: Run Application.Crypto regression
+        shell: pwsh
+        run: |
+          $output = & ${{ matrix.output }}
+          if ($LASTEXITCODE -ne 0) { throw "Application.Crypto regression exited with $LASTEXITCODE" }
+          if ($output -notcontains 'APPLICATION_CRYPTO_OK') { throw 'Application.Crypto success marker was not emitted.' }
