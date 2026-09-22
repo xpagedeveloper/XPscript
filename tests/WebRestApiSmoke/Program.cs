@@ -249,6 +249,30 @@ try
     if (deepJsonResponse.StatusCode != 400)
         throw new Exception($"Deeply nested request JSON returned {deepJsonResponse.StatusCode} instead of 400.");
 
+    var duplicateJsonResponse = await SendAsync(
+        dispatcher, app, "POST", "/api/users",
+        "{\"name\":\"first\",\"name\":\"second\",\"email\":\"fredrik@example.com\",\"age\":42}",
+        "application/json");
+    if (duplicateJsonResponse.StatusCode != 200)
+        throw new Exception($"Duplicate-property JSON returned {duplicateJsonResponse.StatusCode}.");
+    using (var duplicateJsonDocument = JsonDocument.Parse(duplicateJsonResponse.Body))
+    {
+        if (duplicateJsonDocument.RootElement.GetProperty("name").GetString() != "second")
+            throw new Exception("Duplicate JSON property behavior changed; last-value-wins is expected.");
+    }
+
+    var oversizedJsonBody = "{\"name\":\"" + new string('x', XpsRequestBody.DefaultMaxJsonBytes) +
+                            "\",\"email\":\"fredrik@example.com\",\"age\":42}";
+    var oversizedJsonResponse = await SendAsync(
+        dispatcher, app, "POST", "/api/users", oversizedJsonBody, "application/json");
+    if (oversizedJsonResponse.StatusCode != 400)
+        throw new Exception($"Oversized REST JSON returned {oversizedJsonResponse.StatusCode} instead of 400.");
+    var oversizedJsonProblem = BodyText(oversizedJsonResponse);
+    if (!oversizedJsonProblem.Contains("exceeds the configured", StringComparison.OrdinalIgnoreCase) ||
+        oversizedJsonProblem.Contains("StackTrace", StringComparison.OrdinalIgnoreCase) ||
+        oversizedJsonProblem.Contains(".cs:", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Oversized REST JSON did not return the bounded generic validation error.");
+
     var get = await SendAsync(dispatcher, app, "GET", "/api/users/42", origin: "https://example.com");
     if (get.StatusCode != 200) throw new Exception($"REST GET returned {get.StatusCode}.");
     if (BodyText(get) != "\"user-42\"") throw new Exception("Function return value was not automatically serialized as JSON.");
