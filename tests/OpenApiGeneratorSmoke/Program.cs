@@ -761,7 +761,7 @@ paths:
               schema: { $ref: '#/components/schemas/StatusCode' }
 """, "response-collision.yaml").Source;
 if (!responseCollisionClient.Contains("Public StatusCode2 As StatusCode", StringComparison.Ordinal) ||
-    !responseCollisionClient.Contains("result.StatusCode2 = result.Json.ToObject(mappedStatusCode)", StringComparison.Ordinal))
+    !responseCollisionClient.Contains("result.StatusCode2 = result.Json.ToObject(ApiMappedStatusCode)", StringComparison.Ordinal))
     throw new Exception("Response model names that collide with reserved response envelope members must receive a deterministic same-scope name.");
 
 var dictionaryClient = new XpsOpenApiClientGenerator().Generate("""
