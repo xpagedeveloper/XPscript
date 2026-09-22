@@ -69,11 +69,11 @@ public sealed partial class XPScriptTranspiler
                 {
                     File = Path.GetFileName(sourceName), Line = line, Position = column, EndLine = line,
                     EndColumn = column + 1, Description = "Unterminated string literal.",
-                    DiagnosticCode = CompilerDiagnosticCodes.UnterminatedString, Category = "syntax",
+                    DiagnosticCode = CompilerDiagnosticCodes.UnterminatedStringLiteral, Category = "syntax",
                     Properties = [new() { Name = "foundToken", Value = "\"" }, new() { Name = "expectedConstruct", Value = "closing string quote" }],
                     SourceCode = safeSource, MarkedCode = safeSource + Environment.NewLine + new string(' ', Math.Max(0, column - 1)) + "^"
                 };
-                throw new CompilerException("Unterminated string literal.", CompilerDiagnosticCodes.UnterminatedString, "syntax", [diagnostic]);
+                throw new CompilerException("Unterminated string literal.", CompilerDiagnosticCodes.UnterminatedStringLiteral, "syntax", [diagnostic]);
             }
             var marker = $"__XPSCRIPT_STRING_{replacements.Count:D6}__";
             replacements[marker] = EscapeForGeneratedCSharpString(inner.ToString());
