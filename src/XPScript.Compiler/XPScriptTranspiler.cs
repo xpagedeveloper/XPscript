@@ -61,8 +61,9 @@ public sealed partial class XPScriptTranspiler
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
         var originalFeatures = RuntimeFeatures.Detect(source);
-        if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase) && originalFeatures.Ai)
-            throw TargetUnavailable("XPAi", runtimeIdentifier, "server target", "Keep AI credentials and requests on the server.");
+        var originalTargetRestriction = originalFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(originalTargetRestriction.Symbol))
+            throw TargetUnavailable(originalTargetRestriction.Symbol, runtimeIdentifier, originalTargetRestriction.AllowedTargets, originalTargetRestriction.Detail);
 
         // Semantic validators must run against the unmodified expanded source so their
         // line numbers still index sourceMap. Source markers insert physical lines and
@@ -144,8 +145,10 @@ public sealed partial class XPScriptTranspiler
         var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
         {
-            if (usesSqlite) throw TargetUnavailable("XPDBSQLite", runtimeIdentifier, "server or desktop target");
-            if (usesMsSql) throw TargetUnavailable("XPDbMsSql", runtimeIdentifier, "server or desktop target");
+            var runtimeTargetRestriction = runtimeFeatures.UnavailableFor(runtimeIdentifier)
+                .FirstOrDefault(restriction => restriction.Symbol is "XPDBSQLite" or "XPDbMsSql");
+            if (!string.IsNullOrWhiteSpace(runtimeTargetRestriction.Symbol))
+                throw TargetUnavailable(runtimeTargetRestriction.Symbol, runtimeIdentifier, runtimeTargetRestriction.AllowedTargets, runtimeTargetRestriction.Detail);
             if (usesArchive) throw TargetUnavailable("Archive", runtimeIdentifier, "server or desktop target", "Archive file-path operations are not available for browser-wasm targets yet.");
             if (usesSpreadsheet) throw TargetUnavailable("XPSpreadsheet", runtimeIdentifier, "server or desktop target");
             if (usesNetworkTools) throw TargetUnavailable("NetworkTools", runtimeIdentifier, "server or desktop target", "Browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
