@@ -553,6 +553,19 @@ public static class XPScriptCompilerCommandLine
                 if (info)
                     WriteProgress($"Started to compile {sourceName}");
 
+                if (debug)
+                {
+                    var validationResult = await new CompilerDriver()
+                        .ValidateWithResultAsync(sourcePath, currentRuntimeIdentifier)
+                        .ConfigureAwait(false);
+                    if (!validationResult.Success)
+                    {
+                        runCache.Invalidate();
+                        WriteResult(validationResult.WithOperation("run"), resultFormat);
+                        return 1;
+                    }
+                }
+
                 var compileTask = !useDaemon
                     ? RunCompiler.CompileWithResultAsync(
                         sourcePath,
