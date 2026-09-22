@@ -195,7 +195,10 @@ internal static class CompilerDiagnosticParser
                 "CS0117" when quotedIdentifiers.Length >= 2 => quotedIdentifiers[1],
                 _ => quotedIdentifiers[0]
             };
-            return SymbolProperties(propertyName, identifier);
+            var receiverType = normalizedCode is "CS1061" or "CS0117" && quotedIdentifiers.Length >= 1
+                ? quotedIdentifiers[0]
+                : null;
+            return SymbolProperties(propertyName, identifier, receiverType);
         }
 
         if (string.IsNullOrWhiteSpace(sourceLine)) return null;
@@ -208,24 +211,26 @@ internal static class CompilerDiagnosticParser
                 .Select(match => match.Groups["identifier"].Value)
                 .LastOrDefault();
             if (!string.IsNullOrWhiteSpace(memberAccess))
-                return SymbolProperties(propertyName, memberAccess);
+                return SymbolProperties(propertyName, memberAccess, receiverType: null);
         }
 
         if (position <= 0) return null;
         var suffix = position <= sourceLine.Length ? sourceLine.Substring(position - 1) : "";
         var sourceMatch = Regex.Match(suffix, @"^(?<identifier>[A-Za-z_]\w*)");
         return sourceMatch.Success
-            ? SymbolProperties(propertyName, sourceMatch.Groups["identifier"].Value)
+            ? SymbolProperties(propertyName, sourceMatch.Groups["identifier"].Value, receiverType: null)
             : null;
     }
 
-    private static List<CompileDiagnosticProperty> SymbolProperties(string propertyName, string identifier)
+    private static List<CompileDiagnosticProperty> SymbolProperties(string propertyName, string identifier, string? receiverType)
     {
         var properties = new List<CompileDiagnosticProperty>
         {
             new() { Name = propertyName, Value = identifier }
         };
-        foreach (var candidate in CompilerSymbolCatalog.Candidates(identifier))
+        if (!string.IsNullOrWhiteSpace(receiverType))
+            properties.Add(new CompileDiagnosticProperty { Name = "receiverType", Value = receiverType });
+        foreach (var candidate in CompilerSymbolCatalog.Candidates(identifier, receiverType))
         {
             properties.Add(new CompileDiagnosticProperty { Name = "candidate", Value = candidate.Name });
             properties.Add(new CompileDiagnosticProperty { Name = "candidateKind", Value = candidate.Kind });
