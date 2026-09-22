@@ -41,14 +41,11 @@ internal sealed class ParameterPassingPreprocessor
                     if (!declaration.Success) continue;
 
                     var originalName = declaration.Groups["name"].Value;
-                    if (originalName.Equals("Optional", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Preserve unsupported declarations verbatim, but still enter procedure
-                        // scope so the procedure body is not mistaken for another declaration.
-                        activeParameters.Clear();
-                        continue;
-                    }
                     var modifier = declaration.Groups["modifier"].Value;
+                    if (!string.IsNullOrWhiteSpace(modifier) &&
+                        (originalName.Equals("ByVal", StringComparison.OrdinalIgnoreCase) ||
+                         originalName.Equals("ByRef", StringComparison.OrdinalIgnoreCase)))
+                        continue;
                     var marker = modifier.Equals("ByVal", StringComparison.OrdinalIgnoreCase) ? ByValPrefix : ByRefPrefix;
                     var generatedName = marker + originalName;
                     activeParameters[originalName] = generatedName;
