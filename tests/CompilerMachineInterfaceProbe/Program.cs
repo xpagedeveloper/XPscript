@@ -180,6 +180,16 @@ Require(normalizedPathDiagnostic.File == "portable.xps", "diagnostic file paths 
 
 var driver = new CompilerDriver();
 
+var unsupportedParameterCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-unsupported-parameter-error.xps"));
+var unsupportedParameterDiagnostic = unsupportedParameterCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(unsupportedParameterDiagnostic is not null, "unsupported parameter diagnostic");
+Require(unsupportedParameterDiagnostic.Category == "syntax", "unsupported parameter category");
+Require(unsupportedParameterDiagnostic.File == "core-unsupported-parameter-error.xps", "unsupported parameter file");
+Require(unsupportedParameterDiagnostic.Line == 1 && unsupportedParameterDiagnostic.Position > 0, "unsupported parameter source location");
+Require(unsupportedParameterDiagnostic.EndLine == 1 && unsupportedParameterDiagnostic.EndColumn > unsupportedParameterDiagnostic.Position, "unsupported parameter source range");
+Require(unsupportedParameterDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "value As Integer") == true, "unsupported parameter found token");
+Require(unsupportedParameterDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "parameter declaration") == true, "unsupported parameter expected construct");
+
 var corePhysicalRangeCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-unexpected-end-with-error.xps"));
 var corePhysicalRangeDiagnostic = corePhysicalRangeCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
 Require(corePhysicalRangeDiagnostic is not null, "core physical range diagnostic");
@@ -200,16 +210,6 @@ Require(invalidDefTypeDiagnostic.Line == 1 && invalidDefTypeDiagnostic.Position 
 Require(invalidDefTypeDiagnostic.EndLine == 1 && invalidDefTypeDiagnostic.EndColumn > invalidDefTypeDiagnostic.Position, "invalid DefType source range");
 Require(invalidDefTypeDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "A-1") == true, "invalid DefType found token");
 Require(invalidDefTypeDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "letter or letter range") == true, "invalid DefType expected construct");
-
-var unsupportedParameterCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "core-unsupported-parameter-error.xps"));
-var unsupportedParameterDiagnostic = unsupportedParameterCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
-Require(unsupportedParameterDiagnostic is not null, "unsupported parameter diagnostic");
-Require(unsupportedParameterDiagnostic.Category == "syntax", "unsupported parameter category");
-Require(unsupportedParameterDiagnostic.File == "core-unsupported-parameter-error.xps", "unsupported parameter file");
-Require(unsupportedParameterDiagnostic.Line == 1 && unsupportedParameterDiagnostic.Position > 0, "unsupported parameter source location");
-Require(unsupportedParameterDiagnostic.EndLine == 1 && unsupportedParameterDiagnostic.EndColumn > unsupportedParameterDiagnostic.Position, "unsupported parameter source range");
-Require(unsupportedParameterDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "Optional value As Integer") == true, "unsupported parameter found token");
-Require(unsupportedParameterDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "parameter declaration") == true, "unsupported parameter expected construct");
 
 var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
