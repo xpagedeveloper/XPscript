@@ -64,8 +64,13 @@ internal sealed class LanguageExtensionsPreprocessor
             values[currentEnum + "." + member.Groups[1].Value] = nextValue;
             // Unqualified enum members are supported when they are not ambiguous.
             var memberName = member.Groups[1].Value;
-            if (!values.ContainsKey(memberName)) values[memberName] = nextValue;
-            else values.Remove(memberName);
+            // Keep language keywords qualified. Rewriting an unqualified enum member named
+            // "New" would otherwise corrupt constructor declarations and New expressions.
+            if (!memberName.Equals("New", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!values.ContainsKey(memberName)) values[memberName] = nextValue;
+                else values.Remove(memberName);
+            }
             nextValue++;
         }
 
