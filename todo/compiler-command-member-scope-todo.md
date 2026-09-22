@@ -62,7 +62,7 @@ A runtime/global function name must not become globally reserved merely because 
 - [x] Test same spelling across method parameter vs class member.
 - [x] Test same spelling across local vs class member.
 - [x] Test overloaded/member-call syntax separately from property access.
-- [ ] Verify generated OpenAPI code follows the same scope rules instead of maintaining a broader pseudo-reserved list.
+- [x] Verify generated OpenAPI code follows the same scope rules instead of maintaining a broader pseudo-reserved list. `OpenApiGeneratorSmoke` now generates model members named `JsonParse` and `StrLeftBack` and compiles the generated XPScript through `XpsWebCompiler`; the client generator has no separate broad runtime-function reserved-name list.
 
 ## 6. Completion gate
 
