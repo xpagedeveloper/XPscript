@@ -1,0 +1,5 @@
+Sub Main()
+    Dim value As Integer
+    value = 1
+    End Select
+End Sub
