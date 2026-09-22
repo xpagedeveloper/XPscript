@@ -91,8 +91,8 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify secrets files are never served through static files. Direct `/secret.txt` disclosure is rejected in run #72.
 - [x] Verify symlink inside `assets` cannot resolve outside the web root. File symlink escape regression verified in run #76.
 - [x] Verify symlinked static files outside `assets` cannot escape the web root when static files are enabled. Canonical root enforcement and file symlink regression verified in run #76.
-- [ ] Verify directory symlinks and nested symlinks. Direct directory symlink escape is verified in run #76; nested symlink coverage remains.
-- [ ] Verify static file MIME allowlist cannot be bypassed.
+- [x] Verify directory symlinks and nested symlinks. Direct directory symlink escape verified in run #76 and nested directory symlink escape verified in run #78.
+- [x] Verify static file MIME allowlist cannot be bypassed. Encoded extension, double-encoded, hidden-path, extra-path and `.xps` case variants verified in run #78.
 - [x] Verify `.xps` can never be added to the static MIME allowlist. Option validation regression verified in run #74.
 - [x] Verify oversized static files are rejected. A file exceeding `MaxStaticFileBytes` is rejected in run #72.
 - [x] Verify static cache headers cannot be injected with CRLF. `StaticCacheControl` validation regression verified in run #74.
