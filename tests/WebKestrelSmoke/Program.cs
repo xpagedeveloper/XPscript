@@ -294,6 +294,7 @@ try
             throw new Exception("Health endpoint did not report a healthy state.");
         if (!body.Contains("\"TotalRequests\":3", StringComparison.Ordinal))
             throw new Exception("Health endpoint did not report the expected request count.");
+        AssertOperationalPayloadSafe(body, "health");
     }
 
     using (var metrics = await client.GetAsync("/_xps/metrics"))
@@ -306,6 +307,7 @@ try
             throw new Exception("Metrics endpoint did not expose the 2xx counter.");
         if (!body.Contains("xpscript_web_responses_4xx_total 1", StringComparison.Ordinal))
             throw new Exception("Metrics endpoint did not expose the 4xx counter.");
+        AssertOperationalPayloadSafe(body, "metrics");
     }
 
     using (var postHealth = await client.PostAsync("/_xps/health", new StringContent(string.Empty)))
@@ -512,6 +514,19 @@ static int GetFreeTcpPort()
     var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
     listener.Stop();
     return port;
+}
+
+static void AssertOperationalPayloadSafe(string body, string endpoint)
+{
+    var forbidden = new[]
+    {
+        "Authorization", "Bearer ", "Cookie:", "Set-Cookie", "OPENAI_API_KEY", "ASPNETCORE_",
+        "PATH=", "HOME=", "USERPROFILE=", "System.Environment", "StackTrace", ".cs:",
+        "/home/", "/Users/", "\\Users\\", "C:\\"
+    };
+    foreach (var value in forbidden)
+        if (body.Contains(value, StringComparison.OrdinalIgnoreCase))
+            throw new Exception($"Operational {endpoint} endpoint leaked forbidden diagnostic data: {value}");
 }
 
 static void AssertHeader(HttpResponseMessage response, string name, string expected)
