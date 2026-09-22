@@ -190,6 +190,22 @@ try
         out var fixedCreated);
     if (!fixedCreated || fixedCorrelation.Equals(attackerCorrelation, StringComparison.OrdinalIgnoreCase))
         throw new Exception("Client-supplied correlation cookie was accepted, allowing session fixation.");
+    foreach (var malformedCorrelation in new[] { "", "xyz", new string('a', 63), new string('a', 65), new string('g', 64) })
+    {
+        var replacement = XpsWebClientCorrelation.GetOrCreate(
+            new Dictionary<string, string> { [correlationCookieName] = malformedCorrelation },
+            correlationCookieName,
+            out var malformedCreated);
+        if (!malformedCreated || !XpsWebClientCorrelation.IsValid(replacement) || replacement == malformedCorrelation)
+            throw new Exception("Malformed correlation cookie was not safely rotated.");
+    }
+    var oversizedCorrelation = new string('a', 16 * 1024);
+    var oversizedReplacement = XpsWebClientCorrelation.GetOrCreate(
+        new Dictionary<string, string> { [correlationCookieName] = oversizedCorrelation },
+        correlationCookieName,
+        out var oversizedCreated);
+    if (!oversizedCreated || !XpsWebClientCorrelation.IsValid(oversizedReplacement))
+        throw new Exception("Oversized correlation cookie was not safely rotated.");
 
     using (var logger = new XpsWebLogManager(server, new XpsWebLogOptions { DirectoryPath = logDirectory }))
     {
