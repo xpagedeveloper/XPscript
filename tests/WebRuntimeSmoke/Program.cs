@@ -183,7 +183,7 @@ try
     if (!secondCreated || secondCorrelation == rawCorrelation ||
         XpsWebClientCorrelation.Hash(secondCorrelation) == clientSessionId)
         throw new Exception("Independent clients did not receive independent correlation identifiers.");
-    var attackerCorrelation = "0123456789abcdef0123456789abcdef";
+    var attackerCorrelation = new string('a', 64);
     var fixedCorrelation = XpsWebClientCorrelation.GetOrCreate(
         new Dictionary<string, string> { [correlationCookieName] = attackerCorrelation },
         correlationCookieName,
