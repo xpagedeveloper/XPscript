@@ -15,7 +15,7 @@ internal sealed class AiToolCallbackValidator
         sourceName ??= "input.xps";
 
         var procedures = CollectModuleProcedures(source);
-        foreach (var registration in FindRegistrations(source))
+        foreach (var registration in FindRegistrations(source, sourceName))
         {
             if (!TryReadStringLiteral(registration.Arguments[2], out var callbackName))
                 continue;
@@ -100,7 +100,7 @@ internal sealed class AiToolCallbackValidator
         return result;
     }
 
-    private static IEnumerable<Registration> FindRegistrations(string source)
+    private static IEnumerable<Registration> FindRegistrations(string source, string sourceName)
     {
         const string marker = ".AddFunction";
         var index = 0;
@@ -119,7 +119,29 @@ internal sealed class AiToolCallbackValidator
 
             var close = FindClosingParenthesis(source, open);
             if (close < 0)
-                throw new CompilerException("Unterminated AITool.AddFunction call.");
+            {
+                var prefix = source[..open];
+                var line = 1 + prefix.Count(ch => ch == '\n');
+                var lineStart = Math.Max(prefix.LastIndexOf('\n') + 1, 0);
+                var column = open - lineStart + 1;
+                var lineEnd = source.IndexOf('\n', open);
+                if (lineEnd < 0) lineEnd = source.Length;
+                var sourceLine = source[lineStart..lineEnd].TrimEnd('\r');
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = Path.GetFileName(sourceName), Line = line, Position = column, EndLine = line,
+                    EndColumn = column + 1, Description = "Unterminated AITool.AddFunction call.",
+                    DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
+                    Properties =
+                    [
+                        new() { Name = "foundToken", Value = "(" },
+                        new() { Name = "expectedConstruct", Value = "closing parenthesis" }
+                    ],
+                    SourceCode = sourceLine,
+                    MarkedCode = sourceLine + Environment.NewLine + new string(' ', Math.Max(0, column - 1)) + "^"
+                };
+                throw new CompilerException(diagnostic.Description, diagnostic.DiagnosticCode, diagnostic.Category, [diagnostic]);
+            }
 
             var arguments = SplitArguments(source[(open + 1)..close]);
             if (arguments.Count >= 3)
