@@ -236,7 +236,7 @@ public sealed class XpsOpenApiClientGenerator
     private static string UniqueIdentifier(string preferred, HashSet<string> used, bool avoidKeywords = false)
     {
         var candidate = preferred;
-        if (avoidKeywords && IsDeclarationReserved(candidate)) candidate += "_2";
+        if (avoidKeywords && IsDeclarationReserved(candidate)) candidate = "Api" + candidate;
         if (used.Add(candidate)) return candidate;
         var baseName = candidate;
         for (var n = 2; ; n++)
