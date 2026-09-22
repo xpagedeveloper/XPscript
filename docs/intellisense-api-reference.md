@@ -1,4 +1,11 @@
 # Machine-readable IntelliSense API reference
+## Native JSON conversion
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `JsonArray.ToObject` | `arr.ToObject(contract)` | `contract`: XPscript object or value describing the target conversion type. | Converts the JSON array using the supplied XPscript conversion contract. | [native-http-json.xps](../samples/native-http-json.xps) |
+
+
 
 This reference is the canonical machine-readable supplement for public runtime APIs that are documented in topical pages. The VS Code catalog generator scans this file together with the other XPscript documentation.
 
