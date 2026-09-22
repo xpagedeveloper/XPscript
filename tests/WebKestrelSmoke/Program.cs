@@ -311,6 +311,24 @@ try
     using (var postHealth = await client.PostAsync("/_xps/health", new StringContent(string.Empty)))
     {
         if ((int)postHealth.StatusCode != 405) throw new Exception("Operational endpoint must reject non-GET/HEAD methods.");
+        if (!postHealth.Headers.TryGetValues("Allow", out var allow) || allow.Single() != "GET, HEAD")
+            throw new Exception("Operational endpoint 405 response did not advertise GET and HEAD.");
+    }
+
+    using (var headHealth = new HttpRequestMessage(HttpMethod.Head, "/_xps/health"))
+    using (var response = await client.SendAsync(headHealth))
+    {
+        if ((int)response.StatusCode != 200) throw new Exception("Health HEAD endpoint must remain available locally.");
+        if ((await response.Content.ReadAsByteArrayAsync()).Length != 0)
+            throw new Exception("Health HEAD endpoint returned a response body.");
+    }
+
+    using (var headMetrics = new HttpRequestMessage(HttpMethod.Head, "/_xps/metrics"))
+    using (var response = await client.SendAsync(headMetrics))
+    {
+        if ((int)response.StatusCode != 200) throw new Exception("Metrics HEAD endpoint must remain available locally.");
+        if ((await response.Content.ReadAsByteArrayAsync()).Length != 0)
+            throw new Exception("Metrics HEAD endpoint returned a response body.");
     }
 
     // A trusted loopback proxy may supply forwarded values, but ForwardLimit=1 means
