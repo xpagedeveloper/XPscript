@@ -101,7 +101,7 @@ public sealed partial class XPScriptTranspiler
         // Attach runtime/#line markers only after semantic validation and syntax scanning.
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         source = new EscapedQuotePreprocessor().Transform(source);
-        source = new ReservedIdentifierPreprocessor().Transform(source);
+        source = new ReservedIdentifierPreprocessor().Transform(source, sourceName);
         source = new IfLayoutPreprocessor().Transform(source);
         source = new ParameterlessProcedureHeaderPreprocessor().Transform(source);
         source = new ParameterPassingPreprocessor().Transform(source);
@@ -119,7 +119,7 @@ public sealed partial class XPScriptTranspiler
         var runtimeFeatures = RuntimeFeatures.Detect(source);
         var usesAi = originalFeatures.Ai || runtimeFeatures.Ai;
         var notesRuntimeFeatures = NotesRuntimeFeatures.Detect(source);
-        source = new NativeHttpJsonPreprocessor().Transform(source);
+        source = new NativeHttpJsonPreprocessor().Transform(source, sourceName);
         var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
         source = new ArchiveObjectPreprocessor().Transform(source);
         var spreadsheetRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "XPSpreadsheet", "XPWorksheet", "XPCell");
