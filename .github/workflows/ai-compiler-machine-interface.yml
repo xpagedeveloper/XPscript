@@ -25,6 +25,9 @@ jobs:
       - name: Build
         run: dotnet build XPScriptCompiler.slnx -c Release --no-restore -m:1
 
+      - name: Benchmark run cache and debug fresh build
+        run: dotnet run --project tests/CompilerRunWarmBenchmark/CompilerRunWarmBenchmark.csproj -c Release -- .
+
       - name: Daemon concurrent cold-start probe
         shell: pwsh
         run: |
@@ -309,9 +312,6 @@ jobs:
 
       - name: Benchmark in-process validation
         run: dotnet run --project tests/CompilerValidationBenchmark/CompilerValidationBenchmark.csproj -c Release -- .
-
-      - name: Benchmark run cache and debug fresh build
-        run: dotnet run --project tests/CompilerRunWarmBenchmark/CompilerRunWarmBenchmark.csproj -c Release -- .
 
       - name: Validate CLI JSON contract
         shell: pwsh
