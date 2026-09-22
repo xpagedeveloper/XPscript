@@ -60,7 +60,14 @@ public static class XpsWebClientCorrelation
     {
         if (value is not { Length: 64 } || !value.All(char.IsAsciiHexDigit)) return false;
         Span<byte> token = stackalloc byte[32];
-        if (!Convert.TryFromHexString(value, token, out var written) || written != token.Length) return false;
+        try
+        {
+            Convert.FromHexString(value).CopyTo(token);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
         Span<byte> expected = stackalloc byte[32];
         HMACSHA256.HashData(SigningKey, token[..16], expected);
         return CryptographicOperations.FixedTimeEquals(token[16..], expected[..16]);
