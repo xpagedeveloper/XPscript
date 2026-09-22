@@ -440,11 +440,22 @@ internal sealed class CoreCompatibilityTranspiler
         var selectStack = new Stack<(string Variable, bool HasCase)>();
 
         var sourceLines = lines.ToList();
+        var physicalLine = bodyStartLine;
+        var lastPhysicalLine = bodyStartLine;
         for (var lineIndex = 0; lineIndex < sourceLines.Count; lineIndex++)
         {
             var raw = sourceLines[lineIndex];
             var indent = Regex.Match(raw, @"^\s*").Value;
             var line = StripComment(raw).Trim();
+
+            var sourceMarker = Regex.Match(line, @"^Call\s+XPSourceLineRuntime\.__XPSOURCE_(\d+)_", RegexOptions.IgnoreCase);
+            if (sourceMarker.Success && int.TryParse(sourceMarker.Groups[1].Value, out var markedLine))
+            {
+                physicalLine = markedLine;
+                lastPhysicalLine = markedLine;
+                result.Add(raw);
+                continue;
+            }
 
             var with = Regex.Match(line, @"^With\s+(.+)$", RegexOptions.IgnoreCase);
             if (with.Success)
@@ -455,7 +466,7 @@ internal sealed class CoreCompatibilityTranspiler
             }
             if (Regex.IsMatch(line, @"^End\s+With$", RegexOptions.IgnoreCase))
             {
-                if (withStack.Count == 0) throw SyntaxFailure("Unexpected End With.", sourceName, bodyStartLine + lineIndex, raw, "With statement", "End With");
+                if (withStack.Count == 0) throw SyntaxFailure("Unexpected End With.", sourceName, physicalLine, raw, "With statement", "End With");
                 withStack.Pop();
                 continue;
             }
@@ -494,8 +505,8 @@ internal sealed class CoreCompatibilityTranspiler
             result.Add(indent + rewritten);
         }
 
-        if (withStack.Count > 0) throw SyntaxFailure("Missing End With.", sourceName, Math.Max(bodyStartLine, bodyStartLine + sourceLines.Count - 1), sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End With", "end-of-file");
-        if (selectStack.Count > 0) throw SyntaxFailure("Missing End Select.", sourceName, Math.Max(bodyStartLine, bodyStartLine + sourceLines.Count - 1), sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End Select", "end-of-file");
+        if (withStack.Count > 0) throw SyntaxFailure("Missing End With.", sourceName, lastPhysicalLine, sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End With", "end-of-file");
+        if (selectStack.Count > 0) throw SyntaxFailure("Missing End Select.", sourceName, lastPhysicalLine, sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End Select", "end-of-file");
         return result;
     }
 
