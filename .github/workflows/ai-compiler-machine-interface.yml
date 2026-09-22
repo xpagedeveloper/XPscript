@@ -221,9 +221,9 @@ jobs:
           $output = & dotnet run --project $project -c Release --no-build -- run samples/core-invalid-deftype-range-error.xps --debug --security=off 2>&1
           $exitCode = $LASTEXITCODE
           $text = ($output -join [Environment]::NewLine)
-          if ($exitCode -ne 1) { throw "Expected debug validation failure exit code 1, got $exitCode" }
-          if ($text -notmatch 'XPS1012') { throw "Expected structured validation diagnostic XPS1012" }
-          if ($text -match 'Started to compile core-invalid-deftype-range-error.xps') { throw "Invalid debug edit reached full compilation" }
+          if ($exitCode -ne 1) { throw "Expected debug validation failure exit code 1, got $exitCode. Output: $text" }
+          if ($text -notmatch 'XPS1012') { throw "Expected structured validation diagnostic XPS1012. Output: $text" }
+          if ($text -match 'Started to compile core-invalid-deftype-range-error.xps') { throw "Invalid debug edit reached full compilation. Output: $text" }
 
       - name: Daemon error protocol probe
         shell: pwsh
