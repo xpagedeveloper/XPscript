@@ -136,6 +136,18 @@ try
         if (!body.Contains("QUERY=?q=1&q=2", StringComparison.Ordinal)) throw new Exception("Query string normalization failed.");
         if (!body.Contains("BODY=abc", StringComparison.Ordinal)) throw new Exception("Body normalization failed.");
         if (!body.Contains("HEADER=present", StringComparison.Ordinal)) throw new Exception("Request header was not transferred.");
+        var cookieName = XpsWebClientCorrelation.CookieNameFor(serverInfo.SiteId);
+        if (!response.Headers.TryGetValues("Set-Cookie", out var setCookieValues))
+            throw new Exception("Correlation cookie was not issued.");
+        var correlationCookie = setCookieValues.Single(v => v.StartsWith(cookieName + "=", StringComparison.Ordinal));
+        if (!correlationCookie.Contains("; httponly", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Correlation cookie is missing HttpOnly.");
+        if (!correlationCookie.Contains("; samesite=lax", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Correlation cookie is missing SameSite=Lax.");
+        if (!correlationCookie.Contains("; max-age=" + ((long)XpsWebClientCorrelation.Lifetime.TotalSeconds), StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Correlation cookie lifetime mismatch.");
+        if (correlationCookie.Contains("; secure", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("HTTP correlation cookie unexpectedly has Secure.");
         if (body.Contains("REMOTE=203.0.113.9", StringComparison.Ordinal))
             throw new Exception("Untrusted X-Forwarded-For was accepted without KnownProxies.");
         if (!body.Contains("SCHEME=http", StringComparison.Ordinal))
