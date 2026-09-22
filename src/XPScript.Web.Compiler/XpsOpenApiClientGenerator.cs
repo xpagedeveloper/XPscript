@@ -208,7 +208,7 @@ public sealed class XpsOpenApiClientGenerator
     }
     private static void ValidateNotReservedIdentifier(string identifier, string conteyt)
     {
-        if (LexicalKeywords.Contains(identifier))
+        if (IsDeclarationReserved(identifier))
             throw new XpsOpenApiGenerationException($"{conteyt} identifier '{identifier}' is a reserved XPScript keyword.");
     }
 
