@@ -550,9 +550,6 @@ public static class XPScriptCompilerCommandLine
                 var runOutputDirectory = runCache.Enabled ? runCache.OutputDirectory : tempRoot;
                 if (runCache.Enabled) runCache.PrepareOutputDirectory();
 
-                if (info)
-                    WriteProgress($"Started to compile {sourceName}");
-
                 if (debug)
                 {
                     var validationResult = await new CompilerDriver()
@@ -565,6 +562,9 @@ public static class XPScriptCompilerCommandLine
                         return 1;
                     }
                 }
+
+                if (info)
+                    WriteProgress($"Started to compile {sourceName}");
 
                 var compileTask = !useDaemon
                     ? RunCompiler.CompileWithResultAsync(
