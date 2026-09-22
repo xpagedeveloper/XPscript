@@ -178,6 +178,23 @@ try
     if (reusedCreated || reusedCorrelation != rawCorrelation)
         throw new Exception("Client correlation id was not stable across requests.");
     var clientSessionId = XpsWebClientCorrelation.Hash(rawCorrelation);
+    var cookieResponse = new XpsWebResponse();
+    XpsWebClientCorrelation.SetCookie(cookieResponse, correlationCookieName, rawCorrelation, secure: false);
+    var httpCookie = cookieResponse.Headers["Set-Cookie"].Single();
+    if (!httpCookie.Contains("HttpOnly", StringComparison.OrdinalIgnoreCase) ||
+        !httpCookie.Contains("SameSite=Lax", StringComparison.OrdinalIgnoreCase) ||
+        !httpCookie.Contains("Max-Age=2592000", StringComparison.OrdinalIgnoreCase) ||
+        httpCookie.Contains("Secure", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("HTTP correlation cookie security attributes mismatch.");
+    var httpsCookieResponse = new XpsWebResponse();
+    XpsWebClientCorrelation.SetCookie(httpsCookieResponse, correlationCookieName, rawCorrelation, secure: true);
+    var httpsCookie = httpsCookieResponse.Headers["Set-Cookie"].Single();
+    if (!httpsCookie.Contains("HttpOnly", StringComparison.OrdinalIgnoreCase) ||
+        !httpsCookie.Contains("SameSite=Lax", StringComparison.OrdinalIgnoreCase) ||
+        !httpsCookie.Contains("Max-Age=2592000", StringComparison.OrdinalIgnoreCase) ||
+        !httpsCookie.Contains("Secure", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("HTTPS correlation cookie security attributes mismatch.");
+
     var secondCorrelation = XpsWebClientCorrelation.GetOrCreate(
         new Dictionary<string, string>(), correlationCookieName, out var secondCreated);
     if (!secondCreated || secondCorrelation == rawCorrelation ||
