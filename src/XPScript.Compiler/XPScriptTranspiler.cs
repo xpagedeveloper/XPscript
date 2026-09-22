@@ -153,7 +153,7 @@ public sealed partial class XPScriptTranspiler
         source = new TypeCoercionPreprocessor().Transform(source);
         source = new StringConcatenationPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
-        var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        var protectedSource = ProtectStringLiterals(source, out var protectedStrings, sourceName);
         protectedSource = new HclSelectedCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new CrossPlatformPreprocessor().Transform(protectedSource);
         protectedSource = new VariantIndexPreprocessor().Transform(protectedSource);
