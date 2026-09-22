@@ -116,10 +116,10 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify correlation cookie omits Secure on HTTP by design. Kestrel, CGI and FastCGI regressions verified through run #88.
 - [x] Verify correlation cookie SameSite value. SameSite=Lax verified across Kestrel, CGI and FastCGI through run #88.
 - [x] Verify correlation cookie lifetime. 30-day Max-Age verified across Kestrel, CGI and FastCGI through run #88.
-- [ ] Verify raw correlation cookie value is never logged.
-- [ ] Verify logs contain only the hashed session correlation identifier.
-- [x] Verify two clients receive independent correlation identifiers. Runtime regression verified in run #82.
-- [x] Verify session fixation resistance. Client-supplied correlation identifiers are not accepted as authoritative; regression verified in run #82.
+- [x] Verify raw correlation cookie value is never logged. Shared runtime regression verified in run #93.
+- [x] Verify logs contain only the hashed session correlation identifier. Shared runtime regression verified in run #93.
+- [x] Verify two clients receive independent correlation identifiers. Shared runtime regression verified in run #93.
+- [x] Verify session fixation resistance. Correlation cookies are server-authenticated with HMAC and forged client values are rotated; shared runtime regression verified in run #93.
 - [ ] Verify malformed cookies do not break request isolation.
 - [ ] Verify duplicate cookie name behavior.
 - [ ] Verify oversized cookie input fails safely.
