@@ -76,6 +76,24 @@ def run(host, port):
             b"\\users\\" not in r.lower(),
             "invalid percent-encoded UTF-8 path reached the application or leaked diagnostics"))
 
+    add("non-ascii-percent-encoded-path-safe",
+        b"GET /%C3%A5%C3%A4%C3%B6 HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {200,404},
+        lambda c,h,r: (
+            b"XPSCRIPT_SECRET_SENTINEL" not in r and
+            b"stacktrace" not in r.lower() and
+            b".cs:" not in r.lower(),
+            "valid non-ASCII path disclosed protected content or diagnostics"))
+
+    add("non-ascii-percent-encoded-query-safe",
+        b"GET /?name=Fr%C3%A9d%C3%A9ric&city=G%C3%A4vle HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {200},
+        lambda c,h,r: (
+            b"XPSCRIPT-HARDENING" in r and
+            b"stacktrace" not in r.lower() and
+            b".cs:" not in r.lower(),
+            "valid non-ASCII query was not handled safely"))
+
     add("server-header-hidden",
         b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {200},
