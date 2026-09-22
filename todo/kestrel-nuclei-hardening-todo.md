@@ -124,7 +124,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify duplicate cookie name behavior. CGI and FastCGI deterministically retain the first duplicate cookie value; verified in run #103.
 - [x] Verify oversized cookie input fails safely. 16 KiB malformed correlation-cookie input is safely rotated; verified in run #100.
 - [x] Verify session cookies cannot be injected through response headers. Shared response validation rejects CR/LF/NUL header injection and invalid cookie names/values; verified in run #105.
-- [ ] Verify Secure session cookie configuration behaves correctly behind trusted reverse proxies.
+- [x] Verify Secure session cookie configuration behaves correctly behind trusted reverse proxies. Trusted KnownProxy and simulated IIS out-of-process forwarded HTTPS both emit Secure correlation cookies; verified in run #107.
 
 ## Security headers
 
