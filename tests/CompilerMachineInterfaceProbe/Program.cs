@@ -345,6 +345,7 @@ Require(generatedSymbolDiagnostic.UpstreamCode == "CS0103", "generated symbol up
 Require(!string.IsNullOrWhiteSpace(generatedSymbolDiagnostic.SourceCode), "generated symbol source mapping");
 Require(generatedSymbolDiagnostic.Category == "symbol-resolution", "generated symbol category");
 Require(generatedSymbolDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingGeneratedProcedure") == true, "generated symbol metadata");
+Require(generatedSymbolDiagnostic.Properties?.Where(p => p.Name == "candidate").All(p => CompilerSymbolCatalog.Find(p.Value) is not null) == true, "generated symbol candidates use compiler symbol table");
 Require(generatedSymbolDiagnostic.Line > 0 && generatedSymbolDiagnostic.Position > 0, "generated symbol source location");
 Require(generatedSymbolDiagnostic.SourceCode?.Contains("MissingGeneratedProcedure", StringComparison.Ordinal) == true, "generated symbol mapped source line");
 
