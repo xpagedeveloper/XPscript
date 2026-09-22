@@ -108,9 +108,6 @@ public sealed partial class XPScriptTranspiler
         source = new ParameterPassingPreprocessor().Transform(source);
         source = new HclPrintFormattingPreprocessor().Transform(source, sourceName);
         source = new StatementSeparatorPreprocessor().Transform(source, sourceName);
-        // Attach runtime/#line markers only after the preprocessors above have emitted
-        // any diagnostics that depend on physical source coordinates.
-        source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
         var udtValues = new UdtValueSemanticsPreprocessor();
@@ -126,6 +123,10 @@ public sealed partial class XPScriptTranspiler
         source = new NativeHttpJsonPreprocessor().Transform(source, sourceName);
         var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
         source = new ArchiveObjectPreprocessor().Transform(source, sourceName);
+        // Attach runtime/#line markers only after source-coordinate-sensitive parser
+        // preprocessors have emitted diagnostics. Inserting markers earlier changes
+        // physical line numbers seen by Type/Enum/native constructor validation.
+        source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         var spreadsheetRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "XPSpreadsheet", "XPWorksheet", "XPCell");
         source = new SpreadsheetObjectPreprocessor().Transform(source);
         var networkToolsRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo");
