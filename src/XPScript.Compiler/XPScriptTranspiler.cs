@@ -112,7 +112,7 @@ public sealed partial class XPScriptTranspiler
         var udtValues = new UdtValueSemanticsPreprocessor();
         source = udtValues.Transform(source);
         source = new TypeDeclarationPreprocessor().Transform(source, sourceName);
-        source = new LanguageExtensionsPreprocessor().Transform(source);
+        source = new LanguageExtensionsPreprocessor().Transform(source, sourceName);
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
         source = new IndexedPropertyPreprocessor().Transform(source);
         source = new ObjectFunctionSetPreprocessor().Transform(source);
