@@ -23,6 +23,7 @@ End Sub
 
 try
 {
+    await RunJsonBodyAdapterRegression(root, scriptPath);
     await RunDuplicateCookieRegression(root, scriptPath);
     await RunAdapterRegression(root, scriptPath);
     await RunHeadRegression(root, scriptPath);
@@ -34,6 +35,28 @@ try
 finally
 {
     Directory.Delete(parent, recursive: true);
+}
+
+static async Task RunJsonBodyAdapterRegression(string root, string scriptPath)
+{
+    var environment = BaseEnvironment(root, scriptPath);
+    environment["REQUEST_METHOD"] = "POST";
+    environment["CONTENT_TYPE"] = "application/json";
+    var body = Encoding.UTF8.GetBytes("{not-json");
+    environment["CONTENT_LENGTH"] = body.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var server = new XpsServerInfo("cgi-json-body", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new JsonBodyHandler());
+    await using var stdin = new MemoryStream(body);
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(stdin, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    if (!text.StartsWith("Status: 400 Bad Request\r\n", StringComparison.Ordinal))
+        throw new Exception("CGI malformed JSON did not map to 400: " + text);
+    if (text.Contains("stacktrace", StringComparison.OrdinalIgnoreCase) ||
+        text.Contains(".cs:", StringComparison.OrdinalIgnoreCase) ||
+        text.Contains("/home/", StringComparison.OrdinalIgnoreCase) ||
+        text.Contains("\\users\\", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("CGI malformed JSON response leaked diagnostics: " + text);
 }
 
 static async Task RunDuplicateCookieRegression(string root, string scriptPath)
@@ -248,6 +271,25 @@ sealed class EchoHandler : IXpsWebRequestHandler
         context.Response.Write(context.Request.Cookie("client"));
         context.Response.Write("|");
         context.Response.Write(context.Request.BodyText());
+        return Task.CompletedTask;
+    }
+}
+
+sealed class JsonBodyHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        try
+        {
+            _ = context.Body.Json<Dictionary<string, string>>();
+            context.Response.StatusCode = 200;
+            context.Response.Write("OK");
+        }
+        catch (XpsRestBindingException)
+        {
+            context.Response.StatusCode = 400;
+            context.Response.Write("Invalid JSON");
+        }
         return Task.CompletedTask;
     }
 }
