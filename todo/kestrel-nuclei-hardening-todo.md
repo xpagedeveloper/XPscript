@@ -142,9 +142,9 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify health endpoint is local-only by default. Local access remains available while trusted-proxy requests with a non-loopback effective client are hidden with 404; verified in run #113.
 - [x] Verify metrics endpoint is local-only by default. Local access remains available while trusted-proxy requests with a non-loopback effective client are hidden with 404; verified in run #113.
 - [x] Verify non-GET and non-HEAD methods receive 405. POST is rejected with 405 and Allow: GET, HEAD while HEAD returns no body; verified through run #111.
-- [ ] Verify operational endpoints do not leak secrets, tokens, paths, environment variables or source.
+- [x] Verify operational endpoints do not leak secrets, tokens, paths, environment variables or source. Health and metrics payload regressions reject authorization/bearer/cookie data, common secret/environment markers, stack traces, source locations and filesystem paths; covered by the Kestrel hardening suite through run #126.
 - [x] Verify operational endpoints remain protected behind reverse proxy configurations. Trusted forwarded client addresses are evaluated after proxy processing and external clients receive 404; verified in run #113.
-- [ ] Test `--operational-external` separately and document the security implications.
+- [x] Test `--operational-external` separately and document the security implications. Explicit external mode (`OperationalEndpointsLocalOnly = false`) is opt-in and exposes bounded health/metrics payloads to external clients, including through trusted proxies; payload leakage guards remain enforced. Prefer the default local-only mode or `OperationalAllowedNetworks` CIDR allowlists when external monitoring access is required; covered by the Kestrel hardening suite through run #126.
 
 ## Routing and runtime behavior
 
