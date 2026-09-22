@@ -243,7 +243,7 @@ public sealed class XpsOpenApiClientGenerator
         var baseName = candidate;
         for (var n = 2; ; n++)
         {
-            candidate = baseName + "_" + n.ToString(CultureInfo.InvariantCulture);
+            candidate = baseName + n.ToString(CultureInfo.InvariantCulture);
             if ((!avoidKeywords || !IsDeclarationReserved(candidate)) && used.Add(candidate)) return candidate;
         }
     }
