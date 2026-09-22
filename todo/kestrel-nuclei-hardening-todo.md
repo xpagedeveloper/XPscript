@@ -133,9 +133,9 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify Referrer-Policy is present by default.
 - [ ] Decide whether Content-Security-Policy should be provided by default for generated UI/browser applications.
 - [ ] Decide whether Permissions-Policy should be provided by default.
-- [ ] Verify application response headers cannot inject CRLF.
-- [ ] Verify forbidden hop-by-hop headers cannot be configured as default security headers.
-- [ ] Verify Server cannot be reintroduced through configurable default headers.
+- [x] Verify application response headers cannot inject CRLF. Shared response validation and configurable default-header validation reject CR/LF; verified through run #109.
+- [x] Verify forbidden hop-by-hop headers cannot be configured as default security headers. Content-Length, Transfer-Encoding, Connection, Keep-Alive and Upgrade are rejected; verified in run #109.
+- [x] Verify Server cannot be reintroduced through configurable default headers. Server is rejected from DefaultSecurityHeaders; verified in run #109.
 
 ## Health and metrics
 
