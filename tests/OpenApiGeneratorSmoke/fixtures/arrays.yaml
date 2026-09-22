@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info: { title: Array Corpus, version: 1.0.0 }
+components:
+  schemas:
+    Item:
+      type: object
+      properties: { id: { type: integer }, name: { type: string } }
+paths:
+  /items:
+    post:
+      operationId: arrays
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: array, items: { $ref: '#/components/schemas/Item' } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Item' } }
