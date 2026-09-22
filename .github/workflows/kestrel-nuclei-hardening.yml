@@ -46,6 +46,7 @@ jobs:
         shell: bash
         run: |
           dotnet run --project ./tests/WebCgiSmoke/WebCgiSmoke.csproj -c Release
+          dotnet run --project ./tests/WebFastCgiSmoke/WebFastCgiSmoke.csproj -c Release
           dotnet run --project ./tests/WebFastCgiAdversarialSmoke/WebFastCgiAdversarialSmoke.csproj -c Release
 
       - name: Run nginx to FastCGI topology security regressions
