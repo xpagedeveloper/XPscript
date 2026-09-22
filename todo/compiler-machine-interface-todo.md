@@ -158,8 +158,8 @@ Minimum representation:
 - [x] Include offending API/symbol.
 - [x] Include allowed targets where known.
 - [ ] Cover CLI, Desktop, Web, REST and Browser-WASM.
-- [ ] Cover native/platform-specific APIs.
-- [ ] Reuse existing runtime/compiler feature metadata rather than duplicating target rules.
+- [x] Cover native/platform-specific APIs.
+- [x] Reuse existing runtime/compiler feature metadata rather than duplicating target rules.
 
 ## 10. ServerSide execution-boundary diagnostics
 
