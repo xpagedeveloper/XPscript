@@ -157,7 +157,7 @@ Minimum representation:
 - [x] Include active target.
 - [x] Include offending API/symbol.
 - [x] Include allowed targets where known.
-- [ ] Cover CLI, Desktop, Web, REST and Browser-WASM.
+- [x] Cover CLI, Desktop, Web, REST and Browser-WASM.
 - [x] Cover native/platform-specific APIs.
 - [x] Reuse existing runtime/compiler feature metadata rather than duplicating target rules.
 
