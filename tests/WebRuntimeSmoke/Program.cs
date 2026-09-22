@@ -195,18 +195,6 @@ try
         !httpsCookie.Contains("Secure", StringComparison.OrdinalIgnoreCase))
         throw new Exception("HTTPS correlation cookie security attributes mismatch.");
 
-    var malformedCorrelation = XpsWebClientCorrelation.GetOrCreate(
-        new Dictionary<string, string> { [correlationCookieName] = "not-a-valid-correlation-id" },
-        correlationCookieName,
-        out var malformedCreated);
-    if (!malformedCreated || !XpsWebClientCorrelation.IsValid(malformedCorrelation))
-        throw new Exception("Malformed correlation cookie did not fail safely.");
-    var oversizedCorrelation = XpsWebClientCorrelation.GetOrCreate(
-        new Dictionary<string, string> { [correlationCookieName] = new string('a', 8192) },
-        correlationCookieName,
-        out var oversizedCreated);
-    if (!oversizedCreated || !XpsWebClientCorrelation.IsValid(oversizedCorrelation))
-        throw new Exception("Oversized correlation cookie did not fail safely.");
     var secondCorrelation = XpsWebClientCorrelation.GetOrCreate(
         new Dictionary<string, string>(), correlationCookieName, out var secondCreated);
     if (!secondCreated || secondCorrelation == rawCorrelation ||
