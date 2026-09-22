@@ -402,6 +402,23 @@ Require(nativeByRefDiagnostic is not null, "native ByRef diagnostic");
 Require(nativeByRefDiagnostic.Category == "interop", "native ByRef category");
 Require(nativeByRefDiagnostic.File == "native-byref-error.xps", "native ByRef source file");
 
+var goldenFixtures = new (string File, string? Target, string DiagnosticCode, string Category, string[] Properties)[]
+{
+    ("null-integer-assignment-error.xps", null, "XPS2001", "type-checking", ["actualType", "expectedType"]),
+    ("core-unexpected-end-select-error.xps", null, "XPS1012", "syntax", ["expectedConstruct", "foundToken"]),
+    ("browser-wasm-target-ai-error.xps", "browser-wasm", "XPS3001", "target", ["allowedTargets", "symbol", "target"])
+};
+foreach (var fixture in goldenFixtures)
+{
+    var first = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", fixture.File), fixture.Target);
+    var second = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", fixture.File), fixture.Target);
+    var diagnostic = first.Errors.Single(d => d.DiagnosticCode == fixture.DiagnosticCode);
+    Require(diagnostic.Category == fixture.Category, $"golden fixture {fixture.File} category");
+    Require(diagnostic.Properties is not null, $"golden fixture {fixture.File} properties");
+    Require(fixture.Properties.All(name => diagnostic.Properties.Any(p => p.Name == name)), $"golden fixture {fixture.File} property contract");
+    Require(JsonSerializer.Serialize(first) == JsonSerializer.Serialize(second), $"golden fixture {fixture.File} deterministic machine result");
+}
+
 var browserTargetCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "browser-wasm-target-ai-error.xps"), "browser-wasm");
 var browserTargetDiagnostic = browserTargetCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
 Require(browserTargetDiagnostic is not null, "Browser WASM target diagnostic");
