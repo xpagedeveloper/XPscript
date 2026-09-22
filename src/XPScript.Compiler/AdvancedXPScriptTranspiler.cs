@@ -123,6 +123,9 @@ internal sealed class AdvancedXPScriptTranspiler
                     Description = ex.Message,
                     DiagnosticCode = string.IsNullOrWhiteSpace(ex.DiagnosticCode) ? CompilerDiagnosticCodes.InvalidSyntax : ex.DiagnosticCode,
                     Category = string.IsNullOrWhiteSpace(ex.Category) ? "syntax" : ex.Category,
+                    Properties = ex.Message.StartsWith("Unsupported statement:", StringComparison.Ordinal)
+                        ? [new() { Name = "foundToken", Value = line }, new() { Name = "expectedConstruct", Value = "supported XPScript statement" }]
+                        : null,
                     SourceCode = safeSource,
                     MarkedCode = safeSource + Environment.NewLine + "^"
                 };
