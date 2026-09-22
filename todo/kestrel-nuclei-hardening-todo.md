@@ -148,11 +148,11 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Routing and runtime behavior
 
-- [ ] Add explicit JSON parser hardening route to the generated test application so malformed, deeply nested, duplicate-key and oversized JSON can be tested at the XPScript API layer.
-- [x] Verify malformed JSON fails without stack traces or filesystem paths. REST integration regression returns 400 and rejects stack trace/source-path leakage; verified in run #133.
-- [x] Verify deeply nested JSON is bounded. REST integration regression rejects JSON deeper than the parser limit with 400; verified in run #133.
-- [x] Verify oversized JSON is bounded by MaxRequestBodySize. REST request-body parsing rejects payloads above the configured 4 MiB JSON limit with 400; transport-level MaxRequestBodySize remains covered separately; verified in run #133.
-- [x] Verify duplicate JSON property behavior is deterministic and documented. System.Text.Json last-value-wins behavior is asserted through the XPScript REST binding pipeline; verified in run #133.
+- [x] Add explicit JSON parser hardening route to the generated test application so malformed, deeply nested, duplicate-key and oversized JSON can be tested at the XPScript API layer. Real Kestrel HTTP probes verified in run #139.
+- [x] Verify malformed JSON fails without stack traces or filesystem paths. REST integration regression returns 400 and rejects stack trace/source-path leakage; real Kestrel HTTP regression also verified in run #139.
+- [x] Verify deeply nested JSON is bounded. REST integration regression rejects JSON deeper than the parser limit with 400; real Kestrel HTTP regression also verified in run #139.
+- [x] Verify oversized JSON is bounded by MaxRequestBodySize. REST request-body parsing rejects payloads above the configured 4 MiB JSON limit; real Kestrel HTTP regression accepts bounded 400/413 or an early transport close and verifies the host remains healthy; verified in run #139.
+- [x] Verify duplicate JSON property behavior is deterministic and documented. System.Text.Json last-value-wins behavior is asserted through the XPScript REST binding pipeline and real Kestrel HTTP route; verified in run #139.
 
 - [ ] Verify malformed UTF-8 paths fail safely.
 - [ ] Verify non-ASCII paths and query strings.
@@ -161,7 +161,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [ ] Verify query parser behavior with duplicate keys.
 - [x] Verify extreme query-string sizes. Oversized query/request-line probe verified with 414 in run #42.
 - [ ] Verify form parser abuse cases.
-- [x] Verify JSON parser malformed and deeply nested input. Covered through the REST integration pipeline; verified in run #133.
+- [x] Verify JSON parser malformed and deeply nested input. Covered through the REST integration pipeline and real Kestrel HTTP route; verified in run #139. CGI/FastCGI adapter equivalence still requires explicit cross-host regression or documented N/A before the broader cross-host hardening item is considered complete.
 - [ ] Verify multipart parser malformed boundaries and oversized fields.
 - [ ] Verify unexpected methods cannot reach a route with the wrong method attribute.
 - [ ] Verify error responses never expose stack traces.
