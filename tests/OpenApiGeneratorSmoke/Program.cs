@@ -304,7 +304,7 @@ paths:
         '204': { description: ok }
 """, "collision.yaml").Source;
 if (!collisionClient.Contains("Optional FooBar As Variant", StringComparison.Ordinal) || !collisionClient.Contains("Optional FooBar2 As Variant", StringComparison.Ordinal))
-    throw new Exception("Colliding generated parameter identifiers must receive numeric suffixes.");
+    throw new Exception("Colliding generated parameter identifiers must receive deterministic same-scope names.");
 
 var modelAliasClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
@@ -329,7 +329,7 @@ paths:
               schema: { $ref: '#/components/schemas/Payload' }
 """, "model-alias.yaml").Source;
 foreach (var marker in new[] { "[JsonName(\"class\")]", "Public ApiClass As String", "[JsonName(\"api-key\")]", "Public ApiKey As String", "[JsonName(\"api key\")]", "Public ApiKey2 As Long", "[JsonName(\"PascalName\")]", "Public PascalName As Boolean" })
-    if (!modelAliasClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Model property alias/suffix generation is missing marker: " + marker);
+    if (!modelAliasClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Model property alias/collision generation is missing marker: " + marker);
 
 var optionalClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
@@ -446,7 +446,7 @@ if (!securityCollisionSource.Contains("Sub SetHeader2(", StringComparison.Ordina
     !securityCollisionSource.Contains("Sub SetApiKey(", StringComparison.Ordinal) ||
     !securityCollisionSource.Contains("Sub SetApiKey2(", StringComparison.Ordinal) ||
     !securityCollisionSource.Contains("Function SetHeader3(", StringComparison.Ordinal))
-    throw new Exception("Generated API member collisions must be resolved with deterministic numeric suffixes.");
+    throw new Exception("Generated API member collisions must be resolved with deterministic deterministic same-scope names.");
 
 var keywordEnumMemberRejected = false;
 try { _ = new XpsOpenApiClientGenerator().Generate("""
@@ -521,7 +521,7 @@ paths:
 if (!collidingComponentClient.Source.Contains("Public Class ApiKey", StringComparison.Ordinal) ||
     !collidingComponentClient.Source.Contains("Public Class ApiKey2", StringComparison.Ordinal) ||
     !collidingComponentClient.Source.Contains("Public ApiKey2 As ApiKey2", StringComparison.Ordinal))
-    throw new Exception("Colliding OpenAPI component identifiers must receive numeric suffixes while references preserve the original schema identity.");
+    throw new Exception("Colliding OpenAPI component identifiers must receive deterministic same-scope names while references preserve the original schema identity.");
 
 var keywordPropertyClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
@@ -639,7 +639,7 @@ paths:
         '204': { description: ok }
 """, "api-member-collision.yaml").Source;
 if (!apiMemberCollisionSource.Contains("Function SetHeader2(", StringComparison.Ordinal))
-    throw new Exception("OpenAPI operation names that collide with generated API members must receive a numeric suffix.");
+    throw new Exception("OpenAPI operation names that collide with generated API members must receive a deterministic same-scope name.");
 
 var authMemberCollisionSource = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
@@ -657,8 +657,8 @@ paths:
         '204': { description: ok }
 """, "auth-member-collision.yaml").Source;
 if (!authMemberCollisionSource.Contains("Sub SetToken(", StringComparison.Ordinal) ||
-    !authMemberCollisionSource.Contains("Function SetToken_2(", StringComparison.Ordinal))
-    throw new Exception("OpenAPI operation names that collide with generated auth setter members must receive a numeric suffix.");
+    !authMemberCollisionSource.Contains("Function SetToken2(", StringComparison.Ordinal))
+    throw new Exception("OpenAPI operation names that collide with generated auth setter members must receive a deterministic same-scope name.");
 
 var scalarResponseCollisionClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
@@ -692,7 +692,7 @@ paths:
 if (!scalarResponseCollisionClient.Contains("Public StringValue As StringValue", StringComparison.Ordinal) ||
     !scalarResponseCollisionClient.Contains("Public StringValue2 As String", StringComparison.Ordinal) ||
     !scalarResponseCollisionClient.Contains("result.StringValue2 = result.Json.ToObject(\"\")", StringComparison.Ordinal))
-    throw new Exception("Scalar response value fields that collide with model response fields must receive a numeric suffix.");
+    throw new Exception("Scalar response value fields that collide with model response fields must receive a deterministic same-scope name.");
 
 var scalarResponseClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
@@ -760,7 +760,7 @@ paths:
 """, "response-collision.yaml").Source;
 if (!responseCollisionClient.Contains("Public StatusCode2 As StatusCode", StringComparison.Ordinal) ||
     !responseCollisionClient.Contains("result.StatusCode2 = result.Json.ToObject(mappedStatusCode)", StringComparison.Ordinal))
-    throw new Exception("Response model names that collide with reserved response envelope members must receive a numeric suffix.");
+    throw new Exception("Response model names that collide with reserved response envelope members must receive a deterministic same-scope name.");
 
 var dictionaryClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
