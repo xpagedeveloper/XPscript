@@ -37,7 +37,7 @@ internal sealed class CoreCompatibilityTranspiler
     {
         Reset();
         var lines = Normalize(source);
-        Analyze(lines);
+        Analyze(lines, sourceName);
         var transformed = TransformModule(lines, sourceName);
         var generated = new AdvancedXPScriptTranspiler().Transpile(transformed, sourceName);
         generated = InjectScriptMembers(generated);
@@ -82,12 +82,13 @@ internal sealed class CoreCompatibilityTranspiler
     private static string[] Normalize(string source) =>
         source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
 
-    private void Analyze(string[] lines)
+    private void Analyze(string[] lines, string sourceName)
     {
         string? currentClass = null;
 
-        foreach (var raw in lines)
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
+            var raw = lines[lineIndex];
             var line = StripComment(raw).Trim();
             if (line.Length == 0) continue;
 
@@ -98,8 +99,8 @@ internal sealed class CoreCompatibilityTranspiler
                 continue;
             }
 
-            if (TryAnalyzeDefType(line)) continue;
-            if (TryAnalyzeNative(line)) continue;
+            if (TryAnalyzeDefType(line, sourceName, lineIndex + 1, raw)) continue;
+            if (TryAnalyzeNative(line, sourceName, lineIndex + 1, raw)) continue;
 
             var classMatch = Regex.Match(line, @"^(?:(?:Public|Private)\s+)?Class\s+([A-Za-z_]\w*)", RegexOptions.IgnoreCase);
             if (classMatch.Success)
@@ -114,13 +115,13 @@ internal sealed class CoreCompatibilityTranspiler
                 continue;
             }
 
-            var proc = ParseProcedureHeader(line, currentClass);
+            var proc = ParseProcedureHeader(line, currentClass, sourceName, lineIndex + 1, raw);
             if (proc is not null)
                 _procedures.Add(proc);
         }
     }
 
-    private bool TryAnalyzeDefType(string line)
+    private bool TryAnalyzeDefType(string line, string sourceName, int lineNumber, string sourceLine)
     {
         var match = Regex.Match(line, @"^Def(Bool|Byte|Cur|Dbl|Int|Lng|Sng|Str|Var)\s+(.+)$", RegexOptions.IgnoreCase);
         if (!match.Success) return false;
@@ -148,7 +149,7 @@ internal sealed class CoreCompatibilityTranspiler
             }
 
             var range = Regex.Match(token, @"^([A-Za-z])\s*-\s*([A-Za-z])$");
-            if (!range.Success) throw new CompilerException("Invalid Deftype range: " + token);
+            if (!range.Success) throw SyntaxFailure("Invalid Deftype range: " + token, sourceName, lineNumber, sourceLine, "letter or letter range", token);
             var a = char.ToUpperInvariant(range.Groups[1].Value[0]);
             var b = char.ToUpperInvariant(range.Groups[2].Value[0]);
             if (a > b) (a, b) = (b, a);
@@ -157,7 +158,7 @@ internal sealed class CoreCompatibilityTranspiler
         return true;
     }
 
-    private bool TryAnalyzeNative(string line)
+    private bool TryAnalyzeNative(string line, string sourceName, int lineNumber, string sourceLine)
     {
         var match = Regex.Match(
             line,
@@ -169,7 +170,7 @@ internal sealed class CoreCompatibilityTranspiler
         var name = match.Groups[3].Value;
         var library = match.Groups[4].Value;
         var alias = string.IsNullOrWhiteSpace(match.Groups[5].Value) ? name : match.Groups[5].Value;
-        var parameters = ParseParameters(match.Groups[6].Value, treatOmittedAsByRef: true);
+        var parameters = ParseParameters(match.Groups[6].Value, treatOmittedAsByRef: true, sourceName, lineNumber, sourceLine);
         var returnType = kind.Equals("Function", StringComparison.OrdinalIgnoreCase)
             ? (string.IsNullOrWhiteSpace(match.Groups[7].Value) ? ResolveDefaultType(name) : match.Groups[7].Value)
             : "Void";
@@ -178,7 +179,7 @@ internal sealed class CoreCompatibilityTranspiler
         return true;
     }
 
-    private ProcedureInfo? ParseProcedureHeader(string line, string? className)
+    private ProcedureInfo? ParseProcedureHeader(string line, string? className, string sourceName = "input.xps", int lineNumber = 1, string? sourceLine = null)
     {
         var match = Regex.Match(
             line,
@@ -189,12 +190,12 @@ internal sealed class CoreCompatibilityTranspiler
         return new ProcedureInfo(
             _nextProcedureId++,
             match.Groups[3].Value,
-            ParseParameters(match.Groups[4].Value, treatOmittedAsByRef: false),
+            ParseParameters(match.Groups[4].Value, treatOmittedAsByRef: false, sourceName, lineNumber, sourceLine ?? line),
             !string.IsNullOrWhiteSpace(match.Groups[1].Value),
             className);
     }
 
-    private List<ParameterInfo> ParseParameters(string raw, bool treatOmittedAsByRef)
+    private List<ParameterInfo> ParseParameters(string raw, bool treatOmittedAsByRef, string sourceName = "input.xps", int lineNumber = 1, string? sourceLine = null)
     {
         var result = new List<ParameterInfo>();
         if (string.IsNullOrWhiteSpace(raw)) return result;
@@ -203,7 +204,7 @@ internal sealed class CoreCompatibilityTranspiler
         {
             var clean = Regex.Replace(part.Trim(), @"\b(LMBCS|Unicode)\b", "", RegexOptions.IgnoreCase).Trim();
             var match = Regex.Match(clean, @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(\(\))?\s*(List)?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
-            if (!match.Success) throw new CompilerException("Unsupported parameter declaration: " + part.Trim());
+            if (!match.Success) throw SyntaxFailure("Unsupported parameter declaration: " + part.Trim(), sourceName, lineNumber, sourceLine ?? raw, "parameter declaration", part.Trim());
             var mode = match.Groups[1].Value;
             var byRef = mode.Equals("ByRef", StringComparison.OrdinalIgnoreCase) || (treatOmittedAsByRef && !mode.Equals("ByVal", StringComparison.OrdinalIgnoreCase));
             var name = match.Groups[2].Value;
