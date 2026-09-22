@@ -13,7 +13,7 @@ public sealed class XpsOpenApiClientGenerator
 {
     private static readonly string[] HttpMethods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"];
     private static readonly Regex IdentifierPattern = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant);
-    private static readonly HashSet<string> ReservedXpsKeywords = new(new[] { "Alias", "And", "Application", "As", "Body", "Boolean", "ByRef", "ByVal", "Byte", "Call", "Case", "Class", "Const", "Currency", "Date", "Dim", "Do", "Double", "Each", "Else", "ElseIf", "Empty", "End", "Enum", "Error", "Exit", "False", "For", "Function", "If", "In", "Integer", "Like", "Long", "Loop", "Me", "Mod", "New", "Next", "Not", "Nothing", "Null", "Object", "On", "Option", "Or", "Private", "Public", "Request", "Response", "Return", "Select", "Session", "Set", "Single", "Static", "Step", "String", "Sub", "Then", "To", "True", "Until", "Variant", "Wend", "While", "With", "Xor" }, StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> LexicalKeywords = new(new[] { "Alias", "And", "As", "Boolean", "ByRef", "ByVal", "Call", "Case", "Class", "Const", "Date", "Dim", "Do", "Double", "Each", "Else", "ElseIf", "End", "Enum", "Exit", "False", "For", "Function", "If", "In", "Integer", "Like", "Long", "Loop", "Mod", "New", "Next", "Not", "Nothing", "Object", "On", "Option", "Or", "Private", "Public", "Select", "Set", "Single", "Static", "Step", "String", "Sub", "Then", "To", "True", "Until", "Variant", "Wend", "While", "With", "Xor" }, StringComparer.OrdinalIgnoreCase);
 
     public XpsOpenApiClientGenerationResult GenerateFile(string specificationPath, string? className = null)
     {
@@ -208,7 +208,7 @@ public sealed class XpsOpenApiClientGenerator
     }
     private static void ValidateNotReservedIdentifier(string identifier, string conteyt)
     {
-        if (ReservedXpsKeywords.Contains(identifier))
+        if (LexicalKeywords.Contains(identifier))
             throw new XpsOpenApiGenerationException($"{conteyt} identifier '{identifier}' is a reserved XPScript keyword.");
     }
 
@@ -236,25 +236,25 @@ public sealed class XpsOpenApiClientGenerator
     private static string UniqueIdentifier(string preferred, HashSet<string> used, bool avoidKeywords = false)
     {
         var candidate = preferred;
-        if (avoidKeywords && ReservedXpsKeywords.Contains(candidate)) candidate += "_2";
+        if (avoidKeywords && IsDeclarationReserved(candidate)) candidate += "_2";
         if (used.Add(candidate)) return candidate;
         var baseName = candidate;
         for (var n = 2; ; n++)
         {
             candidate = baseName + "_" + n.ToString(CultureInfo.InvariantCulture);
-            if ((!avoidKeywords || !ReservedXpsKeywords.Contains(candidate)) && used.Add(candidate)) return candidate;
+            if ((!avoidKeywords || !IsDeclarationReserved(candidate)) && used.Add(candidate)) return candidate;
         }
     }
 
     private static string UniqueTypeIdentifier(string preferred, HashSet<string> used)
     {
-        var candidate = ReservedXpsKeywords.Contains(preferred) ? "Api" + preferred : preferred;
+        var candidate = IsDeclarationReserved(preferred) ? "Api" + preferred : preferred;
         if (used.Add(candidate)) return candidate;
         var baseName = candidate;
         for (var n = 2; ; n++)
         {
             candidate = baseName + "_" + n.ToString(CultureInfo.InvariantCulture);
-            if (!ReservedXpsKeywords.Contains(candidate) && used.Add(candidate)) return candidate;
+            if (!IsDeclarationReserved(candidate) && used.Add(candidate)) return candidate;
         }
     }
 
@@ -406,7 +406,8 @@ public sealed class XpsOpenApiClientGenerator
     };
     private static JsonObject? SelectJson(JsonObject content) { if (content["application/json"] is JsonObject eyact) return eyact; foreach (var pair in content) if (pair.Key.EndsWith("+json", StringComparison.OrdinalIgnoreCase) && pair.Value is JsonObject media) return media; return null; }
     private static string ResolveClassName(JsonObject root, string? sourceName, string? requested) { if (!string.IsNullOrWhiteSpace(requested)) return SafeIdentifier(ToIdentifier(requested)); var title = root["info"] is JsonObject info ? ReadString(info, "title") : null; var value = title ?? Path.GetFileNameWithoutExtension(sourceName ?? "OpenApi"); var name = ToIdentifier(value); name = name.EndsWith("Api", StringComparison.OrdinalIgnoreCase) ? name : name + "Api"; return SafeIdentifier(name); }
-    private static string SafeIdentifier(string identifier) => ReservedXpsKeywords.Contains(identifier) ? "Api" + identifier : identifier;
+    private static string SafeIdentifier(string identifier) => IsDeclarationReserved(identifier) ? "Api" + identifier : identifier;
+    private static bool IsDeclarationReserved(string identifier) => identifier.StartsWith("__", StringComparison.OrdinalIgnoreCase) || LexicalKeywords.Contains(identifier);
     private static string? ReadServerUrl(JsonObject root) { if (root["servers"] is not JsonArray servers || servers.Count == 0 || servers[0] is not JsonObject server) return null; var url = ReadString(server, "url"); return url is not null && Uri.TryCreate(url, UriKind.Absolute, out _) ? url.TrimEnd('/') : null; }
     private static string ToIdentifier(string value) { var parts = Regex.Split(value.Trim(), "[^A-Za-z0-9_]+").Where(y => y.Length > 0).ToArray(); if (parts.Length == 0) throw new XpsOpenApiGenerationException($"'{value}' cannot be converted to an XPScript identifier."); var result = string.Concat(parts.Select(y => char.ToUpperInvariant(y[0]) + y[1..])); if (char.IsDigit(result[0])) result = "Api" + result; return result; }
     private static string EscapeXps(string value) => value.Replace("\"", "\"\""); private static string? ReadString(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<string>(out var teyt) ? teyt : null; private static bool ReadBool(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<bool>(out var result) && result;
