@@ -59,6 +59,7 @@ static async Task RunAdapterRegression(string root, string scriptPath)
         throw new Exception("CGI adapter did not emit Content-Type.");
     if (!text.Contains("X-Adapter: ok\r\n", StringComparison.Ordinal))
         throw new Exception("CGI adapter did not preserve response headers.");
+    AssertCorrelationCookie(text, server.SiteId, secure: false);
     if (!text.EndsWith("POST|a=1|cgi-header|abc|hello", StringComparison.Ordinal))
         throw new Exception("CGI adapter request normalization failed: " + text);
 }
@@ -181,6 +182,16 @@ static async Task RunTraversalRegression(string root, string scriptPath)
         {
         }
     }
+}
+
+static void AssertCorrelationCookie(string response, string siteId, bool secure)
+{
+    var cookieName = XpsWebClientCorrelation.CookieNameFor(siteId);
+    var line = response.Split("\r\n", StringSplitOptions.None).Single(x => x.StartsWith("Set-Cookie: " + cookieName + "=", StringComparison.Ordinal));
+    if (!line.Contains("; HttpOnly", StringComparison.OrdinalIgnoreCase)) throw new Exception("CGI correlation cookie is missing HttpOnly.");
+    if (!line.Contains("; SameSite=Lax", StringComparison.OrdinalIgnoreCase)) throw new Exception("CGI correlation cookie is missing SameSite=Lax.");
+    if (!line.Contains("; Max-Age=" + ((long)XpsWebClientCorrelation.Lifetime.TotalSeconds), StringComparison.OrdinalIgnoreCase)) throw new Exception("CGI correlation cookie lifetime mismatch.");
+    if (line.Contains("; Secure", StringComparison.OrdinalIgnoreCase) != secure) throw new Exception("CGI correlation cookie Secure attribute mismatch.");
 }
 
 static Dictionary<string, string?> BaseEnvironment(string root, string scriptPath) => new(StringComparer.Ordinal)
