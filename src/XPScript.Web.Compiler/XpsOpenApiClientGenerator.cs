@@ -280,12 +280,12 @@ public sealed class XpsOpenApiClientGenerator
     private static void EmitOperation(StringBuilder b, string apiName, ClientOperation op, JsonObject root, Dictionary<string, JsonObject> models, Dictionary<string, ClientSecurityScheme> securitySchemes, IReadOnlyDictionary<string, string> responseMembers)
     {
         var responseName = apiName + "Response"; var args = op.Parameters.Where(p => p.Required).Select(p => $"{p.GeneratedName} As {p.TypeName}").Concat(op.Parameters.Where(p => !p.Required).Select(p => $"Optional {p.GeneratedName} As Variant = Nothing")).ToList(); var parameterNames = new HashSet<string>(op.Parameters.Select(p => p.GeneratedName), StringComparer.OrdinalIgnoreCase); var payloadName = parameterNames.Contains("payload") ? "ApiPayload" : "payload"; var urlName = parameterNames.Contains("url") ? "ApiUrl" : "url"; var rawName = parameterNames.Contains("raw") ? "ApiRaw" : "raw"; var requestName = parameterNames.Contains("request") ? "ApiRequest" : "request"; var resultName = parameterNames.Contains("result") ? "ApiResult" : "result"; if (op.Body is not null) args.Add(op.Body.Required ? $"{payloadName} As {op.Body.TypeName}" : $"Optional {payloadName} As Variant = Nothing"); b.AppendLine($"    Public Function {op.Name}({string.Join(", ", args)}) As {responseName}"); b.AppendLine($"        Dim {urlName} As String"); b.AppendLine($"        Dim {rawName} As XPHttpResponse"); b.AppendLine($"        Dim {requestName} As New XPHttpRequest"); b.AppendLine($"        Dim {resultName} As {responseName}"); b.AppendLine($"        Set {resultName} = New {responseName}"); b.AppendLine($"        {urlName} = BaseUrl & \"{EscapeXps(op.Path)}\"");
-        foreach (var p in op.Parameters.Where(y => y.Location == "path")) b.AppendLine($"        url = Replace(url, \"{{{EscapeXps(p.Name)}}}\", Http.EncodePath({p.GeneratedName}))"); foreach (var p in op.Parameters.Where(y => y.Location == "query")) { var line = $"url = Http.AddQuery(url, \"{EscapeXps(p.Name)}\", {p.GeneratedName})"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); } foreach (var p in op.Parameters.Where(y => y.Location == "header")) { var line = $"Call request.SetHeader(\"{EscapeXps(p.Name)}\", CStr({p.GeneratedName}))"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); }
-        EmitSecurity(b, op, securitySchemes);
-        b.AppendLine($"        request.Method = \"{op.Method}\""); b.AppendLine("        request.Url = url"); if (op.Body is not null) { if (!op.Body.Required) b.AppendLine($"        If Not {payloadName} Is Nothing Then"); var indent = op.Body.Required ? "        " : "            "; b.AppendLine(indent + "Call request.SetHeader(\"Content-Type\", \"application/json\")"); b.AppendLine(indent + $"request.Body = JsonStringify({payloadName})"); if (!op.Body.Required) b.AppendLine("        End If"); } b.AppendLine("        Set raw = Http.Send(request)");
-        b.AppendLine("        Set result.Raw = raw"); b.AppendLine("        result.StatusCode = raw.StatusCode"); b.AppendLine("        result.IsSuccess = raw.IsSuccess"); b.AppendLine("        If Len(raw.Body) > 0 Then Set result.Json = raw.Json()"); EmitResponseValidation(b, op, root); EmitResponseMapping(b, op, models, responseMembers); b.AppendLine($"        Set {op.Name} = result"); b.AppendLine("    End Function");
+        foreach (var p in op.Parameters.Where(y => y.Location == "path")) b.AppendLine($"        {urlName} = Replace({urlName}, \"{{{EscapeXps(p.Name)}}}\", Http.EncodePath({p.GeneratedName}))"); foreach (var p in op.Parameters.Where(y => y.Location == "query")) { var line = $"{urlName} = Http.AddQuery({urlName}, \"{EscapeXps(p.Name)}\", {p.GeneratedName})"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); } foreach (var p in op.Parameters.Where(y => y.Location == "header")) { var line = $"Call {requestName}.SetHeader(\"{EscapeXps(p.Name)}\", CStr({p.GeneratedName}))"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); }
+        EmitSecurity(b, op, securitySchemes, urlName, requestName);
+        b.AppendLine($"        {requestName}.Method = \"{op.Method}\""); b.AppendLine($"        {requestName}.Url = {urlName}"); if (op.Body is not null) { if (!op.Body.Required) b.AppendLine($"        If Not {payloadName} Is Nothing Then"); var indent = op.Body.Required ? "        " : "            "; b.AppendLine(indent + $"Call {requestName}.SetHeader(\"Content-Type\", \"application/json\")"); b.AppendLine(indent + $"{requestName}.Body = JsonStringify({payloadName})"); if (!op.Body.Required) b.AppendLine("        End If"); } b.AppendLine($"        Set {rawName} = Http.Send({requestName})");
+        b.AppendLine($"        Set {resultName}.Raw = {rawName}"); b.AppendLine($"        {resultName}.StatusCode = {rawName}.StatusCode"); b.AppendLine($"        {resultName}.IsSuccess = {rawName}.IsSuccess"); b.AppendLine($"        If Len({rawName}.Body) > 0 Then Set {resultName}.Json = {rawName}.Json()"); EmitResponseValidation(b, op, root, rawName, resultName); EmitResponseMapping(b, op, models, responseMembers, rawName, resultName); b.AppendLine($"        Set {op.Name} = {resultName}"); b.AppendLine("    End Function");
     }
-    private static void EmitSecurity(StringBuilder b, ClientOperation op, Dictionary<string, ClientSecurityScheme> securitySchemes)
+    private static void EmitSecurity(StringBuilder b, ClientOperation op, Dictionary<string, ClientSecurityScheme> securitySchemes, string urlName, string requestName)
     {
         if (op.Security.Count == 0) return;
         foreach (var alternative in op.Security)
@@ -314,10 +314,10 @@ public sealed class XpsOpenApiClientGenerator
             foreach (var schemeName in alternative)
             {
                 var scheme = securitySchemes[schemeName]; var auth = "Auth" + scheme.GeneratedName;
-                if (scheme.Kind == "apikey" && scheme.Location == "header") b.AppendLine($"            Call request.SetHeader(\"{EscapeXps(scheme.WireName!)}\", {auth})");
-                else if (scheme.Kind == "apikey" && scheme.Location == "query") b.AppendLine($"            url = Http.AddQuery(url, \"{EscapeXps(scheme.WireName!)}\", {auth})");
-                else if (scheme.Kind == "bearer") b.AppendLine($"            Call request.SetBearerToken({auth})");
-                else if (scheme.Kind == "basic") b.AppendLine($"            Call request.SetAuthorization({auth}Authorization)");
+                if (scheme.Kind == "apikey" && scheme.Location == "header") b.AppendLine($"            Call {requestName}.SetHeader(\"{EscapeXps(scheme.WireName!)}\", {auth})");
+                else if (scheme.Kind == "apikey" && scheme.Location == "query") b.AppendLine($"            {urlName} = Http.AddQuery({urlName}, \"{EscapeXps(scheme.WireName!)}\", {auth})");
+                else if (scheme.Kind == "bearer") b.AppendLine($"            Call {requestName}.SetBearerToken({auth})");
+                else if (scheme.Kind == "basic") b.AppendLine($"            Call {requestName}.SetAuthorization({auth}Authorization)");
             }
             first = false;
         }
@@ -326,22 +326,22 @@ public sealed class XpsOpenApiClientGenerator
         b.AppendLine("        End If");
     }
 
-    private static void EmitResponseValidation(StringBuilder b, ClientOperation op, JsonObject root)
+    private static void EmitResponseValidation(StringBuilder b, ClientOperation op, JsonObject root, string rawName, string resultName)
     {
         var schemas = op.Responses.Where(y => y.Schema is not null).ToArray();
         if (schemas.Length == 0) return;
         var first = true;
         foreach (var response in schemas.Where(y => !y.Code.Equals("default", StringComparison.OrdinalIgnoreCase)))
         {
-            b.AppendLine($"        {(first ? "If" : "ElseIf")} raw.StatusCode = {response.Code} Then");
-            b.AppendLine($"            If Not result.Json Is Nothing Then Set result.Validation = XPJsonSchema.Parse(\"{EscapeXps(ResponseSchemaText(root, response.Schema!))}\").Validate(result.Json)");
+            b.AppendLine($"        {(first ? "If" : "ElseIf")} {rawName}.StatusCode = {response.Code} Then");
+            b.AppendLine($"            If Not {resultName}.Json Is Nothing Then Set {resultName}.Validation = XPJsonSchema.Parse(\"{EscapeXps(ResponseSchemaText(root, response.Schema!))}\").Validate({resultName}.Json)");
             first = false;
         }
         var fallback = schemas.FirstOrDefault(y => y.Code.Equals("default", StringComparison.OrdinalIgnoreCase));
         if (fallback is not null)
         {
             b.AppendLine(first ? "        If True Then" : "        Else");
-            b.AppendLine($"            If Not result.Json Is Nothing Then Set result.Validation = XPJsonSchema.Parse(\"{EscapeXps(ResponseSchemaText(root, fallback.Schema!))}\").Validate(result.Json)");
+            b.AppendLine($"            If Not {resultName}.Json Is Nothing Then Set {resultName}.Validation = XPJsonSchema.Parse(\"{EscapeXps(ResponseSchemaText(root, fallback.Schema!))}\").Validate({resultName}.Json)");
             first = false;
         }
         if (!first) b.AppendLine("        End If");
@@ -350,7 +350,7 @@ public sealed class XpsOpenApiClientGenerator
     {
         return XpsOpenApiSchema.StandaloneJsonSchema(root, schema, "OpenAPI client response schema");
     }
-    private static void EmitResponseMapping(StringBuilder b, ClientOperation op, Dictionary<string, JsonObject> models, IReadOnlyDictionary<string, string> responseMembers)
+    private static void EmitResponseMapping(StringBuilder b, ClientOperation op, Dictionary<string, JsonObject> models, IReadOnlyDictionary<string, string> responseMembers, string rawName, string resultName)
     {
         var mappedTypes = op.Responses.Where(y => y.TypeName is not null && models.ContainsKey(y.TypeName))
             .Select(y => y.TypeName!).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
@@ -363,15 +363,15 @@ public sealed class XpsOpenApiClientGenerator
         var first = true;
         foreach (var response in op.Responses.Where(y => !y.Code.Equals("default", StringComparison.OrdinalIgnoreCase)))
         {
-            b.AppendLine($"        {(first ? "If" : "ElseIf")} raw.StatusCode = {response.Code} Then");
+            b.AppendLine($"        {(first ? "If" : "ElseIf")} {rawName}.StatusCode = {response.Code} Then");
             first = false;
             if (response.TypeName is not null)
             {
-                b.AppendLine($"            result.ResponseType = \"{EscapeXps(response.TypeName)}\"");
+                b.AppendLine($"            {resultName}.ResponseType = \"{EscapeXps(response.TypeName)}\"");
                 if (models.ContainsKey(response.TypeName))
-                    b.AppendLine($"            If Not result.Json Is Nothing Then Set result.{responseMembers[response.TypeName]} = result.Json.ToObject(mapped{response.TypeName})");
+                    b.AppendLine($"            If Not {resultName}.Json Is Nothing Then Set {resultName}.{responseMembers[response.TypeName]} = {resultName}.Json.ToObject(mapped{response.TypeName})");
                 else
-                    b.AppendLine($"            If Not result.Json Is Nothing Then result.{responseMembers[response.TypeName]} = result.Json.ToObject({DefaultValue(response.TypeName)})");
+                    b.AppendLine($"            If Not {resultName}.Json Is Nothing Then {resultName}.{responseMembers[response.TypeName]} = {resultName}.Json.ToObject({DefaultValue(response.TypeName)})");
             }
         }
         var fallback = op.Responses.FirstOrDefault(y => y.Code.Equals("default", StringComparison.OrdinalIgnoreCase));
@@ -380,11 +380,11 @@ public sealed class XpsOpenApiClientGenerator
             b.AppendLine(first ? "        If True Then" : "        Else");
             if (fallback.TypeName is not null)
             {
-                b.AppendLine($"            result.ResponseType = \"{EscapeXps(fallback.TypeName)}\"");
+                b.AppendLine($"            {resultName}.ResponseType = \"{EscapeXps(fallback.TypeName)}\"");
                 if (models.ContainsKey(fallback.TypeName))
-                    b.AppendLine($"            If Not result.Json Is Nothing Then Set result.{responseMembers[fallback.TypeName]} = result.Json.ToObject(mapped{fallback.TypeName})");
+                    b.AppendLine($"            If Not {resultName}.Json Is Nothing Then Set {resultName}.{responseMembers[fallback.TypeName]} = {resultName}.Json.ToObject(mapped{fallback.TypeName})");
                 else
-                    b.AppendLine($"            If Not result.Json Is Nothing Then result.{responseMembers[fallback.TypeName]} = result.Json.ToObject({DefaultValue(fallback.TypeName)})");
+                    b.AppendLine($"            If Not {resultName}.Json Is Nothing Then {resultName}.{responseMembers[fallback.TypeName]} = {resultName}.Json.ToObject({DefaultValue(fallback.TypeName)})");
             }
             first = false;
         }
