@@ -178,6 +178,19 @@ try
     if (reusedCreated || reusedCorrelation != rawCorrelation)
         throw new Exception("Client correlation id was not stable across requests.");
     var clientSessionId = XpsWebClientCorrelation.Hash(rawCorrelation);
+    var secondCorrelation = XpsWebClientCorrelation.GetOrCreate(
+        new Dictionary<string, string>(), correlationCookieName, out var secondCreated);
+    if (!secondCreated || secondCorrelation == rawCorrelation ||
+        XpsWebClientCorrelation.Hash(secondCorrelation) == clientSessionId)
+        throw new Exception("Independent clients did not receive independent correlation identifiers.");
+    var attackerCorrelation = "0123456789abcdef0123456789abcdef";
+    var fixedCorrelation = XpsWebClientCorrelation.GetOrCreate(
+        new Dictionary<string, string> { [correlationCookieName] = attackerCorrelation },
+        correlationCookieName,
+        out var fixedCreated);
+    if (!fixedCreated || fixedCorrelation.Equals(attackerCorrelation, StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Client-supplied correlation cookie was accepted, allowing session fixation.");
+
     using (var logger = new XpsWebLogManager(server, new XpsWebLogOptions { DirectoryPath = logDirectory }))
     {
         var context = new XpsWebContext(
