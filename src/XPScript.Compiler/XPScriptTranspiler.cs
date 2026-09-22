@@ -98,8 +98,9 @@ public sealed partial class XPScriptTranspiler
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
 
-        // Attach runtime/#line markers only after semantic validation and syntax scanning.
-        source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
+        // Run source-coordinate-sensitive syntax preprocessors before inserting runtime
+        // source markers. Marker insertion adds physical lines and would otherwise shift
+        // diagnostics away from the user's XPScript source.
         source = new EscapedQuotePreprocessor().Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source, sourceName);
         source = new IfLayoutPreprocessor().Transform(source);
@@ -107,6 +108,9 @@ public sealed partial class XPScriptTranspiler
         source = new ParameterPassingPreprocessor().Transform(source);
         source = new HclPrintFormattingPreprocessor().Transform(source, sourceName);
         source = new StatementSeparatorPreprocessor().Transform(source, sourceName);
+        // Attach runtime/#line markers only after the preprocessors above have emitted
+        // any diagnostics that depend on physical source coordinates.
+        source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
         var udtValues = new UdtValueSemanticsPreprocessor();
