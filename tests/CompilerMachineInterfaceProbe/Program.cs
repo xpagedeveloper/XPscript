@@ -492,6 +492,27 @@ Require(!string.IsNullOrWhiteSpace(coreSyntaxDiagnostic.MarkedCode), "core synta
 Require(coreSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "end-of-file") == true, "core syntax found token");
 Require(coreSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "End Sub or End Function") == true, "core syntax expected construct");
 
+var reservedIdentifierSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "reserved-identifier-error.xps"));
+var reservedIdentifierSyntaxDiagnostic = reservedIdentifierSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(reservedIdentifierSyntaxDiagnostic is not null, "reserved identifier syntax diagnostic");
+Require(reservedIdentifierSyntaxDiagnostic.Category == "syntax", "reserved identifier syntax category");
+Require(reservedIdentifierSyntaxDiagnostic.File == "reserved-identifier-error.xps", "reserved identifier syntax file");
+Require(reservedIdentifierSyntaxDiagnostic.Line == 2 && reservedIdentifierSyntaxDiagnostic.Position > 0, "reserved identifier syntax location");
+Require(reservedIdentifierSyntaxDiagnostic.EndLine == 2 && reservedIdentifierSyntaxDiagnostic.EndColumn > reservedIdentifierSyntaxDiagnostic.Position, "reserved identifier syntax range");
+Require(reservedIdentifierSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "__xp_state") == true, "reserved identifier found token");
+Require(reservedIdentifierSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "non-reserved identifier") == true, "reserved identifier expected construct");
+
+var nativeConstructorSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "native-http-json-missing-constructor-argument-error.xps"));
+var nativeConstructorSyntaxDiagnostic = nativeConstructorSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
+Require(nativeConstructorSyntaxDiagnostic is not null, "native constructor syntax diagnostic");
+Require(nativeConstructorSyntaxDiagnostic.Category == "syntax", "native constructor syntax category");
+Require(nativeConstructorSyntaxDiagnostic.File == "native-http-json-missing-constructor-argument-error.xps", "native constructor syntax file");
+Require(nativeConstructorSyntaxDiagnostic.Line == 2 && nativeConstructorSyntaxDiagnostic.Position > 0, "native constructor syntax location");
+Require(nativeConstructorSyntaxDiagnostic.EndLine == 2 && nativeConstructorSyntaxDiagnostic.EndColumn > nativeConstructorSyntaxDiagnostic.Position, "native constructor syntax range");
+Require(nativeConstructorSyntaxDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "XPDBSQLite") == true, "native constructor found token");
+Require(nativeConstructorSyntaxDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "database path argument") == true, "native constructor expected construct");
+Require(nativeConstructorSyntaxDiagnostic.SourceCode?.Contains("__xp", StringComparison.OrdinalIgnoreCase) != true, "native constructor source remains physical XPScript");
+
 var genericSyntaxCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "general-unsupported-statement-error.xps"));
 var genericSyntaxDiagnostic = genericSyntaxCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS1012");
 Require(genericSyntaxDiagnostic is not null, "generic syntax diagnostic");
