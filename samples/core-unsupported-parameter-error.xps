@@ -1,2 +1,2 @@
-Sub Main(Optional value As Integer)
+Sub Main(ByVal ByRef value As Integer)
 End Sub
