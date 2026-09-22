@@ -54,6 +54,28 @@ def run(host, port):
                 detail = pred_detail
         tests.append({"name": name, "passed": ok, "status": code, "detail": detail})
 
+    add("malformed-utf8-path-rejected",
+        b"GET /bad\xffpath HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404},
+        lambda c,h,r: (
+            b"XPSCRIPT-HARDENING" not in r and
+            b"stacktrace" not in r.lower() and
+            b".cs:" not in r.lower() and
+            b"/home/" not in r.lower() and
+            b"\\users\\" not in r.lower(),
+            "malformed UTF-8 path reached the application or leaked diagnostics"))
+
+    add("malformed-percent-utf8-path-rejected",
+        b"GET /bad%C3%28path HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+        {400,404},
+        lambda c,h,r: (
+            b"XPSCRIPT-HARDENING" not in r and
+            b"stacktrace" not in r.lower() and
+            b".cs:" not in r.lower() and
+            b"/home/" not in r.lower() and
+            b"\\users\\" not in r.lower(),
+            "invalid percent-encoded UTF-8 path reached the application or leaked diagnostics"))
+
     add("server-header-hidden",
         b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {200},
