@@ -130,6 +130,13 @@ jobs:
               Response.Write("HEADER=" & Request.Header("X-Test") & "\n")
               Response.Write("COOKIE=" & Request.Cookie("client") & "\n")
           End Sub
+
+          [Anonymous]
+          [Post]
+          [Route:/api/json-hardening]
+          Sub JsonHardening([FromBody] payload As Variant)
+              Response.OK(payload)
+          End Sub
           XPS
 
           cp ./.hardening-site/index.xps ./.hardening-site/main.xps
@@ -158,6 +165,11 @@ jobs:
 
           cat ./artifacts/hardening/kestrel.stderr.log
           exit 1
+
+      - name: Run JSON API hardening probes
+        shell: bash
+        run: |
+          python3 ./tests/security/json_api_hardening.py "${HARDENING_PORT}"
 
       - name: Install pinned Nuclei
         run: |
