@@ -134,6 +134,27 @@ try
 
     using var client = new HttpClient { BaseAddress = new Uri(address) };
 
+    // Kestrel multipart adapter regression: verify the transport preserves the multipart body and parser failures remain controlled.
+    using (var multipart = new MultipartFormDataContent("kestrel-boundary"))
+    {
+        multipart.Add(new StringContent("user"), "role");
+        using var response = await client.PostAsync("/multipart", multipart);
+        if ((int)response.StatusCode != 201) throw new Exception($"Kestrel multipart expected 201, got {(int)response.StatusCode}.");
+        var body = await response.Content.ReadAsStringAsync();
+        if (!body.Contains("FORM=user", StringComparison.Ordinal))
+            throw new Exception("Kestrel multipart form field was not preserved.");
+    }
+
+    var malformedMultipartBytes = Encoding.UTF8.GetBytes("--actual-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser\r\n--actual-boundary--\r\n");
+    using (var malformedMultipart = new HttpRequestMessage(HttpMethod.Post, "/multipart"))
+    {
+        malformedMultipart.Content = new ByteArrayContent(malformedMultipartBytes);
+        malformedMultipart.Content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("multipart/form-data; boundary=wrong-boundary");
+        using var response = await client.SendAsync(malformedMultipart);
+        if ((int)response.StatusCode != 400)
+            throw new Exception($"Kestrel malformed multipart expected 400, got {(int)response.StatusCode}.");
+    }
+
     using (var message = new HttpRequestMessage(HttpMethod.Post, "/hello?q=1&q=2"))
     {
         message.Headers.TryAddWithoutValidation("X-Request-Test", "present");
@@ -808,6 +829,19 @@ sealed class EchoHandler : IXpsWebRequestHandler
             ? values.SingleOrDefault() ?? string.Empty
             : string.Empty;
         var body = Encoding.UTF8.GetString(context.Request.Body.Span);
+        if (context.Request.Path.Equals("/multipart", StringComparison.Ordinal))
+        {
+            try
+            {
+                context.Response.Write("FORM=" + context.Request.FormFirst("role"));
+            }
+            catch (InvalidOperationException)
+            {
+                context.Response.StatusCode = 400;
+                context.Response.Write("Invalid multipart");
+            }
+            return Task.CompletedTask;
+        }
         context.Response.Write(
             $"METHOD={context.Request.Method}\n" +
             $"PATH={context.Request.Path}\n" +
