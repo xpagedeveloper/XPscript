@@ -6,9 +6,9 @@
 - [Run XPScript directly](#run-xpscript-directly)
 - [Compile code](#compile-code)
 - [Compiler parameters](#compiler-parameters)
-- [Run XPScript WebServer for local testing](#run-xpscript-webserver-for-local-testing)
-- [XPScript WebServer hosting](#xpscript-webserver-hosting)
-- [XPScript WebServer parameters](#xpscript-webserver-parameters)
+- [Run Kestrel for local testing](#run-xpscript-webserver-for-local-testing)
+- [Kestrel hosting](#xpscript-webserver-hosting)
+- [Kestrel parameters](#xpscript-webserver-parameters)
 - [FastCGI hosting](#fastcgi-hosting)
 - [FastCGI parameters](#fastcgi-parameters)
 - [CGI hosting](#cgi-hosting)
@@ -29,7 +29,7 @@ dotnet build .\src\XPScript.Cli\XPScript.Cli.csproj -c Release
 dotnet build .\src\XPScript.Web.Cgi\XPScript.Web.Cgi.csproj -c Release
 ```
 
-`xpscriptc` is the compiler executable. `xpscript` is the CLI that also hosts XPScript WebServer and FastCGI.
+`xpscriptc` is the compiler executable. `xpscript` is the CLI that also hosts Kestrel and FastCGI.
 
 ## Run XPScript directly
 
@@ -88,7 +88,7 @@ Supported deployment RIDs include `win-x64`, `win-arm64`, `linux-x64`, `linux-ar
 
 For automation, JSON/XML errors include source location and compiler diagnostics.
 
-## Run XPScript WebServer for local testing
+## Run Kestrel for local testing
 
 Create `site/index.xps`:
 
@@ -109,7 +109,7 @@ xpscript web --root ./site --address 127.0.0.1 --port 8080
 
 Open `http://127.0.0.1:8080/`. Keep a local test listener on loopback unless another machine must reach it.
 
-## XPScript WebServer hosting
+## Kestrel hosting
 
 Basic production-style invocation:
 
@@ -117,9 +117,9 @@ Basic production-style invocation:
 xpscript web --root /srv/xpsite --address 0.0.0.0 --port 8080 --host www.example.com
 ```
 
-XPScript WebServer can use a JSON `web.cfg`. Explicit command-line values override config values.
+Kestrel can use a JSON `web.cfg`. Explicit command-line values override config values.
 
-## XPScript WebServer parameters
+## Kestrel parameters
 
 | Parameter | Purpose |
 |---|---|
@@ -176,7 +176,7 @@ Publish example:
 dotnet publish .\src\XPScript.Web.Cgi\XPScript.Web.Cgi.csproj -c Release -r win-x64 --self-contained false -o C:\XPScript\cgi
 ```
 
-CGI is process-per-request. Prefer XPScript WebServer or FastCGI for persistent workers and higher throughput.
+CGI is process-per-request. Prefer Kestrel or FastCGI for persistent workers and higher throughput.
 
 ## CGI configuration
 
@@ -186,7 +186,7 @@ Important CGI values include `REQUEST_METHOD`, `QUERY_STRING`, `CONTENT_TYPE`, `
 
 ## IIS hosting
 
-For Windows Server with IIS, the recommended production topology is IIS terminating TLS and reverse proxying to an XPScript WebServer process bound to `127.0.0.1`. Direct IIS CGI hosting is also supported for simpler or lower-volume deployments.
+For Windows Server with IIS, the recommended production topology is IIS terminating TLS and reverse proxying to an Kestrel process bound to `127.0.0.1`. Direct IIS CGI hosting is also supported for simpler or lower-volume deployments.
 
 See [Hosting XPScript on IIS](iis-hosting.md) for the complete IIS setup, including ARR and URL Rewrite, `web.config`, application pool settings, permissions, CGI handler mapping, TLS, updates and troubleshooting.
 
@@ -246,7 +246,7 @@ The `Distribution Publish` workflow publishes five separate downloadable artifac
 | `xpscript-desktop-runtime` | Desktop runtime distribution. |
 | `xpscript-cgi` | CGI host distribution. |
 | `xpscript-fastcgi` | FastCGI host distribution. |
-| `xpscript-kestrel` | XPScript WebServer host distribution. |
+| `xpscript-kestrel` | Kestrel host distribution. |
 
 The `Distribution Publish Matrix` workflow verifies every package for `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64` on pull requests. Manual runs also create one release bundle per RID. Each bundle contains five versioned ZIP files and one SHA-256 manifest.
 
@@ -281,7 +281,7 @@ Artifacts are retained for 14 days. Both distribution workflows fail if required
 | `-Package desktop-runtime` | Publish desktop UI runtime dependencies. |
 | `-Package cgi` | Publish the CGI host. |
 | `-Package fastcgi` | Publish the FastCGI host bundle. |
-| `-Package kestrel` | Publish the XPScript WebServer host bundle. |
+| `-Package kestrel` | Publish the Kestrel host bundle. |
 | `-Configuration Release` | Select the .NET build configuration. `Release` is the default. |
 | `-Runtime RID` | Publish for an explicit runtime identifier. |
 | `-SelfContained` | Include the .NET runtime for the selected RID. |
@@ -295,6 +295,6 @@ Artifacts are retained for 14 days. Both distribution workflows fail if required
 | Compiled desktop application | Application output plus required `desktop-runtime` dependencies |
 | CGI web server | `cgi` |
 | FastCGI web server | `fastcgi` |
-| Standalone XPScript WebServer web server | `kestrel` |
+| Standalone Kestrel web server | `kestrel` |
 
-The FastCGI and XPScript WebServer packages currently publish the `XPScript.Cli` dependency closure because those commands are hosted by the CLI. A production web server does not need the repository source tree. It needs the selected distribution and the site's `.xps` files.
+The FastCGI and Kestrel packages currently publish the `XPScript.Cli` dependency closure because those commands are hosted by the CLI. A production web server does not need the repository source tree. It needs the selected distribution and the site's `.xps` files.
