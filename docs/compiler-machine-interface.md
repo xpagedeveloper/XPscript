@@ -189,7 +189,7 @@ A validation tool call accepts `source`, optional `filename`, and optional `runt
 ```json
 {
   "source": "Sub Main()\n    Print MissingValue\nEnd Sub",
-  "filename": "agent.xps" ,
+  "filename": "agent.xps",
   "runtimeIdentifier": "linux-x64"
 }
 ```
