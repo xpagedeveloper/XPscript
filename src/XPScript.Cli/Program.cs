@@ -231,21 +231,27 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         var scheme = options.HttpsEnabled ? "https" : "http";
         Console.WriteLine($"XPScript web root: {root}");
         Console.WriteLine($"Default document: {defaultDocument}");
-        Console.WriteLine($"Listening: {scheme}://{FormatAddress(address)}:{port}");
+        Console.WriteLine($"Kestrel: {scheme}://{FormatAddress(address)}:{port}");
+        Console.WriteLine($"Network access: {(IPAddress.IsLoopback(address) ? "loopback only" : $"bound to {FormatAddress(address)}; Host header allowlist still applies")}");
         Console.WriteLine($"HTTP protocols: {FormatHttpProtocols(options.Protocols)}");
         if (options.HttpsEnabled) Console.WriteLine($"TLS certificate: {Path.GetFileName(options.HttpsCertificatePath)}");
         if (allowedHosts.Count == 0 && !IPAddress.IsLoopback(address))
             Console.WriteLine("Allowed hosts remain loopback-only. Use --host for external Host values.");
         if (enableSessions)
             Console.WriteLine($"Sessions: enabled, in-memory store, cookie {sessionCookieName}, timeout {sessionIdleSeconds}s, SameSite={sessionSameSite}, Secure={sessionSecure}");
+        else
+            Console.WriteLine("Sessions: disabled");
         var operationalAccess = operationalAllowedNetworks.Count > 0
             ? "loopback + " + string.Join(", ", operationalAllowedNetworks)
             : options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible";
         if (enableHealth) Console.WriteLine($"Health endpoint: {options.HealthPath} ({operationalAccess})");
+        else Console.WriteLine("Health endpoint: disabled");
         if (enableMetrics) Console.WriteLine($"Metrics endpoint: {options.MetricsPath} ({operationalAccess})");
+        else Console.WriteLine("Metrics endpoint: disabled");
         Console.WriteLine($"Mandatory JSONL logs: {options.LogOptions.DirectoryPath ?? XpsWebLogManager.DefaultDirectory(server)}");
         if (structuredLogPath is not null) Console.WriteLine($"Legacy structured request log: {structuredLogPath}");
         if (options.EnableStaticFiles) Console.WriteLine($"Static files: enabled, max {options.MaxStaticFileBytes} bytes");
+        else Console.WriteLine("Static files: disabled");
 
         await app.StartAsync(shutdown.Token);
         await WaitForShutdownAsync(shutdown.Token);
@@ -322,6 +328,11 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
         Console.WriteLine($"XPScript FastCGI root: {root}");
         Console.WriteLine($"Default document: {defaultDocument}");
         Console.WriteLine($"Listening Unix socket: {unixSocket}");
+        Console.WriteLine("Network access: Unix socket only; no TCP port is listening");
+        Console.WriteLine("Sessions: disabled");
+        Console.WriteLine("Health endpoint: disabled");
+        Console.WriteLine("Metrics endpoint: disabled");
+        Console.WriteLine("Static files: disabled");
         Console.WriteLine($"Mandatory JSONL logs: {logDirectory ?? XpsWebLogManager.DefaultDirectory(server)}");
         await WaitForShutdownAsync(shutdown.Token);
         await listener.StopAsync();
@@ -333,6 +344,11 @@ static async Task<int> RunFastCgiAsync(string[] commandArgs)
     Console.WriteLine($"XPScript FastCGI root: {root}");
     Console.WriteLine($"Default document: {defaultDocument}");
     Console.WriteLine($"Listening: {localEndpoint?.Address}:{localEndpoint?.Port}");
+    Console.WriteLine($"Network access: {(localEndpoint is not null && IPAddress.IsLoopback(localEndpoint.Address) ? "loopback only" : $"bound to {localEndpoint?.Address}")}");
+    Console.WriteLine("Sessions: disabled");
+    Console.WriteLine("Health endpoint: disabled");
+    Console.WriteLine("Metrics endpoint: disabled");
+    Console.WriteLine("Static files: disabled");
     Console.WriteLine($"Mandatory JSONL logs: {logDirectory ?? XpsWebLogManager.DefaultDirectory(server)}");
     await WaitForShutdownAsync(shutdown.Token);
     await adapter.StopAsync();
@@ -481,7 +497,7 @@ Command model:
   new      Create a REST, web or desktop starter in a required target directory. Use . for the current directory.
   openapi  Generate XPScript REST server source from OpenAPI 3.0/3.1 YAML or JSON.
   service  Install compiled XPScript services using the native service manager.
-  web      Run the standalone Kestrel web runtime.
+  web      Run the standalone Kestrel runtime.
   fastcgi  Run the FastCGI web runtime.
 
 The same xpscript executable owns all command modes. The XPScript.Compiler project provides shared compiler services and command handling.
@@ -521,16 +537,5 @@ Examples:
   xpscript fastcgi --root /srv/xpsite --default-document home.xps --listen 127.0.0.1:9000
   xpscript fastcgi --root /srv/xpsite --unix-socket /run/xpscript/site.sock
 
-Security defaults:
-  Compile/run retain the existing restricted Include and source-root controls.
-  Service install validates service names and refuses to overwrite an existing service with the same name.
-  Kestrel binds to loopback by default.
-  Kestrel accepts loopback Host values by default. Add --host explicitly for external host names.
-  Sessions are disabled by default.
-  Health and metrics are disabled by default.
-  Static file serving is disabled by default.
-  XPScript source files are never served by the static-file middleware.
-  FastCGI binds to 127.0.0.1:9000 by default.
-  Unix-domain sockets are supported on Linux and macOS only.
 """);
 }
