@@ -21,6 +21,13 @@ var diagnostics=structured.GetProperty("errors").EnumerateArray().ToArray();
 if (diagnostics.Length == 0) throw new Exception("Expected at least one structured compiler diagnostic.");
 if (diagnostics.Any(x=>!x.TryGetProperty("diagnosticCode",out var code) || string.IsNullOrWhiteSpace(code.GetString()))) throw new Exception("MCP validation returned a diagnostic without a stable diagnostic code.");
 if (diagnostics.Any(x=>x.TryGetProperty("file",out var file) && file.GetString()!="agent.xps")) throw new Exception("MCP validation did not preserve the virtual filename.");
+var tool = list.GetProperty("result").GetProperty("tools").EnumerateArray().Single(x=>x.GetProperty("name").GetString()=="xpscript_validate");
+var properties = tool.GetProperty("inputSchema").GetProperty("properties");
+if (!properties.TryGetProperty("debug", out var debugSchema) || debugSchema.GetProperty("type").GetString()!="boolean") throw new Exception("MCP validate must advertise boolean debug input.");
+var debugValidation=await CallAsync(new {jsonrpc="2.0",id=4,method="tools/call",@params=new{name="xpscript_validate",arguments=new{source=await File.ReadAllTextAsync(Path.Combine(repo,"samples","null-integer-assignment-error.xps")),filename="debug-agent.xps",debug=true}}});
+var debugStructured=debugValidation.GetProperty("result").GetProperty("structuredContent");
+if (debugStructured.GetProperty("result").GetString()!="error") throw new Exception("Expected debug MCP validation error result.");
+if (debugStructured.GetProperty("errors").EnumerateArray().Any(x=>x.TryGetProperty("file",out var file) && file.GetString()!="debug-agent.xps" && file.GetString()!="Program.cs")) throw new Exception("MCP debug validation exposed an unexpected file path.");
 p.StandardInput.Close(); if(!p.WaitForExit(5000)){p.Kill(true);throw new Exception("MCP server did not stop after stdin closed.");}
 if(p.ExitCode!=0) throw new Exception("MCP server exit code "+p.ExitCode+": "+await p.StandardError.ReadToEndAsync());
 Console.WriteLine("MCP protocol probe passed.");
