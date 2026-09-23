@@ -11,19 +11,19 @@ The implementation must support OpenAPI **3.0, 3.1 and 3.2** in both **JSON** an
 
 ## Supported specifications
 
-- [ ] OpenAPI 3.0.x
-- [ ] OpenAPI 3.1.x
-- [ ] OpenAPI 3.2.x
-- [ ] JSON input for every supported specification
-- [ ] YAML/YML input for every supported specification
+- [x] OpenAPI 3.0.x
+- [x] OpenAPI 3.1.x
+- [x] OpenAPI 3.2.x
+- [x] JSON input for every supported specification
+- [x] YAML/YML input for every supported specification
 - [ ] Reject unsupported/invalid documents with actionable diagnostics
-- [ ] Detect the specification version from the document rather than the file extension
+- [x] Detect the specification version from the document rather than the file extension
 
 ## Specification normalization layer
 
 OpenAPI 3.0, 3.1 and 3.2 should share a common internal representation before server/client emission where version-specific semantics differ.
 
-- [ ] Detect the OpenAPI specification version from the document content
+- [x] Detect the OpenAPI specification version from the document content
 - [ ] Normalize OpenAPI 3.0/3.1/3.2 components, parameters, request bodies, responses and security into a common internal model where needed
 - [ ] Handle version-specific JSON Schema dialect differences deliberately instead of silently treating all versions as 3.1
 - [ ] Add a fixture that proves version detection is content-based even when the file extension is misleading
@@ -120,21 +120,21 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 ## CI acceptance
 
 - [x] OpenAPI smoke tests run early enough on Linux to provide fast failure feedback
-- [ ] OpenAPI 3.0 JSON server generation + compile test
-- [ ] OpenAPI 3.0 YAML server generation + compile test
-- [ ] OpenAPI 3.0 JSON client generation + compile test
-- [ ] OpenAPI 3.0 YAML client generation + compile test
-- [ ] OpenAPI 3.1 JSON server generation + compile test
-- [ ] OpenAPI 3.1 YAML server generation + compile test
-- [ ] OpenAPI 3.1 JSON client generation + compile test
-- [ ] OpenAPI 3.1 YAML client generation + compile test
-- [ ] OpenAPI 3.2 JSON server generation + compile test
-- [ ] OpenAPI 3.2 YAML server generation + compile test
-- [ ] OpenAPI 3.2 JSON client generation + compile test
-- [ ] OpenAPI 3.2 YAML client generation + compile test
-- [ ] FullTest green on Windows
-- [ ] FullTest green on Linux
-- [ ] FullTest green on macOS
+- [x] OpenAPI 3.0 JSON server generation + compile test
+- [x] OpenAPI 3.0 YAML server generation + compile test
+- [x] OpenAPI 3.0 JSON client generation + compile test
+- [x] OpenAPI 3.0 YAML client generation + compile test
+- [x] OpenAPI 3.1 JSON server generation + compile test
+- [x] OpenAPI 3.1 YAML server generation + compile test
+- [x] OpenAPI 3.1 JSON client generation + compile test
+- [x] OpenAPI 3.1 YAML client generation + compile test
+- [x] OpenAPI 3.2 JSON server generation + compile test
+- [x] OpenAPI 3.2 YAML server generation + compile test
+- [x] OpenAPI 3.2 JSON client generation + compile test
+- [x] OpenAPI 3.2 YAML client generation + compile test
+- [x] FullTest green on Windows
+- [x] FullTest green on Linux
+- [x] FullTest green on macOS
 
 ## Completion rule
 
@@ -142,7 +142,7 @@ Do not merge `openapi-client-v2` / PR #582 to `main` until the applicable items 
 
 ## Verified CI inventory (2026-09-23)
 
-The current CI coverage is split strictly into **server generation** and **client generation**. Existing fixtures prove OpenAPI 3.0 JSON plus OpenAPI 3.0/3.1 YAML paths, but they do **not** yet prove the complete OpenAPI 3.x matrix or OpenAPI 3.2. A format test only counts for the specification version actually declared by its fixture.
+The current CI coverage is split strictly into **server generation** and **client generation**. The explicit matrix smoke now proves OpenAPI 3.0, 3.1 and 3.2 in both JSON and YAML for server and client generation, including compilation through the real XPScript paths.
 
 ### Server already covered
 
@@ -160,9 +160,8 @@ The current CI coverage is split strictly into **server generation** and **clien
 - Client update/regeneration from OpenAPI 3.1 YAML is generated and compiled.
 - Smoke coverage includes security, API keys, bearer/basic auth, schemas, enums, arrays, oneOf/allOf, nullable 3.1 types, additionalProperties, parameter encoding, response validation and identifier/scope collision behavior.
 
-### Still missing as explicit version/format acceptance coverage
+### Matrix acceptance verified
 
-- OpenAPI 3.0: explicit YAML server+compile and YAML client+compile acceptance fixture (some 3.0 generation is covered in-memory, but not the full matrix).
-- OpenAPI 3.1: explicit JSON server+compile and JSON client+compile acceptance fixture.
-- OpenAPI 3.2: server JSON/YAML and client JSON/YAML.
-- Full green CI across Windows, Linux and macOS after the scope migration.
+- OpenAPI 3.0/3.1/3.2 JSON and YAML server generation + real web compilation.
+- OpenAPI 3.0/3.1/3.2 JSON and YAML client generation + real transpiler compilation.
+- Full CI #612 green across Windows, Linux and macOS after the scope migration.
