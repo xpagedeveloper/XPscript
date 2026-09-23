@@ -20,6 +20,51 @@ try
     };
     await using var adapter = new XpsFastCgiAdapter(options, server, new EchoHandler());
 
+    var multipartBody = Encoding.UTF8.GetBytes("--fastcgi-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser\r\n--fastcgi-boundary--\r\n");
+    var multipartInput = BuildRequest(
+        19,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "POST",
+            ["SCRIPT_NAME"] = "/upload.xps",
+            ["CONTENT_TYPE"] = "multipart/form-data; boundary=fastcgi-boundary",
+            ["CONTENT_LENGTH"] = multipartBody.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "upload.xps")
+        },
+        multipartBody);
+    var multipartStream = new FragmentedDuplexStream(multipartInput, 3);
+    await using (var multipartAdapter = new XpsFastCgiAdapter(options, server, new MultipartHandler()))
+    {
+        await multipartAdapter.ProcessConnectionAsync(multipartStream);
+    }
+    var multipartOutput = ParseResponse(multipartStream.Written);
+    if (!multipartOutput.Contains("user", StringComparison.Ordinal))
+        throw new Exception("FastCGI multipart form handling failed: " + multipartOutput);
+
+    var malformedMultipartInput = BuildRequest(
+        21,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "POST",
+            ["SCRIPT_NAME"] = "/upload.xps",
+            ["CONTENT_TYPE"] = "multipart/form-data; boundary=wrong-boundary",
+            ["CONTENT_LENGTH"] = multipartBody.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "upload.xps")
+        },
+        multipartBody);
+    var malformedMultipartStream = new FragmentedDuplexStream(malformedMultipartInput, 3);
+    await using (var multipartAdapter = new XpsFastCgiAdapter(options, server, new MultipartHandler()))
+    {
+        await multipartAdapter.ProcessConnectionAsync(malformedMultipartStream);
+    }
+    var malformedMultipartOutput = ParseResponse(malformedMultipartStream.Written);
+    if (!malformedMultipartOutput.Contains("Status: 400", StringComparison.Ordinal))
+        throw new Exception("FastCGI malformed multipart did not map to 400: " + malformedMultipartOutput);
+
     var duplicateQueryInput = BuildRequest(
         17,
         new Dictionary<string, string>
@@ -291,6 +336,23 @@ static string ParseResponse(byte[] raw)
     return Encoding.UTF8.GetString(stdout.ToArray());
 }
 
+
+sealed class MultipartHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        try
+        {
+            context.Response.Write(context.Request.FormFirst("role"));
+        }
+        catch (InvalidOperationException)
+        {
+            context.Response.StatusCode = 400;
+            context.Response.Write("Invalid multipart");
+        }
+        return Task.CompletedTask;
+    }
+}
 
 sealed class DuplicateQueryHandler : IXpsWebRequestHandler
 {
