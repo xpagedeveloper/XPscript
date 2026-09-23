@@ -165,7 +165,10 @@ public static class CompilerDaemonServer
                     }
                     await WriteErrorAsync(writer, id, $"Unknown daemon method: {method}").ConfigureAwait(false);
                 }
-                catch (Exception ex) { await WriteErrorAsync(writer, id, ex.Message).ConfigureAwait(false); }
+                catch (JsonException) { await WriteErrorAsync(writer, id, "Invalid daemon request.").ConfigureAwait(false); }
+                catch (KeyNotFoundException) { await WriteErrorAsync(writer, id, "Invalid daemon request.").ConfigureAwait(false); }
+                catch (InvalidOperationException) { await WriteErrorAsync(writer, id, "Invalid daemon request.").ConfigureAwait(false); }
+                catch (Exception) { await WriteErrorAsync(writer, id, "Daemon request failed.").ConfigureAwait(false); }
                 finally { if (requestStarted) endRequest(); }
             }
         }
