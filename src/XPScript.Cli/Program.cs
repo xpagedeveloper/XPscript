@@ -224,7 +224,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         var scheme = options.HttpsEnabled ? "https" : "http";
         Console.WriteLine($"XPScript web root: {root}");
         Console.WriteLine($"Default document: {defaultDocument}");
-        Console.WriteLine($"XPScript WebServer: {scheme}://{FormatAddress(address)}:{port}");
+        Console.WriteLine($"Kestrel: {scheme}://{FormatAddress(address)}:{port}");
         Console.WriteLine($"Network access: {(IPAddress.IsLoopback(address) ? "loopback only" : $"bound to {FormatAddress(address)}; Host header allowlist still applies")}");
         Console.WriteLine($"HTTP protocols: {FormatHttpProtocols(options.Protocols)}");
         if (options.HttpsEnabled) Console.WriteLine($"TLS certificate: {Path.GetFileName(options.HttpsCertificatePath)}");
@@ -487,7 +487,7 @@ Command model:
   new      Create a REST, web or desktop starter in a required target directory. Use . for the current directory.
   openapi  Generate XPScript REST server source from OpenAPI 3.0/3.1 YAML or JSON.
   service  Install compiled XPScript services using the native service manager.
-  web      Run the standalone XPScript WebServer runtime.
+  web      Run the standalone Kestrel runtime.
   fastcgi  Run the FastCGI web runtime.
 
 The same xpscript executable owns all command modes. The XPScript.Compiler project provides shared compiler services and command handling.
