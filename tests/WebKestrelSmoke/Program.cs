@@ -651,10 +651,14 @@ try
                 throw new Exception("IIS out-of-process mode bypassed AllowedHosts.");
         }
 
+        // Use a cookie-free client here so a cookie created by the preceding
+        // bad-host request cannot suppress the Set-Cookie header under test.
+        using var iisHttpsHandler = new HttpClientHandler { UseCookies = false };
+        using var iisHttpsClient = new HttpClient(iisHttpsHandler) { BaseAddress = new Uri($"http://127.0.0.1:{iisPort}") };
         using (var externalHttps = new HttpRequestMessage(HttpMethod.Get, "/iis-scheme"))
         {
             externalHttps.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
-            using var response = await iisClient.SendAsync(externalHttps);
+            using var response = await iisHttpsClient.SendAsync(externalHttps);
             if ((int)response.StatusCode != 201)
                 throw new Exception($"IIS forwarded scheme request expected 201, got {(int)response.StatusCode}.");
             var body = await response.Content.ReadAsStringAsync();
