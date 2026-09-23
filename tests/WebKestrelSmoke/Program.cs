@@ -81,7 +81,7 @@ var options = new XpsKestrelOptions
     MaxStaticFileBytes = 32,
     MaxConcurrentConnections = 2,
     RequestHeadersTimeout = TimeSpan.FromSeconds(1),
-    KeepAliveTimeout = TimeSpan.FromSeconds(1),
+    KeepAliveTimeout = TimeSpan.FromSeconds(3),
     MinRequestBodyDataRateBytesPerSecond = 1024,
     MinRequestBodyDataRateGracePeriod = TimeSpan.FromSeconds(2),
     AllowedHosts = ["localhost", "127.0.0.1", "::1"],
@@ -400,7 +400,7 @@ try
     await AssertBoundedConcurrencyStressAsync(client);
     await AssertSlowRequestBodyAsync(new Uri(address));
     await AssertRequestHeadersTimeoutAsync(new Uri(address));
-    await AssertKeepAliveTimeoutAsync(new Uri(address));
+    await AssertKeepAliveTimeoutAsync(new Uri(address), options.KeepAliveTimeout);
 
     using (var health = await client.GetAsync("/_xps/health"))
     {
@@ -934,7 +934,7 @@ static async Task AssertRequestHeadersTimeoutAsync(Uri baseAddress)
         throw new Exception($"Request headers timeout expected connection close or 408, got: {text}");
 }
 
-static async Task AssertKeepAliveTimeoutAsync(Uri baseAddress)
+static async Task AssertKeepAliveTimeoutAsync(Uri baseAddress, TimeSpan keepAliveTimeout)
 {
     using var tcp = new TcpClient();
     await tcp.ConnectAsync(baseAddress.Host, baseAddress.Port);
@@ -960,7 +960,10 @@ static async Task AssertKeepAliveTimeoutAsync(Uri baseAddress)
         if (!statusLine.Contains(" 201 ", StringComparison.Ordinal))
             throw new Exception($"Keep-alive timeout setup request expected 201, got: {statusLine}");
     }
-    await Task.Delay(TimeSpan.FromSeconds(2));
+    // Wait comfortably beyond the configured idle timeout. The timeout itself is kept
+    // long enough that normal CI scheduling cannot close the connection while the setup
+    // response is still being consumed.
+    await Task.Delay(keepAliveTimeout + TimeSpan.FromSeconds(1));
     try
     {
         await stream.WriteAsync(request);
