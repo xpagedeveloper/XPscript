@@ -138,7 +138,31 @@ internal sealed record BrowserWasmServerBridgePlan(
     private static bool HasServerRuntimeFeature(string source)
     {
         var features = RuntimeFeatures.Detect(source);
-        return features.Ai || features.Sqlite || features.MsSql || Regex.IsMatch(source, @"\bApplication\.Crypto\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        return features.Ai || features.Sqlite || features.MsSql || ContainsApplicationCryptoCode(source);
+    }
+
+    private static bool ContainsApplicationCryptoCode(string source)
+    {
+        foreach (var line in source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+        {
+            var clean = StripComment(line);
+            var code = new StringBuilder(clean.Length);
+            var inString = false;
+            for (var i = 0; i < clean.Length; i++)
+            {
+                if (clean[i] == '"')
+                {
+                    if (inString && i + 1 < clean.Length && clean[i + 1] == '"') { code.Append("  "); i++; continue; }
+                    inString = !inString;
+                    code.Append(' ');
+                    continue;
+                }
+                code.Append(inString ? ' ' : clean[i]);
+            }
+            if (Regex.IsMatch(code.ToString(), @"\bApplication\.Crypto\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                return true;
+        }
+        return false;
     }
 
     private static IReadOnlyList<ProcedureBlock> ParseProcedures(string[] lines)
