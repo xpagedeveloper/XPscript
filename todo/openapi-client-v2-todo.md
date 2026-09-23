@@ -36,7 +36,7 @@ OpenAPI 3.0, 3.1 and 3.2 should share a common internal representation before se
 - [x] Generate path parameters
 - [x] Generate query parameters
 - [x] Generate header parameters where applicable
-- [ ] Generate cookie parameters where applicable
+- [x] Generate cookie parameters where applicable
 - [x] Generate request bodies and content types
 - [x] Generate response status codes and response models
 - [x] Generate reusable schema/model classes and enums
