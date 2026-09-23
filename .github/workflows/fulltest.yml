@@ -141,8 +141,15 @@ jobs:
           printf '%s\n' "$compiled_output"
           printf '%s\n' "$compiled_output" | grep -qx 'first'
           printf '%s\n' "$compiled_output" | grep -qx 'second'
-          output="$("${cli[@]}" run ./out/scaffold-test/myapp/main.xps first second)"
+          set +e
+          output="$("${cli[@]}" run ./out/scaffold-test/myapp/main.xps first second 2>&1)"
+          run_status=$?
+          set -e
           printf '%s\n' "$output"
+          printf 'xpscript run exit code: %s\n' "$run_status"
+          if [ "$run_status" -ne 0 ]; then
+            exit "$run_status"
+          fi
           printf '%s\n' "$output" | grep -qx 'first'
           printf '%s\n' "$output" | grep -qx 'second'
 
