@@ -168,8 +168,8 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify compilation/runtime errors never disclose filesystem paths in production responses. The unhandled runtime exception embeds `Environment.CurrentDirectory` in its message while the HTTP regression requires the production response to remain exactly `Internal Server Error`; operational payload regressions separately reject filesystem-path and source-location markers; verified in run #215.
 - [x] Verify response splitting attempts are rejected. Shared response validation rejects CR/LF/NUL and the explicit redirect CRLF regression verifies no injected response header is emitted; verified in run #217.
 - [x] Verify open redirect behavior where application APIs construct redirects. `Response.Redirect` now accepts only application-local absolute paths and rejects absolute external URLs, scheme-relative targets and backslash/UNC-style targets without emitting `Location`; verified in run #219.
-- [ ] Verify reflected input examples are HTML encoded where required.
-- [ ] Add XSS probes against generated browser/UIForm output where user input is reflected.
+- [x] Verify reflected input examples are HTML encoded where required. UIForm adversarial rendering regression verifies titles, labels, options and reflected field values remain HTML encoded; verified in run #221.
+- [x] Add XSS probes against generated browser/UIForm output where user input is reflected. WebUIFormAdversarialSecurity is an explicit hardening CI gate and passed in run #221.
 
 ## Browser and WASM hardening
 
