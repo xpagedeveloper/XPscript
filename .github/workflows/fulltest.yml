@@ -172,7 +172,7 @@ jobs:
           grep -q 'Application.ExitCode = 0' ./out/scaffold-test/myapp/main.xps
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/myapp/main.xps -o ./out/scaffold-test/myapp/app --runtime=false
           test -f ./out/scaffold-test/myapp/app
-          output="$("${cli[@]}" run ./out/scaffold-test/myapp/main.xps -- first second)"
+          output="$("${cli[@]}" run ./out/scaffold-test/myapp/main.xps first second)"
           printf '%s\n' "$output" | grep -qx 'first'
           printf '%s\n' "$output" | grep -qx 'second'
 
