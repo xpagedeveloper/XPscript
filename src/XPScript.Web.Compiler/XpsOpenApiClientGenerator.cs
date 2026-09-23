@@ -387,7 +387,7 @@ public sealed class XpsOpenApiClientGenerator
             {
                 b.AppendLine($"            {resultName}.ResponseType = \"{EscapeXps(fallback.TypeName)}\"");
                 if (models.ContainsKey(fallback.TypeName))
-                    b.AppendLine($"            If Not {resultName}.Json Is Nothing Then Set {resultName}.{responseMembers[fallback.TypeName]} = {resultName}.Json.ToObject(mapped{fallback.TypeName})");
+                    b.AppendLine($"            If Not {resultName}.Json Is Nothing Then Set {resultName}.{responseMembers[fallback.TypeName]} = {resultName}.Json.ToObject({mappedNames[fallback.TypeName]})");
                 else
                     b.AppendLine($"            If Not {resultName}.Json Is Nothing Then {resultName}.{responseMembers[fallback.TypeName]} = {resultName}.Json.ToObject({DefaultValue(fallback.TypeName)})");
             }
