@@ -231,7 +231,7 @@ jobs:
         shell: bash
         run: |
           test -f ./out/generated-openapi-client.xps
-          grep -q 'Public Class ClientCIApi' ./out/generated-openapi-client.xps
+          grep -q 'Public Class ClientCI_API' ./out/generated-openapi-client.xps
           grep -q 'XPJsonSchema.Parse' ./out/generated-openapi-client.xps
           grep -q 'XPJsonArray' ./out/generated-openapi-client.xps
           grep -q 'Optional Expand As Variant = Nothing' ./out/generated-openapi-client.xps
