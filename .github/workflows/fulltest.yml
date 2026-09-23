@@ -157,6 +157,18 @@ jobs:
         run: dotnet run --project ./tests/WebBrowserWasmMultiWindowSmoke/WebBrowserWasmMultiWindowSmoke.csproj -c Release
       - name: Verify desktop UIForm lifecycle
         run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+      - name: Verify CLI application scaffold
+        shell: bash
+        run: |
+          rm -rf ./out/cli-scaffold
+          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- new cli ./out/cli-scaffold
+          test -f ./out/cli-scaffold/main.xps
+          grep -q 'Application.ArgCount' ./out/cli-scaffold/main.xps
+          grep -q 'Application.Args(i)' ./out/cli-scaffold/main.xps
+          grep -q 'Application.ExitCode = 0' ./out/cli-scaffold/main.xps
+          output="$(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- run ./out/cli-scaffold/main.xps -- first second)"
+          printf '%s\n' "$output" | grep -qx 'first'
+          printf '%s\n' "$output" | grep -qx 'second'
       - name: Verify OpenAPI REST generator
         run: dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release
       - name: Verify OpenAPI unified CLI generate
