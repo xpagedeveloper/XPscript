@@ -95,7 +95,7 @@ xpscript web --root .\demo\web-state --address 127.0.0.1 --port 8080 --sessions
 
 Open `http://127.0.0.1:8080/`. The demo shows request-local `RequestScope`, process/application state and host-enabled `Session` state in the same route.
 
-## Kestrel hosting
+## XPScript WebServer hosting
 
 Source: [`kestrel/index.xps`](kestrel/index.xps)
 
@@ -125,7 +125,7 @@ Publish the CGI host first:
 dotnet publish .\src\XPScript.Web.Cgi\XPScript.Web.Cgi.csproj -c Release -r win-x64 --self-contained false -o .\out\cgi
 ```
 
-Configure the web server with `XPSCRIPT_WEB_ROOT` pointing at `demo/cgi`. CGI is process-per-request, so Kestrel or FastCGI is normally preferable for interactive demonstrations.
+Configure the web server with `XPSCRIPT_WEB_ROOT` pointing at `demo/cgi`. CGI is process-per-request, so XPScript WebServer or FastCGI is normally preferable for interactive demonstrations.
 
 ## WebIIS package
 
@@ -177,7 +177,7 @@ This offline-safe configuration demo creates Supabase and Domino REST clients wi
 
 Source: [`http/http-client.xps`](http/http-client.xps)
 
-Start the Kestrel demo first, then in another terminal:
+Start the XPScript WebServer demo first, then in another terminal:
 
 ```powershell
 $env:XPSCRIPT_DEMO_HTTP_URL = 'http://127.0.0.1:8080/'
