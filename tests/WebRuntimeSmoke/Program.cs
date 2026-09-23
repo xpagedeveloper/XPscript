@@ -39,6 +39,16 @@ try
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/%2e%2e/secret.xps"));
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/%252e%252e/secret.xps"));
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/C:/Windows/system.ini"));
+    // Unicode normalization must not create alternate aliases for a protected route.
+    // A composed filename must not resolve through its canonically equivalent decomposed spelling.
+    var composedUnicodeName = "\u00e5.xps";
+    var decomposedUnicodeName = "a\u030a.xps";
+    await File.WriteAllTextAsync(Path.Combine(root, composedUnicodeName), "' unicode");
+    AssertPath(resolver.Resolve("/%C3%A5"), Path.Combine(root, composedUnicodeName), null);
+    var decomposedResolution = resolver.Resolve("/a%CC%8A");
+    if (decomposedResolution.Found)
+        throw new Exception("Unicode normalization created an alternate route alias.");
+
 
     try
     {
