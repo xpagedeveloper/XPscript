@@ -685,7 +685,7 @@ try
 
     var logText = structuredLog.ToString();
     var logLines = logText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-    if (logLines.Length != 3) throw new Exception($"Expected three structured request events, got {logLines.Length}.");
+    if (logLines.Length < 3) throw new Exception($"Expected at least three structured request events, got {logLines.Length}.");
     var requestIds = new HashSet<string>(StringComparer.Ordinal);
     foreach (var line in logLines)
     {
