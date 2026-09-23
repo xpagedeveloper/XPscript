@@ -264,26 +264,44 @@ public static class XpsKestrelAdapter
             });
         }
 
-        var applicationAssetServer = new XpsWebServer(serverInfo);
+        var staticServer = new XpsWebServer(serverInfo);
         app.Use(async (http, next) =>
         {
-            if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
+            if (!options.EnableStaticFiles || (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method)))
             {
                 await next();
                 return;
             }
 
             var rawPath = http.Request.Path.Value ?? string.Empty;
-            if (!rawPath.StartsWith("/assets/", StringComparison.OrdinalIgnoreCase) ||
-                !TryGetStaticPath(rawPath, options.StaticFileContentTypes, out var relativePath, out var contentType) ||
-                !relativePath.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+            var authenticated = false;
+            string? relativePath = null;
+            if (TryGetStaticRequestPath(rawPath, options.PublicStaticPath, null, out var publicPath))
+            {
+                relativePath = publicPath;
+            }
+            else if (TryGetStaticRequestPath(rawPath, options.AuthenticatedStaticPath, options.AuthenticatedStaticDirectory, out var protectedPath))
+            {
+                var principal = principalFactory?.Invoke(http) ?? new XpsWebPrincipal(false);
+                http.Items[typeof(XpsWebPrincipal)] = principal;
+                if (!principal.IsAuthenticated)
+                {
+                    http.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return;
+                }
+                authenticated = true;
+                relativePath = protectedPath;
+            }
+
+            if (relativePath is null ||
+                !TryGetStaticPath(relativePath, options.StaticFileContentTypes, out relativePath, out var contentType))
             {
                 await next();
                 return;
             }
 
             string fullPath;
-            try { fullPath = applicationAssetServer.MapPath(relativePath); }
+            try { fullPath = staticServer.MapPath(relativePath); }
             catch (XpsWebPathException)
             {
                 http.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -307,64 +325,11 @@ public static class XpsKestrelAdapter
             http.Response.StatusCode = StatusCodes.Status200OK;
             http.Response.ContentType = contentType;
             http.Response.ContentLength = info.Length;
-            http.Response.Headers.CacheControl = options.StaticCacheControl;
+            http.Response.Headers.CacheControl = authenticated ? "private, no-store" : options.StaticCacheControl;
             http.Response.Headers["X-Content-Type-Options"] = "nosniff";
             if (!HttpMethods.IsHead(http.Request.Method))
                 await http.Response.SendFileAsync(fullPath, http.RequestAborted);
         });
-
-        if (options.EnableStaticFiles)
-        {
-            var staticServer = new XpsWebServer(serverInfo);
-            app.Use(async (http, next) =>
-            {
-                if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
-                {
-                    await next();
-                    return;
-                }
-
-                var rawPath = http.Request.Path.Value ?? string.Empty;
-                if (!TryGetStaticPath(rawPath, options.StaticFileContentTypes, out var relativePath, out var contentType))
-                {
-                    await next();
-                    return;
-                }
-
-                string fullPath;
-                try
-                {
-                    fullPath = staticServer.MapPath(relativePath);
-                }
-                catch (XpsWebPathException)
-                {
-                    http.Response.StatusCode = StatusCodes.Status404NotFound;
-                    return;
-                }
-
-                FileInfo info;
-                try { info = new FileInfo(fullPath); }
-                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
-                {
-                    http.Response.StatusCode = StatusCodes.Status404NotFound;
-                    return;
-                }
-
-                if (!info.Exists || info.Length > options.MaxStaticFileBytes)
-                {
-                    http.Response.StatusCode = StatusCodes.Status404NotFound;
-                    return;
-                }
-
-                http.Response.StatusCode = StatusCodes.Status200OK;
-                http.Response.ContentType = contentType;
-                http.Response.ContentLength = info.Length;
-                http.Response.Headers.CacheControl = options.StaticCacheControl;
-                http.Response.Headers["X-Content-Type-Options"] = "nosniff";
-                if (!HttpMethods.IsHead(http.Request.Method))
-                    await http.Response.SendFileAsync(fullPath, http.RequestAborted);
-            });
-        }
 
         app.Run(async http =>
         {
@@ -485,6 +450,16 @@ public static class XpsKestrelAdapter
             http.Response.Headers[pair.Key] = pair.Value.ToArray();
         if (!HttpMethods.IsHead(http.Request.Method) && response.Body.Length > 0)
             await http.Response.Body.WriteAsync(response.Body, http.RequestAborted);
+    }
+
+    private static bool TryGetStaticRequestPath(string requestPath, string urlPrefix, string? directoryPrefix, out string relativePath)
+    {
+        relativePath = string.Empty;
+        if (!requestPath.StartsWith(urlPrefix + "/", StringComparison.OrdinalIgnoreCase)) return false;
+        var suffix = requestPath[(urlPrefix.Length + 1)..];
+        if (string.IsNullOrWhiteSpace(suffix)) return false;
+        relativePath = directoryPrefix is null ? suffix : directoryPrefix + "/" + suffix;
+        return true;
     }
 
     private static bool TryGetStaticPath(
