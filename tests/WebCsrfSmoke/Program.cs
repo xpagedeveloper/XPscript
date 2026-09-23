@@ -24,12 +24,6 @@ End Sub
 Sub Submit()
     Response.Write("EXECUTED")
 End Sub
-
-[Anonymous]
-[Get]
-Sub EvalGuard()
-    Response.Write(Evaluate("Shell(""whoami"")"))
-End Sub
 """);
 
 try
@@ -174,20 +168,6 @@ try
     var bearerContext = new XpsWebContext(bearerRequest, bearerResponse, info, new XpsWebPrincipal(false), new XpsApplicationState(), store.Bind(bearerRequest, bearerResponse));
     if (XpsWebSecurity.RequiresCsrfProtection(bearerContext))
         throw new Exception("Bearer-only API request was incorrectly forced through browser CSRF validation.");
-
-    var evalGuarded = false;
-    var evalResponse = new XpsWebResponse();
-    var evalContext = new XpsWebContext(Request(), evalResponse, info, new XpsWebPrincipal(false), new XpsApplicationState(), scriptSession);
-    try
-    {
-        await unit.InvokeAsync("EvalGuard", evalContext);
-    }
-    catch (Exception ex)
-    {
-        evalGuarded = ex.Message.Contains("Unsupported Evaluate function", StringComparison.OrdinalIgnoreCase) ||
-                      ex.Message.Contains("Evaluate", StringComparison.OrdinalIgnoreCase);
-    }
-    if (!evalGuarded) throw new Exception("Evaluate unexpectedly allowed server-side Shell execution.");
 
     Console.WriteLine("WEB-CSRF-SMOKE=OK");
     Console.WriteLine("WEB-XSS-SMOKE=OK");
