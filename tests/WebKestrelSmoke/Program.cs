@@ -754,6 +754,22 @@ static void AssertHeader(HttpResponseMessage response, string name, string expec
         throw new Exception($"Expected response header {name}: {expected}.");
 }
 
+static bool IsConnectionAbort(Exception ex)
+{
+    for (Exception? current = ex; current is not null; current = current.InnerException)
+    {
+        if (current is SocketException socket &&
+            socket.SocketErrorCode is SocketError.ConnectionReset or SocketError.ConnectionAborted or SocketError.Shutdown)
+            return true;
+
+        if (current.Message.Contains("broken pipe", StringComparison.OrdinalIgnoreCase) ||
+            current.Message.Contains("connection reset", StringComparison.OrdinalIgnoreCase) ||
+            current.Message.Contains("connection aborted", StringComparison.OrdinalIgnoreCase))
+            return true;
+    }
+    return false;
+}
+
 static bool IsPrematureResponseEnd(HttpRequestException ex)
 {
     for (Exception? current = ex; current is not null; current = current.InnerException)
@@ -874,29 +890,30 @@ static async Task AssertSlowRequestBodyAsync(Uri baseAddress)
     await tcp.ConnectAsync(baseAddress.Host, baseAddress.Port);
     await using var stream = tcp.GetStream();
     var headers = Encoding.ASCII.GetBytes($"POST /slow-body HTTP/1.1\r\nHost: {baseAddress.Host}:{baseAddress.Port}\r\nContent-Length: 32\r\nContent-Type: application/octet-stream\r\nConnection: close\r\n\r\n");
-    await stream.WriteAsync(headers);
-    await stream.WriteAsync(new byte[] { (byte)'A' });
-    await stream.FlushAsync();
-
-    // The configured 1 KiB/s minimum with a one-second grace period must abort
-    // a body that stops making progress well before the request can reach the handler.
-    await Task.Delay(TimeSpan.FromSeconds(3));
-    var buffer = new byte[1024];
-    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
     try
     {
+        await stream.WriteAsync(headers);
+        await stream.WriteAsync(new byte[] { (byte)'A' });
+        await stream.FlushAsync();
+
+        // The configured 1 KiB/s minimum with a one-second grace period must abort
+        // a body that stops making progress well before the request can reach the handler.
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        var buffer = new byte[1024];
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         var read = await stream.ReadAsync(buffer, timeout.Token);
         var text = Encoding.ASCII.GetString(buffer, 0, read);
         if (read > 0 && text.Contains("201", StringComparison.Ordinal))
             throw new Exception("Slow request body reached the application handler despite the configured minimum data rate.");
     }
-    catch (IOException)
+    catch (IOException ex) when (IsConnectionAbort(ex))
     {
-        // Kestrel may abort/reset the connection when the minimum request body rate is violated.
+        // Kestrel may close the connection while the client is still writing or reading
+        // after the minimum request body rate has been violated.
     }
-    catch (SocketException)
+    catch (SocketException ex) when (IsConnectionAbort(ex))
     {
-        // Connection reset is an acceptable enforcement result.
+        // Connection reset is an acceptable fail-closed enforcement result.
     }
 }
 
