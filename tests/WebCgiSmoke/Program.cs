@@ -23,6 +23,7 @@ End Sub
 
 try
 {
+    await RunUnhandledErrorRegression(root, scriptPath);
     await RunMultipartAdapterRegression(root, scriptPath);
     await RunDuplicateQueryRegression(root, scriptPath);
     await RunJsonBodyAdapterRegression(root, scriptPath);
@@ -37,6 +38,23 @@ try
 finally
 {
     Directory.Delete(parent, recursive: true);
+}
+
+static async Task RunUnhandledErrorRegression(string root, string scriptPath)
+{
+    var environment = BaseEnvironment(root, scriptPath);
+    var server = new XpsServerInfo("cgi-error", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new ThrowingHandler());
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(Stream.Null, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    if (!text.StartsWith("Status: 500 Internal Server Error\r\n", StringComparison.Ordinal) ||
+        !text.EndsWith("Internal Server Error", StringComparison.Ordinal))
+        throw new Exception("CGI unhandled error was not sanitized: " + text);
+    if (text.Contains("SECURITY-SENTINEL", StringComparison.Ordinal) ||
+        text.Contains("ThrowingHandler", StringComparison.Ordinal) ||
+        text.Contains(".cs:", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("CGI unhandled error leaked diagnostics: " + text);
 }
 
 static async Task RunMultipartAdapterRegression(string root, string scriptPath)
@@ -293,6 +311,12 @@ static string FindRepoRoot()
         current = current.Parent;
     }
     throw new Exception("Unable to locate repository root.");
+}
+
+sealed class ThrowingHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context) =>
+        throw new InvalidOperationException("SECURITY-SENTINEL " + Environment.CurrentDirectory);
 }
 
 sealed class EchoHandler : IXpsWebRequestHandler
