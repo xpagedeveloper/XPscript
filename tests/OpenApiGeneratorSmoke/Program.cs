@@ -1156,25 +1156,25 @@ static void VerifyVersionPair(string version, string yaml, XpsOpenApiGenerator s
 foreach (var version in new[] { "3.0.3", "3.1.0", "3.2.0" })
 {
     VerifyVersionPair(version, $"""
-openapi: {version}
+openapi: {{version}}
 info:
-  title: Matrix {version}
+  title: Matrix {{version}}
   version: 1.0.0
 paths:
-  /matrix/{{id}}:
+  /matrix/{id}:
     get:
       operationId: matrixCall
       parameters:
         - name: id
           in: path
           required: true
-          schema: {{ type: integer, format: int64 }}
+          schema: { type: integer, format: int64 }
       responses:
         '200':
           description: ok
           content:
             application/json:
-              schema: {{ type: string }}
+              schema: { type: string }
 """, generator);
 }
 Console.WriteLine("OPENAPI-3X-JSON-YAML-SERVER-CLIENT-MATRIX=OK");
