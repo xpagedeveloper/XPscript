@@ -1012,15 +1012,21 @@ static async Task AssertKeepAliveTimeoutAsync(string root, TimeSpan keepAliveTim
             }
         }
 
-        await Task.Delay(keepAliveTimeout + TimeSpan.FromSeconds(1));
+        // Kestrel enforces KeepAliveTimeout with its heartbeat timer, so closure is
+        // not guaranteed exactly at the configured duration. Wait one additional
+        // heartbeat margin, then verify that the peer has closed the idle connection
+        // before attempting to send another request.
+        await Task.Delay(keepAliveTimeout + TimeSpan.FromSeconds(2));
+        using var secondTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         try
         {
-            await stream.WriteAsync(request);
-            await stream.FlushAsync();
-            using var secondTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             var read = await stream.ReadAsync(buffer, secondTimeout.Token);
             if (read != 0)
-                throw new Exception("Idle keep-alive connection remained usable beyond configured timeout.");
+                throw new Exception("Idle keep-alive connection produced unexpected data after the configured timeout.");
+        }
+        catch (OperationCanceledException) when (secondTimeout.IsCancellationRequested)
+        {
+            throw new Exception("Idle keep-alive connection remained open beyond the configured timeout and heartbeat margin.");
         }
         catch (IOException ex) when (IsConnectionAbort(ex))
         {
