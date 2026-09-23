@@ -111,6 +111,31 @@ try
         "localhost", "https", null, "HTTP/1.1", new Dictionary<string, string>());
     AssertThrows<InvalidOperationException>(() => malformedFormRequest.FormFirst("name"));
 
+    // Multipart parser abuse boundaries are shared by Kestrel, CGI and FastCGI.
+    static XpsWebRequest MultipartRequest(string contentType, byte[] body) => new(
+        "POST", "/upload", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(),
+        contentType, body.Length, body,
+        "localhost", "https", null, "HTTP/1.1", new Dictionary<string, string>());
+
+    var validMultipartBody = System.Text.Encoding.UTF8.GetBytes(
+        "--safe-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser\r\n--safe-boundary--\r\n");
+    var validMultipart = MultipartRequest("multipart/form-data; boundary=safe-boundary", validMultipartBody);
+    if (validMultipart.FormFirst("role") != "user")
+        throw new Exception("Valid multipart field was not parsed.");
+
+    AssertThrows<InvalidOperationException>(() =>
+        MultipartRequest("multipart/form-data", validMultipartBody).FormFirst("role"));
+    AssertThrows<InvalidOperationException>(() =>
+        MultipartRequest("multipart/form-data; boundary=wrong-boundary", validMultipartBody).FormFirst("role"));
+    AssertThrows<InvalidOperationException>(() =>
+        validMultipart.FormFirst("role", maxBytes: 8));
+
+    var unterminatedMultipartBody = System.Text.Encoding.UTF8.GetBytes(
+        "--safe-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser");
+    AssertThrows<InvalidOperationException>(() =>
+        MultipartRequest("multipart/form-data; boundary=safe-boundary", unterminatedMultipartBody).FormFirst("role"));
+
     // Run response-cookie injection regressions early: these protect a shared invariant used by Kestrel, CGI and FastCGI.
     var cookieInjectionResponse = new XpsWebResponse();
     AssertThrows<ArgumentException>(() => cookieInjectionResponse.SetHeader("Set-Cookie", "session=trusted\r\nSet-Cookie: session=attacker"));
