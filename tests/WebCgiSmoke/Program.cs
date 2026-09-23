@@ -23,6 +23,7 @@ End Sub
 
 try
 {
+    await RunDuplicateQueryRegression(root, scriptPath);
     await RunJsonBodyAdapterRegression(root, scriptPath);
     await RunDuplicateCookieRegression(root, scriptPath);
     await RunAdapterRegression(root, scriptPath);
@@ -35,6 +36,19 @@ try
 finally
 {
     Directory.Delete(parent, recursive: true);
+}
+
+static async Task RunDuplicateQueryRegression(string root, string scriptPath)
+{
+    var environment = BaseEnvironment(root, scriptPath);
+    environment["QUERY_STRING"] = "q=one&q=two";
+    var server = new XpsServerInfo("cgi-duplicate-query", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new DuplicateQueryHandler());
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(Stream.Null, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    if (!text.EndsWith("one|one,two", StringComparison.Ordinal))
+        throw new Exception("CGI duplicate query handling was not deterministic: " + text);
 }
 
 static async Task RunJsonBodyAdapterRegression(string root, string scriptPath)
@@ -271,6 +285,18 @@ sealed class EchoHandler : IXpsWebRequestHandler
         context.Response.Write(context.Request.Cookie("client"));
         context.Response.Write("|");
         context.Response.Write(context.Request.BodyText());
+        return Task.CompletedTask;
+    }
+}
+
+sealed class DuplicateQueryHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        context.Response.ContentType = "text/plain; charset=utf-8";
+        context.Response.Write(context.Request.QueryFirst("q"));
+        context.Response.Write("|");
+        context.Response.Write(string.Join(",", context.Request.QueryAll("q")));
         return Task.CompletedTask;
     }
 }
