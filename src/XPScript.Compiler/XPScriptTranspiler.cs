@@ -151,6 +151,7 @@ public sealed partial class XPScriptTranspiler
                 Spreadsheet = usesSpreadsheet,
                 NetworkTools = usesNetworkTools
             };
+            var runtimeTargetRestriction = detectedFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(runtimeTargetRestriction.Symbol))
                 throw TargetUnavailable(runtimeTargetRestriction.Symbol, runtimeIdentifier, runtimeTargetRestriction.AllowedTargets, runtimeTargetRestriction.Detail);
         }
