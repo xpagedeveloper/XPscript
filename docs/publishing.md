@@ -11,7 +11,7 @@ publish/
     XPScript.UI.Desktop.dll
     XPScript.Web.Runtime.dll
     XPScript.Web.Compiler.dll
-    XPScript.Web.Kestrel.dll
+    XPScript.Web.XPScript WebServer.dll
     XPScript.Web.FastCgi.dll
     ...transitive dependencies...
 ```
