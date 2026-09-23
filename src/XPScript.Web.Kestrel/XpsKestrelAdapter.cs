@@ -397,6 +397,11 @@ public static class XpsKestrelAdapter
                 http.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
                 requestScope?.Complete(StatusCodes.Status413PayloadTooLarge, 0);
             }
+            catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge)
+            {
+                http.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+                requestScope?.Complete(StatusCodes.Status413PayloadTooLarge, 0);
+            }
             catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested)
             {
                 requestScope?.Complete(499, 0);
