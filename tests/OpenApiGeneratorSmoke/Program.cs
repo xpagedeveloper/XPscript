@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using XPScript.Compiler;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
@@ -1097,6 +1098,86 @@ paths:
 """, "openapi30.yaml");
 if (openApi30.OpenApiVersion != "3.0.3" || !openApi30.Operations.Contains("Health"))
     throw new Exception("OpenAPI 3.0 compatibility generation failed.");
+
+static string ToJsonFixture(string yaml)
+{
+    var stream = new YamlDotNet.RepresentationModel.YamlStream();
+    stream.Load(new StringReader(yaml));
+    JsonNode? Convert(YamlDotNet.RepresentationModel.YamlNode node) => node switch
+    {
+        YamlDotNet.RepresentationModel.YamlMappingNode map => new JsonObject(map.Children.ToDictionary(
+            pair => ((YamlDotNet.RepresentationModel.YamlScalarNode)pair.Key).Value!,
+            pair => Convert(pair.Value))),
+        YamlDotNet.RepresentationModel.YamlSequenceNode sequence => new JsonArray(sequence.Children.Select(Convert).ToArray()),
+        YamlDotNet.RepresentationModel.YamlScalarNode scalar when scalar.Style == YamlDotNet.Core.ScalarStyle.Plain && scalar.Value is "true" or "false" => JsonValue.Create(bool.Parse(scalar.Value)),
+        YamlDotNet.RepresentationModel.YamlScalarNode scalar when scalar.Style == YamlDotNet.Core.ScalarStyle.Plain && long.TryParse(scalar.Value, out var number) => JsonValue.Create(number),
+        YamlDotNet.RepresentationModel.YamlScalarNode scalar => JsonValue.Create(scalar.Value),
+        _ => null
+    };
+    return Convert(stream.Documents[0].RootNode)!.ToJsonString();
+}
+
+static void VerifyVersionPair(string version, string yaml, XpsOpenApiGenerator serverGenerator)
+{
+    foreach (var fixture in new[] { (Text: yaml, Name: "matrix-" + version + ".yaml"), (Text: ToJsonFixture(yaml), Name: "matrix-" + version + ".json") })
+    {
+        var server = serverGenerator.Generate(fixture.Text, fixture.Name);
+        var client = new XpsOpenApiClientGenerator().Generate(fixture.Text, fixture.Name);
+        if (server.OpenApiVersion != version || !server.Operations.Contains("MatrixCall"))
+            throw new Exception("OpenAPI " + version + " " + fixture.Name + " server generation failed.");
+        if (client.OpenApiVersion != version || !client.Operations.Contains("MatrixCall"))
+            throw new Exception("OpenAPI " + version + " " + fixture.Name + " client generation failed.");
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), "xps-openapi-matrix-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            var serverPath = Path.Combine(tempRoot, "server.xps");
+            File.WriteAllText(serverPath, server.Source);
+            using var unit = new XpsWebCompiler().CompileAsync(serverPath, tempRoot).GetAwaiter().GetResult();
+            if (!unit.Routes.ContainsKey("EndpointMatrixCall"))
+                throw new Exception("OpenAPI " + version + " " + fixture.Name + " server compile failed.");
+
+            var clientPath = Path.Combine(tempRoot, "client.xps");
+            File.WriteAllText(clientPath, client.Source);
+            _ = new XPScriptTranspiler().TranspileRestricted(
+                client.Source + "\nSub Main()\nEnd Sub\n",
+                clientPath,
+                CompilerDriver.CurrentRuntimeIdentifier(),
+                [tempRoot]);
+        }
+        finally
+        {
+            try { Directory.Delete(tempRoot, true); } catch { }
+        }
+    }
+}
+
+foreach (var version in new[] { "3.0.3", "3.1.0", "3.2.0" })
+{
+    VerifyVersionPair(version, $"""
+openapi: {version}
+info:
+  title: Matrix {version}
+  version: 1.0.0
+paths:
+  /matrix/{{id}}:
+    get:
+      operationId: matrixCall
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {{ type: integer, format: int64 }}
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: {{ type: string }}
+""", generator);
+}
+Console.WriteLine("OPENAPI-3X-JSON-YAML-SERVER-CLIENT-MATRIX=OK");
 
 var openApi32Spec = """
 openapi: 3.2.0
