@@ -1098,10 +1098,53 @@ paths:
 if (openApi30.OpenApiVersion != "3.0.3" || !openApi30.Operations.Contains("Health"))
     throw new Exception("OpenAPI 3.0 compatibility generation failed.");
 
+var openApi32Spec = """
+openapi: 3.2.0
+info:
+  title: OpenAPI 32 Compatibility
+  version: 1.0.0
+servers:
+  - url: https://api.example.invalid
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+paths:
+  /items/{id}:
+    get:
+      operationId: getItem32
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Item' }
+""";
+var openApi32Server = generator.Generate(openApi32Spec, "openapi32.yaml");
+var openApi32Client = new XpsOpenApiClientGenerator().Generate(openApi32Spec, "openapi32.yaml");
+if (openApi32Server.OpenApiVersion != "3.2.0" || !openApi32Server.Operations.Contains("GetItem32"))
+    throw new Exception("OpenAPI 3.2 server generation failed.");
+if (openApi32Client.OpenApiVersion != "3.2.0" || !openApi32Client.Operations.Contains("GetItem32"))
+    throw new Exception("OpenAPI 3.2 client generation failed.");
+
 var root = Path.Combine(Path.GetTempPath(), "xps-openapi-generator-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 try
 {
+    var openApi32ServerPath = Path.Combine(root, "openapi32-server.xps");
+    await File.WriteAllTextAsync(openApi32ServerPath, openApi32Server.Source);
+    var openApi32ClientPath = Path.Combine(root, "openapi32-client.xps");
+    await File.WriteAllTextAsync(openApi32ClientPath, openApi32Client.Source);
+    _ = new XPScriptTranspiler().TranspileRestricted(
+        openApi32Client.Source + "\nSub Main()\nEnd Sub\n",
+        openApi32ClientPath,
+        CompilerDriver.CurrentRuntimeIdentifier(),
+        [root]);
+
     var scopeCollisionPath = Path.Combine(root, "scope-collision.xps");
     await File.WriteAllTextAsync(scopeCollisionPath, scopeCollision.Source);
     var crossScopeRuntimePath = Path.Combine(root, "cross-scope-runtime-names.xps");
@@ -1137,6 +1180,11 @@ try
         [root]);
 
     var compiler = new XpsWebCompiler();
+    await using (var openApi32Unit = await compiler.CompileAsync(openApi32ServerPath, root))
+    {
+        if (!openApi32Unit.Routes.ContainsKey("EndpointGetItem32"))
+            throw new Exception("Generated OpenAPI 3.2 server did not compile into the expected REST route.");
+    }
     await using (var scopeCollisionUnit = await compiler.CompileAsync(scopeCollisionPath, root))
     {
         if (!scopeCollisionUnit.Routes.ContainsKey("EndpointCollision"))
@@ -1246,6 +1294,7 @@ try
     Console.WriteLine("OPENAPI-CLIENT-COMPILE=OK");
     Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
     Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
+    Console.WriteLine("OPENAPI-3.2-SERVER-CLIENT-COMPILE=OK");
     Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
     Console.WriteLine("OPENAPI-SCOPE-COLLISION-COMPILE=OK");
     Console.WriteLine("OPENAPI-EDITED-HANDLERS-COMPILE=OK");
