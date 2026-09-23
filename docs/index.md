@@ -1,13 +1,13 @@
 # XPScript documentation
 
-XPScript is a BASIC-style programming language implemented on .NET 10. Source files use the `.xps` extension. The same language can be compiled into normal applications, executed directly from the command line, hosted as web routes through XPScript WebServer, FastCGI or CGI, packaged directly for IIS, and used with the shared UIForm model for desktop and web interfaces.
+XPScript is a BASIC-style programming language implemented on .NET 10. Source files use the `.xps` extension. The same language can be compiled into normal applications, executed directly from the command line, hosted as web routes through Kestrel, FastCGI or CGI, packaged directly for IIS, and used with the shared UIForm model for desktop and web interfaces.
 
 XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See [NOTICE](../NOTICE) and [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) for the separate terms and attribution required by dependencies and reference material.
 
 ## Start here
 
 - [XPScript cheat sheet](cheatsheet.md): compact copy/paste reference for core syntax, CLI, UIForm, web/REST, Browser-WASM, HTTP, databases, secrets, XPAi and Notes/Domino.
-- [Runnable demo catalog](../demo/README.md): small programs for console, desktop UI, browser WebAssembly, web/REST, XPScript WebServer, FastCGI, CGI, WebIIS, SQLite, SQL Server, HTTP databases, HTTP client and XPAi/AITool.
+- [Runnable demo catalog](../demo/README.md): small programs for console, desktop UI, browser WebAssembly, web/REST, Kestrel, FastCGI, CGI, WebIIS, SQLite, SQL Server, HTTP databases, HTTP client and XPAi/AITool.
 - [Language and built-in command reference](language-reference.md): statements, operators, scalar/built-in functions and process commands. Every row has syntax, parameters, behavior and a complete `.xps` example.
 - [Application and state reference](application-reference.md): complete `Application` runtime aliases/UI metadata plus `Application.State`, `Process.State`, `Session.State` and `Request.State`.
 - [Application.Crypto](application-crypto.md): versioned authenticated string encryption, key handling, context binding and migration.
@@ -16,7 +16,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 - [Desktop UI command reference](desktop-ui-reference.md): `MsgBox`, desktop choice/input dialogs and native open/save file dialogs.
 - [Database UI data sources](database-ui-datasources.md): `QueryArray`, `GetRow`, `SaveRow` and shared `XPJsonObject` binding for UIListView/UIForm across SQLite, SQL Server, Supabase and Domino.
 - [Native and managed interop reference](native-interop-reference.md): native declarations plus every OS/RID-specific `Lib`/`Alias` selector and managed/native dependency directive.
-- [Compiler and host CLI reference](cli-reference.md): `xpscriptc`, XPScript WebServer, FastCGI and WebIIS commands/options.
+- [Compiler and host CLI reference](cli-reference.md): `xpscriptc`, Kestrel, FastCGI and WebIIS commands/options.
 - [Dependency security and package patching](dependency-security-and-patching.md): application-specific dependency inspection, NuGet vulnerability checks, security modes, version-scoped compatible patches, `patch all`, and `--security-only`.
 - [Runtime API reference](api-reference.md): HTTP, JSON, native Notes/Domino, databases, XPAi/AITool, UIForm/UIListView and web/REST runtime objects with the same searchable five-field format.
 - [Native Notes/Domino C API](notes-c-api.md): `NotesSession`, databases, views, documents, items, names, date/time values, agents and native lifecycle semantics.
@@ -26,7 +26,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 ## Documentation map
 
 1. [XPScript cheat sheet](cheatsheet.md), compact syntax and runtime patterns for day-to-day development.
-2. [Getting started](getting-started.md), install/build, compile, run, CGI, FastCGI, XPScript WebServer, test hosting and command-line parameters.
+2. [Getting started](getting-started.md), install/build, compile, run, CGI, FastCGI, Kestrel, test hosting and command-line parameters.
 3. [Programming language](language.md), syntax, variables, procedures, control flow, types and coding rules.
 4. [Language and built-in command reference](language-reference.md), the primary language/built-in catalog with parameters and executable examples.
 5. [Application and state reference](application-reference.md), complete executable/runtime path aliases, UI metadata and state-scope API. See [Application.Crypto](application-crypto.md) for authenticated string encryption.
@@ -34,7 +34,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 7. [Desktop UI command reference](desktop-ui-reference.md), `MsgBox`, `ShowDialog` and desktop file pickers.
 8. [Database UI data sources](database-ui-datasources.md), complete list/row/document JSON binding and native save semantics for UIListView and shared UIForm data.
 9. [Native and managed interop reference](native-interop-reference.md), complete native target selectors and reference directives.
-10. [Compiler and host CLI reference](cli-reference.md), complete compiler/XPScript WebServer/FastCGI/WebIIS command-line catalog.
+10. [Compiler and host CLI reference](cli-reference.md), complete compiler/Kestrel/FastCGI/WebIIS command-line catalog.
 11. [Dependency security and package patching](dependency-security-and-patching.md), application dependency graphs, vulnerability auditing, security modes and compatible package patching.
 12. [Runtime API reference](api-reference.md), HTTP/JSON/native Notes/database/AI/UI/web runtime members with parameters and executable examples.
 13. [Native Notes/Domino C API](notes-c-api.md), Notes object model, native view lookup, document save semantics, names and date/time values.
@@ -47,7 +47,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 20. [REST API development](rest-api.md), explicit routes, binding, validation, Response helpers, CORS, rate limiting and state scopes.
 21. [CSRF protection](csrf.md), automatic UIForm protection, manual forms, custom browser requests, bearer APIs and browser WebAssembly challenge/retry.
 22. [WebIIS deployment target](webiis.md), build a normal IIS deployable package with ASP.NET Core Module V2, ZIP and Web Deploy support.
-23. [Hosting on IIS](iis-hosting.md), alternative production hosting on Windows Server with IIS, XPScript WebServer reverse proxy, CGI, TLS, permissions and troubleshooting.
+23. [Hosting on IIS](iis-hosting.md), alternative production hosting on Windows Server with IIS, Kestrel reverse proxy, CGI, TLS, permissions and troubleshooting.
 24. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
 25. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
 26. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
