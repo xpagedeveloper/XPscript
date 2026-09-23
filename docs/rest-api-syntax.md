@@ -144,7 +144,7 @@ End Sub
 
 Existing function-level route metadata remains supported and existing files without `RoutePrefix` keep their previous scope behavior.
 
-## Starting Kestrel
+## Starting XPScript WebServer
 
 The web root can now be supplied positionally:
 
