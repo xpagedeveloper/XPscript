@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
 
-internal static class ApplicationSecurityAudit
+public static class ApplicationSecurityAudit
 {
     private static readonly Regex NuGetAuditUnavailable = new(
         @"(?:warning|error)\s+(?<code>NU1900|NU1905):\s*(?<message>[^\r\n]+)",
@@ -22,7 +22,14 @@ internal static class ApplicationSecurityAudit
         {
             var message = $"Application dependency security check unavailable [{unavailable.Code}]: {unavailable.Message}";
             if (mode == ApplicationSecurityMode.Strict)
-                throw new CompilerException(message);
+                throw new CompilerException(
+                    message,
+                    CompilerDiagnosticCodes.DependencyAuditUnavailable,
+                    "security",
+                    [SecurityDiagnostic(
+                        message,
+                        CompilerDiagnosticCodes.DependencyAuditUnavailable,
+                        new CompileDiagnosticProperty { Name = "upstreamCode", Value = unavailable.Code })]);
             Console.Error.WriteLine(message);
         }
 
@@ -40,11 +47,21 @@ internal static class ApplicationSecurityAudit
         var blocking = findings.Where(f => f.Severity is "high" or "critical").ToArray();
         if (blocking.Length == 0) return;
 
+        var blockingMessage = $"Application dependency security check failed: {blocking.Length} high or critical vulnerability/vulnerabilities detected in packages used by this application.";
         throw new CompilerException(
-            $"Application dependency security check failed: {blocking.Length} high or critical vulnerability/vulnerabilities detected in packages used by this application.");
+            blockingMessage,
+            CompilerDiagnosticCodes.DependencyVulnerability,
+            "security",
+            blocking.Select(f => SecurityDiagnostic(
+                $"Package '{f.Package}' {f.Version} has a known {f.Severity} severity vulnerability.",
+                CompilerDiagnosticCodes.DependencyVulnerability,
+                new CompileDiagnosticProperty { Name = "package", Value = f.Package },
+                new CompileDiagnosticProperty { Name = "version", Value = f.Version },
+                new CompileDiagnosticProperty { Name = "severity", Value = f.Severity },
+                new CompileDiagnosticProperty { Name = "advisory", Value = f.Advisory })));
     }
 
-    internal static UnavailableFinding? ParseUnavailable(string buildOutput)
+    public static UnavailableFinding? ParseUnavailable(string buildOutput)
     {
         var match = NuGetAuditUnavailable.Match(buildOutput ?? string.Empty);
         if (!match.Success) return null;
@@ -53,7 +70,7 @@ internal static class ApplicationSecurityAudit
             match.Groups["message"].Value.Trim());
     }
 
-    internal static IReadOnlyList<Finding> Parse(string buildOutput)
+    public static IReadOnlyList<Finding> Parse(string buildOutput)
     {
         var findings = new List<Finding>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -77,6 +94,18 @@ internal static class ApplicationSecurityAudit
             .ToArray();
     }
 
+
+    private static CompileDiagnostic SecurityDiagnostic(
+        string message,
+        string diagnosticCode,
+        params CompileDiagnosticProperty[] properties) => new()
+    {
+        Description = message,
+        DiagnosticCode = diagnosticCode,
+        Category = "security",
+        Properties = [.. properties]
+    };
+
     private static int SeverityRank(string severity) => severity switch
     {
         "critical" => 4,
@@ -86,6 +115,6 @@ internal static class ApplicationSecurityAudit
         _ => 0
     };
 
-    internal sealed record UnavailableFinding(string Code, string Message);
-    internal sealed record Finding(string Code, string Package, string Version, string Severity, string Advisory);
+    public sealed record UnavailableFinding(string Code, string Message);
+    public sealed record Finding(string Code, string Package, string Version, string Severity, string Advisory);
 }

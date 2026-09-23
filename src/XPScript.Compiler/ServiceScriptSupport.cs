@@ -99,9 +99,16 @@ internal static class XpsServiceScriptParser
     private static void ValidateHook(string source, string sourceName, string hook)
     {
         var matches = Regex.Matches(source, $@"(?im)^\s*(?:(?:Public|Private)\s+)?Sub\s+{hook}\s*(?:\(([^)]*)\))?\s*$");
-        if (matches.Count > 1) throw new CompilerException($"{sourceName}: service hook '{hook}' may only be declared once.");
+        if (matches.Count > 1)
+        {
+            var match = matches[1];
+            throw Error(sourceName, 1 + source[..match.Index].Count(ch => ch == '\n'), $"service hook '{hook}' may only be declared once.");
+        }
         if (matches.Count == 1 && !string.IsNullOrWhiteSpace(matches[0].Groups[1].Value))
-            throw new CompilerException($"{sourceName}: service hook '{hook}' cannot declare parameters.");
+        {
+            var match = matches[0];
+            throw Error(sourceName, 1 + source[..match.Index].Count(ch => ch == '\n'), $"service hook '{hook}' cannot declare parameters.");
+        }
     }
 
     private static TimeSpan ParseDuration(string raw, string sourceName, int line, string rule)
@@ -132,7 +139,21 @@ internal static class XpsServiceScriptParser
         return trimmed.StartsWith("'", StringComparison.Ordinal) || trimmed.StartsWith("Rem ", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static CompilerException Error(string sourceName, int line, string message) => new($"{sourceName}({line}): {message}");
+    private static CompilerException Error(string sourceName, int line, string message)
+    {
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourceName),
+            Line = line,
+            Position = 1,
+            EndLine = line,
+            EndColumn = 1,
+            Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
+            Category = "syntax"
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
+    }
 }
 
 internal static class XpsServiceGeneratedCodePostProcessor

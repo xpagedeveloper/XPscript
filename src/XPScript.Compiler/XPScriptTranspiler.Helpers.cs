@@ -26,7 +26,7 @@ public sealed partial class XPScriptTranspiler
         return source;
     }
 
-    private static string ProtectStringLiterals(string source, out Dictionary<string, string> replacements)
+    private static string ProtectStringLiterals(string source, out Dictionary<string, string> replacements, string sourceName)
     {
         replacements = new Dictionary<string, string>(StringComparer.Ordinal);
         var output = new StringBuilder(source.Length);
@@ -55,7 +55,26 @@ public sealed partial class XPScriptTranspiler
                 }
                 inner.Append(source[i]);
             }
-            if (i >= source.Length) throw new CompilerException("Unterminated string literal.");
+            if (i >= source.Length)
+            {
+                var openingOffset = Math.Max(0, source.LastIndexOf('"', Math.Max(0, i - 1)));
+                var prefix = source[..openingOffset];
+                var line = 1 + prefix.Count(ch => ch == '\n');
+                var lineStart = Math.Max(prefix.LastIndexOf('\n') + 1, 0);
+                var column = openingOffset - lineStart + 1;
+                var lineEnd = source.IndexOf('\n', openingOffset);
+                if (lineEnd < 0) lineEnd = source.Length;
+                var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(source[lineStart..lineEnd]).TrimEnd('\r');
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = Path.GetFileName(sourceName), Line = line, Position = column, EndLine = line,
+                    EndColumn = column + 1, Description = "Unterminated string literal.",
+                    DiagnosticCode = CompilerDiagnosticCodes.UnterminatedStringLiteral, Category = "syntax",
+                    Properties = [new() { Name = "foundToken", Value = "\"" }, new() { Name = "expectedConstruct", Value = "closing string quote" }],
+                    SourceCode = safeSource, MarkedCode = safeSource + Environment.NewLine + new string(' ', Math.Max(0, column - 1)) + "^"
+                };
+                throw new CompilerException("Unterminated string literal.", CompilerDiagnosticCodes.UnterminatedStringLiteral, "syntax", [diagnostic]);
+            }
             var marker = $"__XPSCRIPT_STRING_{replacements.Count:D6}__";
             replacements[marker] = EscapeForGeneratedCSharpString(inner.ToString());
             output.Append(marker).Append('"');

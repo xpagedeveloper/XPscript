@@ -14,7 +14,7 @@ The primary documentation entry points are:
 - `language-reference.md`, complete language statement, built-in scalar function and process-command reference.
 - `file-io-reference.md`, complete file I/O, filesystem, metadata and locking command reference.
 - `native-interop-reference.md`, complete native declaration selectors plus managed/native dependency directives.
-- `cli-reference.md`, complete compiler, Kestrel, FastCGI and WebIIS command-line reference.
+- `cli-reference.md`, complete compiler, XPScript WebServer, FastCGI and WebIIS command-line reference.
 - `api-reference.md`, complete searchable runtime-object API reference.
 - `notes-c-api.md`, authoritative native Notes/Domino object-model reference.
 - `notes-mime-entity.md`, authoritative Notes MIME traversal/mutation reference.
@@ -54,7 +54,7 @@ Reference ownership is explicit:
 - `language-reference.md` owns language statements, built-in scalar functions and process commands.
 - `file-io-reference.md` owns file handles, text/binary/Random I/O, locking, file metadata and filesystem commands.
 - `native-interop-reference.md` owns `Declare ... Lib`, every OS/RID-specific `Lib`/`Alias` selector, `Reference` and `ReferenceNative`.
-- `cli-reference.md` owns compiler, Kestrel, FastCGI and WebIIS command-line commands/options.
+- `cli-reference.md` owns compiler, XPScript WebServer, FastCGI and WebIIS command-line commands/options.
 - `api-reference.md` owns runtime objects such as HTTP, JSON, native Notes/Domino, databases, XPAi/AITool, UIForm/UIListView and web state.
 
 Topical pages may repeat important members with longer explanations, but they should link back to the appropriate reference when useful.

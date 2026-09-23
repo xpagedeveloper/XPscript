@@ -1,0 +1,6 @@
+Sub Main()
+    Dim value As Object
+    If value = Nothing Then
+        Print "invalid"
+    End If
+End Sub

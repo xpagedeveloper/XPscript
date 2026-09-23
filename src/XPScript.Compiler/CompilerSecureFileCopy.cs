@@ -52,19 +52,19 @@ internal static class CompilerSecureFileCopy
         }
         catch (FileNotFoundException)
         {
-            throw new CompilerException(kind + " changed or disappeared before it could be staged.");
+            throw StagingFailure(kind + " changed or disappeared before it could be staged.");
         }
         catch (DirectoryNotFoundException)
         {
-            throw new CompilerException(kind + " could not be staged because a required directory is unavailable.");
+            throw StagingFailure(kind + " could not be staged because a required directory is unavailable.");
         }
         catch (UnauthorizedAccessException)
         {
-            throw new CompilerException(kind + " could not be staged because access was denied.");
+            throw StagingFailure(kind + " could not be staged because access was denied.");
         }
         catch (IOException)
         {
-            throw new CompilerException(kind + " could not be staged safely.");
+            throw StagingFailure(kind + " could not be staged safely.");
         }
     }
 
@@ -93,7 +93,7 @@ internal static class CompilerSecureFileCopy
         if (handle.IsInvalid)
         {
             handle.Dispose();
-            throw new CompilerException(kind + " could not be opened safely for compiler staging.");
+            throw StagingFailure(kind + " could not be opened safely for compiler staging.");
         }
 
         try
@@ -104,14 +104,14 @@ internal static class CompilerSecureFileCopy
                     out var tagInfo,
                     (uint)Marshal.SizeOf<FileAttributeTagInfoNative>()))
             {
-                throw new CompilerException("Unable to safely inspect " + kind + " after opening it for compiler staging.");
+                throw StagingFailure("Unable to safely inspect " + kind + " after opening it for compiler staging.");
             }
 
             if ((tagInfo.FileAttributes & FileAttributeReparsePoint) != 0)
-                throw new CompilerException(kind + " may not be a symbolic link or reparse-point file during compiler staging.");
+                throw StagingFailure(kind + " may not be a symbolic link or reparse-point file during compiler staging.");
 
             if ((tagInfo.FileAttributes & FileAttributeDirectory) != 0)
-                throw new CompilerException(kind + " must be a regular file during compiler staging.");
+                throw StagingFailure(kind + " must be a regular file during compiler staging.");
 
             return new FileStream(handle, FileAccess.Read, bufferSize: 64 * 1024, isAsync: false);
         }
@@ -127,7 +127,7 @@ internal static class CompilerSecureFileCopy
         var noFollow = OperatingSystem.IsLinux() ? 0x00020000 : 0x00000100;
         var fd = open(sourcePath, noFollow);
         if (fd < 0)
-            throw new CompilerException(kind + " could not be opened safely without following symbolic links.");
+            throw StagingFailure(kind + " could not be opened safely without following symbolic links.");
 
         var handle = new SafeFileHandle(new IntPtr(fd), ownsHandle: true);
         try
@@ -143,7 +143,7 @@ internal static class CompilerSecureFileCopy
             catch
             {
                 stream.Dispose();
-                throw new CompilerException(kind + " must be a regular file during compiler staging.");
+                throw StagingFailure(kind + " must be a regular file during compiler staging.");
             }
 
             return stream;
@@ -161,10 +161,10 @@ internal static class CompilerSecureFileCopy
         {
             var info = new FileInfo(sourcePath);
             if (!info.Exists)
-                throw new CompilerException(kind + " was not found while preparing compiler staging.");
+                throw StagingFailure(kind + " was not found while preparing compiler staging.");
 
             if (info.LinkTarget is not null || (info.Attributes & FileAttributes.ReparsePoint) != 0)
-                throw new CompilerException(kind + " may not be a symbolic link or reparse-point file during compiler staging.");
+                throw StagingFailure(kind + " may not be a symbolic link or reparse-point file during compiler staging.");
         }
         catch (CompilerException)
         {
@@ -172,9 +172,12 @@ internal static class CompilerSecureFileCopy
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or PathTooLongException)
         {
-            throw new CompilerException("Unable to safely inspect " + kind + " before compiler staging.");
+            throw StagingFailure("Unable to safely inspect " + kind + " before compiler staging.");
         }
     }
+
+    private static CompilerException StagingFailure(string message) =>
+        new(message, CompilerDiagnosticCodes.SecureStagingFailed, "security");
 
     [StructLayout(LayoutKind.Sequential)]
     private struct FileAttributeTagInfoNative

@@ -1,0 +1,512 @@
+name: AI Compiler Machine Interface
+
+on:
+  push:
+    branches:
+      - ai-compiler-machine-interface
+  workflow_dispatch:
+
+jobs:
+  machine-interface:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore XPScriptCompiler.slnx
+
+      - name: Build
+        run: dotnet build XPScriptCompiler.slnx -c Release --no-restore -m:1
+
+      - name: Benchmark run cache and debug fresh build
+        run: dotnet run --project tests/CompilerRunWarmBenchmark/CompilerRunWarmBenchmark.csproj -c Release -- .
+
+      - name: Daemon concurrent cold-start probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Start-Sleep -Milliseconds 500
+
+          function New-XPScriptRunProcess {
+            $psi = [System.Diagnostics.ProcessStartInfo]::new()
+            $psi.FileName = 'dotnet'
+            foreach ($arg in @('run','--project',$project,'-c','Release','--no-build','--','run','samples/application-is-debugging.xps','--security=off')) { $psi.ArgumentList.Add($arg) }
+            $psi.RedirectStandardOutput = $true
+            $psi.RedirectStandardError = $true
+            $psi.UseShellExecute = $false
+            return [System.Diagnostics.Process]::Start($psi)
+          }
+
+          $p1 = New-XPScriptRunProcess
+          $p2 = New-XPScriptRunProcess
+          $out1 = $p1.StandardOutput.ReadToEnd()
+          $err1 = $p1.StandardError.ReadToEnd()
+          $out2 = $p2.StandardOutput.ReadToEnd()
+          $err2 = $p2.StandardError.ReadToEnd()
+          $p1.WaitForExit()
+          $p2.WaitForExit()
+          if ($p1.ExitCode -ne 0) { throw "First concurrent run failed: $out1 $err1" }
+          if ($p2.ExitCode -ne 0) { throw "Second concurrent run failed: $out2 $err2" }
+          if ($out1 -notmatch 'DEBUGGING=False' -or $out2 -notmatch 'DEBUGGING=False') { throw "Concurrent runs did not both execute successfully" }
+
+          $status1 = Invoke-XPScript @('daemon','status')
+          if ($status1 -notmatch 'PID ([0-9]+)') { throw "Concurrent cold start did not leave a daemon running: $status1" }
+          $pid1 = $Matches[1]
+          Start-Sleep -Milliseconds 250
+          $status2 = Invoke-XPScript @('daemon','status')
+          if ($status2 -notmatch 'PID ([0-9]+)') { throw "Daemon disappeared after concurrent cold start: $status2" }
+          $pid2 = $Matches[1]
+          if ($pid1 -ne $pid2) { throw "Concurrent cold start produced unstable daemon PID: $pid1 then $pid2" }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+
+      - name: Machine interface probe
+        run: dotnet run --project tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release -- .
+
+      - name: Debugger v6 regression probe
+        run: dotnet run --project tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj -c Release --no-build
+
+      - name: Daemon lifecycle probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          $stopped = Invoke-XPScript @('daemon','status')
+          if ($stopped -notmatch 'not running') { throw "Expected daemon to be stopped: $stopped" }
+
+          $run1 = Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off')
+          if ($run1 -notmatch 'DEBUGGING=False') { throw "Normal run failed: $run1" }
+          $status1 = Invoke-XPScript @('daemon','status')
+          if ($status1 -notmatch 'PID ([0-9]+)') { throw "Daemon did not auto-start: $status1" }
+          $pid1 = $Matches[1]
+
+          $run2 = Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off')
+          if ($run2 -notmatch 'DEBUGGING=False') { throw "Second normal run failed: $run2" }
+          $status2 = Invoke-XPScript @('daemon','status')
+          if ($status2 -notmatch 'PID ([0-9]+)') { throw "Daemon disappeared: $status2" }
+          $pid2 = $Matches[1]
+          if ($pid1 -ne $pid2) { throw "Expected daemon reuse, got PID $pid1 then $pid2" }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Start-Sleep -Milliseconds 500
+          $final = Invoke-XPScript @('daemon','status')
+          if ($final -notmatch 'not running') { throw "Expected daemon to stop after quit: $final" }
+
+      - name: Daemon restart probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Start-Sleep -Milliseconds 500
+
+          $run = Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off')
+          if ($run -notmatch 'DEBUGGING=False') { throw "Normal run failed before restart: $run" }
+          $before = Invoke-XPScript @('daemon','status')
+          if ($before -notmatch 'PID ([0-9]+)') { throw "Daemon was not running before restart: $before" }
+          $oldPid = $Matches[1]
+
+          $restart = Invoke-XPScript @('daemon','restart')
+          if ($restart -notmatch 'PID ([0-9]+)') { throw "Restart did not report a daemon PID: $restart" }
+          $newPid = $Matches[1]
+          if ($newPid -eq $oldPid) { throw "Restart reused the old daemon PID $oldPid" }
+
+          $after = Invoke-XPScript @('daemon','status')
+          if ($after -notmatch "PID $newPid") { throw "Restarted daemon was not discoverable: $after" }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Start-Sleep -Milliseconds 500
+
+      - name: Daemon idle-timeout probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Start-Sleep -Milliseconds 500
+
+          $psi = [System.Diagnostics.ProcessStartInfo]::new()
+          $psi.FileName = 'dotnet'
+          foreach ($arg in @('run','--project',$project,'-c','Release','--no-build','--','daemon','--port','0','--idle-minutes','0.02')) { $psi.ArgumentList.Add($arg) }
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $psi.UseShellExecute = $false
+          $psi.Environment['XPSCRIPT_DAEMON_TOKEN'] = 'ci-idle-timeout-token'
+          $daemon = [System.Diagnostics.Process]::Start($psi)
+          $readyLine = $daemon.StandardOutput.ReadLine()
+          if (-not $readyLine) { throw "Idle-timeout daemon did not become ready: $($daemon.StandardError.ReadToEnd())" }
+          $ready = $readyLine | ConvertFrom-Json
+          if ($ready.type -ne 'ready') { throw "Unexpected daemon ready response: $readyLine" }
+
+          $status = Invoke-XPScript @('daemon','status')
+          if ($status -notmatch 'PID ([0-9]+)') { throw "Idle-timeout daemon was not discoverable: $status" }
+
+          if (-not $daemon.WaitForExit(10000)) {
+            $daemon.Kill($true)
+            throw "Daemon did not self-stop after idle timeout"
+          }
+          if ($daemon.ExitCode -ne 0) { throw "Idle-timeout daemon exited with code $($daemon.ExitCode): $($daemon.StandardError.ReadToEnd())" }
+
+          Start-Sleep -Milliseconds 250
+          $stopped = Invoke-XPScript @('daemon','status')
+          if ($stopped -notmatch 'not running') { throw "Daemon remained discoverable after idle timeout: $stopped" }
+
+          $restarted = Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off')
+          if ($restarted -notmatch 'DEBUGGING=False') { throw "Run failed after idle shutdown: $restarted" }
+          $restartedStatus = Invoke-XPScript @('daemon','status')
+          if ($restartedStatus -notmatch 'PID ([0-9]+)') { throw "Run did not restart daemon after idle shutdown: $restartedStatus" }
+          Invoke-XPScript @('daemon','quit') | Out-Null
+
+      - name: Debug bypasses daemon probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Start-Sleep -Milliseconds 500
+          $before = Invoke-XPScript @('daemon','status')
+          if ($before -notmatch 'not running') { throw "Expected daemon stopped before debug run: $before" }
+
+          $debugRun = Invoke-XPScript @('run','samples/application-is-debugging.xps','--debug','--security=off')
+          if ($debugRun -notmatch 'Started to compile application-is-debugging.xps') { throw "Debug run did not perform a local fresh compilation: $debugRun" }
+          if ($debugRun -notmatch 'Program exited with code 0') { throw "Debug run failed: $debugRun" }
+
+          $after = Invoke-XPScript @('daemon','status')
+          if ($after -notmatch 'not running') { throw "--debug unexpectedly started or used daemon: $after" }
+
+      - name: Debug validation rejects invalid edit before build
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          $psi = [System.Diagnostics.ProcessStartInfo]::new()
+          $psi.FileName = 'dotnet'
+          $psi.UseShellExecute = $false
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          foreach ($arg in @('run','--project',$project,'-c','Release','--no-build','--','run','samples/core-invalid-deftype-range-error.xps','--debug','--security=off')) {
+            $psi.ArgumentList.Add($arg)
+          }
+          $process = [System.Diagnostics.Process]::new()
+          $process.StartInfo = $psi
+          if (-not $process.Start()) { throw "Unable to start debug validation regression process" }
+          $stdout = $process.StandardOutput.ReadToEndAsync()
+          $stderr = $process.StandardError.ReadToEndAsync()
+          $process.WaitForExit()
+          $text = (($stdout.GetAwaiter().GetResult()), ($stderr.GetAwaiter().GetResult()) -join [Environment]::NewLine)
+          $exitCode = $process.ExitCode
+          $process.Dispose()
+          if ($exitCode -ne 1) { throw "Expected debug validation failure exit code 1, got $exitCode. Output: $text" }
+          if ($text -notmatch 'XPS1012') { throw "Expected structured validation diagnostic XPS1012. Output: $text" }
+          if ($text -match 'Started to compile core-invalid-deftype-range-error.xps') { throw "Invalid debug edit reached full compilation. Output: $text" }
+
+      - name: Daemon error protocol probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off') | Out-Null
+
+          $statePath = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'XPScript/daemon-v1.json'
+          $state = Get-Content -Raw $statePath | ConvertFrom-Json
+
+          function Invoke-DaemonRequest([string] $json) {
+            $client = [System.Net.Sockets.TcpClient]::new()
+            try {
+              $client.Connect('127.0.0.1', [int]$state.port)
+              $stream = $client.GetStream()
+              $writer = [System.IO.StreamWriter]::new($stream, [System.Text.UTF8Encoding]::new($false), 4096, $true)
+              $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::UTF8, $false, 4096, $true)
+              $writer.AutoFlush = $true
+              $writer.WriteLine($json)
+              return ($reader.ReadLine() | ConvertFrom-Json)
+            } finally {
+              if ($writer) { $writer.Dispose() }
+              if ($reader) { $reader.Dispose() }
+              if ($stream) { $stream.Dispose() }
+              $client.Dispose()
+            }
+          }
+
+          $unauthorized = Invoke-DaemonRequest (@{ id = 41; method = 'hello'; token = 'wrong-token' } | ConvertTo-Json -Compress)
+          if ($unauthorized.id -ne 41) { throw "Unauthorized response lost request id" }
+          if ($unauthorized.error -ne 'Unauthorized daemon request.') { throw "Unexpected unauthorized response: $($unauthorized | ConvertTo-Json -Compress)" }
+
+          $unknown = Invoke-DaemonRequest (@{ id = 42; method = 'definitelyUnknown'; token = $state.token } | ConvertTo-Json -Compress)
+          if ($unknown.id -ne 42) { throw "Unknown-method response lost request id" }
+          if ($unknown.error -notmatch 'Unknown daemon method') { throw "Unexpected unknown-method response: $($unknown | ConvertTo-Json -Compress)" }
+
+          $status = Invoke-XPScript @('daemon','status')
+          if ($status -notmatch 'PID ([0-9]+)') { throw "Daemon did not survive protocol errors: $status" }
+          Invoke-XPScript @('daemon','quit') | Out-Null
+
+      - name: Daemon debug error redaction probe
+        shell: pwsh
+        run: |
+          function Invoke-XPScript([string[]] $Arguments) {
+            & dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- @Arguments
+          }
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off') | Out-Null
+          $statePath = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'XPScript/daemon-v1.json'
+          $state = Get-Content $statePath -Raw | ConvertFrom-Json
+          function Invoke-DaemonRequest($request) {
+            $client = [System.Net.Sockets.TcpClient]::new('127.0.0.1', [int]$state.port)
+            try {
+              $stream = $client.GetStream()
+              $writer = [System.IO.StreamWriter]::new($stream, [System.Text.UTF8Encoding]::new($false), 4096, $true)
+              $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::UTF8, $false, 4096, $true)
+              $writer.AutoFlush = $true
+              $writer.WriteLine(($request | ConvertTo-Json -Compress -Depth 8))
+              return ($reader.ReadLine() | ConvertFrom-Json)
+            } finally { $client.Dispose() }
+          }
+          $normal = Invoke-DaemonRequest @{ id=51; method='compileRun'; token=$state.token; params=@{ outputDirectory=''; runtimeIdentifier=''; debug=$false } }
+          if ($normal.error -match 'System\.| at XPScript|Exception') { throw "Normal daemon error leaked internal detail: $($normal.error)" }
+          $debug = Invoke-DaemonRequest @{ id=52; method='compileRun'; token=$state.token; params=@{ outputDirectory=''; runtimeIdentifier=''; debug=$true } }
+          if ($debug.error -notmatch 'Exception|System\.| at XPScript') { throw "Debug daemon error did not expose troubleshooting detail: $($debug.error)" }
+          Invoke-XPScript @('daemon','quit') | Out-Null
+
+      - name: Daemon bypass and stale-state recovery probe
+        shell: pwsh
+        run: |
+          $project = 'src/XPScript.Compiler/XPScript.Compiler.csproj'
+          function Invoke-XPScript([string[]] $arguments) {
+            $all = @('run','--project',$project,'-c','Release','--no-build','--') + $arguments
+            $output = & dotnet @all 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "xpscript $($arguments -join ' ') failed: $output" }
+            return ($output -join "`n")
+          }
+
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          $withoutDaemon = Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off','--no-daemon')
+          if ($withoutDaemon -notmatch 'DEBUGGING=False') { throw "--no-daemon run failed: $withoutDaemon" }
+          $status = Invoke-XPScript @('daemon','status')
+          if ($status -notmatch 'not running') { throw "--no-daemon unexpectedly started daemon: $status" }
+
+          $stateDir = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'XPScript'
+          $statePath = Join-Path $stateDir 'daemon-v1.json'
+          New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
+          @{ protocol = 1; port = 1; processId = 2147483647; token = 'stale-token' } | ConvertTo-Json -Compress | Set-Content -NoNewline $statePath
+
+          $recovered = Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off')
+          if ($recovered -notmatch 'DEBUGGING=False') { throw "Run did not recover from stale daemon state: $recovered" }
+          $status = Invoke-XPScript @('daemon','status')
+          if ($status -notmatch 'PID ([0-9]+)') { throw "Daemon did not recover from stale state: $status" }
+          Invoke-XPScript @('daemon','quit') | Out-Null
+
+      - name: MCP protocol probe
+        run: dotnet run --project tests/CompilerMcpProtocolProbe/CompilerMcpProtocolProbe.csproj -c Release -- .
+
+      - name: Benchmark validation startup
+        shell: pwsh
+        run: |
+          $samples = @()
+          1..3 | ForEach-Object {
+            $sw = [System.Diagnostics.Stopwatch]::StartNew()
+            & dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- validate samples/null-integer-assignment-error.xps --result-format json *> $null
+            $exitCode = $LASTEXITCODE
+            $sw.Stop()
+            if ($exitCode -ne 2) { throw "Expected validation exit code 2 during benchmark, got $exitCode" }
+            $samples += $sw.ElapsedMilliseconds
+            $global:LASTEXITCODE = 0
+          }
+          $ordered = $samples | Sort-Object
+          $median = $ordered[[math]::Floor($ordered.Count / 2)]
+          "validationStartupMs=$($samples -join ',') medianMs=$median" | Tee-Object -FilePath validation-benchmark.txt
+          if ($median -gt 30000) { throw "Validation median startup/process time exceeded 30 seconds: $median ms" }
+
+      - name: Benchmark in-process validation
+        run: dotnet run --project tests/CompilerValidationBenchmark/CompilerValidationBenchmark.csproj -c Release -- .
+
+      - name: Validate CLI JSON contract
+        shell: pwsh
+        run: |
+          $psi = [System.Diagnostics.ProcessStartInfo]::new()
+          $psi.FileName = 'dotnet'
+          $psi.ArgumentList.Add('run')
+          $psi.ArgumentList.Add('--project')
+          $psi.ArgumentList.Add('src/XPScript.Compiler/XPScript.Compiler.csproj')
+          $psi.ArgumentList.Add('-c')
+          $psi.ArgumentList.Add('Release')
+          $psi.ArgumentList.Add('--no-build')
+          $psi.ArgumentList.Add('--')
+          $psi.ArgumentList.Add('validate')
+          $psi.ArgumentList.Add('samples/null-integer-assignment-error.xps')
+          $psi.ArgumentList.Add('--result-format')
+          $psi.ArgumentList.Add('json')
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $psi.UseShellExecute = $false
+          $process = [System.Diagnostics.Process]::Start($psi)
+          $output = $process.StandardOutput.ReadToEnd()
+          $stderr = $process.StandardError.ReadToEnd()
+          $process.WaitForExit()
+          if ($process.ExitCode -ne 2) { throw "Expected validation exit code 2, got $($process.ExitCode). stderr: $stderr" }
+          $json = $output | ConvertFrom-Json
+          $output | Set-Content -NoNewline compiler-result.actual.json
+          if ($json.schema -ne 'xpscript.compiler-result') { throw "Unexpected schema" }
+          if ($json.schemaVersion -ne 1) { throw "Unexpected schemaVersion" }
+          if ($json.operation -ne 'validate') { throw "Unexpected operation" }
+          if ($json.result -ne 'error') { throw "Expected error result" }
+          if (-not $json.compilerVersion) { throw "Missing compilerVersion" }
+          if (-not ($json.errors | Where-Object { $_.diagnosticCode -eq 'XPS2001' })) { throw "Missing XPS2001 diagnostic" }
+
+      - name: Verify machine stdout and stderr separation
+        shell: pwsh
+        run: |
+          $psi = [System.Diagnostics.ProcessStartInfo]::new()
+          $psi.FileName = 'dotnet'
+          $psi.ArgumentList.Add('run')
+          $psi.ArgumentList.Add('--project')
+          $psi.ArgumentList.Add('src/XPScript.Compiler/XPScript.Compiler.csproj')
+          $psi.ArgumentList.Add('-c')
+          $psi.ArgumentList.Add('Release')
+          $psi.ArgumentList.Add('--no-build')
+          $psi.ArgumentList.Add('--')
+          $psi.ArgumentList.Add('compile')
+          $psi.ArgumentList.Add('samples/null-integer-assignment-error.xps')
+          $psi.ArgumentList.Add('--result-format')
+          $psi.ArgumentList.Add('json')
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $psi.UseShellExecute = $false
+          $process = [System.Diagnostics.Process]::Start($psi)
+          $stdout = $process.StandardOutput.ReadToEnd()
+          $stderr = $process.StandardError.ReadToEnd()
+          $process.WaitForExit()
+          if ($process.ExitCode -ne 2) { throw "Expected compile exit code 2, got $($process.ExitCode)" }
+          $json = $stdout | ConvertFrom-Json
+          if ($json.schema -ne 'xpscript.compiler-result') { throw "stdout is not a compiler result" }
+          if ($stdout -match 'Started to compile|Compilation failed for|Compiled .* in') { throw "Human progress leaked into stdout" }
+          if ($stderr -notmatch 'Started to compile') { throw "Expected human progress on stderr" }
+
+      - name: Validate stdin machine contract
+        shell: pwsh
+        run: |
+          function Invoke-StdinValidation([string] $source, [string] $filename) {
+            $psi = [System.Diagnostics.ProcessStartInfo]::new()
+            $psi.FileName = 'dotnet'
+            foreach ($arg in @('run','--project','src/XPScript.Compiler/XPScript.Compiler.csproj','-c','Release','--no-build','--','validate','--stdin','--filename',$filename,'--result-format','json')) { $psi.ArgumentList.Add($arg) }
+            $psi.RedirectStandardInput = $true
+            $psi.RedirectStandardOutput = $true
+            $psi.RedirectStandardError = $true
+            $psi.UseShellExecute = $false
+            $process = [System.Diagnostics.Process]::Start($psi)
+            $process.StandardInput.Write($source)
+            $process.StandardInput.Close()
+            $stdout = $process.StandardOutput.ReadToEnd()
+            $stderr = $process.StandardError.ReadToEnd()
+            $process.WaitForExit()
+            return @{ ExitCode = $process.ExitCode; Stdout = $stdout; Stderr = $stderr }
+          }
+
+          $invalid = Invoke-StdinValidation "Sub Main()`nDim value As Integer`nvalue = Nothing`nEnd Sub`n" 'program.xps'
+          if ($invalid.ExitCode -ne 2) { throw "Expected stdin validation exit code 2, got $($invalid.ExitCode). stderr: $($invalid.Stderr)" }
+          $json = $invalid.Stdout | ConvertFrom-Json
+          if ($json.operation -ne 'validate' -or $json.result -ne 'error') { throw "Unexpected stdin validation result" }
+          $diagnostic = $json.errors | Where-Object { $_.diagnosticCode -eq 'XPS2001' } | Select-Object -First 1
+          if (-not $diagnostic) { throw "Missing stdin XPS2001 diagnostic" }
+          if ($diagnostic.file -ne 'program.xps') { throw "Virtual filename was not preserved" }
+          if ($diagnostic.line -le 0 -or $diagnostic.column -le 0) { throw "stdin diagnostic location was not preserved" }
+          if ($invalid.Stdout -match 'Started to|Compiling') { throw "Human logging leaked into stdin JSON stdout" }
+
+          $traversal = Invoke-StdinValidation "Sub Main()`nEnd Sub`n" '../escape.xps'
+          if ($traversal.ExitCode -ne 1) { throw "Expected unsafe virtual filename to be rejected" }
+          $traversalJson = $traversal.Stdout | ConvertFrom-Json
+          if ($traversalJson.result -ne 'error') { throw "Expected structured traversal rejection" }
+
+          $oversized = Invoke-StdinValidation ('x' * 1048577) 'large.xps'
+          if ($oversized.ExitCode -ne 1) { throw "Expected oversized stdin source to be rejected" }
+          $oversizedJson = $oversized.Stdout | ConvertFrom-Json
+          if ($oversizedJson.result -ne 'error') { throw "Expected structured source-size rejection" }
+
+      - name: Validate JSON Schema
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema==4.25.1
+          python tests/validate_compiler_schema.py
+
+  machine-interface-cross-platform:
+    name: machine-interface (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore machine-interface probe
+        run: dotnet restore tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj
+      - name: Build machine-interface probe
+        run: dotnet build tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release --no-restore
+      - name: Machine interface probe
+        run: dotnet run --project tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release --no-build -- .
+
+  mcp-installer:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: MCP installer probe
+        run: dotnet run --project tests/CompilerMcpInstallerProbe/CompilerMcpInstallerProbe.csproj -c Release -- .

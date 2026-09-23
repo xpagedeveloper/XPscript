@@ -72,6 +72,7 @@ if (Should-Run 'runtime') {
 
 if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
+  $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj','-c','Release','--','.') $compileTimeoutMilliseconds 'Compiler machine interface probe'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   foreach ($sample in @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-security-fixtures')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }

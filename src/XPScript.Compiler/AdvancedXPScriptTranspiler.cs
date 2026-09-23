@@ -112,10 +112,22 @@ internal sealed class AdvancedXPScriptTranspiler
             {
                 var diagnosticSource = currentSourceLocation?.SourcePath ?? sourceName;
                 var diagnosticLine = currentSourceLocation?.Line ?? i + 1;
-                throw new CompilerException(
-                    $"{diagnosticSource}({diagnosticLine}): {ex.Message}" +
-                    Environment.NewLine +
-                    $"  {original.Trim()}");
+                var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = Path.GetFileName(diagnosticSource),
+                    Line = diagnosticLine,
+                    Position = 1,
+                    EndLine = diagnosticLine,
+                    EndColumn = Math.Max(2, safeSource.Length + 1),
+                    Description = ex.Message,
+                    DiagnosticCode = string.IsNullOrWhiteSpace(ex.DiagnosticCode) ? CompilerDiagnosticCodes.InvalidSyntax : ex.DiagnosticCode,
+                    Category = string.IsNullOrWhiteSpace(ex.Category) ? "syntax" : ex.Category,
+                    Properties = ParserMetadata(ex.Message, line),
+                    SourceCode = safeSource,
+                    MarkedCode = safeSource + Environment.NewLine + "^"
+                };
+                throw new CompilerException(ex.Message, diagnostic.DiagnosticCode, diagnostic.Category, [diagnostic]);
             }
         }
 
@@ -696,6 +708,23 @@ internal static class LSForAllRuntime
         }
 
         throw new CompilerException($"Unsupported statement: {line}");
+    }
+
+    private static List<CompileDiagnosticProperty>? ParserMetadata(string message, string line)
+    {
+        if (message.StartsWith("Unsupported statement:", StringComparison.Ordinal))
+            return [new() { Name = "foundToken", Value = line }, new() { Name = "expectedConstruct", Value = "supported XPScript statement" }];
+        if (message.Equals("Single-line If requires a statement after Then.", StringComparison.Ordinal))
+            return [new() { Name = "foundToken", Value = "Then" }, new() { Name = "expectedConstruct", Value = "statement after Then" }];
+        if (message.Equals("Single-line If Else requires a statement after Else.", StringComparison.Ordinal))
+            return [new() { Name = "foundToken", Value = "Else" }, new() { Name = "expectedConstruct", Value = "statement after Else" }];
+        if (message.Equals("Unexpected End Class.", StringComparison.Ordinal))
+            return [new() { Name = "foundToken", Value = "End Class" }, new() { Name = "expectedConstruct", Value = "matching Class declaration" }];
+        if (message.Equals("Unexpected End ForAll.", StringComparison.Ordinal))
+            return [new() { Name = "foundToken", Value = "End ForAll" }, new() { Name = "expectedConstruct", Value = "matching ForAll statement" }];
+        if (message.Equals("Unexpected block terminator.", StringComparison.Ordinal))
+            return [new() { Name = "foundToken", Value = line }, new() { Name = "expectedConstruct", Value = "matching block opener" }];
+        return null;
     }
 
     private bool TryEmitConst(StringBuilder sb, string line)

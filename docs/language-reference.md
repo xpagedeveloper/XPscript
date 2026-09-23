@@ -308,6 +308,6 @@ See [Getting started](getting-started.md) for hosting commands and deployment pa
 | `--runtime=false` | `--runtime=false` | none | Produces framework-dependent output. | [hello.xps](../demo/console/hello.xps) |
 | `--result-format` | `--result-format text|json|xml` | result serialization format. | Selects compiler diagnostics/result format. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--` | `-- scriptArg1 ...` | remaining values passed to script. | Ends compiler option parsing. | [application-runtime.xps](../samples/application-runtime.xps) |
-| Kestrel `web` | `xpscript web --root PATH [options]` | web root plus host options. | Starts Kestrel web host. | [index.xps](../demo/kestrel/index.xps) |
+| XPScript WebServer `web` | `xpscript web --root PATH [options]` | web root plus host options. | Starts XPScript WebServer web host. | [index.xps](../demo/kestrel/index.xps) |
 | FastCGI | `xpscript fastcgi --root PATH --listen ADDRESS:PORT` | web root and private FastCGI endpoint. | Starts persistent FastCGI host. | [index.xps](../demo/fastcgi/index.xps) |
 | WebIIS target | `xpscript compile source.xps --target webiis` | source route and `webiis` target. | Creates direct IIS deployment package/target output. | [main.xps](../demo/webiis/main.xps) |

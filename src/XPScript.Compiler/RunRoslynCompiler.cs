@@ -175,7 +175,9 @@ global using System.Threading.Tasks;
                     : Path.GetFileName(diagnostic.Location.SourceTree.FilePath),
                 Line = position.Line + 1,
                 Position = position.Character + 1,
-                Description = $"{diagnostic.Id}: {diagnostic.GetMessage()}"
+                Description = diagnostic.GetMessage(),
+                UpstreamCode = diagnostic.Id,
+                Category = "code-generation"
             });
         }
         return result;

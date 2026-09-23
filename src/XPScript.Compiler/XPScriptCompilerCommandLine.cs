@@ -22,7 +22,142 @@ public static class XPScriptCompilerCommandLine
         if (args[0].Equals("compile", StringComparison.OrdinalIgnoreCase))
             return await CompileAsync(args[1..]).ConfigureAwait(false);
 
+        if (args[0].Equals("validate", StringComparison.OrdinalIgnoreCase))
+            return await ValidateAsync(args[1..]).ConfigureAwait(false);
+
+        if (args[0].Equals("explain", StringComparison.OrdinalIgnoreCase))
+            return Explain(args[1..]);
+
+        if (args[0].Equals("describe", StringComparison.OrdinalIgnoreCase))
+            return Describe(args[1..]);
+
+        if (args[0].Equals("symbols", StringComparison.OrdinalIgnoreCase))
+            return Symbols(args[1..]);
+
+        if (args[0].Equals("mcp", StringComparison.OrdinalIgnoreCase))
+            return args.Length > 1 && args[1].Equals("install", StringComparison.OrdinalIgnoreCase)
+                ? await CompilerMcpInstaller.RunAsync(args[2..]).ConfigureAwait(false)
+                : await CompilerMcpServer.RunAsync(args[1..]).ConfigureAwait(false);
+
+        if (args[0].Equals("daemon", StringComparison.OrdinalIgnoreCase))
+        {
+            if (args.Length > 1 && args[1].Equals("status", StringComparison.OrdinalIgnoreCase))
+                return await CompilerDaemonClient.StatusAsync().ConfigureAwait(false);
+            if (args.Length > 1 && args[1].Equals("quit", StringComparison.OrdinalIgnoreCase))
+                return await CompilerDaemonClient.QuitAsync().ConfigureAwait(false);
+            if (args.Length > 1 && args[1].Equals("restart", StringComparison.OrdinalIgnoreCase))
+                return await CompilerDaemonClient.RestartAsync().ConfigureAwait(false);
+            return await CompilerDaemonServer.RunAsync(args[1..]).ConfigureAwait(false);
+        }
+
         return await CompileAsync(args).ConfigureAwait(false);
+    }
+
+    public static int Describe(string[] args)
+    {
+        var resultFormat = "text";
+        try
+        {
+            if (args.Length == 0) throw new ArgumentException("describe requires an XPScript symbol.");
+            var name = args[0];
+            for (var i = 1; i < args.Length; i++)
+            {
+                if (args[i] == "--result-format" && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
+                else throw new ArgumentException($"Unknown argument: {args[i]}");
+            }
+            if (resultFormat is not ("text" or "json")) throw new ArgumentException("describe --result-format must be text or json.");
+            var definition = CompilerSymbolCatalog.Find(name);
+            if (definition is null) { Console.Error.WriteLine($"Unknown XPScript symbol: {name}"); return 2; }
+            if (resultFormat == "json") Console.WriteLine(JsonSerializer.Serialize(definition, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true }));
+            else
+            {
+                Console.WriteLine(definition.Signature);
+                Console.WriteLine($"kind: {definition.Kind}");
+                Console.WriteLine($"documentationId: {definition.DocumentationId}");
+                if (definition.AllowedTargets.Count > 0) Console.WriteLine("allowedTargets: " + string.Join(", ", definition.AllowedTargets));
+                if (definition.Deprecated) Console.WriteLine("deprecated: true");
+            }
+            return 0;
+        }
+        catch (Exception ex) { Console.Error.WriteLine(ex.Message); return 1; }
+    }
+
+    public static int Symbols(string[] args)
+    {
+        var resultFormat = "text";
+        var query = "";
+        try
+        {
+            for (var i = 0; i < args.Length; i++)
+            {
+                if (args[i] == "--search" && i + 1 < args.Length) query = args[++i];
+                else if (args[i] == "--result-format" && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
+                else throw new ArgumentException($"Unknown argument: {args[i]}");
+            }
+            if (resultFormat is not ("text" or "json")) throw new ArgumentException("symbols --result-format must be text or json.");
+            var definitions = CompilerSymbolCatalog.Search(query);
+            if (resultFormat == "json") Console.WriteLine(JsonSerializer.Serialize(definitions, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true }));
+            else foreach (var definition in definitions) Console.WriteLine(definition.Signature);
+            return 0;
+        }
+        catch (Exception ex) { Console.Error.WriteLine(ex.Message); return 1; }
+    }
+
+    public static int Explain(string[] args)
+    {
+        var resultFormat = "text";
+        try
+        {
+            if (args.Length == 0)
+            {
+                Console.Error.WriteLine("explain requires an XPS diagnostic code.");
+                return 1;
+            }
+
+            var code = args[0];
+            for (var i = 1; i < args.Length; i++)
+            {
+                if (args[i] == "--result-format" && i + 1 < args.Length)
+                    resultFormat = args[++i].ToLowerInvariant();
+                else
+                    throw new ArgumentException($"Unknown argument: {args[i]}");
+            }
+
+            if (resultFormat is not ("text" or "json"))
+                throw new ArgumentException("explain --result-format must be text or json.");
+
+            var definition = CompilerDiagnosticCatalog.Find(code);
+            if (definition is null)
+            {
+                Console.Error.WriteLine($"Unknown XPScript diagnostic code: {code}");
+                return 2;
+            }
+
+            if (resultFormat == "json")
+            {
+                Console.WriteLine(JsonSerializer.Serialize(definition, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = true
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"{definition.DiagnosticCode}: {definition.Explanation}");
+                Console.WriteLine($"category: {definition.Category}");
+                Console.WriteLine($"severity: {definition.Severity}");
+                Console.WriteLine($"documentationId: {definition.DocumentationId}");
+                if (definition.Properties.Count > 0)
+                    Console.WriteLine("properties: " + string.Join(", ", definition.Properties));
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return 1;
+        }
     }
 
     public static async Task<int> CompileAsync(string[] args)
@@ -156,6 +291,101 @@ public static class XPScriptCompilerCommandLine
         }
     }
 
+    public static async Task<int> ValidateAsync(string[] args)
+    {
+        const int MaxStdinSourceChars = 1_048_576;
+        var resultFormat = "text";
+        var debug = false;
+        string? stdinRoot = null;
+        try
+        {
+            var useStdin = args.Any(x => x.Equals("--stdin", StringComparison.OrdinalIgnoreCase));
+            string? virtualFileName = null;
+            string? sourceArgument = null;
+            var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
+
+            for (var i = 0; i < args.Length; i++)
+            {
+                if (args[i] == "--stdin")
+                    continue;
+                if (args[i] == "--filename" && i + 1 < args.Length)
+                    virtualFileName = args[++i];
+                else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
+                    runtimeIdentifier = args[++i].ToLowerInvariant();
+                else if (args[i] == "--result-format" && i + 1 < args.Length)
+                    resultFormat = args[++i].ToLowerInvariant();
+                else if (args[i] == "--debug")
+                    debug = true;
+                else if (!args[i].StartsWith("--", StringComparison.Ordinal) && sourceArgument is null)
+                    sourceArgument = args[i];
+                else
+                    throw new ArgumentException($"Unknown argument: {args[i]}");
+            }
+
+            if (resultFormat is not ("text" or "json" or "xml"))
+                throw new ArgumentException("--result-format must be text, json, or xml.");
+
+            string sourcePath;
+            if (useStdin)
+            {
+                if (sourceArgument is not null)
+                    throw new ArgumentException("validate --stdin cannot also specify a source file.");
+                virtualFileName ??= "stdin.xps";
+                if (!Path.GetFileName(virtualFileName).Equals(virtualFileName, StringComparison.Ordinal) ||
+                    !Path.GetExtension(virtualFileName).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+                    throw new ArgumentException("--filename must be a simple .xps filename without a directory path.");
+
+                var source = await Console.In.ReadToEndAsync().ConfigureAwait(false);
+                if (source.Length > MaxStdinSourceChars)
+                    throw new ArgumentException($"stdin source exceeds the {MaxStdinSourceChars} character validation limit.");
+
+                stdinRoot = Path.Combine(Path.GetTempPath(), "XPScript", "stdin", Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(stdinRoot);
+                sourcePath = Path.Combine(stdinRoot, virtualFileName);
+                await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
+            }
+            else
+            {
+                if (sourceArgument is null)
+                {
+                    WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "validate requires an .xps source file or --stdin." }]).WithOperation("validate"), resultFormat);
+                    return 1;
+                }
+                if (virtualFileName is not null)
+                    throw new ArgumentException("--filename is only valid with --stdin.");
+                sourcePath = Path.GetFullPath(sourceArgument);
+            }
+
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+            var compiler = new CompilerDriver();
+            var result = await compiler.ValidateWithResultAsync(sourcePath, runtimeIdentifier).ConfigureAwait(false);
+            if (useStdin && virtualFileName is not null)
+            {
+                result.Source = new CompileSource { EntryPoint = virtualFileName };
+                foreach (var diagnostic in result.Errors)
+                {
+                    if (!string.IsNullOrWhiteSpace(diagnostic.File))
+                        diagnostic.File = virtualFileName;
+                }
+            }
+            WriteResult(result, resultFormat);
+            return result.Success ? 0 : 2;
+        }
+        catch (Exception ex)
+        {
+            var result = CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]).WithOperation("validate");
+            WriteResult(result, resultFormat is "json" or "xml" ? resultFormat : "text");
+            return 1;
+        }
+        finally
+        {
+            if (stdinRoot is not null)
+            {
+                try { Directory.Delete(stdinRoot, recursive: true); } catch { }
+            }
+        }
+    }
+
     public static async Task<int> RunScriptAsync(string[] commandLineArgs)
     {
         var sourceIndex = commandLineArgs.Length > 0 && commandLineArgs[0].Equals("run", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
@@ -168,6 +398,7 @@ public static class XPScriptCompilerCommandLine
         var resultFormat = "text";
         string? tempRoot = null;
         var debug = false;
+        var noDaemon = false;
 
         try
         {
@@ -187,6 +418,12 @@ public static class XPScriptCompilerCommandLine
                 if (parseRunOptions && value == "--")
                 {
                     parseRunOptions = false;
+                    continue;
+                }
+
+                if (parseRunOptions && value == "--no-daemon")
+                {
+                    noDaemon = true;
                     continue;
                 }
 
@@ -261,6 +498,12 @@ public static class XPScriptCompilerCommandLine
                 scriptArgs.Add(value);
             }
 
+            // Debug compilation stays local so generated C#/Roslyn/MSBuild diagnostics
+            // remain directly available to developers and CI. Normal runs use the warm daemon.
+            var useDaemon = !noDaemon && !debug;
+            if (useDaemon && !await CompilerDaemonClient.EnsureRunningAsync().ConfigureAwait(false))
+                throw new InvalidOperationException("Unable to start or connect to the XPScript compiler daemon.");
+
             var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
             using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
@@ -307,14 +550,37 @@ public static class XPScriptCompilerCommandLine
                 var runOutputDirectory = runCache.Enabled ? runCache.OutputDirectory : tempRoot;
                 if (runCache.Enabled) runCache.PrepareOutputDirectory();
 
+                if (debug)
+                {
+                    var validationResult = await new CompilerDriver()
+                        .ValidateWithResultAsync(sourcePath, currentRuntimeIdentifier)
+                        .ConfigureAwait(false);
+                    if (!validationResult.Success)
+                    {
+                        runCache.Invalidate();
+                        WriteResult(validationResult.WithOperation("run"), resultFormat);
+                        return 1;
+                    }
+                }
+
                 if (info)
                     WriteProgress($"Started to compile {sourceName}");
 
-                var compileTask = RunCompiler.CompileWithResultAsync(
-                    sourcePath,
-                    runOutputDirectory,
-                    currentRuntimeIdentifier,
-                    debug);
+                var compileTask = !useDaemon
+                    ? RunCompiler.CompileWithResultAsync(
+                        sourcePath,
+                        runOutputDirectory,
+                        currentRuntimeIdentifier,
+                        debug)
+                    : CompileRunWithDaemonAsync(
+                        sourcePath,
+                        runOutputDirectory,
+                        currentRuntimeIdentifier,
+                        debug,
+                        effectiveSecurityMode,
+                        restricted,
+                        sourceRoots,
+                        sourcePreprocessors);
                 var compileResult = info
                     ? await WaitWithProgressAsync(
                         compileTask,
@@ -513,6 +779,9 @@ XPScript Compiler and Runtime
 
 Usage:
   {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--embed-assets] [--result-format text|json|xml] [--debug] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml] [--debug]
+  xpscript mcp
+  xpscript mcp install codex|claude [--scope user|project] [--force]
   {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
 
 Supported runtime identifiers:
@@ -569,7 +838,8 @@ Use -- before script arguments when an argument could otherwise be interpreted a
                         Console.WriteLine($"  line: {error.Line}");
                         Console.WriteLine($"  position: {error.Position}");
                         Console.WriteLine($"  description: {error.Description}");
-                        if (!string.IsNullOrEmpty(error.Code)) Console.WriteLine($"  code: {error.Code}");
+                        if (!string.IsNullOrEmpty(error.SourceCode)) Console.WriteLine($"  code: {error.SourceCode}");
+                        if (!string.IsNullOrEmpty(error.DiagnosticCode)) Console.WriteLine($"  diagnosticCode: {error.DiagnosticCode}");
                         if (!string.IsNullOrEmpty(error.MarkedCode))
                         {
                             Console.WriteLine("  markedCode:");
@@ -579,5 +849,27 @@ Use -- before script arguments when an argument could otherwise be interpreted a
                 }
                 break;
         }
+    }
+
+    private static async Task<CompileResult> CompileRunWithDaemonAsync(
+        string sourcePath,
+        string outputDirectory,
+        string runtimeIdentifier,
+        bool debug,
+        ApplicationSecurityMode securityMode,
+        bool restricted,
+        IReadOnlyList<string> sourceRoots,
+        IReadOnlyList<string> sourcePreprocessors)
+    {
+        var result = await CompilerDaemonClient.CompileForRunAsync(
+            sourcePath,
+            outputDirectory,
+            runtimeIdentifier,
+            debug,
+            securityMode,
+            restricted,
+            sourceRoots,
+            sourcePreprocessors).ConfigureAwait(false);
+        return result ?? throw new InvalidOperationException("Compiler daemon disconnected during run compilation.");
     }
 }

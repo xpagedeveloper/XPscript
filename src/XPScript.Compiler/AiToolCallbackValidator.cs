@@ -15,26 +15,54 @@ internal sealed class AiToolCallbackValidator
         sourceName ??= "input.xps";
 
         var procedures = CollectModuleProcedures(source);
-        foreach (var registration in FindRegistrations(source))
+        foreach (var registration in FindRegistrations(source, sourceName))
         {
             if (!TryReadStringLiteral(registration.Arguments[2], out var callbackName))
                 continue;
 
             if (!IsIdentifier(callbackName))
-                throw new CompilerException($"{sourceName}: AITool callback name '{callbackName}' is invalid.");
+                throw CallbackDiagnostic(sourceName, CompilerDiagnosticCodes.InvalidCallbackName,
+                    $"AITool callback name '{callbackName}' is invalid.",
+                    ("symbol", callbackName), ("symbolKind", "callback"));
 
             var expectedArity = 1 + registration.Arguments.Count - 3;
             if (!procedures.TryGetValue(callbackName, out var arities))
-                throw new CompilerException($"{sourceName}: AITool callback '{callbackName}' was not found as a module Sub or Function.");
+                throw CallbackDiagnostic(sourceName, CompilerDiagnosticCodes.CallbackNotFound,
+                    $"AITool callback '{callbackName}' was not found as a module Sub or Function.",
+                    ("symbol", callbackName), ("symbolKind", "callback"), ("containingScope", "module"));
 
             if (!arities.Contains(expectedArity))
             {
                 var available = string.Join(", ", arities.OrderBy(value => value));
-                throw new CompilerException(
-                    $"{sourceName}: AITool callback '{callbackName}' must accept {expectedArity} parameter(s) " +
-                    $"(AIToolCall plus {expectedArity - 1} callback context parameter(s)); declared arity: {available}.");
+                throw CallbackDiagnostic(sourceName, CompilerDiagnosticCodes.CallbackArityMismatch,
+                    $"AITool callback '{callbackName}' must accept {expectedArity} parameter(s) " +
+                    $"(AIToolCall plus {expectedArity - 1} callback context parameter(s)); declared arity: {available}.",
+                    ("symbol", callbackName), ("symbolKind", "callback"),
+                    ("expectedArgumentCount", expectedArity.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                    ("availableArgumentCounts", available));
             }
         }
+    }
+
+    private static CompilerException CallbackDiagnostic(
+        string sourceName,
+        string diagnosticCode,
+        string message,
+        params (string Name, string Value)[] properties)
+    {
+        var diagnostic = new CompileDiagnostic
+        {
+            File = sourceName,
+            Description = message,
+            DiagnosticCode = diagnosticCode,
+            Category = "symbol-resolution",
+            Properties = properties.Select(property => new CompileDiagnosticProperty
+            {
+                Name = property.Name,
+                Value = property.Value
+            }).ToList()
+        };
+        return new CompilerException(message, diagnosticCode, "symbol-resolution", [diagnostic]);
     }
 
     private static Dictionary<string, HashSet<int>> CollectModuleProcedures(string source)
@@ -72,7 +100,7 @@ internal sealed class AiToolCallbackValidator
         return result;
     }
 
-    private static IEnumerable<Registration> FindRegistrations(string source)
+    private static IEnumerable<Registration> FindRegistrations(string source, string sourceName)
     {
         const string marker = ".AddFunction";
         var index = 0;
@@ -91,7 +119,29 @@ internal sealed class AiToolCallbackValidator
 
             var close = FindClosingParenthesis(source, open);
             if (close < 0)
-                throw new CompilerException("Unterminated AITool.AddFunction call.");
+            {
+                var prefix = source[..open];
+                var line = 1 + prefix.Count(ch => ch == '\n');
+                var lineStart = Math.Max(prefix.LastIndexOf('\n') + 1, 0);
+                var column = open - lineStart + 1;
+                var lineEnd = source.IndexOf('\n', open);
+                if (lineEnd < 0) lineEnd = source.Length;
+                var sourceLine = source[lineStart..lineEnd].TrimEnd('\r');
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = Path.GetFileName(sourceName), Line = line, Position = column, EndLine = line,
+                    EndColumn = column + 1, Description = "Unterminated AITool.AddFunction call.",
+                    DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
+                    Properties =
+                    [
+                        new() { Name = "foundToken", Value = "(" },
+                        new() { Name = "expectedConstruct", Value = "closing parenthesis" }
+                    ],
+                    SourceCode = sourceLine,
+                    MarkedCode = sourceLine + Environment.NewLine + new string(' ', Math.Max(0, column - 1)) + "^"
+                };
+                throw new CompilerException(diagnostic.Description, diagnostic.DiagnosticCode, diagnostic.Category, [diagnostic]);
+            }
 
             var arguments = SplitArguments(source[(open + 1)..close]);
             if (arguments.Count >= 3)

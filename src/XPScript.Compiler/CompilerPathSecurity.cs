@@ -9,12 +9,12 @@ internal static class CompilerPathSecurity
     public static string ResolveProjectLocalFile(string sourceDirectory, string declaredPath, string kind)
     {
         if (string.IsNullOrWhiteSpace(declaredPath))
-            throw new CompilerException(kind + " path cannot be empty.");
+            throw SecurityPath(kind + " path cannot be empty.");
 
         var root = Path.GetFullPath(sourceDirectory);
         var portable = declaredPath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
         if (Path.IsPathRooted(portable))
-            throw new CompilerException(kind + " path must be relative to and remain inside the XPScript source directory: " + declaredPath);
+            throw SecurityPath(kind + " path must be relative to and remain inside the XPScript source directory: " + declaredPath);
 
         var resolved = Path.GetFullPath(Path.Combine(root, portable));
         EnsureLexicallyContained(root, resolved, kind, declaredPath);
@@ -25,12 +25,12 @@ internal static class CompilerPathSecurity
     public static string ResolveApplicationLocalNativeFile(string sourceDirectory, string declaredPath)
     {
         if (string.IsNullOrWhiteSpace(declaredPath))
-            throw new CompilerException("Application-local native dependency path cannot be empty.");
+            throw SecurityPath("Application-local native dependency path cannot be empty.");
 
         var root = Path.GetFullPath(sourceDirectory);
         var portable = declaredPath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
         if (Path.IsPathRooted(portable))
-            throw new CompilerException("Application-local native dependency paths must be relative to the XPScript source directory: " + declaredPath);
+            throw SecurityPath("Application-local native dependency paths must be relative to the XPScript source directory: " + declaredPath);
 
         var resolved = Path.GetFullPath(Path.Combine(root, portable));
         EnsureLexicallyContained(root, resolved, "Application-local native dependency", declaredPath);
@@ -70,7 +70,7 @@ internal static class CompilerPathSecurity
         catch (PlatformNotSupportedException) { }
         catch (UnauthorizedAccessException)
         {
-            throw new CompilerException("Unable to secure compiler temporary workspace permissions.");
+            throw TemporaryWorkspaceSecurity("Unable to secure compiler temporary workspace permissions.");
         }
     }
 
@@ -85,7 +85,7 @@ internal static class CompilerPathSecurity
         catch (PlatformNotSupportedException) { }
         catch (UnauthorizedAccessException)
         {
-            throw new CompilerException("Unable to secure compiler temporary file permissions.");
+            throw TemporaryWorkspaceSecurity("Unable to secure compiler temporary file permissions.");
         }
     }
 
@@ -101,7 +101,7 @@ internal static class CompilerPathSecurity
 
         var rootInfo = new DirectoryInfo(full);
         if (IsLinkOrReparsePoint(rootInfo))
-            throw new CompilerException("Refusing to recursively clean a compiler temporary workspace that is itself a symbolic link or reparse point.");
+            throw TemporaryWorkspaceSecurity("Refusing to recursively clean a compiler temporary workspace that is itself a symbolic link or reparse point.");
 
         DeleteDirectoryWithoutFollowingLinks(rootInfo);
     }
@@ -133,7 +133,7 @@ internal static class CompilerPathSecurity
             }
             catch (IOException)
             {
-                throw new CompilerException("Unable to resolve compiler temporary directory path.");
+                throw TemporaryWorkspaceSecurity("Unable to resolve compiler temporary directory path.");
             }
         }
 
@@ -152,11 +152,11 @@ internal static class CompilerPathSecurity
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or UnauthorizedAccessException)
         {
-            throw new CompilerException("Unable to determine the current Windows security identifier for compiler temporary workspace ACLs.");
+            throw TemporaryWorkspaceSecurity("Unable to determine the current Windows security identifier for compiler temporary workspace ACLs.");
         }
 
         if (string.IsNullOrWhiteSpace(sid))
-            throw new CompilerException("Unable to determine the current Windows security identifier for compiler temporary workspace ACLs.");
+            throw TemporaryWorkspaceSecurity("Unable to determine the current Windows security identifier for compiler temporary workspace ACLs.");
 
         RunIcacls(fullPath, "/inheritance:r");
         RunIcacls(fullPath, "/grant:r", "*" + sid + ":(OI)(CI)F");
@@ -178,12 +178,12 @@ internal static class CompilerPathSecurity
         try
         {
             using var process = Process.Start(start)
-                ?? throw new CompilerException("Unable to start icacls.exe while securing compiler temporary workspace ACLs.");
+                ?? throw TemporaryWorkspaceSecurity("Unable to start icacls.exe while securing compiler temporary workspace ACLs.");
             _ = process.StandardOutput.ReadToEnd();
             _ = process.StandardError.ReadToEnd();
             process.WaitForExit();
             if (process.ExitCode != 0)
-                throw new CompilerException("Unable to secure compiler temporary workspace ACLs with icacls.exe (exit code " + process.ExitCode + ").");
+                throw TemporaryWorkspaceSecurity("Unable to secure compiler temporary workspace ACLs with icacls.exe (exit code " + process.ExitCode + ").");
         }
         catch (CompilerException)
         {
@@ -191,7 +191,7 @@ internal static class CompilerPathSecurity
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
         {
-            throw new CompilerException("Unable to secure compiler temporary workspace ACLs.");
+            throw TemporaryWorkspaceSecurity("Unable to secure compiler temporary workspace ACLs.");
         }
     }
 
@@ -217,6 +217,12 @@ internal static class CompilerPathSecurity
         directory.Delete(recursive: false);
     }
 
+    private static CompilerException SecurityPath(string message) =>
+        new(message, CompilerDiagnosticCodes.UnsafeDependencyPath, "security");
+
+    private static CompilerException TemporaryWorkspaceSecurity(string message) =>
+        new(message, CompilerDiagnosticCodes.TemporaryWorkspaceSecurityFailed, "security");
+
     private static bool IsLinkOrReparsePoint(FileSystemInfo info) =>
         info.LinkTarget is not null || (info.Attributes & FileAttributes.ReparsePoint) != 0;
 
@@ -224,11 +230,11 @@ internal static class CompilerPathSecurity
     {
         var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         if (candidate.Equals(root, comparison))
-            throw new CompilerException(kind + " path must identify a file inside the XPScript source directory: " + declaredPath);
+            throw SecurityPath(kind + " path must identify a file inside the XPScript source directory: " + declaredPath);
 
         var prefix = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
         if (!candidate.StartsWith(prefix, comparison))
-            throw new CompilerException(kind + " path must remain inside the XPScript source directory: " + declaredPath);
+            throw SecurityPath(kind + " path must remain inside the XPScript source directory: " + declaredPath);
     }
 
     private static void EnsureNoLinkEscape(string root, string candidate, string kind, string declaredPath)
@@ -251,16 +257,16 @@ internal static class CompilerPathSecurity
             }
             catch (IOException)
             {
-                throw new CompilerException(kind + " path contains an unresolved symbolic link or reparse point: " + declaredPath);
+                throw SecurityPath(kind + " path contains an unresolved symbolic link or reparse point: " + declaredPath);
             }
 
             if (string.IsNullOrWhiteSpace(resolvedTarget))
-                throw new CompilerException(kind + " path contains a symbolic link or reparse point that cannot be safely resolved: " + declaredPath);
+                throw SecurityPath(kind + " path contains a symbolic link or reparse point that cannot be safely resolved: " + declaredPath);
 
             var finalTarget = Path.GetFullPath(resolvedTarget);
             var rootPrefix = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
             if (!finalTarget.Equals(root, comparison) && !finalTarget.StartsWith(rootPrefix, comparison))
-                throw new CompilerException(kind + " path resolves through a symbolic link or reparse point outside the XPScript source directory: " + declaredPath);
+                throw SecurityPath(kind + " path resolves through a symbolic link or reparse point outside the XPScript source directory: " + declaredPath);
         }
     }
 
@@ -276,7 +282,7 @@ internal static class CompilerPathSecurity
         catch (DirectoryNotFoundException) { }
         catch (IOException)
         {
-            throw new CompilerException(kind + " path contains an unreadable symbolic link or reparse point: " + declaredPath);
+            throw SecurityPath(kind + " path contains an unreadable symbolic link or reparse point: " + declaredPath);
         }
 
         try
@@ -289,7 +295,7 @@ internal static class CompilerPathSecurity
         catch (DirectoryNotFoundException) { }
         catch (IOException)
         {
-            throw new CompilerException(kind + " path contains an unreadable symbolic link or reparse point: " + declaredPath);
+            throw SecurityPath(kind + " path contains an unreadable symbolic link or reparse point: " + declaredPath);
         }
 
         return null;

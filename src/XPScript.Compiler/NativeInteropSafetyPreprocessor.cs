@@ -25,8 +25,9 @@ internal sealed class NativeInteropSafetyPreprocessor
                     !Regex.IsMatch(text, @"\bByVal\b", RegexOptions.IgnoreCase))
                 {
                     throw new CompilerException(
-                        "Native Declare parameters must currently be explicitly ByVal. " +
-                        "Native ByRef/out marshalling is not implemented and is rejected to prevent an unsafe ABI mismatch.");
+                        "Native Declare parameters must currently be explicitly ByVal. Native ByRef/out marshalling is not implemented and is rejected to prevent an unsafe ABI mismatch.",
+                        CompilerDiagnosticCodes.NativeByRefUnsupported,
+                        "interop");
                 }
             }
         }
