@@ -53,7 +53,7 @@ catch (ArgumentException) { }
 
 try
 {
-    new XpsKestrelOptions { StaticCacheControl = "public, max-age=300\\r\\nX-Injected: yes" }.Validate();
+    new XpsKestrelOptions { StaticCacheControl = "public, max-age=300\r\nX-Injected: yes" }.Validate();
     throw new Exception("CRLF was accepted in StaticCacheControl.");
 }
 catch (ArgumentException) { }
