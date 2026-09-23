@@ -2,10 +2,10 @@
 
 XPScript can be hosted on Windows Server with IIS in two practical ways:
 
-1. IIS in front of the XPScript XPScript WebServer host. This is the recommended setup for production because the XPScript process stays persistent and the shared route resolver handles extensionless URLs such as `/users` and `/users/Save`.
+1. IIS in front of the XPScript Kestrel host. This is the recommended setup for production because the XPScript process stays persistent and the shared route resolver handles extensionless URLs such as `/users` and `/users/Save`.
 2. IIS CGI using `XPScript.Web.Cgi.exe`. This is simpler to wire directly into IIS, but IIS starts the CGI process per request and throughput is lower.
 
-The current `xpscript fastcgi` command exposes a FastCGI TCP listener. IIS FastCGI application mappings launch a FastCGI process directly and do not act as a generic TCP FastCGI proxy, so do not point an IIS FastCGI handler at the XPScript TCP listener. Use XPScript WebServer behind IIS or the CGI host instead.
+The current `xpscript fastcgi` command exposes a FastCGI TCP listener. IIS FastCGI application mappings launch a FastCGI process directly and do not act as a generic TCP FastCGI proxy, so do not point an IIS FastCGI handler at the XPScript TCP listener. Use Kestrel behind IIS or the CGI host instead.
 
 ## Requirements
 
@@ -13,7 +13,7 @@ On the IIS server install:
 
 - IIS Web Server.
 - IIS URL Rewrite when using IIS as a reverse proxy.
-- Application Request Routing, ARR, when using IIS as a reverse proxy to XPScript WebServer.
+- Application Request Routing, ARR, when using IIS as a reverse proxy to Kestrel.
 - CGI role service when using the direct CGI option.
 - .NET 10 runtime when deploying a framework-dependent XPScript package.
 
@@ -42,9 +42,9 @@ C:\XPScript\
 
 Keep the host binaries outside the public site directory.
 
-## Option 1: IIS reverse proxy to XPScript XPScript WebServer
+## Option 1: IIS reverse proxy to XPScript Kestrel
 
-### 1. Publish or install the XPScript WebServer package
+### 1. Publish or install the Kestrel package
 
 From the repository:
 
@@ -52,7 +52,7 @@ From the repository:
 .\scripts\publish-distributions.ps1 -Package kestrel -Runtime win-x64 -SelfContained
 ```
 
-Deploy the resulting XPScript WebServer distribution to a directory such as:
+Deploy the resulting Kestrel distribution to a directory such as:
 
 ```text
 C:\XPScript\host
@@ -88,7 +88,7 @@ Do not bind the XPScript listener to a public address when IIS is the public fro
 
 ### 3. Run XPScript as a Windows service
 
-For production, run the XPScript WebServer host under a Windows service manager so it starts after reboot and restarts after a failure.
+For production, run the Kestrel host under a Windows service manager so it starts after reboot and restarts after a failure.
 
 The service command must execute the same tested command, for example:
 
@@ -170,7 +170,7 @@ Never add an IIS static MIME mapping for `.xps`.
 
 Use this option when you specifically want IIS to execute XPScript through CGI.
 
-CGI starts a new process for each request. Use the XPScript WebServer reverse-proxy option for higher request volume or when persistent in-memory state is required.
+CGI starts a new process for each request. Use the Kestrel reverse-proxy option for higher request volume or when persistent in-memory state is required.
 
 ### 1. Enable CGI in IIS
 
@@ -254,7 +254,7 @@ The CGI transport supplies request data through CGI variables such as `REQUEST_M
 
 ### 6. Extensionless URLs
 
-A `*.xps` CGI handler naturally handles requests that contain the `.xps` extension. If you want clean URLs such as `/users` or `/users/Save`, use the recommended XPScript WebServer reverse-proxy setup, or add carefully tested IIS URL Rewrite rules that route those requests into the CGI handler without exposing source files.
+A `*.xps` CGI handler naturally handles requests that contain the `.xps` extension. If you want clean URLs such as `/users` or `/users/Save`, use the recommended Kestrel reverse-proxy setup, or add carefully tested IIS URL Rewrite rules that route those requests into the CGI handler without exposing source files.
 
 Do not use a catch-all CGI mapping unless you have verified that static files and operational endpoints are handled correctly.
 
@@ -275,7 +275,7 @@ For CGI hosting:
 
 The `.xps` files can be deployed independently from the host binaries.
 
-For XPScript WebServer hosting, replace site files using an atomic deployment strategy when possible. XPScript recompiles routes when their source/dependency snapshot changes.
+For Kestrel hosting, replace site files using an atomic deployment strategy when possible. XPScript recompiles routes when their source/dependency snapshot changes.
 
 When replacing host binaries, stop the XPScript Windows service, replace the distribution, then start the service again. IIS can remain online and will return a proxy error only while the backend is unavailable.
 
@@ -326,7 +326,7 @@ Install the matching .NET 10 runtime, or deploy a self-contained `win-x64` distr
 ## Security checklist
 
 - Terminate public TLS at IIS.
-- Keep XPScript WebServer bound to `127.0.0.1` when IIS is the frontend.
+- Keep Kestrel bound to `127.0.0.1` when IIS is the frontend.
 - Restrict accepted hostnames with `--host`.
 - Never serve `.xps` as static files.
 - Keep XPScript binaries outside the site directory.
@@ -341,4 +341,4 @@ See [Getting started](getting-started.md) for XPScript package creation and host
 
 ## Structured logging and client correlation
 
-Mandatory logging uses the same runtime contract as direct XPScript WebServer, FastCGI and CGI hosting. Each XPScript site gets a stable site-specific `XPSLOGID_<site-hash>` cookie name, which avoids collisions when IIS hosts multiple applications on one domain. Logs contain only its SHA-256-derived `session.id`, never the raw cookie. ASP.NET Core Module preserves the external HTTP or HTTPS scheme so the runtime applies the `Secure` cookie attribute only for HTTPS. See [mandatory web logging](web-logging.md).
+Mandatory logging uses the same runtime contract as direct Kestrel, FastCGI and CGI hosting. Each XPScript site gets a stable site-specific `XPSLOGID_<site-hash>` cookie name, which avoids collisions when IIS hosts multiple applications on one domain. Logs contain only its SHA-256-derived `session.id`, never the raw cookie. ASP.NET Core Module preserves the external HTTP or HTTPS scheme so the runtime applies the `Secure` cookie attribute only for HTTPS. See [mandatory web logging](web-logging.md).
