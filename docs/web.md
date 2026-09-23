@@ -1,6 +1,6 @@
 # Web programming
 
-XPScript web applications use the same `.xps` language and a shared dispatcher across XPScript WebServer, FastCGI and CGI.
+XPScript web applications use the same `.xps` language and a shared dispatcher across Kestrel, FastCGI and CGI.
 
 For the complete verified REST API, Response, Session, Application and RequestScope reference, see [REST API development](rest-api.md).
 
@@ -255,7 +255,7 @@ See [Response object](rest-api.md#response-object) for the verified complete mem
 
 ## Session
 
-Sessions are host-controlled. XPScript WebServer sessions must be enabled with `--sessions`. CGI is process-per-request and requires persistent CGI state configuration when state must survive requests. Do not assume in-memory state survives across CGI processes.
+Sessions are host-controlled. Kestrel sessions must be enabled with `--sessions`. CGI is process-per-request and requires persistent CGI state configuration when state must survive requests. Do not assume in-memory state survives across CGI processes.
 
 Session state supports `Add`, `Set`, `Get`, `Exists`, `Remove`, `Unset` and `Clear`. `Add` overwrites an existing value. `Get` returns `Null` when the key does not exist. `Remove` returns false without throwing when a key does not exist.
 
@@ -304,13 +304,13 @@ The runtime preserves other valid HTTP methods in `Request.Method` so applicatio
 
 ## CGI variables
 
-CGI-compatible request variables are available in XPScript WebServer, FastCGI and CGI hosting. Use `Request.Cgi("VARIABLE_NAME")` when you need a specific variable. Prefer normalized Request properties such as `Method`, `ContentType`, `RemoteAddress` and `Query_String` when an equivalent property exists.
+CGI-compatible request variables are available in Kestrel, FastCGI and CGI hosting. Use `Request.Cgi("VARIABLE_NAME")` when you need a specific variable. Prefer normalized Request properties such as `Method`, `ContentType`, `RemoteAddress` and `Query_String` when an equivalent property exists.
 
 The normalized base set includes `REQUEST_METHOD`, `REQUEST_URI`, `QUERY_STRING`, `PATH_INFO`, `SCRIPT_NAME`, `SERVER_NAME`, `SERVER_PORT`, `SERVER_PROTOCOL`, `REMOTE_ADDR`, `CONTENT_TYPE`, `CONTENT_LENGTH` and `HTTPS`. Incoming headers are also exposed using CGI-style `HTTP_*` names. CGI and FastCGI retain transport-provided environment variables in addition to the normalized values.
 
 ## IIS hosting
 
-On Windows Server, the recommended IIS topology is IIS as the public TLS endpoint and reverse proxy to an XPScript XPScript WebServer process on loopback. Direct IIS CGI hosting is also supported for simpler deployments.
+On Windows Server, the recommended IIS topology is IIS as the public TLS endpoint and reverse proxy to an XPScript Kestrel process on loopback. Direct IIS CGI hosting is also supported for simpler deployments.
 
 See [Hosting XPScript on IIS](iis-hosting.md) for the full configuration, including ARR, URL Rewrite, `web.config`, CGI mappings, application pool settings, filesystem permissions and troubleshooting.
 
@@ -327,4 +327,4 @@ See [Getting started](getting-started.md) for host setup and parameters and [UIF
 
 ## Mandatory structured logs
 
-Every XPScript WebServer, FastCGI and CGI request is logged automatically. Logging cannot be disabled, and the validated log directory must be outside the web root. Applications can add structured events with `Application.Log` and audit events with `Application.Audit`. See [mandatory web logging](web-logging.md) for schema, rotation, retention and sensitive-data rules.
+Every Kestrel, FastCGI and CGI request is logged automatically. Logging cannot be disabled, and the validated log directory must be outside the web root. Applications can add structured events with `Application.Log` and audit events with `Application.Audit`. See [mandatory web logging](web-logging.md) for schema, rotation, retention and sensitive-data rules.
