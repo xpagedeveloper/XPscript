@@ -42,6 +42,11 @@ jobs:
           dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
           dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore -p:SkipUnifiedPublish=true
 
+      - name: Run Kestrel protocol regressions
+        shell: bash
+        run: |
+          dotnet run --project ./tests/WebKestrelSmoke/WebKestrelSmoke.csproj -c Release
+
       - name: Run CGI and FastCGI cross-host security regressions
         shell: bash
         run: |
