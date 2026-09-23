@@ -163,9 +163,9 @@ public sealed class CompilerDriver
                 diagnostics.AddRange(ex.GeneratedDiagnostics);
             return CompileResult.Error(diagnostics).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            var description = "Validation failed: " + ex.GetType().Name + ".";
+            const string description = "Validation failed.";
             return CompileResult.Error([CreateDiagnostic(0, 0, description, "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
         }
         finally
