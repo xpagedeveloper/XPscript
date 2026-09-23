@@ -96,6 +96,25 @@ End Sub
             throw new Exception("[ServerSide] Application.Crypto browser-WASM compile did not produce the WASM route.");
     }
 
+    var inertCryptoPath = Path.Combine(root, "inert-crypto.xps");
+    await File.WriteAllTextAsync(inertCryptoPath, """
+[Platform:browser-wasm]
+
+Function BrowserOnly() As String
+    ' Application.Crypto.Encrypt must not make this procedure server-side.
+    BrowserOnly = "Application.Crypto.Encrypt is documentation text"
+End Function
+
+Sub Main()
+    Print BrowserOnly()
+End Sub
+""");
+    await using (var inertCryptoUnit = await compiler.CompileAsync(inertCryptoPath, root))
+    {
+        if (!inertCryptoUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
+            throw new Exception("Application.Crypto text in comments/strings broke browser-WASM compilation.");
+    }
+
     var unsafeCryptoPath = Path.Combine(root, "unsafe-crypto.xps");
     await File.WriteAllTextAsync(unsafeCryptoPath, """
 [Platform:browser-wasm]
