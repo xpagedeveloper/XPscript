@@ -334,8 +334,9 @@ try
 
     using (var staticAllowed = await client.GetAsync("/assets/allowed.txt"))
     {
-        if ((int)staticAllowed.StatusCode != 200 || await staticAllowed.Content.ReadAsStringAsync() != "STATIC-ALLOWED")
-            throw new Exception("Allowed static asset was not served as expected.");
+        var staticAllowedBody = await staticAllowed.Content.ReadAsStringAsync();
+        if ((int)staticAllowed.StatusCode != 200 || staticAllowedBody != "STATIC-ALLOWED")
+            throw new Exception($"Allowed static asset was not served as expected: status={(int)staticAllowed.StatusCode}, body={staticAllowedBody}");
     }
     foreach (var protectedPath in new[] { "/secret.txt", "/config.json", "/source.xps", "/assets/oversized.txt" })
     {
