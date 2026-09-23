@@ -61,7 +61,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         foreach (var procedure in procedures)
         {
             var body = BodyText(lines, procedure);
-            if (!HasServerRuntimeFeature(body)) continue;
+            if (!HasServerRuntimeFeature(body) && !HasServerSideMarker(body)) continue;
             ValidateRemoteProcedure(procedure);
             remote.Add(procedure);
 
@@ -140,6 +140,9 @@ internal sealed record BrowserWasmServerBridgePlan(
         var features = RuntimeFeatures.Detect(source);
         return features.Ai || features.Sqlite || features.MsSql || ContainsApplicationCryptoCode(source);
     }
+
+    private static bool HasServerSideMarker(string source) =>
+        SpinnerDelayMarker.IsMatch(source);
 
     private static bool ContainsApplicationCryptoCode(string source)
     {
