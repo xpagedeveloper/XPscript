@@ -192,6 +192,11 @@ public static class XpsRestBinder
                     if (headerValues.Count == 0) return OptionalOrMissing(parameter, parameterType, binding.ParameterName, out value, out error);
                     value = ConvertScalar(headerValues[0], parameterType, binding.ParameterName);
                     return true;
+                case "COOKIE":
+                    var cookieValue = context.Request.Cookie(sourceName);
+                    if (cookieValue is null) return OptionalOrMissing(parameter, parameterType, binding.ParameterName, out value, out error);
+                    value = ConvertScalar(cookieValue, parameterType, binding.ParameterName);
+                    return true;
                 case "BODY":
                     bodyObject = new XpsRequestBody(context.Request).Json(parameterType);
                     value = bodyObject;
