@@ -607,9 +607,9 @@ if (!parameterSuffixSource.Contains("Optional ApiEnd As Variant", StringComparis
     !parameterSuffixSource.Contains("Optional ApiKey2 As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional Url As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional Payload As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("Dim ApiUrl As String", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("Optional ApiPayload As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("ApiUrl = Http_i.AddQuery(ApiUrl, \"end\", ApiEnd)", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Dim url2 As String", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("Optional payload2 As Variant", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("url2 = Http_i.AddQuery(url2, \"end\", ApiEnd)", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("request.SetHeader(\"api key\", CStr(ApiKey2))", StringComparison.Ordinal))
     throw new Exception("OpenAPI parameter identifiers must preserve names unless a real procedure-scope collision requires disambiguation. Generated source:\n" + parameterSuffixSource);
 
