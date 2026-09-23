@@ -49,10 +49,10 @@ internal static class XpsScaffolder
 [Anonymous]
 
 [Get:/health]
-Function Health() As Object
+Function Health() As Variant
     Dim result As New XPJsonObject
     Call result.Set("status", "ok")
-    Set Health = result
+    Set Health = Response.OK(result)
 End Function
 """;
 
