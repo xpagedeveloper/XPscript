@@ -50,6 +50,16 @@ End Sub
     var companion = Directory.EnumerateFiles(Path.Combine(root, ".xpscript-cache", "wasm-bridge"), "XPScript.BrowserServer.dll", SearchOption.AllDirectories).FirstOrDefault();
     if (companion is null) throw new Exception("[ServerSide] browser-WASM compile did not produce a server companion assembly.");
 
+    var generatedHttpRuntime = Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
+        .Select(path => new { Path = path, Text = File.ReadAllText(path) })
+        .FirstOrDefault(file => file.Text.Contains("internal sealed class XPScriptHttpClient", StringComparison.Ordinal));
+    if (generatedHttpRuntime is null)
+        throw new Exception("Browser-WASM compile did not retain the generated HTTP runtime for security verification.");
+    if (!generatedHttpRuntime.Text.Contains("AllowAutoRedirect = false", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM HTTP runtime permits automatic redirects that could forward credentials to an unintended origin.");
+    if (!generatedHttpRuntime.Text.Contains("UseCookies = false", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM HTTP runtime unexpectedly enables the native cookie container.");
+
     var noHeaderResponse = new XpsWebResponse();
     await unit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
         BridgeRequest("/app.xps/__xpscript_bridge/capability", new Dictionary<string, IReadOnlyList<string>>()),
@@ -246,6 +256,9 @@ End Sub
         throw new Exception("Browser WASM bootstrap does not anchor relative assets to its owning .xps route.");
 
     var browserModule = await File.ReadAllTextAsync(Path.Combine(frameworkRoot, "xpscript-browser.js"));
+    if (!browserModule.Contains("url !== '__xpscript_bridge' && !url.startsWith('__xpscript_bridge/')", StringComparison.Ordinal) ||
+        !browserModule.Contains("xhr.open(safeMethod, url, false)", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM server bridge no longer enforces a same-origin relative bridge URL.");
     foreach (var requiredMarker in new[]
     {
         "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result",
