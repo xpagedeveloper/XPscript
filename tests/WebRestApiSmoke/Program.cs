@@ -230,6 +230,17 @@ try
     await using var dispatcher = new XpsWebDispatcher(root);
     var app = new XpsApplicationState();
 
+    // Keep method-dispatch hardening first: a path match must never invoke a handler for another HTTP method.
+    var wrongMethodGetRoute = await SendAsync(dispatcher, app, "POST", "/api/users/42");
+    if (wrongMethodGetRoute.StatusCode != 405)
+        throw new Exception($"POST reached or incorrectly resolved GET-only route; expected 405, got {wrongMethodGetRoute.StatusCode}.");
+    if (BodyText(wrongMethodGetRoute).Contains("user-42", StringComparison.Ordinal))
+        throw new Exception("POST executed the GET-only route handler.");
+
+    var wrongMethodPostRoute = await SendAsync(dispatcher, app, "GET", "/api/users");
+    if (wrongMethodPostRoute.StatusCode != 405)
+        throw new Exception($"GET reached or incorrectly resolved POST-only route; expected 405, got {wrongMethodPostRoute.StatusCode}.");
+
     // Keep JSON parser hardening first so parser regressions fail before the broader REST suite.
     var earlyMalformedJson = await SendAsync(
         dispatcher, app, "POST", "/api/users", "{not-json", "application/json");
