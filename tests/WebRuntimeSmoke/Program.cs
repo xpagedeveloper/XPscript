@@ -129,7 +129,7 @@ try
     AssertThrows<InvalidOperationException>(() =>
         MultipartRequest("multipart/form-data; boundary=wrong-boundary", validMultipartBody).FormFirst("role"));
     AssertThrows<InvalidOperationException>(() =>
-        validMultipart.FormFirst("role", maxBytes: 8));
+        validMultipart.FormFirst("role", maxBytes: 8, maxFileBytes: 8));
 
     var unterminatedMultipartBody = System.Text.Encoding.UTF8.GetBytes(
         "--safe-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser");
