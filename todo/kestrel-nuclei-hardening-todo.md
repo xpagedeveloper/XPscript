@@ -158,7 +158,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify non-ASCII paths and query strings. Valid percent-encoded UTF-8 paths and query values are handled safely without diagnostic leakage; verified in run #147.
 - [x] Verify Unicode normalization does not create route aliases that bypass authorization. A composed Unicode route resolves normally while its canonically equivalent decomposed spelling does not alias the same resource; shared path resolver regression verified in run #150.
 - [x] Verify encoded control characters in route paths. Encoded NUL path rejected before application handler in run #42.
-- [ ] Verify query parser behavior with duplicate keys.
+- [x] Verify query parser behavior with duplicate keys. QueryAll preserves duplicate values in order while Query/QueryFirst deterministically use the first value; shared runtime, CGI, and FastCGI regressions verified in run #154.
 - [x] Verify extreme query-string sizes. Oversized query/request-line probe verified with 414 in run #42.
 - [ ] Verify form parser abuse cases.
 - [x] Verify JSON parser malformed and deeply nested input. Shared REST parsing covers malformed/deep JSON; real Kestrel HTTP coverage is verified, and CGI/FastCGI malformed JSON body adaptation is explicitly regression-tested. Deep parser limits are shared runtime behavior rather than transport framing; verified through run #143.
