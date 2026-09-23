@@ -443,11 +443,12 @@ paths:
       responses:
         '204': { description: ok }
 """, "security-collision.yaml").Source;
-if (!securityCollisionSource.Contains("Sub SetHeader2(", StringComparison.Ordinal) ||
-    !securityCollisionSource.Contains("Sub SetApiKey(", StringComparison.Ordinal) ||
-    !securityCollisionSource.Contains("Sub SetApiKey2(", StringComparison.Ordinal) ||
-    !securityCollisionSource.Contains("Function SetHeader3(", StringComparison.Ordinal))
-    throw new Exception("Generated API member collisions must be resolved with deterministic deterministic same-scope names.");
+if (!securityCollisionSource.Contains("Sub ApiSetHeader(", StringComparison.Ordinal) ||
+    !securityCollisionSource.Contains("Sub ApiSetHeader2(", StringComparison.Ordinal) ||
+    !securityCollisionSource.Contains("Sub ApiSetApiKey(", StringComparison.Ordinal) ||
+    !securityCollisionSource.Contains("Sub ApiSetApiKey2(", StringComparison.Ordinal) ||
+    !securityCollisionSource.Contains("Function SetHeader(", StringComparison.Ordinal))
+    throw new Exception("OpenAPI operation names must win over generator-owned API helpers, which must use deterministic Api-prefixed names.");
 
 var keywordEnumMemberRejected = false;
 try { _ = new XpsOpenApiClientGenerator().Generate("""
@@ -670,8 +671,9 @@ paths:
       responses:
         '204': { description: ok }
 """, "api-member-collision.yaml").Source;
-if (!apiMemberCollisionSource.Contains("Function SetHeader2(", StringComparison.Ordinal))
-    throw new Exception("OpenAPI operation names that collide with generated API members must receive a deterministic same-scope name.");
+if (!apiMemberCollisionSource.Contains("Function SetHeader(", StringComparison.Ordinal) ||
+    !apiMemberCollisionSource.Contains("Sub ApiSetHeader(", StringComparison.Ordinal))
+    throw new Exception("OpenAPI operation names must be preserved while generated API helpers move to an owned Api-prefixed name.");
 
 var authMemberCollisionSource = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
@@ -688,9 +690,9 @@ paths:
       responses:
         '204': { description: ok }
 """, "auth-member-collision.yaml").Source;
-if (!authMemberCollisionSource.Contains("Sub SetToken(", StringComparison.Ordinal) ||
-    !authMemberCollisionSource.Contains("Function SetToken2(", StringComparison.Ordinal))
-    throw new Exception("OpenAPI operation names that collide with generated auth setter members must receive a deterministic same-scope name.");
+if (!authMemberCollisionSource.Contains("Sub ApiSetToken(", StringComparison.Ordinal) ||
+    !authMemberCollisionSource.Contains("Function SetToken(", StringComparison.Ordinal))
+    throw new Exception("OpenAPI operation names must be preserved while generated auth setters move to an owned Api-prefixed name.");
 
 var scalarResponseCollisionClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
