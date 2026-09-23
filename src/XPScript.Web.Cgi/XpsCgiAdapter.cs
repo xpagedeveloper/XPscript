@@ -98,7 +98,10 @@ public sealed class XpsCgiAdapter : IDisposable
         catch (Exception ex)
         {
             _logger.WriteAccess(request, 500, 0, Stopwatch.GetElapsedTime(started), requestId, "cgi", principal, ex.GetType().FullName, clientSessionId);
-            throw;
+            var error = new XpsWebResponse { StatusCode = 500, ContentType = "text/plain; charset=utf-8" };
+            error.Write("Internal Server Error");
+            error.Complete();
+            await WriteResponseAsync(stdout, error, request.Method, cancellationToken).ConfigureAwait(false);
         }
     }
 
