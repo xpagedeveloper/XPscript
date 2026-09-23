@@ -51,6 +51,12 @@ End Sub
 
 [Anonymous]
 [Get]
+Sub BadRedirect()
+    Response.Redirect("/next" + Chr(13) + Chr(10) + "X-Injected: yes", 302)
+End Sub
+
+[Anonymous]
+[Get]
 Sub MapSafe()
     Response.ContentType = "text/plain; charset=utf-8"
     Response.Write(Server.MapPath("public.txt"))
@@ -146,6 +152,11 @@ try
     AssertStatus(redirect, 302);
     if (!redirect.Headers.TryGetValue("Location", out var location) || location.Single() != "/next")
         throw new Exception("XPScript redirect did not preserve Location.");
+
+    var badRedirect = await SendAsync(dispatcher, root, "GET", "/index/BadRedirect");
+    AssertGeneric500(badRedirect, parent);
+    if (badRedirect.Headers.ContainsKey("X-Injected"))
+        throw new Exception("Redirect response splitting produced an injected header.");
 
     var mapped = await SendAsync(dispatcher, root, "GET", "/index/MapSafe");
     AssertStatus(mapped, 200);
