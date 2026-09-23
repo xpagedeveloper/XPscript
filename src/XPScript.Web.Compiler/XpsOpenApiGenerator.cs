@@ -152,6 +152,7 @@ public sealed class XpsOpenApiGenerator
         var operations = new List<OperationModel>();
         var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var rootSecurity = root["security"];
+        ValidateSecuritySchemes(root);
 
         foreach (var pathPair in paths)
         {
@@ -167,11 +168,48 @@ public sealed class XpsOpenApiGenerator
                 var body = ReadRequestBody(root, operation["requestBody"], name, models, $"{method.ToUpperInvariant()} {pathPair.Key} requestBody");
                 var responses = ReadResponses(root, operation["responses"], $"{method.ToUpperInvariant()} {pathPair.Key} responses");
                 var security = operation.ContainsKey("security") ? operation["security"] : rootSecurity;
-                var authenticated = security is JsonArray securityArray && securityArray.Count > 0;
+                var authenticated = ReadServerSecurity(root, security, $"{method.ToUpperInvariant()} {pathPair.Key} security");
                 operations.Add(new OperationModel(method.ToUpperInvariant(), pathPair.Key, name, parameters, body, responses, authenticated));
             }
         }
         return operations;
+    }
+
+    private static void ValidateSecuritySchemes(JsonObject root)
+    {
+        if (root["components"] is not JsonObject components || components["securitySchemes"] is not JsonObject schemes) return;
+        foreach (var pair in schemes)
+        {
+            if (pair.Value is not JsonObject scheme)
+                throw new XpsOpenApiGenerationException($"components.securitySchemes.{pair.Key} must be an object.");
+            var type = ReadString(scheme, "type")?.ToLowerInvariant()
+                ?? throw new XpsOpenApiGenerationException($"Security scheme '{pair.Key}' is missing 'type'.");
+            if (type is not ("apikey" or "http" or "oauth2" or "openidconnect" or "mutualtls"))
+                throw new XpsOpenApiGenerationException($"Security scheme '{pair.Key}' uses unsupported type '{type}'.");
+        }
+    }
+
+    private static bool ReadServerSecurity(JsonObject root, JsonNode? node, string context)
+    {
+        if (node is null) return false;
+        if (node is not JsonArray requirements)
+            throw new XpsOpenApiGenerationException($"{context} must be an array.");
+        if (requirements.Count == 0) return false;
+        if (root["components"] is not JsonObject components || components["securitySchemes"] is not JsonObject schemes)
+            throw new XpsOpenApiGenerationException($"{context} references security but components.securitySchemes is missing.");
+        foreach (var requirementNode in requirements)
+        {
+            if (requirementNode is not JsonObject requirement)
+                throw new XpsOpenApiGenerationException($"{context} contains a security requirement that is not an object.");
+            foreach (var pair in requirement)
+            {
+                if (!schemes.ContainsKey(pair.Key))
+                    throw new XpsOpenApiGenerationException($"{context} references undefined security scheme '{pair.Key}'.");
+                if (pair.Value is not JsonArray)
+                    throw new XpsOpenApiGenerationException($"{context} scheme '{pair.Key}' must declare an array of scopes.");
+            }
+        }
+        return true;
     }
 
     private static List<ParameterModel> ReadParameters(JsonObject root, JsonNode? node, string context)
