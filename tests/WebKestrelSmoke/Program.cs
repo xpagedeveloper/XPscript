@@ -800,7 +800,11 @@ static async Task AssertBoundedConcurrencyStressAsync(HttpClient client)
         "1",
         StringComparison.Ordinal);
     var requestCount = stressProfile ? 256 : 24;
-    var maxClientConcurrency = stressProfile ? 32 : 8;
+    // This server intentionally has MaxConcurrentConnections=2. Keep the generic
+    // request stress within that admitted connection budget; the dedicated
+    // AssertMaxConcurrentConnectionsAsync regression separately verifies that
+    // excess connections are rejected or queued.
+    var maxClientConcurrency = 2;
     using var gate = new SemaphoreSlim(maxClientConcurrency);
     var tasks = Enumerable.Range(0, requestCount).Select(async i =>
     {
