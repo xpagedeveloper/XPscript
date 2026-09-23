@@ -162,7 +162,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify extreme query-string sizes. Oversized query/request-line probe verified with 414 in run #42.
 - [x] Verify form parser abuse cases. URL-encoded duplicate fields preserve order with deterministic first-value access; byte/field limits are enforced and malformed percent escapes are rejected by the shared runtime parser; verified in run #157.
 - [x] Verify JSON parser malformed and deeply nested input. Shared REST parsing covers malformed/deep JSON; real Kestrel HTTP coverage is verified, and CGI/FastCGI malformed JSON body adaptation is explicitly regression-tested. Deep parser limits are shared runtime behavior rather than transport framing; verified through run #143.
-- [ ] Verify multipart parser malformed boundaries and oversized fields.
+- [x] Verify multipart parser malformed boundaries and oversized fields. Shared parser boundary/body-limit regressions plus explicit Kestrel, CGI, and FastCGI multipart adapter regressions are verified through run #163.
 - [ ] Verify unexpected methods cannot reach a route with the wrong method attribute.
 - [ ] Verify error responses never expose stack traces.
 - [ ] Verify compilation/runtime errors never disclose filesystem paths in production responses.
