@@ -297,7 +297,7 @@ public sealed class XpsOpenApiClientGenerator
         b.AppendLine($"        Dim {resultName} As {responseName}");
         b.AppendLine($"        Set {resultName} = New {responseName}");
         b.AppendLine($"        {urlName} = BaseUrl_i & \"{EscapeXps(op.Path)}\"");
-        foreach (var p in op.Parameters.Where(y => y.Location == "path")) b.AppendLine($"        {urlName} = Replace({urlName}, \"{{{EscapeXps(p.Name)}}}\", Http.EncodePath({p.GeneratedName}))"); foreach (var p in op.Parameters.Where(y => y.Location == "query")) { var line = $"{urlName} = Http_i.AddQuery({urlName}, \"{EscapeXps(p.Name)}\", {p.GeneratedName})"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); } foreach (var p in op.Parameters.Where(y => y.Location == "header")) { var line = $"Call {requestName}.SetHeader(\"{EscapeXps(p.Name)}\", CStr({p.GeneratedName}))"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); }
+        foreach (var p in op.Parameters.Where(y => y.Location == "path")) b.AppendLine($"        {urlName} = Replace({urlName}, \"{{{EscapeXps(p.Name)}}}\", Http_i.EncodePath({p.GeneratedName}))"); foreach (var p in op.Parameters.Where(y => y.Location == "query")) { var line = $"{urlName} = Http_i.AddQuery({urlName}, \"{EscapeXps(p.Name)}\", {p.GeneratedName})"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); } foreach (var p in op.Parameters.Where(y => y.Location == "header")) { var line = $"Call {requestName}.SetHeader(\"{EscapeXps(p.Name)}\", CStr({p.GeneratedName}))"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); }
         EmitSecurity(b, op, securitySchemes, urlName, requestName);
         b.AppendLine($"        {requestName}.Method = \"{op.Method}\""); b.AppendLine($"        {requestName}.Url = {urlName}"); if (op.Body is not null) { if (!op.Body.Required) b.AppendLine($"        If Not {payloadName} Is Nothing Then"); var indent = op.Body.Required ? "        " : "            "; b.AppendLine(indent + $"Call {requestName}.SetHeader(\"Content-Type\", \"application/json\")"); b.AppendLine(indent + $"{requestName}.Body = JsonStringify({payloadName})"); if (!op.Body.Required) b.AppendLine("        End If"); } b.AppendLine($"        Set {rawName} = Http_i.Send({requestName})");
         b.AppendLine($"        Set {resultName}.Raw = {rawName}"); b.AppendLine($"        {resultName}.StatusCode = {rawName}.StatusCode"); b.AppendLine($"        {resultName}.IsSuccess = {rawName}.IsSuccess"); b.AppendLine($"        If Len({rawName}.Body) > 0 Then Set {resultName}.Json = {rawName}.Json()"); EmitResponseValidation(b, op, root, rawName, resultName); EmitResponseMapping(b, op, models, responseMembers, rawName, resultName, procedureNames); b.AppendLine($"        Set {op.Name} = {resultName}"); b.AppendLine("    End Function");
@@ -324,17 +324,17 @@ public sealed class XpsOpenApiClientGenerator
         {
             var condition = alternative.Count == 0 ? "True" : string.Join(" And ", alternative.Select(name =>
             {
-                var scheme = securitySchemes[name]; var auth = "Auth" + scheme.GeneratedName;
-                return scheme.Kind == "basic" ? $"Len({auth}Authorization) > 0" : $"Len({auth}) > 0";
+                var scheme = securitySchemes[name]; var auth = "Auth" + scheme.GeneratedName + (scheme.Kind == "basic" ? "Authorization" : "_i");
+                return $"Len({auth}) > 0";
             }));
             b.AppendLine($"        {(first ? "If" : "ElseIf")} {condition} Then");
             foreach (var schemeName in alternative)
             {
-                var scheme = securitySchemes[schemeName]; var auth = "Auth" + scheme.GeneratedName;
+                var scheme = securitySchemes[schemeName]; var auth = "Auth" + scheme.GeneratedName + (scheme.Kind == "basic" ? "Authorization" : "_i");
                 if (scheme.Kind == "apikey" && scheme.Location == "header") b.AppendLine($"            Call {requestName}.SetHeader(\"{EscapeXps(scheme.WireName!)}\", {auth})");
                 else if (scheme.Kind == "apikey" && scheme.Location == "query") b.AppendLine($"            {urlName} = Http_i.AddQuery({urlName}, \"{EscapeXps(scheme.WireName!)}\", {auth})");
                 else if (scheme.Kind == "bearer") b.AppendLine($"            Call {requestName}.SetBearerToken({auth})");
-                else if (scheme.Kind == "basic") b.AppendLine($"            Call {requestName}.SetAuthorization({auth}Authorization)");
+                else if (scheme.Kind == "basic") b.AppendLine($"            Call {requestName}.SetAuthorization({auth})");
             }
             first = false;
         }
