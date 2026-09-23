@@ -82,6 +82,12 @@ try
 
     if (request.Method != "POST") throw new Exception("HTTP method normalization failed.");
     if (request.Headers["X-Test"].Count != 2) throw new Exception("Multi-value header preservation failed.");
+    var duplicateQueryValues = request.QueryAll("a");
+    if (duplicateQueryValues.Count != 2 || duplicateQueryValues[0] != "1" || duplicateQueryValues[1] != "2")
+        throw new Exception("Duplicate query values were not preserved deterministically.");
+    if (request.QueryFirst("a") != "1" || request.Query("a") != "1")
+        throw new Exception("Duplicate query first-value behavior was not deterministic.");
+
 
     // Run response-cookie injection regressions early: these protect a shared invariant used by Kestrel, CGI and FastCGI.
     var cookieInjectionResponse = new XpsWebResponse();
