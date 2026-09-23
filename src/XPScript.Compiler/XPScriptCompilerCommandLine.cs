@@ -638,7 +638,14 @@ public static class XPScriptCompilerCommandLine
             if (process.ExitCode != 0 || !File.Exists(navigationPath))
                 return process.ExitCode;
 
-            using var navigationDocument = JsonDocument.Parse(await File.ReadAllTextAsync(navigationPath).ConfigureAwait(false));
+            // Only desktop UI navigation writes JSON to this file. Some non-UI runtimes may
+            // create or reuse the path for diagnostic output, so do not treat mere existence as
+            // a navigation request.
+            var navigationText = await File.ReadAllTextAsync(navigationPath).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(navigationText) || navigationText.AsSpan().TrimStart()[0] != '{')
+                return process.ExitCode;
+
+            using var navigationDocument = JsonDocument.Parse(navigationText);
             var navigation = navigationDocument.RootElement;
             var version = navigation.TryGetProperty("version", out var versionElement) && versionElement.TryGetInt32(out var parsedVersion)
                 ? parsedVersion
