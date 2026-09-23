@@ -23,6 +23,7 @@ End Sub
 
 try
 {
+    await RunMultipartAdapterRegression(root, scriptPath);
     await RunDuplicateQueryRegression(root, scriptPath);
     await RunJsonBodyAdapterRegression(root, scriptPath);
     await RunDuplicateCookieRegression(root, scriptPath);
@@ -36,6 +37,31 @@ try
 finally
 {
     Directory.Delete(parent, recursive: true);
+}
+
+static async Task RunMultipartAdapterRegression(string root, string scriptPath)
+{
+    var body = Encoding.UTF8.GetBytes("--cgi-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser\r\n--cgi-boundary--\r\n");
+    var environment = BaseEnvironment(root, scriptPath);
+    environment["REQUEST_METHOD"] = "POST";
+    environment["CONTENT_TYPE"] = "multipart/form-data; boundary=cgi-boundary";
+    environment["CONTENT_LENGTH"] = body.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var server = new XpsServerInfo("cgi-multipart", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new MultipartHandler());
+    await using var stdin = new MemoryStream(body);
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(stdin, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    if (!text.EndsWith("user", StringComparison.Ordinal))
+        throw new Exception("CGI multipart form handling failed: " + text);
+
+    environment["CONTENT_TYPE"] = "multipart/form-data; boundary=wrong-boundary";
+    await using var badIn = new MemoryStream(body);
+    await using var badOut = new MemoryStream();
+    await adapter.RunAsync(badIn, badOut, environment);
+    var badText = Encoding.UTF8.GetString(badOut.ToArray());
+    if (!badText.StartsWith("Status: 400 Bad Request\r\n", StringComparison.Ordinal))
+        throw new Exception("CGI malformed multipart did not map to 400: " + badText);
 }
 
 static async Task RunDuplicateQueryRegression(string root, string scriptPath)
@@ -285,6 +311,23 @@ sealed class EchoHandler : IXpsWebRequestHandler
         context.Response.Write(context.Request.Cookie("client"));
         context.Response.Write("|");
         context.Response.Write(context.Request.BodyText());
+        return Task.CompletedTask;
+    }
+}
+
+sealed class MultipartHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        try
+        {
+            context.Response.Write(context.Request.FormFirst("role"));
+        }
+        catch (InvalidOperationException)
+        {
+            context.Response.StatusCode = 400;
+            context.Response.Write("Invalid multipart");
+        }
         return Task.CompletedTask;
     }
 }
