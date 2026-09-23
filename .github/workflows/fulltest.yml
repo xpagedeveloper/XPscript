@@ -157,18 +157,64 @@ jobs:
         run: dotnet run --project ./tests/WebBrowserWasmMultiWindowSmoke/WebBrowserWasmMultiWindowSmoke.csproj -c Release
       - name: Verify desktop UIForm lifecycle
         run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
-      - name: Verify CLI application scaffold
+      - name: Verify new project scaffolds
         shell: bash
         run: |
-          rm -rf ./out/cli-scaffold
-          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- new cli ./out/cli-scaffold
-          test -f ./out/cli-scaffold/main.xps
-          grep -q 'Application.ArgCount' ./out/cli-scaffold/main.xps
-          grep -q 'Application.Args(i)' ./out/cli-scaffold/main.xps
-          grep -q 'Application.ExitCode = 0' ./out/cli-scaffold/main.xps
-          output="$(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- run ./out/cli-scaffold/main.xps -- first second)"
+          set -euo pipefail
+          rm -rf ./out/scaffold-test
+          mkdir -p ./out/scaffold-test
+          cli=(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true --)
+
+          "${cli[@]}" new cli ./out/scaffold-test/myapp
+          test -f ./out/scaffold-test/myapp/main.xps
+          grep -q 'Application.ArgCount' ./out/scaffold-test/myapp/main.xps
+          grep -q 'Application.Args(i)' ./out/scaffold-test/myapp/main.xps
+          grep -q 'Application.ExitCode = 0' ./out/scaffold-test/myapp/main.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/myapp/main.xps -o ./out/scaffold-test/myapp/app --runtime=false
+          test -f ./out/scaffold-test/myapp/app
+          output="$("${cli[@]}" run ./out/scaffold-test/myapp/main.xps -- first second)"
           printf '%s\n' "$output" | grep -qx 'first'
           printf '%s\n' "$output" | grep -qx 'second'
+
+          "${cli[@]}" new desktop ./out/scaffold-test/desktop
+          test -f ./out/scaffold-test/desktop/main.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/desktop/main.xps -o ./out/scaffold-test/desktop/app --runtime=false
+          test -f ./out/scaffold-test/desktop/app
+          set +e
+          timeout 10s "${cli[@]}" run ./out/scaffold-test/desktop/main.xps
+          desktop_status=$?
+          set -e
+          if [ "$desktop_status" -ne 0 ] && [ "$desktop_status" -ne 124 ]; then
+            exit "$desktop_status"
+          fi
+
+          "${cli[@]}" new web ./out/scaffold-test/mysite
+          test -f ./out/scaffold-test/mysite/index.xps
+          "${cli[@]}" web --root ./out/scaffold-test/mysite --address 127.0.0.1 --port 18081 >./out/scaffold-test/web.log 2>&1 &
+          web_pid=$!
+          trap 'kill $web_pid 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18081/ | grep -q 'Hello from XPscript'; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:18081/ | grep -q 'Hello from XPscript'
+          kill "$web_pid"
+          wait "$web_pid" 2>/dev/null || true
+          trap - EXIT
+
+          "${cli[@]}" new rest ./out/scaffold-test/myapi
+          test -f ./out/scaffold-test/myapi/index.xps
+          "${cli[@]}" web --root ./out/scaffold-test/myapi --address 127.0.0.1 --port 18082 >./out/scaffold-test/rest.log 2>&1 &
+          rest_pid=$!
+          trap 'kill $rest_pid 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18082/api/health | grep -q '"status":"ok"'; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:18082/api/health | grep -q '"status":"ok"'
+          kill "$rest_pid"
+          wait "$rest_pid" 2>/dev/null || true
+          trap - EXIT
       - name: Verify OpenAPI REST generator
         run: dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release
       - name: Verify OpenAPI unified CLI generate
