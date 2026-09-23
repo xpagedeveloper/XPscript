@@ -70,7 +70,21 @@ public static class CompilerDaemonClient
             {
                 var line = await process.StandardOutput.ReadLineAsync(timeout.Token).ConfigureAwait(false);
                 if (line is null) break;
-                using var ready = JsonDocument.Parse(line);
+
+                // The unified xpscript host may emit its normal banner before the daemon
+                // protocol's JSON ready frame. Ignore non-JSON stdout until the ready frame
+                // arrives instead of treating host output as daemon protocol data.
+                JsonDocument? ready = null;
+                try
+                {
+                    ready = JsonDocument.Parse(line);
+                }
+                catch (JsonException)
+                {
+                    continue;
+                }
+
+                using (ready)
                 if (ready.RootElement.TryGetProperty("type", out var type) && type.GetString() == "ready")
                 {
                     // Ready is the daemon's only stdout protocol frame. Continue draining stdout
