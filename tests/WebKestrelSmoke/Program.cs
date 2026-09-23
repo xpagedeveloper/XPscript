@@ -124,6 +124,54 @@ var app = XpsKestrelAdapter.Build(
 var stopped = false;
 string? firstRequestId = null;
 
+// HTTP/2 has a different framing model from HTTP/1.1. Exercise Kestrel's cleartext
+// HTTP/2 endpoint directly so HTTP/1.1-only raw probes do not create a coverage gap.
+var http2Options = new XpsKestrelOptions
+{
+    Port = 0,
+    Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2,
+    AllowedHosts = ["localhost", "127.0.0.1", "::1"]
+};
+var http2App = XpsKestrelAdapter.Build(
+    http2Options,
+    new XpsServerInfo("kestrel-http2-smoke", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"),
+    new EchoHandler(),
+    new SmokeApplicationState());
+try
+{
+    await http2App.StartAsync();
+    var http2Server = http2App.Services.GetRequiredService<IServer>();
+    var http2Addresses = http2Server.Features.Get<IServerAddressesFeature>()?.Addresses
+        ?? throw new Exception("HTTP/2 Kestrel did not expose server addresses.");
+    using var http2Client = new HttpClient
+    {
+        BaseAddress = new Uri(http2Addresses.Single()),
+        DefaultRequestVersion = HttpVersion.Version20,
+        DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact
+    };
+    using var http2Request = new HttpRequestMessage(HttpMethod.Get, "/http2?mode=exact")
+    {
+        Version = HttpVersion.Version20,
+        VersionPolicy = HttpVersionPolicy.RequestVersionExact
+    };
+    http2Request.Headers.TryAddWithoutValidation("X-Request-Test", "http2");
+    using var http2Response = await http2Client.SendAsync(http2Request);
+    if (http2Response.Version != HttpVersion.Version20)
+        throw new Exception($"HTTP/2 endpoint negotiated {http2Response.Version} instead of HTTP/2.");
+    if ((int)http2Response.StatusCode != 201)
+        throw new Exception($"HTTP/2 request expected 201, got {(int)http2Response.StatusCode}.");
+    var http2Body = await http2Response.Content.ReadAsStringAsync();
+    if (!http2Body.Contains("PATH=/http2", StringComparison.Ordinal) ||
+        !http2Body.Contains("QUERY=mode=exact", StringComparison.Ordinal) ||
+        !http2Body.Contains("HEADER=http2", StringComparison.Ordinal))
+        throw new Exception("HTTP/2 request metadata was not preserved by the Kestrel adapter: " + http2Body);
+}
+finally
+{
+    await http2App.StopAsync();
+    await http2App.DisposeAsync();
+}
+
 try
 {
     await app.StartAsync();
