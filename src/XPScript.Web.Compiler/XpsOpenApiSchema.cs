@@ -4,7 +4,20 @@ namespace XPScript.Web.Compiler;
 
 internal static class XpsOpenApiSchema
 {
+    private static readonly AsyncLocal<string?> OpenApiVersion = new();
     private static readonly AsyncLocal<IReadOnlyDictionary<string, string>?> ReferenceTypeNames = new();
+
+    internal static IDisposable UseOpenApiVersion(string version)
+    {
+        var previous = OpenApiVersion.Value;
+        OpenApiVersion.Value = version;
+        return new OpenApiVersionScope(previous);
+    }
+
+    private sealed class OpenApiVersionScope(string? previous) : IDisposable
+    {
+        public void Dispose() => OpenApiVersion.Value = previous;
+    }
 
     internal static IDisposable UseReferenceTypeNames(IReadOnlyDictionary<string, string> names)
     {
@@ -42,6 +55,8 @@ internal static class XpsOpenApiSchema
     {
         if (schema["type"] is JsonArray types)
         {
+            if (OpenApiVersion.Value?.StartsWith("3.0.", StringComparison.Ordinal) == true)
+                throw new XpsOpenApiGenerationException(context + " uses a JSON Schema type array, which is not supported by OpenAPI 3.0. Use nullable: true with a single type instead.");
             var nonNull = types.Select(x => x?.GetValue<string>()).Where(x => !string.Equals(x, "null", StringComparison.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             if (nonNull.Length == 1) { var copy = (JsonObject)schema.DeepClone(); copy["type"] = nonNull[0]; return XpsType(root, copy, context); }
             return "Variant";
