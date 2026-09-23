@@ -12,13 +12,28 @@ The implementation must support both **JSON** and **YAML/YML** input.
 ## Supported specifications
 
 - [ ] Swagger / OpenAPI 2.0 (Swagger 2.0)
-- [x] OpenAPI 3.0.x
-- [x] OpenAPI 3.1.x
+- [ ] OpenAPI 3.0.x
+- [ ] OpenAPI 3.1.x
 - [ ] OpenAPI 3.2.x
-- [x] JSON input for every supported specification
-- [x] YAML/YML input for every supported specification
+- [ ] JSON input for every supported specification
+- [ ] YAML/YML input for every supported specification
 - [ ] Reject unsupported/invalid documents with actionable diagnostics
 - [ ] Detect the specification version from the document rather than the file extension
+
+## Specification normalization layer
+
+Swagger 2.0, OpenAPI 3.0, 3.1 and 3.2 must be normalized into one internal representation before server/client emission. Do not duplicate the complete generators per specification version.
+
+- [ ] Introduce explicit specification detection: Swagger 2.0 via `swagger: "2.0"`, OpenAPI via `openapi`
+- [ ] Normalize Swagger 2.0 `definitions` to reusable schema models
+- [ ] Normalize Swagger 2.0 body/form parameters to the common request model
+- [ ] Normalize Swagger 2.0 `host`, `basePath`, `schemes` to server/base URL semantics
+- [ ] Normalize Swagger 2.0 `securityDefinitions` to the common security model
+- [ ] Normalize Swagger 2.0 response schemas to the common response model
+- [ ] Normalize OpenAPI 3.0/3.1/3.2 components, parameters, request bodies, responses and security into the same internal model
+- [ ] Handle version-specific JSON Schema dialect differences deliberately instead of silently treating all versions as 3.1
+- [ ] Add a fixture that proves version detection is content-based even when the file extension is misleading
+- [ ] Add negative tests for unsupported Swagger/OpenAPI versions
 
 ## REST server generation
 
