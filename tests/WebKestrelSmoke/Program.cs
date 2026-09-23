@@ -945,9 +945,20 @@ static async Task AssertKeepAliveTimeoutAsync(Uri baseAddress)
     var buffer = new byte[4096];
     using (var firstTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
     {
-        var read = await stream.ReadAsync(buffer, firstTimeout.Token);
-        if (read == 0 || !Encoding.ASCII.GetString(buffer, 0, read).Contains("201", StringComparison.Ordinal))
-            throw new Exception("Keep-alive timeout setup request did not complete.");
+        var response = new StringBuilder();
+        while (!response.ToString().Contains("\r\n\r\n", StringComparison.Ordinal))
+        {
+            var read = await stream.ReadAsync(buffer, firstTimeout.Token);
+            if (read == 0)
+                throw new Exception("Keep-alive timeout setup connection closed before the response headers completed.");
+            response.Append(Encoding.ASCII.GetString(buffer, 0, read));
+        }
+
+        var headerText = response.ToString();
+        var statusLineEnd = headerText.IndexOf("\r\n", StringComparison.Ordinal);
+        var statusLine = statusLineEnd >= 0 ? headerText[..statusLineEnd] : headerText;
+        if (!statusLine.Contains(" 201 ", StringComparison.Ordinal))
+            throw new Exception($"Keep-alive timeout setup request expected 201, got: {statusLine}");
     }
     await Task.Delay(TimeSpan.FromSeconds(2));
     try
