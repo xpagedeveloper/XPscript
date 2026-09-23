@@ -116,6 +116,29 @@ var crlfHeaderOptions = new XpsKestrelOptions
 };
 AssertThrows<ArgumentException>(() => crlfHeaderOptions.Validate());
 
+// Query-string security regressions. Decode exactly once and never reinterpret decoded delimiters as structure.
+var querySecurityRequest = new XpsWebRequest(
+    "GET", "/", string.Empty,
+    "?value=test%26admin%3Dtrue%3Fnext&double=%2526admin%253Dtrue&unicode=%EF%BC%86admin%EF%BC%9Dtrue&flag&empty=",
+    new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase),
+    null, null, ReadOnlyMemory<byte>.Empty, "localhost", "http", "127.0.0.1", "HTTP/1.1",
+    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+if (querySecurityRequest.Query("value") != "test&admin=true?next")
+    throw new Exception("Encoded query delimiters were reinterpreted as query structure.");
+if (querySecurityRequest.Query("admin").Length != 0)
+    throw new Exception("Encoded query value injected an unexpected admin parameter.");
+if (querySecurityRequest.Query("double") != "%26admin%3Dtrue")
+    throw new Exception("Double-encoded query value was decoded more than once.");
+if (querySecurityRequest.Query("unicode") != "＆admin＝true")
+    throw new Exception("Unicode delimiter lookalikes were normalized into query structure.");
+if (querySecurityRequest.Query("flag") != string.Empty || querySecurityRequest.Query("empty") != string.Empty)
+    throw new Exception("Valueless or empty query parameters were parsed unexpectedly.");
+AssertThrows<InvalidOperationException>(() => new XpsWebRequest(
+    "GET", "/", string.Empty, "?bad=%2",
+    new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase),
+    null, null, ReadOnlyMemory<byte>.Empty, "localhost", "http", "127.0.0.1", "HTTP/1.1",
+    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)).Query("bad"));
+
 var app = XpsKestrelAdapter.Build(
     options,
     serverInfo,
