@@ -37,7 +37,7 @@ try
         await errorAdapter.ProcessConnectionAsync(errorStream);
     }
     var errorOutput = ParseResponse(errorStream.Written);
-    if (!errorOutput.Contains("Status: 500 Internal Server Error", StringComparison.Ordinal) ||
+    if (!errorOutput.StartsWith("Status: 500\r\n", StringComparison.Ordinal) ||
         !errorOutput.EndsWith("Internal Server Error", StringComparison.Ordinal))
         throw new Exception("FastCGI unhandled error was not sanitized: " + errorOutput);
     if (errorOutput.Contains("SECURITY-SENTINEL", StringComparison.Ordinal) ||
