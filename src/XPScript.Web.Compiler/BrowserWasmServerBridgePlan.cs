@@ -308,7 +308,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         var suffix = procedure.Id[..8];
         var argsName = "XpscriptWasmBridgeArgs" + suffix;
         var resultName = "XpscriptWasmBridgeResult" + suffix;
-        output.AppendLine($"    Dim {argsName} As New JsonArray");
+        output.AppendLine($"    Dim {argsName} As New XPJsonArray");
         foreach (var parameter in procedure.Parameters) output.AppendLine($"    Call {argsName}.Add({parameter.Name})");
         if (!procedure.IsFunction)
         {
@@ -332,7 +332,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine();
         output.AppendLine("Private Function " + CapabilityFunction + "(spinnerDelay As Integer) As String");
         output.AppendLine("    Dim http As New HttpClient");
-        output.AppendLine("    Dim document As JsonDocument");
+        output.AppendLine("    Dim document As XPJsonDocument");
         output.AppendLine("    Dim root As Variant");
         output.AppendLine("    If " + CapabilityVariable + " = \"\" Then");
         output.AppendLine("        Call http.SetHeader(\"X-XPS-WASM-Bridge\", \"1\")");
@@ -347,8 +347,8 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine();
         output.AppendLine("Private Function " + InvokeFunction + "(procedureId As String, arguments As Variant, spinnerDelay As Integer) As Variant");
         output.AppendLine("    Dim http As New HttpClient");
-        output.AppendLine("    Dim payload As New JsonObject");
-        output.AppendLine("    Dim response As HttpResponse");
+        output.AppendLine("    Dim payload As New XPJsonObject");
+        output.AppendLine("    Dim response As XPHttpResponse");
         output.AppendLine("    Dim document As JsonDocument");
         output.AppendLine("    Dim root As Variant");
         output.AppendLine("    Call http.SetHeader(\"X-XPS-WASM-Bridge\", \"1\")");
