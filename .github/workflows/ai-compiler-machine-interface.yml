@@ -286,6 +286,33 @@ jobs:
           if ($status -notmatch 'PID ([0-9]+)') { throw "Daemon did not survive protocol errors: $status" }
           Invoke-XPScript @('daemon','quit') | Out-Null
 
+      - name: Daemon debug error redaction probe
+        shell: pwsh
+        run: |
+          function Invoke-XPScript([string[]] $Arguments) {
+            & dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- @Arguments
+          }
+          Invoke-XPScript @('daemon','quit') | Out-Null
+          Invoke-XPScript @('run','samples/application-is-debugging.xps','--security=off') | Out-Null
+          $statePath = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'XPScript/daemon-v1.json'
+          $state = Get-Content $statePath -Raw | ConvertFrom-Json
+          function Invoke-DaemonRequest($request) {
+            $client = [System.Net.Sockets.TcpClient]::new('127.0.0.1', [int]$state.port)
+            try {
+              $stream = $client.GetStream()
+              $writer = [System.IO.StreamWriter]::new($stream, [System.Text.UTF8Encoding]::new($false), 4096, $true)
+              $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::UTF8, $false, 4096, $true)
+              $writer.AutoFlush = $true
+              $writer.WriteLine(($request | ConvertTo-Json -Compress -Depth 8))
+              return ($reader.ReadLine() | ConvertFrom-Json)
+            } finally { $client.Dispose() }
+          }
+          $normal = Invoke-DaemonRequest @{ id=51; method='compileRun'; token=$state.token; params=@{ source=$null; outputDirectory=''; runtimeIdentifier=''; debug=$false } }
+          if ($normal.error -match 'System\.| at XPScript|Exception') { throw "Normal daemon error leaked internal detail: $($normal.error)" }
+          $debug = Invoke-DaemonRequest @{ id=52; method='compileRun'; token=$state.token; params=@{ source=$null; outputDirectory=''; runtimeIdentifier=''; debug=$true } }
+          if ($debug.error -notmatch 'Exception|System\.| at XPScript') { throw "Debug daemon error did not expose troubleshooting detail: $($debug.error)" }
+          Invoke-XPScript @('daemon','quit') | Out-Null
+
       - name: Daemon bypass and stale-state recovery probe
         shell: pwsh
         run: |
