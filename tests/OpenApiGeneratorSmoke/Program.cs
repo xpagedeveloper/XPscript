@@ -952,6 +952,25 @@ paths:
       responses:
         '204': { description: ok }
 """, "unicode.yaml").Source;
+var cookieServer = generator.Generate("""
+openapi: 3.1.0
+info: { title: Cookie Server, version: 1.0.0 }
+paths:
+  /cookie:
+    get:
+      operationId: cookieValue
+      parameters:
+        - { name: client-id, in: cookie, schema: { type: string } }
+      responses:
+        '204': { description: ok }
+""", "cookie-server.yaml");
+if (!cookieServer.Source.Contains("[FromCookie:\"client-id\"] pClientId As String", StringComparison.Ordinal))
+    throw new Exception("OpenAPI server cookie parameter was not emitted as FromCookie.");
+var cookieParsed = new XpsWebRouteMetadataParser().Parse(cookieServer.Source);
+var cookieBinding = cookieParsed.Routes["EndpointCookieValue"].ParameterBindings?.SingleOrDefault();
+if (cookieBinding is null || cookieBinding.Source != "COOKIE" || cookieBinding.SourceName != "client-id")
+    throw new Exception("Generated OpenAPI FromCookie metadata was not retained.");
+
 if (!unicodeClient.Contains("Http_i.EncodePath(City)", StringComparison.Ordinal) || !unicodeClient.Contains("Http_i.AddQuery(url, \"q\", Q)", StringComparison.Ordinal))
     throw new Exception("OpenAPI Unicode path/query values must flow through XPHttp UTF-8 encoding helpers. Generated source:\n" + unicodeClient);
 
