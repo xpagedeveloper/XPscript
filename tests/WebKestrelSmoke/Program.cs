@@ -134,6 +134,19 @@ try
 
     using var client = new HttpClient { BaseAddress = new Uri(address) };
 
+    using (var error = await client.GetAsync("/unhandled-error"))
+    {
+        if ((int)error.StatusCode != 500)
+            throw new Exception($"Kestrel unhandled error expected 500, got {(int)error.StatusCode}.");
+        var errorBody = await error.Content.ReadAsStringAsync();
+        if (errorBody != "Internal Server Error")
+            throw new Exception("Kestrel unhandled error was not sanitized: " + errorBody);
+        if (errorBody.Contains("SECURITY-SENTINEL", StringComparison.Ordinal) ||
+            errorBody.Contains("EchoHandler", StringComparison.Ordinal) ||
+            errorBody.Contains(".cs:", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Kestrel unhandled error leaked diagnostics: " + errorBody);
+    }
+
     // Kestrel multipart adapter regression: verify the transport preserves the multipart body and parser failures remain controlled.
     using (var multipart = new MultipartFormDataContent("kestrel-boundary"))
     {
@@ -822,6 +835,8 @@ sealed class EchoHandler : IXpsWebRequestHandler
 {
     public Task HandleAsync(XpsWebContext context)
     {
+        if (context.Request.Path.Equals("/unhandled-error", StringComparison.Ordinal))
+            throw new InvalidOperationException("SECURITY-SENTINEL " + Environment.CurrentDirectory);
         context.Response.StatusCode = 201;
         context.Response.ContentType = "text/plain; charset=utf-8";
         context.Response.SetHeader("X-Xps-Test", "ok");
