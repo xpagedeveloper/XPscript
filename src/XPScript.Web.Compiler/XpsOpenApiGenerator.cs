@@ -187,8 +187,8 @@ public sealed class XpsOpenApiGenerator
                 ?? throw new XpsOpenApiGenerationException($"Parameter '{name}' in {context} is missing 'in'.");
             if (location == "path" && !ReadBoolean(parameter, "required"))
                 throw new XpsOpenApiGenerationException($"Path parameter '{name}' in {context} must declare required: true.");
-            if (location is not ("path" or "query" or "header"))
-                throw new XpsOpenApiGenerationException($"Parameter '{name}' uses unsupported location '{location}'. Supported locations are path, query and header.");
+            if (location is not ("path" or "query" or "header" or "cookie"))
+                throw new XpsOpenApiGenerationException($"Parameter '{name}' uses unsupported location '{location}'. Supported locations are path, query, header and cookie.");
             if (parameter["schema"] is not JsonObject schema)
                 throw new XpsOpenApiGenerationException($"Parameter '{name}' in {context} must declare a schema.");
             var type = new XpsType(XpsOpenApiSchema.XpsType(root, schema, $"parameter '{name}'"), XpsOpenApiSchema.IsObjectType(root, schema, $"parameter '{name}'"));
@@ -417,6 +417,7 @@ public sealed class XpsOpenApiGenerator
                     "path" => "FromRoute",
                     "query" => "FromQuery",
                     "header" => "FromHeader",
+                    "cookie" => "FromCookie",
                     _ => throw new InvalidOperationException("Unsupported parameter location.")
                 };
                 var escapedName = parameter.Name.Replace("\"", "\"\"", StringComparison.Ordinal);
