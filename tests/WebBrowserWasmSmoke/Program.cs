@@ -77,6 +77,48 @@ End Sub
     if (capabilityResponse.StatusCode != 200 || !capabilityResponse.Body.Contains("capability", StringComparison.Ordinal))
         throw new Exception("Server bridge capability endpoint did not issue a session-bound capability.");
 
+    var cryptoPath = Path.Combine(root, "server-crypto.xps");
+    await File.WriteAllTextAsync(cryptoPath, """
+[Platform:browser-wasm]
+
+[ServerSide]
+Function EncryptOnServer(value As String, password As String) As String
+    EncryptOnServer = Application.Crypto.Encrypt(value, password)
+End Function
+
+Sub Main()
+    Print EncryptOnServer("secret", "password")
+End Sub
+""");
+    await using (var cryptoUnit = await compiler.CompileAsync(cryptoPath, root))
+    {
+        if (!cryptoUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
+            throw new Exception("[ServerSide] Application.Crypto browser-WASM compile did not produce the WASM route.");
+    }
+
+    var unsafeCryptoPath = Path.Combine(root, "unsafe-crypto.xps");
+    await File.WriteAllTextAsync(unsafeCryptoPath, """
+[Platform:browser-wasm]
+
+Function EncryptInBrowser(value As String, password As String) As String
+    EncryptInBrowser = Application.Crypto.Encrypt(value, password)
+End Function
+
+Sub Main()
+    Print EncryptInBrowser("secret", "password")
+End Sub
+""");
+    try
+    {
+        await using var ignored = await compiler.CompileAsync(unsafeCryptoPath, root);
+        throw new Exception("Unannotated Application.Crypto browser-WASM code compiled without [ServerSide].");
+    }
+    catch (XpsWebCompilationException ex) when (ex.Message.Contains("not marked [ServerSide]", StringComparison.OrdinalIgnoreCase))
+    {
+        if (ex.DiagnosticCode != "XPS3002" || ex.Category != "execution-context")
+            throw new Exception("Application.Crypto missing [ServerSide] diagnostic was not structured as XPS3002.");
+    }
+
     var unsafePath = Path.Combine(root, "unsafe-server.xps");
     await File.WriteAllTextAsync(unsafePath, """
 [Platform:browser-wasm]
