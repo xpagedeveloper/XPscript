@@ -504,17 +504,15 @@ Scaffolding:
   Existing index.xps or main.xps files are never overwritten.
 
 Examples:
-  xpscript new rest ./myapi
-  xpscript new web ./mysite
+  xpscript new cli ./myapp
   xpscript new desktop ./myapp
-  xpscript new cli ./mycli
-  xpscript new rest .
+  xpscript new web ./mysite
+  xpscript new rest ./myapi
   xpscript openapi generate ./openapi.yaml
   xpscript openapi generate ./petstore.yaml -o ./generated/petstore.xps
   xpscript compile hello.xps
   xpscript compile hello.xps --platform linux-x64 -o hello
   xpscript run hello.xps
-  xpscript run hello.xps -- --runtime passed-to-script
   xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto
   xpscript web ./site
   xpscript web --config ./production.cfg
