@@ -48,6 +48,7 @@ public sealed class XpsOpenApiGenerator
         if (!version.StartsWith("3.0.", StringComparison.Ordinal) && !version.StartsWith("3.1.", StringComparison.Ordinal) && !version.StartsWith("3.2.", StringComparison.Ordinal))
             throw new XpsOpenApiGenerationException($"OpenAPI version '{version}' is unsupported. XPScript supports OpenAPI 3.0.x, 3.1.x and 3.2.x.");
 
+        using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version);
         var models = CollectComponentModels(root);
         var operations = CollectOperations(root, models);
         if (operations.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI document does not contain any supported path operations.");
