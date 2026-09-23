@@ -121,11 +121,11 @@ public static class CompilerDaemonServer
                     if (method == "compileRun")
                     {
                         var parameters = root.GetProperty("params");
+                        var debug = parameters.TryGetProperty("debug", out var debugElement) && debugElement.ValueKind == JsonValueKind.True;
+                        debugRequest = debug;
                         var source = parameters.GetProperty("source").GetString() ?? "";
                         var outputDirectory = parameters.GetProperty("outputDirectory").GetString() ?? "";
                         var runtimeIdentifier = parameters.GetProperty("runtimeIdentifier").GetString() ?? "";
-                        var debug = parameters.TryGetProperty("debug", out var debugElement) && debugElement.GetBoolean();
-                        debugRequest = debug;
                         var restricted = parameters.TryGetProperty("restricted", out var restrictedElement) && restrictedElement.GetBoolean();
                         var securityText = parameters.TryGetProperty("securityMode", out var securityElement) ? securityElement.GetString() : null;
                         var securityMode = Enum.TryParse<ApplicationSecurityMode>(securityText, true, out var parsedSecurity)
