@@ -163,7 +163,7 @@ try
         throw new Exception($"HTTP/2 request expected 201, got {(int)http2Response.StatusCode}.");
     var http2Body = await http2Response.Content.ReadAsStringAsync();
     if (!http2Body.Contains("PATH=/http2", StringComparison.Ordinal) ||
-        !http2Body.Contains("QUERY=mode=exact", StringComparison.Ordinal) ||
+        !http2Body.Contains("QUERY=?mode=exact", StringComparison.Ordinal) ||
         !http2Body.Contains("HEADER=http2", StringComparison.Ordinal))
         throw new Exception("HTTP/2 request metadata was not preserved by the Kestrel adapter: " + http2Body);
 }
