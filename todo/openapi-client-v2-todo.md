@@ -2,16 +2,15 @@
 
 ## Goal
 
-XPScript shall be able to consume OpenAPI/Swagger descriptions and generate usable XPScript source in both directions:
+XPScript shall be able to consume OpenAPI descriptions and generate usable XPScript source in both directions:
 
 1. **REST server skeleton** — generate a server application with endpoint skeleton functions for every operation described by the API.
 2. **REST client** — generate a client that can connect to the described service, including the operations, request/response models, schemas, enums, authentication and other API surface required to use the service from XPScript.
 
-The implementation must support both **JSON** and **YAML/YML** input.
+The implementation must support OpenAPI **3.0, 3.1 and 3.2** in both **JSON** and **YAML/YML** input. Swagger/OpenAPI 2.0 is explicitly out of scope for this workstream and can be evaluated separately later.
 
 ## Supported specifications
 
-- [ ] Swagger / OpenAPI 2.0 (Swagger 2.0)
 - [ ] OpenAPI 3.0.x
 - [ ] OpenAPI 3.1.x
 - [ ] OpenAPI 3.2.x
@@ -22,18 +21,13 @@ The implementation must support both **JSON** and **YAML/YML** input.
 
 ## Specification normalization layer
 
-Swagger 2.0, OpenAPI 3.0, 3.1 and 3.2 must be normalized into one internal representation before server/client emission. Do not duplicate the complete generators per specification version.
+OpenAPI 3.0, 3.1 and 3.2 should share a common internal representation before server/client emission where version-specific semantics differ.
 
-- [ ] Introduce explicit specification detection: Swagger 2.0 via `swagger: "2.0"`, OpenAPI via `openapi`
-- [ ] Normalize Swagger 2.0 `definitions` to reusable schema models
-- [ ] Normalize Swagger 2.0 body/form parameters to the common request model
-- [ ] Normalize Swagger 2.0 `host`, `basePath`, `schemes` to server/base URL semantics
-- [ ] Normalize Swagger 2.0 `securityDefinitions` to the common security model
-- [ ] Normalize Swagger 2.0 response schemas to the common response model
-- [ ] Normalize OpenAPI 3.0/3.1/3.2 components, parameters, request bodies, responses and security into the same internal model
+- [ ] Detect the OpenAPI specification version from the document content
+- [ ] Normalize OpenAPI 3.0/3.1/3.2 components, parameters, request bodies, responses and security into a common internal model where needed
 - [ ] Handle version-specific JSON Schema dialect differences deliberately instead of silently treating all versions as 3.1
 - [ ] Add a fixture that proves version detection is content-based even when the file extension is misleading
-- [ ] Add negative tests for unsupported Swagger/OpenAPI versions
+- [ ] Add negative tests for unsupported OpenAPI versions
 
 ## REST server generation
 
@@ -126,10 +120,6 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 ## CI acceptance
 
 - [x] OpenAPI smoke tests run early enough on Linux to provide fast failure feedback
-- [ ] Swagger/OpenAPI 2.0 JSON server generation + compile test
-- [ ] Swagger/OpenAPI 2.0 YAML server generation + compile test
-- [ ] Swagger/OpenAPI 2.0 JSON client generation + compile test
-- [ ] Swagger/OpenAPI 2.0 YAML client generation + compile test
 - [ ] OpenAPI 3.0 JSON server generation + compile test
 - [ ] OpenAPI 3.0 YAML server generation + compile test
 - [ ] OpenAPI 3.0 JSON client generation + compile test
@@ -152,7 +142,7 @@ Do not merge `openapi-client-v2` / PR #582 to `main` until the applicable items 
 
 ## Verified CI inventory (2026-09-23)
 
-The current CI coverage is split strictly into **server generation** and **client generation**. Existing fixtures prove OpenAPI 3.0 JSON plus OpenAPI 3.0/3.1 YAML paths, but they do **not** yet prove Swagger 2.0 or OpenAPI 3.2. A format test only counts for the specification version actually declared by its fixture.
+The current CI coverage is split strictly into **server generation** and **client generation**. Existing fixtures prove OpenAPI 3.0 JSON plus OpenAPI 3.0/3.1 YAML paths, but they do **not** yet prove the complete OpenAPI 3.x matrix or OpenAPI 3.2. A format test only counts for the specification version actually declared by its fixture.
 
 ### Server already covered
 
@@ -172,7 +162,6 @@ The current CI coverage is split strictly into **server generation** and **clien
 
 ### Still missing as explicit version/format acceptance coverage
 
-- Swagger/OpenAPI 2.0: server JSON, server YAML, client JSON, client YAML.
 - OpenAPI 3.0: explicit YAML server+compile and YAML client+compile acceptance fixture (some 3.0 generation is covered in-memory, but not the full matrix).
 - OpenAPI 3.1: explicit JSON server+compile and JSON client+compile acceptance fixture.
 - OpenAPI 3.2: server JSON/YAML and client JSON/YAML.
