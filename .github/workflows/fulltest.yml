@@ -130,6 +130,28 @@ jobs:
           mkdir -p ./out/scaffold-test
           cli=(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true --)
 
+          echo '=== Web scaffold ==='
+          # Web was the most recently hanging scaffold, so verify it first.
+          "${cli[@]}" new web ./out/scaffold-test/mysite
+          test -f ./out/scaffold-test/mysite/index.xps
+          timeout --kill-after=5s 45s "${cli[@]}" web --root ./out/scaffold-test/mysite --address 127.0.0.1 --port 18081 >./out/scaffold-test/web.log 2>&1 &
+          web_pid=$!
+          web_ready=0
+          for i in {1..30}; do
+            if curl --max-time 2 --fail --silent http://127.0.0.1:18081/ | grep -q 'Hello from XPscript'; then web_ready=1; break; fi
+            if ! kill -0 "$web_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [ "$web_ready" -ne 1 ]; then
+            cat ./out/scaffold-test/web.log || true
+            kill "$web_pid" 2>/dev/null || true
+            wait "$web_pid" 2>/dev/null || true
+            echo 'Web scaffold did not become ready.' >&2
+            exit 1
+          fi
+          kill "$web_pid" 2>/dev/null || true
+          wait "$web_pid" 2>/dev/null || true
+
           echo '=== Desktop scaffold ==='
           "${cli[@]}" new desktop ./out/scaffold-test/desktop
           test -f ./out/scaffold-test/desktop/main.xps
@@ -157,7 +179,7 @@ jobs:
           printf '%s\n' "$compiled_output" | grep -qx 'first'
           printf '%s\n' "$compiled_output" | grep -qx 'second'
           set +e
-          output="$("${cli[@]}" run ./out/scaffold-test/myapp/main.xps first second 2>&1)"
+          output="$(timeout --kill-after=5s 45s "${cli[@]}" run ./out/scaffold-test/myapp/main.xps first second 2>&1)"
           run_status=$?
           set -e
           printf '%s\n' "$output"
@@ -168,35 +190,20 @@ jobs:
           printf '%s\n' "$output" | grep -qx 'first'
           printf '%s\n' "$output" | grep -qx 'second'
 
-          echo '=== Web scaffold ==='
-          "${cli[@]}" new web ./out/scaffold-test/mysite
-          test -f ./out/scaffold-test/mysite/index.xps
-          "${cli[@]}" web --root ./out/scaffold-test/mysite --address 127.0.0.1 --port 18081 >./out/scaffold-test/web.log 2>&1 &
-          web_pid=$!
-          trap 'kill $web_pid 2>/dev/null || true' EXIT
-          for i in {1..30}; do
-            if curl --max-time 2 --fail --silent http://127.0.0.1:18081/ | grep -q 'Hello from XPscript'; then break; fi
-            sleep 1
-          done
-          curl --max-time 2 --fail --silent http://127.0.0.1:18081/ | grep -q 'Hello from XPscript'
-          kill "$web_pid"
-          wait "$web_pid" 2>/dev/null || true
-          trap - EXIT
-
           echo '=== REST scaffold ==='
           "${cli[@]}" new rest ./out/scaffold-test/myapi
           test -f ./out/scaffold-test/myapi/index.xps
-          "${cli[@]}" web --root ./out/scaffold-test/myapi --address 127.0.0.1 --port 18082 >./out/scaffold-test/rest.log 2>&1 &
+          timeout --kill-after=5s 45s "${cli[@]}" web --root ./out/scaffold-test/myapi --address 127.0.0.1 --port 18082 >./out/scaffold-test/rest.log 2>&1 &
           rest_pid=$!
-          trap 'kill $rest_pid 2>/dev/null || true' EXIT
+          rest_ready=0
           for i in {1..30}; do
-            if curl --max-time 2 --fail --silent http://127.0.0.1:18082/api/health | grep -q '"status":"ok"'; then break; fi
+            if curl --max-time 2 --fail --silent http://127.0.0.1:18082/api/health | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"'; then rest_ready=1; break; fi
+            if ! kill -0 "$rest_pid" 2>/dev/null; then break; fi
             sleep 1
           done
-          curl --max-time 2 --fail --silent http://127.0.0.1:18082/api/health | grep -q '"status":"ok"'
-          kill "$rest_pid"
+          if [ "$rest_ready" -ne 1 ]; then cat ./out/scaffold-test/rest.log || true; kill "$rest_pid" 2>/dev/null || true; wait "$rest_pid" 2>/dev/null || true; exit 1; fi
+          kill "$rest_pid" 2>/dev/null || true
           wait "$rest_pid" 2>/dev/null || true
-          trap - EXIT
       - name: Verify debugger core
         run: dotnet run --project ./tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj -c Release
       - name: Compile ArraySort regression application
