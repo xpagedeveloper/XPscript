@@ -952,7 +952,7 @@ paths:
       responses:
         '204': { description: ok }
 """, "unicode.yaml").Source;
-if (!unicodeClient.Contains("Http_i.EncodePath(City)", StringComparison.Ordinal) || !unicodeClient.Contains("Http_i.AddQuery(url, \"q\", Q)", StringComparison.Ordinal))
+if (!unicodeClient.Contains("Http_i.EncodePath(City)", StringComparison.Ordinal) || !unicodeClient.Contains("Http_i.AddQuery(url_i, \"q\", Q)", StringComparison.Ordinal))
     throw new Exception("OpenAPI Unicode path/query values must flow through XPHttp UTF-8 encoding helpers.");
 
 if (!clientResult.Source.Contains("Public Validation As XPJsonValidationResult", StringComparison.Ordinal) ||
