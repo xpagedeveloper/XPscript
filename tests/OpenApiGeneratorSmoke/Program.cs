@@ -978,6 +978,9 @@ try
     generator.Generate("""
 openapi: 3.1.0
 info: { title: Bad Security, version: 1.0.0 }
+components:
+  securitySchemes:
+    definedAuth: { type: http, scheme: bearer }
 security:
   - missingAuth: []
 paths:
