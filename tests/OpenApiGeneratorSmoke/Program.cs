@@ -443,12 +443,11 @@ paths:
       responses:
         '204': { description: ok }
 """, "security-collision.yaml").Source;
-if (!securityCollisionSource.Contains("Sub ApiSetHeader(", StringComparison.Ordinal) ||
-    !securityCollisionSource.Contains("Sub ApiSetHeader2(", StringComparison.Ordinal) ||
+if (securityCollisionSource.Split("Sub ApiSetHeader(", StringSplitOptions.None).Length - 1 != 2 ||
     !securityCollisionSource.Contains("Sub ApiSetApiKey(", StringComparison.Ordinal) ||
     !securityCollisionSource.Contains("Sub ApiSetApiKey2(", StringComparison.Ordinal) ||
     !securityCollisionSource.Contains("Function SetHeader(", StringComparison.Ordinal))
-    throw new Exception("OpenAPI operation names must win over generator-owned API helpers, which must use deterministic Api-prefixed names. Generated source:\n" + securityCollisionSource);
+    throw new Exception("OpenAPI operation names must be preserved, same-name method overloads with different parameter signatures must remain valid, and true same-scope helper collisions must be deterministic. Generated source:\n" + securityCollisionSource);
 
 var keywordEnumMemberRejected = false;
 try { _ = new XpsOpenApiClientGenerator().Generate("""
