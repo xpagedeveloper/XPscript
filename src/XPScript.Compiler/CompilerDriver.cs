@@ -352,6 +352,13 @@ public sealed class CompilerDriver
             if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal))
                 StageRunManagedDependency(Path.Combine(Path.GetDirectoryName(typeof(CompilerDriver).Assembly.Location) ?? "", "MimeKit.dll"), runOutputDirectory);
 
+            // Framework-dependent builds always produce a managed assembly. On some Unix
+            // SDK/runtime combinations the apphost is not emitted by `dotnet build -r`, so the
+            // runnable artifact is the managed DLL and the caller must launch it through dotnet.
+            var managedAssembly = Path.Combine(runOutputDirectory, "Generated.dll");
+            if (File.Exists(managedAssembly))
+                return managedAssembly;
+
             var generatedExecutable = FindPublishedExecutable(runOutputDirectory, rid, "Generated");
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no runnable executable was produced for runtime " + rid + ".");
