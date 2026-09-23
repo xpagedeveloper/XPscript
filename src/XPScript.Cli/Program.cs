@@ -72,6 +72,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     var operationalAllowedNetworks = new List<string>();
     var enableStaticFiles = false;
     long? staticMaxBytes = null;
+    var staticContentTypes = new Dictionary<string, string>(new XpsKestrelOptions().StaticFileContentTypes, StringComparer.OrdinalIgnoreCase);
     string? structuredLogPath = null;
     string? logDirectory = null;
     string? httpsCertificatePath = null;
@@ -152,6 +153,15 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             case "--static-max-bytes":
                 staticMaxBytes = ParsePositiveLong(RequireValue(commandArgs, ref i), "--static-max-bytes");
                 break;
+            case "--static-allow":
+            {
+                enableStaticFiles = true;
+                var extension = RequireValue(commandArgs, ref i);
+                var contentType = RequireValue(commandArgs, ref i);
+                if (!extension.StartsWith(".", StringComparison.Ordinal)) extension = "." + extension;
+                staticContentTypes[extension] = contentType;
+                break;
+            }
             default:
                 throw new ArgumentException("Unknown web argument: " + commandArgs[i]);
         }
@@ -192,6 +202,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         OperationalAllowedNetworks = operationalAllowedNetworks.AsReadOnly(),
         EnableStaticFiles = enableStaticFiles,
         MaxStaticFileBytes = staticMaxBytes ?? defaults.MaxStaticFileBytes,
+        StaticFileContentTypes = staticContentTypes,
         LogOptions = new XpsWebLogOptions { DirectoryPath = logDirectory }
     };
     options.Validate();
@@ -250,7 +261,7 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         else Console.WriteLine("Metrics endpoint: disabled");
         Console.WriteLine($"Mandatory JSONL logs: {options.LogOptions.DirectoryPath ?? XpsWebLogManager.DefaultDirectory(server)}");
         if (structuredLogPath is not null) Console.WriteLine($"Legacy structured request log: {structuredLogPath}");
-        if (options.EnableStaticFiles) Console.WriteLine($"Static files: enabled, max {options.MaxStaticFileBytes} bytes");
+        if (options.EnableStaticFiles) Console.WriteLine($"Static files: enabled, public {options.PublicStaticPath}/, authenticated {options.AuthenticatedStaticPath}/, max {options.MaxStaticFileBytes} bytes, extensions {string.Join(", ", options.StaticFileContentTypes.Keys.OrderBy(x => x))}");
         else Console.WriteLine("Static files: disabled");
 
         await app.StartAsync(shutdown.Token);
@@ -486,7 +497,7 @@ Usage:
                 [--session-cookie NAME] [--session-timeout-seconds SECONDS]
                 [--session-same-site Strict|Lax|None] [--session-secure]
                 [--structured-log FILE] [--operational-external]
-                [--static-files] [--static-max-bytes BYTES]
+                [--static-files] [--static-max-bytes BYTES] [--static-allow EXT MIME]
   xpscript web [--config FILE] --root DIR [web options...]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] --unix-socket PATH
