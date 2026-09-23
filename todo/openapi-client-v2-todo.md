@@ -26,8 +26,8 @@ OpenAPI 3.0, 3.1 and 3.2 should share a common internal representation before se
 - [x] Detect the OpenAPI specification version from the document content
 - [ ] Normalize OpenAPI 3.0/3.1/3.2 components, parameters, request bodies, responses and security into a common internal model where needed
 - [ ] Handle version-specific JSON Schema dialect differences deliberately instead of silently treating all versions as 3.1
-- [ ] Add a fixture that proves version detection is content-based even when the file extension is misleading
-- [ ] Add negative tests for unsupported OpenAPI versions
+- [x] Add a fixture that proves version detection is content-based even when the file extension is misleading
+- [x] Add negative tests for unsupported OpenAPI versions
 
 ## REST server generation
 
