@@ -20,6 +20,27 @@ try
     };
     await using var adapter = new XpsFastCgiAdapter(options, server, new EchoHandler());
 
+    var duplicateQueryInput = BuildRequest(
+        17,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "GET",
+            ["SCRIPT_NAME"] = "/index.xps",
+            ["QUERY_STRING"] = "q=one&q=two",
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "index.xps")
+        },
+        []);
+    var duplicateQueryStream = new FragmentedDuplexStream(duplicateQueryInput, 3);
+    await using (var queryAdapter = new XpsFastCgiAdapter(options, server, new DuplicateQueryHandler()))
+    {
+        await queryAdapter.ProcessConnectionAsync(duplicateQueryStream);
+    }
+    var duplicateQueryOutput = ParseResponse(duplicateQueryStream.Written);
+    if (!duplicateQueryOutput.Contains("one|one,two", StringComparison.Ordinal))
+        throw new Exception("FastCGI duplicate query handling was not deterministic: " + duplicateQueryOutput);
+
     var malformedJsonBody = Encoding.UTF8.GetBytes("{not-json");
     var malformedJsonInput = BuildRequest(
         15,
@@ -270,6 +291,18 @@ static string ParseResponse(byte[] raw)
     return Encoding.UTF8.GetString(stdout.ToArray());
 }
 
+
+sealed class DuplicateQueryHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        context.Response.ContentType = "text/plain; charset=utf-8";
+        context.Response.Write(context.Request.QueryFirst("q"));
+        context.Response.Write("|");
+        context.Response.Write(string.Join(",", context.Request.QueryAll("q")));
+        return Task.CompletedTask;
+    }
+}
 
 sealed class JsonBodyHandler : IXpsWebRequestHandler
 {
