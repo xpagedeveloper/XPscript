@@ -184,26 +184,25 @@ xpscript mcp
 
 It communicates over stdin/stdout using JSON-RPC/MCP and currently exposes `xpscript_validate`, `xpscript_symbols`, `xpscript_describe` and `xpscript_explain`. It does not expose application execution or deployment.
 
-A validation tool call accepts `source`, optional `filename`, optional `runtimeIdentifier`, and optional `debug`. Example arguments:
+A validation tool call accepts `source`, optional `filename`, and optional `runtimeIdentifier`. Compiler debug mode is deliberately not exposed through MCP. Example arguments:
 
 ```json
 {
   "source": "Sub Main()\n    Print MissingValue\nEnd Sub",
-  "filename": "agent.xps",
-  "runtimeIdentifier": "linux-x64",
-  "debug": false
+  "filename": "agent.xps" ,
+  "runtimeIdentifier": "linux-x64"
 }
 ```
 
-Keep `debug` omitted or `false` for normal AI/editor validation. Set `debug: true` only when investigating compiler/transpiler behavior. It activates the compiler diagnostic debug mode and may add generated C#/`Program.cs` diagnostic context. MCP transport/parser/internal server exceptions remain standardized JSON-RPC errors even when compiler debug diagnostics are enabled; `debug` is not permission to expose arbitrary MCP process exceptions.
+MCP intentionally exposes only compiler diagnostics suitable for machine consumers and source-level repair. Internal compiler debug mode, generated `Program.cs` troubleshooting details, raw exceptions and stack traces are not part of the MCP surface. `--debug` remains a local XPScript development and compiler-troubleshooting facility. MCP transport/parser/internal server exceptions remain standardized JSON-RPC errors.
 
 Recommended integration flow:
 
-1. Call `xpscript_validate` with a simple virtual `.xps` filename and `debug=false`.
+1. Call `xpscript_validate` with a simple virtual `.xps` filename.
 2. Consume `structuredContent` and key repairs on `diagnosticCode`, source range and structured `properties`.
 3. Modify XPScript source, never generated C#.
 4. Validate again until the structured result succeeds.
-5. If a compiler-owned failure cannot be explained from normal diagnostics, repeat the validation with `debug=true` and keep that diagnostic output in a trusted developer context.
+5. If validation reports an internal compiler failure that cannot be repaired from the structured diagnostics, stop automated repair and investigate it locally with the XPScript CLI/compiler development tooling.
 6. Compile/run/deploy only through a separately authorized workflow.
 
 ### Debug and security contract
