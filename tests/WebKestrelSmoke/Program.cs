@@ -316,7 +316,7 @@ try
 
     using (var oversized = new HttpRequestMessage(HttpMethod.Post, "/oversized"))
     {
-        oversized.Content = new ByteArrayContent(new byte[65]);
+        oversized.Content = new ByteArrayContent(new byte[checked((int)options.MaxRequestBodySize + 1)]);
         using var response = await client.SendAsync(oversized);
         if ((int)response.StatusCode != 413) throw new Exception($"Oversized request expected 413, got {(int)response.StatusCode}.");
         _ = ReadRequestId(response);
@@ -325,7 +325,7 @@ try
     using (var chunked = new HttpRequestMessage(HttpMethod.Post, "/chunked-oversized"))
     {
         chunked.Headers.TransferEncodingChunked = true;
-        chunked.Content = new UnknownLengthContent(new byte[65]);
+        chunked.Content = new UnknownLengthContent(new byte[checked((int)options.MaxRequestBodySize + 1)]);
         using var response = await client.SendAsync(chunked);
         if ((int)response.StatusCode != 413)
             throw new Exception($"Chunked in-memory body limit expected 413, got {(int)response.StatusCode}.");
