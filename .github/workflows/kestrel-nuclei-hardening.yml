@@ -52,6 +52,11 @@ jobs:
         run: |
           dotnet run --project ./tests/WebUIFormAdversarialSecurity/WebUIFormAdversarialSecurity.csproj -c Release
 
+      - name: Run CSRF session isolation regressions
+        shell: bash
+        run: |
+          dotnet run --project ./tests/WebCsrfSmoke/WebCsrfSmoke.csproj -c Release
+
       - name: Run CGI and FastCGI cross-host security regressions
         shell: bash
         run: |
