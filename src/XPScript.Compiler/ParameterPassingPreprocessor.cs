@@ -42,6 +42,10 @@ internal sealed class ParameterPassingPreprocessor
 
                     var originalName = declaration.Groups["name"].Value;
                     var modifier = declaration.Groups["modifier"].Value;
+                    if (!string.IsNullOrWhiteSpace(modifier) &&
+                        (originalName.Equals("ByVal", StringComparison.OrdinalIgnoreCase) ||
+                         originalName.Equals("ByRef", StringComparison.OrdinalIgnoreCase)))
+                        continue;
                     var marker = modifier.Equals("ByVal", StringComparison.OrdinalIgnoreCase) ? ByValPrefix : ByRefPrefix;
                     var generatedName = marker + originalName;
                     activeParameters[originalName] = generatedName;

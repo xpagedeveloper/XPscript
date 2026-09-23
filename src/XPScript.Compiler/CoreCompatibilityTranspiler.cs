@@ -37,13 +37,29 @@ internal sealed class CoreCompatibilityTranspiler
     {
         Reset();
         var lines = Normalize(source);
-        Analyze(lines);
-        var transformed = TransformModule(lines);
+        Analyze(lines, sourceName);
+        var transformed = TransformModule(lines, sourceName);
         var generated = new AdvancedXPScriptTranspiler().Transpile(transformed, sourceName);
         generated = InjectScriptMembers(generated);
         generated = PostProcessMarkers(generated);
         generated += "\n\n" + CoreCompatibilityRuntimeSource.Code + "\n";
         return generated;
+    }
+
+    private static CompilerException SyntaxFailure(string message, string sourceName, int line, string sourceLine, string expectedConstruct, string? foundToken = null)
+    {
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourceName), Line = line, Position = 1, EndLine = line,
+            EndColumn = Math.Max(2, safeSource.Length + 1), Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
+            Properties = string.IsNullOrWhiteSpace(foundToken)
+                ? [new() { Name = "expectedConstruct", Value = expectedConstruct }]
+                : [new() { Name = "foundToken", Value = foundToken }, new() { Name = "expectedConstruct", Value = expectedConstruct }],
+            SourceCode = safeSource, MarkedCode = safeSource + Environment.NewLine + "^"
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
     }
 
     private void Reset()
@@ -66,12 +82,13 @@ internal sealed class CoreCompatibilityTranspiler
     private static string[] Normalize(string source) =>
         source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
 
-    private void Analyze(string[] lines)
+    private void Analyze(string[] lines, string sourceName)
     {
         string? currentClass = null;
 
-        foreach (var raw in lines)
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
+            var raw = lines[lineIndex];
             var line = StripComment(raw).Trim();
             if (line.Length == 0) continue;
 
@@ -82,8 +99,8 @@ internal sealed class CoreCompatibilityTranspiler
                 continue;
             }
 
-            if (TryAnalyzeDefType(line)) continue;
-            if (TryAnalyzeNative(line)) continue;
+            if (TryAnalyzeDefType(line, sourceName, lineIndex + 1, raw)) continue;
+            if (TryAnalyzeNative(line, sourceName, lineIndex + 1, raw)) continue;
 
             var classMatch = Regex.Match(line, @"^(?:(?:Public|Private)\s+)?Class\s+([A-Za-z_]\w*)", RegexOptions.IgnoreCase);
             if (classMatch.Success)
@@ -98,13 +115,13 @@ internal sealed class CoreCompatibilityTranspiler
                 continue;
             }
 
-            var proc = ParseProcedureHeader(line, currentClass);
+            var proc = ParseProcedureHeader(line, currentClass, sourceName, lineIndex + 1, raw);
             if (proc is not null)
                 _procedures.Add(proc);
         }
     }
 
-    private bool TryAnalyzeDefType(string line)
+    private bool TryAnalyzeDefType(string line, string sourceName, int lineNumber, string sourceLine)
     {
         var match = Regex.Match(line, @"^Def(Bool|Byte|Cur|Dbl|Int|Lng|Sng|Str|Var)\s+(.+)$", RegexOptions.IgnoreCase);
         if (!match.Success) return false;
@@ -132,7 +149,7 @@ internal sealed class CoreCompatibilityTranspiler
             }
 
             var range = Regex.Match(token, @"^([A-Za-z])\s*-\s*([A-Za-z])$");
-            if (!range.Success) throw new CompilerException("Invalid Deftype range: " + token);
+            if (!range.Success) throw SyntaxFailure("Invalid Deftype range: " + token, sourceName, lineNumber, sourceLine, "letter or letter range", token);
             var a = char.ToUpperInvariant(range.Groups[1].Value[0]);
             var b = char.ToUpperInvariant(range.Groups[2].Value[0]);
             if (a > b) (a, b) = (b, a);
@@ -141,7 +158,7 @@ internal sealed class CoreCompatibilityTranspiler
         return true;
     }
 
-    private bool TryAnalyzeNative(string line)
+    private bool TryAnalyzeNative(string line, string sourceName, int lineNumber, string sourceLine)
     {
         var match = Regex.Match(
             line,
@@ -153,7 +170,7 @@ internal sealed class CoreCompatibilityTranspiler
         var name = match.Groups[3].Value;
         var library = match.Groups[4].Value;
         var alias = string.IsNullOrWhiteSpace(match.Groups[5].Value) ? name : match.Groups[5].Value;
-        var parameters = ParseParameters(match.Groups[6].Value, treatOmittedAsByRef: true);
+        var parameters = ParseParameters(match.Groups[6].Value, treatOmittedAsByRef: true, sourceName, lineNumber, sourceLine);
         var returnType = kind.Equals("Function", StringComparison.OrdinalIgnoreCase)
             ? (string.IsNullOrWhiteSpace(match.Groups[7].Value) ? ResolveDefaultType(name) : match.Groups[7].Value)
             : "Void";
@@ -162,7 +179,7 @@ internal sealed class CoreCompatibilityTranspiler
         return true;
     }
 
-    private ProcedureInfo? ParseProcedureHeader(string line, string? className)
+    private ProcedureInfo? ParseProcedureHeader(string line, string? className, string sourceName = "input.xps", int lineNumber = 1, string? sourceLine = null)
     {
         var match = Regex.Match(
             line,
@@ -173,12 +190,12 @@ internal sealed class CoreCompatibilityTranspiler
         return new ProcedureInfo(
             _nextProcedureId++,
             match.Groups[3].Value,
-            ParseParameters(match.Groups[4].Value, treatOmittedAsByRef: false),
+            ParseParameters(match.Groups[4].Value, treatOmittedAsByRef: false, sourceName, lineNumber, sourceLine ?? line),
             !string.IsNullOrWhiteSpace(match.Groups[1].Value),
             className);
     }
 
-    private List<ParameterInfo> ParseParameters(string raw, bool treatOmittedAsByRef)
+    private List<ParameterInfo> ParseParameters(string raw, bool treatOmittedAsByRef, string sourceName = "input.xps", int lineNumber = 1, string? sourceLine = null)
     {
         var result = new List<ParameterInfo>();
         if (string.IsNullOrWhiteSpace(raw)) return result;
@@ -187,7 +204,11 @@ internal sealed class CoreCompatibilityTranspiler
         {
             var clean = Regex.Replace(part.Trim(), @"\b(LMBCS|Unicode)\b", "", RegexOptions.IgnoreCase).Trim();
             var match = Regex.Match(clean, @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(\(\))?\s*(List)?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
-            if (!match.Success) throw new CompilerException("Unsupported parameter declaration: " + part.Trim());
+            if (!match.Success)
+            {
+                var foundToken = part.Trim();
+                throw SyntaxFailure("Unsupported parameter declaration: " + foundToken, sourceName, lineNumber, sourceLine ?? raw, "parameter declaration", foundToken);
+            }
             var mode = match.Groups[1].Value;
             var byRef = mode.Equals("ByRef", StringComparison.OrdinalIgnoreCase) || (treatOmittedAsByRef && !mode.Equals("ByVal", StringComparison.OrdinalIgnoreCase));
             var name = match.Groups[2].Value;
@@ -197,7 +218,7 @@ internal sealed class CoreCompatibilityTranspiler
         return result;
     }
 
-    private string TransformModule(string[] lines)
+    private string TransformModule(string[] lines, string sourceName)
     {
         var output = new List<string>();
         string? currentClass = null;
@@ -241,7 +262,7 @@ internal sealed class CoreCompatibilityTranspiler
                 if (Regex.IsMatch(StripComment(lines[j]).Trim(), endPattern, RegexOptions.IgnoreCase)) break;
                 body.Add(lines[j]);
             }
-            if (j >= lines.Length) throw new CompilerException("Missing procedure terminator.");
+            if (j >= lines.Length) throw SyntaxFailure("Missing procedure terminator.", sourceName, i + 1, raw, "End Sub or End Function", "end-of-file");
 
             if (proc.Name.Equals("__property__", StringComparison.Ordinal))
             {
@@ -251,7 +272,7 @@ internal sealed class CoreCompatibilityTranspiler
             }
             else
             {
-                output.AddRange(TransformProcedure(trimmed, body, proc, currentClass));
+                output.AddRange(TransformProcedure(trimmed, body, proc, currentClass, sourceName, i + 2));
                 output.Add(lines[j]);
             }
             i = j;
@@ -270,7 +291,7 @@ internal sealed class CoreCompatibilityTranspiler
         return ParseProcedureHeader(line, className);
     }
 
-    private IEnumerable<string> TransformProcedure(string header, List<string> body, ProcedureInfo proc, string? className)
+    private IEnumerable<string> TransformProcedure(string header, List<string> body, ProcedureInfo proc, string? className, string sourceName, int bodyStartLine)
     {
         var output = new List<string>();
         var transformedHeader = TransformProcedureHeader(header, proc);
@@ -292,7 +313,7 @@ internal sealed class CoreCompatibilityTranspiler
         var staticNames = DiscoverStaticLocals(body, proc, className, arrays, scalarTypes);
 
         var common = TransformCommonBody(body, proc, className, proc.IsStatic);
-        var withAndSelect = TransformWithAndSelect(common);
+        var withAndSelect = TransformWithAndSelect(common, sourceName, bodyStartLine);
 
         foreach (var originalLine in withAndSelect)
         {
@@ -416,16 +437,29 @@ internal sealed class CoreCompatibilityTranspiler
         return result;
     }
 
-    private List<string> TransformWithAndSelect(IEnumerable<string> lines)
+    private List<string> TransformWithAndSelect(IEnumerable<string> lines, string sourceName, int bodyStartLine)
     {
         var result = new List<string>();
         var withStack = new Stack<string>();
         var selectStack = new Stack<(string Variable, bool HasCase)>();
 
-        foreach (var raw in lines)
+        var sourceLines = lines.ToList();
+        var physicalLine = bodyStartLine;
+        var lastPhysicalLine = bodyStartLine;
+        for (var lineIndex = 0; lineIndex < sourceLines.Count; lineIndex++)
         {
+            var raw = sourceLines[lineIndex];
             var indent = Regex.Match(raw, @"^\s*").Value;
             var line = StripComment(raw).Trim();
+
+            var sourceMarker = Regex.Match(line, @"^Call\s+XPSourceLineRuntime\.__XPSOURCE_(\d+)_", RegexOptions.IgnoreCase);
+            if (sourceMarker.Success && int.TryParse(sourceMarker.Groups[1].Value, out var markedLine))
+            {
+                physicalLine = markedLine;
+                lastPhysicalLine = markedLine;
+                result.Add(raw);
+                continue;
+            }
 
             var with = Regex.Match(line, @"^With\s+(.+)$", RegexOptions.IgnoreCase);
             if (with.Success)
@@ -436,7 +470,7 @@ internal sealed class CoreCompatibilityTranspiler
             }
             if (Regex.IsMatch(line, @"^End\s+With$", RegexOptions.IgnoreCase))
             {
-                if (withStack.Count == 0) throw new CompilerException("Unexpected End With.");
+                if (withStack.Count == 0) throw SyntaxFailure("Unexpected End With.", sourceName, physicalLine, raw, "With statement", "End With");
                 withStack.Pop();
                 continue;
             }
@@ -465,8 +499,10 @@ internal sealed class CoreCompatibilityTranspiler
                 continue;
             }
 
-            if (Regex.IsMatch(rewritten, @"^End\s+Select$", RegexOptions.IgnoreCase) && selectStack.Count > 0)
+            if (Regex.IsMatch(rewritten, @"^End\s+Select$", RegexOptions.IgnoreCase))
             {
+                if (selectStack.Count == 0)
+                    throw SyntaxFailure("Unexpected End Select.", sourceName, physicalLine, raw, "Select Case statement", "End Select");
                 var context = selectStack.Pop();
                 if (context.HasCase) result.Add(indent + "End If");
                 continue;
@@ -475,8 +511,8 @@ internal sealed class CoreCompatibilityTranspiler
             result.Add(indent + rewritten);
         }
 
-        if (withStack.Count > 0) throw new CompilerException("Missing End With.");
-        if (selectStack.Count > 0) throw new CompilerException("Missing End Select.");
+        if (withStack.Count > 0) throw SyntaxFailure("Missing End With.", sourceName, lastPhysicalLine, sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End With", "end-of-file");
+        if (selectStack.Count > 0) throw SyntaxFailure("Missing End Select.", sourceName, lastPhysicalLine, sourceLines.Count > 0 ? sourceLines[^1] : string.Empty, "End Select", "end-of-file");
         return result;
     }
 

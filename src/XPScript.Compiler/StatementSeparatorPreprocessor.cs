@@ -4,25 +4,52 @@ namespace XPScript.Compiler;
 
 internal sealed class StatementSeparatorPreprocessor
 {
-    public string Transform(string source)
+    public string Transform(string source, string sourceName = "input.xps")
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length);
         var sourceLine = 0;
+        var pendingSourceLine = 0;
 
-        foreach (var raw in lines)
+        for (var physicalIndex = 0; physicalIndex < lines.Length; physicalIndex++)
         {
+            var raw = lines[physicalIndex];
             var marker = Regex.Match(raw, @"XPSourceLineRuntime\.Set\((\d+)\)", RegexOptions.IgnoreCase);
+            var sourceMarker = Regex.Match(raw, @"__XPSOURCE_(\d+)_", RegexOptions.IgnoreCase);
+            var isGeneratedMarker = marker.Success || sourceMarker.Success;
             if (marker.Success)
-                sourceLine = int.Parse(marker.Groups[1].Value);
+            {
+                pendingSourceLine = int.Parse(marker.Groups[1].Value);
+            }
+            else if (sourceMarker.Success)
+            {
+                pendingSourceLine = int.Parse(sourceMarker.Groups[1].Value);
+            }
 
-            ExpandLine(raw, output, sourceLine);
+            if (isGeneratedMarker)
+            {
+                ExpandLine(raw, output, physicalIndex + 1, sourceName);
+                continue;
+            }
+
+            if (pendingSourceLine > 0 && !string.IsNullOrWhiteSpace(raw))
+            {
+                sourceLine = pendingSourceLine;
+                pendingSourceLine = 0;
+            }
+
+            // A source marker is inserted immediately before the original statement.
+            // If another preprocessor inserted lines between them, sourceLine remains
+            // valid. Otherwise the marker value is authoritative and must not be
+            // replaced with the transformed physical index.
+            var effectiveSourceLine = sourceLine > 0 ? sourceLine : physicalIndex + 1;
+            ExpandLine(raw, output, effectiveSourceLine, sourceName);
         }
 
         return string.Join(Environment.NewLine, output);
     }
 
-    private static void ExpandLine(string raw, List<string> output, int sourceLine)
+    private static void ExpandLine(string raw, List<string> output, int sourceLine, string sourceName)
     {
         var commentIndex = FindCommentStart(raw);
         var code = commentIndex >= 0 ? raw[..commentIndex] : raw;
@@ -45,22 +72,22 @@ internal sealed class StatementSeparatorPreprocessor
             output.Add(indent + label.Groups["label"].Value + ":");
             var tail = label.Groups["tail"].Value;
             if (!string.IsNullOrWhiteSpace(tail))
-                AddStatements(output, SplitTopLevelColons(tail), indent, comment, sourceLine);
+                AddStatements(output, SplitTopLevelColons(tail), indent, comment, sourceLine, sourceName, raw);
             else if (!string.IsNullOrEmpty(comment))
                 output[^1] += " " + comment;
             return;
         }
 
-        if (TryExpandSingleLineIf(code, comment, output, sourceLine))
+        if (TryExpandSingleLineIf(code, comment, output, sourceLine, sourceName, raw))
             return;
 
-        if (TryExpandInlineElseIf(code, comment, output, sourceLine))
+        if (TryExpandInlineElseIf(code, comment, output, sourceLine, sourceName, raw))
             return;
 
-        AddStatements(output, SplitTopLevelColons(code), indent, comment, sourceLine);
+        AddStatements(output, SplitTopLevelColons(code), indent, comment, sourceLine, sourceName, raw);
     }
 
-    private static bool TryExpandSingleLineIf(string code, string comment, List<string> output, int sourceLine)
+    private static bool TryExpandSingleLineIf(string code, string comment, List<string> output, int sourceLine, string sourceName, string raw)
     {
         var indent = Regex.Match(code, @"^\s*").Value;
         var trimmed = code.Trim();
@@ -82,17 +109,17 @@ internal sealed class StatementSeparatorPreprocessor
         var falseTail = elseIndex >= 0 ? tail[(elseIndex + 4)..].Trim() : null;
 
         output.Add($"{indent}If {condition} Then");
-        AddStatements(output, SplitTopLevelColons(trueTail), indent + "    ", string.Empty, sourceLine);
+        AddStatements(output, SplitTopLevelColons(trueTail), indent + "    ", string.Empty, sourceLine, sourceName, raw);
         if (falseTail is not null)
         {
             output.Add(indent + "Else");
-            AddStatements(output, SplitTopLevelColons(falseTail), indent + "    ", string.Empty, sourceLine);
+            AddStatements(output, SplitTopLevelColons(falseTail), indent + "    ", string.Empty, sourceLine, sourceName, raw);
         }
         output.Add(indent + "End If" + (string.IsNullOrEmpty(comment) ? string.Empty : " " + comment));
         return true;
     }
 
-    private static bool TryExpandInlineElseIf(string code, string comment, List<string> output, int sourceLine)
+    private static bool TryExpandInlineElseIf(string code, string comment, List<string> output, int sourceLine, string sourceName, string raw)
     {
         var indent = Regex.Match(code, @"^\s*").Value;
         var trimmed = code.Trim();
@@ -109,7 +136,7 @@ internal sealed class StatementSeparatorPreprocessor
             return false;
 
         output.Add($"{indent}ElseIf {condition} Then");
-        AddStatements(output, SplitTopLevelColons(tail), indent + "    ", comment, sourceLine);
+        AddStatements(output, SplitTopLevelColons(tail), indent + "    ", comment, sourceLine, sourceName, raw);
         return true;
     }
 
@@ -118,13 +145,36 @@ internal sealed class StatementSeparatorPreprocessor
         IReadOnlyList<string> statements,
         string indent,
         string trailingComment,
-        int sourceLine)
+        int sourceLine,
+        string sourceName,
+        string raw)
     {
         for (var i = 0; i < statements.Count; i++)
         {
             var statement = statements[i].Trim();
             if (statement.Length == 0)
-                throw new CompilerException($"Empty statement between ':' separators on source line {sourceLine}.");
+            {
+                var message = $"Empty statement between ':' separators on source line {sourceLine}.";
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = Path.GetFileName(sourceName),
+                    Line = sourceLine,
+                    Position = 1,
+                    EndLine = sourceLine,
+                    EndColumn = 2,
+                    Description = message,
+                    DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
+                    Category = "syntax",
+                    Properties =
+                    [
+                        new() { Name = "foundToken", Value = ":" },
+                        new() { Name = "expectedConstruct", Value = "statement" }
+                    ],
+                    SourceCode = CompilerDiagnosticRedaction.MaskStringLiterals(raw).TrimEnd(),
+                    MarkedCode = CompilerDiagnosticRedaction.MaskStringLiterals(raw).TrimEnd() + Environment.NewLine + "^"
+                };
+                throw new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
+            }
 
             var suffix = i == statements.Count - 1 && !string.IsNullOrEmpty(trailingComment)
                 ? " " + trailingComment

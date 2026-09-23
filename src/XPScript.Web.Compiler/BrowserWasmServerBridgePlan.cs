@@ -1,3 +1,4 @@
+using XPScript.Compiler;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -34,10 +35,6 @@ internal sealed record BrowserWasmServerBridgePlan(
         @"^(?:(?:Dim|Static|Public|Private)\s+)([A-Za-z_]\w*)\s+(?:(?:List)\s+)?As\s+(?:New\s+)?([A-Za-z_]\w*)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    private static readonly Regex ServerType = new(
-        @"\b(XPAi|XPAiResponse|XPDBSQLite|XPDbMsSql)\b",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
     private static readonly HashSet<string> SerializableTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "Variant", "String", "Integer", "Long", "Double", "Single", "Boolean", "Byte", "Currency", "Date"
@@ -64,7 +61,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         foreach (var procedure in procedures)
         {
             var body = BodyText(lines, procedure);
-            if (!ServerType.IsMatch(body)) continue;
+            if (!HasServerRuntimeFeature(body)) continue;
             ValidateRemoteProcedure(procedure);
             remote.Add(procedure);
 
@@ -133,9 +130,39 @@ internal sealed record BrowserWasmServerBridgePlan(
         return new BrowserWasmServerBridgePlan(
             browser.ToString(),
             manifest,
-            remote.Any(x => ServerType.IsMatch(BodyText(lines, x)) && Regex.IsMatch(BodyText(lines, x), @"\bXPAi(?:Response)?\b", RegexOptions.IgnoreCase)),
-            remote.Any(x => Regex.IsMatch(BodyText(lines, x), @"\bXPDBSQLite\b", RegexOptions.IgnoreCase)) || serverStateGlobals.Any(name => moduleGlobals.TryGetValue(name, out var type) && type.Equals("XPDBSQLite", StringComparison.OrdinalIgnoreCase)),
-            remote.Any(x => Regex.IsMatch(BodyText(lines, x), @"\bXPDbMsSql\b", RegexOptions.IgnoreCase)) || serverStateGlobals.Any(name => moduleGlobals.TryGetValue(name, out var type) && type.Equals("XPDbMsSql", StringComparison.OrdinalIgnoreCase)));
+            remote.Any(x => RuntimeFeatures.Detect(BodyText(lines, x)).Ai),
+            remote.Any(x => RuntimeFeatures.Detect(BodyText(lines, x)).Sqlite) || serverStateGlobals.Any(name => moduleGlobals.TryGetValue(name, out var type) && type.Equals("XPDBSQLite", StringComparison.OrdinalIgnoreCase)),
+            remote.Any(x => RuntimeFeatures.Detect(BodyText(lines, x)).MsSql) || serverStateGlobals.Any(name => moduleGlobals.TryGetValue(name, out var type) && type.Equals("XPDbMsSql", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static bool HasServerRuntimeFeature(string source)
+    {
+        var features = RuntimeFeatures.Detect(source);
+        return features.Ai || features.Sqlite || features.MsSql || ContainsApplicationCryptoCode(source);
+    }
+
+    private static bool ContainsApplicationCryptoCode(string source)
+    {
+        foreach (var line in source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+        {
+            var clean = StripComment(line);
+            var code = new StringBuilder(clean.Length);
+            var inString = false;
+            for (var i = 0; i < clean.Length; i++)
+            {
+                if (clean[i] == '"')
+                {
+                    if (inString && i + 1 < clean.Length && clean[i + 1] == '"') { code.Append("  "); i++; continue; }
+                    inString = !inString;
+                    code.Append(' ');
+                    continue;
+                }
+                code.Append(inString ? ' ' : clean[i]);
+            }
+            if (Regex.IsMatch(code.ToString(), @"\bApplication\.Crypto\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                return true;
+        }
+        return false;
     }
 
     private static IReadOnlyList<ProcedureBlock> ParseProcedures(string[] lines)
@@ -189,8 +216,8 @@ internal sealed record BrowserWasmServerBridgePlan(
         foreach (var part in SplitArguments(raw))
         {
             var clean = part.Trim();
-            if (Regex.IsMatch(clean, @"\bByRef\b", RegexOptions.IgnoreCase)) throw new XpsWebCompilationException("browser-wasm server bridge does not support ByRef parameters. Split the server operation into a value-returning helper function.");
-            if (Regex.IsMatch(clean, @"\(\)\s*(?:As\b|$)", RegexOptions.IgnoreCase) || Regex.IsMatch(clean, @"\bList\b", RegexOptions.IgnoreCase)) throw new XpsWebCompilationException("browser-wasm server bridge does not support array or List parameters.");
+            if (Regex.IsMatch(clean, @"\bByRef\b", RegexOptions.IgnoreCase)) throw ServerBridgeSignatureError(clean, "ByRef", "ByVal scalar or Variant", "browser-wasm server bridge does not support ByRef parameters. Split the server operation into a value-returning helper function.");
+            if (Regex.IsMatch(clean, @"\(\)\s*(?:As\b|$)", RegexOptions.IgnoreCase) || Regex.IsMatch(clean, @"\bList\b", RegexOptions.IgnoreCase)) throw ServerBridgeSignatureError(clean, "collection", "scalar or Variant", "browser-wasm server bridge does not support array or List parameters.");
             var match = Regex.Match(clean, @"^(?:ByVal\s+)?([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             if (!match.Success) throw new XpsWebCompilationException("browser-wasm server bridge encountered an unsupported procedure parameter: " + clean);
             result.Add(new BrowserWasmServerBridgeParameter(match.Groups[1].Value, string.IsNullOrWhiteSpace(match.Groups[2].Value) ? "Variant" : match.Groups[2].Value));
@@ -200,15 +227,62 @@ internal sealed record BrowserWasmServerBridgePlan(
 
     private static void ValidateRemoteProcedure(ProcedureBlock procedure)
     {
-        if (procedure.ClassDepth != 0) throw new XpsWebCompilationException($"browser-wasm server bridge cannot proxy class method '{procedure.Name}' yet. Move the server-only operation to a module Function or Sub.");
-        if (procedure.Name.Equals("Main", StringComparison.OrdinalIgnoreCase) || procedure.Name.Equals("Index", StringComparison.OrdinalIgnoreCase)) throw new XpsWebCompilationException($"browser-wasm entry procedure '{procedure.Name}' contains server-only code. Move XPAi/XPDB work into a helper Function or Sub so the browser entry point can remain local.");
+        if (procedure.ClassDepth != 0)
+            throw ServerSideContextError(
+                procedure.Name,
+                "ClassMethod",
+                $"browser-wasm server bridge cannot proxy class method '{procedure.Name}' yet. Move the server-only operation to a module Function or Sub.");
+
+        if (procedure.Name.Equals("Main", StringComparison.OrdinalIgnoreCase) || procedure.Name.Equals("Index", StringComparison.OrdinalIgnoreCase))
+            throw ServerSideContextError(
+                procedure.Name,
+                "BrowserEntryPoint",
+                $"browser-wasm entry procedure '{procedure.Name}' contains server-only code. Move XPAi/XPDB work into a helper Function or Sub so the browser entry point can remain local.");
     }
+
+    private static XpsWebCompilationException ServerSideContextError(string symbol, string currentContext, string message) =>
+        new(
+            message,
+            "XPS3002",
+            "execution-context",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["symbol"] = symbol,
+                ["target"] = "browser-wasm",
+                ["currentContext"] = currentContext,
+                ["requiredContext"] = "ServerSide"
+            });
 
     private static void ValidateSerializableSignature(ProcedureBlock procedure)
     {
-        foreach (var parameter in procedure.Parameters) if (!SerializableTypes.Contains(parameter.TypeName)) throw new XpsWebCompilationException($"browser-wasm server bridge parameter '{parameter.Name}' in '{procedure.Name}' uses non-serializable type '{parameter.TypeName}'. Use a scalar or Variant containing native JSON.");
-        if (procedure.IsFunction && !SerializableTypes.Contains(procedure.ReturnType)) throw new XpsWebCompilationException($"browser-wasm server bridge Function '{procedure.Name}' returns non-serializable type '{procedure.ReturnType}'. Use a scalar or Variant containing native JSON.");
+        foreach (var parameter in procedure.Parameters)
+            if (!SerializableTypes.Contains(parameter.TypeName))
+                throw ServerBridgeSignatureError(
+                    procedure.Name + "." + parameter.Name,
+                    parameter.TypeName,
+                    "scalar or Variant",
+                    $"browser-wasm server bridge parameter '{parameter.Name}' in '{procedure.Name}' uses non-serializable type '{parameter.TypeName}'. Use a scalar or Variant containing native JSON.");
+        if (procedure.IsFunction && !SerializableTypes.Contains(procedure.ReturnType))
+            throw ServerBridgeSignatureError(
+                procedure.Name,
+                procedure.ReturnType,
+                "scalar or Variant",
+                $"browser-wasm server bridge Function '{procedure.Name}' returns non-serializable type '{procedure.ReturnType}'. Use a scalar or Variant containing native JSON.");
     }
+
+    private static XpsWebCompilationException ServerBridgeSignatureError(string symbol, string actualType, string expectedType, string message) =>
+        new(
+            message,
+            "XPS2003",
+            "type",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["symbol"] = symbol,
+                ["target"] = "browser-wasm",
+                ["currentContext"] = "ServerSide",
+                ["actualType"] = actualType,
+                ["expectedType"] = expectedType
+            });
 
     private static int ReadSpinnerDelay(string[] lines, ProcedureBlock procedure)
     {

@@ -19,9 +19,9 @@ internal static class RunCompiler
         try
         {
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-                return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "XPScript source files must use the .xps extension." }]);
+                return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "XPScript source files must use the .xps extension.", DiagnosticCode = CompilerDiagnosticCodes.SourceExtensionInvalid, Category = "configuration" }]);
             if (!File.Exists(sourcePath))
-                return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]);
+                return CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found.", DiagnosticCode = CompilerDiagnosticCodes.SourceFileNotFound, Category = "configuration" }]);
 
             source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
             var runnable = await CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, debug, cancellationToken).ConfigureAwait(false);
@@ -29,7 +29,17 @@ internal static class RunCompiler
         }
         catch (CompilerException ex)
         {
-            var diagnostics = CompilerDiagnosticParser.Parse(ex.Message, sourcePath, source, debug: false);
+            // Language validators can already provide source-mapped structured
+            // diagnostics. Preserve those in normal machine output. Generated
+            // C# diagnostics remain debug-only unless they are the only detail.
+            if (ex.GeneratedDiagnostics.Count > 0 &&
+                ex.GeneratedDiagnostics.Any(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)))
+            {
+                return CompileResult.Error(ex.GeneratedDiagnostics);
+            }
+
+            var diagnostics = CompilerDiagnosticParser.Parse(
+                ex.Message, sourcePath, source, debug: false, ex.DiagnosticCode, ex.Category);
             if (debug && ex.GeneratedDiagnostics.Count > 0)
                 diagnostics.AddRange(ex.GeneratedDiagnostics);
             return CompileResult.Error(diagnostics);
@@ -39,7 +49,9 @@ internal static class RunCompiler
             return CompileResult.Error([new CompileDiagnostic
             {
                 File = Path.GetFileName(sourcePath),
-                Description = debug ? "Run compilation failed: " + ex : "Run compilation failed: " + ex.Message
+                Description = debug ? "Run compilation failed: " + ex : "Run compilation failed: " + ex.Message,
+                DiagnosticCode = CompilerDiagnosticCodes.InternalCompilationFailed,
+                Category = "compiler"
             }]);
         }
     }
@@ -53,7 +65,7 @@ internal static class RunCompiler
     {
         var rid = runtimeIdentifier.Trim().ToLowerInvariant();
         if (!CompilerDriver.SupportedRuntimes.Contains(rid, StringComparer.OrdinalIgnoreCase))
-            throw new CompilerException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
+            throw new CompilerException("Unsupported runtime identifier '" + runtimeIdentifier + "'.", CompilerDiagnosticCodes.RuntimeIdentifierUnsupported, "configuration");
 
         var originalSource = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
@@ -188,7 +200,9 @@ internal static class RunCompiler
                 File = "Program.cs",
                 Line = int.Parse(match.Groups["line"].Value),
                 Position = int.Parse(match.Groups["pos"].Value),
-                Description = $"{match.Groups["id"].Value}: {match.Groups["desc"].Value.Trim()}"
+                Description = match.Groups["desc"].Value.Trim(),
+                UpstreamCode = match.Groups["id"].Value,
+                Category = "code-generation"
             });
         }
         return result;

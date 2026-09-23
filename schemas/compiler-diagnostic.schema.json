@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xpagedeveloper.com/xpscript/schemas/compiler-diagnostic.schema.json",
+  "title": "XPScript Compiler Diagnostic",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "file",
+    "line",
+    "position",
+    "description",
+    "severity",
+    "category",
+    "code",
+    "markedCode"
+  ],
+  "properties": {
+    "file": {
+      "type": "string"
+    },
+    "line": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "position": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "description": {
+      "type": "string"
+    },
+    "diagnosticCode": {
+      "type": "string",
+      "pattern": "^XPS[0-9]{4}$"
+    },
+    "upstreamCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "severity": {
+      "enum": [
+        "error",
+        "warning",
+        "info"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1
+    },
+    "code": {
+      "type": "string",
+      "description": "Schema v1 compatibility field containing source text, not the diagnostic identifier."
+    },
+    "markedCode": {
+      "type": "string"
+    },
+    "sourceText": {
+      "type": "string",
+      "description": "Unambiguous alias for the schema v1 code/source-text field."
+    },
+    "message": {
+      "type": "string"
+    },
+    "column": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "endLine": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "endColumn": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "properties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "value"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

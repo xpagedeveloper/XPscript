@@ -1,0 +1,6 @@
+Option Declare
+
+Sub NestedBroken()
+    Dim value As Integer
+    value = "nested wrong"
+End Sub

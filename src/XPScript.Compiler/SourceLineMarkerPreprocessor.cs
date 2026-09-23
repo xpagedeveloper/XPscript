@@ -52,7 +52,7 @@ internal sealed class SourceLineMarkerPreprocessor
 
                 if (!continuation && code.Length > 0)
                 {
-                    var expandedLine = i + 1;
+                    var expandedLine = sourceMap is null ? i + 1 : Math.Min(i + 1, sourceMap.Count);
                     var location = sourceMap?.Resolve(expandedLine, sourceName)
                         ?? new SourceMap.Location(sourceName, expandedLine, raw);
                     var sourceId = SafeSourceId(location.SourcePath, sourceName);
@@ -144,6 +144,36 @@ internal sealed class SourceLineMarkerPreprocessor
 
     private static bool IsProcedureEnd(string code) =>
         Regex.IsMatch(code, @"^End\s+(?:Sub|Function|Property)$", RegexOptions.IgnoreCase);
+
+    internal static bool TryResolveNearestMarker(string sourcePrefix, out int line, out string sourceId)
+    {
+        line = 0;
+        sourceId = string.Empty;
+        var prefix = sourcePrefix ?? string.Empty;
+        var matches = Regex.Matches(prefix, @"__XPSOURCE_(?<line>\d+)_(?<source>[0-9A-Fa-f]+)");
+        if (matches.Count == 0) return false;
+
+        // A marker line contains the marker call itself. Preprocessors can later insert
+        // unrelated quoted text after it, so only accept a marker when the unterminated
+        // token is on the immediately following non-empty source line.
+        var match = matches[^1];
+        var afterMarker = prefix[(match.Index + match.Length)..];
+        var markerLineEnd = afterMarker.IndexOf('\n');
+        if (markerLineEnd < 0) return false;
+        var between = afterMarker[(markerLineEnd + 1)..];
+        if (between.Contains('\n')) return false;
+
+        if (!int.TryParse(match.Groups["line"].Value, out line) || line <= 0) return false;
+        try
+        {
+            sourceId = Encoding.UTF8.GetString(Convert.FromHexString(match.Groups["source"].Value));
+        }
+        catch
+        {
+            sourceId = string.Empty;
+        }
+        return true;
+    }
 
     private static bool EndsWithContinuation(string code)
     {

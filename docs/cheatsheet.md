@@ -280,7 +280,7 @@ Function GetUser(id As Integer) As String
 End Function
 ```
 
-Start local Kestrel:
+Start local XPScript WebServer:
 
 ```text
 xpscript web ./site

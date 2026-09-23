@@ -2,15 +2,17 @@ namespace XPScript.Compiler;
 
 internal sealed class SourceLineContinuationPreprocessor
 {
-    public string Transform(string source)
+    public string Transform(string source, string sourceName = "input.xps")
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         for (var i = 0; i < lines.Length; i++)
         {
             if (!EndsWithContinuation(lines[i])) continue;
 
-            var firstIndent = LeadingWhitespace(lines[i]);
-            var joined = RemoveContinuation(lines[i]).TrimEnd();
+            var openingLineIndex = i;
+            var openingSource = lines[i];
+            var firstIndent = LeadingWhitespace(openingSource);
+            var joined = RemoveContinuation(openingSource).TrimEnd();
             var j = i + 1;
             while (j < lines.Length)
             {
@@ -24,14 +26,37 @@ internal sealed class SourceLineContinuationPreprocessor
             }
 
             if (j >= lines.Length)
-                throw new CompilerException($"Line continuation at physical line {i + 1} has no following source line.");
+            {
+                var line = openingLineIndex + 1;
+                var message = $"Line continuation at physical line {line} has no following source line.";
+                var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(openingSource).TrimEnd();
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = Path.GetFileName(sourceName),
+                    Line = line,
+                    Position = Math.Max(1, safeSource.LastIndexOf('_') + 1),
+                    EndLine = line,
+                    EndColumn = Math.Max(2, safeSource.LastIndexOf('_') + 2),
+                    Description = message,
+                    DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
+                    Category = "syntax",
+                    Properties =
+                    [
+                        new() { Name = "foundToken", Value = "_" },
+                        new() { Name = "expectedConstruct", Value = "following source line" }
+                    ],
+                    SourceCode = safeSource,
+                    MarkedCode = safeSource + Environment.NewLine + new string(' ', Math.Max(0, safeSource.LastIndexOf('_'))) + "^"
+                };
+                throw new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
+            }
 
             lines[i] = firstIndent + joined.TrimStart();
             i = j;
         }
 
         var result = string.Join(Environment.NewLine, lines);
-        new AiToolCallbackValidator().Validate(result, "input.xps");
+        new AiToolCallbackValidator().Validate(result, sourceName);
         return result;
     }
 

@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xpagedeveloper.com/xpscript/schemas/compiler-result.schema.json",
+  "title": "XPScript Compiler Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schemaVersion",
+    "compilerVersion",
+    "operation",
+    "result",
+    "errors",
+    "diagnosticsTruncated",
+    "totalDiagnostics"
+  ],
+  "properties": {
+    "schema": {
+      "const": "xpscript.compiler-result"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "compilerVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operation": {
+      "enum": [
+        "compile",
+        "validate"
+      ]
+    },
+    "result": {
+      "enum": [
+        "ok",
+        "error"
+      ]
+    },
+    "output": {
+      "type": "string"
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "$ref": "compiler-diagnostic.schema.json"
+      }
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entryPoint"
+      ],
+      "properties": {
+        "entryPoint": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "diagnosticsTruncated": {
+      "type": "boolean",
+      "description": "True when diagnostics were truncated to the machine-interface limit."
+    },
+    "totalDiagnostics": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total diagnostics produced before truncation."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "validate"
+          }
+        },
+        "required": [
+          "operation"
+        ]
+      },
+      "then": {
+        "not": {
+          "required": [
+            "output"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "const": "error"
+          }
+        },
+        "required": [
+          "result"
+        ]
+      },
+      "then": {
+        "properties": {
+          "errors": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

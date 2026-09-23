@@ -8,18 +8,18 @@ internal sealed class LanguageExtensionsPreprocessor
     private sealed record OptionalParameter(int Index, string DefaultExpression);
     private sealed record ProcedureInfo(string Name, int ParameterCount, IReadOnlyDictionary<int, OptionalParameter> OptionalParameters);
 
-    public string Transform(string source)
+    public string Transform(string source, string sourceName = "input.xps")
     {
         var normalized = source.Replace("\r\n", "\n").Replace('\r', '\n');
         var lines = normalized.Split('\n').ToList();
 
         var enumTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var enumValues = CollectEnums(lines, enumTypes);
+        var enumValues = CollectEnums(lines, enumTypes, sourceName);
         var udtTypes = CollectTypes(lines);
         var procedures = CollectProcedures(lines);
 
         RewriteEnumBlocks(lines, enumValues);
-        RewriteTypeBlocks(lines);
+        RewriteTypeBlocks(lines, sourceName);
         RewriteEnumTypes(lines, enumTypes);
         RewriteUdtDeclarations(lines, udtTypes);
         RewriteOptionalDeclarations(lines);
@@ -29,14 +29,15 @@ internal sealed class LanguageExtensionsPreprocessor
         return string.Join(Environment.NewLine, lines);
     }
 
-    private static Dictionary<string, long> CollectEnums(IReadOnlyList<string> lines, HashSet<string> enumTypes)
+    private static Dictionary<string, long> CollectEnums(IReadOnlyList<string> lines, HashSet<string> enumTypes, string sourceName)
     {
         var values = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
         string? currentEnum = null;
         long nextValue = 0;
 
-        foreach (var raw in lines)
+        for (var lineIndex = 0; lineIndex < lines.Count; lineIndex++)
         {
+            var raw = lines[lineIndex];
             var line = StripComment(raw).Trim();
             var start = Regex.Match(line, @"^(?:(?:Public|Private)\s+)?Enum\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
             if (start.Success)
@@ -56,7 +57,7 @@ internal sealed class LanguageExtensionsPreprocessor
 
             var member = Regex.Match(line, @"^([A-Za-z_]\w*)(?:\s*=\s*([+-]?\d+))?\s*$", RegexOptions.IgnoreCase);
             if (!member.Success)
-                throw new CompilerException("Unsupported Enum member declaration.");
+                throw SyntaxFailure(sourceName, lineIndex + 1, raw, "enum member declaration", line);
 
             if (member.Groups[2].Success)
                 nextValue = long.Parse(member.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
@@ -133,7 +134,7 @@ internal sealed class LanguageExtensionsPreprocessor
         }
     }
 
-    private static void RewriteTypeBlocks(IList<string> lines)
+    private static void RewriteTypeBlocks(IList<string> lines, string sourceName)
     {
         var inType = false;
         for (var i = 0; i < lines.Count; i++)
@@ -161,9 +162,9 @@ internal sealed class LanguageExtensionsPreprocessor
 
             var field = Regex.Match(line, @"^([A-Za-z_]\w*)\s*(\([^)]*\))?\s+As\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
             if (!field.Success)
-                throw new CompilerException("Unsupported Type member declaration.");
+                throw SyntaxFailure(sourceName, i + 1, raw, "Type member declaration", line);
             if (field.Groups[2].Success)
-                throw new CompilerException("Array members inside Type are not supported yet.");
+                throw SyntaxFailure(sourceName, i + 1, raw, "non-array Type member declaration", field.Groups[2].Value);
             lines[i] = indent + "Public " + field.Groups[1].Value + " As " + field.Groups[3].Value;
         }
     }
@@ -317,6 +318,18 @@ internal sealed class LanguageExtensionsPreprocessor
         for (var i = 0; i < parts.Length; i += 2)
             parts[i] = Regex.Replace(parts[i], pattern, replacement, RegexOptions.IgnoreCase);
         return string.Concat(parts);
+    }
+
+    private static CompilerException SyntaxFailure(string sourceName, int line, string sourceLine, string expected, string found)
+    {
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourceName), Line = line, Position = 1, EndLine = line, EndColumn = Math.Max(1, safeSource.Length + 1),
+            Description = $"Unsupported syntax; expected {expected}.", DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
+            Properties = [new() { Name = "foundToken", Value = found }, new() { Name = "expectedConstruct", Value = expected }], SourceCode = safeSource
+        };
+        return new CompilerException(diagnostic.Description, diagnostic.DiagnosticCode, diagnostic.Category, [diagnostic]);
     }
 
     private static string StripComment(string line)

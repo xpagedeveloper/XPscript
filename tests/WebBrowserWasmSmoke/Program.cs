@@ -77,6 +77,67 @@ End Sub
     if (capabilityResponse.StatusCode != 200 || !capabilityResponse.Body.Contains("capability", StringComparison.Ordinal))
         throw new Exception("Server bridge capability endpoint did not issue a session-bound capability.");
 
+    var cryptoPath = Path.Combine(root, "server-crypto.xps");
+    await File.WriteAllTextAsync(cryptoPath, """
+[Platform:browser-wasm]
+
+[ServerSide]
+Function EncryptOnServer(value As String, password As String) As String
+    EncryptOnServer = Application.Crypto.Encrypt(value, password)
+End Function
+
+Sub Main()
+    Print EncryptOnServer("secret", "password")
+End Sub
+""");
+    await using (var cryptoUnit = await compiler.CompileAsync(cryptoPath, root))
+    {
+        if (!cryptoUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
+            throw new Exception("[ServerSide] Application.Crypto browser-WASM compile did not produce the WASM route.");
+    }
+
+    var inertCryptoPath = Path.Combine(root, "inert-crypto.xps");
+    await File.WriteAllTextAsync(inertCryptoPath, """
+[Platform:browser-wasm]
+
+Function BrowserOnly() As String
+    ' Application.Crypto.Encrypt must not make this procedure server-side.
+    BrowserOnly = "Application.Crypto.Encrypt is documentation text"
+End Function
+
+Sub Main()
+    Print BrowserOnly()
+End Sub
+""");
+    await using (var inertCryptoUnit = await compiler.CompileAsync(inertCryptoPath, root))
+    {
+        if (!inertCryptoUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
+            throw new Exception("Application.Crypto text in comments/strings broke browser-WASM compilation.");
+    }
+
+    var unsafeCryptoPath = Path.Combine(root, "unsafe-crypto.xps");
+    await File.WriteAllTextAsync(unsafeCryptoPath, """
+[Platform:browser-wasm]
+
+Function EncryptInBrowser(value As String, password As String) As String
+    EncryptInBrowser = Application.Crypto.Encrypt(value, password)
+End Function
+
+Sub Main()
+    Print EncryptInBrowser("secret", "password")
+End Sub
+""");
+    try
+    {
+        await using var ignored = await compiler.CompileAsync(unsafeCryptoPath, root);
+        throw new Exception("Unannotated Application.Crypto browser-WASM code compiled without [ServerSide].");
+    }
+    catch (XpsWebCompilationException ex) when (ex.Message.Contains("not marked [ServerSide]", StringComparison.OrdinalIgnoreCase))
+    {
+        if (ex.DiagnosticCode != "XPS3002" || ex.Category != "execution-context")
+            throw new Exception("Application.Crypto missing [ServerSide] diagnostic was not structured as XPS3002.");
+    }
+
     var unsafePath = Path.Combine(root, "unsafe-server.xps");
     await File.WriteAllTextAsync(unsafePath, """
 [Platform:browser-wasm]
@@ -97,6 +158,16 @@ End Sub
     }
     catch (XpsWebCompilationException ex) when (ex.Message.Contains("not marked [ServerSide]", StringComparison.OrdinalIgnoreCase))
     {
+        if (ex.DiagnosticCode != "XPS3002" || ex.Category != "execution-context")
+            throw new Exception("Missing [ServerSide] diagnostic was not structured as XPS3002.");
+        if (!ex.Properties.TryGetValue("symbol", out var symbol) || symbol != "UnsafeDb")
+            throw new Exception("Missing [ServerSide] diagnostic did not identify the offending procedure.");
+        if (!ex.Properties.TryGetValue("target", out var target) || target != "browser-wasm")
+            throw new Exception("Missing [ServerSide] diagnostic did not identify browser-wasm.");
+        if (!ex.Properties.TryGetValue("currentContext", out var currentContext) || currentContext != "Client")
+            throw new Exception("Missing [ServerSide] diagnostic did not identify the client context.");
+        if (!ex.Properties.TryGetValue("requiredContext", out var requiredContext) || requiredContext != "ServerSide")
+            throw new Exception("Missing [ServerSide] diagnostic did not identify the required context.");
     }
 
     var indexRequest = new XpsWebRequest(

@@ -39,7 +39,7 @@ internal sealed class IncludeSourcePreprocessor
         var stack = new List<IncludeStackEntry>();
         var output = new List<string>();
         var map = new List<SourceMap.Location>();
-        Expand(rootPath, rootSource, pathIdentity, included, dependencies, stack, output, map);
+        Expand(rootPath, rootSource, pathIdentity, included, dependencies, stack, output, map, []);
 
         foreach (var dependency in compileResult.Dependencies)
         {
@@ -68,7 +68,8 @@ internal sealed class IncludeSourcePreprocessor
         List<string> dependencies,
         List<IncludeStackEntry> stack,
         List<string> output,
-        List<SourceMap.Location> map)
+        List<SourceMap.Location> map,
+        IReadOnlyList<SourceMap.IncludeFrame> includeTrace)
     {
         sourcePath = Path.GetFullPath(sourcePath);
         var sourceKey = pathIdentity.ComparisonKey(sourcePath);
@@ -97,7 +98,7 @@ internal sealed class IncludeSourcePreprocessor
 
                 if (WebPlatformPattern.IsMatch(code) || ServerSidePattern.IsMatch(code))
                 {
-                    AddLine(output, map, string.Empty, sourcePath, i + 1);
+                    AddLine(output, map, string.Empty, sourcePath, i + 1, includeTrace);
                     continue;
                 }
 
@@ -107,7 +108,7 @@ internal sealed class IncludeSourcePreprocessor
                     if (Regex.IsMatch(code, @"^Include\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                         throw IncludeError(sourcePath, i + 1, "Invalid Include directive. Expected Include \"file.xps\".");
 
-                    AddLine(output, map, raw, sourcePath, i + 1);
+                    AddLine(output, map, raw, sourcePath, i + 1, includeTrace);
                     continue;
                 }
 
@@ -140,7 +141,7 @@ internal sealed class IncludeSourcePreprocessor
 
                 if (included.Contains(includeKey))
                 {
-                    AddLine(output, map, string.Empty, sourcePath, i + 1);
+                    AddLine(output, map, string.Empty, sourcePath, i + 1, includeTrace);
                     continue;
                 }
 
@@ -154,7 +155,8 @@ internal sealed class IncludeSourcePreprocessor
                     throw IncludeError(sourcePath, i + 1, "Unable to read included source file: " + SafePath(declaredPath));
                 }
 
-                Expand(includePath, includeSource, pathIdentity, included, dependencies, stack, output, map);
+                var nestedTrace = includeTrace.Concat([new SourceMap.IncludeFrame(sourcePath, i + 1, includePath)]).ToArray();
+                Expand(includePath, includeSource, pathIdentity, included, dependencies, stack, output, map, nestedTrace);
             }
         }
         finally
@@ -166,10 +168,16 @@ internal sealed class IncludeSourcePreprocessor
     private static bool IsBrowserWasmSource(string source)
         => NormalizeLines(source).Any(line => WebPlatformPattern.IsMatch(StripComment(line).Trim()));
 
-    private static void AddLine(List<string> output, List<SourceMap.Location> map, string text, string path, int line)
+    private static void AddLine(
+        List<string> output,
+        List<SourceMap.Location> map,
+        string text,
+        string path,
+        int line,
+        IReadOnlyList<SourceMap.IncludeFrame> includeTrace)
     {
         output.Add(text);
-        map.Add(new SourceMap.Location(path, line, text));
+        map.Add(new SourceMap.Location(path, line, text, includeTrace));
     }
 
     private static string[] NormalizeLines(string source) =>

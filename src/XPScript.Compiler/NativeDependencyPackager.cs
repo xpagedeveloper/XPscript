@@ -105,8 +105,8 @@ internal sealed class NativeDependencyPackager
         var expected = _runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".dll" :
             _runtimeIdentifier.StartsWith("linux-", StringComparison.OrdinalIgnoreCase) ? ".so or versioned .so.N" :
             _runtimeIdentifier.StartsWith("osx-", StringComparison.OrdinalIgnoreCase) ? ".dylib" : "a native-library file";
-        throw Error(location,
-            $"Application-local native dependency '{declaredPath}' does not match target runtime '{_runtimeIdentifier}'. Expected {expected}.");
+        var message = $"Application-local native dependency '{declaredPath}' does not match target runtime '{_runtimeIdentifier}'. Expected {expected}.";
+        throw TargetError(location, message, declaredPath, expected);
     }
 
     private string? SelectTargetLibrary(string code, string? fallback)
@@ -130,6 +130,27 @@ internal sealed class NativeDependencyPackager
     {
         var match = Regex.Match(code, "\\b" + Regex.Escape(keyword) + "\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase);
         return match.Success ? match.Groups[1].Value : null;
+    }
+
+    private CompilerException TargetError(SourceMap.Location location, string message, string symbol, string expected)
+    {
+        var diagnostic = new CompileDiagnostic
+        {
+            File = location.SourcePath,
+            Line = location.Line,
+            Position = 1,
+            Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.TargetApiUnavailable,
+            Category = "target",
+            SourceCode = location.SourceText,
+            Properties =
+            [
+                new() { Name = "symbol", Value = symbol },
+                new() { Name = "target", Value = _runtimeIdentifier },
+                new() { Name = "allowedTargets", Value = expected }
+            ]
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.TargetApiUnavailable, "target", [diagnostic]);
     }
 
     private static CompilerException Error(SourceMap.Location location, string message) =>

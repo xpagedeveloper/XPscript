@@ -76,12 +76,6 @@ internal sealed class CompilerSourceLineDirectivePostProcessor
             var match = MarkerPattern.Match(rawLine);
             if (!match.Success)
             {
-                if (inScript && ScriptProcedurePattern.IsMatch(rawLine))
-                {
-                    var indent = Regex.Match(rawLine, @"^\s*").Value;
-                    output.Add(indent + NoInliningAttribute);
-                }
-
                 if (inScript && ForRangeLoopPattern.IsMatch(rawLine))
                     insideGeneratedForRangeHeader = true;
 

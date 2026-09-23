@@ -36,10 +36,28 @@ internal sealed class NothingComparisonValidator
                 continue;
 
             var op = match.Groups["op"].Value;
-            throw new CompilerException(
-                $"{sourceName}({i + 1},{match.Index + 1}): Nothing cannot be compared with '{op}'. " +
-                "Use 'Is Nothing' or 'Is Not Nothing' for object references." + Environment.NewLine +
-                $"  {lines[i].Trim()}");
+            var message = $"Nothing cannot be compared with '{op}'. Use 'Is Nothing' or 'Is Not Nothing' for object references.";
+            var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(lines[i]).TrimEnd();
+            var position = match.Index + 1;
+            var diagnostic = new CompileDiagnostic
+            {
+                File = sourceName,
+                Line = i + 1,
+                Position = position,
+                EndLine = i + 1,
+                EndColumn = position + match.Length,
+                Description = message,
+                DiagnosticCode = CompilerDiagnosticCodes.InvalidNothingComparison,
+                Category = "syntax",
+                Properties =
+                [
+                    new() { Name = "foundOperator", Value = op },
+                    new() { Name = "expectedConstruct", Value = "Is Nothing or Is Not Nothing" }
+                ],
+                SourceCode = safeSource,
+                MarkedCode = safeSource + Environment.NewLine + new string(' ', Math.Max(0, position - 1)) + "^"
+            };
+            throw new CompilerException(message, CompilerDiagnosticCodes.InvalidNothingComparison, "syntax", [diagnostic]);
         }
     }
 
