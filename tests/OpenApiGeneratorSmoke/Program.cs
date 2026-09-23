@@ -1180,6 +1180,52 @@ paths:
 }
 Console.WriteLine("OPENAPI-3X-JSON-YAML-SERVER-CLIENT-MATRIX=OK");
 
+foreach (var unsupportedVersion in new[] { "2.0", "3.3.0", "4.0.0" })
+{
+    var unsupportedSpec = "{\"openapi\":\"" + unsupportedVersion + "\",\"info\":{\"title\":\"Unsupported\",\"version\":\"1\"},\"paths\":{}}";
+    foreach (var generate in new Func<string, string>[]
+    {
+        text => generator.Generate(text, "misleading-supported.yaml").Source,
+        text => new XpsOpenApiClientGenerator().Generate(text, "misleading-supported.yaml").Source
+    })
+    {
+        try
+        {
+            _ = generate(unsupportedSpec);
+            throw new Exception("Unsupported OpenAPI " + unsupportedVersion + " was accepted.");
+        }
+        catch (XpsOpenApiGenerationException ex)
+        {
+            if (!ex.Message.Contains(unsupportedVersion, StringComparison.Ordinal) ||
+                !ex.Message.Contains("3.0.x", StringComparison.Ordinal) ||
+                !ex.Message.Contains("3.1.x", StringComparison.Ordinal) ||
+                !ex.Message.Contains("3.2.x", StringComparison.Ordinal))
+                throw new Exception("Unsupported OpenAPI diagnostic was not actionable: " + ex.Message);
+        }
+    }
+}
+
+const string missingVersionSpec = "{\"info\":{\"title\":\"Missing version\",\"version\":\"1\"},\"paths\":{}}";
+foreach (var generate in new Action[]
+{
+    () => generator.Generate(missingVersionSpec, "looks-like-openapi-3.2.yaml"),
+    () => new XpsOpenApiClientGenerator().Generate(missingVersionSpec, "looks-like-openapi-3.2.yaml")
+})
+{
+    try
+    {
+        generate();
+        throw new Exception("OpenAPI document without an openapi version was accepted.");
+    }
+    catch (XpsOpenApiGenerationException ex)
+    {
+        if (!ex.Message.Contains("openapi", StringComparison.OrdinalIgnoreCase) ||
+            !ex.Message.Contains("version", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Missing OpenAPI version diagnostic was not actionable: " + ex.Message);
+    }
+}
+Console.WriteLine("OPENAPI-UNSUPPORTED-VERSION-DIAGNOSTICS=OK");
+
 var openApi32Spec = """
 openapi: 3.2.0
 info:
