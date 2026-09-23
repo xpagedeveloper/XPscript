@@ -1,6 +1,6 @@
 # WebIIS deployment target
 
-`webiis` builds an IIS-deployable XPscript web application package that uses ASP.NET Core Module V2 and XPScript WebServer.
+`webiis` builds an IIS-deployable XPscript web application package that uses ASP.NET Core Module V2 and Kestrel.
 
 ## Build
 
@@ -64,7 +64,7 @@ Repository, build and runtime cache directories such as `.git`, `.xpscript-cache
 
 The generated `web.config` uses `AspNetCoreModuleV2` with `hostingModel="outofprocess"`.
 
-IIS receives the public HTTP or HTTPS request. ASP.NET Core Module starts the XPscript host and assigns a private loopback port. XPscript reads the IIS-provided `ASPNETCORE_PORT`, binds XPScript WebServer to loopback only and accepts the original public host value because IIS bindings are the public host boundary.
+IIS receives the public HTTP or HTTPS request. ASP.NET Core Module starts the XPscript host and assigns a private loopback port. XPscript reads the IIS-provided `ASPNETCORE_PORT`, binds Kestrel to loopback only and accepts the original public host value because IIS bindings are the public host boundary.
 
 Normal standalone `xpscript web` hosting keeps its explicit XPscript host allowlist behavior. The IIS behavior is activated only when the ASP.NET Core Module environment contains both its assigned port and pairing token.
 
@@ -235,4 +235,4 @@ For alternative IIS topologies such as reverse proxy or CGI, see [Hosting XPScri
 
 ## Structured logging and client correlation
 
-Mandatory logging uses the same runtime contract as direct XPScript WebServer, FastCGI and CGI hosting. Each XPScript site gets a stable site-specific `XPSLOGID_<site-hash>` cookie name, which avoids collisions when IIS hosts multiple applications on one domain. Logs contain only its SHA-256-derived `session.id`, never the raw cookie. ASP.NET Core Module preserves the external HTTP or HTTPS scheme so the runtime applies the `Secure` cookie attribute only for HTTPS. See [mandatory web logging](web-logging.md).
+Mandatory logging uses the same runtime contract as direct Kestrel, FastCGI and CGI hosting. Each XPScript site gets a stable site-specific `XPSLOGID_<site-hash>` cookie name, which avoids collisions when IIS hosts multiple applications on one domain. Logs contain only its SHA-256-derived `session.id`, never the raw cookie. ASP.NET Core Module preserves the external HTTP or HTTPS scheme so the runtime applies the `Secure` cookie attribute only for HTTPS. See [mandatory web logging](web-logging.md).
