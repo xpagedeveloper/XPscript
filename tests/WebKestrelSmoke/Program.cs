@@ -432,8 +432,13 @@ try
     using (var postHealth = await client.PostAsync("/_xps/health", new StringContent(string.Empty)))
     {
         if ((int)postHealth.StatusCode != 405) throw new Exception("Operational endpoint must reject non-GET/HEAD methods.");
-        if (!postHealth.Headers.TryGetValues("Allow", out var allow) || allow.Single() != "GET, HEAD")
-            throw new Exception("Operational endpoint 405 response did not advertise GET and HEAD.");
+        if (!postHealth.Headers.TryGetValues("Allow", out var allow))
+            throw new Exception("Operational endpoint 405 response did not advertise allowed methods.");
+        var allowedMethods = allow
+            .SelectMany(value => value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!allowedMethods.SetEquals(["GET", "HEAD"]))
+            throw new Exception($"Operational endpoint 405 response advertised unexpected methods: {string.Join(", ", allowedMethods)}.");
     }
 
     using (var headHealth = new HttpRequestMessage(HttpMethod.Head, "/_xps/health"))
