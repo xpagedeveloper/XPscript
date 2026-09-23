@@ -612,6 +612,35 @@ if (!parameterSuffixSource.Contains("Optional ApiEnd As Variant", StringComparis
     !parameterSuffixSource.Contains("request.SetHeader(\"api key\", CStr(ApiKey2))", StringComparison.Ordinal))
     throw new Exception("OpenAPI parameter identifiers must preserve names unless a real procedure-scope collision requires disambiguation. Generated source:\n" + parameterSuffixSource);
 
+var helperScopeSource = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Helper Scope, version: 1.0.0 }
+paths:
+  /value:
+    post:
+      operationId: helperScope
+      parameters:
+        - { name: url, in: query, schema: { type: string } }
+        - { name: ApiUrl, in: query, schema: { type: string } }
+        - { name: raw, in: query, schema: { type: string } }
+        - { name: ApiRaw, in: query, schema: { type: string } }
+        - { name: request, in: query, schema: { type: string } }
+        - { name: ApiRequest, in: query, schema: { type: string } }
+        - { name: result, in: query, schema: { type: string } }
+        - { name: ApiResult, in: query, schema: { type: string } }
+        - { name: payload, in: query, schema: { type: string } }
+        - { name: ApiPayload, in: query, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: string }
+      responses:
+        '204': { description: ok }
+""", "helper-scope.yaml").Source;
+foreach (var marker in new[] { "Optional Url As Variant", "Optional ApiUrl As Variant", "Dim url2 As String", "Dim raw2 As XPHttpResponse", "Dim request2 As New XPHttpRequest", "Dim result2 As HelperScope_APIResponse", "Optional payload2 As Variant" })
+    if (!helperScopeSource.Contains(marker, StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Generated helper name did not avoid the complete procedure scope: " + marker + "\n" + helperScopeSource);
+
 var generatedTypeCollisionRejected = false;
 try { _ = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
