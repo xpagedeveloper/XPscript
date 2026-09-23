@@ -555,7 +555,9 @@ try
     {
         Port = 0,
         AllowedHosts = ["localhost", "127.0.0.1", "::1", "public.example"],
-        KnownProxies = [System.Net.IPAddress.Loopback]
+        KnownProxies = [System.Net.IPAddress.Loopback],
+        EnableHealthEndpoint = true,
+        EnableMetricsEndpoint = true
     };
     var trustedApp = XpsKestrelAdapter.Build(
         trustedOptions,
