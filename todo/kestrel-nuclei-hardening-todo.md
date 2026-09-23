@@ -58,7 +58,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify chunk extensions and malformed chunk terminators. Malformed terminator rejected in run #31 and chunk extensions handled without ambiguous framing in run #39.
 - [x] Add request smuggling regression probes for CL.TE, TE.CL and duplicate Content-Length variants. CL.TE verified in run #31, TE.CL and parser variants verified in run #32. nginx to FastCGI topology gate verified in run #38.
 - [x] Verify HTTP/1.0 handling. Verified safe in run #39.
-- [ ] Verify HTTP/2 behavior separately from HTTP/1.1.
+- [x] Verify HTTP/2 behavior separately from HTTP/1.1. An explicit HTTP/2-only Kestrel instance requires an exact HTTP/2 request and verifies status, path, query and header propagation independently of the HTTP/1.1 probes; verified in run #215.
 
 ## Request body and resource limits
 
@@ -164,8 +164,8 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify JSON parser malformed and deeply nested input. Shared REST parsing covers malformed/deep JSON; real Kestrel HTTP coverage is verified, and CGI/FastCGI malformed JSON body adaptation is explicitly regression-tested. Deep parser limits are shared runtime behavior rather than transport framing; verified through run #143.
 - [x] Verify multipart parser malformed boundaries and oversized fields. Shared parser boundary/body-limit regressions plus explicit Kestrel, CGI, and FastCGI multipart adapter regressions are verified through run #163.
 - [x] Verify unexpected methods cannot reach a route with the wrong method attribute. REST dispatcher regressions verify GET/POST route isolation and 405 responses without invoking the wrong handler; verified in run #165.
-- [ ] Verify error responses never expose stack traces.
-- [ ] Verify compilation/runtime errors never disclose filesystem paths in production responses.
+- [x] Verify error responses never expose stack traces. The Kestrel regression deliberately throws an exception containing a security sentinel and verifies the production response is exactly `Internal Server Error` with no exception type, source location or stack-trace marker; verified in run #215.
+- [x] Verify compilation/runtime errors never disclose filesystem paths in production responses. The unhandled runtime exception embeds `Environment.CurrentDirectory` in its message while the HTTP regression requires the production response to remain exactly `Internal Server Error`; operational payload regressions separately reject filesystem-path and source-location markers; verified in run #215.
 - [ ] Verify response splitting attempts are rejected.
 - [ ] Verify open redirect behavior where application APIs construct redirects.
 - [ ] Verify reflected input examples are HTML encoded where required.
