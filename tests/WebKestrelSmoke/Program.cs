@@ -204,7 +204,8 @@ try
         ?? throw new Exception("Kestrel did not expose server addresses.");
     var address = addresses.Single();
 
-    using var client = new HttpClient { BaseAddress = new Uri(address) };
+    using var clientHandler = new HttpClientHandler { UseCookies = false };
+    using var client = new HttpClient(clientHandler) { BaseAddress = new Uri(address) };
 
     using (var error = await client.GetAsync("/unhandled-error"))
     {
