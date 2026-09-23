@@ -51,13 +51,13 @@ public static class CompilerMcpServer
             {
                 WriteError(TryReadId(line), ex.Code, ex.Message);
             }
-            catch (JsonException ex)
+            catch (JsonException)
             {
-                WriteError(null, -32700, ex.Message);
+                WriteError(null, -32700, "Parse error.");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                WriteError(TryReadId(line), -32603, ex.Message);
+                WriteError(TryReadId(line), -32603, "Internal error.");
             }
         }
         return 0;
