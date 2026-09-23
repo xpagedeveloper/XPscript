@@ -220,13 +220,13 @@ try
     }
 
     // Kestrel multipart adapter regression: verify the transport preserves the multipart body and parser failures remain controlled.
-    using (var multipart = new MultipartFormDataContent("kestrel-boundary"))
+    using (var multipart = new MultipartFormDataContent("b"))
     {
-        multipart.Add(new StringContent("user"), "role");
+        multipart.Add(new StringContent("u"), "r");
         using var response = await client.PostAsync("/multipart", multipart);
         if ((int)response.StatusCode != 201) throw new Exception($"Kestrel multipart expected 201, got {(int)response.StatusCode}.");
         var body = await response.Content.ReadAsStringAsync();
-        if (!body.Contains("FORM=user", StringComparison.Ordinal))
+        if (!body.Contains("FORM=u", StringComparison.Ordinal))
             throw new Exception("Kestrel multipart form field was not preserved.");
     }
 
@@ -933,7 +933,7 @@ sealed class EchoHandler : IXpsWebRequestHandler
         {
             try
             {
-                context.Response.Write("FORM=" + context.Request.FormFirst("role"));
+                context.Response.Write("FORM=" + context.Request.FormFirst("r"));
             }
             catch (InvalidOperationException)
             {
