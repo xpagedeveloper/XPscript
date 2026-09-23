@@ -156,7 +156,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 - [x] Verify malformed UTF-8 paths fail safely. Raw invalid UTF-8 and invalid percent-encoded UTF-8 paths are rejected without reaching the application or leaking diagnostics; verified in run #145.
 - [x] Verify non-ASCII paths and query strings. Valid percent-encoded UTF-8 paths and query values are handled safely without diagnostic leakage; verified in run #147.
-- [ ] Verify Unicode normalization does not create route aliases that bypass authorization.
+- [x] Verify Unicode normalization does not create route aliases that bypass authorization. A composed Unicode route resolves normally while its canonically equivalent decomposed spelling does not alias the same resource; shared path resolver regression verified in run #150.
 - [x] Verify encoded control characters in route paths. Encoded NUL path rejected before application handler in run #42.
 - [ ] Verify query parser behavior with duplicate keys.
 - [x] Verify extreme query-string sizes. Oversized query/request-line probe verified with 414 in run #42.
