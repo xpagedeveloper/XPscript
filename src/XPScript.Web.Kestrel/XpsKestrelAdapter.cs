@@ -239,7 +239,7 @@ public static class XpsKestrelAdapter
                 if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
                 {
                     http.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
-                    http.Response.Headers.Allow = "GET, HEAD";
+                    http.Response.Headers["Allow"] = new Microsoft.Extensions.Primitives.StringValues(["GET", "HEAD"]);
                     return;
                 }
 
