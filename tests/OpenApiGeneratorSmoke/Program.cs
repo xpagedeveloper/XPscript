@@ -952,6 +952,44 @@ paths:
       responses:
         '204': { description: ok }
 """, "unicode.yaml").Source;
+var serverSecurity = generator.Generate("""
+openapi: 3.1.0
+info: { title: Server Security, version: 1.0.0 }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+security:
+  - bearerAuth: []
+paths:
+  /protected:
+    get:
+      operationId: protectedCall
+      responses: { '204': { description: ok } }
+  /public:
+    get:
+      operationId: publicCall
+      security: []
+      responses: { '204': { description: ok } }
+""", "server-security.yaml").Source;
+if (!serverSecurity.Contains("[Authenticated]", StringComparison.Ordinal) || !serverSecurity.Contains("[Anonymous]", StringComparison.Ordinal))
+    throw new Exception("OpenAPI server security declarations did not generate authenticated/public route metadata.");
+try
+{
+    generator.Generate("""
+openapi: 3.1.0
+info: { title: Bad Security, version: 1.0.0 }
+security:
+  - missingAuth: []
+paths:
+  /bad:
+    get:
+      operationId: badSecurity
+      responses: { '204': { description: ok } }
+""", "bad-server-security.yaml");
+    throw new Exception("Undefined OpenAPI server security scheme must be rejected.");
+}
+catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("undefined security scheme", StringComparison.OrdinalIgnoreCase)) { }
+
 var cookieServer = generator.Generate("""
 openapi: 3.1.0
 info: { title: Cookie Server, version: 1.0.0 }
