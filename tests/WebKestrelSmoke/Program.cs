@@ -791,12 +791,34 @@ static async Task AssertBoundedConcurrencyStressAsync(HttpClient client)
         await gate.WaitAsync();
         try
         {
-            using var response = await client.GetAsync($"/stress/{i}");
-            if ((int)response.StatusCode != 201)
-                throw new Exception($"Bounded concurrency request {i} expected 201, got {(int)response.StatusCode}.");
-            var body = await response.Content.ReadAsStringAsync();
-            if (!body.Contains($"PATH=/stress/{i}", StringComparison.Ordinal))
-                throw new Exception($"Bounded concurrency request {i} received an unexpected response.");
+            HttpResponseMessage? response = null;
+            for (var attempt = 1; attempt <= 4; attempt++)
+            {
+                try
+                {
+                    response = await client.GetAsync($"/stress/{i}");
+                    break;
+                }
+                catch (HttpRequestException ex) when (IsPrematureResponseEnd(ex) && attempt < 4)
+                {
+                    // MaxConcurrentConnections can reject an excess HTTP/1.1 connection
+                    // before a response is written. Retry with bounded backoff so this
+                    // stress test verifies eventual service without weakening the separate
+                    // connection-limit regression below.
+                    await Task.Delay(attempt * 25);
+                }
+            }
+
+            if (response is null)
+                throw new Exception($"Bounded concurrency request {i} was repeatedly rejected at the connection limit.");
+            using (response)
+            {
+                if ((int)response.StatusCode != 201)
+                    throw new Exception($"Bounded concurrency request {i} expected 201, got {(int)response.StatusCode}.");
+                var body = await response.Content.ReadAsStringAsync();
+                if (!body.Contains($"PATH=/stress/{i}", StringComparison.Ordinal))
+                    throw new Exception($"Bounded concurrency request {i} received an unexpected response.");
+            }
         }
         finally
         {
