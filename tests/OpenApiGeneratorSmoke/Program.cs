@@ -448,7 +448,7 @@ if (!securityCollisionSource.Contains("Sub ApiSetHeader(", StringComparison.Ordi
     !securityCollisionSource.Contains("Sub ApiSetApiKey(", StringComparison.Ordinal) ||
     !securityCollisionSource.Contains("Sub ApiSetApiKey2(", StringComparison.Ordinal) ||
     !securityCollisionSource.Contains("Function SetHeader(", StringComparison.Ordinal))
-    throw new Exception("OpenAPI operation names must win over generator-owned API helpers, which must use deterministic Api-prefixed names.");
+    throw new Exception("OpenAPI operation names must win over generator-owned API helpers, which must use deterministic Api-prefixed names. Generated source:\n" + securityCollisionSource);
 
 var keywordEnumMemberRejected = false;
 try { _ = new XpsOpenApiClientGenerator().Generate("""
