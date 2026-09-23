@@ -76,7 +76,7 @@ var telemetry = new XpsWebTelemetry(new XpsWebJsonLineEventSink(structuredLog));
 var options = new XpsKestrelOptions
 {
     Port = 0,
-    MaxRequestBodySize = 64,
+    MaxRequestBodySize = 256,
     EnableStaticFiles = true,
     MaxStaticFileBytes = 32,
     MaxConcurrentConnections = 2,
