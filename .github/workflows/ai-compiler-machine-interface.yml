@@ -307,9 +307,9 @@ jobs:
               return ($reader.ReadLine() | ConvertFrom-Json)
             } finally { $client.Dispose() }
           }
-          $normal = Invoke-DaemonRequest @{ id=51; method='compileRun'; token=$state.token; params=@{ source=$null; outputDirectory=''; runtimeIdentifier=''; debug=$false } }
+          $normal = Invoke-DaemonRequest @{ id=51; method='compileRun'; token=$state.token; params=@{ outputDirectory=''; runtimeIdentifier=''; debug=$false } }
           if ($normal.error -match 'System\.| at XPScript|Exception') { throw "Normal daemon error leaked internal detail: $($normal.error)" }
-          $debug = Invoke-DaemonRequest @{ id=52; method='compileRun'; token=$state.token; params=@{ source=$null; outputDirectory=''; runtimeIdentifier=''; debug=$true } }
+          $debug = Invoke-DaemonRequest @{ id=52; method='compileRun'; token=$state.token; params=@{ outputDirectory=''; runtimeIdentifier=''; debug=$true } }
           if ($debug.error -notmatch 'Exception|System\.| at XPScript') { throw "Debug daemon error did not expose troubleshooting detail: $($debug.error)" }
           Invoke-XPScript @('daemon','quit') | Out-Null
 
