@@ -1,875 +1,448 @@
-using System.Diagnostics;
-using System.Text.Json;
-using System.Xml.Serialization;
+# Compiler Machine Interface TODO
 
-namespace XPScript.Compiler;
-
-public static class XPScriptCompilerCommandLine
-{
-    private static int progressLineWidth;
-
-    public static async Task<int> RunAsync(string[] args)
-    {
-        if (args.Length == 0 || args[0] is "--help" or "-h")
-        {
-            WriteHelp("xpscript compile", "xpscript run");
-            return 0;
-        }
-
-        if (args[0].Equals("run", StringComparison.OrdinalIgnoreCase))
-            return await RunScriptAsync(args).ConfigureAwait(false);
-
-        if (args[0].Equals("compile", StringComparison.OrdinalIgnoreCase))
-            return await CompileAsync(args[1..]).ConfigureAwait(false);
-
-        if (args[0].Equals("validate", StringComparison.OrdinalIgnoreCase))
-            return await ValidateAsync(args[1..]).ConfigureAwait(false);
-
-        if (args[0].Equals("explain", StringComparison.OrdinalIgnoreCase))
-            return Explain(args[1..]);
-
-        if (args[0].Equals("describe", StringComparison.OrdinalIgnoreCase))
-            return Describe(args[1..]);
-
-        if (args[0].Equals("symbols", StringComparison.OrdinalIgnoreCase))
-            return Symbols(args[1..]);
-
-        if (args[0].Equals("mcp", StringComparison.OrdinalIgnoreCase))
-            return args.Length > 1 && args[1].Equals("install", StringComparison.OrdinalIgnoreCase)
-                ? await CompilerMcpInstaller.RunAsync(args[2..]).ConfigureAwait(false)
-                : await CompilerMcpServer.RunAsync(args[1..]).ConfigureAwait(false);
-
-        if (args[0].Equals("daemon", StringComparison.OrdinalIgnoreCase))
-        {
-            if (args.Length > 1 && args[1].Equals("status", StringComparison.OrdinalIgnoreCase))
-                return await CompilerDaemonClient.StatusAsync().ConfigureAwait(false);
-            if (args.Length > 1 && args[1].Equals("quit", StringComparison.OrdinalIgnoreCase))
-                return await CompilerDaemonClient.QuitAsync().ConfigureAwait(false);
-            if (args.Length > 1 && args[1].Equals("restart", StringComparison.OrdinalIgnoreCase))
-                return await CompilerDaemonClient.RestartAsync().ConfigureAwait(false);
-            return await CompilerDaemonServer.RunAsync(args[1..]).ConfigureAwait(false);
-        }
-
-        return await CompileAsync(args).ConfigureAwait(false);
-    }
-
-    public static int Describe(string[] args)
-    {
-        var resultFormat = "text";
-        try
-        {
-            if (args.Length == 0) throw new ArgumentException("describe requires an XPScript symbol.");
-            var name = args[0];
-            for (var i = 1; i < args.Length; i++)
-            {
-                if (args[i] == "--result-format" && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
-                else throw new ArgumentException($"Unknown argument: {args[i]}");
-            }
-            if (resultFormat is not ("text" or "json")) throw new ArgumentException("describe --result-format must be text or json.");
-            var definition = CompilerSymbolCatalog.Find(name);
-            if (definition is null) { Console.Error.WriteLine($"Unknown XPScript symbol: {name}"); return 2; }
-            if (resultFormat == "json") Console.WriteLine(JsonSerializer.Serialize(definition, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true }));
-            else
-            {
-                Console.WriteLine(definition.Signature);
-                Console.WriteLine($"kind: {definition.Kind}");
-                Console.WriteLine($"documentationId: {definition.DocumentationId}");
-                if (definition.AllowedTargets.Count > 0) Console.WriteLine("allowedTargets: " + string.Join(", ", definition.AllowedTargets));
-                if (definition.Deprecated) Console.WriteLine("deprecated: true");
-            }
-            return 0;
-        }
-        catch (Exception ex) { Console.Error.WriteLine(ex.Message); return 1; }
-    }
-
-    public static int Symbols(string[] args)
-    {
-        var resultFormat = "text";
-        var query = "";
-        try
-        {
-            for (var i = 0; i < args.Length; i++)
-            {
-                if (args[i] == "--search" && i + 1 < args.Length) query = args[++i];
-                else if (args[i] == "--result-format" && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
-                else throw new ArgumentException($"Unknown argument: {args[i]}");
-            }
-            if (resultFormat is not ("text" or "json")) throw new ArgumentException("symbols --result-format must be text or json.");
-            var definitions = CompilerSymbolCatalog.Search(query);
-            if (resultFormat == "json") Console.WriteLine(JsonSerializer.Serialize(definitions, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true }));
-            else foreach (var definition in definitions) Console.WriteLine(definition.Signature);
-            return 0;
-        }
-        catch (Exception ex) { Console.Error.WriteLine(ex.Message); return 1; }
-    }
-
-    public static int Explain(string[] args)
-    {
-        var resultFormat = "text";
-        try
-        {
-            if (args.Length == 0)
-            {
-                Console.Error.WriteLine("explain requires an XPS diagnostic code.");
-                return 1;
-            }
-
-            var code = args[0];
-            for (var i = 1; i < args.Length; i++)
-            {
-                if (args[i] == "--result-format" && i + 1 < args.Length)
-                    resultFormat = args[++i].ToLowerInvariant();
-                else
-                    throw new ArgumentException($"Unknown argument: {args[i]}");
-            }
-
-            if (resultFormat is not ("text" or "json"))
-                throw new ArgumentException("explain --result-format must be text or json.");
-
-            var definition = CompilerDiagnosticCatalog.Find(code);
-            if (definition is null)
-            {
-                Console.Error.WriteLine($"Unknown XPScript diagnostic code: {code}");
-                return 2;
-            }
-
-            if (resultFormat == "json")
-            {
-                Console.WriteLine(JsonSerializer.Serialize(definition, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true
-                }));
-            }
-            else
-            {
-                Console.WriteLine($"{definition.DiagnosticCode}: {definition.Explanation}");
-                Console.WriteLine($"category: {definition.Category}");
-                Console.WriteLine($"severity: {definition.Severity}");
-                Console.WriteLine($"documentationId: {definition.DocumentationId}");
-                if (definition.Properties.Count > 0)
-                    Console.WriteLine("properties: " + string.Join(", ", definition.Properties));
-            }
-
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine(ex.Message);
-            return 1;
-        }
-    }
-
-    public static async Task<int> CompileAsync(string[] args)
-    {
-        if (args.Length == 0)
-        {
-            WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "compile requires an .xps source file." }]), "text");
-            return 1;
-        }
-
-        var sourcePath = Path.GetFullPath(args[0]);
-        string? outputPath = null;
-        var selfContained = false;
-        var singleFile = true;
-        var resultFormat = "text";
-        var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
-        string? target = null;
-        var restricted = false;
-        var debug = false;
-        ApplicationSecurityMode? securityMode = null;
-        var embedAssets = false;
-        var sourceRoots = new List<string>();
-        var sourcePreprocessors = new List<string>();
-
-        try
-        {
-            for (var i = 1; i < args.Length; i++)
-            {
-                if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
-                    outputPath = Path.GetFullPath(args[++i]);
-                else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
-                    runtimeIdentifier = args[++i].ToLowerInvariant();
-                else if (args[i].StartsWith("--runtime=", StringComparison.OrdinalIgnoreCase))
-                    selfContained = ParseBooleanCompileOption("--runtime", args[i]["--runtime=".Length..]);
-                else if (args[i] == "--runtime" && i + 1 < args.Length)
-                    selfContained = ParseBooleanCompileOption("--runtime", args[++i]);
-                else if (args[i].StartsWith("--single-file=", StringComparison.OrdinalIgnoreCase))
-                    singleFile = ParseBooleanCompileOption("--single-file", args[i]["--single-file=".Length..]);
-                else if (args[i] == "--single-file" && i + 1 < args.Length)
-                    singleFile = ParseBooleanCompileOption("--single-file", args[++i]);
-                else if (args[i].StartsWith("--singlefile=", StringComparison.OrdinalIgnoreCase))
-                    singleFile = ParseBooleanCompileOption("--singlefile", args[i]["--singlefile=".Length..]);
-                else if (args[i] == "--singlefile" && i + 1 < args.Length)
-                    singleFile = ParseBooleanCompileOption("--singlefile", args[++i]);
-                else if (args[i] == "--target" && i + 1 < args.Length)
-                    target = args[++i].ToLowerInvariant();
-                else if (args[i] == "--result-format" && i + 1 < args.Length)
-                    resultFormat = args[++i].ToLowerInvariant();
-                else if (args[i] == "--restricted")
-                    restricted = true;
-                else if (args[i] == "--debug")
-                    debug = true;
-                else if (args[i].StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
-                    securityMode = ApplicationSecurityModeContext.Parse(args[i]["--security=".Length..]);
-                else if (args[i] == "--security" && i + 1 < args.Length)
-                    securityMode = ApplicationSecurityModeContext.Parse(args[++i]);
-                else if (args[i] == "--embed-assets")
-                    embedAssets = true;
-                else if (args[i] == "--source-root" && i + 1 < args.Length)
-                {
-                    restricted = true;
-                    sourceRoots.Add(Path.GetFullPath(args[++i]));
-                }
-                else if (args[i] == "--preprocessor" && i + 1 < args.Length)
-                    sourcePreprocessors.Add(args[++i]);
-                else
-                    throw new ArgumentException($"Unknown argument: {args[i]}");
-            }
-
-            if (resultFormat is not ("text" or "json" or "xml"))
-                throw new ArgumentException("--result-format must be text, json, or xml.");
-            if (target is not null && target != "webiis")
-                throw new ArgumentException("--target currently supports webiis.");
-            if (target == "webiis" && embedAssets)
-                throw new ArgumentException("--embed-assets is supported for desktop executable compilation. Web and browser-WASM assets are packaged as application assets.");
-
-            var effectiveSecurityMode = securityMode ?? (debug ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
-            using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
-            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
-            using var publishLayoutScope = CompilePublishLayoutContext.Push(singleFile, selfContained);
-            var timer = Stopwatch.StartNew();
-            var sourceName = Path.GetFileName(sourcePath);
-            WriteProgress($"Started to compile {sourceName}");
-
-            if (target == "webiis")
-            {
-                var targetResult = await WaitWithProgressAsync(
-                    WebIisPackageTarget.BuildAsync(sourcePath, outputPath, selfContained, resultFormat),
-                    timer,
-                    $"Compiling {sourceName} as WebIIS package").ConfigureAwait(false);
-                CompleteProgress(targetResult.Success
-                    ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
-                    : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
-                WriteResult(targetResult, resultFormat);
-                return targetResult.Success ? 0 : 2;
-            }
-
-            if (restricted && sourceRoots.Count == 0)
-                sourceRoots.Add(Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory);
-
-            var fileName = Path.GetFileNameWithoutExtension(sourcePath);
-            var defaultExtension = runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".exe" : "";
-            outputPath ??= Path.Combine(Path.GetDirectoryName(sourcePath)!, fileName + defaultExtension);
-
-            if (UIFormAppAssets.UsesUIForm(sourcePath))
-                UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
-
-            using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
-            using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
-            using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
-            var compiler = new CompilerDriver();
-            var mode = $"single-file={singleFile.ToString().ToLowerInvariant()}, runtime={selfContained.ToString().ToLowerInvariant()}";
-            var result = await WaitWithProgressAsync(
-                compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier),
-                timer,
-                $"Compiling {sourceName} [{runtimeIdentifier}, {mode}]").ConfigureAwait(false);
-            if (result.Success && !embedAssets && UIFormAppAssets.UsesUIForm(sourcePath))
-                UIFormAppAssets.PublishExternalAssets(sourcePath, outputPath);
-            CompleteProgress(result.Success
-                ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
-                : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
-            WriteResult(result, resultFormat);
-            return result.Success ? 0 : 2;
-        }
-        catch (Exception ex)
-        {
-            CompleteProgress("Compilation failed");
-            var result = CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]);
-            WriteResult(result, resultFormat is "json" or "xml" ? resultFormat : "text");
-            return 1;
-        }
-    }
-
-    public static async Task<int> ValidateAsync(string[] args)
-    {
-        const int MaxStdinSourceChars = 1_048_576;
-        var resultFormat = "text";
-        var debug = false;
-        string? stdinRoot = null;
-        try
-        {
-            var useStdin = args.Any(x => x.Equals("--stdin", StringComparison.OrdinalIgnoreCase));
-            string? virtualFileName = null;
-            string? sourceArgument = null;
-            var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
-
-            for (var i = 0; i < args.Length; i++)
-            {
-                if (args[i] == "--stdin")
-                    continue;
-                if (args[i] == "--filename" && i + 1 < args.Length)
-                    virtualFileName = args[++i];
-                else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
-                    runtimeIdentifier = args[++i].ToLowerInvariant();
-                else if (args[i] == "--result-format" && i + 1 < args.Length)
-                    resultFormat = args[++i].ToLowerInvariant();
-                else if (args[i] == "--debug")
-                    debug = true;
-                else if (!args[i].StartsWith("--", StringComparison.Ordinal) && sourceArgument is null)
-                    sourceArgument = args[i];
-                else
-                    throw new ArgumentException($"Unknown argument: {args[i]}");
-            }
-
-            if (resultFormat is not ("text" or "json" or "xml"))
-                throw new ArgumentException("--result-format must be text, json, or xml.");
-
-            string sourcePath;
-            if (useStdin)
-            {
-                if (sourceArgument is not null)
-                    throw new ArgumentException("validate --stdin cannot also specify a source file.");
-                virtualFileName ??= "stdin.xps";
-                if (!Path.GetFileName(virtualFileName).Equals(virtualFileName, StringComparison.Ordinal) ||
-                    !Path.GetExtension(virtualFileName).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-                    throw new ArgumentException("--filename must be a simple .xps filename without a directory path.");
-
-                var source = await Console.In.ReadToEndAsync().ConfigureAwait(false);
-                if (source.Length > MaxStdinSourceChars)
-                    throw new ArgumentException($"stdin source exceeds the {MaxStdinSourceChars} character validation limit.");
-
-                stdinRoot = Path.Combine(Path.GetTempPath(), "XPScript", "stdin", Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(stdinRoot);
-                sourcePath = Path.Combine(stdinRoot, virtualFileName);
-                await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
-            }
-            else
-            {
-                if (sourceArgument is null)
-                {
-                    WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "validate requires an .xps source file or --stdin." }]).WithOperation("validate"), resultFormat);
-                    return 1;
-                }
-                if (virtualFileName is not null)
-                    throw new ArgumentException("--filename is only valid with --stdin.");
-                sourcePath = Path.GetFullPath(sourceArgument);
-            }
-
-            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
-            var compiler = new CompilerDriver();
-            var result = await compiler.ValidateWithResultAsync(sourcePath, runtimeIdentifier).ConfigureAwait(false);
-            if (useStdin && virtualFileName is not null)
-            {
-                result.Source = new CompileSource { EntryPoint = virtualFileName };
-                foreach (var diagnostic in result.Errors)
-                {
-                    if (!string.IsNullOrWhiteSpace(diagnostic.File))
-                        diagnostic.File = virtualFileName;
-                }
-            }
-            WriteResult(result, resultFormat);
-            return result.Success ? 0 : 2;
-        }
-        catch (Exception ex)
-        {
-            var result = CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]).WithOperation("validate");
-            WriteResult(result, resultFormat is "json" or "xml" ? resultFormat : "text");
-            return 1;
-        }
-        finally
-        {
-            if (stdinRoot is not null)
-            {
-                try { Directory.Delete(stdinRoot, recursive: true); } catch { }
-            }
-        }
-    }
-
-    public static async Task<int> RunScriptAsync(string[] commandLineArgs)
-    {
-        var sourceIndex = commandLineArgs.Length > 0 && commandLineArgs[0].Equals("run", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        if (commandLineArgs.Length <= sourceIndex)
-        {
-            WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "run requires an .xps source file." }]), "text");
-            return 1;
-        }
-
-        var resultFormat = "text";
-        string? tempRoot = null;
-        var debug = false;
-        var noDaemon = false;
-
-        try
-        {
-            var sourcePath = Path.GetFullPath(commandLineArgs[sourceIndex]);
-            var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
-            var scriptArgs = new List<string>();
-            var parseRunOptions = true;
-            var restricted = false;
-            var info = false;
-            ApplicationSecurityMode? securityMode = null;
-            var sourceRoots = new List<string>();
-            var sourcePreprocessors = new List<string>();
-
-            for (var i = sourceIndex + 1; i < commandLineArgs.Length; i++)
-            {
-                var value = commandLineArgs[i];
-                if (parseRunOptions && value == "--")
-                {
-                    parseRunOptions = false;
-                    continue;
-                }
-
-                if (parseRunOptions && value == "--no-daemon")
-                {
-                    noDaemon = true;
-                    continue;
-                }
-
-                if (parseRunOptions && value == "--info")
-                {
-                    info = true;
-                    continue;
-                }
-
-                if (parseRunOptions && value == "--debug")
-                {
-                    debug = true;
-                    info = true;
-                    continue;
-                }
-
-                if (parseRunOptions && value.StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
-                {
-                    securityMode = ApplicationSecurityModeContext.Parse(value["--security=".Length..]);
-                    continue;
-                }
-
-                if (parseRunOptions && value == "--security")
-                {
-                    if (i + 1 >= commandLineArgs.Length)
-                        throw new ArgumentException("--security requires off, warn, or strict.");
-                    securityMode = ApplicationSecurityModeContext.Parse(commandLineArgs[++i]);
-                    continue;
-                }
-
-                if (parseRunOptions && (value == "--rid" || value == "--platform"))
-                {
-                    if (i + 1 >= commandLineArgs.Length)
-                        throw new ArgumentException(value + " requires a runtime identifier.");
-                    runtimeIdentifier = commandLineArgs[++i].ToLowerInvariant();
-                    continue;
-                }
-
-                if (parseRunOptions && value == "--result-format")
-                {
-                    if (i + 1 >= commandLineArgs.Length)
-                        throw new ArgumentException("--result-format requires text, json, or xml.");
-                    resultFormat = commandLineArgs[++i].ToLowerInvariant();
-                    if (resultFormat is not ("text" or "json" or "xml"))
-                        throw new ArgumentException("--result-format must be text, json, or xml.");
-                    continue;
-                }
-
-                if (parseRunOptions && value == "--restricted")
-                {
-                    restricted = true;
-                    continue;
-                }
-
-                if (parseRunOptions && value == "--source-root")
-                {
-                    if (i + 1 >= commandLineArgs.Length)
-                        throw new ArgumentException("--source-root requires a directory path.");
-                    restricted = true;
-                    sourceRoots.Add(Path.GetFullPath(commandLineArgs[++i]));
-                    continue;
-                }
-
-                if (parseRunOptions && value == "--preprocessor")
-                {
-                    if (i + 1 >= commandLineArgs.Length)
-                        throw new ArgumentException("--preprocessor requires a specification.");
-                    sourcePreprocessors.Add(commandLineArgs[++i]);
-                    continue;
-                }
-
-                scriptArgs.Add(value);
-            }
-
-            // Debug compilation stays local so generated C#/Roslyn/MSBuild diagnostics
-            // remain directly available to developers and CI. Normal runs use the warm daemon.
-            var useDaemon = !noDaemon && !debug;
-            if (useDaemon && !await CompilerDaemonClient.EnsureRunningAsync().ConfigureAwait(false))
-                throw new InvalidOperationException("Unable to start or connect to the XPScript compiler daemon.");
-
-            var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
-            using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
-            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
-            var currentRuntimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
-            if (!runtimeIdentifier.Equals(currentRuntimeIdentifier, StringComparison.OrdinalIgnoreCase))
-                throw new PlatformNotSupportedException(
-                    "Direct execution can run only the current runtime target '" + currentRuntimeIdentifier +
-                    "'. Compile separately when targeting '" + runtimeIdentifier + "'.");
-
-            if (!File.Exists(sourcePath))
-            {
-                WriteResult(CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]), resultFormat);
-                return 2;
-            }
-
-            if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-            {
-                WriteResult(CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "XPScript source files must use the .xps extension." }]), resultFormat);
-                return 2;
-            }
-
-            var sourceDirectory = Path.GetDirectoryName(sourcePath)
-                ?? throw new InvalidOperationException("Unable to determine the XPScript source directory.");
-
-            if (UIFormAppAssets.UsesUIForm(sourcePath))
-                UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
-
-            if (restricted && sourceRoots.Count == 0)
-                sourceRoots.Add(sourceDirectory);
-
-            tempRoot = CompilerPathSecurity.CreateOwnedTemporaryDirectory("run-");
-            var navigationPath = Path.Combine(tempRoot, "navigation.json");
-
-            using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
-            using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
-            var runCache = await RunArtifactCache.CreateAsync(sourcePath, currentRuntimeIdentifier, sourcePreprocessors).ConfigureAwait(false);
-            var timer = Stopwatch.StartNew();
-            var sourceName = Path.GetFileName(sourcePath);
-            var executablePath = string.Empty;
-
-            var cacheHit = effectiveSecurityMode == ApplicationSecurityMode.Off && !debug && runCache.TryGetRunnable(out executablePath);
-            if (!cacheHit)
-            {
-                var runOutputDirectory = runCache.Enabled ? runCache.OutputDirectory : tempRoot;
-                if (runCache.Enabled) runCache.PrepareOutputDirectory();
-
-                if (debug)
-                {
-                    var validationResult = await new CompilerDriver()
-                        .ValidateWithResultAsync(sourcePath, currentRuntimeIdentifier)
-                        .ConfigureAwait(false);
-                    if (!validationResult.Success)
-                    {
-                        runCache.Invalidate();
-                        WriteResult(validationResult.WithOperation("run"), resultFormat);
-                        return 1;
-                    }
-                }
-
-                if (info)
-                    WriteProgress($"Started to compile {sourceName}");
-
-                var compileTask = !useDaemon
-                    ? RunCompiler.CompileWithResultAsync(
-                        sourcePath,
-                        runOutputDirectory,
-                        currentRuntimeIdentifier,
-                        debug)
-                    : CompileRunWithDaemonAsync(
-                        sourcePath,
-                        runOutputDirectory,
-                        currentRuntimeIdentifier,
-                        debug,
-                        effectiveSecurityMode,
-                        restricted,
-                        sourceRoots,
-                        sourcePreprocessors);
-                var compileResult = info
-                    ? await WaitWithProgressAsync(
-                        compileTask,
-                        timer,
-                        $"Compiling {sourceName} [{currentRuntimeIdentifier}, run]").ConfigureAwait(false)
-                    : await compileTask.ConfigureAwait(false);
-
-                if (!compileResult.Success)
-                {
-                    runCache.Invalidate();
-                    if (info)
-                        CompleteProgress($"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
-                    WriteResult(compileResult, resultFormat);
-                    return 2;
-                }
-
-                executablePath = compileResult.Output ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
-                    throw new InvalidOperationException("Run compilation succeeded without a runnable executable.");
-
-                if (runCache.Enabled) runCache.MarkReady(executablePath);
-                if (info)
-                    CompleteProgress($"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s");
-            }
-            else if (info)
-            {
-                WriteProgressLine($"Run cache hit for {sourceName}");
-            }
-
-            if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
-                throw new InvalidOperationException("Run cache did not contain a runnable executable.");
-
-            if (info)
-                WriteProgressLine("Starting program");
-
-            var managedAssemblyPath = Path.ChangeExtension(executablePath, ".dll");
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = File.Exists(managedAssemblyPath) ? CompilerToolResolver.ResolveDotnetHost() : executablePath,
-                UseShellExecute = false,
-                WorkingDirectory = sourceDirectory
-            };
-            if (File.Exists(managedAssemblyPath))
-                startInfo.ArgumentList.Add(managedAssemblyPath);
-            startInfo.Environment["XPSCRIPT_NAVIGATION_FILE"] = navigationPath;
-            if (debug) startInfo.Environment["XPSCRIPT_RUNTIME_DEBUG"] = "1";
-            foreach (var argument in scriptArgs)
-                startInfo.ArgumentList.Add(argument);
-
-            using var process = Process.Start(startInfo)
-                ?? throw new InvalidOperationException("Unable to start the compiled XPScript program.");
-            await process.WaitForExitAsync().ConfigureAwait(false);
-            if (info) WriteProgressLine($"Program exited with code {process.ExitCode}");
-            if (process.ExitCode != 0 || !File.Exists(navigationPath))
-                return process.ExitCode;
-
-            using var navigationDocument = JsonDocument.Parse(await File.ReadAllTextAsync(navigationPath).ConfigureAwait(false));
-            var navigation = navigationDocument.RootElement;
-            var version = navigation.TryGetProperty("version", out var versionElement) && versionElement.TryGetInt32(out var parsedVersion)
-                ? parsedVersion
-                : 0;
-            if (version != 1)
-                throw new InvalidOperationException("Unsupported desktop navigation request version.");
-
-            var target = navigation.TryGetProperty("target", out var targetElement)
-                ? targetElement.GetString()?.Trim() ?? string.Empty
-                : string.Empty;
-            var parameterName = navigation.TryGetProperty("parameterName", out var parameterNameElement)
-                ? parameterNameElement.GetString()?.Trim() ?? string.Empty
-                : string.Empty;
-            var parameterValue = navigation.TryGetProperty("parameterValue", out var parameterValueElement)
-                ? parameterValueElement.GetString() ?? string.Empty
-                : string.Empty;
-
-            if (target.Length is < 5 or > 512 || Path.IsPathRooted(target) || target.Contains("..", StringComparison.Ordinal) ||
-                !target.EndsWith(".xps", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Desktop navigation target must be a relative local .xps path.");
-            if (parameterName.Length > 0 && (parameterName.Length > 128 || !parameterName.All(ch => char.IsLetterOrDigit(ch) || ch is '_' or '-')))
-                throw new InvalidOperationException("Desktop navigation parameter name is invalid.");
-
-            var nextSourcePath = Path.GetFullPath(Path.Combine(sourceDirectory, target.Replace('/', Path.DirectorySeparatorChar)));
-            var relativeTarget = Path.GetRelativePath(sourceDirectory, nextSourcePath);
-            if (Path.IsPathRooted(relativeTarget) || relativeTarget.Equals("..", StringComparison.Ordinal) ||
-                relativeTarget.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
-                throw new InvalidOperationException("Desktop navigation target escapes the current script directory.");
-            if (!File.Exists(nextSourcePath))
-                throw new FileNotFoundException("Desktop navigation target was not found.", nextSourcePath);
-
-            var nextArgs = new List<string> { "run", nextSourcePath };
-            if (info) nextArgs.Add("--info");
-            if (debug) nextArgs.Add("--debug");
-            if (restricted)
-            {
-                nextArgs.Add("--restricted");
-                foreach (var root in sourceRoots)
-                {
-                    nextArgs.Add("--source-root");
-                    nextArgs.Add(root);
-                }
-            }
-            foreach (var preprocessor in sourcePreprocessors)
-            {
-                nextArgs.Add("--preprocessor");
-                nextArgs.Add(preprocessor);
-            }
-            if (parameterName.Length > 0)
-            {
-                nextArgs.Add("--");
-                nextArgs.Add(parameterName + "=" + parameterValue);
-            }
-
-            return await RunScriptAsync(nextArgs.ToArray()).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            if (progressLineWidth > 0) CompleteProgress("Run failed");
-            WriteResult(CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]), resultFormat);
-            return 1;
-        }
-        finally
-        {
-            if (!string.IsNullOrWhiteSpace(tempRoot))
-            {
-                try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
-            }
-        }
-    }
-
-    private static bool ParseBooleanCompileOption(string optionName, string value)
-    {
-        if (bool.TryParse(value, out var result)) return result;
-        throw new ArgumentException(optionName + " must be true or false.");
-    }
-
-    private static async Task<T> WaitWithProgressAsync<T>(Task<T> task, Stopwatch timer, string status)
-    {
-        var nextReportAt = TimeSpan.Zero;
-        while (!task.IsCompleted)
-        {
-            if (timer.Elapsed >= nextReportAt)
-            {
-                WriteProgress($"{status}... {timer.Elapsed.TotalSeconds:F0}s");
-                nextReportAt += TimeSpan.FromSeconds(1);
-            }
-
-            var completed = await Task.WhenAny(task, Task.Delay(TimeSpan.FromMilliseconds(100))).ConfigureAwait(false);
-            if (completed == task) break;
-        }
-        return await task.ConfigureAwait(false);
-    }
-
-    private static void WriteProgress(string message)
-    {
-        if (Console.IsErrorRedirected)
-        {
-            Console.Error.WriteLine(message);
-            return;
-        }
-
-        var width = Math.Max(progressLineWidth, message.Length);
-        Console.Error.Write('\r');
-        Console.Error.Write(message.PadRight(width));
-        Console.Error.Flush();
-        progressLineWidth = width;
-    }
-
-    private static void CompleteProgress(string message)
-    {
-        if (Console.IsErrorRedirected)
-        {
-            Console.Error.WriteLine(message);
-            progressLineWidth = 0;
-            return;
-        }
-
-        var width = Math.Max(progressLineWidth, message.Length);
-        Console.Error.Write('\r');
-        Console.Error.WriteLine(message.PadRight(width));
-        Console.Error.Flush();
-        progressLineWidth = 0;
-    }
-
-    private static void WriteProgressLine(string message)
-    {
-        if (progressLineWidth > 0)
-            CompleteProgress(message);
-        else
-            Console.Error.WriteLine(message);
-    }
-
-    public static void WriteHelp(string compileCommand = "xpscript compile", string runCommand = "xpscript run")
-    {
-        Console.WriteLine($"""
-XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
-Usage:
-  {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--embed-assets] [--result-format text|json|xml] [--debug] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
-  xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml] [--debug]
-  xpscript mcp
-  xpscript mcp install codex|claude [--scope user|project] [--force]
-  {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+## Goal
 
-Supported runtime identifiers:
-  win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
+Make the XPScript compiler a deterministic, versioned and machine-readable language service that can be consumed by CLI tooling, CI, IDE/LSP integrations, MCP servers and AI coding agents.
 
-Compiler targets:
-  webiis    Create an IIS deployable ASP.NET Core application folder and ZIP package.
+The compiler remains the single source of truth for syntax, symbols, types, semantic rules, target restrictions and compilation validity.
 
-If --platform/--rid is omitted, XPScript targets the current operating system and process architecture.
-Desktop compile defaults to --single-file=true and --runtime=false: application libraries are bundled into the executable, while .NET 10 must be installed on the target computer.
---single-file=false publishes the executable and application libraries as separate files in the output directory.
---runtime=true includes the .NET 10 runtime; --runtime=false requires a compatible installed .NET 10 runtime.
-When --runtime=false and .NET 10 is missing, the native .NET apphost reports the missing framework and provides Microsoft's install/download link before managed application code starts.
-For --target webiis, --runtime=true creates a self-contained package and --runtime=false creates a .NET 10 Hosting Bundle dependent package.
---embed-assets embeds a UIForm application's assets/ tree into a desktop executable. Embedded assets are materialized beside the executable at startup so existing assets/... paths continue to work.
-Without --embed-assets, UIForm assets are copied next to the compiled desktop executable.
-UIForm compile and run operations automatically create a sibling assets/ directory when it does not exist.
---restricted limits Include reads to the root script directory unless one or more --source-root directories are supplied.
---source-root may be repeated and automatically enables restricted Include processing.
---preprocessor may be repeated and runs after the complete Include graph is expanded.
-The compile command reports live progress on one console line while preserving structured result output on stdout.
-The run command stays quiet by default. Use --info to show live compilation status and runtime lifecycle information.
---info and --debug automatically enable application dependency security auditing in warn mode. Use --security=off to disable it, or --security=strict to fail on high/critical findings.
-Compiler diagnostics are source-mapped to the original .xps file by default. Generated Program.cs locations are hidden.
-Use --debug as a strict superset of --info: it forces a fresh run compilation, shows the compile timer, includes generated C# diagnostics and physical Program.cs locations, and enables detailed runtime exception tracing for errors that may be handled by On Error.
-The run command uses an in-process Roslyn fast path for eligible scripts, a framework-dependent no-apphost MSBuild fallback for dependency-heavy scripts, and a dependency-snapshot artifact cache. Debug runs bypass an existing run-cache artifact so diagnostics always reflect the current compiler.
-Use -- before script arguments when an argument could otherwise be interpreted as a run option.
-""");
-    }
+This feature must not depend on an LLM, XPAi, OpenAI, embeddings, RAG or any AI provider.
 
-    public static void WriteResult(CompileResult result, string format)
-    {
-        switch (format)
-        {
-            case "json":
-                Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
-                break;
-            case "xml":
-                var serializer = new XmlSerializer(typeof(CompileResult));
-                var namespaces = new XmlSerializerNamespaces();
-                namespaces.Add("", "");
-                serializer.Serialize(Console.Out, result, namespaces);
-                Console.WriteLine();
-                break;
-            default:
-                Console.WriteLine($"result: {result.Result}");
-                if (!string.IsNullOrWhiteSpace(result.Output)) Console.WriteLine($"output: {result.Output}");
-                if (result.Errors.Count > 0)
-                {
-                    Console.WriteLine("errors:");
-                    foreach (var error in result.Errors)
-                    {
-                        if (!string.IsNullOrEmpty(error.File)) Console.WriteLine($"  file: {error.File}");
-                        Console.WriteLine($"  line: {error.Line}");
-                        Console.WriteLine($"  position: {error.Position}");
-                        Console.WriteLine($"  description: {error.Description}");
-                        if (!string.IsNullOrEmpty(error.SourceCode)) Console.WriteLine($"  code: {error.SourceCode}");
-                        if (!string.IsNullOrEmpty(error.DiagnosticCode)) Console.WriteLine($"  diagnosticCode: {error.DiagnosticCode}");
-                        if (!string.IsNullOrEmpty(error.MarkedCode))
-                        {
-                            Console.WriteLine("  markedCode:");
-                            foreach (var line in error.MarkedCode.Replace("\r\n", "\n").Split('\n')) Console.WriteLine("    " + line);
-                        }
-                    }
-                }
-                break;
-        }
-    }
+## Architecture
 
-    private static async Task<CompileResult> CompileRunWithDaemonAsync(
-        string sourcePath,
-        string outputDirectory,
-        string runtimeIdentifier,
-        bool debug,
-        ApplicationSecurityMode securityMode,
-        bool restricted,
-        IReadOnlyList<string> sourceRoots,
-        IReadOnlyList<string> sourcePreprocessors)
-    {
-        var result = await CompilerDaemonClient.CompileForRunAsync(
-            sourcePath,
-            outputDirectory,
-            runtimeIdentifier,
-            debug,
-            securityMode,
-            restricted,
-            sourceRoots,
-            sourcePreprocessors).ConfigureAwait(false);
-        return result ?? throw new InvalidOperationException("Compiler daemon disconnected during run compilation.");
-    }
+Target architecture:
+
+```text
+                 XPScript Compiler Core
+                         |
+              CompilerService API
+                         |
+        +----------------+----------------+
+        |                |                |
+       CLI            IDE/LSP            MCP
+        |                                 |
+        +----------------+----------------+
+                         |
+                    AI tooling
+```
+
+The CLI must be a consumer of the shared compiler service rather than the only programmatic interface.
+
+## 1. Audit existing compiler diagnostics
+
+- [x] Locate the implementation of `--result-format json` and document the current contract.
+- [x] Inventory parser, symbol, type, semantic, target and code-generation diagnostics.
+- [x] Identify diagnostics that are currently created only as formatted strings.
+- [x] Identify where structured information is lost before reaching CLI output.
+- [x] Identify reusable source-location, symbol and type metadata.
+- [x] Define one shared diagnostic model for text, JSON and XML output.
+- [x] Preserve normal compilation as the authoritative validation path.
+
+## 2. Versioned compiler result contract
+
+- [x] Define a stable compiler-result contract.
+- [x] Add `schema` and `schemaVersion`.
+- [x] Include compiler version.
+- [x] Include operation, such as `compile` or `validate`.
+- [x] Include target and entry source where applicable.
+- [x] Always return a diagnostics collection.
+- [x] Ensure early failures still produce valid structured output.
+- [x] Ensure JSON mode never mixes human logging into stdout.
+- [x] Route non-result logging to stderr where appropriate.
+- [x] Make breaking contract changes explicit through schema versioning.
+
+Target shape:
+
+```json
+{
+  "schema": "xpscript.compiler-result",
+  "schemaVersion": 1,
+  "compilerVersion": "1.0.0",
+  "operation": "validate",
+  "result": "error",
+  "target": "linux-x64",
+  "source": {
+    "entryPoint": "program.xps"
+  },
+  "diagnostics": []
 }
+```
+
+## 3. Stable diagnostic codes
+
+- [x] Introduce stable diagnostic codes independent of human-readable messages.
+- [x] Define code ranges after reviewing the current compiler architecture.
+- [x] Never reuse a code for a different semantic meaning.
+- [x] Add regression tests protecting diagnostic-code stability.
+
+Candidate ranges to investigate:
+
+```text
+XPS1xxx parser/syntax
+XPS2xxx symbols/types
+XPS3xxx semantic validation
+XPS4xxx target/platform/execution boundaries
+XPS5xxx security/static analysis
+XPS6xxx code generation
+XPS7xxx external/runtime dependencies
+XPS8xxx project/configuration
+XPS9xxx internal compiler diagnostics
+```
+
+## 4. Common diagnostic model
+
+- [x] Support `code`, `severity`, `category` and `message`.
+- [x] Support file, start line/column and end line/column where available.
+- [x] Support structured diagnostic properties instead of encoding metadata into `message`.
+- [x] Standardize severities at least as `error`, `warning` and `info`.
+- [x] Preserve the same semantic diagnostic across text, JSON and XML representations.
+
+Minimum representation:
+
+```json
+{
+  "code": "XPS2104",
+  "severity": "error",
+  "category": "member-resolution",
+  "file": "program.xps",
+  "line": 12,
+  "column": 17,
+  "endLine": 12,
+  "endColumn": 21,
+  "message": "Unknown member 'Load'."
+}
+```
+
+## 5. Parser diagnostics
+
+- [x] Convert parser failures to structured diagnostics.
+- [x] Include the token/construct found where available.
+- [x] Include expected token/construct information where available.
+- [x] Include precise source ranges.
+- [x] Do not reconstruct parser metadata by parsing error messages.
+
+## 6. Symbol diagnostics
+
+- [x] Structure unknown symbol and unknown member failures.
+- [x] Include requested symbol name.
+- [x] Include receiver type for failed member resolution.
+- [x] Include symbol kind and containing scope where useful.
+- [x] Reuse compiler symbol tables.
+- [x] Preserve XPScript symbol/casing semantics.
+
+## 7. Candidate symbols
+
+- [x] Investigate returning valid nearby candidates for failed symbol/member lookup.
+- [x] Limit candidate count.
+- [x] Include canonical name, symbol kind and signature.
+- [x] Make ordering deterministic.
+- [x] Guarantee candidates exist in the current compiler/runtime.
+- [x] Do not maintain a separate AI-only symbol catalog.
+
+## 8. Type and argument diagnostics
+
+- [x] Include expected and actual type for type mismatches.
+- [x] Include affected symbol where applicable.
+- [x] Structure missing, extra and invalid arguments.
+- [x] Include parameter name/index and expected type.
+- [x] Include procedure/function signature where useful.
+- [x] Include ByRef/ByVal compatibility information where relevant.
+- [x] Include overload candidates if supported by the language model.
+
+## 9. Target/platform diagnostics
+
+- [x] Structure target-specific failures.
+- [x] Include active target.
+- [x] Include offending API/symbol.
+- [x] Include allowed targets where known.
+- [x] Cover CLI, Desktop, Web, REST and Browser-WASM.
+- [x] Cover native/platform-specific APIs.
+- [x] Reuse existing runtime/compiler feature metadata rather than duplicating target rules.
+
+## 10. ServerSide execution-boundary diagnostics
+
+- [x] Structure errors for APIs that require server-side execution.
+- [x] Include current target/context.
+- [x] Include `requiredContext`, for example `ServerSide`.
+- [x] Include offending symbol.
+- [x] Ensure Browser-WASM validation can distinguish client and `[ServerSide]` code.
+- [x] Reuse compiler/runtime metadata for these restrictions.
+
+## 11. Stable documentation IDs
+
+- [x] Define documentation IDs independent of Markdown paths.
+- [x] Map language constructs, runtime classes/members, targets, security rules and diagnostics.
+- [x] Allow diagnostics to reference one or more documentation IDs.
+- [x] Keep actual documentation retrieval outside the compiler.
+
+Examples:
+
+```text
+language.If
+language.ForAll
+api.XPJsonSchema
+api.XPJsonSchema.FromJson
+api.XPAi
+target.BrowserWasm
+target.ServerSide
+security.Shell
+```
+
+## 12. JSON Schemas
+
+- [x] Add JSON Schema for compiler results.
+- [x] Add JSON Schema for diagnostics.
+- [x] Choose a stable repository location such as `schemas/`.
+- [x] Validate representative compiler output against the schemas in CI.
+- [x] Document additive and breaking schema evolution.
+
+Suggested files:
+
+```text
+schemas/compiler-result.schema.json
+schemas/compiler-diagnostic.schema.json
+```
+
+## 13. Validation-only operation
+
+- [x] Add or expose validation that performs normal parsing, symbol resolution, type checking, semantic validation and target validation without producing a final executable.
+- [x] Reuse the normal compiler pipeline.
+- [x] Do not create a reduced AI parser/type checker.
+- [x] Ensure diagnostics match normal compilation for equivalent validation failures.
+- [x] Avoid expensive packaging/publishing work.
+
+Proposed CLI:
+
+```text
+xpscriptc validate program.xps --result-format json
+```
+
+## 14. stdin validation
+
+- [x] Investigate `--stdin` source input.
+- [x] Support a virtual filename for diagnostics.
+- [x] Preserve line/column information.
+- [x] Keep JSON result on stdout and logging on stderr.
+- [x] Apply source-size and resource limits.
+
+Possible interface:
+
+```text
+xpscriptc validate --stdin --filename program.xps --result-format json
+```
+
+## 15. Reusable compiler service
+
+- [x] Expose validation behind a reusable compiler API.
+- [x] Return typed compiler-result and diagnostic objects.
+- [x] Make CLI consume this API.
+- [x] Make tests able to invoke it directly.
+- [x] Design it so IDE/LSP and future MCP tooling can reuse it.
+- [x] Do not require in-process consumers to shell out to `xpscriptc`.
+
+Conceptual API only:
+
+```text
+Validate(source, options)
+Compile(source, options)
+GetDiagnostics(...)
+GetSymbols(...)
+```
+
+Exact public API names must follow the existing compiler architecture.
+
+## 16. Symbol introspection
+
+- [x] Investigate a machine-readable symbol-description service.
+- [x] Support exact symbol/type lookup.
+- [x] Return kind, signature, parameters and return type.
+- [x] Return target restrictions.
+- [x] Return documentation ID.
+- [x] Return deprecation metadata where supported.
+- [x] Expose only public XPScript language/runtime symbols.
+
+Possible CLI consumers:
+
+```text
+xpscriptc describe XPJsonSchema --result-format json
+xpscriptc symbols --search XPJson --result-format json
+```
+
+## 17. Diagnostic introspection
+
+- [x] Provide deterministic lookup of diagnostic definitions.
+- [x] Return category, severity defaults, explanation and documentation IDs.
+- [x] Do not use an LLM inside the compiler to explain diagnostics.
+
+Possible interface:
+
+```text
+xpscriptc explain XPS2104 --result-format json
+```
+
+## 18. Security and redaction
+
+- [x] Structure existing security/static diagnostics where appropriate.
+- [x] Include stable security rule IDs.
+- [x] Never leak API keys, Authorization headers or credential values.
+- [x] Review source snippets returned in diagnostics for secret leakage.
+- [x] Validation must never execute submitted XPScript.
+- [x] Separate validation, compilation and execution permissions in future remote tooling.
+- [x] Bound CPU, memory, source size and diagnostic output where practical.
+- [x] Prevent path traversal through virtual filenames/project paths.
+
+## 19. Determinism
+
+- [x] Same source, compiler version and options must produce stable diagnostic codes.
+- [x] Define deterministic diagnostic ordering.
+- [x] Define deterministic candidate-symbol ordering.
+- [x] Normalize path representation where needed.
+- [x] Avoid environment-dependent structured values.
+- [x] Include enough target/configuration metadata to reproduce validation.
+
+## 20. Performance
+
+- [x] Benchmark validation startup and processing time.
+- [x] Avoid executable generation in validation-only mode.
+- [x] Define maximum diagnostics returned. Machine results return at most 100 diagnostics while preserving deterministic ordering.
+- [x] Report diagnostic truncation explicitly via `diagnosticsTruncated` and `totalDiagnostics` in the schema-v1 result.
+- [x] Investigate a reusable compiler process/service only if measured startup cost requires it.
+
+CI benchmark evidence on the GitHub Linux runner shows a median of 1029 ms when validation starts a fresh CLI process versus 5 ms for repeated validation through a warmed, reusable `CompilerDriver` in the same process. This makes reusable in-process compiler hosting the preferred path for latency-sensitive IDE/LSP and AI tooling. The CLI remains appropriate for one-shot validation. The existing reusable compiler API satisfies in-process consumers; a persistent external transport/process should be added only when an out-of-process consumer requires it.
+
+## 20a. MCP and warm development hosts
+
+- [x] Add a local MCP stdio transport over the reusable compiler API.
+- [x] Expose compiler validation, symbol search/description and diagnostic explanation as MCP tools.
+- [x] Keep MCP validation non-executing and separate from compile/run permissions.
+- [x] Add MCP protocol/contract probes to CI.
+- [x] Ship an XPScript development skill that tells coding agents when to use warm MCP validation/introspection and when to run a full CLI compile.
+- [x] Add `xpscript mcp install codex|claude` to install, validate or update the MCP registration and XPScript skill in supported coding clients.
+- [x] Add installer integration tests with isolated fake HOME/config roots on Windows, Linux and macOS. CI verifies idempotent install/update behavior, skill installation and repair of mismatched MCP registrations on all three platforms.
+- [x] Re-check Codex and Claude Code client configuration formats against current official documentation. Claude supports `local|project|user` MCP scopes; the XPScript installer exposes user/project and passes scope explicitly. Codex documents user config plus project `.codex/config.toml`, but its current `mcp add` CLI syntax has no documented scope switch, so the installer now rejects `--scope project` rather than silently installing a user MCP registration. Re-check these formats before each XPScript release.
+- [x] Investigate reusing a warm `CompilerDriver` inside the existing debugger host without changing the debugger protocol. The current debugger core (`DebugSession`/`IDebugTransport`) owns runtime pause/step state and does not own compilation, so warm validation can be added before the existing debug build without changing the protocol or transport types.
+- [x] Let debugger-driven edit/validate cycles use validation before a full debug build when semantics permit. `run --debug` now performs compiler validation before starting the fresh debug build; invalid edits return structured diagnostics and short-circuit the build. CI #551 verifies the invalid-edit path while the existing debug probe verifies valid debug runs still perform the local fresh build.
+- [x] Investigate a warm compiler host for test/run-without-debugger so repeated test runs do not pay process/compiler startup for unchanged compiler state. Normal `run` already has dependency-snapshot artifact reuse through `RunArtifactCache`; a persistent host should therefore target edit/validation and cache-miss compilation rather than duplicate the existing artifact cache.
+- [x] Define cache invalidation for source, Include graph, runtime identifier, preprocessors, dependencies and compiler version before enabling warm compile reuse.
+  - Reuse is keyed by an `XPScriptCompilationSnapshot`, never by source path or timestamps alone.
+  - The snapshot hashes the root source and the fully expanded Include dependency graph by content.
+  - Run snapshots also hash managed references, `ReferenceNative` inputs, declared native dependencies and application icon inputs.
+  - Runtime identifier is part of the snapshot identity.
+  - Source-preprocessor configuration must be represented by a deterministic configuration identity; the current run artifact cache remains disabled when source preprocessors are configured until that identity is available.
+  - Compiler identity is part of the snapshot and run-cache key; changing the compiler invalidates reuse.
+  - Any missing, changed or newly resolved dependency produces a different snapshot or fails snapshot creation, so stale artifacts must not be reused.
+  - Security/restricted-mode context must remain outside reuse unless its effective source roots and relevant configuration are represented in the configuration identity.
+- [x] Benchmark debugger and run-without-debugger cold versus warm paths before changing their current execution semantics.
+  - GitHub Linux CI baseline after daemon routing: local cold run (`--no-daemon`) 764 ms; daemon cold run 849 ms; warm daemon run median 762 ms. The normal run path is already dominated by `RunArtifactCache`, so the persistent compiler does not materially improve an unchanged cached run.
+  - Fresh debug compilation, where the artifact cache is bypassed, measured 3370 ms locally (`--no-daemon`) versus 3565/1938/2209 ms through the warmed daemon (median 2209 ms), about 34% lower median latency. Keep this benchmark in CI as regression evidence rather than a hard timing contract.
+
+The debugger transport is intentionally unchanged by the MCP work. Warm compilation for debugger and test/run-without-debugger should reuse the compiler service internally and preserve their existing protocols and observable execution behavior.
+
+## 21. Tests
+
+Add deterministic fixtures covering:
+
+- [x] Syntax errors. Covered by deterministic XPS1001-XPS1012 fixtures in `CompilerMachineInterfaceProbe`, including the generic advanced-transpiler syntax failure path.
+- [x] Unknown symbols. Include/source-map fixture verifies stable `XPS2008`, upstream `CS0103`, symbol metadata and mapped XPScript source location.
+- [x] Unknown members. (`XPS2009` / Roslyn `CS1061` or `CS0117`, with member metadata and mapped XPScript source verified by the machine-interface probe.)
+- [x] Type mismatch. Covered by null-to-integer XPS2001/XPS2003 fixtures and structured expected/actual type metadata.
+- [x] Wrong argument count/type. Covered by XPCsvDocument.Load argument-count and overload/type mismatch fixtures.
+- [x] ByRef/ByVal errors. Native `ByRef` rejection is covered by stable structured diagnostic `XPS2013`; existing overload fixtures verify `ByRef`/`ByVal` parameter-mode metadata.
+- [x] Target restrictions. Covered by native target mismatch XPS3001 fixture.
+- [x] Browser-WASM restrictions. Covered by Browser-WASM XPAi target restriction XPS3001 fixture.
+- [x] ServerSide-required APIs. Covered by the Browser-WASM smoke test: an unannotated server-only XPDB procedure must fail with structured `XPS3002` / `execution-context` and verifies `symbol`, `target=browser-wasm`, `currentContext=Client`, and `requiredContext=ServerSide`.
+- [x] Security warnings. Dependency-audit parsing is covered deterministically for NU1900 unavailable-audit warnings plus NU1902/NU1904 vulnerability findings, including deduplication, severity ordering, advisory normalization, and structured XPS7001/XPS7002 catalog metadata.
+- [x] Multiple diagnostics. Machine-interface validation verifies multiple independent XPS2008 diagnostics, per-symbol metadata, total diagnostic count, and non-truncated small result sets.
+- [x] Multiple source files. Recursive include source mapping is covered through three nested include levels, including leaf file/line/position, redacted source text, deterministic include ancestry, and duplicate include normalization.
+- [x] Malformed and empty source.
+- [x] UTF-8/non-ASCII source according to language support.
+- [x] LF and CRLF location consistency.
+
+Golden tests should verify machine fields, not unnecessarily depend on exact human message wording.
+
+## 22. Cross-platform CI
+
+- [x] Run machine-interface tests on Windows. Verified by the cross-platform matrix job in AI Compiler Machine Interface CI.
+- [x] Run on Linux. Verified by the cross-platform matrix job in AI Compiler Machine Interface CI.
+- [x] Run on macOS. Verified by the cross-platform matrix job in AI Compiler Machine Interface CI.
+- [x] Verify equivalent diagnostic codes and source positions. The same CompilerMachineInterfaceProbe runs on Windows, Linux and macOS and now passes on all three platforms, including source-mapped diagnostics.
+- [x] Validate JSON output against the published schemas.
+
+## 23. Documentation
+
+- [x] Document compiler-result schema.
+- [x] Document diagnostic schema and code ranges.
+- [x] Document severity semantics.
+- [x] Document validation-only mode.
+- [x] Document stdin mode if implemented.
+- [x] Document source-location semantics. Defined in `docs/compiler-machine-interface.md`, including 1-based coordinates, include remapping, CRLF/LF equivalence, stdin virtual filenames and generated-C# boundaries.
+- [x] Document versioning/compatibility.
+- [x] Document security/redaction behavior. Defined in `docs/compiler-machine-interface.md`, including source-line masking, secret handling, path sanitization and non-executing validation.
+- [x] Add examples for CI and external tooling. Bash, PowerShell and machine-consumer flows are documented in `docs/compiler-machine-interface.md`.
+
+## 24. Implementation order
+
+### Phase 1: foundation
+
+- [x] Audit diagnostics and current JSON output. Completed by Sections 1-2 and documented in `docs/compiler-machine-interface.md`.
+- [x] Define shared diagnostic/result models.
+- [x] Define diagnostic code policy.
+- [x] Add schema versioning.
+- [x] Add regression tests.
+
+### Phase 2: structured compiler knowledge
+
+- [x] Parser metadata. Covered by structured syntax diagnostics (`foundToken`, `expectedConstruct`) and parser/source-range regression probes.
+- [x] Symbol/member metadata. Covered by `CompilerSymbolCatalog` kind/signature/parameter/return-type/documentation/deprecation metadata and scoped member lookup.
+- [x] Type/argument metadata. Covered by Section 8 structured type, argument, parameter and overload diagnostics.
+- [x] Target/ServerSide metadata. Covered by structured XPS3001/XPS3002 target/context properties and Sections 9-10.
+- [x] Documentation IDs. Covered by Section 11 stable documentation IDs.
+- [x] Candidate symbols. Covered by deterministic compiler-owned symbol/member candidates and receiver-scoped regression probes.
+
+### Phase 3: machine interface
+
+- [x] Validation-only operation.
+- [x] Reusable compiler service API. Covered by Section 15 and used by CLI/tests/MCP.
+- [x] stdin support if approved by architecture review. Implemented and covered by Section 14.
+- [x] Symbol/diagnostic introspection. Implemented and covered by Sections 16-17.
+- [x] Resource limits. Source size, validation timeout and diagnostic output/count limits are covered by Sections 18-20.
+
+### Phase 4: hardening
+
+- [x] Golden fixtures. `CompilerMachineInterfaceProbe` verifies deterministic machine-field contracts for syntax (`XPS1012`), Browser-WASM target (`XPS3001`) and type/argument (`XPS2003`) diagnostics without depending on exact human-readable message wording; CI #544 passes the probe cross-platform.
+- [x] Cross-platform CI. Section 22 runs the same machine-interface probe on Windows, Linux and macOS.
+- [x] JSON Schema validation.
+- [x] Performance benchmarks. Section 20 and 20a retain CI benchmark coverage for validation, run cache and debug paths.
+- [x] Security/redaction review. Section 18 regression coverage and Section 23 documentation cover redaction and non-executing validation.
+
+## Definition of done
+
+An external program can submit invalid XPScript and deterministically receive enough structured compiler-owned information to identify and correct common syntax, symbol, type, semantic and target failures without parsing human-readable error strings.
+
+A corrected source can be resubmitted and receive:
+
+```json
+{
+  "schema": "xpscript.compiler-result",
+  "schemaVersion": 1,
+  "operation": "validate",
+  "result": "ok",
+  "diagnostics": []
+}
+```
+
+No LLM, embedding provider, RAG system or AI SDK is required to satisfy this TODO.
+
+## Non-goals
+
+- [ ] AI model training or fine-tuning.
+- [ ] Embeddings/vector databases.
+- [ ] RAG.
+- [ ] Provider-specific LLM integration.
+- [ ] Prompt management.
+- [ ] Autonomous code repair.
+- [x] MCP transport implementation.
+- [ ] Automatic execution or deployment.
+- [ ] A separate AI parser/type checker.
