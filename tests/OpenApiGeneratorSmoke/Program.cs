@@ -962,7 +962,7 @@ if (!clientResult.Source.Contains("Public Validation As XPJsonValidationResult",
 
 if (clientResult.Source.Contains("UIForm", StringComparison.OrdinalIgnoreCase) || clientResult.Source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal))
     throw new Exception("Generated OpenAPI client must not depend on UIForm runtime.");
-foreach (var marker in new[] { "XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPJsonDocument", "Http.Send(request)" })
+foreach (var marker in new[] { "XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPJsonDocument", "Http_i.Send(request)" })
     if (!clientResult.Source.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated OpenAPI client is missing core API marker: " + marker);
 
 if (result.OpenApiVersion != "3.1.0") throw new Exception("OpenAPI version was not retained.");
