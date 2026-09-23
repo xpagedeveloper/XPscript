@@ -358,7 +358,7 @@ paths:
       responses:
         '204': { description: ok }
 """, "optional.yaml").Source;
-foreach (var marker in new[] { "Optional Q As Variant = Nothing", "Optional Limit As Variant = Nothing", "Optional XTrace As Variant = Nothing", "Optional payload As Variant = Nothing", "If Not Q Is Nothing Then url = Http.AddQuery", "If Not XTrace Is Nothing Then Call request.SetHeader", "If Not payload Is Nothing Then" })
+foreach (var marker in new[] { "Optional Q As Variant = Nothing", "Optional Limit As Variant = Nothing", "Optional XTrace As Variant = Nothing", "Optional payload As Variant = Nothing", "If Not Q Is Nothing Then url = Http_i.AddQuery", "If Not XTrace Is Nothing Then Call request.SetHeader", "If Not payload Is Nothing Then" })
     if (!optionalClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated optional OpenAPI values are missing marker: " + marker);
 
 var arrayClient = new XpsOpenApiClientGenerator().Generate("""
@@ -609,7 +609,7 @@ if (!parameterSuffixSource.Contains("Optional ApiEnd As Variant", StringComparis
     !parameterSuffixSource.Contains("Optional Payload As Variant", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Dim ApiUrl As String", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("Optional ApiPayload As Variant", StringComparison.Ordinal) ||
-    !parameterSuffixSource.Contains("ApiUrl = Http.AddQuery(ApiUrl, \"end\", ApiEnd)", StringComparison.Ordinal) ||
+    !parameterSuffixSource.Contains("ApiUrl = Http_i.AddQuery(ApiUrl, \"end\", ApiEnd)", StringComparison.Ordinal) ||
     !parameterSuffixSource.Contains("request.SetHeader(\"api key\", CStr(ApiKey2))", StringComparison.Ordinal))
     throw new Exception("OpenAPI parameter identifiers must preserve names unless a real procedure-scope collision requires disambiguation. Generated source:\n" + parameterSuffixSource);
 
@@ -952,7 +952,7 @@ paths:
       responses:
         '204': { description: ok }
 """, "unicode.yaml").Source;
-if (!unicodeClient.Contains("Http.EncodePath(City)", StringComparison.Ordinal) || !unicodeClient.Contains("Http.AddQuery(url, \"q\", Q)", StringComparison.Ordinal))
+if (!unicodeClient.Contains("Http_i.EncodePath(City)", StringComparison.Ordinal) || !unicodeClient.Contains("Http_i.AddQuery(url, \"q\", Q)", StringComparison.Ordinal))
     throw new Exception("OpenAPI Unicode path/query values must flow through XPHttp UTF-8 encoding helpers.");
 
 if (!clientResult.Source.Contains("Public Validation As XPJsonValidationResult", StringComparison.Ordinal) ||
