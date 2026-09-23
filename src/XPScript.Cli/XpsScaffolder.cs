@@ -4,11 +4,11 @@ internal static class XpsScaffolder
     {
         ArgumentNullException.ThrowIfNull(args);
         if (args.Length != 2)
-            throw new ArgumentException("Usage: xpscript new <rest|web|desktop> <directory>. The directory is required; use '.' for the current directory.");
+            throw new ArgumentException("Usage: xpscript new <rest|web|desktop|cli> <directory>. The directory is required; use '.' for the current directory.");
 
         var kind = args[0].Trim().ToLowerInvariant();
-        if (kind is not ("rest" or "web" or "desktop"))
-            throw new ArgumentException("Project type must be rest, web or desktop.");
+        if (kind is not ("rest" or "web" or "desktop" or "cli"))
+            throw new ArgumentException("Project type must be rest, web, desktop or cli.");
 
         var suppliedTarget = args[1].Trim();
         if (suppliedTarget.Length == 0)
@@ -25,6 +25,7 @@ internal static class XpsScaffolder
             "rest" => ("index.xps", RestTemplate, $"xpscript web {QuoteForDisplay(target)}"),
             "web" => ("index.xps", WebTemplate, $"xpscript web {QuoteForDisplay(target)}"),
             "desktop" => ("main.xps", DesktopTemplate, $"xpscript run {QuoteForDisplay(Path.Combine(target, "main.xps"))}"),
+            "cli" => ("main.xps", CliTemplate, $"xpscript run {QuoteForDisplay(Path.Combine(target, "main.xps"))} -- argument1 argument2"),
             _ => throw new InvalidOperationException("Unsupported scaffold type.")
         };
 
@@ -61,6 +62,20 @@ End Function
 Sub Index()
     Response.Write("<h1>Hello from XPscript</h1>")
     Response.Write("<p>Your web server is running.</p>")
+End Sub
+""";
+
+    private const string CliTemplate = """
+Option Declare
+
+Sub Main()
+    Dim i As Integer
+
+    For i = 0 To Application.ArgCount - 1
+        Print Application.Args(i)
+    Next
+
+    Application.ExitCode = 0
 End Sub
 """;
 
