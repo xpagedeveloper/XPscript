@@ -50,7 +50,7 @@ internal static class XpsScaffolder
 
 [Get:/health]
 Function Health() As Object
-    Dim result As New JsonObject
+    Dim result As New XPJsonObject
     Call result.Set("status", "ok")
     Set Health = result
 End Function
@@ -81,7 +81,7 @@ End Sub
 
     private const string DesktopTemplate = """
 Sub Main()
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
     Dim form As New UIForm("XPscript desktop application", 480, 240, True)
     Dim result As String
 
