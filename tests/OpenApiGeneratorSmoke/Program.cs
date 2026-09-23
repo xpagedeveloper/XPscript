@@ -1226,6 +1226,64 @@ foreach (var generate in new Action[]
 }
 Console.WriteLine("OPENAPI-UNSUPPORTED-VERSION-DIAGNOSTICS=OK");
 
+var dialect30 = """
+openapi: 3.0.3
+info: { title: Dialect 30, version: 1.0.0 }
+paths:
+  /dialect:
+    get:
+      operationId: dialect30
+      parameters:
+        - name: value
+          in: query
+          schema:
+            type: [string, 'null']
+      responses:
+        '200': { description: ok }
+""";
+foreach (var generate in new Action[]
+{
+    () => generator.Generate(dialect30, "dialect-30.yaml"),
+    () => new XpsOpenApiClientGenerator().Generate(dialect30, "dialect-30.yaml")
+})
+{
+    try
+    {
+        generate();
+        throw new Exception("OpenAPI 3.0 JSON Schema type array was accepted.");
+    }
+    catch (XpsOpenApiGenerationException ex)
+    {
+        if (!ex.Message.Contains("OpenAPI 3.0", StringComparison.Ordinal) ||
+            !ex.Message.Contains("nullable: true", StringComparison.Ordinal))
+            throw new Exception("OpenAPI 3.0 dialect diagnostic was not actionable: " + ex.Message);
+    }
+}
+
+foreach (var version in new[] { "3.1.0", "3.2.0" })
+{
+    var dialect31Plus = """
+openapi: __VERSION__
+info: { title: Dialect modern, version: 1.0.0 }
+paths:
+  /dialect:
+    get:
+      operationId: dialectModern
+      parameters:
+        - name: value
+          in: query
+          schema:
+            type: [string, 'null']
+      responses:
+        '200': { description: ok }
+""".Replace("__VERSION__", version, StringComparison.Ordinal);
+    var dialectServer = generator.Generate(dialect31Plus, "dialect-modern.yaml");
+    var dialectClient = new XpsOpenApiClientGenerator().Generate(dialect31Plus, "dialect-modern.yaml");
+    if (!dialectServer.Operations.Contains("DialectModern") || !dialectClient.Operations.Contains("DialectModern"))
+        throw new Exception("OpenAPI " + version + " JSON Schema type array was not accepted.");
+}
+Console.WriteLine("OPENAPI-JSON-SCHEMA-DIALECTS=OK");
+
 var openApi32Spec = """
 openapi: 3.2.0
 info:
