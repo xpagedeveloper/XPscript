@@ -616,16 +616,18 @@ public static class XPScriptCompilerCommandLine
             if (info)
                 WriteProgressLine("Starting program");
 
-            // The compiler returns the runnable apphost/executable. Execute that path directly.
-            // A sibling .dll is an implementation detail of framework-dependent output and must
-            // not replace the apphost: doing so changes executable identity and can break runtime
-            // behavior that depends on the generated application entry point.
+            // Framework-dependent run builds may return the managed assembly directly.
+            // Launch DLL output through the resolved dotnet host; native apphost output remains
+            // directly executable.
+            var managedAssembly = Path.GetExtension(executablePath).Equals(".dll", StringComparison.OrdinalIgnoreCase);
             var startInfo = new ProcessStartInfo
             {
-                FileName = executablePath,
+                FileName = managedAssembly ? CompilerToolResolver.ResolveDotnetHost() : executablePath,
                 UseShellExecute = false,
                 WorkingDirectory = sourceDirectory
             };
+            if (managedAssembly)
+                startInfo.ArgumentList.Add(executablePath);
             startInfo.Environment["XPSCRIPT_NAVIGATION_FILE"] = navigationPath;
             if (debug) startInfo.Environment["XPSCRIPT_RUNTIME_DEBUG"] = "1";
             foreach (var argument in scriptArgs)
