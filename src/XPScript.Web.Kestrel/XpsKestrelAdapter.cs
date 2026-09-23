@@ -404,7 +404,16 @@ public static class XpsKestrelAdapter
             catch
             {
                 requestScope?.Complete(StatusCodes.Status500InternalServerError, 0, failed: true);
-                throw;
+                if (!http.Response.HasStarted)
+                {
+                    http.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    http.Response.ContentType = "text/plain; charset=utf-8";
+                    await http.Response.WriteAsync("Internal Server Error", http.RequestAborted);
+                }
+                else
+                {
+                    http.Abort();
+                }
             }
         });
 
