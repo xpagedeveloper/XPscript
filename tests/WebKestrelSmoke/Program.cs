@@ -400,7 +400,7 @@ try
     await AssertBoundedConcurrencyStressAsync(client);
     await AssertSlowRequestBodyAsync(new Uri(address));
     await AssertRequestHeadersTimeoutAsync(new Uri(address));
-    await AssertKeepAliveTimeoutAsync(new Uri(address), options.KeepAliveTimeout);
+    await AssertKeepAliveTimeoutAsync(root, options.KeepAliveTimeout);
 
     using (var health = await client.GetAsync("/_xps/health"))
     {
@@ -938,50 +938,101 @@ static async Task AssertRequestHeadersTimeoutAsync(Uri baseAddress)
         throw new Exception($"Request headers timeout expected connection close or 408, got: {text}");
 }
 
-static async Task AssertKeepAliveTimeoutAsync(Uri baseAddress, TimeSpan keepAliveTimeout)
+static async Task AssertKeepAliveTimeoutAsync(string root, TimeSpan keepAliveTimeout)
 {
-    using var tcp = new TcpClient();
-    await tcp.ConnectAsync(baseAddress.Host, baseAddress.Port);
-    await using var stream = tcp.GetStream();
-    var request = Encoding.ASCII.GetBytes($"GET /keepalive HTTP/1.1\r\nHost: {baseAddress.Host}:{baseAddress.Port}\r\n\r\n");
-    await stream.WriteAsync(request);
-    await stream.FlushAsync();
-    var buffer = new byte[4096];
-    using (var firstTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
+    // Keep this regression isolated from the shared server. Earlier raw TCP tests
+    // deliberately exhaust connection slots and trigger protocol timeouts.
+    var isolatedOptions = new XpsKestrelOptions
     {
-        var response = new StringBuilder();
-        while (!response.ToString().Contains("\r\n\r\n", StringComparison.Ordinal))
-        {
-            var read = await stream.ReadAsync(buffer, firstTimeout.Token);
-            if (read == 0)
-                throw new Exception("Keep-alive timeout setup connection closed before the response headers completed.");
-            response.Append(Encoding.ASCII.GetString(buffer, 0, read));
-        }
+        Port = 0,
+        KeepAliveTimeout = keepAliveTimeout,
+        AllowedHosts = ["localhost", "127.0.0.1", "::1"]
+    };
+    var isolatedApp = XpsKestrelAdapter.Build(
+        isolatedOptions,
+        new XpsServerInfo("kestrel-keepalive-smoke", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"),
+        new EchoHandler(),
+        new SmokeApplicationState());
 
-        var headerText = response.ToString();
-        var statusLineEnd = headerText.IndexOf("\r\n", StringComparison.Ordinal);
-        var statusLine = statusLineEnd >= 0 ? headerText[..statusLineEnd] : headerText;
-        if (!statusLine.Contains(" 201 ", StringComparison.Ordinal))
-            throw new Exception($"Keep-alive timeout setup request expected 201, got: {statusLine}");
-    }
-    // Wait comfortably beyond the configured idle timeout. The timeout itself is kept
-    // long enough that normal CI scheduling cannot close the connection while the setup
-    // response is still being consumed.
-    await Task.Delay(keepAliveTimeout + TimeSpan.FromSeconds(1));
     try
     {
+        await isolatedApp.StartAsync();
+        var server = isolatedApp.Services.GetRequiredService<IServer>();
+        var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses
+            ?? throw new Exception("Keep-alive Kestrel did not expose server addresses.");
+        var baseAddress = new Uri(addresses.Single());
+
+        using var tcp = new TcpClient();
+        await tcp.ConnectAsync(baseAddress.Host, baseAddress.Port);
+        await using var stream = tcp.GetStream();
+        var request = Encoding.ASCII.GetBytes($"GET /keepalive HTTP/1.1\r\nHost: {baseAddress.Host}:{baseAddress.Port}\r\n\r\n");
         await stream.WriteAsync(request);
         await stream.FlushAsync();
-        using var secondTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        var read = await stream.ReadAsync(buffer, secondTimeout.Token);
-        if (read != 0)
-            throw new Exception("Idle keep-alive connection remained usable beyond configured timeout.");
+
+        var buffer = new byte[4096];
+        var responseBytes = new List<byte>();
+        var headerEnd = -1;
+        var contentLength = 0;
+        using (var firstTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+        {
+            while (headerEnd < 0)
+            {
+                var read = await stream.ReadAsync(buffer, firstTimeout.Token);
+                if (read == 0)
+                    throw new Exception("Keep-alive timeout setup connection closed before the response headers completed.");
+                responseBytes.AddRange(buffer.AsSpan(0, read).ToArray());
+                var text = Encoding.ASCII.GetString(responseBytes.ToArray());
+                headerEnd = text.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+            }
+
+            var responseText = Encoding.ASCII.GetString(responseBytes.ToArray());
+            var headers = responseText[..headerEnd];
+            var statusLineEnd = headers.IndexOf("\r\n", StringComparison.Ordinal);
+            var statusLine = statusLineEnd >= 0 ? headers[..statusLineEnd] : headers;
+            if (!statusLine.Contains(" 201 ", StringComparison.Ordinal))
+                throw new Exception($"Keep-alive timeout setup request expected 201, got: {statusLine}");
+
+            foreach (var line in headers.Split("\r\n", StringSplitOptions.None).Skip(1))
+            {
+                if (line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase) &&
+                    int.TryParse(line["Content-Length:".Length..].Trim(), out var parsed))
+                {
+                    contentLength = parsed;
+                    break;
+                }
+            }
+
+            var bodyBytes = responseBytes.Count - (headerEnd + 4);
+            while (bodyBytes < contentLength)
+            {
+                var read = await stream.ReadAsync(buffer, firstTimeout.Token);
+                if (read == 0)
+                    throw new Exception("Keep-alive timeout setup connection closed before the response body completed.");
+                bodyBytes += read;
+            }
+        }
+
+        await Task.Delay(keepAliveTimeout + TimeSpan.FromSeconds(1));
+        try
+        {
+            await stream.WriteAsync(request);
+            await stream.FlushAsync();
+            using var secondTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            var read = await stream.ReadAsync(buffer, secondTimeout.Token);
+            if (read != 0)
+                throw new Exception("Idle keep-alive connection remained usable beyond configured timeout.");
+        }
+        catch (IOException ex) when (IsConnectionAbort(ex))
+        {
+        }
+        catch (SocketException ex) when (IsConnectionAbort(ex))
+        {
+        }
     }
-    catch (IOException)
+    finally
     {
-    }
-    catch (SocketException)
-    {
+        await isolatedApp.StopAsync();
+        await isolatedApp.DisposeAsync();
     }
 }
 
