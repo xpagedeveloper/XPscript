@@ -6,9 +6,9 @@
 - [Run XPScript directly](#run-xpscript-directly)
 - [Compile code](#compile-code)
 - [Compiler parameters](#compiler-parameters)
-- [Run XPScript WebServer for local testing](#run-kestrel-for-local-testing)
-- [XPScript WebServer hosting](#kestrel-hosting)
-- [XPScript WebServer parameters](#kestrel-parameters)
+- [Run XPScript WebServer for local testing](#run-xpscript-webserver-for-local-testing)
+- [XPScript WebServer hosting](#xpscript-webserver-hosting)
+- [XPScript WebServer parameters](#xpscript-webserver-parameters)
 - [FastCGI hosting](#fastcgi-hosting)
 - [FastCGI parameters](#fastcgi-parameters)
 - [CGI hosting](#cgi-hosting)
@@ -186,7 +186,7 @@ Important CGI values include `REQUEST_METHOD`, `QUERY_STRING`, `CONTENT_TYPE`, `
 
 ## IIS hosting
 
-For Windows Server with IIS, the recommended production topology is IIS terminating TLS and reverse proxying to an XPScript XPScript WebServer process bound to `127.0.0.1`. Direct IIS CGI hosting is also supported for simpler or lower-volume deployments.
+For Windows Server with IIS, the recommended production topology is IIS terminating TLS and reverse proxying to an XPScript WebServer process bound to `127.0.0.1`. Direct IIS CGI hosting is also supported for simpler or lower-volume deployments.
 
 See [Hosting XPScript on IIS](iis-hosting.md) for the complete IIS setup, including ARR and URL Rewrite, `web.config`, application pool settings, permissions, CGI handler mapping, TLS, updates and troubleshooting.
 
