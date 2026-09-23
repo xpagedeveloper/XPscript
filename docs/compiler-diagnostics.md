@@ -41,6 +41,10 @@ Example debug-only generated diagnostic:
 
 `--debug` changes diagnostic visibility only. It does not change XPScript parsing, generated program behavior or error handling. Expected ComputeWithForm validation errors handled by `On Error` are omitted from runtime debug exception traces, while `Err` and the failed-field array retain their normal values.
 
+The same diagnostic-mode distinction applies to machine integrations. The MCP `xpscript_validate` tool accepts `debug: true` to request detailed compiler diagnostics. Normal MCP calls should leave it false or omit it. The local compiler daemon redacts unexpected request exceptions by default; a daemon `compileRun` request explicitly carrying `debug=true` may include the full exception for trusted local troubleshooting. This is separate from ordinary structured XPScript diagnostics.
+
+Debug output can contain generated `Program.cs` locations, exception types and stack information. Treat it as developer diagnostic output rather than stable machine-contract data. Stable automation must continue to use `diagnosticCode`, XPScript source ranges and structured properties. Secret redaction requirements apply in both normal and debug modes.
+
 
 ## Machine-readable compiler contract
 
