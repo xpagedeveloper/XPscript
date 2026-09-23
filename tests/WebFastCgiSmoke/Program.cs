@@ -20,6 +20,31 @@ try
     };
     await using var adapter = new XpsFastCgiAdapter(options, server, new EchoHandler());
 
+    var errorInput = BuildRequest(
+        23,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "GET",
+            ["SCRIPT_NAME"] = "/error.xps",
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "error.xps")
+        },
+        []);
+    var errorStream = new FragmentedDuplexStream(errorInput, 3);
+    await using (var errorAdapter = new XpsFastCgiAdapter(options, server, new ThrowingHandler()))
+    {
+        await errorAdapter.ProcessConnectionAsync(errorStream);
+    }
+    var errorOutput = ParseResponse(errorStream.Written);
+    if (!errorOutput.Contains("Status: 500 Internal Server Error", StringComparison.Ordinal) ||
+        !errorOutput.EndsWith("Internal Server Error", StringComparison.Ordinal))
+        throw new Exception("FastCGI unhandled error was not sanitized: " + errorOutput);
+    if (errorOutput.Contains("SECURITY-SENTINEL", StringComparison.Ordinal) ||
+        errorOutput.Contains("ThrowingHandler", StringComparison.Ordinal) ||
+        errorOutput.Contains(".cs:", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("FastCGI unhandled error leaked diagnostics: " + errorOutput);
+
     var multipartBody = Encoding.UTF8.GetBytes("--fastcgi-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser\r\n--fastcgi-boundary--\r\n");
     var multipartInput = BuildRequest(
         19,
@@ -336,6 +361,12 @@ static string ParseResponse(byte[] raw)
     return Encoding.UTF8.GetString(stdout.ToArray());
 }
 
+
+sealed class ThrowingHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context) =>
+        throw new InvalidOperationException("SECURITY-SENTINEL " + Environment.CurrentDirectory);
+}
 
 sealed class MultipartHandler : IXpsWebRequestHandler
 {
