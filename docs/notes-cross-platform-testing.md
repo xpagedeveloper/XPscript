@@ -12,7 +12,7 @@ The runtime uses .NET `NativeLibrary.Load` and resolves C API exports dynamicall
 
 `NotesInitExtended` initializes the process and the thread that creates `NotesSession`. Any other thread that performs Notes C API work is initialized with `NotesInitThread` before the native operation and terminated with `NotesTermThread` on that same thread when the operation scope ends. Nested Notes calls on the same worker thread share one thread-initialization scope.
 
-This operation-scoped model is intentional for .NET thread-pool hosts such as Kestrel and FastCGI. It avoids leaving Domino per-thread state attached to worker threads whose lifetime is controlled by .NET.
+This operation-scoped model is intentional for .NET thread-pool hosts such as XPScript WebServer and FastCGI. It avoids leaving Domino per-thread state attached to worker threads whose lifetime is controlled by .NET.
 
 ## Automated tests
 
