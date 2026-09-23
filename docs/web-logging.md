@@ -1,6 +1,6 @@
 # Mandatory web logging
 
-Every XPScript web host writes structured logs automatically. Access, error and security/audit logging cannot be disabled. XPScript WebServer, FastCGI and CGI use the same UTF-8 JSON Lines format.
+Every XPScript web host writes structured logs automatically. Access, error and security/audit logging cannot be disabled. Kestrel, FastCGI and CGI use the same UTF-8 JSON Lines format.
 
 ## Files and retention
 
@@ -69,4 +69,4 @@ Give the service identity write access to the log directory and deny access to t
 
 ## Platform contract
 
-XPScript WebServer, IIS reverse proxy, FastCGI and CGI use the same correlation helper, cookie lifetime, hash format, `session.id` field, exchange schema and redaction rules. The only transport-dependent cookie attribute is `Secure`. It is present for externally HTTPS requests and absent for HTTP so both protocols work. IIS must preserve the original scheme through ASP.NET Core Module or trusted forwarded headers.
+Kestrel, IIS reverse proxy, FastCGI and CGI use the same correlation helper, cookie lifetime, hash format, `session.id` field, exchange schema and redaction rules. The only transport-dependent cookie attribute is `Secure`. It is present for externally HTTPS requests and absent for HTTP so both protocols work. IIS must preserve the original scheme through ASP.NET Core Module or trusted forwarded headers.
