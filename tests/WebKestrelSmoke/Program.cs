@@ -432,9 +432,11 @@ try
     using (var postHealth = await client.PostAsync("/_xps/health", new StringContent(string.Empty)))
     {
         if ((int)postHealth.StatusCode != 405) throw new Exception("Operational endpoint must reject non-GET/HEAD methods.");
-        if (!postHealth.Headers.TryGetValues("Allow", out var allow))
+        IEnumerable<string>? allow = null;
+        if (!postHealth.Headers.TryGetValues("Allow", out allow) &&
+            !postHealth.Content.Headers.TryGetValues("Allow", out allow))
             throw new Exception("Operational endpoint 405 response did not advertise allowed methods.");
-        var allowedMethods = allow
+        var allowedMethods = allow!
             .SelectMany(value => value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (!allowedMethods.SetEquals(["GET", "HEAD"]))
