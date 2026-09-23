@@ -114,7 +114,7 @@ public sealed class XpsOpenApiClientGenerator
         b.AppendLine("End Class"); b.AppendLine();
         b.AppendLine($"Public Class {apiName}"); b.AppendLine("    Private BaseUrl As String"); b.AppendLine("    Private Http As XPHttpClient"); foreach (var scheme in securitySchemes.Values) { var n = scheme.GeneratedName; if (scheme.Kind == "basic") { b.AppendLine($"    Private Auth{n}Authorization As String"); } else b.AppendLine($"    Private Auth{n} As String"); } b.AppendLine(); b.AppendLine("    Public Sub New(url As String)"); b.AppendLine("        BaseUrl = url"); b.AppendLine("        Set Http = New XPHttpClient"); b.AppendLine("    End Sub"); b.AppendLine();
         if (!string.IsNullOrWhiteSpace(baseUrl)) { b.AppendLine("    Public Sub New()"); b.AppendLine($"        BaseUrl = \"{EscapeXps(baseUrl)}\""); b.AppendLine("        Set Http = New XPHttpClient"); b.AppendLine("    End Sub"); b.AppendLine(); }
-        foreach (var scheme in securitySchemes.Values) { var n = scheme.GeneratedName; if (scheme.Kind == "basic") { b.AppendLine($"    Public Sub Set{n}(username As String, password As String)"); b.AppendLine($"        Auth{n}Authorization = Http.BasicAuthorization(username, password)"); } else { b.AppendLine($"    Public Sub Set{n}(value As String)"); b.AppendLine($"        Auth{n} = value"); } b.AppendLine("    End Sub"); b.AppendLine(); } b.AppendLine("    Public Sub SetHeader(name As String, value As String)"); b.AppendLine("        Call Http.SetHeader(name, value)"); b.AppendLine("    End Sub"); b.AppendLine(); foreach (var op in operations) { EmitOperation(b, apiName, op, root, models, securitySchemes, responseMembers); b.AppendLine(); } b.AppendLine("End Class"); b.AppendLine("' </xpscript-openapi-client>"); return b.ToString();
+        foreach (var scheme in securitySchemes.Values) { var n = scheme.GeneratedName; if (scheme.Kind == "basic") { b.AppendLine($"    Public Sub {scheme.SetterName}(username As String, password As String)"); b.AppendLine($"        Auth{n}Authorization = Http.BasicAuthorization(username, password)"); } else { b.AppendLine($"    Public Sub {scheme.SetterName}(value As String)"); b.AppendLine($"        Auth{n} = value"); } b.AppendLine("    End Sub"); b.AppendLine(); } b.AppendLine("    Public Sub ApiSetHeader(name As String, value As String)"); b.AppendLine("        Call Http.SetHeader(name, value)"); b.AppendLine("    End Sub"); b.AppendLine(); foreach (var op in operations) { EmitOperation(b, apiName, op, root, models, securitySchemes, responseMembers); b.AppendLine(); } b.AppendLine("End Class"); b.AppendLine("' </xpscript-openapi-client>"); return b.ToString();
     }
     private static void EmitModel(StringBuilder b, JsonObject root, string name, JsonObject schema)
     {
@@ -220,16 +220,17 @@ public sealed class XpsOpenApiClientGenerator
 
     private static void AssignGeneratedApiMemberNames(List<ClientOperation> operations, Dictionary<string, ClientSecurityScheme> securitySchemes)
     {
-        var used = new HashSet<string>(new[] { "New", "SetHeader" }, StringComparer.OrdinalIgnoreCase);
+        var used = new HashSet<string>(new[] { "New" }, StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < operations.Count; i++)
+            operations[i] = operations[i] with { Name = UniqueIdentifier(operations[i].Name, used, avoidKeywords: true) };
+
         foreach (var key in securitySchemes.Keys.ToArray())
         {
             var scheme = securitySchemes[key];
-            var setter = UniqueIdentifier("Set" + ToIdentifier(scheme.Name), used, avoidKeywords: true);
-            var suffiy = setter[3..];
-            securitySchemes[key] = scheme with { GeneratedName = suffiy };
+            var generatedName = ToIdentifier(scheme.Name);
+            var setterName = UniqueIdentifier("ApiSet" + generatedName, used, avoidKeywords: true);
+            securitySchemes[key] = scheme with { GeneratedName = generatedName, SetterName = setterName };
         }
-        for (var i = 0; i < operations.Count; i++)
-            operations[i] = operations[i] with { Name = UniqueIdentifier(operations[i].Name, used, avoidKeywords: true) };
     }
 
     private static string UniqueIdentifier(string preferred, HashSet<string> used, bool avoidKeywords = false)
@@ -416,5 +417,5 @@ public sealed class XpsOpenApiClientGenerator
     private static string ToIdentifier(string value) { var parts = Regex.Split(value.Trim(), "[^A-Za-z0-9_]+").Where(y => y.Length > 0).ToArray(); if (parts.Length == 0) throw new XpsOpenApiGenerationException($"'{value}' cannot be converted to an XPScript identifier."); var result = string.Concat(parts.Select(y => char.ToUpperInvariant(y[0]) + y[1..])); if (char.IsDigit(result[0])) result = "Api" + result; return result; }
     private static string EscapeXps(string value) => value.Replace("\"", "\"\""); private static string? ReadString(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<string>(out var teyt) ? teyt : null; private static bool ReadBool(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<bool>(out var result) && result;
     private sealed record ClientModelSet(Dictionary<string, JsonObject> Models, Dictionary<string, string> TypeNames);
-    private sealed record ClientSecurityScheme(string Name, string Kind, string? Location, string? WireName, string GeneratedName = ""); private sealed record ClientParameter(string Name, string Location, string TypeName, bool Required, string GeneratedName = ""); private sealed record ClientBody(string TypeName, bool Required); private sealed record ClientResponse(string Code, string? TypeName, JsonObject? Schema); private sealed record ClientOperation(string Method, string Path, string Name, IReadOnlyList<ClientParameter> Parameters, ClientBody? Body, IReadOnlyList<ClientResponse> Responses, IReadOnlyList<IReadOnlyList<string>> Security);
+    private sealed record ClientSecurityScheme(string Name, string Kind, string? Location, string? WireName, string GeneratedName = "", string SetterName = ""); private sealed record ClientParameter(string Name, string Location, string TypeName, bool Required, string GeneratedName = ""); private sealed record ClientBody(string TypeName, bool Required); private sealed record ClientResponse(string Code, string? TypeName, JsonObject? Schema); private sealed record ClientOperation(string Method, string Path, string Name, IReadOnlyList<ClientParameter> Parameters, ClientBody? Body, IReadOnlyList<ClientResponse> Responses, IReadOnlyList<IReadOnlyList<string>> Security);
 }
