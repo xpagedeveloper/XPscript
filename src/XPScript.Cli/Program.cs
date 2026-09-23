@@ -24,6 +24,7 @@ try
     {
         "compile" => await XPScriptCompilerCommandLine.CompileAsync(args[1..]),
         "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
+        "daemon" => await CompilerDaemonServer.RunAsync(args[1..]),
         "dependencies" => await XPScript.Cli.ApplicationDependencyCommand.RunDependenciesAsync(args[1..]),
         "security" => await XPScript.Cli.ApplicationDependencyCommand.RunSecurityAsync(args[1..]),
         "patch" => await XPScript.Cli.PackagePatchCommand.RunAsync(args[1..]),
