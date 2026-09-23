@@ -138,7 +138,7 @@ internal sealed record BrowserWasmServerBridgePlan(
     private static bool HasServerRuntimeFeature(string source)
     {
         var features = RuntimeFeatures.Detect(source);
-        return features.Ai || features.Sqlite || features.MsSql;
+        return features.Ai || features.Sqlite || features.MsSql || Regex.IsMatch(PreprocessorFeatureGate.CodeOnly(source), @"\bApplication\.Crypto\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     private static IReadOnlyList<ProcedureBlock> ParseProcedures(string[] lines)
