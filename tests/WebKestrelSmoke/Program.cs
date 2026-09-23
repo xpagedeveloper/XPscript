@@ -326,10 +326,19 @@ try
     {
         chunked.Headers.TransferEncodingChunked = true;
         chunked.Content = new UnknownLengthContent(new byte[checked((int)options.MaxRequestBodySize + 1)]);
-        using var response = await client.SendAsync(chunked);
-        if ((int)response.StatusCode != 413)
-            throw new Exception($"Chunked in-memory body limit expected 413, got {(int)response.StatusCode}.");
-        _ = ReadRequestId(response);
+        try
+        {
+            using var response = await client.SendAsync(chunked);
+            if ((int)response.StatusCode != 413)
+                throw new Exception($"Chunked in-memory body limit expected 413 or a transport-level connection rejection, got {(int)response.StatusCode}.");
+            _ = ReadRequestId(response);
+        }
+        catch (HttpRequestException ex) when (IsPrematureResponseEnd(ex))
+        {
+            // Kestrel may terminate the HTTP/1.1 connection while rejecting an oversized
+            // chunked body. That is a valid fail-closed outcome: the application handler
+            // never receives the oversized request.
+        }
     }
 
     using (var staticAllowed = await client.GetAsync("/assets/allowed.css"))
@@ -743,6 +752,17 @@ static void AssertHeader(HttpResponseMessage response, string name, string expec
 {
     if (!response.Headers.TryGetValues(name, out var values) || values.Single() != expected)
         throw new Exception($"Expected response header {name}: {expected}.");
+}
+
+static bool IsPrematureResponseEnd(HttpRequestException ex)
+{
+    for (Exception? current = ex; current is not null; current = current.InnerException)
+    {
+        if (current.Message.Contains("response ended prematurely", StringComparison.OrdinalIgnoreCase) ||
+            current.Message.Contains("ResponseEnded", StringComparison.OrdinalIgnoreCase))
+            return true;
+    }
+    return false;
 }
 
 static string ReadRequestId(HttpResponseMessage response)
