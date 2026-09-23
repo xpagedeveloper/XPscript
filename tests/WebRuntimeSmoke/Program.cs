@@ -89,6 +89,28 @@ try
         throw new Exception("Duplicate query first-value behavior was not deterministic.");
 
 
+    // URL-encoded form parser abuse boundaries are shared by Kestrel, CGI and FastCGI.
+    var duplicateFormBody = "role=user&role=admin"u8.ToArray();
+    var formRequest = new XpsWebRequest(
+        "POST", "/submit", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(),
+        "application/x-www-form-urlencoded", duplicateFormBody.Length, duplicateFormBody,
+        "localhost", "https", null, "HTTP/1.1", new Dictionary<string, string>());
+    var formValues = formRequest.FormAll("role");
+    if (formValues.Count != 2 || formValues[0] != "user" || formValues[1] != "admin" ||
+        formRequest.FormFirst("role") != "user" || formRequest.Form("role") != "user")
+        throw new Exception("Duplicate form values were not preserved deterministically.");
+    AssertThrows<InvalidOperationException>(() => formRequest.FormAll("role", maxBytes: 4));
+    AssertThrows<InvalidOperationException>(() => formRequest.FormAll("role", maxFields: 1));
+
+    var malformedFormBody = "name=%ZZ"u8.ToArray();
+    var malformedFormRequest = new XpsWebRequest(
+        "POST", "/submit", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(),
+        "application/x-www-form-urlencoded", malformedFormBody.Length, malformedFormBody,
+        "localhost", "https", null, "HTTP/1.1", new Dictionary<string, string>());
+    AssertThrows<InvalidOperationException>(() => malformedFormRequest.FormFirst("name"));
+
     // Run response-cookie injection regressions early: these protect a shared invariant used by Kestrel, CGI and FastCGI.
     var cookieInjectionResponse = new XpsWebResponse();
     AssertThrows<ArgumentException>(() => cookieInjectionResponse.SetHeader("Set-Cookie", "session=trusted\r\nSet-Cookie: session=attacker"));
