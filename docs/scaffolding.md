@@ -76,7 +76,7 @@ creates `mycli/main.xps` with a minimal console application. It prints each appl
 Run it with:
 
 ```text
-xpscript run ./mycli/main.xps -- first second
+xpscript run ./mycli/main.xps first second
 ```
 
 The generated program prints:
