@@ -47,6 +47,11 @@ jobs:
         run: |
           dotnet run --project ./tests/WebKestrelSmoke/WebKestrelSmoke.csproj -c Release
 
+      - name: Run UIForm adversarial XSS regressions
+        shell: bash
+        run: |
+          dotnet run --project ./tests/WebUIFormAdversarialSecurity/WebUIFormAdversarialSecurity.csproj -c Release
+
       - name: Run CGI and FastCGI cross-host security regressions
         shell: bash
         run: |
