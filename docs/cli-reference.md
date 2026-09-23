@@ -47,21 +47,21 @@ See [Dependency security and package patching](dependency-security-and-patching.
 
 Service files use `[Service]`, optional `[StopTimeout:value]`, `ServiceStart()`, one or more optional `[Interval:value]` procedures, and `ServiceStop()`. See [XPScript services](services.md) for the lifecycle contract.
 
-## `xpscript web` XPScript WebServer host
+## `xpscript web` Kestrel host
 
 | Command/option | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `web` | `xpscript web --root PATH [options]` | `PATH`: XPScript web root. | Starts the persistent XPScript WebServer web host. | [index.xps](../demo/kestrel/index.xps) |
+| `web` | `xpscript web --root PATH [options]` | `PATH`: XPScript web root. | Starts the persistent Kestrel web host. | [index.xps](../demo/kestrel/index.xps) |
 | `--root` | `--root PATH` | `PATH`: directory containing web `.xps` files. | Selects the required web application root. | [index.xps](../demo/kestrel/index.xps) |
 | `--default-document` | `--default-document FILE.xps` | `FILE.xps`: default route file, normally `index.xps`. | Changes the file resolved for directory/default-document requests. | [index.xps](../demo/kestrel/index.xps) |
-| `--address` | `--address IP` | `IP`: listener address. | Selects the XPScript WebServer bind address. | [index.xps](../demo/kestrel/index.xps) |
-| `--bind` | `--bind IP` | `IP`: listener address. | Alias for the XPScript WebServer listener address option. | [index.xps](../demo/kestrel/index.xps) |
-| `--port` | `--port N` | `N`: TCP port. | Selects the XPScript WebServer listener port. | [index.xps](../demo/kestrel/index.xps) |
+| `--address` | `--address IP` | `IP`: listener address. | Selects the Kestrel bind address. | [index.xps](../demo/kestrel/index.xps) |
+| `--bind` | `--bind IP` | `IP`: listener address. | Alias for the Kestrel listener address option. | [index.xps](../demo/kestrel/index.xps) |
+| `--port` | `--port N` | `N`: TCP port. | Selects the Kestrel listener port. | [index.xps](../demo/kestrel/index.xps) |
 | `--host` | `--host NAME` | `NAME`: accepted HTTP Host value; repeatable. | Adds an allowed public Host value. | [index.xps](../demo/kestrel/index.xps) |
 | `--allowed-host` | `--allowed-host NAME` | `NAME`: accepted HTTP Host value; repeatable. | Alias for adding an allowed Host value. | [index.xps](../demo/kestrel/index.xps) |
 | `--https-cert` | `--https-cert PATH` | `PATH`: PFX certificate file. | Enables HTTPS using the selected PFX certificate. | [index.xps](../demo/kestrel/index.xps) |
 | `--https-cert-password-env` | `--https-cert-password-env NAME` | `NAME`: environment variable holding the PFX password. | Reads the HTTPS certificate password from environment rather than the command line. | [index.xps](../demo/kestrel/index.xps) |
-| `--protocols` | `--protocols http1|http2|http1+2` | protocol selection. | Chooses allowed XPScript WebServer HTTP protocol versions. | [index.xps](../demo/kestrel/index.xps) |
+| `--protocols` | `--protocols http1|http2|http1+2` | protocol selection. | Chooses allowed Kestrel HTTP protocol versions. | [index.xps](../demo/kestrel/index.xps) |
 | `--health` | `--health` | none | Enables the host health endpoint. | [index.xps](../demo/kestrel/index.xps) |
 | `--metrics` | `--metrics` | none | Enables the host metrics endpoint. | [index.xps](../demo/kestrel/index.xps) |
 | `--sessions` | `--sessions` | none | Enables in-memory XPScript web sessions. | [index.xps](../demo/web-state/index.xps) |
@@ -73,7 +73,7 @@ Service files use `[Service]`, optional `[StopTimeout:value]`, `ServiceStart()`,
 | `--structured-log` | `--structured-log PATH` | `PATH`: JSON-lines log file. | Writes structured request logging to the selected path. | [index.xps](../demo/kestrel/index.xps) |
 | `--static-files` | `--static-files` | none | Enables static-file serving from the web root. | [index.xps](../demo/kestrel/index.xps) |
 | `--static-max-bytes` | `--static-max-bytes N` | `N`: maximum static response size in bytes. | Limits static-file size. | [index.xps](../demo/kestrel/index.xps) |
-| `--config` | `--config FILE` | `FILE`: host configuration file. | Loads XPScript WebServer host configuration. Explicit CLI values override config values. | [index.xps](../demo/kestrel/index.xps) |
+| `--config` | `--config FILE` | `FILE`: host configuration file. | Loads Kestrel host configuration. Explicit CLI values override config values. | [index.xps](../demo/kestrel/index.xps) |
 
 ## `xpscript fastcgi` host
 
