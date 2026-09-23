@@ -276,7 +276,7 @@ public static class XpsKestrelAdapter
             var rawPath = http.Request.Path.Value ?? string.Empty;
             var authenticated = false;
             string? relativePath = null;
-            if (TryGetStaticRequestPath(rawPath, options.PublicStaticPath, null, out var publicPath))
+            if (TryGetStaticRequestPath(rawPath, options.PublicStaticPath, options.PublicStaticPath.TrimStart('/'), out var publicPath))
             {
                 relativePath = publicPath;
             }
