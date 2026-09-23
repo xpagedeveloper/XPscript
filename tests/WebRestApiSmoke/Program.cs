@@ -85,12 +85,14 @@ End Function
 [Anonymous]
 [Get]
 [Route:/api/bind/{id}]
-Sub BindSources([FromRoute] id As Integer, [FromQuery] verbose As Boolean, [FromHeader:"X-Tenant-ID"] tenantId As String)
+Sub BindSources([FromRoute] id As Integer, [FromQuery] verbose As Boolean, [FromHeader:"X-Tenant-ID"] tenantId As String, [FromCookie:"client-id"] clientId As String)
     Response.Write(CStr(id))
     Response.Write("|")
     Response.Write(CStr(verbose))
     Response.Write("|")
     Response.Write(tenantId)
+    Response.Write("|")
+    Response.Write(clientId)
 End Sub
 
 [Anonymous]
@@ -224,7 +226,7 @@ try
     if (parsed.Routes["GetUser"].Cors is null || parsed.Routes["GetUser"].RateLimit is null) throw new Exception("CORS or rate limit metadata was not retained.");
     if (parsed.Routes["CreateUser"].ValidationRules?.Count != 5) throw new Exception("Model validation metadata was not collected.");
     if (parsed.Routes["CreateUser"].JsonSchema != "schemas/create-user.schema.json") throw new Exception("JSON Schema route metadata was not retained.");
-    if (parsed.Routes["BindSources"].ParameterBindings?.Count != 3) throw new Exception("Explicit parameter bindings were not retained.");
+    if (parsed.Routes["BindSources"].ParameterBindings?.Count != 4) throw new Exception("Explicit parameter bindings were not retained.");
     if (parsed.Source.Contains("[FromRoute]", StringComparison.OrdinalIgnoreCase)) throw new Exception("Parameter binding syntax was not stripped before compilation.");
 
     await using var dispatcher = new XpsWebDispatcher(root);
@@ -241,9 +243,10 @@ try
         "GET",
         "/api/bind/9",
         queryString: "verbose=true",
-        extraHeaders: new Dictionary<string, string> { ["X-Tenant-ID"] = "tenant-1" });
-    if (binding.StatusCode != 200 || BodyText(binding) != "9|True|tenant-1")
-        throw new Exception("FromRoute/FromQuery/FromHeader binding failed: " + BodyText(binding));
+        extraHeaders: new Dictionary<string, string> { ["X-Tenant-ID"] = "tenant-1" },
+        cookies: new Dictionary<string, string> { ["client-id"] = "cookie-1" });
+    if (binding.StatusCode != 200 || BodyText(binding) != "9|True|tenant-1|cookie-1")
+        throw new Exception("FromRoute/FromQuery/FromHeader/FromCookie binding failed: " + BodyText(binding));
 
     var preflight = await SendAsync(
         dispatcher,
@@ -477,7 +480,8 @@ static async Task<XpsWebResponse> SendAsync(
     string? origin = null,
     IReadOnlyDictionary<string, string>? extraHeaders = null,
     string queryString = "",
-    string? serverRoot = null)
+    string? serverRoot = null,
+    IReadOnlyDictionary<string, string>? cookies = null)
 {
     var headers = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
     if (origin is not null) headers["Origin"] = [origin];
@@ -497,7 +501,7 @@ static async Task<XpsWebResponse> SendAsync(
         "http",
         "127.0.0.1",
         "HTTP/1.1",
-        new Dictionary<string, string>());
+        cookies ?? new Dictionary<string, string>());
     var response = new XpsWebResponse();
     var context = new XpsWebContext(
         request,
