@@ -224,10 +224,11 @@ public sealed class XpsOpenApiClientGenerator
         for (var i = 0; i < operations.Count; i++)
             operations[i] = operations[i] with { Name = UniqueIdentifier(operations[i].Name, used, avoidKeywords: true) };
 
+        var generatedSecurityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var key in securitySchemes.Keys.ToArray())
         {
             var scheme = securitySchemes[key];
-            var generatedName = ToIdentifier(scheme.Name);
+            var generatedName = UniqueIdentifier(ToIdentifier(scheme.Name), generatedSecurityNames, avoidKeywords: true);
             var setterName = UniqueIdentifier("ApiSet" + generatedName, used, avoidKeywords: true);
             securitySchemes[key] = scheme with { GeneratedName = generatedName, SetterName = setterName };
         }
