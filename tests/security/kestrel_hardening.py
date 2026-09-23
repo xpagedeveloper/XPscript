@@ -194,6 +194,13 @@ def run(host, port):
         lambda c,h,r: (r.count(b"HTTP/1.1 ") <= 1 and b"XPSCRIPT_SECRET_SENTINEL" not in r,
                        "chunk extension caused ambiguous framing or protected-content disclosure"))
 
+    oversized_chunk = b"A" * 1048577
+    add("chunked-body-over-limit-rejected",
+        (b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n" +
+         f"{len(oversized_chunk):X}\r\n".encode("ascii") + oversized_chunk + b"\r\n0\r\n\r\n"),
+        {400,413},
+        lambda c,h,r: (b"XPSCRIPT-HARDENING" not in r, "oversized chunked body reached application handler"))
+
     add("malformed-http-version-rejected",
         b"GET / HTTP/1.X\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
         {400,505})
@@ -220,13 +227,6 @@ def run(host, port):
     add("oversized-content-length-rejected",
         b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 1048577\r\nConnection: close\r\n\r\n",
         {400,413})
-
-    oversized_chunk = b"A" * 1048577
-    add("chunked-body-over-limit-rejected",
-        (b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n" +
-         f"{len(oversized_chunk):X}\r\n".encode("ascii") + oversized_chunk + b"\r\n0\r\n\r\n"),
-        {400,413},
-        lambda c,h,r: (b"XPSCRIPT-HARDENING" not in r, "oversized chunked body reached application handler"))
 
     add("encoded-path-control-character-rejected",
         b"GET /hello%00world HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
