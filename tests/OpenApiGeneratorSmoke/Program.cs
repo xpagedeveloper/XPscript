@@ -1117,7 +1117,7 @@ static string ToJsonFixture(string yaml)
     return Convert(stream.Documents[0].RootNode)!.ToJsonString();
 }
 
-static void VerifyVersionPair(string version, string yaml, XpsOpenApiGenerator serverGenerator)
+static async Task VerifyVersionPair(string version, string yaml, XpsOpenApiGenerator serverGenerator)
 {
     foreach (var fixture in new[] { (Text: yaml, Name: "matrix-" + version + ".yaml"), (Text: ToJsonFixture(yaml), Name: "matrix-" + version + ".json") })
     {
@@ -1134,7 +1134,7 @@ static void VerifyVersionPair(string version, string yaml, XpsOpenApiGenerator s
         {
             var serverPath = Path.Combine(tempRoot, "server.xps");
             File.WriteAllText(serverPath, server.Source);
-            using var unit = new XpsWebCompiler().CompileAsync(serverPath, tempRoot).GetAwaiter().GetResult();
+            await using var unit = await new XpsWebCompiler().CompileAsync(serverPath, tempRoot);
             if (!unit.Routes.ContainsKey("EndpointMatrixCall"))
                 throw new Exception("OpenAPI " + version + " " + fixture.Name + " server compile failed.");
 
@@ -1176,7 +1176,7 @@ paths:
             application/json:
               schema: { type: string }
 """.Replace("__OPENAPI_VERSION__", version, StringComparison.Ordinal);
-    VerifyVersionPair(version, matrixYaml, generator);
+    await VerifyVersionPair(version, matrixYaml, generator);
 }
 Console.WriteLine("OPENAPI-3X-JSON-YAML-SERVER-CLIENT-MATRIX=OK");
 
