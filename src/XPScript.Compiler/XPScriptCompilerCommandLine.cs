@@ -808,7 +808,6 @@ The run command stays quiet by default. Use --info to show live compilation stat
 Compiler diagnostics are source-mapped to the original .xps file by default. Generated Program.cs locations are hidden.
 Use --debug as a strict superset of --info: it forces a fresh run compilation, shows the compile timer, includes generated C# diagnostics and physical Program.cs locations, and enables detailed runtime exception tracing for errors that may be handled by On Error.
 The run command uses an in-process Roslyn fast path for eligible scripts, a framework-dependent no-apphost MSBuild fallback for dependency-heavy scripts, and a dependency-snapshot artifact cache. Debug runs bypass an existing run-cache artifact so diagnostics always reflect the current compiler.
-Use -- before script arguments when an argument could otherwise be interpreted as a run option.
 """);
     }
 
