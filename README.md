@@ -9,7 +9,7 @@ Third-party components retain their own license terms. See [THIRD-PARTY-NOTICES.
 XPScript is a standalone programming language compiler implemented in C#/.NET 10. Source files use the `.xps` extension and can target Windows, Linux and macOS executables without requiring an external scripting runtime.
 The Language is a work in progress but still very capable, please report any findings in issues.
 
-We have support for CLI, Desktop, WebAssembly Desktop, Webb Server (Internal XPScript WebServer, IIS, Fast CGI, CGI) and a special Rest server setup.
+We have support for CLI, Desktop, WebAssembly Desktop, Webb Server (Internal Kestrel, IIS, Fast CGI, CGI) and a special Rest server setup.
 There is also Lotus of support for databases but the biggest one is HCL Notes C-API access to Databases, Views, Documents and lots more.
 
 ## Documentation
