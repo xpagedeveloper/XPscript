@@ -12,11 +12,11 @@ using XPScript.Web.Runtime;
 var root = Path.Combine(Path.GetTempPath(), "xps-kestrel-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 Directory.CreateDirectory(Path.Combine(root, "assets"));
-await File.WriteAllTextAsync(Path.Combine(root, "assets", "allowed.txt"), "STATIC-ALLOWED");
+await File.WriteAllTextAsync(Path.Combine(root, "assets", "allowed.css"), "STATIC-ALLOWED");
 await File.WriteAllTextAsync(Path.Combine(root, "secret.txt"), "STATIC-SECRET");
 await File.WriteAllTextAsync(Path.Combine(root, "config.json"), "{\"secret\":true}");
 await File.WriteAllTextAsync(Path.Combine(root, "source.xps"), "Sub Index()\nEnd Sub");
-await File.WriteAllBytesAsync(Path.Combine(root, "assets", "oversized.txt"), new byte[33]);
+await File.WriteAllBytesAsync(Path.Combine(root, "assets", "oversized.css"), new byte[33]);
 var outsideRoot = Path.Combine(Path.GetTempPath(), "xps-kestrel-outside-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outsideRoot);
 await File.WriteAllTextAsync(Path.Combine(outsideRoot, "outside.txt"), "OUTSIDE-SECRET");
@@ -332,13 +332,13 @@ try
         _ = ReadRequestId(response);
     }
 
-    using (var staticAllowed = await client.GetAsync("/assets/allowed.txt"))
+    using (var staticAllowed = await client.GetAsync("/assets/allowed.css"))
     {
         var staticAllowedBody = await staticAllowed.Content.ReadAsStringAsync();
         if ((int)staticAllowed.StatusCode != 200 || staticAllowedBody != "STATIC-ALLOWED")
             throw new Exception($"Allowed static asset was not served as expected: status={(int)staticAllowed.StatusCode}, body={staticAllowedBody}");
     }
-    foreach (var protectedPath in new[] { "/secret.txt", "/config.json", "/source.xps", "/assets/oversized.txt" })
+    foreach (var protectedPath in new[] { "/secret.txt", "/config.json", "/source.xps", "/assets/oversized.css" })
     {
         using var protectedResponse = await client.GetAsync(protectedPath);
         if ((int)protectedResponse.StatusCode == 200)
