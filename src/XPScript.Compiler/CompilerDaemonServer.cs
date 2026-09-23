@@ -90,6 +90,7 @@ public static class CompilerDaemonServer
                 var line = await reader.ReadLineAsync(shutdown.Token).ConfigureAwait(false);
                 if (line is null) return;
                 var requestStarted = false;
+                var debugRequest = false;
                 JsonElement id = default;
                 try
                 {
@@ -124,6 +125,7 @@ public static class CompilerDaemonServer
                         var outputDirectory = parameters.GetProperty("outputDirectory").GetString() ?? "";
                         var runtimeIdentifier = parameters.GetProperty("runtimeIdentifier").GetString() ?? "";
                         var debug = parameters.TryGetProperty("debug", out var debugElement) && debugElement.GetBoolean();
+                        debugRequest = debug;
                         var restricted = parameters.TryGetProperty("restricted", out var restrictedElement) && restrictedElement.GetBoolean();
                         var securityText = parameters.TryGetProperty("securityMode", out var securityElement) ? securityElement.GetString() : null;
                         var securityMode = Enum.TryParse<ApplicationSecurityMode>(securityText, true, out var parsedSecurity)
@@ -165,10 +167,10 @@ public static class CompilerDaemonServer
                     }
                     await WriteErrorAsync(writer, id, $"Unknown daemon method: {method}").ConfigureAwait(false);
                 }
-                catch (JsonException) { await WriteErrorAsync(writer, id, "Invalid daemon request.").ConfigureAwait(false); }
-                catch (KeyNotFoundException) { await WriteErrorAsync(writer, id, "Invalid daemon request.").ConfigureAwait(false); }
-                catch (InvalidOperationException) { await WriteErrorAsync(writer, id, "Invalid daemon request.").ConfigureAwait(false); }
-                catch (Exception) { await WriteErrorAsync(writer, id, "Daemon request failed.").ConfigureAwait(false); }
+                catch (JsonException ex) { await WriteErrorAsync(writer, id, debugRequest ? ex.ToString() : "Invalid daemon request.").ConfigureAwait(false); }
+                catch (KeyNotFoundException ex) { await WriteErrorAsync(writer, id, debugRequest ? ex.ToString() : "Invalid daemon request.").ConfigureAwait(false); }
+                catch (InvalidOperationException ex) { await WriteErrorAsync(writer, id, debugRequest ? ex.ToString() : "Invalid daemon request.").ConfigureAwait(false); }
+                catch (Exception ex) { await WriteErrorAsync(writer, id, debugRequest ? ex.ToString() : "Daemon request failed.").ConfigureAwait(false); }
                 finally { if (requestStarted) endRequest(); }
             }
         }
