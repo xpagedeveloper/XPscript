@@ -38,6 +38,9 @@ public sealed class XpsKestrelOptions
     public string HealthPath { get; init; } = "/_xps/health";
     public string MetricsPath { get; init; } = "/_xps/metrics";
     public bool EnableStaticFiles { get; init; }
+    public string PublicStaticPath { get; init; } = "/assets";
+    public string AuthenticatedStaticPath { get; init; } = "/protected";
+    public string AuthenticatedStaticDirectory { get; init; } = "protected";
     public long MaxStaticFileBytes { get; init; } = 32L * 1024 * 1024;
     public string StaticCacheControl { get; init; } = "public, max-age=300";
     public XpsWebLogOptions LogOptions { get; init; } = new();
@@ -129,6 +132,13 @@ public sealed class XpsKestrelOptions
         if (string.Equals(HealthPath, MetricsPath, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("HealthPath and MetricsPath must be different.");
 
+        ValidateStaticPath(PublicStaticPath, nameof(PublicStaticPath));
+        ValidateStaticPath(AuthenticatedStaticPath, nameof(AuthenticatedStaticPath));
+        if (string.Equals(PublicStaticPath, AuthenticatedStaticPath, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Public and authenticated static URL paths must be different.");
+        if (string.IsNullOrWhiteSpace(AuthenticatedStaticDirectory) || Path.IsPathRooted(AuthenticatedStaticDirectory) ||
+            AuthenticatedStaticDirectory.IndexOfAny(['/', '\\', ':', '\r', '\n', '\0']) >= 0 || AuthenticatedStaticDirectory is "." or "..")
+            throw new ArgumentException("Authenticated static directory must be one simple relative directory name.", nameof(AuthenticatedStaticDirectory));
         if (MaxStaticFileBytes is < 1 or > 1024L * 1024L * 1024L)
             throw new ArgumentOutOfRangeException(nameof(MaxStaticFileBytes), "Static file limit must be between 1 byte and 1 GiB.");
         if (StaticCacheControl.IndexOfAny(['\r', '\n', '\0']) >= 0)
@@ -145,6 +155,16 @@ public sealed class XpsKestrelOptions
             if (string.IsNullOrWhiteSpace(pair.Value) || pair.Value.IndexOfAny(['\r', '\n', '\0']) >= 0)
                 throw new ArgumentException("Static file content types must be valid header values.", nameof(StaticFileContentTypes));
         }
+    }
+
+    private static void ValidateStaticPath(string path, string name)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("/", StringComparison.Ordinal) || path == "/" ||
+            path.EndsWith("/", StringComparison.Ordinal) || path.Contains('?') || path.Contains('#') ||
+            path.Contains('\\') || path.IndexOfAny(['\r', '\n', '\0']) >= 0)
+            throw new ArgumentException("Static URL path must be an absolute single URL prefix without query, fragment or control characters.", name);
+        if (path.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+            throw new ArgumentException("Static URL path cannot contain traversal segments.", name);
     }
 
     private static void ValidateDataRate(double? bytesPerSecond, TimeSpan gracePeriod, string name)
