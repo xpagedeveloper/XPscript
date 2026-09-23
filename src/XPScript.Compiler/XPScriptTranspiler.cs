@@ -152,7 +152,7 @@ public sealed partial class XPScriptTranspiler
                 Spreadsheet = usesSpreadsheet,
                 NetworkTools = usesNetworkTools
             };
-            var runtimeTargetRestriction = detectedFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
+            if (usesApplicationCrypto)\n                throw TargetUnavailable("Application.Crypto", runtimeIdentifier, "server or desktop target", "Application cryptography is not available for browser-wasm targets.");\n\n            var runtimeTargetRestriction = detectedFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(runtimeTargetRestriction.Symbol))
                 throw TargetUnavailable(runtimeTargetRestriction.Symbol, runtimeIdentifier, runtimeTargetRestriction.AllowedTargets, runtimeTargetRestriction.Detail);
         }
