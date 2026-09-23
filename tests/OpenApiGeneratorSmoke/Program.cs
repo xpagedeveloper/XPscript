@@ -36,7 +36,7 @@ paths:
       responses:
         '204': { description: ok }
 """, "security.yaml").Source;
-foreach (var marker in new[] { "request.SetBearerToken(AuthBearerAuth)", "request.SetAuthorization(AuthBasicAuthAuthorization)", "request.SetHeader(\"X-API-Key\", AuthApiKey)", "ElseIf", "Public Function PublicCall" })
+foreach (var marker in new[] { "request.SetBearerToken(AuthBearerAuth_i)", "request.SetAuthorization(AuthBasicAuthAuthorization)", "request.SetHeader(\"X-API-Key\", AuthApiKey_i)", "ElseIf", "Public Function PublicCall" })
     if (!securityClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Generated OpenAPI security client is missing marker: " + marker);
 if (!securityClient.Contains("Private AuthBasicAuthAuthorization As String", StringComparison.Ordinal) ||
     !securityClient.Contains("AuthBasicAuthAuthorization = Http_i.BasicAuthorization(username, password)", StringComparison.Ordinal) ||
