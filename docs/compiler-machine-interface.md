@@ -156,3 +156,56 @@ The server implements JSON-RPC MCP initialization, tool discovery and tool calls
 The MCP transport is local and non-executing. It does not expose compile, run or debugger operations. This keeps AI validation permissions separate from artifact publication and execution permissions.
 
 The existing debugger protocol is not changed by MCP. A later optimization may reuse the same warm compiler-service lifetime inside debugger and run/test hosts after cache invalidation and behavioral equivalence are measured.
+
+
+## Warm compiler daemon
+
+Normal `xpscript run` operations may reuse the local compiler daemon to avoid paying compiler startup cost for every edit/run cycle. The daemon listens only on loopback, stores its connection state under the user's local application-data directory, and authenticates requests with the random token recorded in that state. Use:
+
+```text
+xpscript daemon status
+xpscript daemon restart
+xpscript daemon quit
+```
+
+Use `run --no-daemon` when a one-shot local compilation is required without starting or reusing the daemon. Use `run --debug` for troubleshooting: debug runs deliberately bypass the warm daemon and perform a fresh local validation/build so generated-code diagnostics and detailed runtime tracing correspond to the current source.
+
+The daemon protocol itself also carries a `debug` flag on `compileRun`. Normal daemon requests redact unexpected internal exception details. A request explicitly marked `debug=true` may return detailed exception information, including implementation stack information, for local troubleshooting. Clients must therefore treat debug output as developer-only diagnostic data and must not publish it to untrusted logs or users. Authentication failures never disclose debug detail.
+
+The daemon is an optimization, not a separate compiler implementation. Compiler semantics, security mode, source preprocessors, include restrictions and runtime target are supplied per request and use the same compiler pipeline as direct invocation. Compile requests are serialized inside the daemon because the complete build/dependency-staging pipeline is not treated as concurrently writable.
+
+## MCP usage and debug diagnostics
+
+Start the local MCP server with:
+
+```text
+xpscript mcp
+```
+
+It communicates over stdin/stdout using JSON-RPC/MCP and currently exposes `xpscript_validate`, `xpscript_symbols`, `xpscript_describe` and `xpscript_explain`. It does not expose application execution or deployment.
+
+A validation tool call accepts `source`, optional `filename`, optional `runtimeIdentifier`, and optional `debug`. Example arguments:
+
+```json
+{
+  "source": "Sub Main()\n    Print MissingValue\nEnd Sub",
+  "filename": "agent.xps",
+  "runtimeIdentifier": "linux-x64",
+  "debug": false
+}
+```
+
+Keep `debug` omitted or `false` for normal AI/editor validation. Set `debug: true` only when investigating compiler/transpiler behavior. It activates the compiler diagnostic debug mode and may add generated C#/`Program.cs` diagnostic context. MCP transport/parser/internal server exceptions remain standardized JSON-RPC errors even when compiler debug diagnostics are enabled; `debug` is not permission to expose arbitrary MCP process exceptions.
+
+Recommended integration flow:
+
+1. Call `xpscript_validate` with a simple virtual `.xps` filename and `debug=false`.
+2. Consume `structuredContent` and key repairs on `diagnosticCode`, source range and structured `properties`.
+3. Modify XPScript source, never generated C#.
+4. Validate again until the structured result succeeds.
+5. If a compiler-owned failure cannot be explained from normal diagnostics, repeat the validation with `debug=true` and keep that diagnostic output in a trusted developer context.
+6. Compile/run/deploy only through a separately authorized workflow.
+
+### Debug and security contract
+
+`--debug` is an explicit troubleshooting mode, not the default machine interface. Normal machine consumers should expect sanitized paths, redacted secret-bearing source values and no raw internal exception text. Debug mode can intentionally reveal generated-code locations or implementation details needed to diagnose compiler defects. Secret redaction remains required: enabling debug must not be used as a mechanism for returning credentials, bearer tokens or other application secrets.
