@@ -142,6 +142,9 @@ jobs:
             code=$(curl --path-as-is -sS -o /tmp/xps-fastcgi-body -w '%{http_code}' "http://127.0.0.1:${NGINX_PORT}${path}" || true)
             test "${code}" != "200"
           done
+          sudo nginx -c /tmp/xpscript-hardening-nginx.conf -s stop
+          kill "$(cat ./artifacts/hardening/fastcgi-nginx-host.pid)" 2>/dev/null || true
+          trap - EXIT
 
       - name: Create hardening application
         shell: bash
@@ -322,6 +325,83 @@ jobs:
           status=$?
           set -e
           echo "${status}" > ./artifacts/hardening/nuclei-web-boundary.exit-code
+
+      - name: Run controlled nginx to FastCGI fuzzing matrix
+        shell: bash
+        run: |
+          run_fuzz() {
+            local target="$1"
+            local output="$2"
+            set +e
+            "${HOME}/go/bin/nuclei" \
+              -u "${target}" \
+              -t ./artifacts/nuclei-templates/http/fuzzing/linux-lfi-fuzzing.yaml \
+              -t ./artifacts/nuclei-templates/http/fuzzing/windows-lfi-fuzzing.yaml \
+              -t ./artifacts/nuclei-templates/http/fuzzing/xff-403-bypass.yaml \
+              -rate-limit 20 \
+              -bulk-size 1 \
+              -concurrency 1 \
+              -jsonl-export "./artifacts/hardening/${output}.jsonl" \
+              -silent
+            status=$?
+            set -e
+            echo "${status}" > "./artifacts/hardening/${output}.exit-code"
+          }
+
+          start_fastcgi() {
+            local root="$1"
+            local fcgi_port="$2"
+            local nginx_port="$3"
+            local name="$4"
+            dotnet run --project ./tests/WebFastCgiNginxHost/WebFastCgiNginxHost.csproj -c Release -- "${root}" "${fcgi_port}" > "./artifacts/hardening/${name}-host.log" 2>&1 &
+            FASTCGI_PID=$!
+            for i in {1..30}; do
+              if grep -q "XPS-FASTCGI-NGINX-HOST=READY" "./artifacts/hardening/${name}-host.log"; then break; fi
+              sleep 1
+            done
+            grep -q "XPS-FASTCGI-NGINX-HOST=READY" "./artifacts/hardening/${name}-host.log"
+            cat > "./artifacts/hardening/${name}-nginx.conf" <<EOF
+          pid /tmp/${name}.pid;
+          events {}
+          http {
+            access_log off;
+            error_log stderr notice;
+            server {
+              listen 127.0.0.1:${nginx_port};
+              server_name 127.0.0.1;
+              location / {
+                include /etc/nginx/fastcgi_params;
+                fastcgi_param SCRIPT_FILENAME ${root}/index.xps;
+                fastcgi_param PATH_INFO \$fastcgi_path_info;
+                fastcgi_pass 127.0.0.1:${fcgi_port};
+              }
+            }
+          }
+          EOF
+            sudo nginx -c "${GITHUB_WORKSPACE}/artifacts/hardening/${name}-nginx.conf"
+          }
+
+          stop_fastcgi() {
+            local name="$1"
+            sudo nginx -c "${GITHUB_WORKSPACE}/artifacts/hardening/${name}-nginx.conf" -s stop || true
+            kill "${FASTCGI_PID}" 2>/dev/null || true
+          }
+
+          WEB_ROOT="$(realpath ./.hardening-site)"
+          start_fastcgi "${WEB_ROOT}" 19092 18084 "fastcgi-fuzz-web"
+          trap 'stop_fastcgi "fastcgi-fuzz-web"' EXIT
+          curl --silent --fail "http://127.0.0.1:18084/" | grep -q XPSCRIPT-HARDENING
+          run_fuzz "http://127.0.0.1:18084/?q=baseline" "nuclei-fuzz-fastcgi-web"
+          stop_fastcgi "fastcgi-fuzz-web"
+          trap - EXIT
+
+          REST_ROOT="$(realpath ./.hardening-rest)"
+          start_fastcgi "${REST_ROOT}" 19093 18085 "fastcgi-fuzz-rest"
+          trap 'stop_fastcgi "fastcgi-fuzz-rest"' EXIT
+          curl --silent --fail "http://127.0.0.1:18085/" | grep -q XPSCRIPT-REST-HARDENING
+          run_fuzz "http://127.0.0.1:18085/api/fuzz?q=baseline" "nuclei-fuzz-fastcgi-rest"
+          stop_fastcgi "fastcgi-fuzz-rest"
+          trap - EXIT
 
       - name: Run controlled CGI fuzzing matrix
         shell: bash
