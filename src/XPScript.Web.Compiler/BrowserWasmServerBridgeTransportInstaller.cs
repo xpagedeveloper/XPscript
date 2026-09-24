@@ -2,21 +2,21 @@ namespace XPScript.Web.Compiler;
 
 internal static class BrowserWasmServerBridgeTransportInstaller
 {
-    private const string SendUrlMarker = "        EnsureNotDisposed();\n        var url = XPScriptRuntime.CStr(urlValue).Trim();";
+    private const string SendCoreMarker = "    private XPScriptHttpResponse SendCore(System.Net.Http.HttpMethod method, object? urlValue, object? bodyValue, IReadOnlyDictionary<string, string>? requestHeaders = null)\n    {\n        EnsureNotDisposed();\n        _tls.Reset();\n        var url = XPScriptRuntime.CStr(urlValue).Trim();";
     private const string InstalledMarker = "XPScriptBrowserServerBridgeTransport.Send(method, url, bodyValue, _headers)";
 
     public static string TransformGenerated(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
         if (generated.Contains(InstalledMarker, StringComparison.Ordinal)) return generated;
-        if (!generated.Contains(SendUrlMarker, StringComparison.Ordinal))
+        if (!generated.Contains(SendCoreMarker, StringComparison.Ordinal))
             throw new XpsWebCompilationException("Unable to install browser-wasm server bridge transport in HttpClient runtime.");
 
-        var replacement = SendUrlMarker + "\n" +
+        var replacement = SendCoreMarker + "\n" +
             "        if (XPScriptBrowserServerBridgeTransport.IsBridgeUrl(url))\n" +
-            "            return XPScriptBrowserServerBridgeTransport.Send(method, url, bodyValue, _headers);";
+            "            return XPScriptBrowserServerBridgeTransport.Send(method, url, bodyValue, MergeHeaders(requestHeaders));";
 
-        return generated.Replace(SendUrlMarker, replacement, StringComparison.Ordinal) + "\n\n" + RuntimeCode;
+        return generated.Replace(SendCoreMarker, replacement, StringComparison.Ordinal) + "\n\n" + RuntimeCode;
     }
 
     public static string TransformBrowserModule(string module)
