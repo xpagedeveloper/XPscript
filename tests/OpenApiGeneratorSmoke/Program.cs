@@ -1717,6 +1717,8 @@ End Class
             warning.Contains("existing type 'Long' preserved", StringComparison.OrdinalIgnoreCase)))
         throw new Exception("Additive import same-scope collision must produce a deterministic drift warning.");
 
+    // Reimport uses a deliberately different fixture filename. Keep it first in this regression
+    // so additive update semantics fail fast before independent multi-API isolation checks.
     var importResult = new XpsOpenApiImporter().ImportFile(reimportFixture, userEdited);
 
     foreach (var preserved in new[]
