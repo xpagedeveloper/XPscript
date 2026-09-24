@@ -63,6 +63,9 @@ try
         throw new Exception("HTML response did not receive a Content-Security-Policy header.");
     if (!headerResponse.Headers.TryGetValue("X-Content-Type-Options", out var nosniff) || !nosniff.Contains("nosniff"))
         throw new Exception("HTML response did not receive nosniff protection.");
+    if (!headerResponse.Headers.TryGetValue("X-Permitted-Cross-Domain-Policies", out var crossDomainPolicies) ||
+        !crossDomainPolicies.Contains("none"))
+        throw new Exception("HTML response did not disable legacy cross-domain policy files.");
 
     var independentInfo = new XpsServerInfo(info.SiteId, root, XpsWebHostingMode.Kestrel, info.StartTimeUtc, info.RuntimeVersion);
     var independentContext = new XpsWebContext(request, new XpsWebResponse(), independentInfo, new XpsWebPrincipal(false), new XpsApplicationState(), session);
