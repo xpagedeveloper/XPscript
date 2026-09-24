@@ -43,7 +43,7 @@ OpenAPI 3.0, 3.1 and 3.2 should share a common internal representation before se
 - [x] Support references/components/definitions required by generated endpoints
 - [x] Support documented security/authentication declarations
 - [x] Generated server source must compile with the real XPScript compiler
-- [ ] Generated server must be usable as a starting skeleton without hand-editing generated infrastructure
+- [x] Generated server must be usable as a starting skeleton without hand-editing generated infrastructure
 
 ## REST client generation
 
@@ -59,7 +59,7 @@ OpenAPI 3.0, 3.1 and 3.2 should share a common internal representation before se
 - [x] Support OAuth/OpenID declarations to the extent required for constructing authenticated requests
 - [x] Preserve operation and schema names when they are legal XPScript identifiers
 - [x] Generated client source must compile with the real XPScript compiler/transpiler
-- [ ] Generated client must be usable without hand-editing generated infrastructure
+- [x] Generated client must be usable without hand-editing generated infrastructure
 
 ## API naming
 
@@ -94,8 +94,8 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] Initial generation follows all naming/scope rules
 - [x] Client generation follows all naming/scope rules
 - [x] Server generation follows all naming/scope rules
-- [x] Additive import follows all naming/scope rules
-- [x] Additive import preserves existing valid generated names
+- [x] Initial import into existing handwritten source follows all naming/scope rules
+- [x] Initial import preserves existing valid user declarations
 - [x] Repeated generation follows all naming/scope rules deterministically
 
 ## Compatibility/regression cases
@@ -109,7 +109,7 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] Parameter/member overlap is tested
 - [x] Generated helper collision is tested
 - [x] Multiple security schemes normalizing to the same identifier are tested
-- [x] Additive import collision behavior is tested
+- [x] Initial import collision behavior is tested
 - [x] Repeated generation collision behavior is tested
 - [x] Lexical keyword behavior is tested
 - [x] `__*` compiler-reserved behavior is tested
