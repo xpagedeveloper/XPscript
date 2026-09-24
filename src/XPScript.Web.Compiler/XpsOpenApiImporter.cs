@@ -51,8 +51,8 @@ public sealed class XpsOpenApiImporter
         if (!string.IsNullOrWhiteSpace(existingSource) && ContainsGeneratedOpenApiSource(existingSource))
         {
             desired = IsolateCollidingApi(desired, existingSource, sourceName, forceIsolation: true);
-            var newline = DetectNewline(existingSource);
-            var isolatedSource = AppendBlock(existingSource, NormalizeNewlines(desired.Source, newline), newline);
+            var isolatedNewline = DetectNewline(existingSource);
+            var isolatedSource = AppendBlock(existingSource, NormalizeNewlines(desired.Source, isolatedNewline), isolatedNewline);
             var isolatedClasses = ParseClasses(desired.Source).Select(x => x.Name).ToArray();
             var isolatedClassSpans = ParseClasses(desired.Source).Select(x => (x.Start, x.End)).ToArray();
             var isolatedProcedures = ParseProcedures(desired.Source, isolatedClassSpans)
