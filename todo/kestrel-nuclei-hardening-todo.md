@@ -184,7 +184,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 ## Nuclei
 ### Upstream finding classification, run #283
 
-- `cookies-without-secure` (info): not applicable for the scanner's intentional plain-HTTP endpoint. XPScript sets Secure only on HTTPS; HTTP support is intentional and separately regression-tested.
+- `cookies-without-secure` (info): expected only for the scanner's intentional plain-HTTP endpoint. XPScript must always set `Secure` on these cookies when the request uses HTTPS; on HTTP the attribute is intentionally omitted so HTTP remains supported. Both HTTP and HTTPS cookie behavior are regression-tested.
 - `http-missing-security-headers / strict-transport-security` (info): confirmed observation, not enabled on HTTP because HSTS is an HTTPS-only policy and must not be emitted as a substitute for TLS.
 - `http-missing-security-headers / x-permitted-cross-domain-policies` (info): confirmed missing optional legacy header. Review whether an explicit `none` default adds useful defense-in-depth.
 - `http-missing-security-headers / cross-origin-embedder-policy` (info): confirmed missing isolation header. Not safe to enable globally without compatibility review because it changes cross-origin resource loading requirements.
