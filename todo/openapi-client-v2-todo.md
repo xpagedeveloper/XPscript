@@ -41,7 +41,7 @@ OpenAPI 3.0, 3.1 and 3.2 should share a common internal representation before se
 - [x] Generate response status codes and response models
 - [x] Generate reusable schema/model classes and enums
 - [x] Support references/components/definitions required by generated endpoints
-- [ ] Support documented security/authentication declarations
+- [x] Support documented security/authentication declarations
 - [x] Generated server source must compile with the real XPScript compiler
 - [ ] Generated server must be usable as a starting skeleton without hand-editing generated infrastructure
 
