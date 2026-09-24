@@ -166,11 +166,25 @@ public sealed class XpsOpenApiImporter
         var prefix = ImportPrefix(sourceName);
         var rewritten = desired.Source;
 
+        // Rename the longest generated identifiers first. Operation metadata contains the
+        // base operation name, while the server generator derives request/response classes,
+        // handlers, endpoints and writers from it. Prefix those concrete declarations before
+        // the base operation name so references remain internally consistent.
+        var operationDerivedNames = desired.Operations.SelectMany(name => new[]
+        {
+            name + "Request",
+            name + "Response",
+            "Handle" + name,
+            "Endpoint" + name,
+            "Write" + name + "Response"
+        });
+
         // Isolation is deliberately based on declarations in the generated source rather than
         // ParseClasses/ParseProcedures. Those parsers exist for additive merging and may omit
         // declarations that do not participate in a merge. A distinct imported API must have
         // every generated top-level declaration isolated deterministically.
         var names = desiredClasses.Select(x => x.Name)
+            .Concat(operationDerivedNames)
             .Concat(desired.Operations)
             .Concat(desired.Models)
             .Concat(Regex.Matches(
