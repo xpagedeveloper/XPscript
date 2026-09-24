@@ -331,7 +331,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine("Private " + CapabilityVariable + " As String");
         output.AppendLine();
         output.AppendLine("Private Function " + CapabilityFunction + "(spinnerDelay As Integer) As String");
-        output.AppendLine("    Dim http As New HttpClient");
+        output.AppendLine("    Dim http As New XPHttpClient");
         output.AppendLine("    Dim document As XPJsonDocument");
         output.AppendLine("    Dim root As Variant");
         output.AppendLine("    If " + CapabilityVariable + " = \"\" Then");
@@ -346,10 +346,10 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine("End Function");
         output.AppendLine();
         output.AppendLine("Private Function " + InvokeFunction + "(procedureId As String, arguments As Variant, spinnerDelay As Integer) As Variant");
-        output.AppendLine("    Dim http As New HttpClient");
+        output.AppendLine("    Dim http As New XPHttpClient");
         output.AppendLine("    Dim payload As New XPJsonObject");
         output.AppendLine("    Dim response As XPHttpResponse");
-        output.AppendLine("    Dim document As JsonDocument");
+        output.AppendLine("    Dim document As XPJsonDocument");
         output.AppendLine("    Dim root As Variant");
         output.AppendLine("    Call http.SetHeader(\"X-XPS-WASM-Bridge\", \"1\")");
         output.AppendLine("    Call http.SetHeader(\"X-XPS-WASM-Spinner-Delay\", CStr(spinnerDelay))");
