@@ -31,8 +31,8 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Review first successful workflow execution. Run #30 completed successfully with Kestrel, CGI and FastCGI regression gates.
 - [x] Verify real nginx to XPScript FastCGI topology. Run #38 completed successfully while retaining strict duplicate FastCGI parameter rejection.
 - [x] Verify advanced Kestrel traversal corpus end-to-end. Run #38 completed successfully.
-- [ ] Record all upstream Nuclei findings and classify each as confirmed, false positive, dependency issue, or not applicable.
-- [ ] Add confirmed findings below with reproduction details.
+- [x] Record all upstream Nuclei findings and classify each as confirmed, false positive, dependency issue, or not applicable. Run #283 produced eight informational findings: two HTTP-only cookie Secure findings are not applicable to the intentional HTTP test endpoint, five header/CSP findings are confirmed configuration observations, and SameSite=Strict is not applicable because XPScript intentionally uses SameSite=Lax for browser/session compatibility. No low, medium, high or critical findings were reported.
+- [x] Add confirmed findings below with reproduction details. Run #283 artifact `nuclei-upstream.jsonl` records the exact template IDs, matcher names, matched URL and extracted cookie/CSP evidence for every finding.
 
 ## HTTP protocol and Kestrel boundary
 
@@ -181,7 +181,19 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify credential storage and cookie behavior across HTTP and HTTPS. Browser WASM explicitly verifies the shared correlation cookie policy: HttpOnly, SameSite=Lax, 30-day lifetime, Secure on HTTPS and intentionally omitted on HTTP. Native XPHttpClient cookie storage remains disabled; verified in run #258.
 - [x] Verify browser routes and server routes enforce the same authorization policy. Browser/WASM shell and assets remain anonymous so login/onboarding UI can load, while `[ServerSide]` procedures carry independent `[Anonymous]`, `[Authenticated]`, `[Role:...]` and `[Rule:...]` policies enforced by the server bridge. Direct anonymous, authenticated, role and rule bridge invocation regressions pass together with the full hardening and Windows IIS jobs; verified in run #283.
 
-## Nuclei corpus management
+## Nuclei
+### Upstream finding classification, run #283
+
+- `cookies-without-secure` (info): not applicable for the scanner's intentional plain-HTTP endpoint. XPScript sets Secure only on HTTPS; HTTP support is intentional and separately regression-tested.
+- `http-missing-security-headers / strict-transport-security` (info): confirmed observation, not enabled on HTTP because HSTS is an HTTPS-only policy and must not be emitted as a substitute for TLS.
+- `http-missing-security-headers / x-permitted-cross-domain-policies` (info): confirmed missing optional legacy header. Review whether an explicit `none` default adds useful defense-in-depth.
+- `http-missing-security-headers / cross-origin-embedder-policy` (info): confirmed missing isolation header. Not safe to enable globally without compatibility review because it changes cross-origin resource loading requirements.
+- `http-missing-security-headers / cross-origin-opener-policy` (info): confirmed missing isolation header. Review browser/UIForm compatibility before selecting a default.
+- `http-missing-security-headers / cross-origin-resource-policy` (info): confirmed missing isolation header. Review static assets and browser/WASM behavior before selecting a default.
+- `weak-csp-detect / unsafe-script-src` (info): confirmed. Default CSP currently contains `script-src 'unsafe-inline'`; requires a nonce/hash-compatible generated-script design before it can be removed safely.
+- `missing-cookie-samesite-strict` (info): not applicable. Session and correlation cookies intentionally use `SameSite=Lax`; CSRF protection is enforced separately for unsafe browser/session requests.
+
+ corpus management
 
 - [ ] Review upstream `http/misconfiguration` findings.
 - [x] Add explicit generic web-boundary Nuclei profile for CRLF injection, PUT enablement, TRACE, Host-header injection, web.config, Git metadata/credentials and .DS_Store exposure.
