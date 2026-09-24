@@ -316,6 +316,7 @@ jobs:
           fi
 
   windows-iis:
+    needs: hardening
     if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening'
     runs-on: windows-latest
     timeout-minutes: 20
