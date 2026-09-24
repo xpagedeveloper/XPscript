@@ -4,6 +4,44 @@ namespace XPScript.Web.Compiler;
 
 internal static class XpsOpenApiSchema
 {
+    internal sealed record NormalizedDocument(
+        string Version,
+        JsonObject Root,
+        JsonObject Schemas,
+        JsonObject Parameters,
+        JsonObject RequestBodies,
+        JsonObject Responses,
+        JsonObject SecuritySchemes,
+        JsonNode? Security);
+
+    internal static NormalizedDocument NormalizeDocument(JsonObject root)
+    {
+        var version = ReadString(root, "openapi")
+            ?? throw new XpsOpenApiGenerationException("OpenAPI document is missing the required 'openapi' version field.");
+        if (!version.StartsWith("3.0.", StringComparison.Ordinal) &&
+            !version.StartsWith("3.1.", StringComparison.Ordinal) &&
+            !version.StartsWith("3.2.", StringComparison.Ordinal))
+            throw new XpsOpenApiGenerationException($"OpenAPI version '{version}' is unsupported. XPScript supports OpenAPI 3.0.x, 3.1.x and 3.2.x.");
+
+        var components = root["components"] as JsonObject;
+        return new NormalizedDocument(
+            version,
+            root,
+            ComponentMap(components, "schemas"),
+            ComponentMap(components, "parameters"),
+            ComponentMap(components, "requestBodies"),
+            ComponentMap(components, "responses"),
+            ComponentMap(components, "securitySchemes"),
+            root["security"]);
+    }
+
+    private static JsonObject ComponentMap(JsonObject? components, string name)
+    {
+        if (components is null || components[name] is null) return new JsonObject();
+        return components[name] as JsonObject
+            ?? throw new XpsOpenApiGenerationException($"components.{name} must be an object.");
+    }
+
     private static readonly AsyncLocal<string?> OpenApiVersion = new();
     private static readonly AsyncLocal<IReadOnlyDictionary<string, string>?> ReferenceTypeNames = new();
 
