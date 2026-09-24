@@ -225,11 +225,7 @@ public sealed partial class XPScriptTranspiler
         generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(generated);
         generated = new BrowserWasmHttpCsrfPostProcessor(runtimeIdentifier).Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
-        generated = generated.Replace("XPScriptRuntime.SetArgs(args);", $"XPScriptRuntime.SetArgs(args);
-        XPScriptFileSystemRuntime.SetScriptDirectory(\"{EscapeCSharpString(GetSourceDirectory(sourceName))}\");
-        XPNativeInteropRuntime.Initialize();
-        XPScriptApplicationRuntime.SetArgs(args);
-        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});", StringComparison.Ordinal);
+        generated = generated.Replace("XPScriptRuntime.SetArgs(args);", $"XPScriptRuntime.SetArgs(args);\n        XPScriptFileSystemRuntime.SetScriptDirectory(\"{EscapeCSharpString(GetSourceDirectory(sourceName))}\");\n        XPNativeInteropRuntime.Initialize();\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});", StringComparison.Ordinal);
         generated = generated.Replace("text.StartsWith('/', StringComparison.Ordinal)", "text.StartsWith(\"/\", StringComparison.Ordinal)", StringComparison.Ordinal);
         generated = generated.Replace("byte[] bytes => System.Text.Encoding.UTF8.GetString(bytes),", "byte[] requestBytes => System.Text.Encoding.UTF8.GetString(requestBytes),", StringComparison.Ordinal);
         generated = generated.Replace("using System.Text.RegularExpressions;", "using System.Text.RegularExpressions;\nusing System.Runtime.InteropServices;", StringComparison.Ordinal);
