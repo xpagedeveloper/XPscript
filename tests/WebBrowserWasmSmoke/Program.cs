@@ -243,7 +243,7 @@ End Sub
             await policyUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
                 BridgePostRequest("/bridge-policy.xps/__xpscript_bridge", policyHeaders, ProcedureId(sourceHash, procedureName)),
                 response, Server(root), principal, new SmokeApplicationState(), policySession));
-            return (response.StatusCode, response.Body);
+            return (response.StatusCode, System.Text.Encoding.UTF8.GetString(response.Body.Span));
         }
 
         var publicResult = await InvokePolicyAsync("PublicBridge", new XpsWebPrincipal(false));
