@@ -33,9 +33,21 @@ public sealed class XpsOpenApiClientGenerator
     }
     private static JsonObject ParseDocument(string specification)
     {
-        var trimmed = specification.AsSpan().TrimStart(); if (!trimmed.IsEmpty && trimmed[0] == '{') return JsonNode.Parse(specification) as JsonObject ?? throw new XpsOpenApiGenerationException("OpenAPI JSON root must be an object.");
-        var yaml = new YamlStream(); yaml.Load(new StringReader(specification)); if (yaml.Documents.Count != 1) throw new XpsOpenApiGenerationException("OpenAPI YAML must contain eyactly one document.");
-        return ConvertYaml(yaml.Documents[0].RootNode) as JsonObject ?? throw new XpsOpenApiGenerationException("OpenAPI YAML root must be an object.");
+        try
+        {
+            var trimmed = specification.AsSpan().TrimStart();
+            if (!trimmed.IsEmpty && trimmed[0] == '{')
+                return JsonNode.Parse(specification) as JsonObject ?? throw new XpsOpenApiGenerationException("OpenAPI JSON root must be an object.");
+            var yaml = new YamlStream();
+            yaml.Load(new StringReader(specification));
+            if (yaml.Documents.Count != 1) throw new XpsOpenApiGenerationException("OpenAPI YAML must contain exactly one document.");
+            return ConvertYaml(yaml.Documents[0].RootNode) as JsonObject ?? throw new XpsOpenApiGenerationException("OpenAPI YAML root must be an object.");
+        }
+        catch (XpsOpenApiGenerationException) { throw; }
+        catch (Exception ex) when (ex is JsonException or YamlException or FormatException)
+        {
+            throw new XpsOpenApiGenerationException($"OpenAPI document could not be parsed: {ex.Message}");
+        }
     }
     private static JsonNode? ConvertYaml(YamlNode node) => node switch { YamlMappingNode map => ConvertMap(map), YamlSequenceNode sequence => ConvertSequence(sequence), YamlScalarNode scalar => ConvertScalar(scalar), _ => throw new XpsOpenApiGenerationException("Unsupported YAML node in OpenAPI document.") };
     private static JsonObject ConvertMap(YamlMappingNode map) { var result = new JsonObject(); foreach (var pair in map.Children) { if (pair.Key is not YamlScalarNode key || string.IsNullOrWhiteSpace(key.Value)) throw new XpsOpenApiGenerationException("OpenAPI YAML mapping keys must be strings."); result[key.Value] = ConvertYaml(pair.Value); } return result; }
