@@ -288,7 +288,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     private static string BuildIndexHtml(string sourcePath)
     {
         var template = BrowserRuntimeConstant("IndexHtml");
-        var scriptName = Uri.EscapeDataString(Path.GetFileName(sourcePath));
+        var scriptName = Uri.EscapeDataString(Path.GetFileName(sourcePath)).Replace("%2E", ".", StringComparison.OrdinalIgnoreCase);
         return template.Replace("__XPSCRIPT_BASE_HREF__", scriptName + "/", StringComparison.Ordinal);
     }
 
