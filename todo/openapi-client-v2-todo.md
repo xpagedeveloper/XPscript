@@ -95,7 +95,7 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] Initial generation follows all naming/scope rules
 - [x] Client generation follows all naming/scope rules
 - [x] Server generation follows all naming/scope rules
-- [ ] Additive import follows all naming/scope rules
+- [x] Additive import follows all naming/scope rules
 - [x] Additive import preserves existing valid generated names
 - [ ] Regeneration/update follows all naming/scope rules
 - [x] Generated ownership marker is stable and recognized by update
@@ -106,7 +106,7 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] ScopeCollision server model with `JsonParse` and `StrLeftBack`
 - [x] ScopeCollision output compiled by the real XPScript compiler
 - [x] Two classes may independently contain the same runtime-name property
-- [ ] Runtime-name property and runtime-name method coexist where XPScript permits it
+- [x] Runtime-name property and runtime-name method coexist where XPScript permits it
 - [x] Same method name with different parameter signatures is treated as a valid overload where XPScript permits it
 - [x] Case-insensitive true same-scope collisions are deterministically disambiguated
 - [x] Parameter/member overlap is tested
