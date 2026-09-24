@@ -81,8 +81,8 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] Case-insensitive collisions are detected in the same scope
 - [ ] Type-name collisions are handled only in type declaration scope
 - [x] Member collisions are handled independently per class
-- [ ] Procedure parameters are handled in procedure parameter scope
-- [ ] Local/generated helper variables are handled in procedure-local scope
+- [x] Procedure parameters are handled in procedure parameter scope
+- [x] Local/generated helper variables are handled in procedure-local scope
 - [x] OpenAPI-authored names win over generator-owned helper names when a true collision exists
 - [x] Generator-owned helper names are deterministic
 - [x] Compiler-owned `__*` identifiers remain protected
