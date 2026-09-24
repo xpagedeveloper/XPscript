@@ -35,7 +35,7 @@ End Sub
 [Get]
 Sub Sqlite()
     Dim db As New XPDBSQLite(":memory:")
-    Dim parameters As New JsonObject
+    Dim parameters As New XPJsonObject
     Call db.Execute("CREATE TABLE values_table (value TEXT NOT NULL)")
     Call parameters.Set("value", "WEB-SQLITE")
     Call db.Execute("INSERT INTO values_table(value) VALUES ($value)", parameters)
