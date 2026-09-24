@@ -46,6 +46,8 @@ public sealed class XpsOpenApiImporter
     {
         ArgumentNullException.ThrowIfNull(existingSource);
         var desired = _generator.Generate(specification, sourceName);
+        if (!string.IsNullOrWhiteSpace(existingSource))
+            desired = IsolateCollidingApi(desired, existingSource, sourceName);
         var source = existingSource;
         var newline = DetectNewline(source);
         var addedClasses = new List<string>();
@@ -129,6 +131,47 @@ public sealed class XpsOpenApiImporter
             addedProperties,
             addedProcedures,
             warnings.Distinct(StringComparer.Ordinal).ToArray());
+    }
+
+    private static XpsOpenApiGenerationResult IsolateCollidingApi(XpsOpenApiGenerationResult desired, string existingSource, string? sourceName)
+    {
+        var existingClasses = ParseClasses(existingSource).Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var desiredClasses = ParseClasses(desired.Source);
+        var existingClassSpans = ParseClasses(existingSource).Select(x => (x.Start, x.End)).ToArray();
+        var existingProcedures = ParseProcedures(existingSource, existingClassSpans)
+            .Select(x => ProcedureKey(x.Kind, x.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var desiredClassSpans = desiredClasses.Select(x => (x.Start, x.End)).ToArray();
+        var desiredProcedures = ParseProcedures(desired.Source, desiredClassSpans);
+        var collides = desiredClasses.Any(x => existingClasses.Contains(x.Name))
+            || desiredProcedures.Any(x => existingProcedures.Contains(ProcedureKey(x.Kind, x.Name)));
+        if (!collides) return desired;
+
+        var prefix = ImportPrefix(sourceName);
+        var names = desiredClasses.Select(x => x.Name)
+            .Concat(desiredProcedures.Select(x => x.Name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(x => x.Length)
+            .ToArray();
+        var rewritten = desired.Source;
+        foreach (var name in names)
+            rewritten = Regex.Replace(rewritten, $@"\b{Regex.Escape(name)}\b", prefix + name, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        return desired with
+        {
+            Source = rewritten,
+            Operations = desired.Operations.Select(x => prefix + x).ToArray(),
+            Models = desired.Models.Select(x => prefix + x).ToArray()
+        };
+    }
+
+    private static string ImportPrefix(string? sourceName)
+    {
+        var raw = Path.GetFileNameWithoutExtension(sourceName ?? "ImportedApi");
+        var parts = Regex.Split(raw, @"[^A-Za-z0-9]+").Where(x => x.Length > 0).ToArray();
+        var prefix = string.Concat(parts.Select(x => char.ToUpperInvariant(x[0]) + x[1..]));
+        if (string.IsNullOrEmpty(prefix)) prefix = "ImportedApi";
+        if (char.IsDigit(prefix[0])) prefix = "Api" + prefix;
+        return prefix;
     }
 
     private static string InsertClassFields(string source, ClassBlock block, IReadOnlyList<string> fields, string newline)
