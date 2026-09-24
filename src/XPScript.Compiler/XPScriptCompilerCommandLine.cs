@@ -388,8 +388,8 @@ public static class XPScriptCompilerCommandLine
 
     public static async Task<int> RunScriptAsync(string[] commandLineArgs)
     {
-        var sourceIndex = commandLineArgs.Length > 0 && commandLineArgs[0].Equals("run", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        if (commandLineArgs.Length <= sourceIndex)
+        var argumentStart = commandLineArgs.Length > 0 && commandLineArgs[0].Equals("run", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        if (commandLineArgs.Length <= argumentStart)
         {
             WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "run requires an .xps source file." }]), "text");
             return 1;
@@ -402,7 +402,7 @@ public static class XPScriptCompilerCommandLine
 
         try
         {
-            var sourcePath = Path.GetFullPath(commandLineArgs[sourceIndex]);
+            string? sourceArgument = null;
             var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
             var scriptArgs = new List<string>();
             var parseRunOptions = true;
@@ -412,10 +412,17 @@ public static class XPScriptCompilerCommandLine
             var sourceRoots = new List<string>();
             var sourcePreprocessors = new List<string>();
 
-            for (var i = sourceIndex + 1; i < commandLineArgs.Length; i++)
+            for (var i = argumentStart; i < commandLineArgs.Length; i++)
             {
                 var value = commandLineArgs[i];
-                if (parseRunOptions && !value.StartsWith("--", StringComparison.Ordinal))
+
+                if (sourceArgument is null && !value.StartsWith("--", StringComparison.Ordinal))
+                {
+                    sourceArgument = value;
+                    continue;
+                }
+
+                if (sourceArgument is not null && parseRunOptions && !value.StartsWith("--", StringComparison.Ordinal))
                     parseRunOptions = false;
 
                 if (parseRunOptions && value == "--no-daemon")
@@ -426,14 +433,17 @@ public static class XPScriptCompilerCommandLine
 
                 if (parseRunOptions && value == "--info")
                 {
+                    if (debug)
+                        throw new ArgumentException("--info and --debug cannot be used together.");
                     info = true;
                     continue;
                 }
 
                 if (parseRunOptions && value == "--debug")
                 {
+                    if (info)
+                        throw new ArgumentException("--info and --debug cannot be used together.");
                     debug = true;
-                    info = true;
                     continue;
                 }
 
@@ -492,8 +502,16 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
+                if (sourceArgument is null)
+                    throw new ArgumentException("run requires an .xps source file.");
+
                 scriptArgs.Add(value);
             }
+
+            if (sourceArgument is null)
+                throw new ArgumentException("run requires an .xps source file.");
+
+            var sourcePath = Path.GetFullPath(sourceArgument);
 
             // Debug compilation stays local so generated C#/Roslyn/MSBuild diagnostics
             // remain directly available to developers and CI. Normal runs use the warm daemon.
