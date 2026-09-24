@@ -13,7 +13,8 @@ internal sealed record BrowserWasmServerBridgeProcedure(
     bool IsFunction,
     string ReturnType,
     IReadOnlyList<BrowserWasmServerBridgeParameter> Parameters,
-    int SpinnerDelayMilliseconds);
+    int SpinnerDelayMilliseconds,
+    XPScript.Web.Runtime.XpsRoutePolicy Policy);
 
 internal sealed record BrowserWasmServerBridgePlan(
     string BrowserSource,
@@ -40,7 +41,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         "Variant", "String", "Integer", "Long", "Double", "Single", "Boolean", "Byte", "Currency", "Date"
     };
 
-    public static BrowserWasmServerBridgePlan Create(string source, string sourceIdentity)
+    public static BrowserWasmServerBridgePlan Create(string source, string sourceIdentity, IReadOnlyDictionary<string, XPScript.Web.Runtime.XpsWebRouteDescriptor> routes)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceIdentity);
@@ -99,7 +100,10 @@ internal sealed record BrowserWasmServerBridgePlan(
             ValidateSerializableSignature(procedure);
             var id = ProcedureId(sourceIdentity, procedure.Name);
             var spinnerDelay = ReadSpinnerDelay(lines, procedure);
-            if (!manifest.TryAdd(id, new BrowserWasmServerBridgeProcedure(id, procedure.Name, procedure.IsFunction, procedure.ReturnType, procedure.Parameters, spinnerDelay)))
+            var policy = routes.TryGetValue(procedure.Name, out var route)
+                ? route.Policy
+                : new XPScript.Web.Runtime.XpsRoutePolicy(true, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "POST" }, [], []);
+            if (!manifest.TryAdd(id, new BrowserWasmServerBridgeProcedure(id, procedure.Name, procedure.IsFunction, procedure.ReturnType, procedure.Parameters, spinnerDelay, policy)))
                 throw new XpsWebCompilationException("browser-wasm server bridge generated a duplicate procedure id.");
         }
 
