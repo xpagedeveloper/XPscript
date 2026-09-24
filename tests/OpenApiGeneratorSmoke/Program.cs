@@ -1178,6 +1178,32 @@ foreach (var marker in new[] { "Public JsonParse As String", "Public Jsonparse A
     if (!crossScopeRuntimeNames.Source.Contains(marker, StringComparison.Ordinal))
         throw new Exception("Runtime/global identifier was renamed even though its declaration scope permits it: " + marker);
 
+var parameterMemberOverlap = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Parameter Member Overlap, version: 1.0.0 }
+components:
+  schemas:
+    Search:
+      type: object
+      properties:
+        value: { type: string }
+paths:
+  /search:
+    get:
+      operationId: search
+      parameters:
+        - { name: value, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Search' }
+""", "parameter-member-overlap.yaml");
+foreach (var marker in new[] { "Public Value As String", "Optional Value As Variant" })
+    if (!parameterMemberOverlap.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("Parameter/member overlap was incorrectly treated as a same-scope collision: " + marker);
+
 var compilerReservedClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Compiler Reserved, version: 1.0.0 }
