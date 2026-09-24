@@ -41,7 +41,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         "Variant", "String", "Integer", "Long", "Double", "Single", "Boolean", "Byte", "Currency", "Date"
     };
 
-    public static BrowserWasmServerBridgePlan Create(string source, string sourceIdentity, IReadOnlyDictionary<string, XPScript.Web.Runtime.XpsWebRouteDescriptor> routes)
+    public static BrowserWasmServerBridgePlan Create(string source, string sourceIdentity, IReadOnlyDictionary<string, BrowserWasmServerSideOptions> serverSideOptions)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceIdentity);
@@ -100,9 +100,16 @@ internal sealed record BrowserWasmServerBridgePlan(
             ValidateSerializableSignature(procedure);
             var id = ProcedureId(sourceIdentity, procedure.Name);
             var spinnerDelay = ReadSpinnerDelay(lines, procedure);
-            var policy = routes.TryGetValue(procedure.Name, out var route)
-                ? route.Policy
-                : new XPScript.Web.Runtime.XpsRoutePolicy(true, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "POST" }, [], []);
+            var options = serverSideOptions.TryGetValue(procedure.Name, out var configured)
+                ? configured
+                : new BrowserWasmServerSideOptions(BrowserWasmServerSideOptions.DefaultSpinnerDelayMilliseconds, true, [], [], [], []);
+            var policy = new XPScript.Web.Runtime.XpsRoutePolicy(
+                options.AllowAnonymous,
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "POST" },
+                options.RequiredRules,
+                options.ForbiddenRules,
+                options.RequiredRoles,
+                options.ForbiddenRoles);
             if (!manifest.TryAdd(id, new BrowserWasmServerBridgeProcedure(id, procedure.Name, procedure.IsFunction, procedure.ReturnType, procedure.Parameters, spinnerDelay, policy)))
                 throw new XpsWebCompilationException("browser-wasm server bridge generated a duplicate procedure id.");
         }
