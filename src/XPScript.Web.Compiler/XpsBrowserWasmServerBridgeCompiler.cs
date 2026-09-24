@@ -65,7 +65,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         var annotatedProcedures = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
         var normalizedSource = NormalizeVariantSetAssignments(parsed.Source);
         var planningSource = BrowserWasmServerSideMetadata.InjectPlanningMarkers(normalizedSource, annotatedProcedures);
-        var plan = BrowserWasmServerBridgePlan.Create(planningSource, sourceHash);
+        var plan = BrowserWasmServerBridgePlan.Create(planningSource, sourceHash, parsed.Routes);
         BrowserWasmServerSideMetadata.ValidateExplicitBoundary(plan, annotatedProcedures);
 
         if (plan.Procedures.Count == 0)
