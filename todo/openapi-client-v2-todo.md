@@ -97,7 +97,7 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] Server generation follows all naming/scope rules
 - [x] Additive import follows all naming/scope rules
 - [x] Additive import preserves existing valid generated names
-- [ ] Regeneration/update follows all naming/scope rules
+- [x] Regeneration/update follows all naming/scope rules
 - [x] Generated ownership marker is stable and recognized by update
 - [x] Updating a generated client does not require manually editing the generated file
 
@@ -113,7 +113,7 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] Generated helper collision is tested
 - [x] Multiple security schemes normalizing to the same identifier are tested
 - [x] Additive import collision behavior is tested
-- [ ] Regeneration collision behavior is tested
+- [x] Regeneration collision behavior is tested
 - [x] Lexical keyword behavior is tested
 - [x] `__*` compiler-reserved behavior is tested
 
