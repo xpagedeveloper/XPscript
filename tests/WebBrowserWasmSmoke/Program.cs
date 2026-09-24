@@ -25,6 +25,11 @@ End Sub
 
 Sub Main()
     Print ServerTransform("wasm")
+    Dim http As New XPHttpClient
+    Call http.SetBearerToken("browser-wasm-smoke-token")
+    Dim bridgeResponse As XPHttpResponse
+    Set bridgeResponse = http.Get("__xpscript_bridge/capability")
+    Call http.Dispose()
     Dim form As New UIForm("Browser Smoke")
     Call form.AddTextField("name", "Name")
     Call form.SetOnChangeCallback("name", "NameChanged", "browser")
@@ -61,6 +66,9 @@ End Sub
         throw new Exception("Browser-WASM HTTP runtime permits automatic redirects that could forward credentials to an unintended origin.");
     if (!nativeHttpRuntime.Contains("UseCookies = false", StringComparison.Ordinal))
         throw new Exception("Browser-WASM HTTP runtime unexpectedly enables the native cookie container.");
+    if (!nativeHttpRuntime.Contains("AllowAutoRedirect = false", StringComparison.Ordinal) ||
+        !nativeHttpRuntime.Contains("UseCookies = false", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM HTTP credential isolation invariants are missing.");
 
     var noHeaderResponse = new XpsWebResponse();
     await unit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
