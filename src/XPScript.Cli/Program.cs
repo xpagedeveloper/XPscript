@@ -466,7 +466,7 @@ Usage:
   xpscript compile <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [--result-format text|json|xml]
   xpscript dependencies <source.xps> [--platform RID|--rid RID] [--json]
   xpscript security <source.xps> [--platform RID|--rid RID] [--json]
-  xpscript run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+  xpscript run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [script arguments...]
   xpscript <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [compiler options...]
   xpscript new <rest|web|desktop|cli> <directory>
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
