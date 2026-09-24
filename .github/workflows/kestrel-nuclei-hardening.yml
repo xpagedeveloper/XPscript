@@ -5,6 +5,8 @@ on:
     branches:
       - ai-kestrel-nuclei-hardening
   workflow_dispatch:
+  schedule:
+    - cron: "17 6 1 * *"
 
 permissions:
   contents: read
@@ -25,6 +27,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Scheduled scanner pin review reminder
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          echo "::notice title=Monthly Nuclei pin review::Review NUCLEI_VERSION and NUCLEI_TEMPLATES_SHA against current upstream releases. Update pins only through a reviewed commit and rerun the complete hardening workflow."
 
       - uses: actions/setup-dotnet@v5
         with:
