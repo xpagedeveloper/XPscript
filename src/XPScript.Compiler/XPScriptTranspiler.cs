@@ -201,7 +201,8 @@ public sealed partial class XPScriptTranspiler
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
         if (runtimeFeatures.RequiresHttp) { generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n"; generated += "\n\n" + HttpCoreRuntimeSource.Code + "\n"; generated += "\n\n" + AsyncHttpRuntimeSource.Code + "\n"; }
         if (runtimeFeatures.Ui) generated += "\n\n" + UIExtensionRuntimeSource.Code + "\n";
-        if (runtimeFeatures.RequiresHttp && source.Contains("XPScriptHttpJsonHelpers", StringComparison.Ordinal)) generated += "\n\n" + HttpJsonRuntimeSource.Code + "\n";\n        if (runtimeFeatures.RequiresHttp && runtimeFeatures.Ui && source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal)) generated += "\n\n" + HttpUiFormRuntimeSource.Code + "\n";
+        if (runtimeFeatures.RequiresHttp && source.Contains("XPScriptHttpJsonHelpers", StringComparison.Ordinal)) generated += "\n\n" + HttpJsonRuntimeSource.Code + "\n";
+        if (runtimeFeatures.RequiresHttp && runtimeFeatures.Ui && source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal)) generated += "\n\n" + HttpUiFormRuntimeSource.Code + "\n";
         if (runtimeFeatures.Database) generated += "\n\n" + CaseInsensitiveDynamicObjectRuntimeSource.Code + "\n";
         if (usesSqlite) generated += "\n\n" + SqliteDbRuntimeSource.Code + "\n";
         if (usesMsSql) generated += "\n\n" + MsSqlDbRuntimeSource.Code + "\n";
@@ -224,7 +225,11 @@ public sealed partial class XPScriptTranspiler
         generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(generated);
         generated = new BrowserWasmHttpCsrfPostProcessor(runtimeIdentifier).Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
-        generated = generated.Replace("XPScriptRuntime.SetArgs(args);", $"XPScriptRuntime.SetArgs(args);\n        XPScriptFileSystemRuntime.SetScriptDirectory(\"{EscapeCSharpString(GetSourceDirectory(sourceName))}\");\n        XPNativeInteropRuntime.Initialize();\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});", StringComparison.Ordinal);
+        generated = generated.Replace("XPScriptRuntime.SetArgs(args);", $"XPScriptRuntime.SetArgs(args);
+        XPScriptFileSystemRuntime.SetScriptDirectory(\"{EscapeCSharpString(GetSourceDirectory(sourceName))}\");
+        XPNativeInteropRuntime.Initialize();
+        XPScriptApplicationRuntime.SetArgs(args);
+        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});", StringComparison.Ordinal);
         generated = generated.Replace("text.StartsWith('/', StringComparison.Ordinal)", "text.StartsWith(\"/\", StringComparison.Ordinal)", StringComparison.Ordinal);
         generated = generated.Replace("byte[] bytes => System.Text.Encoding.UTF8.GetString(bytes),", "byte[] requestBytes => System.Text.Encoding.UTF8.GetString(requestBytes),", StringComparison.Ordinal);
         generated = generated.Replace("using System.Text.RegularExpressions;", "using System.Text.RegularExpressions;\nusing System.Runtime.InteropServices;", StringComparison.Ordinal);
