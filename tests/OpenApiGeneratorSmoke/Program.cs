@@ -1204,6 +1204,45 @@ foreach (var marker in new[] { "Public Value As String", "Optional Value As Vari
     if (!parameterMemberOverlap.Source.Contains(marker, StringComparison.Ordinal))
         throw new Exception("Parameter/member overlap was incorrectly treated as a same-scope collision: " + marker);
 
+var procedureScope = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Procedure Scope, version: 1.0.0 }
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        id: { type: string }
+paths:
+  /things:
+    get:
+      operationId: getThing
+      parameters:
+        - { name: url, in: query, schema: { type: string } }
+        - { name: raw, in: header, schema: { type: string } }
+        - { name: result, in: query, schema: { type: string } }
+        - { name: ApiMappedThing, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Thing' }
+""", "procedure-scope.yaml");
+foreach (var marker in new[]
+{
+    "Optional Url As Variant",
+    "Optional Raw As Variant",
+    "Optional Result As Variant",
+    "Optional ApiMappedThing As Variant",
+    "Dim url2 As String",
+    "Dim raw2 As XPHttpResponse",
+    "Dim result2 As Procedure_Scope_APIResponse",
+    "Dim ApiMappedThing2 As Thing"
+})
+    if (!procedureScope.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("Generated helper did not stay inside procedure-local scope: " + marker);
+
 var compilerReservedClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Compiler Reserved, version: 1.0.0 }
