@@ -53,6 +53,72 @@ internal static class BrowserWasmServerSideMetadata
         public bool SetEquals(IEnumerable<string> other) => _names.SetEquals(other);
     }
 
+    public static string TransformAuthorizationMetadata(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var lines = NormalizeLines(source);
+        var output = new StringBuilder(source.Length);
+        var pendingAuth = new List<string>();
+        var pendingServerSide = false;
+
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (IsBridgeAuthorizationAttribute(trimmed))
+            {
+                pendingAuth.Add(line);
+                continue;
+            }
+
+            if (ServerSideAttribute.IsMatch(trimmed))
+            {
+                pendingServerSide = true;
+                continue;
+            }
+
+            if (pendingAuth.Count > 0 || pendingServerSide)
+            {
+                if (trimmed.Length == 0 || trimmed.StartsWith("'", StringComparison.Ordinal))
+                {
+                    output.AppendLine(line);
+                    continue;
+                }
+
+                if (ProcedureHeader.IsMatch(trimmed))
+                {
+                    if (pendingServerSide)
+                    {
+                        output.AppendLine("[Post]");
+                        foreach (var auth in pendingAuth) output.AppendLine(auth);
+                    }
+                    else
+                    {
+                        foreach (var auth in pendingAuth) output.AppendLine(auth);
+                    }
+                    output.AppendLine(line);
+                    pendingAuth.Clear();
+                    pendingServerSide = false;
+                    continue;
+                }
+
+                foreach (var auth in pendingAuth) output.AppendLine(auth);
+                pendingAuth.Clear();
+                pendingServerSide = false;
+            }
+
+            output.AppendLine(line);
+        }
+
+        foreach (var auth in pendingAuth) output.AppendLine(auth);
+        return output.ToString().TrimEnd('\r', '\n');
+    }
+
+    private static bool IsBridgeAuthorizationAttribute(string trimmed) =>
+        trimmed.Equals("[Anonymous]", StringComparison.OrdinalIgnoreCase) ||
+        trimmed.Equals("[Authenticated]", StringComparison.OrdinalIgnoreCase) ||
+        trimmed.StartsWith("[Role:", StringComparison.OrdinalIgnoreCase) ||
+        trimmed.StartsWith("[Rule:", StringComparison.OrdinalIgnoreCase);
+
     public static IReadOnlySet<string> ReadAnnotatedProcedures(string source) =>
         new AnnotatedProcedureSet(ReadAnnotatedProcedureOptions(source));
 
