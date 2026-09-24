@@ -14,7 +14,7 @@ internal static class BrowserWasmServerBridgeTransportInstaller
 
         var replacement = SendCoreMarker + "\n" +
             "        if (XPScriptBrowserServerBridgeTransport.IsBridgeUrl(url))\n" +
-            "            return XPScriptBrowserServerBridgeTransport.Send(method, url, bodyValue, MergeHeaders(requestHeaders));";
+            "            return XPScriptBrowserServerBridgeTransport.Send(method, url, bodyValue, _headers);";
 
         return generated.Replace(SendCoreMarker, replacement, StringComparison.Ordinal) + "\n\n" + RuntimeCode;
     }
