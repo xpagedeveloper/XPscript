@@ -16,7 +16,7 @@ The implementation must support OpenAPI **3.0, 3.1 and 3.2** in both **JSON** an
 - [x] OpenAPI 3.2.x
 - [x] JSON input for every supported specification
 - [x] YAML/YML input for every supported specification
-- [ ] Reject unsupported/invalid documents with actionable diagnostics
+- [x] Reject unsupported/invalid documents with actionable diagnostics
 - [x] Detect the specification version from the document rather than the file extension
 
 ## Specification normalization layer
