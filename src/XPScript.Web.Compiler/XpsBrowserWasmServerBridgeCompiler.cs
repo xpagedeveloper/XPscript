@@ -62,10 +62,11 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var compilerIdentity = typeof(XpsBrowserWasmServerBridgeCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
         var sourceHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + BridgeCompilerVersion)));
+        var serverSideOptions = BrowserWasmServerSideMetadata.ReadAnnotatedProcedureOptions(source);
         var annotatedProcedures = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
         var normalizedSource = NormalizeVariantSetAssignments(parsed.Source);
         var planningSource = BrowserWasmServerSideMetadata.InjectPlanningMarkers(normalizedSource, annotatedProcedures);
-        var plan = BrowserWasmServerBridgePlan.Create(planningSource, sourceHash, parsed.Routes);
+        var plan = BrowserWasmServerBridgePlan.Create(planningSource, sourceHash, serverSideOptions);
         BrowserWasmServerSideMetadata.ValidateExplicitBoundary(plan, annotatedProcedures);
 
         if (plan.Procedures.Count == 0)
