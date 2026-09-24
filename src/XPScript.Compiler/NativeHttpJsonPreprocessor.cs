@@ -52,7 +52,8 @@ internal sealed class NativeHttpJsonPreprocessor
                 if (pair.Value.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase))
                 {
                     foreach (var method in new[] { "AddQuery", "SetBearerToken", "SetBasicAuth", "BasicAuthorization" }) rewritten = Regex.Replace(rewritten, $@"\b{escapedName}\.{method}\s*\(", $"XPScriptHttpCoreHelpers.{method}({pair.Key}, ", RegexOptions.IgnoreCase);
-                    foreach (var method in new[] { "GetJson", "PostJson", "PutJson", "PatchJson", "PostForm" }) rewritten = Regex.Replace(rewritten, $@"\b{escapedName}\.{method}\s*\(", $"XPScriptHttpJsonHelpers.{method}({pair.Key}, ", RegexOptions.IgnoreCase);\n                    foreach (var method in new[] { "LoadForm", "SaveForm", "PutForm" }) rewritten = Regex.Replace(rewritten, $@"\b{escapedName}\.{method}\s*\(", $"XPScriptHttpUiFormHelpers.{method}({pair.Key}, ", RegexOptions.IgnoreCase);
+                    foreach (var method in new[] { "GetJson", "PostJson", "PutJson", "PatchJson", "PostForm" }) rewritten = Regex.Replace(rewritten, $@"\b{escapedName}\.{method}\s*\(", $"XPScriptHttpJsonHelpers.{method}({pair.Key}, ", RegexOptions.IgnoreCase);
+                    foreach (var method in new[] { "LoadForm", "SaveForm", "PutForm" }) rewritten = Regex.Replace(rewritten, $@"\b{escapedName}\.{method}\s*\(", $"XPScriptHttpUiFormHelpers.{method}({pair.Key}, ", RegexOptions.IgnoreCase);
                     foreach (var method in new[] { "GetAsync", "DeleteAsync", "PostAsync", "PutAsync", "PatchAsync" }) rewritten = Regex.Replace(rewritten, $@"\b{escapedName}\.{method}\s*\(", $"XPScriptAsyncHttp.{method}({pair.Key}, ", RegexOptions.IgnoreCase);
                 }
                 else if (pair.Value.Equals("XPHttpResponse", StringComparison.OrdinalIgnoreCase)) rewritten = Regex.Replace(rewritten, $@"\b{escapedName}\.Json\s*\(\s*\)", $"XPScriptHttpCoreHelpers.ResponseJson({pair.Key})", RegexOptions.IgnoreCase);
