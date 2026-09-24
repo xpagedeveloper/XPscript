@@ -24,8 +24,7 @@ public sealed class XpsOpenApiClientGenerator
     public XpsOpenApiClientGenerationResult Generate(string specification, string? sourceName = null, string? className = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(specification); var root = ParseDocument(specification);
-        var version = ReadString(root, "openapi") ?? throw new XpsOpenApiGenerationException("OpenAPI document is missing the required 'openapi' version field.");
-        if (!version.StartsWith("3.0.", StringComparison.Ordinal) && !version.StartsWith("3.1.", StringComparison.Ordinal) && !version.StartsWith("3.2.", StringComparison.Ordinal)) throw new XpsOpenApiGenerationException($"OpenAPI version '{version}' is unsupported. XPScript supports OpenAPI 3.0.x, 3.1.x and 3.2.x.");
+        var normalized = XpsOpenApiSchema.NormalizeDocument(root); var version = normalized.Version;
         using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version); var apiName = ResolveClassName(root, sourceName, className); var modelSet = CollectModels(root); using var typeNameScope = XpsOpenApiSchema.UseReferenceTypeNames(modelSet.TypeNames); var models = modelSet.Models; var securitySchemes = CollectSecuritySchemes(root); var operations = CollectOperations(root); AssignGeneratedApiMemberNames(operations, securitySchemes);
         if (operations.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI document does not contain any supported path operations.");
         var source = EmitSource(version, sourceName, apiName, ReadServerUrl(root), root, models, operations, securitySchemes);
