@@ -49,7 +49,26 @@ public sealed class XpsOpenApiImporter
         // Import is additive, not an update/reimport mechanism. Once generated OpenAPI
         // infrastructure exists, a new import is isolated so it cannot mutate that API.
         if (!string.IsNullOrWhiteSpace(existingSource) && ContainsGeneratedOpenApiSource(existingSource))
+        {
             desired = IsolateCollidingApi(desired, existingSource, sourceName, forceIsolation: true);
+            var newline = DetectNewline(existingSource);
+            var isolatedSource = AppendBlock(existingSource, NormalizeNewlines(desired.Source, newline), newline);
+            var isolatedClasses = ParseClasses(desired.Source).Select(x => x.Name).ToArray();
+            var isolatedClassSpans = ParseClasses(desired.Source).Select(x => (x.Start, x.End)).ToArray();
+            var isolatedProcedures = ParseProcedures(desired.Source, isolatedClassSpans)
+                .Select(x => x.Kind + " " + x.Name).ToArray();
+
+            // A generated OpenAPI block is immutable to later server imports. Separate APIs
+            // are appended as complete isolated units instead of being passed through the
+            // legacy additive class/procedure merger.
+            return new XpsOpenApiImportResult(
+                desired.OpenApiVersion,
+                isolatedSource,
+                isolatedClasses,
+                Array.Empty<string>(),
+                isolatedProcedures,
+                Array.Empty<string>());
+        }
         var source = existingSource;
         var newline = DetectNewline(source);
         var addedClasses = new List<string>();
