@@ -206,7 +206,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Maintain an explicit allowlist for confirmed false positives. `tests/security/nuclei/allowlist.json` is version-controlled, starts empty, requires a documented reason per entry, and CI only exempts an exact template plus optional matcher/severity match.
 - [x] Never silently ignore a new high or critical finding. CI parses every generated Nuclei JSONL artifact and fails the hardening job if any high or critical finding is present.
 - [x] Store scanner revision, template revision and finding metadata in artifacts. CI writes `nuclei-scan-metadata.json` with pinned scanner version, pinned template SHA, Git SHA, severity counts and finding identifiers/match metadata.
-- [ ] Add a scheduled manual review process for updating pinned scanner and template versions.
+- [x] Add a scheduled manual review process for updating pinned scanner and template versions. The hardening workflow runs monthly on the first day of the month and emits an explicit review notice for `NUCLEI_VERSION` and `NUCLEI_TEMPLATES_SHA`; pin changes remain reviewable commits followed by the complete hardening workflow.
 
 ## Confirmed findings
 
