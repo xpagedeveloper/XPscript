@@ -115,6 +115,64 @@ End Sub
     if (capabilityResponse.StatusCode != 200 || !capabilityResponse.Body.Contains("capability", StringComparison.Ordinal))
         throw new Exception("Server bridge capability endpoint did not issue a session-bound capability.");
 
+    var authenticatedPath = Path.Combine(root, "authenticated.xps");
+    await File.WriteAllTextAsync(authenticatedPath, """
+[Platform:browser-wasm]
+
+[Authenticated]
+[ServerSide]
+Function SecureServerValue() As String
+    SecureServerValue = "secure"
+End Function
+
+Sub Main()
+    Print SecureServerValue()
+End Sub
+""");
+    var authenticatedParsed = new XpsWebRouteMetadataParser().Parse(await File.ReadAllTextAsync(authenticatedPath));
+    await using (var authenticatedUnit = await compiler.CompileAsync(authenticatedPath, root))
+    {
+        foreach (var routeName in new[] { "Index", XpsWebPathResolver.BrowserWasmAssetRoute })
+        {
+            var policy = authenticatedUnit.Routes[routeName].Policy;
+            if (policy.AllowAnonymous)
+                throw new Exception("Browser-WASM authenticated application exposed an anonymous shell, asset or bridge route.");
+            if (policy.Authorize(BridgeRequest("/authenticated.xps", new Dictionary<string, IReadOnlyList<string>>()), new XpsWebPrincipal(false)) != XpsRouteAuthorizationResult.AuthenticationRequired)
+                throw new Exception("Browser-WASM authenticated route did not reject an anonymous principal.");
+            if (policy.Authorize(BridgeRequest("/authenticated.xps", new Dictionary<string, IReadOnlyList<string>>()), new XpsWebPrincipal(true, "browser-user")) != XpsRouteAuthorizationResult.Allowed)
+                throw new Exception("Browser-WASM authenticated route rejected an authenticated principal.");
+        }
+    }
+
+    var mixedPolicyPath = Path.Combine(root, "mixed-policy.xps");
+    await File.WriteAllTextAsync(mixedPolicyPath, """
+[Platform:browser-wasm]
+
+[Anonymous]
+[Get]
+Function PublicRoute() As String
+    PublicRoute = "public"
+End Function
+
+[Authenticated]
+[Get]
+Function PrivateRoute() As String
+    PrivateRoute = "private"
+End Function
+
+Sub Main()
+    Print "mixed"
+End Sub
+""");
+    try
+    {
+        await using var ignored = await compiler.CompileAsync(mixedPolicyPath, root);
+        throw new Exception("Browser-WASM mixed authorization policies compiled into one client bundle.");
+    }
+    catch (XpsWebCompilationException ex) when (ex.Message.Contains("consistent authorization policy", StringComparison.OrdinalIgnoreCase))
+    {
+    }
+
     var cryptoPath = Path.Combine(root, "server-crypto.xps");
     await File.WriteAllTextAsync(cryptoPath, """
 [Platform:browser-wasm]
