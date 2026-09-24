@@ -70,6 +70,24 @@ End Sub
         !nativeHttpRuntime.Contains("UseCookies = false", StringComparison.Ordinal))
         throw new Exception("Browser-WASM HTTP credential isolation invariants are missing.");
 
+    var correlationCookieName = XpsWebClientCorrelation.CookieNameFor("browser-wasm-cookie-smoke");
+    var correlationValue = XpsWebClientCorrelation.GetOrCreate(new Dictionary<string, string>(), correlationCookieName, out var correlationCreated);
+    if (!correlationCreated) throw new Exception("Browser-WASM cookie regression did not create a fresh correlation cookie.");
+    foreach (var secure in new[] { false, true })
+    {
+        var cookieResponse = new XpsWebResponse();
+        XpsWebClientCorrelation.SetCookie(cookieResponse, correlationCookieName, correlationValue, secure);
+        if (!cookieResponse.Headers.TryGetValue("Set-Cookie", out var cookieValues) || cookieValues.Count != 1)
+            throw new Exception("Browser-WASM correlation cookie was not emitted.");
+        var cookie = cookieValues[0];
+        if (!cookie.Contains("; HttpOnly", StringComparison.Ordinal) ||
+            !cookie.Contains("; SameSite=Lax", StringComparison.Ordinal) ||
+            !cookie.Contains("; Max-Age=2592000", StringComparison.Ordinal))
+            throw new Exception("Browser-WASM correlation cookie is missing HttpOnly, SameSite=Lax or the 30-day lifetime.");
+        if (secure != cookie.Contains("; Secure", StringComparison.Ordinal))
+            throw new Exception("Browser-WASM correlation cookie Secure flag does not match HTTP/HTTPS transport.");
+    }
+
     var noHeaderResponse = new XpsWebResponse();
     await unit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
         BridgeRequest("/app.xps/__xpscript_bridge/capability", new Dictionary<string, IReadOnlyList<string>>()),
