@@ -43,10 +43,8 @@ public sealed class XpsOpenApiGenerator
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(specification);
         var root = ParseDocument(specification, sourceName);
-        var version = ReadString(root, "openapi")
-            ?? throw new XpsOpenApiGenerationException("OpenAPI document is missing the required 'openapi' version field.");
-        if (!version.StartsWith("3.0.", StringComparison.Ordinal) && !version.StartsWith("3.1.", StringComparison.Ordinal) && !version.StartsWith("3.2.", StringComparison.Ordinal))
-            throw new XpsOpenApiGenerationException($"OpenAPI version '{version}' is unsupported. XPScript supports OpenAPI 3.0.x, 3.1.x and 3.2.x.");
+        var normalized = XpsOpenApiSchema.NormalizeDocument(root);
+        var version = normalized.Version;
 
         using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version);
         var models = CollectComponentModels(root);
