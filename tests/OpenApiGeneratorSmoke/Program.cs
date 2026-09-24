@@ -1784,6 +1784,56 @@ End Class
         }
     }
 
+    var regenerationSpec = """
+openapi: 3.1.0
+info: { title: Regeneration Collision, version: 1.0.0 }
+components:
+  securitySchemes:
+    Api-Token:
+      type: apiKey
+      in: header
+      name: X-Api-Token
+    Api_Token:
+      type: apiKey
+      in: header
+      name: X-Api-Token-2
+  schemas:
+    Collision:
+      type: object
+      properties:
+        JsonParse: { type: string }
+        jsonparse: { type: integer }
+paths:
+  /first:
+    get:
+      operationId: ApiSetHeader
+      parameters:
+        - name: request
+          in: query
+          schema: { type: string }
+      responses:
+        '204': { description: ok }
+""";
+    var regenerationGenerator = new XpsOpenApiClientGenerator();
+    var regenerationFirst = regenerationGenerator.Generate(regenerationSpec, "regeneration-collision.yaml", "RegenerationApi");
+    var regenerationSecond = regenerationGenerator.Generate(regenerationSpec, "regeneration-collision.yaml", "RegenerationApi");
+    if (!string.Equals(regenerationFirst.Source, regenerationSecond.Source, StringComparison.Ordinal))
+        throw new Exception("OpenAPI client regeneration must produce deterministic collision names.");
+    foreach (var expected in new[] { "Public JsonParse As String", "Public Jsonparse2 As Long", "Public Function ApiSetHeader2(", "Public Sub SetApiToken(", "Public Sub SetApiToken2(" })
+        if (!regenerationSecond.Source.Contains(expected, StringComparison.Ordinal))
+            throw new Exception("OpenAPI client regeneration collision output is missing deterministic declaration: " + expected);
+
+    var regenerationChangedSpec = regenerationSpec.Replace(
+        "        - name: request\n          in: query\n          schema: { type: string }",
+        "        - name: request\n          in: query\n          schema: { type: string }\n        - name: result\n          in: query\n          schema: { type: string }",
+        StringComparison.Ordinal);
+    var regenerationChanged = regenerationGenerator.Generate(regenerationChangedSpec, "regeneration-collision.yaml", "RegenerationApi");
+    if (!regenerationChanged.Source.Contains("Public Function ApiSetHeader2(", StringComparison.Ordinal) ||
+        !regenerationChanged.Source.Contains("Optional Result As Variant = Nothing", StringComparison.Ordinal))
+        throw new Exception("OpenAPI client regeneration must preserve deterministic member naming when the contract grows.");
+
+    Console.WriteLine("OPENAPI-REGENERATION-COLLISION=OK");
+
     foreach (var marker in new[] { "OPENAPI-CLIENT-SECURITY=OK", "OPENAPI-CLIENT-CORE-ONLY=OK" })
         Console.WriteLine(marker);
     Console.WriteLine("OPENAPI-CLIENT-COMPILE=OK");
