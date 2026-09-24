@@ -713,7 +713,6 @@ public static class XPScriptCompilerCommandLine
             }
             if (parameterName.Length > 0)
             {
-                nextArgs.Add("--");
                 nextArgs.Add(parameterName + "=" + parameterValue);
             }
 
