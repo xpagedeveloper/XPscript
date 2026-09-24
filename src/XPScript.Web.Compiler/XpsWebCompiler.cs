@@ -330,11 +330,34 @@ public sealed class XpsWebCompiler
         }
     }
 
+    private static XpsRoutePolicy BrowserWasmApplicationPolicy(XpsWebRouteParseResult parsed, IReadOnlySet<string> methods)
+    {
+        if (parsed.Routes.Count == 0) return new XpsRoutePolicy(true, methods, [], []);
+
+        var policies = parsed.Routes.Values.Select(route => route.Policy).ToArray();
+        var first = policies[0];
+        if (policies.Skip(1).Any(policy =>
+            policy.AllowAnonymous != first.AllowAnonymous ||
+            !policy.RequiredRules.SequenceEqual(first.RequiredRules, StringComparer.OrdinalIgnoreCase) ||
+            !policy.ForbiddenRules.SequenceEqual(first.ForbiddenRules, StringComparer.OrdinalIgnoreCase) ||
+            !(policy.RequiredRoles ?? []).SequenceEqual(first.RequiredRoles ?? [], StringComparer.OrdinalIgnoreCase) ||
+            !(policy.ForbiddenRoles ?? []).SequenceEqual(first.ForbiddenRoles ?? [], StringComparer.OrdinalIgnoreCase)))
+            throw new XpsWebCompilationException("browser-wasm routes must use one consistent authorization policy for the application shell, assets and server bridge.");
+
+        return new XpsRoutePolicy(
+            first.AllowAnonymous,
+            methods,
+            first.RequiredRules,
+            first.ForbiddenRules,
+            first.RequiredRoles,
+            first.ForbiddenRoles);
+    }
+
     private static async Task<XpsCompiledWebUnit> CompileBrowserWasmAsync(string sourcePath, string webRoot, XpsWebRouteParseResult parsed, CancellationToken cancellationToken)
     {
         var bundle = await XpsBrowserWasmServerBridgeCompiler.GetOrBuildAsync(sourcePath, webRoot, parsed, cancellationToken).ConfigureAwait(false);
         var methods = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "GET", "HEAD" };
-        var policy = new XpsRoutePolicy(true, methods, [], []);
+        var policy = BrowserWasmApplicationPolicy(parsed, methods);
         var routes = new Dictionary<string, XpsWebRouteDescriptor>(StringComparer.OrdinalIgnoreCase)
         {
             ["Index"] = new("Index", policy),
