@@ -1286,6 +1286,55 @@ foreach (var generate in new Action[]
 }
 Console.WriteLine("OPENAPI-UNSUPPORTED-VERSION-DIAGNOSTICS=OK");
 
+foreach (var invalid in new[]
+{
+    (Name: "malformed.json", Text: "{ \"openapi\": \"3.1.0\", \"paths\": {"),
+    (Name: "malformed.yaml", Text: "openapi: 3.1.0\npaths:\n  /broken: [")
+})
+{
+    foreach (var generate in new Func<object>[]
+    {
+        () => generator.Generate(invalid.Text, invalid.Name),
+        () => new XpsOpenApiClientGenerator().Generate(invalid.Text, invalid.Name)
+    })
+    {
+        try
+        {
+            _ = generate();
+            throw new Exception("Malformed OpenAPI document was accepted: " + invalid.Name);
+        }
+        catch (XpsOpenApiGenerationException ex)
+        {
+            if (!ex.Message.Contains("OpenAPI", StringComparison.OrdinalIgnoreCase) ||
+                !ex.Message.Contains("pars", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Malformed OpenAPI diagnostic was not actionable: " + ex.Message);
+        }
+    }
+}
+
+const string missingPathsSpec = """
+openapi: 3.1.0
+info: { title: Missing Paths, version: 1.0.0 }
+""";
+foreach (var generate in new Func<object>[]
+{
+    () => generator.Generate(missingPathsSpec, "missing-paths.yaml"),
+    () => new XpsOpenApiClientGenerator().Generate(missingPathsSpec, "missing-paths.yaml")
+})
+{
+    try
+    {
+        _ = generate();
+        throw new Exception("OpenAPI document without paths was accepted.");
+    }
+    catch (XpsOpenApiGenerationException ex)
+    {
+        if (!ex.Message.Contains("path", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Missing paths diagnostic was not actionable: " + ex.Message);
+    }
+}
+Console.WriteLine("OPENAPI-INVALID-DOCUMENT-DIAGNOSTICS=OK");
+
 var dialect30 = """
 openapi: 3.0.3
 info: { title: Dialect 30, version: 1.0.0 }
