@@ -102,7 +102,7 @@ public sealed class XpsBrowserWasmCompiler
         foreach (var directory in Directory.EnumerateDirectories(sourceRoot, "*", SearchOption.AllDirectories)) Directory.CreateDirectory(Path.Combine(destinationRoot, Path.GetRelativePath(sourceRoot, directory)));
         foreach (var file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories)) { var destination = Path.Combine(destinationRoot, Path.GetRelativePath(sourceRoot, file)); Directory.CreateDirectory(Path.GetDirectoryName(destination)!); File.Copy(file, destination, true); }
     }
-    private string BuildIndexHtml(string sourcePath) => IndexHtml.Replace("__XPSCRIPT_BASE_HREF__", Uri.EscapeDataString(Path.GetFileName(sourcePath)) + "/", StringComparison.Ordinal);
+    private string BuildIndexHtml(string sourcePath) => IndexHtml.Replace("__XPSCRIPT_BASE_HREF__", Uri.EscapeDataString(Path.GetFileName(sourcePath)).Replace("%2E", ".", StringComparison.OrdinalIgnoreCase) + "/", StringComparison.Ordinal);
     private static string NormalizeVariantSetAssignments(string source)
     {
         var variantNames = VariantDeclaration.Matches(source).Select(match => match.Groups[1].Value).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
