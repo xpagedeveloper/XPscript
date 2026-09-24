@@ -112,7 +112,7 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] Parameter/member overlap is tested
 - [x] Generated helper collision is tested
 - [x] Multiple security schemes normalizing to the same identifier are tested
-- [ ] Additive import collision behavior is tested
+- [x] Additive import collision behavior is tested
 - [ ] Regeneration collision behavior is tested
 - [x] Lexical keyword behavior is tested
 - [x] `__*` compiler-reserved behavior is tested
