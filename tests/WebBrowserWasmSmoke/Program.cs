@@ -240,9 +240,18 @@ End Sub
         async Task<(int StatusCode, string Body)> InvokePolicyAsync(string procedureName, XpsWebPrincipal principal)
         {
             var response = new XpsWebResponse();
-            await policyUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
-                BridgePostRequest("/bridge-policy.xps/__xpscript_bridge", policyHeaders, ProcedureId(sourceHash, procedureName)),
-                response, Server(root), principal, new SmokeApplicationState(), policySession));
+            var previousConsoleErrors = Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS");
+            Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", "1");
+            try
+            {
+                await policyUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
+                    BridgePostRequest("/bridge-policy.xps/__xpscript_bridge", policyHeaders, ProcedureId(sourceHash, procedureName)),
+                    response, Server(root), principal, new SmokeApplicationState(), policySession));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", previousConsoleErrors);
+            }
             return (response.StatusCode, System.Text.Encoding.UTF8.GetString(response.Body.Span));
         }
 
