@@ -1828,7 +1828,7 @@ paths:
         "        - name: request\n          in: query\n          schema: { type: string }\n        - name: result\n          in: query\n          schema: { type: string }",
         StringComparison.Ordinal);
     var regenerationChanged = regenerationGenerator.Generate(regenerationChangedSpec, "regeneration-collision.yaml", "RegenerationApi");
-    if (!regenerationChanged.Source.Contains("Public Function ApiSetHeader2(", StringComparison.Ordinal) ||
+    if (!regenerationChanged.Source.Contains("Public Function ApiSetHeader(", StringComparison.Ordinal) ||
         !regenerationChanged.Source.Contains("Optional Result As Variant = Nothing", StringComparison.Ordinal))
         throw new Exception("OpenAPI client regeneration must preserve deterministic member naming when the contract grows.");
 
