@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace XPScript.Web.Compiler;
 
-internal sealed record BrowserWasmServerSideOptions(int SpinnerDelayMilliseconds)
+internal sealed record BrowserWasmServerSideOptions(int SpinnerDelayMilliseconds, XPScript.Web.Runtime.XpsRoutePolicy Policy)
 {
     public const int DefaultSpinnerDelayMilliseconds = 300;
 }
@@ -141,7 +141,7 @@ internal static class BrowserWasmServerSideMetadata
                 var delay = BrowserWasmServerSideOptions.DefaultSpinnerDelayMilliseconds;
                 if (attribute.Groups[1].Success && !int.TryParse(attribute.Groups[1].Value, out delay))
                     throw new XpsWebCompilationException("[ServerSide] SpinnerDelay must be a non-negative 32-bit integer number of milliseconds.");
-                pending = new BrowserWasmServerSideOptions(delay);
+                pending = new BrowserWasmServerSideOptions(delay, new XPScript.Web.Runtime.XpsRoutePolicy(true, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "POST" }, [], []));
                 continue;
             }
 
@@ -195,7 +195,7 @@ internal static class BrowserWasmServerSideMetadata
             ? metadata.Options
             : annotatedProcedures.ToDictionary(
                 name => name,
-                _ => new BrowserWasmServerSideOptions(BrowserWasmServerSideOptions.DefaultSpinnerDelayMilliseconds),
+                _ => new BrowserWasmServerSideOptions(BrowserWasmServerSideOptions.DefaultSpinnerDelayMilliseconds, new XPScript.Web.Runtime.XpsRoutePolicy(true, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "POST" }, [], [])),
                 StringComparer.OrdinalIgnoreCase);
         var lines = NormalizeLines(parsedSource);
         var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
