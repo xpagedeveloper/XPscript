@@ -415,11 +415,8 @@ public static class XPScriptCompilerCommandLine
             for (var i = sourceIndex + 1; i < commandLineArgs.Length; i++)
             {
                 var value = commandLineArgs[i];
-                if (parseRunOptions && value == "--")
-                {
+                if (parseRunOptions && !value.StartsWith("--", StringComparison.Ordinal))
                     parseRunOptions = false;
-                    continue;
-                }
 
                 if (parseRunOptions && value == "--no-daemon")
                 {
