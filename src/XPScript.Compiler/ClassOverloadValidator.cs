@@ -83,8 +83,27 @@ internal sealed class ClassOverloadValidator
         {
             if (previous.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase)) return;
             var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
-            throw new CompilerException(
-                $"{sourceName}({lineNumber},1): Class '{className}' cannot declare field and property '{name}' with the same name; the conflicting {previous.Kind} was declared on line {previous.Line}.{Environment.NewLine}  {safeSource}");
+            var description = $"Class '{className}' cannot declare field and property '{name}' with the same name; the conflicting {previous.Kind} was declared on line {previous.Line}.";
+            var diagnostic = new CompileDiagnostic
+            {
+                File = sourceName,
+                Line = lineNumber,
+                Position = 1,
+                Description = description,
+                DiagnosticCode = CompilerDiagnosticCodes.ConflictingClassMember,
+                Category = "member-resolution",
+                Properties =
+                [
+                    new() { Name = "receiverType", Value = className },
+                    new() { Name = "symbol", Value = name },
+                    new() { Name = "symbolKind", Value = kind },
+                    new() { Name = "conflictingSymbolKind", Value = previous.Kind },
+                    new() { Name = "previousLine", Value = previous.Line.ToString() }
+                ],
+                SourceCode = safeSource,
+                MarkedCode = safeSource + Environment.NewLine + "^"
+            };
+            throw new CompilerException(description, CompilerDiagnosticCodes.ConflictingClassMember, "member-resolution", [diagnostic]);
         }
 
         members[name] = (kind, lineNumber);
@@ -135,7 +154,27 @@ internal sealed class ClassOverloadValidator
                 if (seen.TryGetValue(signature, out var previous))
                 {
                     var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(lines[method.Line - 1]).TrimEnd();
-                    throw new CompilerException($"{sourceName}({method.Line},1): Duplicate overload '{method.ClassName}.{method.Name}' has the same effective parameter signature as line {previous.Line}.{Environment.NewLine}  {safeSource}");
+                    var description = $"Duplicate overload '{method.ClassName}.{method.Name}' has the same effective parameter signature as line {previous.Line}.";
+                    var diagnostic = new CompileDiagnostic
+                    {
+                        File = sourceName,
+                        Line = method.Line,
+                        Position = 1,
+                        Description = description,
+                        DiagnosticCode = CompilerDiagnosticCodes.DuplicateOverload,
+                        Category = "overload-resolution",
+                        Properties =
+                        [
+                            new() { Name = "receiverType", Value = method.ClassName },
+                            new() { Name = "symbol", Value = method.Name },
+                            new() { Name = "symbolKind", Value = "method" },
+                            new() { Name = "signature", Value = FormatSignature(method) },
+                            new() { Name = "previousLine", Value = previous.Line.ToString() }
+                        ],
+                        SourceCode = safeSource,
+                        MarkedCode = safeSource + Environment.NewLine + "^"
+                    };
+                    throw new CompilerException(description, CompilerDiagnosticCodes.DuplicateOverload, "overload-resolution", [diagnostic]);
                 }
                 seen[signature] = method;
             }
@@ -213,13 +252,63 @@ internal sealed class ClassOverloadValidator
         if (scored.Count == 0)
         {
             var supplied = string.Join(", ", arguments.Select(a => InferType(a, variables)?.Type ?? "Unknown"));
-            throw new CompilerException($"{sourceName}({lineNumber},1): No overload of '{displayName}' matches supplied signature ({supplied}).{Environment.NewLine}  {safeSource}");
+            throw OverloadDiagnosticException(
+                sourceName, lineNumber, safeSource,
+                $"No overload of '{displayName}' matches supplied signature ({supplied}).",
+                CompilerDiagnosticCodes.NoMatchingOverload,
+                displayName, supplied, candidates);
         }
         var bestScore = scored.Min(x => x.Score);
         var best = scored.Where(x => x.Score == bestScore).ToArray();
         if (best.Length > 1)
-            throw new CompilerException($"{sourceName}({lineNumber},1): Ambiguous overload call '{displayName}'; {best.Length} overloads are equally specific.{Environment.NewLine}  {safeSource}");
+            throw OverloadDiagnosticException(
+                sourceName, lineNumber, safeSource,
+                $"Ambiguous overload call '{displayName}'; {best.Length} overloads are equally specific.",
+                CompilerDiagnosticCodes.AmbiguousOverload,
+                displayName,
+                string.Join(", ", arguments.Select(a => InferType(a, variables)?.Type ?? "Unknown")),
+                best.Select(x => x.Method).ToArray());
     }
+
+
+    private static CompilerException OverloadDiagnosticException(
+        string sourceName,
+        int lineNumber,
+        string safeSource,
+        string description,
+        string diagnosticCode,
+        string symbol,
+        string suppliedSignature,
+        IReadOnlyList<Method> candidates)
+    {
+        var properties = new List<CompileDiagnosticProperty>
+        {
+            new() { Name = "symbol", Value = symbol },
+            new() { Name = "symbolKind", Value = "method" },
+            new() { Name = "receiverType", Value = candidates.Count > 0 ? candidates[0].ClassName : "" },
+            new() { Name = "suppliedSignature", Value = suppliedSignature }
+        };
+        foreach (var candidate in candidates.OrderBy(FormatSignature, StringComparer.OrdinalIgnoreCase))
+            properties.Add(new CompileDiagnosticProperty { Name = "candidateSignature", Value = FormatSignature(candidate) });
+
+        var diagnostic = new CompileDiagnostic
+        {
+            File = sourceName,
+            Line = lineNumber,
+            Position = 1,
+            Description = description,
+            DiagnosticCode = diagnosticCode,
+            Category = "overload-resolution",
+            Properties = properties,
+            SourceCode = safeSource,
+            MarkedCode = safeSource + Environment.NewLine + "^"
+        };
+        return new CompilerException(description, diagnosticCode, "overload-resolution", [diagnostic]);
+    }
+
+    private static string FormatSignature(Method method) =>
+        method.ClassName + "." + method.Name + "(" +
+        string.Join(", ", method.Parameters.Select(p => (p.IsByRef ? "ByRef " : "ByVal ") + p.Name + " As " + p.Type + (p.IsArray ? "()" : "") + (p.IsOptional ? " Optional" : ""))) + ")";
 
     private static int MatchScore(Parameter parameter, (string Type, bool IsArray)? actual)
     {

@@ -1,0 +1,4 @@
+Sub Main()
+    Dim räknare As Integer
+    räknare = "fel 漢字"
+End Sub

@@ -48,7 +48,7 @@ public static class UIFormAppAssets
         var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
         var assets = Path.Combine(sourceDirectory, DirectoryName);
         if (File.Exists(assets))
-            throw new CompilerException("UIForm assets path identifies a file instead of a directory: assets");
+            throw AssetSecurity("UIForm assets path identifies a file instead of a directory: assets");
         Directory.CreateDirectory(assets);
         RejectLinkedDirectory(assets, "UIForm assets directory");
         return assets;
@@ -148,12 +148,12 @@ internal static class XPScriptEmbeddedAppAssets
             var directory = new DirectoryInfo(path);
             if (info.LinkTarget is not null || directory.LinkTarget is not null ||
                 (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-                throw new CompilerException("UIForm assets may not contain symbolic links or reparse points.");
+                throw AssetSecurity("UIForm assets may not contain symbolic links or reparse points.");
             if (Directory.Exists(path)) continue;
             if (!File.Exists(path)) continue;
             var relative = Path.GetRelativePath(root, path).Replace('\\', '/');
             if (Path.IsPathRooted(relative) || relative.Equals("..", StringComparison.Ordinal) || relative.StartsWith("../", StringComparison.Ordinal))
-                throw new CompilerException("UIForm asset path escapes the assets directory.");
+                throw AssetSecurity("UIForm asset path escapes the assets directory.");
             result.Add((Path.GetFullPath(path), relative));
         }
         result.Sort((left, right) => StringComparer.Ordinal.Compare(left.RelativePath, right.RelativePath));
@@ -164,7 +164,7 @@ internal static class XPScriptEmbeddedAppAssets
     {
         RejectLinkedDirectory(sourceRoot, "UIForm assets directory");
         if (File.Exists(destinationRoot))
-            throw new CompilerException("UIForm asset publication target identifies a file: assets");
+            throw AssetSecurity("UIForm asset publication target identifies a file: assets");
         Directory.CreateDirectory(destinationRoot);
         RejectLinkedDirectory(destinationRoot, "UIForm asset publication directory");
 
@@ -173,7 +173,7 @@ internal static class XPScriptEmbeddedAppAssets
             var target = Path.GetFullPath(Path.Combine(destinationRoot, file.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
             var rootPrefix = Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
             if (!target.StartsWith(rootPrefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-                throw new CompilerException("UIForm asset publication path escapes the assets directory.");
+                throw AssetSecurity("UIForm asset publication path escapes the assets directory.");
             var directory = Path.GetDirectoryName(target)!;
             Directory.CreateDirectory(directory);
             RejectLinkedDirectory(directory, "UIForm asset publication directory");
@@ -187,12 +187,12 @@ internal static class XPScriptEmbeddedAppAssets
         {
             var info = new DirectoryInfo(path);
             if (info.LinkTarget is not null || (info.Exists && (info.Attributes & FileAttributes.ReparsePoint) != 0))
-                throw new CompilerException(label + " may not be a symbolic link or reparse point.");
+                throw AssetSecurity(label + " may not be a symbolic link or reparse point.");
         }
         catch (CompilerException) { throw; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            throw new CompilerException("Unable to inspect " + label.ToLowerInvariant() + ".");
+            throw AssetSecurity("Unable to inspect " + label.ToLowerInvariant() + ".");
         }
     }
 
@@ -200,4 +200,8 @@ internal static class XPScriptEmbeddedAppAssets
         Path.GetFullPath(left).Equals(Path.GetFullPath(right), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     private static string EscapeCSharp(string value) => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+
+    private static CompilerException AssetSecurity(string message) =>
+        new(message, CompilerDiagnosticCodes.UnsafeDependencyPath, "security");
+
 }

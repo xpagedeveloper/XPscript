@@ -61,7 +61,9 @@ internal sealed class NativeLibraryPlatformPreprocessor
         var selectedAlias = SelectTargetValue(code, "Alias", baseAlias.Success ? baseAlias.Groups[1].Value : null);
 
         if (string.IsNullOrWhiteSpace(selectedLibrary))
-            throw new CompilerException("Declare requires a native library for the selected target runtime.");
+            throw TargetFailure(
+                "Declare requires a native library for the selected target runtime.",
+                baseAlias.Success ? baseAlias.Groups[1].Value : "Declare");
 
         var isApplicationLocal = NativeDependencyPackager.IsApplicationLocalPath(selectedLibrary);
         var loadLibrary = isApplicationLocal
@@ -130,6 +132,24 @@ internal sealed class NativeLibraryPlatformPreprocessor
         code = code.TrimEnd();
         if (code.EndsWith("_", StringComparison.Ordinal)) code = code[..^1].TrimEnd();
         return comment.Length == 0 ? code : code + " " + comment;
+    }
+
+    private CompilerException TargetFailure(string message, string symbol)
+    {
+        var allowedTargets = new[] { "win-x64", "win-arm64", "linux-x64", "linux-arm64", "osx-x64", "osx-arm64" };
+        var diagnostic = new CompileDiagnostic
+        {
+            Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.TargetApiUnavailable,
+            Category = "target",
+            Properties =
+            [
+                new() { Name = "symbol", Value = symbol },
+                new() { Name = "target", Value = _runtimeIdentifier },
+                .. allowedTargets.Select(target => new CompileDiagnosticProperty { Name = "allowedTargets", Value = target })
+            ]
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.TargetApiUnavailable, "target", [diagnostic]);
     }
 
     private static string Escape(string value) => value.Replace("\"", "\\\"", StringComparison.Ordinal);

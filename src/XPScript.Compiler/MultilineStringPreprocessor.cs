@@ -92,7 +92,26 @@ internal sealed class MultilineStringPreprocessor
                 }
 
                 if (!closed)
-                    throw new CompilerException($"{sourceName}({openingLine}): Unterminated multiline string literal opened with '{c}'.");
+                {
+                    var message = $"Unterminated multiline string literal opened with '{c}'.";
+                    var diagnostic = new CompileDiagnostic
+                    {
+                        File = Path.GetFileName(sourceName),
+                        Line = openingLine,
+                        Position = 1,
+                        EndLine = openingLine,
+                        EndColumn = 2,
+                        Description = message,
+                        DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
+                        Category = "syntax",
+                        Properties =
+                        [
+                            new() { Name = "foundToken", Value = c.ToString() },
+                            new() { Name = "expectedConstruct", Value = close.ToString() }
+                        ]
+                    };
+                    throw new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
+                }
 
                 output.Append(BuildExpression(content.ToString()));
                 pendingBlankLines += newlineCount;

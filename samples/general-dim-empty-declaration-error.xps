@@ -1,0 +1,3 @@
+Sub Main()
+    Dim first As Integer,, second As Integer
+End Sub

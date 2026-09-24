@@ -69,7 +69,10 @@ internal sealed class IncrementOperatorSyntaxValidator
             line,
             index + 1,
             "Invalid increment/decrement syntax. ++ and -- are standalone postfix operators on assignable variables.",
-            original);
+            original,
+            CompilerDiagnosticCodes.InvalidIncrementSyntax,
+            ("foundOperator", index == plusIndex ? "++" : "--"),
+            ("expectedConstruct", "standalone postfix operator on assignable variable"));
     }
 
     private static void ValidateCompound(
@@ -107,7 +110,10 @@ internal sealed class IncrementOperatorSyntaxValidator
                 line,
                 operatorIndex + 1,
                 "Invalid compound-assignment syntax. The left-hand side must be an assignable variable and a right-hand expression is required.",
-                original);
+                original,
+                CompilerDiagnosticCodes.InvalidCompoundAssignmentSyntax,
+                ("foundOperator", detectedOperator),
+                ("expectedConstruct", "assignable variable operator expression"));
         }
 
         var target = match.Groups["target"].Value;
@@ -125,7 +131,12 @@ internal sealed class IncrementOperatorSyntaxValidator
                 line,
                 operatorIndex + 1,
                 $"Operator '{selectedOperator}' requires a numeric assignable target; '{target}' is {targetType}.",
-                original);
+                original,
+                CompilerDiagnosticCodes.InvalidCompoundAssignmentSyntax,
+                ("foundOperator", selectedOperator),
+                ("symbol", target),
+                ("expectedType", "numeric"),
+                ("actualType", targetType));
         }
 
         if (selectedOperator == "&=" && !targetType.Equals("String", StringComparison.OrdinalIgnoreCase))
@@ -135,7 +146,12 @@ internal sealed class IncrementOperatorSyntaxValidator
                 line,
                 operatorIndex + 1,
                 $"Operator '&=' requires a String or Variant-compatible assignable target; '{target}' is {targetType}.",
-                original);
+                original,
+                CompilerDiagnosticCodes.InvalidCompoundAssignmentSyntax,
+                ("foundOperator", selectedOperator),
+                ("symbol", target),
+                ("expectedType", "String or Variant"),
+                ("actualType", targetType));
         }
     }
 
@@ -146,6 +162,12 @@ internal sealed class IncrementOperatorSyntaxValidator
         return Math.Min(first, second);
     }
 
+    private static int OperatorWidth((string Name, string Value)[] properties)
+    {
+        var foundOperator = properties.FirstOrDefault(p => p.Name == "foundOperator").Value;
+        return string.IsNullOrEmpty(foundOperator) ? 1 : foundOperator.Length;
+    }
+
     private static string NormalizeType(string type) => type.Trim() switch
     {
         var x when x.Equals("Int", StringComparison.OrdinalIgnoreCase) => "Integer",
@@ -153,12 +175,24 @@ internal sealed class IncrementOperatorSyntaxValidator
         _ => type.Trim()
     };
 
-    private static CompilerException Diagnostic(string sourceName, int line, int position, string message, string original)
+    private static CompilerException Diagnostic(string sourceName, int line, int position, string message, string original, string diagnosticCode = "", params (string Name, string Value)[] properties)
     {
         var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
-        return new CompilerException(
-            $"{sourceName}({line},{position}): {message}" + Environment.NewLine +
-            $"  {safeSource}");
+        var diagnostic = new CompileDiagnostic
+        {
+            File = sourceName,
+            Line = line,
+            Position = position,
+            EndLine = line,
+            EndColumn = position + OperatorWidth(properties),
+            Description = message,
+            DiagnosticCode = string.IsNullOrWhiteSpace(diagnosticCode) ? null : diagnosticCode,
+            Category = "syntax",
+            Properties = properties.Length == 0 ? null : properties.Select(p => new CompileDiagnosticProperty { Name = p.Name, Value = p.Value }).ToList(),
+            SourceCode = safeSource,
+            MarkedCode = safeSource + Environment.NewLine + new string(' ', Math.Max(0, position - 1)) + "^"
+        };
+        return new CompilerException(message, diagnosticCode, "syntax", [diagnostic]);
     }
 
     private static string StripComment(string line)

@@ -5,13 +5,14 @@ namespace XPScript.Compiler;
 
 internal sealed class HclPrintFormattingPreprocessor
 {
-    public string Transform(string source)
+    public string Transform(string source, string sourceName = "input.xps")
     {
         var lines = source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length);
 
-        foreach (var raw in lines)
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
+            var raw = lines[lineIndex];
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
             if (line.Length == 0 || !ContainsSpcOrTabOutsideStrings(line))
@@ -23,21 +24,35 @@ internal sealed class HclPrintFormattingPreprocessor
             var filePrint = Regex.Match(line, @"^Print\s+#([^,]+)\s*,\s*(.*)$", RegexOptions.IgnoreCase);
             if (filePrint.Success)
             {
-                output.Add(indent + $"Print #{filePrint.Groups[1].Value}, LSHclPrintRuntime.Format({BuildParts(filePrint.Groups[2].Value)})");
+                output.Add(indent + $"Print #{filePrint.Groups[1].Value}, LSHclPrintRuntime.Format({BuildParts(filePrint.Groups[2].Value, sourceName, lineIndex + 1, raw)})");
                 continue;
             }
 
             var consolePrint = Regex.Match(line, @"^Print\s+(.+)$", RegexOptions.IgnoreCase);
             if (consolePrint.Success)
             {
-                output.Add(indent + $"Print LSHclPrintRuntime.Format({BuildParts(consolePrint.Groups[1].Value)})");
+                output.Add(indent + $"Print LSHclPrintRuntime.Format({BuildParts(consolePrint.Groups[1].Value, sourceName, lineIndex + 1, raw)})");
                 continue;
             }
 
-            throw new CompilerException("Spc and Tab are valid only inside Print or Print # statements.");
+            throw SyntaxFailure("Spc and Tab are valid only inside Print or Print # statements.", sourceName, lineIndex + 1, raw, "Print or Print # statement");
         }
 
         return string.Join(Environment.NewLine, output);
+    }
+
+    private static CompilerException SyntaxFailure(string message, string sourceName, int line, string sourceLine, string expectedConstruct)
+    {
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourceName), Line = line, Position = 1, EndLine = line,
+            EndColumn = Math.Max(2, safeSource.Length + 1), Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
+            Properties = [new() { Name = "expectedConstruct", Value = expectedConstruct }],
+            SourceCode = safeSource, MarkedCode = safeSource + Environment.NewLine + "^"
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
     }
 
     private static bool ContainsSpcOrTabOutsideStrings(string line)
@@ -65,10 +80,10 @@ internal sealed class HclPrintFormattingPreprocessor
         return false;
     }
 
-    private static string BuildParts(string body)
+    private static string BuildParts(string body, string sourceName, int line, string sourceLine)
     {
-        var parts = SplitPrintItems(body);
-        if (parts.Count == 0) throw new CompilerException("Print with Spc/Tab requires at least one print item.");
+        var parts = SplitPrintItems(body, sourceName, line, sourceLine);
+        if (parts.Count == 0) throw SyntaxFailure("Print with Spc/Tab requires at least one print item.", sourceName, line, sourceLine, "print item");
 
         var transformed = new List<string>(parts.Count);
         foreach (var raw in parts)
@@ -93,11 +108,11 @@ internal sealed class HclPrintFormattingPreprocessor
             transformed.Add("LSHclPrintRuntime.Text(" + part + ")");
         }
 
-        if (transformed.Count == 0) throw new CompilerException("Print with Spc/Tab requires at least one print item.");
+        if (transformed.Count == 0) throw SyntaxFailure("Print with Spc/Tab requires at least one print item.", sourceName, line, sourceLine, "print item");
         return string.Join(", ", transformed);
     }
 
-    private static List<string> SplitPrintItems(string value)
+    private static List<string> SplitPrintItems(string value, string sourceName, int line, string sourceLine)
     {
         var result = new List<string>();
         var current = new StringBuilder();
@@ -135,8 +150,8 @@ internal sealed class HclPrintFormattingPreprocessor
             current.Append(c);
         }
 
-        if (inString) throw new CompilerException("Unterminated string literal in Print statement.");
-        if (depth != 0) throw new CompilerException("Unbalanced parentheses in Print statement.");
+        if (inString) throw SyntaxFailure("Unterminated string literal in Print statement.", sourceName, line, sourceLine, "closing string quote");
+        if (depth != 0) throw SyntaxFailure("Unbalanced parentheses in Print statement.", sourceName, line, sourceLine, "balanced parentheses");
         result.Add(current.ToString());
         return result;
     }

@@ -2,7 +2,8 @@ namespace XPScript.Compiler;
 
 internal sealed class SourceMap
 {
-    internal sealed record Location(string SourcePath, int Line, string SourceText);
+    internal sealed record IncludeFrame(string SourcePath, int Line, string IncludedPath);
+    internal sealed record Location(string SourcePath, int Line, string SourceText, IReadOnlyList<IncludeFrame>? IncludeTrace = null);
 
     private readonly IReadOnlyList<Location> _lines;
 

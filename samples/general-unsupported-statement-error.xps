@@ -1,0 +1,3 @@
+Sub Main()
+    TotallyUnsupportedStatement
+End Sub

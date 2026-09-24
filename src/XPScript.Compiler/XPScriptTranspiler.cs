@@ -12,7 +12,10 @@ public sealed partial class XPScriptTranspiler
     public string Transpile(string source, string sourceName, string runtimeIdentifier)
     {
         var serviceDefinition = XpsServiceScriptParser.Parse(source, sourceName);
-        var includeResult = new IncludeSourcePreprocessor().Transform(serviceDefinition.Source, sourceName);
+        var prepared = ExpandedSourceContext.Current;
+        var includeResult = prepared is not null && prepared.Matches(serviceDefinition.Source, sourceName)
+            ? new IncludeSourcePreprocessor.Result(serviceDefinition.Source, prepared.Map, [Path.GetFullPath(sourceName)])
+            : new IncludeSourcePreprocessor().Transform(serviceDefinition.Source, sourceName);
         try
         {
             var generated = TranspileExpanded(includeResult.Source, sourceName, runtimeIdentifier, includeResult.Map);
@@ -26,7 +29,7 @@ public sealed partial class XPScriptTranspiler
         {
             var remapped = SourceMapDiagnostics.Remap(ex.Message, sourceName, includeResult.Map);
             if (string.Equals(remapped, ex.Message, StringComparison.Ordinal)) throw;
-            throw new CompilerException(remapped);
+            throw new CompilerException(remapped, ex.DiagnosticCode, ex.Category, ex.GeneratedDiagnostics);
         }
     }
 
@@ -37,40 +40,99 @@ public sealed partial class XPScriptTranspiler
         return Transpile(source, sourceName, runtimeIdentifier);
     }
 
+    private static CompilerException TargetUnavailable(string symbol, string target, string allowedTargets, string? detail = null)
+    {
+        var message = $"'{symbol}' is not available for target '{target}'." + (string.IsNullOrWhiteSpace(detail) ? "" : " " + detail);
+        var diagnostic = new CompileDiagnostic
+        {
+            Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.TargetApiUnavailable,
+            Category = "target",
+            Properties =
+            [
+                new() { Name = "symbol", Value = symbol },
+                new() { Name = "target", Value = target },
+                new() { Name = "allowedTargets", Value = allowedTargets }
+            ]
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.TargetApiUnavailable, "target", [diagnostic]);
+    }
+
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
+        var originalFeatures = RuntimeFeatures.Detect(source);
+        var originalTargetRestriction = originalFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(originalTargetRestriction.Symbol))
+            throw TargetUnavailable(originalTargetRestriction.Symbol, runtimeIdentifier, originalTargetRestriction.AllowedTargets, originalTargetRestriction.Detail);
+
+        // Semantic validators must run against the unmodified expanded source so their
+        // line numbers still index sourceMap. Source markers insert physical lines and
+        // would otherwise shift validator diagnostics away from the include map.
+        try
+        {
+            new DateComparisonValidator().Validate(source, sourceName);
+            new ClassOverloadValidator().Validate(source, sourceName);
+            new SourceTypeValidator().Validate(source, sourceName, sourceMap);
+        }
+        catch (CompilerException ex)
+        {
+            // Semantic validators operate on the flattened include source. Remap their
+            // coordinates immediately while the exact include map is still available.
+            var remapped = SourceMapDiagnostics.Remap(ex.Message, sourceName, sourceMap);
+            if (string.Equals(remapped, ex.Message, StringComparison.Ordinal)) throw;
+            throw new CompilerException(remapped, ex.DiagnosticCode, ex.Category, ex.GeneratedDiagnostics);
+        }
+
+        // Expand multiline strings before the ordinary string scanner. Multiline
+        // delimiters are language syntax and must not be misclassified as XPS1006 by
+        // the compatibility string scan.
         source = new MultilineStringPreprocessor().Transform(source, sourceName);
+
+        // Resolve and validate physical line continuations while the source still has
+        // its original physical layout. NormalizeSource also consumes continuations, so
+        // this must run first to preserve dangling-continuation coordinates.
+        source = new SourceLineContinuationPreprocessor().Transform(source, sourceName);
+
+        // Validate/normalize ordinary string delimiters while the source still has the
+        // physical line layout represented by sourceMap. Running this after marker and
+        // compatibility preprocessors would report transformed coordinates.
+        var operatorArray = new OperatorArrayCompatibilityPreprocessor();
+        source = operatorArray.NormalizeSource(source);
+
+        // Run source-coordinate-sensitive syntax preprocessors before inserting runtime
+        // source markers. Marker insertion adds physical lines and would otherwise shift
+        // diagnostics away from the user's XPScript source.
         source = new EscapedQuotePreprocessor().Transform(source);
         var jsonNames = new JsonNameMetadataPreprocessor();
         source = jsonNames.Transform(source);
-        source = new ReservedIdentifierPreprocessor().Transform(source);
-        new DateComparisonValidator().Validate(source, sourceName);
-        new ClassOverloadValidator().Validate(source, sourceName);
-        new SourceTypeValidator().Validate(source, sourceName);
+        source = new ReservedIdentifierPreprocessor().Transform(source, sourceName);
         source = new IfLayoutPreprocessor().Transform(source);
         source = new ParameterlessProcedureHeaderPreprocessor().Transform(source);
-        source = new SourceLineContinuationPreprocessor().Transform(source);
         source = new ParameterPassingPreprocessor().Transform(source);
-        source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
-        source = new HclPrintFormattingPreprocessor().Transform(source);
-        source = new StatementSeparatorPreprocessor().Transform(source);
+        source = new HclPrintFormattingPreprocessor().Transform(source, sourceName);
+        source = new StatementSeparatorPreprocessor().Transform(source, sourceName);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
         var udtValues = new UdtValueSemanticsPreprocessor();
         source = udtValues.Transform(source);
-        source = new TypeDeclarationPreprocessor().Transform(source);
-        source = new LanguageExtensionsPreprocessor().Transform(source);
+        source = new TypeDeclarationPreprocessor().Transform(source, sourceName);
+        source = new LanguageExtensionsPreprocessor().Transform(source, sourceName);
         source = new PropertyLetCompatibilityPreprocessor().Transform(source);
         source = new IndexedPropertyPreprocessor().Transform(source);
         source = new ObjectFunctionSetPreprocessor().Transform(source);
         var runtimeFeatures = RuntimeFeatures.Detect(source);
+        var usesAi = originalFeatures.Ai || runtimeFeatures.Ai;
         var notesRuntimeFeatures = NotesRuntimeFeatures.Detect(source);
-        source = new NativeHttpJsonPreprocessor().Transform(source);
-        var archiveRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "Archive", "ArchiveEntry");
-        source = new ArchiveObjectPreprocessor().Transform(source);
-        var spreadsheetRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "XPSpreadsheet", "XPWorksheet", "XPCell");
+        source = new NativeHttpJsonPreprocessor().Transform(source, sourceName);
+        var archiveRequested = runtimeFeatures.Archive;
+        source = new ArchiveObjectPreprocessor().Transform(source, sourceName);
+        // Attach runtime/#line markers only after source-coordinate-sensitive parser
+        // preprocessors have emitted diagnostics. Inserting markers earlier changes
+        // physical line numbers seen by Type/Enum/native constructor validation.
+        source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
+        var spreadsheetRequested = runtimeFeatures.Spreadsheet;
         source = new SpreadsheetObjectPreprocessor().Transform(source);
-        var networkToolsRequested = PreprocessorFeatureGate.ContainsTypeReference(PreprocessorFeatureGate.CodeOnly(source), "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo");
+        var networkToolsRequested = runtimeFeatures.NetworkTools;
         source = new NetworkToolsObjectPreprocessor().Transform(source);
         source = source.Replace("XPScriptDatabaseAttachmentRuntime.ForSqlite(", "XPScriptDatabaseAttachmentApi.ForSqlite(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForMsSql(", "XPScriptDatabaseAttachmentApi.ForMsSql(", StringComparison.Ordinal)
@@ -79,19 +141,22 @@ public sealed partial class XPScriptTranspiler
             .Replace("XPScriptDatabaseAttachmentRuntime.SetSupabaseBucket(", "XPScriptDatabaseAttachmentApi.SetSupabaseBucket(", StringComparison.Ordinal);
         var usesSqlite = runtimeFeatures.Sqlite || source.Contains("XPScriptDbSqlite", StringComparison.Ordinal);
         var usesMsSql = runtimeFeatures.MsSql || source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
-        var usesAi = source.Contains("XPScriptAi", StringComparison.Ordinal);
         var usesExtendedArchive = source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
         var usesArchive = archiveRequested || usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
         var usesSpreadsheet = spreadsheetRequested || source.Contains("XPScriptSpreadsheet", StringComparison.Ordinal);
         var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
-        var usesApplicationCrypto = Regex.IsMatch(PreprocessorFeatureGate.CodeOnly(source), @"\bApplication\.Crypto\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        if (usesSqlite && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPDBSQLite is not available for browser-wasm targets.");
-        if (usesMsSql && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPDbMsSql is not available for browser-wasm targets.");
-        if (usesAi && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPAi is not available for browser-wasm targets. Keep AI credentials and requests on the server.");
-        if (usesArchive && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("Archive file-path operations are not available for browser-wasm targets yet. Run archive filesystem work on the server until in-memory Archive support is implemented.");
-        if (usesSpreadsheet && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("XPSpreadsheet file operations are not available for browser-wasm targets in the basic implementation.");
-        if (usesNetworkTools && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("NetworkTools is not available for browser-wasm targets because browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
-        if (usesApplicationCrypto && runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new CompilerException("Application.Crypto is not available in browser-wasm client code because .NET AES-GCM is unsupported there. Keep cryptographic operations in server-side code.");
+        if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
+        {
+            var detectedFeatures = runtimeFeatures with
+            {
+                Archive = usesArchive,
+                Spreadsheet = usesSpreadsheet,
+                NetworkTools = usesNetworkTools
+            };
+            var runtimeTargetRestriction = detectedFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(runtimeTargetRestriction.Symbol))
+                throw TargetUnavailable(runtimeTargetRestriction.Symbol, runtimeIdentifier, runtimeTargetRestriction.AllowedTargets, runtimeTargetRestriction.Detail);
+        }
         var moduleObjects = new ModuleObjectGlobalsPreprocessor(udtValues.TypeNames);
         source = moduleObjects.Transform(source);
         var moduleGlobals = new ModuleGlobalsPreprocessor(udtValues.TypeNames);
@@ -100,9 +165,7 @@ public sealed partial class XPScriptTranspiler
         source = new TypeCoercionPreprocessor().Transform(source);
         source = new StringConcatenationPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
-        var operatorArray = new OperatorArrayCompatibilityPreprocessor();
-        source = operatorArray.NormalizeSource(source);
-        var protectedSource = ProtectStringLiterals(source, out var protectedStrings);
+        var protectedSource = ProtectStringLiterals(source, out var protectedStrings, sourceName);
         protectedSource = new HclSelectedCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new CrossPlatformPreprocessor().Transform(protectedSource);
         protectedSource = new VariantIndexPreprocessor().Transform(protectedSource);
@@ -141,7 +204,8 @@ public sealed partial class XPScriptTranspiler
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
         if (runtimeFeatures.RequiresHttp) { generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n"; generated += "\n\n" + HttpCoreRuntimeSource.Code + "\n"; generated += "\n\n" + AsyncHttpRuntimeSource.Code + "\n"; }
         if (runtimeFeatures.Ui) generated += "\n\n" + UIExtensionRuntimeSource.Code + "\n";
-        if (runtimeFeatures.RequiresHttp && runtimeFeatures.Ui) generated += "\n\n" + HttpUiFormRuntimeSource.Code + "\n";
+        if (runtimeFeatures.RequiresHttp && source.Contains("XPScriptHttpJsonHelpers", StringComparison.Ordinal)) generated += "\n\n" + HttpJsonRuntimeSource.Code + "\n";
+        if (runtimeFeatures.RequiresHttp && runtimeFeatures.Ui && source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal)) generated += "\n\n" + HttpUiFormRuntimeSource.Code + "\n";
         if (runtimeFeatures.Database) generated += "\n\n" + CaseInsensitiveDynamicObjectRuntimeSource.Code + "\n";
         if (usesSqlite) generated += "\n\n" + SqliteDbRuntimeSource.Code + "\n";
         if (usesMsSql) generated += "\n\n" + MsSqlDbRuntimeSource.Code + "\n";
@@ -171,6 +235,7 @@ public sealed partial class XPScriptTranspiler
         generated = Regex.Replace(generated, @"(?m)^\s*__lsErrCtx\.Statement\s*=\s*\d+;\s*\r?$\n?", "");
         generated = ScopeErrorProtection(generated);
         foreach (var item in protectedStrings) generated = generated.Replace(item.Key, item.Value, StringComparison.Ordinal);
-        return generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
+        generated = generated.Replace(".Value!.IsNothing", ".IsNothing", StringComparison.Ordinal);
+        return new CompilerSourceLineDirectivePostProcessor().Transform(generated);
     }
 }

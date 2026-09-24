@@ -1,0 +1,6 @@
+Type SampleRecord
+    Values(limit) As Integer
+End Type
+
+Sub Main()
+End Sub

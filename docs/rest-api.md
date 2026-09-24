@@ -213,7 +213,7 @@ Request methods currently implemented:
 
 `Request.Authorization` returns the first Authorization header value. `Request.BearerToken` returns the token only when exactly one Authorization value exists, uses the Bearer scheme and contains a non-empty token. Ambiguous or malformed Authorization input returns `Null`.
 
-CGI-compatible variables are normalized across Kestrel, FastCGI and CGI. The base set includes `REQUEST_METHOD`, `REQUEST_URI`, `QUERY_STRING`, `PATH_INFO`, `SCRIPT_NAME`, `SERVER_NAME`, `SERVER_PORT`, `SERVER_PROTOCOL`, `REMOTE_ADDR`, `CONTENT_TYPE`, `CONTENT_LENGTH` and `HTTPS`. Request headers are also exposed as CGI-style `HTTP_*` variables. CGI and FastCGI preserve additional transport-provided environment variables.
+CGI-compatible variables are normalized across XPScript WebServer, FastCGI and CGI. The base set includes `REQUEST_METHOD`, `REQUEST_URI`, `QUERY_STRING`, `PATH_INFO`, `SCRIPT_NAME`, `SERVER_NAME`, `SERVER_PORT`, `SERVER_PROTOCOL`, `REMOTE_ADDR`, `CONTENT_TYPE`, `CONTENT_LENGTH` and `HTTPS`. Request headers are also exposed as CGI-style `HTTP_*` variables. CGI and FastCGI preserve additional transport-provided environment variables.
 
 ## JSON body
 
@@ -415,7 +415,7 @@ RequestScope is internally synchronized as well, although it is normally accesse
 
 Use RequestScope for temporary values needed only during one request. Use Session for per-user state that must survive several requests. Use Application for values shared by all requests handled by one application runtime instance.
 
-For multi-process CGI, multiple Kestrel instances, load-balanced servers or several HA nodes, in-memory Application and Session state is not automatically shared between processes. Configure persistent/shared state where required by the hosting model.
+For multi-process CGI, multiple XPScript WebServer instances, load-balanced servers or several HA nodes, in-memory Application and Session state is not automatically shared between processes. Configure persistent/shared state where required by the hosting model.
 
 ## Authentication and roles
 

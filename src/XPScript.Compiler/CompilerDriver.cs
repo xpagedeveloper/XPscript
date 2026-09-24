@@ -7,13 +7,17 @@ namespace XPScript.Compiler;
 public sealed class CompilerDriver
 {
     private const string MimeKitVersion = "4.17.0";
+    private const long MaximumSourceBytes = 1024L * 1024L;
+    private static readonly TimeSpan ValidationBuildTimeout = TimeSpan.FromMinutes(2);
+    private const int MaximumBuildDiagnosticChars = 256 * 1024;
     private sealed record StagedManagedReference(string Name, string Path);
 
     private static readonly HashSet<string> SupportedRuntimeIdentifiers = new(StringComparer.OrdinalIgnoreCase)
     {
         "win-x64", "win-arm64",
         "linux-x64", "linux-arm64",
-        "osx-x64", "osx-arm64"
+        "osx-x64", "osx-arm64",
+        "browser-wasm"
     };
 
     public static IReadOnlyCollection<string> SupportedRuntimes => SupportedRuntimeIdentifiers;
@@ -42,22 +46,30 @@ public sealed class CompilerDriver
         try
         {
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath))]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceExtensionInvalid, "configuration")]).WithContext(sourcePath, runtimeIdentifier);
 
             if (!File.Exists(sourcePath))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath))]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]).WithContext(sourcePath, runtimeIdentifier);
 
+            EnsureSourceSize(sourcePath);
             source = await File.ReadAllTextAsync(sourcePath);
             await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
-            return CompileResult.Ok(outputPath);
+            return CompileResult.Ok(outputPath).WithContext(sourcePath, runtimeIdentifier);
         }
         catch (CompilerException ex)
         {
-            return CompileResult.Error(ParseCompilerDiagnostics(ex.Message, sourcePath, source));
+            if (ex.GeneratedDiagnostics.Count > 0 &&
+                ex.GeneratedDiagnostics.Any(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)))
+                return CompileResult.Error(ex.GeneratedDiagnostics).WithContext(sourcePath, runtimeIdentifier);
+
+            var diagnostics = ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category);
+            if (CompilerDiagnosticMode.Debug && ex.GeneratedDiagnostics.Count > 0)
+                diagnostics.AddRange(ex.GeneratedDiagnostics);
+            return CompileResult.Error(diagnostics).WithContext(sourcePath, runtimeIdentifier);
         }
         catch (Exception)
         {
-            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath))]);
+            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithContext(sourcePath, runtimeIdentifier);
         }
     }
 
@@ -67,22 +79,98 @@ public sealed class CompilerDriver
         try
         {
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath))]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceExtensionInvalid, "configuration")]);
 
             if (!File.Exists(sourcePath))
-                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath))]);
+                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]);
 
+            EnsureSourceSize(sourcePath);
             source = await File.ReadAllTextAsync(sourcePath);
             var executablePath = await CompileForRunAsync(sourcePath, outputDirectory, runtimeIdentifier);
             return CompileResult.Ok(executablePath);
         }
         catch (CompilerException ex)
         {
-            return CompileResult.Error(ParseCompilerDiagnostics(ex.Message, sourcePath, source));
+            if (ex.GeneratedDiagnostics.Count > 0 &&
+                ex.GeneratedDiagnostics.Any(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)))
+                return CompileResult.Error(ex.GeneratedDiagnostics);
+
+            var diagnostics = ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category);
+            if (CompilerDiagnosticMode.Debug && ex.GeneratedDiagnostics.Count > 0)
+                diagnostics.AddRange(ex.GeneratedDiagnostics);
+            return CompileResult.Error(diagnostics);
         }
         catch (Exception)
         {
-            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath))]);
+            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]);
+        }
+    }
+
+    public async Task<CompileResult> ValidateWithResultAsync(string sourcePath) =>
+        await ValidateWithResultAsync(sourcePath, CurrentRuntimeIdentifier());
+
+    public async Task<CompileResult> ValidateWithResultAsync(string sourcePath, string runtimeIdentifier)
+    {
+        string source = "";
+        IDisposable? sourceContext = null;
+        SourceMap? diagnosticSourceMap = null;
+        try
+        {
+            if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+                return CompileResult.Error([CreateDiagnostic(0, 0, "XPScript source files must use the .xps extension.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceExtensionInvalid, "configuration")]).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
+
+            if (!File.Exists(sourcePath))
+                return CompileResult.Error([CreateDiagnostic(0, 0, "Source file not found.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.SourceFileNotFound, "configuration")]).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
+
+            var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
+            EnsureSourceSize(sourcePath);
+            source = await File.ReadAllTextAsync(sourcePath);
+            var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
+            var preprocessorResult = new SourcePreprocessorPipeline().Transform(
+                includeResult.Source,
+                includeResult.Map,
+                sourcePath,
+                SourcePreprocessorConfigurationContext.Current);
+            var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(preprocessorResult.Source, preprocessorResult.Map, sourcePath);
+            var expandedSource = managedReferences.Source;
+            diagnosticSourceMap = preprocessorResult.Map;
+
+            // Run source-level syntax validation before transpilation mutates line layout.
+            // These diagnostics already carry physical source coordinates and must not be
+            // repaired later from generated-code positions.
+            new NothingComparisonValidator().Validate(source, sourcePath);
+
+            var nativeDependencies = new NativeDependencyPackager(rid).Collect(expandedSource, includeResult.Map, sourcePath);
+            ValidateNativeDependencies(sourcePath, nativeDependencies);
+            ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
+
+            var transpiler = new XPScriptTranspiler();
+            sourceContext = ExpandedSourceContext.Begin(expandedSource, sourcePath, includeResult.Map);
+            var generatedSource = transpiler.Transpile(expandedSource, sourcePath, rid);
+            await ValidateGeneratedCodeAsync(sourcePath, rid, generatedSource, managedReferences);
+            sourceContext.Dispose();
+            sourceContext = null;
+            return CompileResult.Valid().WithContext(sourcePath, rid);
+        }
+        catch (CompilerException ex)
+        {
+            if (ex.GeneratedDiagnostics.Count > 0 &&
+                ex.GeneratedDiagnostics.Any(d => !string.IsNullOrWhiteSpace(d.DiagnosticCode)))
+                return CompileResult.Error(ex.GeneratedDiagnostics).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
+
+            var diagnostics = ParseCompilerDiagnostics(ex.Message, sourcePath, source, ex.DiagnosticCode, ex.Category, diagnosticSourceMap);
+            if (CompilerDiagnosticMode.Debug && ex.GeneratedDiagnostics.Count > 0)
+                diagnostics.AddRange(ex.GeneratedDiagnostics);
+            return CompileResult.Error(diagnostics).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
+        }
+        catch (Exception)
+        {
+            const string description = "Validation failed.";
+            return CompileResult.Error([CreateDiagnostic(0, 0, description, "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
+        }
+        finally
+        {
+            sourceContext?.Dispose();
         }
     }
 
@@ -427,6 +515,117 @@ public sealed class CompilerDriver
         return rid;
     }
 
+    private async Task ValidateGeneratedCodeAsync(
+        string sourcePath,
+        string runtimeIdentifier,
+        string generatedSource,
+        ManagedAssemblyReferencePreprocessor.Result managedReferences)
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
+
+        try
+        {
+            var projectPath = Path.Combine(tempRoot, "Generated.csproj");
+            var programPath = Path.Combine(tempRoot, "Program.cs");
+            var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
+            var csproj = BuildGeneratedProject(
+                runtimeIdentifier,
+                selfContained: false,
+                stagedManagedReferences,
+                publishSingleFile: false,
+                usesMimeKit: generatedSource.Contains("MimeKit.", StringComparison.Ordinal),
+                assemblyName: "Validation");
+
+            await File.WriteAllTextAsync(projectPath, csproj);
+            CompilerPathSecurity.HardenTemporaryFile(projectPath);
+            await File.WriteAllTextAsync(programPath, generatedSource);
+            CompilerPathSecurity.HardenTemporaryFile(programPath);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                WorkingDirectory = tempRoot
+            };
+            psi.ArgumentList.Add("build");
+            psi.ArgumentList.Add(projectPath);
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add("Release");
+            psi.ArgumentList.Add("--nologo");
+            psi.ArgumentList.Add("-r");
+            psi.ArgumentList.Add(runtimeIdentifier);
+            psi.ArgumentList.Add("--self-contained");
+            psi.ArgumentList.Add("false");
+            CompilerBuildEnvironment.Configure(psi, tempRoot);
+
+            using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start validation build.");
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(ValidationBuildTimeout);
+            try
+            {
+                await process.WaitForExitAsync(timeout.Token);
+            }
+            catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+                try { await process.WaitForExitAsync(); } catch { }
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = DiagnosticFileName(sourcePath),
+                    Description = "Generated-code validation exceeded the 120 second time limit.",
+                    DiagnosticCode = CompilerDiagnosticCodes.ValidationBuildTimedOut,
+                    Severity = "error",
+                    Category = "compiler",
+                    Properties =
+                    [
+                        new CompileDiagnosticProperty { Name = "timeoutSeconds", Value = "120" }
+                    ]
+                };
+                throw new CompilerException(diagnostic.Description, [diagnostic]);
+            }
+            var stdout = LimitBuildDiagnosticOutput(await stdoutTask);
+            var stderr = LimitBuildDiagnosticOutput(await stderrTask);
+            ApplicationSecurityAudit.Report(LimitBuildDiagnosticOutput(stdout + Environment.NewLine + stderr));
+
+            if (process.ExitCode != 0)
+            {
+                var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
+                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
+            }
+        }
+        finally
+        {
+            try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
+        }
+    }
+
+    private static void EnsureSourceSize(string sourcePath)
+    {
+        var actualBytes = new FileInfo(sourcePath).Length;
+        if (actualBytes <= MaximumSourceBytes) return;
+
+        var diagnostic = new CompileDiagnostic
+        {
+            File = DiagnosticFileName(sourcePath),
+            Description = "XPScript source exceeds the 1 MiB compiler source-size limit.",
+            DiagnosticCode = CompilerDiagnosticCodes.SourceTooLarge,
+            Severity = "error",
+            Category = "input",
+            Properties =
+            [
+                new CompileDiagnosticProperty { Name = "maximumBytes", Value = MaximumSourceBytes.ToString(System.Globalization.CultureInfo.InvariantCulture) },
+                new CompileDiagnosticProperty { Name = "actualBytes", Value = actualBytes.ToString(System.Globalization.CultureInfo.InvariantCulture) }
+            ]
+        };
+        throw new CompilerException(diagnostic.Description, [diagnostic]);
+    }
+
     private static string BuildGeneratedProject(
         string runtimeIdentifier,
         bool selfContained,
@@ -515,89 +714,27 @@ public sealed class CompilerDriver
         return candidates.Length == 1 ? candidates[0] : null;
     }
 
-    private static List<CompileDiagnostic> ParseCompilerDiagnostics(string message, string sourcePath, string source)
+    private static List<CompileDiagnostic> ParseCompilerDiagnostics(
+        string message,
+        string sourcePath,
+        string source,
+        string diagnosticCode = "",
+        string category = "",
+        SourceMap? sourceMap = null) =>
+        CompilerDiagnosticParser.Parse(
+            message,
+            sourcePath,
+            source,
+            CompilerDiagnosticMode.Debug,
+            diagnosticCode,
+            category,
+            sourceMap);
+
+    private static string LimitBuildDiagnosticOutput(string value)
     {
-        var result = new List<CompileDiagnostic>();
-        var escapedSource = Regex.Escape(sourcePath).Replace("\\\\", @"[\\/]");
-        var sourcePattern = new Regex($@"(?<file>{escapedSource}|[^\r\n]*\.xps)\((?<line>\d+)(?:,(?<pos>\d+))?\):\s*(?<desc>[^\r\n]+)", RegexOptions.IgnoreCase);
-
-        foreach (Match match in sourcePattern.Matches(message))
-        {
-            var line = int.Parse(match.Groups["line"].Value);
-            var pos = match.Groups["pos"].Success ? int.Parse(match.Groups["pos"].Value) : 1;
-            var diagnosticSource = match.Groups["file"].Value.Trim();
-            var code = DiagnosticSourceLine(sourcePath, source, diagnosticSource, line);
-            result.Add(CreateDiagnostic(
-                line,
-                pos,
-                Humanize(match.Groups["desc"].Value.Trim()),
-                code,
-                Mark(code, pos),
-                DiagnosticFileName(diagnosticSource)));
-        }
-        if (result.Count > 0)
-            return result.GroupBy(x => (x.File, x.Line, x.Position, x.Description)).Select(x => x.First()).ToList();
-
-        var generatedPattern = new Regex(@"Program\.cs\((?<line>\d+),(?<pos>\d+)\):\s*error\s+CS\d+:\s*(?<desc>.*?)(?:\s*\[|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline);
-        foreach (Match match in generatedPattern.Matches(message))
-        {
-            result.Add(CreateDiagnostic(int.Parse(match.Groups["line"].Value), int.Parse(match.Groups["pos"].Value), Humanize(match.Groups["desc"].Value.Trim()), "", ""));
-        }
-        if (result.Count == 0)
-            result.Add(CreateDiagnostic(
-                0,
-                0,
-                Humanize(message.Split('\n', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "Compilation failed."),
-                "",
-                "",
-                DiagnosticFileName(sourcePath)));
-        return result;
-    }
-
-    private static string DiagnosticSourceLine(string rootSourcePath, string rootSource, string diagnosticSourcePath, int line)
-    {
-        if (line <= 0) return "";
-
-        if (IsRootDiagnosticSource(rootSourcePath, diagnosticSourcePath))
-            return SourceLine(rootSource, line);
-
-        try
-        {
-            var resolved = Path.IsPathRooted(diagnosticSourcePath)
-                ? Path.GetFullPath(diagnosticSourcePath)
-                : Path.GetFullPath(Path.Combine(SourceDirectory(rootSourcePath), diagnosticSourcePath));
-
-            if (!Path.GetExtension(resolved).Equals(".xps", StringComparison.OrdinalIgnoreCase) || !File.Exists(resolved))
-                return "";
-
-            return SourceLine(File.ReadAllText(resolved), line);
-        }
-        catch
-        {
-            return "";
-        }
-    }
-
-    private static bool IsRootDiagnosticSource(string rootSourcePath, string diagnosticSourcePath)
-    {
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (string.Equals(rootSourcePath, diagnosticSourcePath, comparison)) return true;
-
-        try
-        {
-            if (Path.IsPathRooted(diagnosticSourcePath))
-                return string.Equals(Path.GetFullPath(rootSourcePath), Path.GetFullPath(diagnosticSourcePath), comparison);
-        }
-        catch { }
-
-        return !Path.IsPathRooted(diagnosticSourcePath)
-            && string.Equals(Path.GetFileName(rootSourcePath), Path.GetFileName(diagnosticSourcePath), comparison);
-    }
-
-    private static string SourceLine(string source, int line)
-    {
-        var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-        return line > 0 && line <= lines.Length ? RedactSourceLine(lines[line - 1]) : "";
+        if (value.Length <= MaximumBuildDiagnosticChars) return value;
+        return value[..MaximumBuildDiagnosticChars] + Environment.NewLine +
+               "[compiler output truncated after " + MaximumBuildDiagnosticChars + " characters]";
     }
 
     private static string SanitizeBuildDiagnostics(string text, string tempRoot, string sourcePath)
@@ -609,39 +746,6 @@ public sealed class CompilerDriver
         }
         catch { }
         return sanitized;
-    }
-
-    private static string RedactSourceLine(string line)
-    {
-        if (string.IsNullOrEmpty(line)) return line;
-        var output = new StringBuilder(line.Length);
-        var inString = false;
-        for (var i = 0; i < line.Length; i++)
-        {
-            var c = line[i];
-
-            if (inString && c == '\\' && i + 1 < line.Length && line[i + 1] == '"')
-            {
-                output.Append("**");
-                i++;
-                continue;
-            }
-
-            if (c == '"')
-            {
-                output.Append(c);
-                if (inString && i + 1 < line.Length && line[i + 1] == '"')
-                {
-                    output.Append('"');
-                    i++;
-                    continue;
-                }
-                inString = !inString;
-                continue;
-            }
-            output.Append(inString ? '*' : c);
-        }
-        return output.ToString();
     }
 
     private static string SafeFileName(string value)
@@ -656,42 +760,24 @@ public sealed class CompilerDriver
         catch { return ""; }
     }
 
-    private static string Humanize(string description)
-    {
-        var convert = Regex.Match(description, @"cannot convert from '([^']+)' to '([^']+)'", RegexOptions.IgnoreCase);
-        if (convert.Success) return $"Unable to use {FriendlyType(convert.Groups[1].Value)} where {FriendlyType(convert.Groups[2].Value)} is required.";
-        var assign = Regex.Match(description, @"Cannot implicitly convert type '([^']+)' to '([^']+)'", RegexOptions.IgnoreCase);
-        if (assign.Success) return $"Unable to assign {FriendlyType(assign.Groups[1].Value)} to {FriendlyType(assign.Groups[2].Value)}.";
-        return description;
-    }
-
-    private static string FriendlyType(string type) => type.Trim() switch
-    {
-        "string" or "System.String" => "String", "int" or "System.Int32" => "Integer", "long" or "System.Int64" => "Long",
-        "double" or "System.Double" => "Double", "float" or "System.Single" => "Single", "bool" or "System.Boolean" => "Boolean",
-        "byte" or "System.Byte" => "Byte", "decimal" or "System.Decimal" => "Currency", _ => type
-    };
-
     private static CompileDiagnostic CreateDiagnostic(
         int line,
         int pos,
         string description,
         string code,
         string marked,
-        string file = "") => new()
+        string file = "",
+        string diagnosticCode = "",
+        string category = "compiler") => new()
     {
         File = file,
         Line = line,
         Position = pos,
         Description = description,
-        Code = code,
-        MarkedCode = marked
+        SourceCode = code,
+        MarkedCode = marked,
+        DiagnosticCode = diagnosticCode,
+        Category = category
     };
 
-    private static string Mark(string code, int position)
-    {
-        if (string.IsNullOrEmpty(code) || position <= 0) return code;
-        var caret = Math.Clamp(position - 1, 0, code.Length);
-        return code + Environment.NewLine + new string(' ', caret) + "^";
-    }
 }

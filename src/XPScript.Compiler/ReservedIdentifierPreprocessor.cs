@@ -27,7 +27,7 @@ internal sealed class ReservedIdentifierPreprocessor
         "Body"
     };
 
-    public string Transform(string source)
+    public string Transform(string source, string sourceName = "input.xps")
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         for (var index = 0; index < lines.Length; index++)
@@ -35,16 +35,16 @@ internal sealed class ReservedIdentifierPreprocessor
             var code = StripComment(lines[index]).Trim();
             if (code.Length == 0) continue;
 
-            CheckVariableDeclarations(code, index + 1);
-            CheckNamedDeclaration(code, index + 1);
-            CheckParameters(code, index + 1);
+            CheckVariableDeclarations(code, index + 1, lines[index], sourceName);
+            CheckNamedDeclaration(code, index + 1, lines[index], sourceName);
+            CheckParameters(code, index + 1, lines[index], sourceName);
         }
 
-        new NothingComparisonValidator().Validate(source, "input.xps");
+        new NothingComparisonValidator().Validate(source, sourceName);
         return new GeneralSyntaxPreprocessor().Transform(source);
     }
 
-    private static void CheckVariableDeclarations(string code, int line)
+    private static void CheckVariableDeclarations(string code, int line, string sourceLine, string sourceName)
     {
         string? declarationList = null;
 
@@ -70,7 +70,7 @@ internal sealed class ReservedIdentifierPreprocessor
         {
             var match = Regex.Match(declaration.Trim(), @"^([A-Za-z_]\w*)\b");
             if (match.Success)
-                EnsureAllowed(match.Groups[1].Value, line, false);
+                EnsureAllowed(match.Groups[1].Value, line, false, sourceLine, sourceName);
         }
     }
 
@@ -108,7 +108,7 @@ internal sealed class ReservedIdentifierPreprocessor
         yield return text[start..];
     }
 
-    private static void CheckNamedDeclaration(string code, int line)
+    private static void CheckNamedDeclaration(string code, int line, string sourceLine, string sourceName)
     {
         var declaration = Regex.Match(code,
             @"^(?:(?:Public|Private|Static)\s+)?(?:Dim\s+|Static\s+|Class\s+|Type\s+|Enum\s+|Sub\s+|Function\s+|Property\s+(?:Get|Let|Set)\s+)([A-Za-z_]\w*)",
@@ -120,10 +120,10 @@ internal sealed class ReservedIdentifierPreprocessor
         if (!declaration.Success) return;
 
         var name = declaration.Groups[1].Value;
-        EnsureAllowed(name, line, IsTypeDeclaration(code));
+        EnsureAllowed(name, line, IsTypeDeclaration(code), sourceLine, sourceName);
     }
 
-    private static void CheckParameters(string code, int line)
+    private static void CheckParameters(string code, int line, string sourceLine, string sourceName)
     {
         var header = Regex.Match(code,
             @"^(?:(?:Public|Private|Static)\s+)?(?:Sub|Function|Property\s+(?:Get|Let|Set))\s+[A-Za-z_]\w*\s*\((.*)\)",
@@ -133,22 +133,37 @@ internal sealed class ReservedIdentifierPreprocessor
         foreach (Match match in Regex.Matches(header.Groups[1].Value,
                      @"(?:^|,)\s*(?:(?:Optional|ByVal|ByRef)\s+)*([A-Za-z_]\w*)\b",
                      RegexOptions.IgnoreCase))
-            EnsureAllowed(match.Groups[1].Value, line, false);
+            EnsureAllowed(match.Groups[1].Value, line, false, sourceLine, sourceName);
     }
 
     private static bool IsTypeDeclaration(string code) =>
         Regex.IsMatch(code, @"^(?:(?:Public|Private)\s+)?(?:Class|Type|Enum)\b", RegexOptions.IgnoreCase);
 
-    private static void EnsureAllowed(string name, int line, bool typeDeclaration)
+    private static void EnsureAllowed(string name, int line, bool typeDeclaration, string sourceLine, string sourceName)
     {
         if (name.StartsWith("__", StringComparison.OrdinalIgnoreCase))
-            throw new CompilerException($"input.xps({line},1): Identifier is reserved for XPScript compiler-generated state.");
+            throw ReservedIdentifierFailure("Identifier is reserved for XPScript compiler-generated state.", name, line, sourceLine, sourceName);
 
         if (ReservedValueNames.Contains(name))
-            throw new CompilerException($"input.xps({line},1): Identifier is reserved by the XPScript runtime.");
+            throw ReservedIdentifierFailure("Identifier is reserved by the XPScript runtime.", name, line, sourceLine, sourceName);
 
         if (typeDeclaration && ReservedTypeNames.Contains(name))
-            throw new CompilerException($"input.xps({line},1): Type name is reserved by the XPScript runtime.");
+            throw ReservedIdentifierFailure("Type name is reserved by the XPScript runtime.", name, line, sourceLine, sourceName);
+    }
+
+    private static CompilerException ReservedIdentifierFailure(string message, string name, int line, string sourceLine, string sourceName)
+    {
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
+        var start = Math.Max(0, safeSource.IndexOf(name, StringComparison.OrdinalIgnoreCase));
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourceName), Line = line, Position = start + 1, EndLine = line,
+            EndColumn = start + name.Length + 1, Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
+            Properties = [new() { Name = "foundToken", Value = name }, new() { Name = "expectedConstruct", Value = "non-reserved identifier" }],
+            SourceCode = safeSource, MarkedCode = safeSource + Environment.NewLine + new string(' ', start) + new string('^', Math.Max(1, name.Length))
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
     }
 
     private static string StripComment(string line)

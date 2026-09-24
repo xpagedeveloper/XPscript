@@ -165,8 +165,8 @@ void VerifyLegacyNativeNamesDoNotEnableRuntimes()
 {
     var probes = new (string Label, string Declaration, string Marker)[]
     {
-        ("HTTP", "Dim value As HttpClient", "internal static class XPScriptNativeHttp"),
-        ("JSON", "Dim value As JsonDocument", "internal static class XPScriptNativeJson"),
+        ("HTTP", "Dim value As XPHttpClient", "internal static class XPScriptNativeHttp"),
+        ("JSON", "Dim value As XPJsonDocument", "internal static class XPScriptNativeJson"),
         ("CSV", "Dim value As CsvDocument", "internal static class XPScriptNativeCsv"),
         ("XML", "Dim value As XmlDocument", "internal static class XPScriptNativeXml"),
         ("HTTPDB", "Dim value As HTTPDBSupabase", "internal sealed class XPScriptHttpDbSupabase")

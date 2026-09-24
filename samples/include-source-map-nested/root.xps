@@ -1,0 +1,7 @@
+Option Declare
+
+Include "level1/a.xps"
+
+Sub Main()
+    NestedBroken()
+End Sub
