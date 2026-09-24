@@ -97,7 +97,10 @@ public sealed class XpsWebCompiler
 
         var source = await File.ReadAllTextAsync(fullSourcePath, cancellationToken).ConfigureAwait(false);
         XpsWebRecursionValidator.Validate(source, fullSourcePath);
-        var parsed = new XpsWebRouteMetadataParser().Parse(new ServerSideMetadataPreprocessor().Transform(source));
+        var metadataSource = new ServerSideMetadataPreprocessor().Transform(source);
+        if (source.Contains("[Platform:browser-wasm]", StringComparison.OrdinalIgnoreCase))
+            metadataSource = BrowserWasmServerSideMetadata.TransformAuthorizationMetadata(source);
+        var parsed = new XpsWebRouteMetadataParser().Parse(metadataSource);
         if (string.Equals(parsed.Platform, "browser-wasm", StringComparison.OrdinalIgnoreCase))
             return await CompileBrowserWasmAsync(fullSourcePath, fullSourceRoot, parsed, cancellationToken).ConfigureAwait(false);
 
