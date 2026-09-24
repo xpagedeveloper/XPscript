@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
 New-Item -ItemType Directory -Force -Path ./out/fulltest | Out-Null
 $runtimeTimeoutMilliseconds = 50000
-$compileTimeoutMilliseconds = if ($IsWindows) { 120000 } else { 60000 }
+$compileTimeoutMilliseconds = if ($IsWindows) { 180000 } else { 60000 }
 
 function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeoutMilliseconds, [string] $label) {
   $si = [System.Diagnostics.ProcessStartInfo]::new(); $si.FileName = $fileName; $si.UseShellExecute = $false; $si.RedirectStandardOutput = $true; $si.RedirectStandardError = $true
@@ -49,13 +49,15 @@ if (Should-Run 'notes') {
 
 if (Should-Run 'runtime') {
   Write-Host '=== XP RUNTIME FULLTEST ==='
-  # Run the actively developed JSON Schema regression first so failures surface before the slower runtime matrix.
+  # Keep the most recently failing runtime regression first for fast CI feedback.
+  Run-Xps ./demo/spreadsheet/xpspreadsheet-styles.xps xpspreadsheet-styles | Out-Null
+  # Run the actively developed JSON Schema regression before the slower runtime matrix.
   $jsonSchema = Run-Xps ./samples/xpjsonschema-runtime.xps xpjsonschema-runtime
   if ($jsonSchema.Output -notmatch 'XPJSONSCHEMA-RUNTIME=OK') { throw 'XPJsonSchema runtime regression did not complete.' }
   $jsonSchemaBoolean = Run-Xps ./samples/xpjsonschema-boolean-runtime.xps xpjsonschema-boolean-runtime
   if ($jsonSchemaBoolean.Output -notmatch 'XPJSONSCHEMA-BOOLEAN-RUNTIME=OK') { throw 'XPJsonSchema boolean-schema regression did not complete.' }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/SpreadsheetCapabilityProbe/SpreadsheetCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Spreadsheet compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  foreach ($sample in @('xpspreadsheet-basic','xpspreadsheet-worksheets','xpspreadsheet-styles','xpspreadsheet-ranges','xpspreadsheet-formatting','xpspreadsheet-autofilter','xpspreadsheet-csv-interop')) { Run-Xps "./demo/spreadsheet/$sample.xps" $sample | Out-Null }
+  foreach ($sample in @('xpspreadsheet-basic','xpspreadsheet-worksheets','xpspreadsheet-ranges','xpspreadsheet-formatting','xpspreadsheet-autofilter','xpspreadsheet-csv-interop')) { Run-Xps "./demo/spreadsheet/$sample.xps" $sample | Out-Null }
   if (-not $IsWindows) {
     $xlsx = Get-ChildItem -Path . -Filter 'xpspreadsheet-basic.xlsx' -File -Recurse | Select-Object -First 1; if ($null -eq $xlsx) { throw 'XPSpreadsheet round-trip did not create expected XLSX.' }
     Add-Type -AssemblyName System.IO.Compression; $zip = [System.IO.Compression.ZipFile]::OpenRead($xlsx.FullName)

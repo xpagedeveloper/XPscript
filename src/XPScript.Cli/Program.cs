@@ -24,6 +24,7 @@ try
     {
         "compile" => await XPScriptCompilerCommandLine.CompileAsync(args[1..]),
         "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
+        "daemon" => await CompilerDaemonServer.RunAsync(args[1..]),
         "dependencies" => await XPScript.Cli.ApplicationDependencyCommand.RunDependenciesAsync(args[1..]),
         "security" => await XPScript.Cli.ApplicationDependencyCommand.RunSecurityAsync(args[1..]),
         "patch" => await XPScript.Cli.PackagePatchCommand.RunAsync(args[1..]),
@@ -46,9 +47,7 @@ static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
     if (arguments.Length == 0 || !arguments[0].Equals("run", StringComparison.OrdinalIgnoreCase))
         return;
 
-    var separator = Array.IndexOf(arguments, "--");
-    var optionCount = separator < 0 ? arguments.Length : separator;
-    var explicitInfo = arguments.Take(optionCount).Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
+    var explicitInfo = arguments.Skip(2).TakeWhile(value => value.StartsWith("--", StringComparison.Ordinal)).Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
     Environment.SetEnvironmentVariable("XPSCRIPT_RUNTIME_INFO", explicitInfo ? "1" : null);
 }
 
@@ -465,9 +464,9 @@ Usage:
   xpscript compile <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [--result-format text|json|xml]
   xpscript dependencies <source.xps> [--platform RID|--rid RID] [--json]
   xpscript security <source.xps> [--platform RID|--rid RID] [--json]
-  xpscript run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+  xpscript run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [script arguments...]
   xpscript <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [compiler options...]
-  xpscript new <rest|web|desktop> <directory>
+  xpscript new <rest|web|desktop|cli> <directory>
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
   xpscript service install <compiled-service> --name NAME --display-name "DISPLAY NAME" [--start auto|manual|disabled]
   xpscript web <directory> [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
@@ -484,7 +483,7 @@ Usage:
 Command model:
   compile  Compile an XPScript source file.
   run      Compile to an isolated temporary output and execute on the current OS/architecture.
-  new      Create a REST, web or desktop starter in a required target directory. Use . for the current directory.
+  new      Create a REST, web, desktop or CLI starter in a required target directory. Use . for the current directory.
   openapi  Generate XPScript REST server source from OpenAPI 3.0/3.1 YAML or JSON.
   service  Install compiled XPScript services using the native service manager.
   web      Run the standalone Kestrel runtime.
@@ -504,16 +503,15 @@ Scaffolding:
   Existing index.xps or main.xps files are never overwritten.
 
 Examples:
-  xpscript new rest ./myapi
-  xpscript new web ./mysite
+  xpscript new cli ./myapp
   xpscript new desktop ./myapp
-  xpscript new rest .
+  xpscript new web ./mysite
+  xpscript new rest ./myapi
   xpscript openapi generate ./openapi.yaml
   xpscript openapi generate ./petstore.yaml -o ./generated/petstore.xps
   xpscript compile hello.xps
   xpscript compile hello.xps --platform linux-x64 -o hello
   xpscript run hello.xps
-  xpscript run hello.xps -- --runtime passed-to-script
   xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto
   xpscript web ./site
   xpscript web --config ./production.cfg

@@ -4,11 +4,11 @@ internal static class XpsScaffolder
     {
         ArgumentNullException.ThrowIfNull(args);
         if (args.Length != 2)
-            throw new ArgumentException("Usage: xpscript new <rest|web|desktop> <directory>. The directory is required; use '.' for the current directory.");
+            throw new ArgumentException("Usage: xpscript new <rest|web|desktop|cli> <directory>. The directory is required; use '.' for the current directory.");
 
         var kind = args[0].Trim().ToLowerInvariant();
-        if (kind is not ("rest" or "web" or "desktop"))
-            throw new ArgumentException("Project type must be rest, web or desktop.");
+        if (kind is not ("rest" or "web" or "desktop" or "cli"))
+            throw new ArgumentException("Project type must be rest, web, desktop or cli.");
 
         var suppliedTarget = args[1].Trim();
         if (suppliedTarget.Length == 0)
@@ -25,6 +25,7 @@ internal static class XpsScaffolder
             "rest" => ("index.xps", RestTemplate, $"xpscript web {QuoteForDisplay(target)}"),
             "web" => ("index.xps", WebTemplate, $"xpscript web {QuoteForDisplay(target)}"),
             "desktop" => ("main.xps", DesktopTemplate, $"xpscript run {QuoteForDisplay(Path.Combine(target, "main.xps"))}"),
+            "cli" => ("main.xps", CliTemplate, $"xpscript run {QuoteForDisplay(Path.Combine(target, "main.xps"))} argument1 argument2"),
             _ => throw new InvalidOperationException("Unsupported scaffold type.")
         };
 
@@ -44,15 +45,19 @@ internal static class XpsScaffolder
     private static string QuoteForDisplay(string path) => path.Any(char.IsWhiteSpace) ? "\"" + path + "\"" : path;
 
     private const string RestTemplate = """
+Public Class HealthResponse
+    Public Status As String
+End Class
+
 [RoutePrefix:/api]
 [Anonymous]
 
 [Get:/health]
-Function Health() As Object
-    Dim result As New JsonObject
-    Call result.Set("status", "ok")
-    Set Health = result
-End Function
+Sub Health()
+    Dim result As New HealthResponse
+    result.Status = "ok"
+    Response.OK(result)
+End Sub
 """;
 
     private const string WebTemplate = """
@@ -64,9 +69,23 @@ Sub Index()
 End Sub
 """;
 
+    private const string CliTemplate = """
+Option Declare
+
+Sub Main()
+    Dim i As Integer
+
+    For i = 0 To Application.ArgCount - 1
+        Print Application.Args(i)
+    Next
+
+    Application.ExitCode = 0
+End Sub
+""";
+
     private const string DesktopTemplate = """
 Sub Main()
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
     Dim form As New UIForm("XPscript desktop application", 480, 240, True)
     Dim result As String
 
