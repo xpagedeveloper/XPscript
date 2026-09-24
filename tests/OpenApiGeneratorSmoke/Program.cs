@@ -1864,9 +1864,12 @@ paths:
       responses:
         '204': { description: ok }
 """, firstImportedApi.Source, "second-api.yaml");
-    if (!secondImportedApi.Warnings.Any(warning => warning.Contains("SharedModel", StringComparison.OrdinalIgnoreCase)) ||
-        !secondImportedApi.Warnings.Any(warning => warning.Contains("sharedOperation", StringComparison.OrdinalIgnoreCase)))
-        throw new Exception("Importing a second API with colliding generated names must report the collisions instead of silently merging the APIs.");
+    foreach (var expected in new[] { "Class SharedModel", "Class SecondApiSharedModel", "Function SharedOperation", "Function SecondApiSharedOperation" })
+        if (!secondImportedApi.Source.Contains(expected, StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Imported APIs must coexist with isolated generated names; missing: " + expected);
+    if (secondImportedApi.Warnings.Any(warning => warning.Contains("SharedModel", StringComparison.OrdinalIgnoreCase) ||
+                                                  warning.Contains("sharedOperation", StringComparison.OrdinalIgnoreCase)))
+        throw new Exception("Isolated imported APIs must not report avoidable generated-name collisions.");
 
     Console.WriteLine("OPENAPI-MULTI-API-COLLISION=OK");
 
