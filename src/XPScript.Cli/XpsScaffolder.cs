@@ -50,7 +50,7 @@ internal static class XpsScaffolder
 
 [Get:/health]
 Sub Health()
-    Response.OK("{""status"":""ok""}")
+    Response.Json("{""status"":""ok""}")
 End Sub
 """;
 
