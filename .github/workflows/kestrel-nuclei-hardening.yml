@@ -295,6 +295,60 @@ jobs:
           set -e
           echo "${status}" > ./artifacts/hardening/nuclei-upstream.exit-code
 
+      - name: Enforce Nuclei severity policy and record scanner metadata
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("./artifacts/hardening")
+          files = sorted(root.glob("nuclei-*.jsonl"))
+          findings = []
+          counts = {"info": 0, "low": 0, "medium": 0, "high": 0, "critical": 0, "unknown": 0}
+
+          for path in files:
+              for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                  if not line.strip():
+                      continue
+                  try:
+                      finding = json.loads(line)
+                  except json.JSONDecodeError as exc:
+                      raise SystemExit(f"{path}:{line_no}: invalid Nuclei JSONL: {exc}")
+                  severity = str(finding.get("info", {}).get("severity", "unknown")).lower()
+                  counts[severity if severity in counts else "unknown"] += 1
+                  findings.append({
+                      "file": path.name,
+                      "template_id": finding.get("template-id"),
+                      "matcher_name": finding.get("matcher-name"),
+                      "severity": severity,
+                      "matched_at": finding.get("matched-at"),
+                  })
+
+          metadata = {
+              "nuclei_version": os.environ["NUCLEI_VERSION"],
+              "nuclei_templates_sha": os.environ["NUCLEI_TEMPLATES_SHA"],
+              "git_sha": os.environ["GITHUB_SHA"],
+              "finding_counts": counts,
+              "findings": findings,
+          }
+          (root / "nuclei-scan-metadata.json").write_text(
+              json.dumps(metadata, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+
+          blocking = [f for f in findings if f["severity"] in {"high", "critical"}]
+          if blocking:
+              for finding in blocking:
+                  print(
+                      f"Blocking Nuclei finding: {finding['severity']} "
+                      f"{finding['template_id']} {finding['matcher_name'] or ''} "
+                      f"{finding['matched_at'] or ''}"
+                  )
+              raise SystemExit("New high or critical Nuclei findings are not permitted.")
+          PY
+
       - name: Run raw HTTP hardening probes
         run: |
           python3 ./tests/security/kestrel_hardening.py             --host 127.0.0.1             --port "${HARDENING_PORT}"             --json ./artifacts/hardening/raw-http-results.json
