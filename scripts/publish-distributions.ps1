@@ -10,6 +10,22 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $output = Join-Path $repoRoot $OutputRoot
 $project = Join-Path $repoRoot 'src/XPScript.Cli/XPScript.Cli.csproj'
 
+Write-Host "Checking .NET WebAssembly build workload..."
+$workloadList = (& dotnet workload list 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0) {
+    throw "Unable to query installed .NET workloads."
+}
+if ($workloadList -notmatch '(?m)^\s*wasm-tools\s') {
+    Write-Host "wasm-tools is not installed. Installing it for browser-wasm builds..."
+    & dotnet workload install wasm-tools
+    if ($LASTEXITCODE -ne 0) {
+        throw "Installing the wasm-tools workload failed with exit code $LASTEXITCODE."
+    }
+}
+else {
+    Write-Host "wasm-tools is already installed."
+}
+
 if (Test-Path $output) {
     Remove-Item $output -Recurse -Force
 }
