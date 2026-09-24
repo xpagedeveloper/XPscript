@@ -1799,7 +1799,7 @@ paths:
       responses:
         '204': { description: ok }
 """, firstImportedApi.Source, "second-api.yaml");
-    foreach (var expected in new[] { "Class SharedModel", "Class SecondApiSharedModel", "Function SharedOperation", "Function SecondApiSharedOperation" })
+    foreach (var expected in new[] { "Class SharedModel", "Class SecondApiSharedModel", "Function HandleSharedOperation", "Function SecondApiHandleSharedOperation" })
         if (!secondImportedApi.Source.Contains(expected, StringComparison.OrdinalIgnoreCase))
             throw new Exception("Imported APIs must coexist with isolated generated names; missing: " + expected);
     if (secondImportedApi.Warnings.Any(warning => warning.Contains("SharedModel", StringComparison.OrdinalIgnoreCase) ||
