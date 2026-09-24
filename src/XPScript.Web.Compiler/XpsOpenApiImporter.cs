@@ -183,39 +183,25 @@ public sealed class XpsOpenApiImporter
         if (!collides && !forceIsolation) return desired;
 
         var prefix = ImportPrefix(sourceName);
-        var rewritten = desired.Source;
 
-        // Rename the longest generated identifiers first. Operation metadata contains the
-        // base operation name, while the server generator derives request/response classes,
-        // handlers, endpoints and writers from it. Prefix those concrete declarations before
-        // the base operation name so references remain internally consistent.
-        var operationDerivedNames = desired.Operations.SelectMany(name => new[]
-        {
-            name + "Request",
-            name + "Response",
-            "Handle" + name,
-            "Endpoint" + name,
-            "Write" + name + "Response"
-        });
-
-        // Isolation is deliberately based on declarations in the generated source rather than
-        // ParseClasses/ParseProcedures. Those parsers exist for additive merging and may omit
-        // declarations that do not participate in a merge. A distinct imported API must have
-        // every generated top-level declaration isolated deterministically.
-        var names = desiredClasses.Select(x => x.Name)
-            .Concat(operationDerivedNames)
-            .Concat(desired.Operations)
-            .Concat(desired.Models)
-            .Concat(Regex.Matches(
-                    desired.Source,
-                    @"(?im)^\s*(?:(?:Public|Private|Static)\s+)*(?:Class|Function|Sub)\s+(?<name>[A-Za-z_]\w*)")
-                .Select(match => match.Groups["name"].Value))
+        // Prefix every generated declaration directly. This avoids relying on model/operation
+        // metadata and also avoids replacement-order effects between base and derived names.
+        var declarationPattern = new Regex(
+            @"(?im)^(?<head>\s*(?:(?:Public|Private|Static)\s+)*(?:Class|Function|Sub)\s+)(?<name>[A-Za-z_]\w*)",
+            RegexOptions.CultureInvariant);
+        var declaredNames = declarationPattern.Matches(desired.Source)
+            .Select(match => match.Groups["name"].Value)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(name => name.Length)
             .ToArray();
 
-        foreach (var name in names)
-            rewritten = Regex.Replace(rewritten, $@"\b{Regex.Escape(name)}\b", prefix + name, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var rewritten = desired.Source;
+        foreach (var name in declaredNames)
+            rewritten = Regex.Replace(
+                rewritten,
+                $@"\b{Regex.Escape(name)}\b",
+                prefix + name,
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         return desired with
         {
