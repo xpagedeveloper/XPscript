@@ -74,6 +74,49 @@ paths:
 }
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("Authorization header", StringComparison.OrdinalIgnoreCase)) { }
 
+var oauthClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: OAuth Smoke, version: 1.0.0 }
+components:
+  securitySchemes:
+    OAuthLogin:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.test/token
+          scopes: { read: Read data }
+    OpenIdLogin:
+      type: openIdConnect
+      openIdConnectUrl: https://auth.example.test/.well-known/openid-configuration
+paths:
+  /oauth:
+    get:
+      operationId: oauthCall
+      security:
+        - OAuthLogin: [read]
+      responses:
+        '200': { description: ok }
+  /openid:
+    get:
+      operationId: openIdCall
+      security:
+        - OpenIdLogin: []
+      responses:
+        '200': { description: ok }
+""", "oauth-security.yaml").Source;
+foreach (var marker in new[]
+{
+    "Private AuthOAuthLogin_i As String",
+    "Public Sub SetOAuthLogin(value As String)",
+    "request.SetBearerToken(AuthOAuthLogin_i)",
+    "Private AuthOpenIdLogin_i As String",
+    "Public Sub SetOpenIdLogin(value As String)",
+    "request.SetBearerToken(AuthOpenIdLogin_i)"
+})
+    if (!oauthClient.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("Generated OAuth/OpenID client is missing bearer credential marker: " + marker);
+
+
 var optionalPresenceClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Optional Presence, version: 1.0.0 }
