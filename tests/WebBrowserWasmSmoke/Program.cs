@@ -129,19 +129,15 @@ Sub Main()
     Print SecureServerValue()
 End Sub
 """);
-    var authenticatedParsed = new XpsWebRouteMetadataParser().Parse(await File.ReadAllTextAsync(authenticatedPath));
     await using (var authenticatedUnit = await compiler.CompileAsync(authenticatedPath, root))
     {
-        foreach (var routeName in new[] { "Index", XpsWebPathResolver.BrowserWasmAssetRoute })
-        {
-            var policy = authenticatedUnit.Routes[routeName].Policy;
-            if (policy.AllowAnonymous)
-                throw new Exception("Browser-WASM authenticated application exposed an anonymous shell, asset or bridge route.");
-            if (policy.Authorize(BridgeRequest("/authenticated.xps", new Dictionary<string, IReadOnlyList<string>>()), new XpsWebPrincipal(false)) != XpsRouteAuthorizationResult.AuthenticationRequired)
-                throw new Exception("Browser-WASM authenticated route did not reject an anonymous principal.");
-            if (policy.Authorize(BridgeRequest("/authenticated.xps", new Dictionary<string, IReadOnlyList<string>>()), new XpsWebPrincipal(true, "browser-user")) != XpsRouteAuthorizationResult.Allowed)
-                throw new Exception("Browser-WASM authenticated route rejected an authenticated principal.");
-        }
+        if (!authenticatedUnit.Routes["Index"].Policy.AllowAnonymous ||
+            !authenticatedUnit.Routes[XpsWebPathResolver.BrowserWasmAssetRoute].Policy.AllowAnonymous)
+            throw new Exception("Browser-WASM shell or assets require authentication and would prevent login UI from loading.");
+
+        var secureProcedure = new XpsWebRouteMetadataParser().Parse(await File.ReadAllTextAsync(authenticatedPath)).Routes["SecureServerValue"];
+        if (secureProcedure.Policy.AllowAnonymous)
+            throw new Exception("Authenticated Browser-WASM server operation lost its authorization policy.");
     }
 
     var mixedPolicyPath = Path.Combine(root, "mixed-policy.xps");
@@ -149,28 +145,25 @@ End Sub
 [Platform:browser-wasm]
 
 [Anonymous]
-[Get]
-Function PublicRoute() As String
-    PublicRoute = "public"
+[ServerSide]
+Function Login() As String
+    Login = "login"
 End Function
 
 [Authenticated]
-[Get]
+[ServerSide]
 Function PrivateRoute() As String
     PrivateRoute = "private"
 End Function
 
 Sub Main()
-    Print "mixed"
+    Print Login()
 End Sub
 """);
-    try
+    await using (var mixedPolicyUnit = await compiler.CompileAsync(mixedPolicyPath, root))
     {
-        await using var ignored = await compiler.CompileAsync(mixedPolicyPath, root);
-        throw new Exception("Browser-WASM mixed authorization policies compiled into one client bundle.");
-    }
-    catch (XpsWebCompilationException ex) when (ex.Message.Contains("consistent authorization policy", StringComparison.OrdinalIgnoreCase))
-    {
+        if (!mixedPolicyUnit.Routes["Index"].Policy.AllowAnonymous)
+            throw new Exception("Mixed-policy Browser-WASM application did not keep its login-capable shell anonymous.");
     }
 
     var cryptoPath = Path.Combine(root, "server-crypto.xps");
