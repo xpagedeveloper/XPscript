@@ -50,9 +50,7 @@ internal static class XpsScaffolder
 
 [Get:/health]
 Sub Health()
-    Dim result As New XPJsonObject
-    Call result.Set("status", "ok")
-    Response.OK(result)
+    Response.OK("{""status"":""ok""}")
 End Sub
 """;
 
