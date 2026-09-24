@@ -1819,7 +1819,7 @@ paths:
     var regenerationSecond = regenerationGenerator.Generate(regenerationSpec, "regeneration-collision.yaml", "RegenerationApi");
     if (!string.Equals(regenerationFirst.Source, regenerationSecond.Source, StringComparison.Ordinal))
         throw new Exception("OpenAPI client regeneration must produce deterministic collision names.");
-    foreach (var expected in new[] { "Public JsonParse As String", "Public Json_parse As Long", "Public Function ApiSetHeader(", "Public Sub ApiSetApi_Token(", "Public Sub ApiSetApi_Token2(" })
+    foreach (var expected in new[] { "Public JsonParse As String", "Public Json_parse As Long", "Public Function ApiSetHeader(", "Public Sub ApiSetApi_Token(", "Public Sub ApiSetApi_Token22(" })
         if (!regenerationSecond.Source.Contains(expected, StringComparison.Ordinal))
             throw new Exception("OpenAPI client regeneration collision output is missing deterministic declaration: " + expected);
 
