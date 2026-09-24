@@ -56,7 +56,7 @@ OpenAPI 3.0, 3.1 and 3.2 should share a common internal representation before se
 - [x] Support reusable schemas and references
 - [x] Support API key authentication
 - [x] Support HTTP authentication schemes described by supported specs
-- [ ] Support OAuth/OpenID declarations to the extent required for constructing authenticated requests
+- [x] Support OAuth/OpenID declarations to the extent required for constructing authenticated requests
 - [x] Preserve operation and schema names when they are legal XPScript identifiers
 - [x] Generated client source must compile with the real XPScript compiler/transpiler
 - [ ] Generated client must be usable without hand-editing generated infrastructure
