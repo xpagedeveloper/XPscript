@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Logging;
@@ -52,6 +53,7 @@ public static class XpsKestrelAdapter
 
         var runtimeTelemetry = telemetry ??
             (options.EnableHealthEndpoint || options.EnableMetricsEndpoint ? new XpsWebTelemetry() : null);
+        var operationalAllowedNetworks = options.OperationalAllowedNetworks.Select(XpsIpNetwork.Parse).ToArray();
         var connectionCounter = new XpsKestrelConnectionCounter();
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = [] });
@@ -90,7 +92,7 @@ public static class XpsKestrelAdapter
         if (runtimeTelemetry is not null)
             app.Lifetime.ApplicationStopping.Register(runtimeTelemetry.MarkStopping);
 
-        if (options.KnownProxies.Count > 0)
+        if (options.KnownProxies.Count > 0 || iisOutOfProcess)
         {
             var forwarded = new ForwardedHeadersOptions
             {
@@ -102,10 +104,30 @@ public static class XpsKestrelAdapter
             forwarded.KnownProxies.Clear();
             forwarded.KnownIPNetworks.Clear();
             foreach (var proxy in options.KnownProxies) forwarded.KnownProxies.Add(proxy);
+            // IIS out-of-process always reaches the application through the local
+            // ASP.NET Core Module reverse proxy. Trust only that loopback hop.
+            if (iisOutOfProcess)
+            {
+                forwarded.KnownProxies.Add(IPAddress.Loopback);
+                forwarded.KnownProxies.Add(IPAddress.IPv6Loopback);
+            }
             app.UseForwardedHeaders(forwarded);
         }
 
         app.Lifetime.ApplicationStopped.Register(logManager.Dispose);
+
+        app.Use(async (http, next) =>
+        {
+            var rawTarget = http.Features.Get<IHttpRequestFeature>()?.RawTarget;
+            if (HasEncodedTraversal(rawTarget))
+            {
+                http.Response.StatusCode = StatusCodes.Status400BadRequest;
+                http.Response.Headers.Connection = "close";
+                return;
+            }
+
+            await next();
+        });
 
         app.Use(async (http, next) =>
         {
@@ -185,7 +207,7 @@ public static class XpsKestrelAdapter
 
         app.Use(async (http, next) =>
         {
-            if (!iisOutOfProcess && !HostAllowed(http.Request.Host.Host, options.AllowedHosts))
+            if (!HostAllowed(http.Request.Host.Host, options.AllowedHosts))
             {
                 http.Response.StatusCode = StatusCodes.Status400BadRequest;
                 if (!HttpMethods.IsHead(http.Request.Method))
@@ -208,7 +230,7 @@ public static class XpsKestrelAdapter
                     return;
                 }
 
-                if (options.OperationalEndpointsLocalOnly && !IsLoopback(http.Connection.RemoteIpAddress))
+                if (!OperationalEndpointAllowed(http.Connection.RemoteIpAddress, options, operationalAllowedNetworks))
                 {
                     http.Response.StatusCode = StatusCodes.Status404NotFound;
                     return;
@@ -217,7 +239,7 @@ public static class XpsKestrelAdapter
                 if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
                 {
                     http.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
-                    http.Response.Headers.Allow = "GET, HEAD";
+                    http.Response.Headers["Allow"] = new Microsoft.Extensions.Primitives.StringValues(["GET", "HEAD"]);
                     return;
                 }
 
@@ -242,26 +264,44 @@ public static class XpsKestrelAdapter
             });
         }
 
-        var applicationAssetServer = new XpsWebServer(serverInfo);
+        var staticServer = new XpsWebServer(serverInfo);
         app.Use(async (http, next) =>
         {
-            if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
+            if (!options.EnableStaticFiles || (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method)))
             {
                 await next();
                 return;
             }
 
             var rawPath = http.Request.Path.Value ?? string.Empty;
-            if (!rawPath.StartsWith("/assets/", StringComparison.OrdinalIgnoreCase) ||
-                !TryGetStaticPath(rawPath, options.StaticFileContentTypes, out var relativePath, out var contentType) ||
-                !relativePath.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+            var authenticated = false;
+            string? relativePath = null;
+            if (TryGetStaticRequestPath(rawPath, options.PublicStaticPath, options.PublicStaticPath.TrimStart('/'), out var publicPath))
+            {
+                relativePath = publicPath;
+            }
+            else if (TryGetStaticRequestPath(rawPath, options.AuthenticatedStaticPath, options.AuthenticatedStaticDirectory, out var protectedPath))
+            {
+                var principal = principalFactory?.Invoke(http) ?? new XpsWebPrincipal(false);
+                http.Items[typeof(XpsWebPrincipal)] = principal;
+                if (!principal.IsAuthenticated)
+                {
+                    http.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return;
+                }
+                authenticated = true;
+                relativePath = protectedPath;
+            }
+
+            if (relativePath is null ||
+                !TryGetStaticPath(relativePath, options.StaticFileContentTypes, out relativePath, out var contentType))
             {
                 await next();
                 return;
             }
 
             string fullPath;
-            try { fullPath = applicationAssetServer.MapPath(relativePath); }
+            try { fullPath = staticServer.MapPath(relativePath); }
             catch (XpsWebPathException)
             {
                 http.Response.StatusCode = StatusCodes.Status404NotFound;
@@ -285,64 +325,11 @@ public static class XpsKestrelAdapter
             http.Response.StatusCode = StatusCodes.Status200OK;
             http.Response.ContentType = contentType;
             http.Response.ContentLength = info.Length;
-            http.Response.Headers.CacheControl = options.StaticCacheControl;
+            http.Response.Headers.CacheControl = authenticated ? "private, no-store" : options.StaticCacheControl;
             http.Response.Headers["X-Content-Type-Options"] = "nosniff";
             if (!HttpMethods.IsHead(http.Request.Method))
                 await http.Response.SendFileAsync(fullPath, http.RequestAborted);
         });
-
-        if (options.EnableStaticFiles)
-        {
-            var staticServer = new XpsWebServer(serverInfo);
-            app.Use(async (http, next) =>
-            {
-                if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
-                {
-                    await next();
-                    return;
-                }
-
-                var rawPath = http.Request.Path.Value ?? string.Empty;
-                if (!TryGetStaticPath(rawPath, options.StaticFileContentTypes, out var relativePath, out var contentType))
-                {
-                    await next();
-                    return;
-                }
-
-                string fullPath;
-                try
-                {
-                    fullPath = staticServer.MapPath(relativePath);
-                }
-                catch (XpsWebPathException)
-                {
-                    http.Response.StatusCode = StatusCodes.Status404NotFound;
-                    return;
-                }
-
-                FileInfo info;
-                try { info = new FileInfo(fullPath); }
-                catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
-                {
-                    http.Response.StatusCode = StatusCodes.Status404NotFound;
-                    return;
-                }
-
-                if (!info.Exists || info.Length > options.MaxStaticFileBytes)
-                {
-                    http.Response.StatusCode = StatusCodes.Status404NotFound;
-                    return;
-                }
-
-                http.Response.StatusCode = StatusCodes.Status200OK;
-                http.Response.ContentType = contentType;
-                http.Response.ContentLength = info.Length;
-                http.Response.Headers.CacheControl = options.StaticCacheControl;
-                http.Response.Headers["X-Content-Type-Options"] = "nosniff";
-                if (!HttpMethods.IsHead(http.Request.Method))
-                    await http.Response.SendFileAsync(fullPath, http.RequestAborted);
-            });
-        }
 
         app.Run(async http =>
         {
@@ -375,6 +362,14 @@ public static class XpsKestrelAdapter
                 http.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
                 requestScope?.Complete(StatusCodes.Status413PayloadTooLarge, 0);
             }
+            catch (Microsoft.AspNetCore.Http.BadHttpRequestException ex)
+            {
+                var statusCode = ex.StatusCode is >= 400 and < 500
+                    ? ex.StatusCode
+                    : StatusCodes.Status400BadRequest;
+                http.Response.StatusCode = statusCode;
+                requestScope?.Complete(statusCode, 0);
+            }
             catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested)
             {
                 requestScope?.Complete(499, 0);
@@ -382,7 +377,16 @@ public static class XpsKestrelAdapter
             catch
             {
                 requestScope?.Complete(StatusCodes.Status500InternalServerError, 0, failed: true);
-                throw;
+                if (!http.Response.HasStarted)
+                {
+                    http.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    http.Response.ContentType = "text/plain; charset=utf-8";
+                    await http.Response.WriteAsync("Internal Server Error", http.RequestAborted);
+                }
+                else
+                {
+                    http.Abort();
+                }
             }
         });
 
@@ -448,6 +452,16 @@ public static class XpsKestrelAdapter
             await http.Response.Body.WriteAsync(response.Body, http.RequestAborted);
     }
 
+    private static bool TryGetStaticRequestPath(string requestPath, string urlPrefix, string? directoryPrefix, out string relativePath)
+    {
+        relativePath = string.Empty;
+        if (!requestPath.StartsWith(urlPrefix + "/", StringComparison.OrdinalIgnoreCase)) return false;
+        var suffix = requestPath[(urlPrefix.Length + 1)..];
+        if (string.IsNullOrWhiteSpace(suffix)) return false;
+        relativePath = directoryPrefix is null ? suffix : directoryPrefix + "/" + suffix;
+        return true;
+    }
+
     private static bool TryGetStaticPath(
         string requestPath,
         IReadOnlyDictionary<string, string> contentTypes,
@@ -475,6 +489,30 @@ public static class XpsKestrelAdapter
 
         relativePath = string.Join('/', segments);
         return true;
+    }
+
+    private static bool HasEncodedTraversal(string? rawTarget)
+    {
+        if (string.IsNullOrEmpty(rawTarget)) return false;
+        var path = rawTarget.Split('?', 2)[0];
+        string decoded;
+        try { decoded = Uri.UnescapeDataString(path); }
+        catch (UriFormatException) { return true; }
+
+        var normalized = decoded.Replace('\\', '/');
+        if (normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+            return true;
+
+        if (ContainsPercentEscape(decoded))
+        {
+            string decodedTwice;
+            try { decodedTwice = Uri.UnescapeDataString(decoded).Replace('\\', '/'); }
+            catch (UriFormatException) { return true; }
+            if (decodedTwice.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+                return true;
+        }
+
+        return false;
     }
 
     private static bool ContainsPercentEscape(string value)
@@ -506,6 +544,17 @@ public static class XpsKestrelAdapter
     }
 
     private static bool IsLoopback(IPAddress? address) => address is not null && IPAddress.IsLoopback(address);
+
+    private static bool OperationalEndpointAllowed(
+        IPAddress? address,
+        XpsKestrelOptions options,
+        IReadOnlyList<XpsIpNetwork> allowedNetworks)
+    {
+        if (address is null) return false;
+        if (IPAddress.IsLoopback(address)) return true;
+        if (allowedNetworks.Any(network => network.Contains(address))) return true;
+        return !options.OperationalEndpointsLocalOnly && allowedNetworks.Count == 0;
+    }
 
     private sealed class RequestBodyTooLargeException : Exception { }
 }

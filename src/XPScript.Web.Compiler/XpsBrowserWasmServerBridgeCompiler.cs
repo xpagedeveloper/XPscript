@@ -62,10 +62,11 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var compilerIdentity = typeof(XpsBrowserWasmServerBridgeCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
         var sourceHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + BridgeCompilerVersion)));
+        var serverSideOptions = BrowserWasmServerSideMetadata.ReadAnnotatedProcedureOptions(source);
         var annotatedProcedures = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
         var normalizedSource = NormalizeVariantSetAssignments(parsed.Source);
         var planningSource = BrowserWasmServerSideMetadata.InjectPlanningMarkers(normalizedSource, annotatedProcedures);
-        var plan = BrowserWasmServerBridgePlan.Create(planningSource, sourceHash);
+        var plan = BrowserWasmServerBridgePlan.Create(planningSource, sourceHash, serverSideOptions);
         BrowserWasmServerSideMetadata.ValidateExplicitBoundary(plan, annotatedProcedures);
 
         if (plan.Procedures.Count == 0)
@@ -288,7 +289,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     private static string BuildIndexHtml(string sourcePath)
     {
         var template = BrowserRuntimeConstant("IndexHtml");
-        var scriptName = Uri.EscapeDataString(Path.GetFileName(sourcePath));
+        var scriptName = Uri.EscapeDataString(Path.GetFileName(sourcePath)).Replace("%2E", ".", StringComparison.OrdinalIgnoreCase);
         return template.Replace("__XPSCRIPT_BASE_HREF__", scriptName + "/", StringComparison.Ordinal);
     }
 

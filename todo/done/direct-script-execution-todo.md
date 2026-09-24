@@ -30,7 +30,6 @@ Future compatibility note: if a true hosted/direct execution engine is added lat
 
 ```text
 xpscriptc run script.xps arg1 arg2
-xpscriptc run script.xps -- --runtime value-for-the-script
 ```
 
 Direct execution compiles framework-dependent output into an isolated compiler-owned temporary directory, starts it with the source directory as working directory, waits for completion, propagates its exit code and removes the temporary directory.

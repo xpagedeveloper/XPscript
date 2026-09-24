@@ -7,6 +7,7 @@ public static class XpsWebClientCorrelation
 {
     public const string CookieName = "XPSLOGID";
     public static readonly TimeSpan Lifetime = TimeSpan.FromDays(30);
+    private static readonly byte[] SigningKey = RandomNumberGenerator.GetBytes(32);
 
     public static string CookieNameFor(string siteId)
     {
@@ -29,7 +30,7 @@ public static class XpsWebClientCorrelation
         }
 
         created = true;
-        return Guid.NewGuid().ToString("N");
+        return CreateToken();
     }
 
     public static string Hash(string value)
@@ -55,6 +56,30 @@ public static class XpsWebClientCorrelation
             MaxAge: Lifetime));
     }
 
-    public static bool IsValid(string? value) =>
-        value is { Length: 32 } && value.All(char.IsAsciiHexDigit);
+    public static bool IsValid(string? value)
+    {
+        if (value is not { Length: 64 } || !value.All(char.IsAsciiHexDigit)) return false;
+        Span<byte> token = stackalloc byte[32];
+        try
+        {
+            Convert.FromHexString(value).CopyTo(token);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        Span<byte> expected = stackalloc byte[32];
+        HMACSHA256.HashData(SigningKey, token[..16], expected);
+        return CryptographicOperations.FixedTimeEquals(token[16..], expected[..16]);
+    }
+
+    private static string CreateToken()
+    {
+        Span<byte> token = stackalloc byte[32];
+        RandomNumberGenerator.Fill(token[..16]);
+        Span<byte> signature = stackalloc byte[32];
+        HMACSHA256.HashData(SigningKey, token[..16], signature);
+        signature[..16].CopyTo(token[16..]);
+        return Convert.ToHexString(token).ToLowerInvariant();
+    }
 }

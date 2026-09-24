@@ -68,7 +68,7 @@ var values = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCas
     ["enabled"] = JsonSerializer.SerializeToElement(true)
 };
 var resultJson = XpsUIDesktopRuntimeBridge.SerializeResult(new DesktopFormResult("OK", values));
-using var result = JsonDocument.Parse(resultJson);
+using var result = XPJsonDocument.Parse(resultJson);
 var root = result.RootElement;
 if (root.GetProperty("result").GetString() != "OK")
     throw new InvalidOperationException("Desktop UIForm result mismatch.");
@@ -138,8 +138,8 @@ if (applicationHostType is null ||
 
 var listSource = """
 Sub Main()
-    Dim rows As New JsonArray
-    Dim row As New JsonObject
+    Dim rows As New XPJsonArray
+    Dim row As New XPJsonObject
     Dim list As New UIListView("Customers")
     Call row.Set("id", "1001")
     Call row.Set("name", "Kalle")

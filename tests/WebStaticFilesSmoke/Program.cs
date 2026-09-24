@@ -8,12 +8,14 @@ using XPScript.Web.Runtime;
 var parent = Path.Combine(Path.GetTempPath(), "xps-static-smoke-" + Guid.NewGuid().ToString("N"));
 var root = Path.Combine(parent, "site");
 Directory.CreateDirectory(Path.Combine(root, "assets"));
+Directory.CreateDirectory(Path.Combine(root, "protected"));
 await File.WriteAllTextAsync(Path.Combine(root, "assets", "site.css"), "body{margin:0}");
 await File.WriteAllTextAsync(Path.Combine(root, "assets", "app.js"), "console.log('xps');");
 await File.WriteAllTextAsync(Path.Combine(root, "secret.xps"), "Response.Write(\"SECRET-SOURCE\")");
 await File.WriteAllTextAsync(Path.Combine(root, ".hidden.css"), "hidden");
 await File.WriteAllTextAsync(Path.Combine(root, "assets", "data.bin"), "binary");
 await File.WriteAllTextAsync(Path.Combine(root, "assets", "large.css"), new string('x', 129));
+await File.WriteAllTextAsync(Path.Combine(root, "protected", "account.css"), "PRIVATE-ASSET");
 
 var options = new XpsKestrelOptions
 {
@@ -24,7 +26,8 @@ var options = new XpsKestrelOptions
     StaticCacheControl = "public, max-age=60"
 };
 var serverInfo = new XpsServerInfo("static-smoke", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test");
-var app = XpsKestrelAdapter.Build(options, serverInfo, new FallbackHandler());
+var app = XpsKestrelAdapter.Build(options, serverInfo, new FallbackHandler(), principalFactory: http =>
+    new XpsWebPrincipal(http.Request.Headers["X-Test-Authenticated"] == "1"));
 
 try
 {
@@ -84,6 +87,28 @@ try
     using (var large = await client.GetAsync("/assets/large.css"))
     {
         if (large.StatusCode != HttpStatusCode.NotFound) throw new Exception("Oversized static file should fail closed with 404.");
+    }
+
+    using (var protectedAnonymous = await client.GetAsync("/protected/account.css"))
+    {
+        if (protectedAnonymous.StatusCode != HttpStatusCode.Unauthorized) throw new Exception("Protected static file must require authentication.");
+        if ((await protectedAnonymous.Content.ReadAsStringAsync()).Contains("PRIVATE-ASSET", StringComparison.Ordinal)) throw new Exception("Protected static file leaked to an unauthenticated request.");
+    }
+
+    using (var request = new HttpRequestMessage(HttpMethod.Get, "/protected/account.css"))
+    {
+        request.Headers.Add("X-Test-Authenticated", "1");
+        using var protectedAuthenticated = await client.SendAsync(request);
+        if (protectedAuthenticated.StatusCode != HttpStatusCode.OK) throw new Exception("Authenticated static file was not served.");
+        if (await protectedAuthenticated.Content.ReadAsStringAsync() != "PRIVATE-ASSET") throw new Exception("Authenticated static file body mismatch.");
+        if (!protectedAuthenticated.Headers.CacheControl?.ToString().Contains("no-store", StringComparison.OrdinalIgnoreCase) ?? true) throw new Exception("Authenticated static file must use no-store caching.");
+    }
+
+    using (var request = new HttpRequestMessage(HttpMethod.Get, "/protected/%2e%2e/assets/site.css"))
+    {
+        request.Headers.Add("X-Test-Authenticated", "1");
+        using var traversal = await client.SendAsync(request);
+        if (traversal.StatusCode == HttpStatusCode.OK && await traversal.Content.ReadAsStringAsync() == "body{margin:0}") throw new Exception("Authenticated static root traversal escaped into public assets.");
     }
 
     Console.WriteLine("WEB-STATIC-FILES-SMOKE=OK");

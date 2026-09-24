@@ -1,0 +1,19 @@
+id: xpscript-request-id-spoof
+
+info:
+  name: XPScript Client Request ID Trusted
+  author: xpscript
+  severity: medium
+  description: Detects whether a client-controlled X-Request-Id is reflected as the server correlation id.
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/"
+    headers:
+      X-Request-Id: "client-spoofed-id"
+    matchers:
+      - type: regex
+        part: header
+        regex:
+          - "(?im)^X-Request-Id:\\s*client-spoofed-id\\s*$"

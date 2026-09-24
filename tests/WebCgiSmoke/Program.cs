@@ -23,15 +23,111 @@ End Sub
 
 try
 {
+    await RunUnhandledErrorRegression(root, scriptPath);
+    await RunMultipartAdapterRegression(root, scriptPath);
+    await RunDuplicateQueryRegression(root, scriptPath);
+    await RunJsonBodyAdapterRegression(root, scriptPath);
+    await RunDuplicateCookieRegression(root, scriptPath);
     await RunAdapterRegression(root, scriptPath);
     await RunHeadRegression(root, scriptPath);
     await RunExecutableRegression(root, scriptPath);
     await RunInvalidBodyRegression(root, scriptPath);
+    await RunTraversalRegression(root, scriptPath);
     Console.WriteLine("WEB-CGI-SMOKE=OK");
 }
 finally
 {
     Directory.Delete(parent, recursive: true);
+}
+
+static async Task RunUnhandledErrorRegression(string root, string scriptPath)
+{
+    var environment = BaseEnvironment(root, scriptPath);
+    var server = new XpsServerInfo("cgi-error", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new ThrowingHandler());
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(Stream.Null, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    if (!text.StartsWith("Status: 500 Internal Server Error\r\n", StringComparison.Ordinal) ||
+        !text.EndsWith("Internal Server Error", StringComparison.Ordinal))
+        throw new Exception("CGI unhandled error was not sanitized: " + text);
+    if (text.Contains("SECURITY-SENTINEL", StringComparison.Ordinal) ||
+        text.Contains("ThrowingHandler", StringComparison.Ordinal) ||
+        text.Contains(".cs:", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("CGI unhandled error leaked diagnostics: " + text);
+}
+
+static async Task RunMultipartAdapterRegression(string root, string scriptPath)
+{
+    var body = Encoding.UTF8.GetBytes("--cgi-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser\r\n--cgi-boundary--\r\n");
+    var environment = BaseEnvironment(root, scriptPath);
+    environment["REQUEST_METHOD"] = "POST";
+    environment["CONTENT_TYPE"] = "multipart/form-data; boundary=cgi-boundary";
+    environment["CONTENT_LENGTH"] = body.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var server = new XpsServerInfo("cgi-multipart", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new MultipartHandler());
+    await using var stdin = new MemoryStream(body);
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(stdin, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    if (!text.EndsWith("user", StringComparison.Ordinal))
+        throw new Exception("CGI multipart form handling failed: " + text);
+
+    environment["CONTENT_TYPE"] = "multipart/form-data; boundary=wrong-boundary";
+    await using var badIn = new MemoryStream(body);
+    await using var badOut = new MemoryStream();
+    await adapter.RunAsync(badIn, badOut, environment);
+    var badText = Encoding.UTF8.GetString(badOut.ToArray());
+    if (!badText.StartsWith("Status: 400 Bad Request\r\n", StringComparison.Ordinal))
+        throw new Exception("CGI malformed multipart did not map to 400: " + badText);
+}
+
+static async Task RunDuplicateQueryRegression(string root, string scriptPath)
+{
+    var environment = BaseEnvironment(root, scriptPath);
+    environment["QUERY_STRING"] = "q=one&q=two";
+    var server = new XpsServerInfo("cgi-duplicate-query", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new DuplicateQueryHandler());
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(Stream.Null, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    if (!text.EndsWith("one|one,two", StringComparison.Ordinal))
+        throw new Exception("CGI duplicate query handling was not deterministic: " + text);
+}
+
+static async Task RunJsonBodyAdapterRegression(string root, string scriptPath)
+{
+    var environment = BaseEnvironment(root, scriptPath);
+    environment["REQUEST_METHOD"] = "POST";
+    environment["CONTENT_TYPE"] = "application/json";
+    var body = Encoding.UTF8.GetBytes("{not-json");
+    environment["CONTENT_LENGTH"] = body.Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var server = new XpsServerInfo("cgi-json-body", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new JsonBodyHandler());
+    await using var stdin = new MemoryStream(body);
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(stdin, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    if (!text.StartsWith("Status: 400 Bad Request\r\n", StringComparison.Ordinal))
+        throw new Exception("CGI malformed JSON did not map to 400: " + text);
+    if (text.Contains("stacktrace", StringComparison.OrdinalIgnoreCase) ||
+        text.Contains(".cs:", StringComparison.OrdinalIgnoreCase) ||
+        text.Contains("/home/", StringComparison.OrdinalIgnoreCase) ||
+        text.Contains("\\users\\", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("CGI malformed JSON response leaked diagnostics: " + text);
+}
+
+static async Task RunDuplicateCookieRegression(string root, string scriptPath)
+{
+    var environment = BaseEnvironment(root, scriptPath);
+    environment["HTTP_COOKIE"] = "client=first; client=second";
+    var server = new XpsServerInfo("cgi-duplicate-cookie", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+    using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new EchoHandler());
+    await using var stdout = new MemoryStream();
+    await adapter.RunAsync(Stream.Null, stdout, environment);
+    var text = Encoding.UTF8.GetString(stdout.ToArray());
+    if (!text.EndsWith("GET|||first|", StringComparison.Ordinal))
+        throw new Exception("CGI duplicate cookie handling was not deterministic: " + text);
 }
 
 static async Task RunAdapterRegression(string root, string scriptPath)
@@ -58,6 +154,7 @@ static async Task RunAdapterRegression(string root, string scriptPath)
         throw new Exception("CGI adapter did not emit Content-Type.");
     if (!text.Contains("X-Adapter: ok\r\n", StringComparison.Ordinal))
         throw new Exception("CGI adapter did not preserve response headers.");
+    AssertCorrelationCookie(text, server.SiteId, secure: false);
     if (!text.EndsWith("POST|a=1|cgi-header|abc|hello", StringComparison.Ordinal))
         throw new Exception("CGI adapter request normalization failed: " + text);
 }
@@ -156,6 +253,42 @@ static async Task RunInvalidBodyRegression(string root, string scriptPath)
     }
 }
 
+static async Task RunTraversalRegression(string root, string scriptPath)
+{
+    foreach (var path in new[]
+    {
+        "/assets/%2e%2e/_xps/metrics",
+        "/assets/%252e%252e/_xps/metrics",
+        "/assets/..%5csecret.txt",
+        "/assets/%2e%2e%2fsecret.txt"
+    })
+    {
+        var environment = BaseEnvironment(root, scriptPath);
+        environment["SCRIPT_NAME"] = path;
+        var server = new XpsServerInfo("cgi-traversal", root, XpsWebHostingMode.Cgi, DateTimeOffset.UtcNow, "test");
+        using var adapter = new XpsCgiAdapter(new XpsCgiOptions(), server, new EchoHandler());
+        await using var stdout = new MemoryStream();
+        try
+        {
+            await adapter.RunAsync(Stream.Null, stdout, environment);
+            throw new Exception("CGI adapter accepted traversal path: " + path);
+        }
+        catch (XpsCgiException)
+        {
+        }
+    }
+}
+
+static void AssertCorrelationCookie(string response, string siteId, bool secure)
+{
+    var cookieName = XpsWebClientCorrelation.CookieNameFor(siteId);
+    var line = response.Split("\r\n", StringSplitOptions.None).Single(x => x.StartsWith("Set-Cookie: " + cookieName + "=", StringComparison.Ordinal));
+    if (!line.Contains("; HttpOnly", StringComparison.OrdinalIgnoreCase)) throw new Exception("CGI correlation cookie is missing HttpOnly.");
+    if (!line.Contains("; SameSite=Lax", StringComparison.OrdinalIgnoreCase)) throw new Exception("CGI correlation cookie is missing SameSite=Lax.");
+    if (!line.Contains("; Max-Age=" + ((long)XpsWebClientCorrelation.Lifetime.TotalSeconds), StringComparison.OrdinalIgnoreCase)) throw new Exception("CGI correlation cookie lifetime mismatch.");
+    if (line.Contains("; Secure", StringComparison.OrdinalIgnoreCase) != secure) throw new Exception("CGI correlation cookie Secure attribute mismatch.");
+}
+
 static Dictionary<string, string?> BaseEnvironment(string root, string scriptPath) => new(StringComparer.Ordinal)
 {
     ["XPSCRIPT_WEB_ROOT"] = root,
@@ -180,6 +313,12 @@ static string FindRepoRoot()
     throw new Exception("Unable to locate repository root.");
 }
 
+sealed class ThrowingHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context) =>
+        throw new InvalidOperationException("SECURITY-SENTINEL " + Environment.CurrentDirectory);
+}
+
 sealed class EchoHandler : IXpsWebRequestHandler
 {
     public Task HandleAsync(XpsWebContext context)
@@ -196,6 +335,54 @@ sealed class EchoHandler : IXpsWebRequestHandler
         context.Response.Write(context.Request.Cookie("client"));
         context.Response.Write("|");
         context.Response.Write(context.Request.BodyText());
+        return Task.CompletedTask;
+    }
+}
+
+sealed class MultipartHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        try
+        {
+            context.Response.Write(context.Request.FormFirst("role"));
+        }
+        catch (InvalidOperationException)
+        {
+            context.Response.StatusCode = 400;
+            context.Response.Write("Invalid multipart");
+        }
+        return Task.CompletedTask;
+    }
+}
+
+sealed class DuplicateQueryHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        context.Response.ContentType = "text/plain; charset=utf-8";
+        context.Response.Write(context.Request.QueryFirst("q"));
+        context.Response.Write("|");
+        context.Response.Write(string.Join(",", context.Request.QueryAll("q")));
+        return Task.CompletedTask;
+    }
+}
+
+sealed class JsonBodyHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        try
+        {
+            _ = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(context.Request.Body.Span);
+            context.Response.StatusCode = 200;
+            context.Response.Write("OK");
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            context.Response.StatusCode = 400;
+            context.Response.Write("Invalid JSON");
+        }
         return Task.CompletedTask;
     }
 }

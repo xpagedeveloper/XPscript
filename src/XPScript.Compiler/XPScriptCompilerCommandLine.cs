@@ -388,8 +388,8 @@ public static class XPScriptCompilerCommandLine
 
     public static async Task<int> RunScriptAsync(string[] commandLineArgs)
     {
-        var sourceIndex = commandLineArgs.Length > 0 && commandLineArgs[0].Equals("run", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        if (commandLineArgs.Length <= sourceIndex)
+        var argumentStart = commandLineArgs.Length > 0 && commandLineArgs[0].Equals("run", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        if (commandLineArgs.Length <= argumentStart)
         {
             WriteResult(CompileResult.Error([new CompileDiagnostic { Description = "run requires an .xps source file." }]), "text");
             return 1;
@@ -402,7 +402,7 @@ public static class XPScriptCompilerCommandLine
 
         try
         {
-            var sourcePath = Path.GetFullPath(commandLineArgs[sourceIndex]);
+            string? sourceArgument = null;
             var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
             var scriptArgs = new List<string>();
             var parseRunOptions = true;
@@ -412,14 +412,18 @@ public static class XPScriptCompilerCommandLine
             var sourceRoots = new List<string>();
             var sourcePreprocessors = new List<string>();
 
-            for (var i = sourceIndex + 1; i < commandLineArgs.Length; i++)
+            for (var i = argumentStart; i < commandLineArgs.Length; i++)
             {
                 var value = commandLineArgs[i];
-                if (parseRunOptions && value == "--")
+
+                if (sourceArgument is null && !value.StartsWith("--", StringComparison.Ordinal))
                 {
-                    parseRunOptions = false;
+                    sourceArgument = value;
                     continue;
                 }
+
+                if (sourceArgument is not null && parseRunOptions && !value.StartsWith("--", StringComparison.Ordinal))
+                    parseRunOptions = false;
 
                 if (parseRunOptions && value == "--no-daemon")
                 {
@@ -429,14 +433,17 @@ public static class XPScriptCompilerCommandLine
 
                 if (parseRunOptions && value == "--info")
                 {
+                    if (debug)
+                        throw new ArgumentException("--info and --debug cannot be used together.");
                     info = true;
                     continue;
                 }
 
                 if (parseRunOptions && value == "--debug")
                 {
+                    if (info)
+                        throw new ArgumentException("--info and --debug cannot be used together.");
                     debug = true;
-                    info = true;
                     continue;
                 }
 
@@ -495,8 +502,16 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
+                if (sourceArgument is null)
+                    throw new ArgumentException("run requires an .xps source file.");
+
                 scriptArgs.Add(value);
             }
+
+            if (sourceArgument is null)
+                throw new ArgumentException("run requires an .xps source file.");
+
+            var sourcePath = Path.GetFullPath(sourceArgument);
 
             // Debug compilation stays local so generated C#/Roslyn/MSBuild diagnostics
             // remain directly available to developers and CI. Normal runs use the warm daemon.
@@ -616,15 +631,18 @@ public static class XPScriptCompilerCommandLine
             if (info)
                 WriteProgressLine("Starting program");
 
-            var managedAssemblyPath = Path.ChangeExtension(executablePath, ".dll");
+            // Framework-dependent run builds may return the managed assembly directly.
+            // Launch DLL output through the resolved dotnet host; native apphost output remains
+            // directly executable.
+            var managedAssembly = Path.GetExtension(executablePath).Equals(".dll", StringComparison.OrdinalIgnoreCase);
             var startInfo = new ProcessStartInfo
             {
-                FileName = File.Exists(managedAssemblyPath) ? CompilerToolResolver.ResolveDotnetHost() : executablePath,
+                FileName = managedAssembly ? CompilerToolResolver.ResolveDotnetHost() : executablePath,
                 UseShellExecute = false,
                 WorkingDirectory = sourceDirectory
             };
-            if (File.Exists(managedAssemblyPath))
-                startInfo.ArgumentList.Add(managedAssemblyPath);
+            if (managedAssembly)
+                startInfo.ArgumentList.Add(executablePath);
             startInfo.Environment["XPSCRIPT_NAVIGATION_FILE"] = navigationPath;
             if (debug) startInfo.Environment["XPSCRIPT_RUNTIME_DEBUG"] = "1";
             foreach (var argument in scriptArgs)
@@ -637,7 +655,14 @@ public static class XPScriptCompilerCommandLine
             if (process.ExitCode != 0 || !File.Exists(navigationPath))
                 return process.ExitCode;
 
-            using var navigationDocument = JsonDocument.Parse(await File.ReadAllTextAsync(navigationPath).ConfigureAwait(false));
+            // Only desktop UI navigation writes JSON to this file. Some non-UI runtimes may
+            // create or reuse the path for diagnostic output, so do not treat mere existence as
+            // a navigation request.
+            var navigationText = await File.ReadAllTextAsync(navigationPath).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(navigationText) || navigationText.AsSpan().TrimStart()[0] != '{')
+                return process.ExitCode;
+
+            using var navigationDocument = JsonDocument.Parse(navigationText);
             var navigation = navigationDocument.RootElement;
             var version = navigation.TryGetProperty("version", out var versionElement) && versionElement.TryGetInt32(out var parsedVersion)
                 ? parsedVersion
@@ -688,7 +713,6 @@ public static class XPScriptCompilerCommandLine
             }
             if (parameterName.Length > 0)
             {
-                nextArgs.Add("--");
                 nextArgs.Add(parameterName + "=" + parameterValue);
             }
 
@@ -782,7 +806,7 @@ Usage:
   xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml] [--debug]
   xpscript mcp
   xpscript mcp install codex|claude [--scope user|project] [--force]
-  {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+  {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [script arguments...]
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
@@ -808,7 +832,6 @@ The run command stays quiet by default. Use --info to show live compilation stat
 Compiler diagnostics are source-mapped to the original .xps file by default. Generated Program.cs locations are hidden.
 Use --debug as a strict superset of --info: it forces a fresh run compilation, shows the compile timer, includes generated C# diagnostics and physical Program.cs locations, and enables detailed runtime exception tracing for errors that may be handled by On Error.
 The run command uses an in-process Roslyn fast path for eligible scripts, a framework-dependent no-apphost MSBuild fallback for dependency-heavy scripts, and a dependency-snapshot artifact cache. Debug runs bypass an existing run-cache artifact so diagnostics always reflect the current compiler.
-Use -- before script arguments when an argument could otherwise be interpreted as a run option.
 """);
     }
 

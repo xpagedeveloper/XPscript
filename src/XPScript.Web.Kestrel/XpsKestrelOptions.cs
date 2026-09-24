@@ -34,9 +34,13 @@ public sealed class XpsKestrelOptions
     public bool EnableHealthEndpoint { get; init; }
     public bool EnableMetricsEndpoint { get; init; }
     public bool OperationalEndpointsLocalOnly { get; init; } = true;
+    public IReadOnlyList<string> OperationalAllowedNetworks { get; init; } = [];
     public string HealthPath { get; init; } = "/_xps/health";
     public string MetricsPath { get; init; } = "/_xps/metrics";
     public bool EnableStaticFiles { get; init; }
+    public string PublicStaticPath { get; init; } = "/assets";
+    public string AuthenticatedStaticPath { get; init; } = "/protected";
+    public string AuthenticatedStaticDirectory { get; init; } = "protected";
     public long MaxStaticFileBytes { get; init; } = 32L * 1024 * 1024;
     public string StaticCacheControl { get; init; } = "public, max-age=300";
     public XpsWebLogOptions LogOptions { get; init; } = new();
@@ -121,11 +125,20 @@ public sealed class XpsKestrelOptions
                 throw new ArgumentException($"Header '{pair.Key}' cannot be configured as a default security header.", nameof(DefaultSecurityHeaders));
         }
 
+        foreach (var network in OperationalAllowedNetworks)
+            _ = XpsIpNetwork.Parse(network);
         ValidateOperationalPath(HealthPath, nameof(HealthPath));
         ValidateOperationalPath(MetricsPath, nameof(MetricsPath));
         if (string.Equals(HealthPath, MetricsPath, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("HealthPath and MetricsPath must be different.");
 
+        ValidateStaticPath(PublicStaticPath, nameof(PublicStaticPath));
+        ValidateStaticPath(AuthenticatedStaticPath, nameof(AuthenticatedStaticPath));
+        if (string.Equals(PublicStaticPath, AuthenticatedStaticPath, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Public and authenticated static URL paths must be different.");
+        if (string.IsNullOrWhiteSpace(AuthenticatedStaticDirectory) || Path.IsPathRooted(AuthenticatedStaticDirectory) ||
+            AuthenticatedStaticDirectory.IndexOfAny(['/', '\\', ':', '\r', '\n', '\0']) >= 0 || AuthenticatedStaticDirectory is "." or "..")
+            throw new ArgumentException("Authenticated static directory must be one simple relative directory name.", nameof(AuthenticatedStaticDirectory));
         if (MaxStaticFileBytes is < 1 or > 1024L * 1024L * 1024L)
             throw new ArgumentOutOfRangeException(nameof(MaxStaticFileBytes), "Static file limit must be between 1 byte and 1 GiB.");
         if (StaticCacheControl.IndexOfAny(['\r', '\n', '\0']) >= 0)
@@ -144,6 +157,16 @@ public sealed class XpsKestrelOptions
         }
     }
 
+    private static void ValidateStaticPath(string path, string name)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("/", StringComparison.Ordinal) || path == "/" ||
+            path.EndsWith("/", StringComparison.Ordinal) || path.Contains('?') || path.Contains('#') ||
+            path.Contains('\\') || path.IndexOfAny(['\r', '\n', '\0']) >= 0)
+            throw new ArgumentException("Static URL path must be an absolute single URL prefix without query, fragment or control characters.", name);
+        if (path.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+            throw new ArgumentException("Static URL path cannot contain traversal segments.", name);
+    }
+
     private static void ValidateDataRate(double? bytesPerSecond, TimeSpan gracePeriod, string name)
     {
         if (bytesPerSecond is not null && (double.IsNaN(bytesPerSecond.Value) || double.IsInfinity(bytesPerSecond.Value) || bytesPerSecond <= 0 || bytesPerSecond > 1024d * 1024d * 1024d))
@@ -158,5 +181,39 @@ public sealed class XpsKestrelOptions
             path.Contains('?') || path.Contains('#') || path.Contains('\r') || path.Contains('\n'))
             throw new ArgumentException("Operational endpoint paths must be absolute URL paths without query, fragment or line breaks.", name);
         if (path.Length > 512) throw new ArgumentOutOfRangeException(name, "Operational endpoint paths cannot exceed 512 characters.");
+    }
+}
+
+public readonly record struct XpsIpNetwork(IPAddress Network, int PrefixLength)
+{
+    public static XpsIpNetwork Parse(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException("Operational network CIDR cannot be empty.", nameof(value));
+        var parts = value.Split('/', StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || !IPAddress.TryParse(parts[0], out var address))
+            throw new ArgumentException("Operational network must be CIDR, for example 10.0.0.0/8 or 2001:db8::/32.", nameof(value));
+        var bits = address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? 32 :
+            address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ? 128 : 0;
+        if (bits == 0 || !int.TryParse(parts[1], out var prefix) || prefix < 0 || prefix > bits)
+            throw new ArgumentException("Operational network CIDR prefix is invalid.", nameof(value));
+        var bytes = address.GetAddressBytes();
+        var full = prefix / 8;
+        var remaining = prefix % 8;
+        if (remaining != 0) bytes[full] &= (byte)(0xff << (8 - remaining));
+        for (var i = full + (remaining == 0 ? 0 : 1); i < bytes.Length; i++) bytes[i] = 0;
+        return new XpsIpNetwork(new IPAddress(bytes), prefix);
+    }
+
+    public bool Contains(IPAddress address)
+    {
+        if (address.AddressFamily != Network.AddressFamily) return false;
+        var candidate = address.GetAddressBytes();
+        var network = Network.GetAddressBytes();
+        var full = PrefixLength / 8;
+        for (var i = 0; i < full; i++) if (candidate[i] != network[i]) return false;
+        var remaining = PrefixLength % 8;
+        if (remaining == 0) return true;
+        var mask = (byte)(0xff << (8 - remaining));
+        return (candidate[full] & mask) == (network[full] & mask);
     }
 }

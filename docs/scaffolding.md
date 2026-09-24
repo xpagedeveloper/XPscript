@@ -8,6 +8,7 @@ A target directory is always required. Use `.` to generate the starter in the cu
 xpscript new rest <directory>
 xpscript new web <directory>
 xpscript new desktop <directory>
+xpscript new cli <directory>
 ```
 
 Examples:
@@ -16,6 +17,7 @@ Examples:
 xpscript new rest ./myapi
 xpscript new web ./mysite
 xpscript new desktop ./myapp
+xpscript new cli ./mycli
 xpscript new rest .
 ```
 
@@ -63,6 +65,27 @@ Run it with:
 xpscript run ./myapp/main.xps
 ```
 
+## CLI
+
+```text
+xpscript new cli ./mycli
+```
+
+creates `mycli/main.xps` with a minimal console application. It prints each application argument on its own line and explicitly sets `Application.ExitCode = 0` before returning.
+
+Run it with:
+
+```text
+xpscript run ./mycli/main.xps first second
+```
+
+The generated program prints:
+
+```text
+first
+second
+```
+
 ## Existing files
 
-REST and web scaffolds refuse to overwrite an existing `index.xps`. Desktop scaffolds refuse to overwrite an existing `main.xps`. Choose another directory or move the existing file before running `xpscript new` again.
+REST and web scaffolds refuse to overwrite an existing `index.xps`. Desktop and CLI scaffolds refuse to overwrite an existing `main.xps`. Choose another directory or move the existing file before running `xpscript new` again.

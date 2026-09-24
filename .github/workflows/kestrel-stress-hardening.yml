@@ -1,0 +1,29 @@
+name: Kestrel Stress Hardening
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kestrel-stress-hardening-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bounded-stress:
+    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      XPSCRIPT_KESTREL_STRESS_PROFILE: "1"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run bounded Kestrel stress profile
+        run: dotnet run --project ./tests/WebKestrelSmoke/WebKestrelSmoke.csproj -c Release

@@ -117,6 +117,13 @@ internal static class XpsBrowserWasmServerBridgeHost
             return true;
         }
 
+        var authorization = procedure.Policy.Authorize(context.Request, context.Principal, context.Session);
+        if (authorization != XpsRouteAuthorizationResult.Allowed)
+        {
+            WriteAuthorizationProblem(context, authorization);
+            return true;
+        }
+
         await state.Gate.WaitAsync(context.Request.CancellationToken).ConfigureAwait(false);
         try
         {
@@ -223,12 +230,18 @@ internal static class XpsBrowserWasmServerBridgeHost
 
     private static JsonNode? NormalizeResult(Assembly companion, object? result)
     {
-        var nativeJson = companion.GetType("XPScriptNativeJson", throwOnError: true, ignoreCase: false)
-            ?? throw new InvalidOperationException("Companion native JSON runtime was not found.");
-        var toNode = nativeJson.GetMethod("ToNode", BindingFlags.Static | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Companion native JSON conversion method was not found.");
-        var node = toNode.Invoke(null, [result]) as JsonNode;
-        return node?.DeepClone();
+        if (result is null) return null;
+
+        var nativeJson = companion.GetType("XPScriptNativeJson", throwOnError: false, ignoreCase: false);
+        if (nativeJson is not null)
+        {
+            var toNode = nativeJson.GetMethod("ToNode", BindingFlags.Static | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Companion native JSON conversion method was not found.");
+            var node = toNode.Invoke(null, [result]) as JsonNode;
+            if (node is not null) return node.DeepClone();
+        }
+
+        return JsonSerializer.SerializeToNode(result, result.GetType());
     }
 
     private static BridgeRequest ParseRequest(JsonElement root)
@@ -306,6 +319,24 @@ internal static class XpsBrowserWasmServerBridgeHost
         if (!context.Request.Method.Equals("HEAD", StringComparison.OrdinalIgnoreCase))
             context.Response.Write(JsonSerializer.Serialize(new { type = "about:blank", title, status = statusCode }));
         context.Response.Complete();
+    }
+
+    private static void WriteAuthorizationProblem(XpsWebContext context, XpsRouteAuthorizationResult authorization)
+    {
+        switch (authorization)
+        {
+            case XpsRouteAuthorizationResult.AuthenticationRequired:
+                WriteProblem(context, 401, "Unauthorized");
+                return;
+            case XpsRouteAuthorizationResult.Forbidden:
+                WriteProblem(context, 403, "Forbidden");
+                return;
+            case XpsRouteAuthorizationResult.MethodNotAllowed:
+                WriteMethodNotAllowed(context, "POST");
+                return;
+            default:
+                throw new InvalidOperationException("Unexpected browser-wasm bridge authorization result.");
+        }
     }
 
     private static void WriteMethodNotAllowed(XpsWebContext context, string allow)

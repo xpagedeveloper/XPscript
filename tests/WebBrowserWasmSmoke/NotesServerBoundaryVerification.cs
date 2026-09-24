@@ -79,7 +79,7 @@ Function ReadValue(value As UIForm) As String
 End Function
 
 Sub Main()
-    Print "browser"
+    Print ReadValue(New UIForm("browser"))
 End Sub
 """, "ReadValue.value", "ServerSide", "XPS2003", "type");
 

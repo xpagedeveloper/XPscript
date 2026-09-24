@@ -183,6 +183,7 @@ public sealed class XpsWebResponse
             throw new ArgumentOutOfRangeException(nameof(statusCode), "Redirect status must be 301, 302, 303, 307 or 308.");
         ValidateHeaderValue(url);
         if (string.IsNullOrWhiteSpace(url)) throw new ArgumentException("Redirect URL must not be empty.", nameof(url));
+        ValidateRedirectUrl(url);
         StatusCode = statusCode;
         SetHeader("Location", url);
     }
@@ -219,6 +220,18 @@ public sealed class XpsWebResponse
             return pathMatch && domainMatch;
         });
         if (values.Count == 0) _headers.Remove("Set-Cookie");
+    }
+
+    private static void ValidateRedirectUrl(string url)
+    {
+        if (!Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out var target))
+            throw new ArgumentException("Redirect URL is invalid.", nameof(url));
+
+        if (target.IsAbsoluteUri || url.StartsWith("//", StringComparison.Ordinal) || url.StartsWith(@"\\", StringComparison.Ordinal))
+            throw new ArgumentException("Redirect URL must be an application-local path.", nameof(url));
+
+        if (!url.StartsWith("/", StringComparison.Ordinal) || url.StartsWith("/\\", StringComparison.Ordinal))
+            throw new ArgumentException("Redirect URL must be an application-local absolute path.", nameof(url));
     }
 
     private static string NormalizeDownloadFileName(string fileName)

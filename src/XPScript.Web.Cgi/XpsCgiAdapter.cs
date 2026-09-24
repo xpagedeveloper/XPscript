@@ -98,7 +98,10 @@ public sealed class XpsCgiAdapter : IDisposable
         catch (Exception ex)
         {
             _logger.WriteAccess(request, 500, 0, Stopwatch.GetElapsedTime(started), requestId, "cgi", principal, ex.GetType().FullName, clientSessionId);
-            throw;
+            var error = new XpsWebResponse { StatusCode = 500, ContentType = "text/plain; charset=utf-8" };
+            error.Write("Internal Server Error");
+            error.Complete();
+            await WriteResponseAsync(stdout, error, request.Method, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -293,7 +296,35 @@ public sealed class XpsCgiAdapter : IDisposable
         if (!path.StartsWith("/", StringComparison.Ordinal)) path = "/" + path;
         if (!string.IsNullOrEmpty(pathInfo) && pathInfo != "/" && !path.EndsWith(pathInfo, StringComparison.Ordinal))
             path += pathInfo.StartsWith("/", StringComparison.Ordinal) ? pathInfo : "/" + pathInfo;
+        if (HasTraversal(path)) throw new XpsCgiException("Request path contains traversal segments.");
         return path;
+    }
+
+    private static bool HasTraversal(string path)
+    {
+        string decoded;
+        try { decoded = Uri.UnescapeDataString(path); }
+        catch (UriFormatException) { return true; }
+
+        var normalized = decoded.Replace('\\', '/');
+        if (normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+            return true;
+
+        if (ContainsPercentEscape(decoded))
+        {
+            try { normalized = Uri.UnescapeDataString(decoded).Replace('\\', '/'); }
+            catch (UriFormatException) { return true; }
+            if (normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment is "." or ".."))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool ContainsPercentEscape(string value)
+    {
+        for (var i = 0; i + 2 < value.Length; i++)
+            if (value[i] == '%' && Uri.IsHexDigit(value[i + 1]) && Uri.IsHexDigit(value[i + 2])) return true;
+        return false;
     }
 
     private static bool IsHttps(IReadOnlyDictionary<string, string?> environment)

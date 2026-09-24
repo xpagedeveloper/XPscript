@@ -24,6 +24,7 @@ try
     {
         "compile" => await XPScriptCompilerCommandLine.CompileAsync(args[1..]),
         "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
+        "daemon" => await CompilerDaemonServer.RunAsync(args[1..]),
         "dependencies" => await XPScript.Cli.ApplicationDependencyCommand.RunDependenciesAsync(args[1..]),
         "security" => await XPScript.Cli.ApplicationDependencyCommand.RunSecurityAsync(args[1..]),
         "patch" => await XPScript.Cli.PackagePatchCommand.RunAsync(args[1..]),
@@ -46,9 +47,7 @@ static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
     if (arguments.Length == 0 || !arguments[0].Equals("run", StringComparison.OrdinalIgnoreCase))
         return;
 
-    var separator = Array.IndexOf(arguments, "--");
-    var optionCount = separator < 0 ? arguments.Length : separator;
-    var explicitInfo = arguments.Take(optionCount).Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
+    var explicitInfo = arguments.Skip(2).TakeWhile(value => value.StartsWith("--", StringComparison.Ordinal)).Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
     Environment.SetEnvironmentVariable("XPSCRIPT_RUNTIME_INFO", explicitInfo ? "1" : null);
 }
 
@@ -69,8 +68,10 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     var sessionSameSite = "Lax";
     var sessionSecure = false;
     var operationalExternal = false;
+    var operationalAllowedNetworks = new List<string>();
     var enableStaticFiles = false;
     long? staticMaxBytes = null;
+    var staticContentTypes = new Dictionary<string, string>(new XpsKestrelOptions().StaticFileContentTypes, StringComparer.OrdinalIgnoreCase);
     string? structuredLogPath = null;
     string? logDirectory = null;
     string? httpsCertificatePath = null;
@@ -135,6 +136,9 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             case "--operational-external":
                 operationalExternal = true;
                 break;
+            case "--operational-allow":
+                operationalAllowedNetworks.Add(RequireValue(commandArgs, ref i));
+                break;
             case "--structured-log":
                 structuredLogPath = Path.GetFullPath(RequireValue(commandArgs, ref i));
                 logDirectory ??= Path.GetDirectoryName(structuredLogPath);
@@ -148,13 +152,24 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             case "--static-max-bytes":
                 staticMaxBytes = ParsePositiveLong(RequireValue(commandArgs, ref i), "--static-max-bytes");
                 break;
+            case "--static-allow":
+            {
+                enableStaticFiles = true;
+                var extension = RequireValue(commandArgs, ref i);
+                var contentType = RequireValue(commandArgs, ref i);
+                if (!extension.StartsWith(".", StringComparison.Ordinal)) extension = "." + extension;
+                staticContentTypes[extension] = contentType;
+                break;
+            }
             default:
                 throw new ArgumentException("Unknown web argument: " + commandArgs[i]);
         }
     }
 
-    if (operationalExternal && !enableHealth && !enableMetrics)
-        throw new ArgumentException("--operational-external requires --health and/or --metrics.");
+    if ((operationalExternal || operationalAllowedNetworks.Count > 0) && !enableHealth && !enableMetrics)
+        throw new ArgumentException("--operational-external/--operational-allow requires --health and/or --metrics.");
+    if (operationalExternal && operationalAllowedNetworks.Count > 0)
+        throw new ArgumentException("--operational-external cannot be combined with --operational-allow; use 0.0.0.0/0 and ::/0 explicitly if unrestricted access is required.");
     if (httpsCertificatePasswordEnvironment is not null && httpsCertificatePath is null)
         throw new ArgumentException("--https-cert-password-env requires --https-cert.");
     if (staticMaxBytes is not null && !enableStaticFiles)
@@ -183,8 +198,10 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         EnableHealthEndpoint = enableHealth,
         EnableMetricsEndpoint = enableMetrics,
         OperationalEndpointsLocalOnly = !operationalExternal,
+        OperationalAllowedNetworks = operationalAllowedNetworks.AsReadOnly(),
         EnableStaticFiles = enableStaticFiles,
         MaxStaticFileBytes = staticMaxBytes ?? defaults.MaxStaticFileBytes,
+        StaticFileContentTypes = staticContentTypes,
         LogOptions = new XpsWebLogOptions { DirectoryPath = logDirectory }
     };
     options.Validate();
@@ -234,13 +251,16 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             Console.WriteLine($"Sessions: enabled, in-memory store, cookie {sessionCookieName}, timeout {sessionIdleSeconds}s, SameSite={sessionSameSite}, Secure={sessionSecure}");
         else
             Console.WriteLine("Sessions: disabled");
-        if (enableHealth) Console.WriteLine($"Health endpoint: {options.HealthPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
+        var operationalAccess = operationalAllowedNetworks.Count > 0
+            ? "loopback + " + string.Join(", ", operationalAllowedNetworks)
+            : options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible";
+        if (enableHealth) Console.WriteLine($"Health endpoint: {options.HealthPath} ({operationalAccess})");
         else Console.WriteLine("Health endpoint: disabled");
-        if (enableMetrics) Console.WriteLine($"Metrics endpoint: {options.MetricsPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
+        if (enableMetrics) Console.WriteLine($"Metrics endpoint: {options.MetricsPath} ({operationalAccess})");
         else Console.WriteLine("Metrics endpoint: disabled");
         Console.WriteLine($"Mandatory JSONL logs: {options.LogOptions.DirectoryPath ?? XpsWebLogManager.DefaultDirectory(server)}");
         if (structuredLogPath is not null) Console.WriteLine($"Legacy structured request log: {structuredLogPath}");
-        if (options.EnableStaticFiles) Console.WriteLine($"Static files: enabled, max {options.MaxStaticFileBytes} bytes");
+        if (options.EnableStaticFiles) Console.WriteLine($"Static files: enabled, public {options.PublicStaticPath}/, authenticated {options.AuthenticatedStaticPath}/, max {options.MaxStaticFileBytes} bytes, extensions {string.Join(", ", options.StaticFileContentTypes.Keys.OrderBy(x => x))}");
         else Console.WriteLine("Static files: disabled");
 
         await app.StartAsync(shutdown.Token);
@@ -465,18 +485,18 @@ Usage:
   xpscript compile <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [--result-format text|json|xml]
   xpscript dependencies <source.xps> [--platform RID|--rid RID] [--json]
   xpscript security <source.xps> [--platform RID|--rid RID] [--json]
-  xpscript run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+  xpscript run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [script arguments...]
   xpscript <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [compiler options...]
-  xpscript new <rest|web|desktop> <directory>
+  xpscript new <rest|web|desktop|cli> <directory>
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
   xpscript service install <compiled-service> --name NAME --display-name "DISPLAY NAME" [--start auto|manual|disabled]
   xpscript web <directory> [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
-                [--health] [--metrics] [--sessions]
+                [--health] [--metrics] [--operational-allow CIDR ...] [--sessions]
                 [--session-cookie NAME] [--session-timeout-seconds SECONDS]
                 [--session-same-site Strict|Lax|None] [--session-secure]
                 [--structured-log FILE] [--operational-external]
-                [--static-files] [--static-max-bytes BYTES]
+                [--static-files] [--static-max-bytes BYTES] [--static-allow EXT MIME]
   xpscript web [--config FILE] --root DIR [web options...]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] --unix-socket PATH
@@ -484,7 +504,7 @@ Usage:
 Command model:
   compile  Compile an XPScript source file.
   run      Compile to an isolated temporary output and execute on the current OS/architecture.
-  new      Create a REST, web or desktop starter in a required target directory. Use . for the current directory.
+  new      Create a REST, web, desktop or CLI starter in a required target directory. Use . for the current directory.
   openapi  Generate XPScript REST server source from OpenAPI 3.0/3.1 YAML or JSON.
   service  Install compiled XPScript services using the native service manager.
   web      Run the standalone Kestrel runtime.
@@ -504,16 +524,15 @@ Scaffolding:
   Existing index.xps or main.xps files are never overwritten.
 
 Examples:
-  xpscript new rest ./myapi
-  xpscript new web ./mysite
+  xpscript new cli ./myapp
   xpscript new desktop ./myapp
-  xpscript new rest .
+  xpscript new web ./mysite
+  xpscript new rest ./myapi
   xpscript openapi generate ./openapi.yaml
   xpscript openapi generate ./petstore.yaml -o ./generated/petstore.xps
   xpscript compile hello.xps
   xpscript compile hello.xps --platform linux-x64 -o hello
   xpscript run hello.xps
-  xpscript run hello.xps -- --runtime passed-to-script
   xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto
   xpscript web ./site
   xpscript web --config ./production.cfg

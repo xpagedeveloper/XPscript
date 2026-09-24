@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Text;
 using System.Text.RegularExpressions;
+using XPScript.Compiler;
 
 namespace XPScript.Web.Compiler;
 
-internal sealed record BrowserWasmServerSideOptions(int SpinnerDelayMilliseconds)
+internal sealed record BrowserWasmServerSideOptions(int SpinnerDelayMilliseconds, bool AllowAnonymous, IReadOnlyList<string> RequiredRules, IReadOnlyList<string> ForbiddenRules, IReadOnlyList<string> RequiredRoles, IReadOnlyList<string> ForbiddenRoles)
 {
     public const int DefaultSpinnerDelayMilliseconds = 300;
 }
@@ -53,6 +54,47 @@ internal static class BrowserWasmServerSideMetadata
         public bool SetEquals(IEnumerable<string> other) => _names.SetEquals(other);
     }
 
+    public static string TransformAuthorizationMetadata(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var annotated = ReadAnnotatedProcedureOptions(source).Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (annotated.Count == 0) return new ServerSideMetadataPreprocessor().Transform(source);
+
+        var lines = NormalizeLines(source);
+        var output = new StringBuilder(source.Length);
+        var pending = new List<string>();
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (IsBridgeAuthorizationAttribute(trimmed) || ServerSideAttribute.IsMatch(trimmed))
+            {
+                pending.Add(line);
+                continue;
+            }
+            if (pending.Count > 0 && ProcedureHeader.IsMatch(trimmed))
+            {
+                var name = ProcedureHeader.Match(trimmed).Groups[2].Value;
+                if (!annotated.Contains(name))
+                    foreach (var attribute in pending.Where(x => !ServerSideAttribute.IsMatch(x.Trim()))) output.AppendLine(attribute);
+                pending.Clear();
+            }
+            else if (pending.Count > 0 && trimmed.Length > 0 && !trimmed.StartsWith("'", StringComparison.Ordinal))
+            {
+                foreach (var attribute in pending) output.AppendLine(attribute);
+                pending.Clear();
+            }
+            output.AppendLine(line);
+        }
+        foreach (var attribute in pending) output.AppendLine(attribute);
+        return output.ToString().TrimEnd('\r', '\n');
+    }
+
+    private static bool IsBridgeAuthorizationAttribute(string trimmed) =>
+        trimmed.Equals("[Anonymous]", StringComparison.OrdinalIgnoreCase) ||
+        trimmed.Equals("[Authenticated]", StringComparison.OrdinalIgnoreCase) ||
+        trimmed.StartsWith("[Role:", StringComparison.OrdinalIgnoreCase) ||
+        trimmed.StartsWith("[Rule:", StringComparison.OrdinalIgnoreCase);
+
     public static IReadOnlySet<string> ReadAnnotatedProcedures(string source) =>
         new AnnotatedProcedureSet(ReadAnnotatedProcedureOptions(source));
 
@@ -62,11 +104,18 @@ internal static class BrowserWasmServerSideMetadata
         var lines = NormalizeLines(source);
         var result = new Dictionary<string, BrowserWasmServerSideOptions>(StringComparer.OrdinalIgnoreCase);
         BrowserWasmServerSideOptions? pending = null;
+        var pendingAuth = new List<string>();
         var classDepth = 0;
 
         for (var i = 0; i < lines.Length; i++)
         {
             var trimmed = lines[i].Trim();
+            if (IsBridgeAuthorizationAttribute(trimmed))
+            {
+                pendingAuth.Add(trimmed);
+                continue;
+            }
+
             var attribute = ServerSideAttribute.Match(trimmed);
             if (attribute.Success)
             {
@@ -75,7 +124,8 @@ internal static class BrowserWasmServerSideMetadata
                 var delay = BrowserWasmServerSideOptions.DefaultSpinnerDelayMilliseconds;
                 if (attribute.Groups[1].Success && !int.TryParse(attribute.Groups[1].Value, out delay))
                     throw new XpsWebCompilationException("[ServerSide] SpinnerDelay must be a non-negative 32-bit integer number of milliseconds.");
-                pending = new BrowserWasmServerSideOptions(delay);
+                pending = BuildOptions(delay, pendingAuth);
+                pendingAuth.Clear();
                 continue;
             }
 
@@ -129,7 +179,7 @@ internal static class BrowserWasmServerSideMetadata
             ? metadata.Options
             : annotatedProcedures.ToDictionary(
                 name => name,
-                _ => new BrowserWasmServerSideOptions(BrowserWasmServerSideOptions.DefaultSpinnerDelayMilliseconds),
+                _ => BuildOptions(BrowserWasmServerSideOptions.DefaultSpinnerDelayMilliseconds, []),
                 StringComparer.OrdinalIgnoreCase);
         var lines = NormalizeLines(parsedSource);
         var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -166,6 +216,25 @@ internal static class BrowserWasmServerSideMetadata
         foreach (var name in annotatedProcedures)
             if (!plan.Procedures.Values.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
                 throw ServerSideRequired(name, $"[ServerSide] procedure '{name}' could not be converted into a browser-wasm server call.", "ServerSide");
+    }
+
+    private static BrowserWasmServerSideOptions BuildOptions(int delay, IReadOnlyList<string> attributes)
+    {
+        var allowAnonymous = true;
+        var requiredRules = new List<string>();
+        var forbiddenRules = new List<string>();
+        var requiredRoles = new List<string>();
+        var forbiddenRoles = new List<string>();
+        foreach (var attribute in attributes)
+        {
+            if (attribute.Equals("[Authenticated]", StringComparison.OrdinalIgnoreCase)) { allowAnonymous = false; continue; }
+            if (attribute.Equals("[Anonymous]", StringComparison.OrdinalIgnoreCase)) { allowAnonymous = true; continue; }
+            var role = Regex.Match(attribute, @"^\[Role:\s*(!?)([^\]]+)\]$", RegexOptions.IgnoreCase);
+            if (role.Success) { (role.Groups[1].Value == "!" ? forbiddenRoles : requiredRoles).Add(role.Groups[2].Value.Trim()); continue; }
+            var rule = Regex.Match(attribute, @"^\[Rule:\s*(!?)([^\]]+)\]$", RegexOptions.IgnoreCase);
+            if (rule.Success) { (rule.Groups[1].Value == "!" ? forbiddenRules : requiredRules).Add(rule.Groups[2].Value.Trim()); continue; }
+        }
+        return new BrowserWasmServerSideOptions(delay, allowAnonymous, requiredRules, forbiddenRules, requiredRoles, forbiddenRoles);
     }
 
     private static XpsWebCompilationException ServerSideRequired(string symbol, string message, string currentContext = "Client") =>

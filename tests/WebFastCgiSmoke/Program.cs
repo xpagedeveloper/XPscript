@@ -20,6 +20,143 @@ try
     };
     await using var adapter = new XpsFastCgiAdapter(options, server, new EchoHandler());
 
+    var errorInput = BuildRequest(
+        23,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "GET",
+            ["SCRIPT_NAME"] = "/error.xps",
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "error.xps")
+        },
+        []);
+    var errorStream = new FragmentedDuplexStream(errorInput, 3);
+    await using (var errorAdapter = new XpsFastCgiAdapter(options, server, new ThrowingHandler()))
+    {
+        await errorAdapter.ProcessConnectionAsync(errorStream);
+    }
+    var errorOutput = ParseResponse(errorStream.Written);
+    if (!errorOutput.StartsWith("Status: 500\r\n", StringComparison.Ordinal) ||
+        !errorOutput.EndsWith("Internal Server Error", StringComparison.Ordinal))
+        throw new Exception("FastCGI unhandled error was not sanitized: " + errorOutput);
+    if (errorOutput.Contains("SECURITY-SENTINEL", StringComparison.Ordinal) ||
+        errorOutput.Contains("ThrowingHandler", StringComparison.Ordinal) ||
+        errorOutput.Contains(".cs:", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("FastCGI unhandled error leaked diagnostics: " + errorOutput);
+
+    var multipartBody = Encoding.UTF8.GetBytes("--fastcgi-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser\r\n--fastcgi-boundary--\r\n");
+    var multipartInput = BuildRequest(
+        19,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "POST",
+            ["SCRIPT_NAME"] = "/upload.xps",
+            ["CONTENT_TYPE"] = "multipart/form-data; boundary=fastcgi-boundary",
+            ["CONTENT_LENGTH"] = multipartBody.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "upload.xps")
+        },
+        multipartBody);
+    var multipartStream = new FragmentedDuplexStream(multipartInput, 3);
+    await using (var multipartAdapter = new XpsFastCgiAdapter(options, server, new MultipartHandler()))
+    {
+        await multipartAdapter.ProcessConnectionAsync(multipartStream);
+    }
+    var multipartOutput = ParseResponse(multipartStream.Written);
+    if (!multipartOutput.Contains("user", StringComparison.Ordinal))
+        throw new Exception("FastCGI multipart form handling failed: " + multipartOutput);
+
+    var malformedMultipartInput = BuildRequest(
+        21,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "POST",
+            ["SCRIPT_NAME"] = "/upload.xps",
+            ["CONTENT_TYPE"] = "multipart/form-data; boundary=wrong-boundary",
+            ["CONTENT_LENGTH"] = multipartBody.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "upload.xps")
+        },
+        multipartBody);
+    var malformedMultipartStream = new FragmentedDuplexStream(malformedMultipartInput, 3);
+    await using (var multipartAdapter = new XpsFastCgiAdapter(options, server, new MultipartHandler()))
+    {
+        await multipartAdapter.ProcessConnectionAsync(malformedMultipartStream);
+    }
+    var malformedMultipartOutput = ParseResponse(malformedMultipartStream.Written);
+    if (!malformedMultipartOutput.Contains("Status: 400", StringComparison.Ordinal))
+        throw new Exception("FastCGI malformed multipart did not map to 400: " + malformedMultipartOutput);
+
+    var duplicateQueryInput = BuildRequest(
+        17,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "GET",
+            ["SCRIPT_NAME"] = "/index.xps",
+            ["QUERY_STRING"] = "q=one&q=two",
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "index.xps")
+        },
+        []);
+    var duplicateQueryStream = new FragmentedDuplexStream(duplicateQueryInput, 3);
+    await using (var queryAdapter = new XpsFastCgiAdapter(options, server, new DuplicateQueryHandler()))
+    {
+        await queryAdapter.ProcessConnectionAsync(duplicateQueryStream);
+    }
+    var duplicateQueryOutput = ParseResponse(duplicateQueryStream.Written);
+    if (!duplicateQueryOutput.Contains("one|one,two", StringComparison.Ordinal))
+        throw new Exception("FastCGI duplicate query handling was not deterministic: " + duplicateQueryOutput);
+
+    var malformedJsonBody = Encoding.UTF8.GetBytes("{not-json");
+    var malformedJsonInput = BuildRequest(
+        15,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "POST",
+            ["SCRIPT_NAME"] = "/json.xps",
+            ["CONTENT_TYPE"] = "application/json",
+            ["CONTENT_LENGTH"] = malformedJsonBody.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "json.xps")
+        },
+        malformedJsonBody);
+    var malformedJsonStream = new FragmentedDuplexStream(malformedJsonInput, 3);
+    await using (var jsonAdapter = new XpsFastCgiAdapter(options, server, new JsonBodyHandler()))
+    {
+        await jsonAdapter.ProcessConnectionAsync(malformedJsonStream);
+    }
+    var malformedJsonOutput = ParseResponse(malformedJsonStream.Written);
+    if (!malformedJsonOutput.Contains("Status: 400", StringComparison.Ordinal))
+        throw new Exception("FastCGI malformed JSON did not map to 400: " + malformedJsonOutput);
+    if (malformedJsonOutput.Contains("stacktrace", StringComparison.OrdinalIgnoreCase) ||
+        malformedJsonOutput.Contains(".cs:", StringComparison.OrdinalIgnoreCase) ||
+        malformedJsonOutput.Contains("/home/", StringComparison.OrdinalIgnoreCase) ||
+        malformedJsonOutput.Contains("\\users\\", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("FastCGI malformed JSON response leaked diagnostics: " + malformedJsonOutput);
+
+    var duplicateCookieInput = BuildRequest(
+        13,
+        new Dictionary<string, string>
+        {
+            ["REQUEST_METHOD"] = "GET",
+            ["SCRIPT_NAME"] = "/index.xps",
+            ["SERVER_NAME"] = "localhost",
+            ["SERVER_PROTOCOL"] = "HTTP/1.1",
+            ["HTTP_COOKIE"] = "client=first; client=second",
+            ["SCRIPT_FILENAME"] = Path.Combine(root, "index.xps")
+        },
+        []);
+    var duplicateCookieStream = new FragmentedDuplexStream(duplicateCookieInput, 3);
+    await adapter.ProcessConnectionAsync(duplicateCookieStream);
+    var duplicateCookieOutput = ParseResponse(duplicateCookieStream.Written);
+    if (!duplicateCookieOutput.Contains("COOKIE=first\n", StringComparison.Ordinal))
+        throw new Exception("FastCGI duplicate cookie handling was not deterministic: " + duplicateCookieOutput);
+
     var getInput = BuildRequest(
         1,
         new Dictionary<string, string>
@@ -45,6 +182,7 @@ try
     if (!getOutput.Contains("QUERY=q=one&q=two", StringComparison.Ordinal)) throw new Exception("FastCGI query mapping failed.");
     if (!getOutput.Contains("HEADER=present", StringComparison.Ordinal)) throw new Exception("FastCGI header mapping failed.");
     if (!getOutput.Contains("COOKIE=abc", StringComparison.Ordinal)) throw new Exception("FastCGI cookie mapping failed.");
+    AssertCorrelationCookie(getOutput, server.SiteId, secure: false);
 
     var headInput = BuildRequest(
         3,
@@ -91,6 +229,7 @@ try
     if (!postOutput.Contains("METHOD=POST", StringComparison.Ordinal)) throw new Exception("FastCGI POST method mapping failed.");
     if (!postOutput.Contains("BODY=hello=world", StringComparison.Ordinal)) throw new Exception("FastCGI STDIN body mapping failed.");
     if (!postOutput.Contains("SCHEME=https", StringComparison.Ordinal)) throw new Exception("FastCGI HTTPS mapping failed.");
+    AssertCorrelationCookie(postOutput, server.SiteId, secure: true);
 
     var escapeInput = BuildRequest(
         9,
@@ -136,6 +275,16 @@ try
 finally
 {
     Directory.Delete(root, recursive: true);
+}
+
+static void AssertCorrelationCookie(string response, string siteId, bool secure)
+{
+    var cookieName = XpsWebClientCorrelation.CookieNameFor(siteId);
+    var line = response.Split("\r\n", StringSplitOptions.None).Single(x => x.StartsWith("Set-Cookie: " + cookieName + "=", StringComparison.Ordinal));
+    if (!line.Contains("; HttpOnly", StringComparison.OrdinalIgnoreCase)) throw new Exception("FastCGI correlation cookie is missing HttpOnly.");
+    if (!line.Contains("; SameSite=Lax", StringComparison.OrdinalIgnoreCase)) throw new Exception("FastCGI correlation cookie is missing SameSite=Lax.");
+    if (!line.Contains("; Max-Age=" + ((long)XpsWebClientCorrelation.Lifetime.TotalSeconds), StringComparison.OrdinalIgnoreCase)) throw new Exception("FastCGI correlation cookie lifetime mismatch.");
+    if (line.Contains("; Secure", StringComparison.OrdinalIgnoreCase) != secure) throw new Exception("FastCGI correlation cookie Secure attribute mismatch.");
 }
 
 static byte[] BuildRequest(ushort requestId, IReadOnlyDictionary<string, string> parameters, byte[] body)
@@ -210,6 +359,61 @@ static string ParseResponse(byte[] raw)
     }
     if (!sawEnd) throw new Exception("FastCGI response did not contain END_REQUEST.");
     return Encoding.UTF8.GetString(stdout.ToArray());
+}
+
+
+sealed class ThrowingHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context) =>
+        throw new InvalidOperationException("SECURITY-SENTINEL " + Environment.CurrentDirectory);
+}
+
+sealed class MultipartHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        try
+        {
+            context.Response.Write(context.Request.FormFirst("role"));
+        }
+        catch (InvalidOperationException)
+        {
+            context.Response.StatusCode = 400;
+            context.Response.Write("Invalid multipart");
+        }
+        return Task.CompletedTask;
+    }
+}
+
+sealed class DuplicateQueryHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        context.Response.ContentType = "text/plain; charset=utf-8";
+        context.Response.Write(context.Request.QueryFirst("q"));
+        context.Response.Write("|");
+        context.Response.Write(string.Join(",", context.Request.QueryAll("q")));
+        return Task.CompletedTask;
+    }
+}
+
+sealed class JsonBodyHandler : IXpsWebRequestHandler
+{
+    public Task HandleAsync(XpsWebContext context)
+    {
+        try
+        {
+            _ = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(context.Request.Body.Span);
+            context.Response.StatusCode = 200;
+            context.Response.Write("OK");
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            context.Response.StatusCode = 400;
+            context.Response.Write("Invalid JSON");
+        }
+        return Task.CompletedTask;
+    }
 }
 
 sealed class EchoHandler : IXpsWebRequestHandler

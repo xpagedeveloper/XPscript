@@ -18,9 +18,7 @@ static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
     if (arguments.Length == 0 || !arguments[0].Equals("run", StringComparison.OrdinalIgnoreCase))
         return;
 
-    var separator = Array.IndexOf(arguments, "--");
-    var optionCount = separator < 0 ? arguments.Length : separator;
-    var explicitInfo = arguments.Take(optionCount).Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
+    var explicitInfo = arguments.Skip(2).TakeWhile(value => value.StartsWith("--", StringComparison.Ordinal)).Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
     Environment.SetEnvironmentVariable("XPSCRIPT_RUNTIME_INFO", explicitInfo ? "1" : null);
 }
 
@@ -46,8 +44,9 @@ static string[] NormalizeArguments(string[] arguments)
         return arguments;
 
     var result = arguments.ToList();
-    var separator = result.FindIndex(value => value == "--");
-    if (separator < 0) result.Add("--info");
-    else result.Insert(separator, "--info");
+    var insertAt = 2;
+    while (insertAt < result.Count && result[insertAt].StartsWith("--", StringComparison.Ordinal))
+        insertAt++;
+    result.Insert(insertAt, "--info");
     return result.ToArray();
 }

@@ -1,0 +1,21 @@
+id: xpscript-static-traversal
+
+info:
+  name: XPScript Static File Traversal
+  author: xpscript
+  severity: critical
+  description: Detects traversal from the static assets route into files outside assets.
+
+http:
+  - raw:
+      - |
+        GET /assets/%2e%2e/secret.txt HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+
+    unsafe: true
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "XPSCRIPT_SECRET_SENTINEL"

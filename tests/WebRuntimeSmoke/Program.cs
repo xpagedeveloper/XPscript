@@ -39,6 +39,15 @@ try
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/%2e%2e/secret.xps"));
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/%252e%252e/secret.xps"));
     AssertThrows<XpsWebPathException>(() => resolver.Resolve("/C:/Windows/system.ini"));
+    // Unicode normalization must not create alternate aliases for a protected route.
+    // A composed filename must not resolve through its canonically equivalent decomposed spelling.
+    var composedUnicodeName = "\u00e5.xps";
+    await File.WriteAllTextAsync(Path.Combine(root, composedUnicodeName), "' unicode");
+    AssertPath(resolver.Resolve("/%C3%A5"), Path.Combine(root, composedUnicodeName), null);
+    var decomposedResolution = resolver.Resolve("/a%CC%8A");
+    if (decomposedResolution.Found)
+        throw new Exception("Unicode normalization created an alternate route alias.");
+
 
     try
     {
@@ -73,6 +82,93 @@ try
 
     if (request.Method != "POST") throw new Exception("HTTP method normalization failed.");
     if (request.Headers["X-Test"].Count != 2) throw new Exception("Multi-value header preservation failed.");
+    var duplicateQueryValues = request.QueryAll("a");
+    if (duplicateQueryValues.Count != 2 || duplicateQueryValues[0] != "1" || duplicateQueryValues[1] != "2")
+        throw new Exception("Duplicate query values were not preserved deterministically.");
+    if (request.QueryFirst("a") != "1" || request.Query("a") != "1")
+        throw new Exception("Duplicate query first-value behavior was not deterministic.");
+
+
+    // URL-encoded form parser abuse boundaries are shared by Kestrel, CGI and FastCGI.
+    var duplicateFormBody = "role=user&role=admin"u8.ToArray();
+    var formRequest = new XpsWebRequest(
+        "POST", "/submit", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(),
+        "application/x-www-form-urlencoded", duplicateFormBody.Length, duplicateFormBody,
+        "localhost", "https", null, "HTTP/1.1", new Dictionary<string, string>());
+    var formValues = formRequest.FormAll("role");
+    if (formValues.Count != 2 || formValues[0] != "user" || formValues[1] != "admin" ||
+        formRequest.FormFirst("role") != "user" || formRequest.Form("role") != "user")
+        throw new Exception("Duplicate form values were not preserved deterministically.");
+    AssertThrows<InvalidOperationException>(() => formRequest.FormAll("role", maxBytes: 4));
+    AssertThrows<InvalidOperationException>(() => formRequest.FormAll("role", maxFields: 1));
+
+    var malformedFormBody = "name=%ZZ"u8.ToArray();
+    var malformedFormRequest = new XpsWebRequest(
+        "POST", "/submit", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(),
+        "application/x-www-form-urlencoded", malformedFormBody.Length, malformedFormBody,
+        "localhost", "https", null, "HTTP/1.1", new Dictionary<string, string>());
+    AssertThrows<InvalidOperationException>(() => malformedFormRequest.FormFirst("name"));
+
+    // Multipart parser abuse boundaries are shared by Kestrel, CGI and FastCGI.
+    static XpsWebRequest MultipartRequest(string contentType, byte[] body) => new(
+        "POST", "/upload", "", "",
+        new Dictionary<string, IReadOnlyList<string>>(),
+        contentType, body.Length, body,
+        "localhost", "https", null, "HTTP/1.1", new Dictionary<string, string>());
+
+    var validMultipartBody = System.Text.Encoding.UTF8.GetBytes(
+        "--safe-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser\r\n--safe-boundary--\r\n");
+    var validMultipart = MultipartRequest("multipart/form-data; boundary=safe-boundary", validMultipartBody);
+    if (validMultipart.FormFirst("role") != "user")
+        throw new Exception("Valid multipart field was not parsed.");
+
+    AssertThrows<InvalidOperationException>(() =>
+        MultipartRequest("multipart/form-data", validMultipartBody).FormFirst("role"));
+    AssertThrows<InvalidOperationException>(() =>
+        MultipartRequest("multipart/form-data; boundary=wrong-boundary", validMultipartBody).FormFirst("role"));
+    AssertThrows<InvalidOperationException>(() =>
+        validMultipart.FormFirst("role", maxBytes: 8, maxFileBytes: 8));
+
+    var unterminatedMultipartBody = System.Text.Encoding.UTF8.GetBytes(
+        "--safe-boundary\r\nContent-Disposition: form-data; name=\"role\"\r\n\r\nuser");
+    AssertThrows<InvalidOperationException>(() =>
+        MultipartRequest("multipart/form-data; boundary=safe-boundary", unterminatedMultipartBody).FormFirst("role"));
+
+    // Run response-cookie injection regressions early: these protect a shared invariant used by Kestrel, CGI and FastCGI.
+    var cookieInjectionResponse = new XpsWebResponse();
+    AssertThrows<ArgumentException>(() => cookieInjectionResponse.SetHeader("Set-Cookie", "session=trusted\r\nSet-Cookie: session=attacker"));
+    AssertThrows<ArgumentException>(() => cookieInjectionResponse.AppendHeader("Set-Cookie", "session=trusted\nSet-Cookie: session=attacker"));
+    AssertThrows<ArgumentException>(() => cookieInjectionResponse.SetCookie("session", "trusted\r\nSet-Cookie: session=attacker"));
+    AssertThrows<ArgumentException>(() => cookieInjectionResponse.SetCookie("session\r\nX-Evil", "attacker"));
+    if (cookieInjectionResponse.Headers.ContainsKey("Set-Cookie"))
+        throw new Exception("Rejected cookie injection mutated response headers.");
+
+    // Security policy defaults are shared across Kestrel, CGI and FastCGI.
+    var htmlSecurityResponse = new XpsWebResponse { ContentType = "text/html; charset=utf-8" };
+    htmlSecurityResponse.Complete();
+    var defaultCsp = htmlSecurityResponse.Headers["Content-Security-Policy"].Single();
+    if (!defaultCsp.Contains("default-src 'self'", StringComparison.Ordinal) ||
+        !defaultCsp.Contains("object-src 'none'", StringComparison.Ordinal) ||
+        !defaultCsp.Contains("frame-ancestors 'none'", StringComparison.Ordinal))
+        throw new Exception("Default HTML Content-Security-Policy is missing required restrictions.");
+    if (htmlSecurityResponse.Headers["Permissions-Policy"].Single() != "camera=(), microphone=(), geolocation=()")
+        throw new Exception("Default Permissions-Policy mismatch.");
+
+    var nonHtmlSecurityResponse = new XpsWebResponse { ContentType = "application/json; charset=utf-8" };
+    nonHtmlSecurityResponse.Complete();
+    if (nonHtmlSecurityResponse.Headers.ContainsKey("Content-Security-Policy"))
+        throw new Exception("Content-Security-Policy was unexpectedly applied to a non-HTML response.");
+    if (!nonHtmlSecurityResponse.Headers.ContainsKey("Permissions-Policy"))
+        throw new Exception("Permissions-Policy was not applied to a non-HTML response.");
+
+    var wasmSecurityResponse = new XpsWebResponse { ContentType = "text/html; charset=utf-8" };
+    XpsWebSecurity.ApplyBrowserWasmResponseSecurityHeaders(wasmSecurityResponse);
+    var wasmCsp = wasmSecurityResponse.Headers["Content-Security-Policy"].Single();
+    if (!wasmCsp.Contains("'wasm-unsafe-eval'", StringComparison.Ordinal) ||
+        !wasmCsp.Contains("object-src 'none'", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM Content-Security-Policy mismatch.");
 
     var response = new XpsWebResponse();
     response.SetHeader("X-Test", "ok");
@@ -178,6 +274,52 @@ try
     if (reusedCreated || reusedCorrelation != rawCorrelation)
         throw new Exception("Client correlation id was not stable across requests.");
     var clientSessionId = XpsWebClientCorrelation.Hash(rawCorrelation);
+    var cookieResponse = new XpsWebResponse();
+    XpsWebClientCorrelation.SetCookie(cookieResponse, correlationCookieName, rawCorrelation, secure: false);
+    var httpCookie = cookieResponse.Headers["Set-Cookie"].Single();
+    if (!httpCookie.Contains("HttpOnly", StringComparison.OrdinalIgnoreCase) ||
+        !httpCookie.Contains("SameSite=Lax", StringComparison.OrdinalIgnoreCase) ||
+        !httpCookie.Contains("Max-Age=2592000", StringComparison.OrdinalIgnoreCase) ||
+        httpCookie.Contains("Secure", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("HTTP correlation cookie security attributes mismatch.");
+    var httpsCookieResponse = new XpsWebResponse();
+    XpsWebClientCorrelation.SetCookie(httpsCookieResponse, correlationCookieName, rawCorrelation, secure: true);
+    var httpsCookie = httpsCookieResponse.Headers["Set-Cookie"].Single();
+    if (!httpsCookie.Contains("HttpOnly", StringComparison.OrdinalIgnoreCase) ||
+        !httpsCookie.Contains("SameSite=Lax", StringComparison.OrdinalIgnoreCase) ||
+        !httpsCookie.Contains("Max-Age=2592000", StringComparison.OrdinalIgnoreCase) ||
+        !httpsCookie.Contains("Secure", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("HTTPS correlation cookie security attributes mismatch.");
+
+    var secondCorrelation = XpsWebClientCorrelation.GetOrCreate(
+        new Dictionary<string, string>(), correlationCookieName, out var secondCreated);
+    if (!secondCreated || secondCorrelation == rawCorrelation ||
+        XpsWebClientCorrelation.Hash(secondCorrelation) == clientSessionId)
+        throw new Exception("Independent clients did not receive independent correlation identifiers.");
+    var attackerCorrelation = new string('a', 64);
+    var fixedCorrelation = XpsWebClientCorrelation.GetOrCreate(
+        new Dictionary<string, string> { [correlationCookieName] = attackerCorrelation },
+        correlationCookieName,
+        out var fixedCreated);
+    if (!fixedCreated || fixedCorrelation.Equals(attackerCorrelation, StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Client-supplied correlation cookie was accepted, allowing session fixation.");
+    foreach (var malformedCorrelation in new[] { "", "xyz", new string('a', 63), new string('a', 65), new string('g', 64) })
+    {
+        var replacement = XpsWebClientCorrelation.GetOrCreate(
+            new Dictionary<string, string> { [correlationCookieName] = malformedCorrelation },
+            correlationCookieName,
+            out var malformedCreated);
+        if (!malformedCreated || !XpsWebClientCorrelation.IsValid(replacement) || replacement == malformedCorrelation)
+            throw new Exception("Malformed correlation cookie was not safely rotated.");
+    }
+    var oversizedCorrelation = new string('a', 16 * 1024);
+    var oversizedReplacement = XpsWebClientCorrelation.GetOrCreate(
+        new Dictionary<string, string> { [correlationCookieName] = oversizedCorrelation },
+        correlationCookieName,
+        out var oversizedCreated);
+    if (!oversizedCreated || !XpsWebClientCorrelation.IsValid(oversizedReplacement))
+        throw new Exception("Oversized correlation cookie was not safely rotated.");
+
     using (var logger = new XpsWebLogManager(server, new XpsWebLogOptions { DirectoryPath = logDirectory }))
     {
         var context = new XpsWebContext(

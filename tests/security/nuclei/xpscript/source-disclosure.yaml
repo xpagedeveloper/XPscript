@@ -1,0 +1,17 @@
+id: xpscript-source-disclosure
+
+info:
+  name: XPScript Source Disclosure
+  author: xpscript
+  severity: high
+  description: Detects direct disclosure of XPScript source files.
+
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/index.xps"
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "Sub Index"

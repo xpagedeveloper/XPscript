@@ -51,6 +51,30 @@ End Sub
 
 [Anonymous]
 [Get]
+Sub BadRedirect()
+    Response.Redirect("/next" + Chr(13) + Chr(10) + "X-Injected: yes", 302)
+End Sub
+
+[Anonymous]
+[Get]
+Sub ExternalRedirect()
+    Response.Redirect("https://evil.example/phish", 302)
+End Sub
+
+[Anonymous]
+[Get]
+Sub SchemeRelativeRedirect()
+    Response.Redirect("//evil.example/phish", 302)
+End Sub
+
+[Anonymous]
+[Get]
+Sub BackslashRedirect()
+    Response.Redirect("\\evil.example\\phish", 302)
+End Sub
+
+[Anonymous]
+[Get]
 Sub MapSafe()
     Response.ContentType = "text/plain; charset=utf-8"
     Response.Write(Server.MapPath("public.txt"))
@@ -146,6 +170,19 @@ try
     AssertStatus(redirect, 302);
     if (!redirect.Headers.TryGetValue("Location", out var location) || location.Single() != "/next")
         throw new Exception("XPScript redirect did not preserve Location.");
+
+    var badRedirect = await SendAsync(dispatcher, root, "GET", "/index/BadRedirect");
+    AssertGeneric500(badRedirect, parent);
+    if (badRedirect.Headers.ContainsKey("X-Injected"))
+        throw new Exception("Redirect response splitting produced an injected header.");
+
+    foreach (var route in new[] { "/index/ExternalRedirect", "/index/SchemeRelativeRedirect", "/index/BackslashRedirect" })
+    {
+        var openRedirect = await SendAsync(dispatcher, root, "GET", route);
+        AssertGeneric500(openRedirect, parent);
+        if (openRedirect.Headers.ContainsKey("Location"))
+            throw new Exception($"Unsafe redirect target produced a Location header for {route}.");
+    }
 
     var mapped = await SendAsync(dispatcher, root, "GET", "/index/MapSafe");
     AssertStatus(mapped, 200);
