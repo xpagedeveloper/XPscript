@@ -47,6 +47,16 @@ jobs:
         run: |
           dotnet run --project ./tests/WebKestrelSmoke/WebKestrelSmoke.csproj -c Release
 
+      - name: Install Browser WASM workload
+        shell: bash
+        run: |
+          dotnet workload install wasm-tools
+
+      - name: Run Browser WASM credential boundary regressions
+        shell: bash
+        run: |
+          dotnet run --project ./tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
+
       - name: Run UIForm adversarial XSS regressions
         shell: bash
         run: |
@@ -56,11 +66,6 @@ jobs:
         shell: bash
         run: |
           dotnet run --project ./tests/WebCsrfSmoke/WebCsrfSmoke.csproj -c Release
-
-      - name: Run Browser WASM credential boundary regressions
-        shell: bash
-        run: |
-          dotnet run --project ./tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
 
       - name: Run CGI and FastCGI cross-host security regressions
         shell: bash
