@@ -332,10 +332,17 @@ End Sub
             Directory.Exists(Path.Combine(path!, "_framework")))
         .Select(path => path!)
         .ToArray();
-    if (appRoots.Length != 1)
-        throw new Exception($"Expected exactly one cached Browser-WASM application root, found {appRoots.Length}.");
+    var matchingRoots = new List<string>();
+    foreach (var appRoot in appRoots)
+    {
+        var candidateBootstrap = await File.ReadAllTextAsync(Path.Combine(appRoot, "index.html"));
+        if (candidateBootstrap.Contains("<base href=\"app.xps/\">", StringComparison.Ordinal))
+            matchingRoots.Add(appRoot);
+    }
+    if (matchingRoots.Count != 1)
+        throw new Exception($"Expected exactly one cached Browser-WASM application for app.xps, found {matchingRoots.Count}.");
 
-    var frameworkRoot = appRoots[0];
+    var frameworkRoot = matchingRoots[0];
     var dotnetJs = Directory.EnumerateFiles(Path.Combine(frameworkRoot, "_framework"), "dotnet.js", SearchOption.TopDirectoryOnly).FirstOrDefault();
     if (dotnetJs is null) throw new Exception("WASM publish output was not cached.");
     if (!File.Exists(Path.Combine(frameworkRoot, "index.html")) ||
