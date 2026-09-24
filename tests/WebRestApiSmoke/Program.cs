@@ -146,7 +146,7 @@ End Sub
 Sub AttachmentExport()
     Dim db As New XPDBSQLite("web-attachment-security.db")
     Dim files As Variant
-    Dim saved As JsonObject
+    Dim saved As XPJsonObject
     Dim id As String
     Dim fileNo As Integer
 
@@ -173,8 +173,8 @@ End Sub
 Sub AttachmentExportTraversal()
     Dim db As New XPDBSQLite("web-attachment-security.db")
     Dim files As Variant
-    Dim rows As JsonArray
-    Dim item As JsonObject
+    Dim rows As XPJsonArray
+    Dim item As XPJsonObject
 
     Set files = db.Attachments("customers", "id", 42)
     Set rows = files.GetMetadata()
@@ -189,8 +189,8 @@ End Sub
 Sub AttachmentExportAbsolute()
     Dim db As New XPDBSQLite("web-attachment-security.db")
     Dim files As Variant
-    Dim rows As JsonArray
-    Dim item As JsonObject
+    Dim rows As XPJsonArray
+    Dim item As XPJsonObject
 
     Set files = db.Attachments("customers", "id", 42)
     Set rows = files.GetMetadata()
@@ -205,8 +205,8 @@ End Sub
 Sub AttachmentDownload()
     Dim db As New XPDBSQLite("web-attachment-security.db")
     Dim files As Variant
-    Dim rows As JsonArray
-    Dim item As JsonObject
+    Dim rows As XPJsonArray
+    Dim item As XPJsonObject
 
     Set files = db.Attachments("customers", "id", 42)
     Set rows = files.GetMetadata()
@@ -266,7 +266,7 @@ try
         "application/json");
     if (duplicateJsonResponse.StatusCode != 200)
         throw new Exception($"Duplicate-property JSON returned {duplicateJsonResponse.StatusCode}.");
-    using (var duplicateJsonDocument = JsonDocument.Parse(duplicateJsonResponse.Body))
+    using (var duplicateJsonDocument = XPJsonDocument.Parse(duplicateJsonResponse.Body))
     {
         if (duplicateJsonDocument.RootElement.GetProperty("name").GetString() != "second")
             throw new Exception("Duplicate JSON property behavior changed; last-value-wins is expected.");
@@ -322,7 +322,7 @@ try
         "application/json",
         origin: "https://client.example");
     if (create.StatusCode != 200) throw new Exception($"JSON body binding returned {create.StatusCode}: {BodyText(create)}");
-    using (var json = JsonDocument.Parse(create.Body))
+    using (var json = XPJsonDocument.Parse(create.Body))
     {
         if (!json.RootElement.TryGetProperty("name", out var name) || name.GetString() != "Fredrik")
             throw new Exception("Response.OK did not serialize bound XPScript model data.");
@@ -341,7 +341,7 @@ try
     var schemaInvalidBody = BodyText(schemaInvalid);
     if (!schemaInvalidBody.Contains("$.age", StringComparison.Ordinal) || !schemaInvalidBody.Contains("JSON Schema validation failed", StringComparison.Ordinal))
         throw new Exception("JSON Schema Problem Details did not contain structured field path errors.");
-    using (var schemaProblem = JsonDocument.Parse(schemaInvalid.Body))
+    using (var schemaProblem = XPJsonDocument.Parse(schemaInvalid.Body))
     {
         var rootElement = schemaProblem.RootElement;
         if (!rootElement.TryGetProperty("validationErrors", out var validationErrors) || validationErrors.ValueKind != JsonValueKind.Array || validationErrors.GetArrayLength() == 0)
