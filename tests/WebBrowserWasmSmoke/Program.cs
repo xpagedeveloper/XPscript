@@ -135,9 +135,16 @@ End Sub
             !authenticatedUnit.Routes[XpsWebPathResolver.BrowserWasmAssetRoute].Policy.AllowAnonymous)
             throw new Exception("Browser-WASM shell or assets require authentication and would prevent login UI from loading.");
 
-        var secureProcedure = new XpsWebRouteMetadataParser().Parse(await File.ReadAllTextAsync(authenticatedPath)).Routes["SecureServerValue"];
-        if (secureProcedure.Policy.AllowAnonymous)
-            throw new Exception("Authenticated Browser-WASM server operation lost its authorization policy.");
+        var anonymousBridgeResponse = new XpsWebResponse();
+        await authenticatedUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
+            BridgeRequest("/authenticated.xps/__xpscript_bridge", new Dictionary<string, IReadOnlyList<string>>()),
+            anonymousBridgeResponse,
+            Server(root),
+            new XpsWebPrincipal(false),
+            new SmokeApplicationState(),
+            new SmokeSession()));
+        if (anonymousBridgeResponse.StatusCode != 403)
+            throw new Exception("Authenticated Browser-WASM bridge accepted an anonymous request.");
     }
 
     var mixedPolicyPath = Path.Combine(root, "mixed-policy.xps");
