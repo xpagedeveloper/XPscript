@@ -217,8 +217,8 @@ End Sub
             BridgeRequest("/bridge-policy.xps/__xpscript_bridge/capability", policyHeaders),
             policyCapabilityResponse, Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), policySession));
         if (policyCapabilityResponse.StatusCode != 200 ||
-            !policyCapabilityResponse.Headers.TryGetValue("Content-Type", out _))
-            throw new Exception("Browser-WASM policy regression could not acquire a bridge capability.");
+            !policyCapabilityResponse.Body.Contains("capability", StringComparison.Ordinal))
+            throw new Exception($"Browser-WASM policy regression could not acquire a bridge capability: HTTP {policyCapabilityResponse.StatusCode}, body '{policyCapabilityResponse.Body}'.");
 
         using var capabilityDocument = System.Text.Json.JsonDocument.Parse(policyCapabilityResponse.Body);
         var capability = capabilityDocument.RootElement.GetProperty("capability").GetString()
