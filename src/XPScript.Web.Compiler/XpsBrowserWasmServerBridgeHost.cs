@@ -230,12 +230,18 @@ internal static class XpsBrowserWasmServerBridgeHost
 
     private static JsonNode? NormalizeResult(Assembly companion, object? result)
     {
-        var nativeJson = companion.GetType("XPScriptNativeJson", throwOnError: true, ignoreCase: false)
-            ?? throw new InvalidOperationException("Companion native JSON runtime was not found.");
-        var toNode = nativeJson.GetMethod("ToNode", BindingFlags.Static | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Companion native JSON conversion method was not found.");
-        var node = toNode.Invoke(null, [result]) as JsonNode;
-        return node?.DeepClone();
+        if (result is null) return null;
+
+        var nativeJson = companion.GetType("XPScriptNativeJson", throwOnError: false, ignoreCase: false);
+        if (nativeJson is not null)
+        {
+            var toNode = nativeJson.GetMethod("ToNode", BindingFlags.Static | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Companion native JSON conversion method was not found.");
+            var node = toNode.Invoke(null, [result]) as JsonNode;
+            if (node is not null) return node.DeepClone();
+        }
+
+        return JsonSerializer.SerializeToNode(result, result.GetType());
     }
 
     private static BridgeRequest ParseRequest(JsonElement root)
