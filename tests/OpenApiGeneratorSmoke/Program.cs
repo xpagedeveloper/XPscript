@@ -1682,7 +1682,12 @@ components:
       type: object
       properties:
         JsonParse: { type: string }
-paths: {}
+paths:
+  /collision:
+    get:
+      operationId: collisionProbe
+      responses:
+        '204': { description: ok }
 """, """
 Public Class CollisionModel
     Public jsonparse As Long
