@@ -66,6 +66,9 @@ try
     if (!headerResponse.Headers.TryGetValue("X-Permitted-Cross-Domain-Policies", out var crossDomainPolicies) ||
         !crossDomainPolicies.Contains("none"))
         throw new Exception("HTML response did not disable legacy cross-domain policy files.");
+    if (!headerResponse.Headers.TryGetValue("Cross-Origin-Opener-Policy", out var openerPolicy) ||
+        !openerPolicy.Contains("same-origin"))
+        throw new Exception("HTML response did not isolate the top-level browsing context.");
 
     var independentInfo = new XpsServerInfo(info.SiteId, root, XpsWebHostingMode.Kestrel, info.StartTimeUtc, info.RuntimeVersion);
     var independentContext = new XpsWebContext(request, new XpsWebResponse(), independentInfo, new XpsWebPrincipal(false), new XpsApplicationState(), session);
