@@ -164,12 +164,20 @@ public sealed class XpsOpenApiImporter
         if (!collides && !forceIsolation) return desired;
 
         var prefix = ImportPrefix(sourceName);
-        var names = desiredClasses.Select(x => x.Name)
-            .Concat(desiredProcedures.Select(x => x.Name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderByDescending(x => x.Length)
-            .ToArray();
         var rewritten = desired.Source;
+
+        // Isolation is deliberately based on declarations in the generated source rather than
+        // ParseClasses/ParseProcedures. Those parsers exist for additive merging and may omit
+        // declarations that do not participate in a merge. A distinct imported API must have
+        // every generated top-level declaration isolated deterministically.
+        var names = Regex.Matches(
+                desired.Source,
+                @"(?im)^\s*(?:(?:Public|Private|Static)\s+)*(?:Class|Function|Sub)\s+(?<name>[A-Za-z_]\w*)")
+            .Select(match => match.Groups["name"].Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(name => name.Length)
+            .ToArray();
+
         foreach (var name in names)
             rewritten = Regex.Replace(rewritten, $@"\b{Regex.Escape(name)}\b", prefix + name, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
