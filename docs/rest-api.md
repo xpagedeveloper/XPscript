@@ -19,28 +19,17 @@ xpscript openapi generate api.json --force
 
 `--force` is required to overwrite an existing generated `.xps` file.
 
-### Additive reimport
+### Initial import
 
-Use `openapi import` when an OpenAPI specification has changed and the existing `.xps` file may contain implemented handlers or other edits that must not be overwritten.
+Use `openapi import` for the first import of an OpenAPI specification into an XPScript REST server source file.
 
 ```text
 xpscript openapi import petstore.yaml -o ./generated/petstore.xps
 ```
 
-Import is deliberately additive. Existing declarations are authoritative and are preserved. The importer only adds declarations that are missing from the existing XPScript source:
+The import is a one-time operation. If the destination does not exist, XPScript creates it from the OpenAPI specification and validates the generated REST web unit before placing it at the destination. An existing source file may receive its first OpenAPI import without overwriting existing user declarations.
 
-- a component or generated contract class that does not yet exist is appended
-- a property that does not yet exist in an existing class is inserted before that class's `End Class`
-- a generated Function or Sub that does not yet exist is appended
-- existing Functions and Subs, including their bodies, signatures and attributes, are never rewritten
-- existing class properties and validation attributes are never rewritten or removed
-- declarations removed from the newer OpenAPI specification are not removed from XPScript
-
-When the newer OpenAPI document describes a different type, validation rule, Function/Sub signature, route method, route path, security attribute or endpoint parameter list for an existing declaration, the importer keeps the existing XPScript declaration and reports a drift warning. For example, adding a query parameter to an already imported operation can add the corresponding request-contract property, but the existing endpoint wrapper is left unchanged and a warning is emitted rather than modifying the wrapper signature.
-
-The merged source is written to a temporary `.xps` file and compiled as a REST web unit first. The destination file is replaced only when that compile succeeds. A failed reimport therefore leaves the existing destination untouched. `openapi import` does not accept `--force`.
-
-If the destination does not exist yet, `openapi import` creates it from the OpenAPI specification and validates it before placing it at the destination.
+After OpenAPI-generated infrastructure has been imported, run neither a reimport nor an update against that file. Generate a new server source when the contract changes. `openapi import` does not accept `--force`.
 
 A minimal OpenAPI source can look like this:
 
