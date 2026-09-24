@@ -1832,6 +1832,44 @@ paths:
         !regenerationChanged.Source.Contains("Optional Result As Variant = Nothing", StringComparison.Ordinal))
         throw new Exception("OpenAPI client regeneration must preserve deterministic member naming when the contract grows.");
 
+    var firstImportedApi = new XpsOpenApiImporter().Import("""
+openapi: 3.1.0
+info: { title: First API, version: 1.0.0 }
+components:
+  schemas:
+    SharedModel:
+      type: object
+      properties:
+        firstValue: { type: string }
+paths:
+  /first:
+    get:
+      operationId: sharedOperation
+      responses:
+        '204': { description: ok }
+""", "", "first-api.yaml");
+    var secondImportedApi = new XpsOpenApiImporter().Import("""
+openapi: 3.1.0
+info: { title: Second API, version: 1.0.0 }
+components:
+  schemas:
+    SharedModel:
+      type: object
+      properties:
+        secondValue: { type: string }
+paths:
+  /second:
+    get:
+      operationId: sharedOperation
+      responses:
+        '204': { description: ok }
+""", firstImportedApi.Source, "second-api.yaml");
+    if (!secondImportedApi.Warnings.Any(warning => warning.Contains("SharedModel", StringComparison.OrdinalIgnoreCase)) ||
+        !secondImportedApi.Warnings.Any(warning => warning.Contains("sharedOperation", StringComparison.OrdinalIgnoreCase)))
+        throw new Exception("Importing a second API with colliding generated names must report the collisions instead of silently merging the APIs.");
+
+    Console.WriteLine("OPENAPI-MULTI-API-COLLISION=OK");
+
     Console.WriteLine("OPENAPI-REGENERATION-COLLISION=OK");
 
     foreach (var marker in new[] { "OPENAPI-CLIENT-SECURITY=OK", "OPENAPI-CLIENT-CORE-ONLY=OK" })
