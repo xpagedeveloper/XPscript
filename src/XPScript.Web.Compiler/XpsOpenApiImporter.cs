@@ -49,7 +49,7 @@ public sealed class XpsOpenApiImporter
         if (!string.IsNullOrWhiteSpace(existingSource) &&
             ContainsGeneratedOpenApiSource(existingSource) &&
             !ContainsGeneratedSource(existingSource, sourceName) &&
-            !SharesGeneratedApiSurface(desired, existingSource))
+            !SharesGeneratedRoutes(desired.Source, existingSource))
             desired = IsolateCollidingApi(desired, existingSource, sourceName, forceIsolation: true);
         var source = existingSource;
         var newline = DetectNewline(source);
@@ -149,42 +149,23 @@ public sealed class XpsOpenApiImporter
                       && line.TrimEnd().EndsWith(marker, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static bool SharesGeneratedApiSurface(XpsOpenApiGenerationResult desired, string existingSource)
+    private static bool SharesGeneratedRoutes(string desiredSource, string existingSource)
     {
-        var desiredClasses = ParseClasses(desired.Source);
-        var existingClasses = ParseClasses(existingSource);
-        var desiredEndpoints = ParseProcedures(desired.Source, desiredClasses.Select(x => (x.Start, x.End)).ToArray())
-            .Where(IsGeneratedEndpoint)
-            .ToArray();
-        var existingEndpoints = ParseProcedures(existingSource, existingClasses.Select(x => (x.Start, x.End)).ToArray())
-            .Where(IsGeneratedEndpoint)
-            .ToArray();
-
-        // Operation names alone are not API identity: two unrelated APIs may deliberately use
-        // the same operationId. Treat this as an additive reimport only when a generated endpoint
-        // has the same operation name and the same HTTP routing attributes.
-        return desiredEndpoints.Any(desiredEndpoint =>
-            existingEndpoints.Any(existingEndpoint =>
-                existingEndpoint.Name.Equals(desiredEndpoint.Name, StringComparison.OrdinalIgnoreCase) &&
-                EndpointAttributes(desiredEndpoint).SetEquals(EndpointAttributes(existingEndpoint))));
+        var desiredRoutes = GeneratedRoutes(desiredSource);
+        if (desiredRoutes.Count == 0) return false;
+        return desiredRoutes.Overlaps(GeneratedRoutes(existingSource));
     }
 
-    private static bool IsGeneratedEndpoint(ProcedureBlock procedure) =>
-        procedure.Kind.Equals("Sub", StringComparison.OrdinalIgnoreCase) &&
-        procedure.Name.StartsWith("Endpoint", StringComparison.OrdinalIgnoreCase);
-
-    private static HashSet<string> EndpointAttributes(ProcedureBlock procedure) =>
-        NormalizeAttributes(procedure.Prefix)
-            .Where(attribute =>
-                attribute.StartsWith("[RestRoute(", StringComparison.OrdinalIgnoreCase) ||
-                attribute.StartsWith("[RestGet", StringComparison.OrdinalIgnoreCase) ||
-                attribute.StartsWith("[RestPost", StringComparison.OrdinalIgnoreCase) ||
-                attribute.StartsWith("[RestPut", StringComparison.OrdinalIgnoreCase) ||
-                attribute.StartsWith("[RestPatch", StringComparison.OrdinalIgnoreCase) ||
-                attribute.StartsWith("[RestDelete", StringComparison.OrdinalIgnoreCase) ||
-                attribute.StartsWith("[RestHead", StringComparison.OrdinalIgnoreCase) ||
-                attribute.StartsWith("[RestOptions", StringComparison.OrdinalIgnoreCase))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    private static HashSet<string> GeneratedRoutes(string source)
+    {
+        var routes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in Regex.Matches(
+                     source,
+                     @"(?im)^\s*\[RestRoute\(\s*""(?<route>[^""]+)""\s*\)\]\s*$",
+                     RegexOptions.CultureInvariant))
+            routes.Add(match.Groups["route"].Value);
+        return routes;
+    }
 
     private static XpsOpenApiGenerationResult IsolateCollidingApi(XpsOpenApiGenerationResult desired, string existingSource, string? sourceName, bool forceIsolation = false)
     {
