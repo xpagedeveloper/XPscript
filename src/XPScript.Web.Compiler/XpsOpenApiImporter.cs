@@ -153,20 +153,38 @@ public sealed class XpsOpenApiImporter
     {
         var desiredClasses = ParseClasses(desired.Source);
         var existingClasses = ParseClasses(existingSource);
-        var desiredProcedures = ParseProcedures(desired.Source, desiredClasses.Select(x => (x.Start, x.End)).ToArray())
-             .Select(x => ProcedureKey(x.Kind, x.Name))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var existingProcedures = ParseProcedures(existingSource, existingClasses.Select(x => (x.Start, x.End)).ToArray())
-            .Select(x => ProcedureKey(x.Kind, x.Name))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var desiredEndpoints = ParseProcedures(desired.Source, desiredClasses.Select(x => (x.Start, x.End)).ToArray())
+            .Where(IsGeneratedEndpoint)
+            .ToArray();
+        var existingEndpoints = ParseProcedures(existingSource, existingClasses.Select(x => (x.Start, x.End)).ToArray())
+            .Where(IsGeneratedEndpoint)
+            .ToArray();
 
-        // Generated REST endpoints are stable API identity across additive reimports even when
-        // the specification filename/title/version changes. A shared endpoint means update the
-        // existing API; disjoint APIs that merely reuse model/operation names are isolated.
-        return desiredProcedures
-            .Where(x => x.StartsWith("Sub\0Endpoint", StringComparison.OrdinalIgnoreCase))
-            .Any(existingProcedures.Contains);
+        // Operation names alone are not API identity: two unrelated APIs may deliberately use
+        // the same operationId. Treat this as an additive reimport only when a generated endpoint
+        // has the same operation name and the same HTTP routing attributes.
+        return desiredEndpoints.Any(desiredEndpoint =>
+            existingEndpoints.Any(existingEndpoint =>
+                existingEndpoint.Name.Equals(desiredEndpoint.Name, StringComparison.OrdinalIgnoreCase) &&
+                EndpointAttributes(desiredEndpoint).SetEquals(EndpointAttributes(existingEndpoint))));
     }
+
+    private static bool IsGeneratedEndpoint(ProcedureBlock procedure) =>
+        procedure.Kind.Equals("Sub", StringComparison.OrdinalIgnoreCase) &&
+        procedure.Name.StartsWith("Endpoint", StringComparison.OrdinalIgnoreCase);
+
+    private static HashSet<string> EndpointAttributes(ProcedureBlock procedure) =>
+        NormalizeAttributes(procedure.Prefix)
+            .Where(attribute =>
+                attribute.StartsWith("[RestRoute(", StringComparison.OrdinalIgnoreCase) ||
+                attribute.StartsWith("[RestGet", StringComparison.OrdinalIgnoreCase) ||
+                attribute.StartsWith("[RestPost", StringComparison.OrdinalIgnoreCase) ||
+                attribute.StartsWith("[RestPut", StringComparison.OrdinalIgnoreCase) ||
+                attribute.StartsWith("[RestPatch", StringComparison.OrdinalIgnoreCase) ||
+                attribute.StartsWith("[RestDelete", StringComparison.OrdinalIgnoreCase) ||
+                attribute.StartsWith("[RestHead", StringComparison.OrdinalIgnoreCase) ||
+                attribute.StartsWith("[RestOptions", StringComparison.OrdinalIgnoreCase))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     private static XpsOpenApiGenerationResult IsolateCollidingApi(XpsOpenApiGenerationResult desired, string existingSource, string? sourceName)
     {
