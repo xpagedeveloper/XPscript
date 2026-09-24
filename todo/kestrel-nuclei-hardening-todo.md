@@ -186,20 +186,20 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 - `cookies-without-secure` (info): expected only for the scanner's intentional plain-HTTP endpoint. XPScript must always set `Secure` on these cookies when the request uses HTTPS; on HTTP the attribute is intentionally omitted so HTTP remains supported. Both HTTP and HTTPS cookie behavior are regression-tested.
 - `http-missing-security-headers / strict-transport-security` (info): confirmed observation, not enabled on HTTP because HSTS is an HTTPS-only policy and must not be emitted as a substitute for TLS.
-- `http-missing-security-headers / x-permitted-cross-domain-policies` (info): confirmed missing optional legacy header. Review whether an explicit `none` default adds useful defense-in-depth.
+- `http-missing-security-headers / x-permitted-cross-domain-policies` (info): resolved. XPScript now emits `X-Permitted-Cross-Domain-Policies: none` by default and regression coverage verifies it.
 - `http-missing-security-headers / cross-origin-embedder-policy` (info): confirmed missing isolation header. Not safe to enable globally without compatibility review because it changes cross-origin resource loading requirements.
-- `http-missing-security-headers / cross-origin-opener-policy` (info): confirmed missing isolation header. Review browser/UIForm compatibility before selecting a default.
+- `http-missing-security-headers / cross-origin-opener-policy` (info): resolved. XPScript now emits `Cross-Origin-Opener-Policy: same-origin` by default; hardening, Browser/WASM, Nuclei and Windows/IIS verification passed in run #290.
 - `http-missing-security-headers / cross-origin-resource-policy` (info): confirmed missing isolation header. Review static assets and browser/WASM behavior before selecting a default.
 - `weak-csp-detect / unsafe-script-src` (info): confirmed. Default CSP currently contains `script-src 'unsafe-inline'`; requires a nonce/hash-compatible generated-script design before it can be removed safely.
 - `missing-cookie-samesite-strict` (info): not applicable. Session and correlation cookies intentionally use `SameSite=Lax`; CSRF protection is enforced separately for unsafe browser/session requests.
 
  corpus management
 
-- [ ] Review upstream `http/misconfiguration` findings.
+- [x] Review upstream `http/misconfiguration` findings. Run #283 produced the eight informational findings classified above; actionable X-Permitted-Cross-Domain-Policies and COOP observations were subsequently fixed and run #290 passed.
 - [x] Add explicit generic web-boundary Nuclei profile for CRLF injection, PUT enablement, TRACE, Host-header injection, web.config, Git metadata/credentials and .DS_Store exposure.
 - [x] Add curated ASP.NET, IIS and .NET Nuclei profile for debug mode, ASP.NET Core development environment, launchSettings.json, ELMAH, Trace.axd, Microsoft runtime errors, NuGet.config, IIS short-name behavior and IIS version disclosure.
 - [x] Add curated JSON security Nuclei profile for appsettings.json, credentials.json, auth.json, JWK/JWKS exposure, Swagger/OpenAPI exposure and generic sensitive config JSON disclosure.
-- [ ] Review upstream `http/exposures` findings.
+- [x] Review upstream `http/exposures` findings. The pinned upstream exposures directory was scanned in run #283 with no exposure finding outside the eight informational misconfiguration/header/cookie/CSP observations classified above.
 - [ ] Add applicable generic fuzzing templates in a controlled phase.
 - [ ] Add applicable generic vulnerability templates in a controlled phase.
 - [ ] Add ASP.NET Core and Kestrel-specific CVE templates when relevant.
