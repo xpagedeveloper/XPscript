@@ -52,7 +52,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify bare LF request framing is rejected or safely normalized. Kestrel accepts and canonicalizes bare-LF framing before XPScript middleware. Regression requires exactly one response and no protected-content disclosure. Corrected canonicalization probe verified in run #40.
 - [x] Verify malformed HTTP version tokens. Verified in run #32.
 - [x] Verify conflicting Content-Length values are rejected.
-- [~] Verify Content-Length plus Transfer-Encoding canonicalization cannot create request smuggling across supported deployment topologies. Standalone Kestrel CL.TE desync probe verified safe in run #31. Reverse-proxy topologies remain.
+- [x] Verify Content-Length plus Transfer-Encoding canonicalization cannot create request smuggling across supported deployment topologies. Standalone Kestrel CL.TE desync probe verified safe in run #31. A real nginx to Kestrel HTTP/1.1 reverse-proxy gate now exercises CL.TE and TE.CL multi-request desynchronization attempts; run #300 passed without protected/application-content disclosure. FastCGI behind nginx remains separately covered by run #38, while IIS out-of-process framing is owned by IIS/ANCM before Kestrel and is covered by the Windows IIS deployment gate.
 - [x] Verify duplicate Transfer-Encoding values. Verified safe in run #31.
 - [x] Verify invalid chunk sizes. Verified rejected in run #31.
 - [x] Verify chunk extensions and malformed chunk terminators. Malformed terminator rejected in run #31 and chunk extensions handled without ambiguous framing in run #39.
@@ -234,9 +234,9 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - Expected response: either rejection or unambiguous single-request canonicalization with no cross-request desynchronization
 - Root cause: Kestrel accepts the request and canonicalizes framing before the XPScript middleware layer. The original Content-Length header is not available to the adapter after parsing, so application middleware cannot reliably reject the raw CL+TE combination.
 - Proposed fix: test for actual desynchronization/smuggling rather than status-code rejection. Verify standalone Kestrel and IIS-to-Kestrel separately. Keep raw framing tests authoritative.
-- Regression test: raw-socket probe now accepts Kestrel canonicalization only when it produces one response and no protected-content disclosure. Add a dedicated multi-request desynchronization probe next.
+- Regression test: raw-socket probes verify standalone Kestrel canonicalization, and `tests/security/reverse_proxy_smuggling.py` sends CL.TE and TE.CL multi-request desynchronization attempts through a real nginx HTTP/1.1 reverse proxy to Kestrel. Run #300 passed without protected/application-content disclosure.
 - Nuclei note: the custom `xpscript-cl-te-framing` template did not report this condition in the same run, so Nuclei is not currently reproducing the exact raw-socket framing behavior.
-- Fix commit or pull request: superseded by topology-specific verification. The attempted middleware rejection could not observe the raw Content-Length after Kestrel parsing.
+- Fix commit or pull request: superseded by topology-specific verification. The attempted middleware rejection could not observe the raw Content-Length after Kestrel parsing. Reverse-proxy regression added in commits `1c0bc9267467847690eb178afd11b28e34263955` and `b105a218eada17225dd8a480a0aa9deaef3d563b`, verified by run #300.
 
 
 
