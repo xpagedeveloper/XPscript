@@ -237,28 +237,29 @@ End Sub
         var sourceHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(policySource + "\0" + compilerIdentity + "\0" + "4")));
 
-        async Task<int> InvokePolicyAsync(string procedureName, XpsWebPrincipal principal)
+        async Task<(int StatusCode, string Body)> InvokePolicyAsync(string procedureName, XpsWebPrincipal principal)
         {
             var response = new XpsWebResponse();
             await policyUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
                 BridgePostRequest("/bridge-policy.xps/__xpscript_bridge", policyHeaders, ProcedureId(sourceHash, procedureName)),
                 response, Server(root), principal, new SmokeApplicationState(), policySession));
-            return response.StatusCode;
+            return (response.StatusCode, response.Body);
         }
 
-        if (await InvokePolicyAsync("PublicBridge", new XpsWebPrincipal(false)) != 200)
-            throw new Exception("Anonymous Browser-WASM server operation was not callable anonymously.");
-        if (await InvokePolicyAsync("AuthBridge", new XpsWebPrincipal(false)) != 401)
+        var publicResult = await InvokePolicyAsync("PublicBridge", new XpsWebPrincipal(false));
+        if (publicResult.StatusCode != 200)
+            throw new Exception($"Anonymous Browser-WASM server operation was not callable anonymously: HTTP {publicResult.StatusCode}, body '{publicResult.Body}'.");
+        if ((await InvokePolicyAsync("AuthBridge", new XpsWebPrincipal(false))).StatusCode != 401)
             throw new Exception("Authenticated Browser-WASM server operation did not reject an anonymous principal with 401.");
-        if (await InvokePolicyAsync("AuthBridge", new XpsWebPrincipal(true, "user")) != 200)
+        if ((await InvokePolicyAsync("AuthBridge", new XpsWebPrincipal(true, "user"))).StatusCode != 200)
             throw new Exception("Authenticated Browser-WASM server operation rejected an authenticated principal.");
-        if (await InvokePolicyAsync("AdminBridge", new XpsWebPrincipal(true, "user")) != 403)
+        if ((await InvokePolicyAsync("AdminBridge", new XpsWebPrincipal(true, "user"))).StatusCode != 403)
             throw new Exception("Role-protected Browser-WASM server operation did not reject a principal without the required role.");
-        if (await InvokePolicyAsync("AdminBridge", new XpsWebPrincipal(true, "admin", roles: new[] { "Admin" })) != 200)
+        if ((await InvokePolicyAsync("AdminBridge", new XpsWebPrincipal(true, "admin", roles: new[] { "Admin" }))).StatusCode != 200)
             throw new Exception("Role-protected Browser-WASM server operation rejected the required role.");
-        if (await InvokePolicyAsync("RuleBridge", new XpsWebPrincipal(true, "user")) != 403)
+        if ((await InvokePolicyAsync("RuleBridge", new XpsWebPrincipal(true, "user"))).StatusCode != 403)
             throw new Exception("Rule-protected Browser-WASM server operation did not reject a principal without the required rule.");
-        if (await InvokePolicyAsync("RuleBridge", new XpsWebPrincipal(true, "reader", rules: new[] { "CanRead" })) != 200)
+        if ((await InvokePolicyAsync("RuleBridge", new XpsWebPrincipal(true, "reader", rules: new[] { "CanRead" }))).StatusCode != 200)
             throw new Exception("Rule-protected Browser-WASM server operation rejected the required rule.");
     }
 
