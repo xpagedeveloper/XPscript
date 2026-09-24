@@ -1,0 +1,669 @@
+name: Kestrel Nuclei Hardening
+
+on:
+  push:
+    branches:
+      - ai-kestrel-nuclei-hardening
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 1 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kestrel-hardening-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hardening:
+    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HARDENING_PORT: "18081"
+      NUCLEI_VERSION: "v3.11.1"
+      NUCLEI_TEMPLATES_SHA: "883b9d5b0f45857738f35446cdb1b03e09d969d5"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Scheduled scanner pin review reminder
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          echo "::notice title=Monthly Nuclei pin review::Review NUCLEI_VERSION and NUCLEI_TEMPLATES_SHA against current upstream releases. Update pins only through a reviewed commit and rerun the complete hardening workflow."
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.x"
+          cache: false
+
+      - name: Build XPScript compiler and CLI
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+          dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore -p:SkipUnifiedPublish=true
+
+      - name: Run Kestrel protocol regressions
+        shell: bash
+        run: |
+          dotnet run --project ./tests/WebKestrelSmoke/WebKestrelSmoke.csproj -c Release
+
+      - name: Install Browser WASM workload
+        shell: bash
+        run: |
+          dotnet workload install wasm-tools
+
+      - name: Run Browser WASM credential boundary regressions
+        shell: bash
+        run: |
+          dotnet run --project ./tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
+
+      - name: Run UIForm adversarial XSS regressions
+        shell: bash
+        run: |
+          dotnet run --project ./tests/WebUIFormAdversarialSecurity/WebUIFormAdversarialSecurity.csproj -c Release
+
+      - name: Run CSRF session isolation regressions
+        shell: bash
+        run: |
+          dotnet run --project ./tests/WebCsrfSmoke/WebCsrfSmoke.csproj -c Release
+
+      - name: Run CGI and FastCGI cross-host security regressions
+        shell: bash
+        run: |
+          dotnet run --project ./tests/WebRuntimeSmoke/WebRuntimeSmoke.csproj -c Release
+          dotnet run --project ./tests/WebCgiSmoke/WebCgiSmoke.csproj -c Release
+          dotnet run --project ./tests/WebFastCgiSmoke/WebFastCgiSmoke.csproj -c Release
+          dotnet run --project ./tests/WebFastCgiAdversarialSmoke/WebFastCgiAdversarialSmoke.csproj -c Release
+
+      - name: Run nginx to FastCGI topology security regressions
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+          FASTCGI_PORT=19091
+          NGINX_PORT=18081
+          mkdir -p ./artifacts/hardening ./.hardening-fastcgi
+          FASTCGI_ROOT="$(realpath ./.hardening-fastcgi)"
+          cat > ./.hardening-fastcgi/index.xps <<'XPS'
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Response.ContentType = "text/plain; charset=utf-8"
+              Response.Write("XPSCRIPT-FASTCGI-HARDENING")
+          End Sub
+          XPS
+          dotnet run --project ./tests/WebFastCgiNginxHost/WebFastCgiNginxHost.csproj -c Release -- "${FASTCGI_ROOT}" "${FASTCGI_PORT}" > ./artifacts/hardening/fastcgi-nginx-host.log 2>&1 &
+          echo $! > ./artifacts/hardening/fastcgi-nginx-host.pid
+          for i in {1..30}; do
+            if grep -q "XPS-FASTCGI-NGINX-HOST=READY" ./artifacts/hardening/fastcgi-nginx-host.log; then break; fi
+            sleep 1
+          done
+          if ! grep -q "XPS-FASTCGI-NGINX-HOST=READY" ./artifacts/hardening/fastcgi-nginx-host.log; then
+            cat ./artifacts/hardening/fastcgi-nginx-host.log
+            exit 1
+          fi
+          cat > /tmp/xpscript-hardening-nginx.conf <<EOF
+          events {}
+          http {
+            access_log off;
+            server {
+              listen 127.0.0.1:${NGINX_PORT};
+              server_name 127.0.0.1;
+              location / {
+                include /etc/nginx/fastcgi_params;
+                fastcgi_param SCRIPT_FILENAME ${FASTCGI_ROOT}/index.xps;
+                fastcgi_param PATH_INFO "";
+                fastcgi_pass 127.0.0.1:${FASTCGI_PORT};
+              }
+            }
+          }
+          EOF
+          sudo nginx -c /tmp/xpscript-hardening-nginx.conf
+          trap 'sudo nginx -c /tmp/xpscript-hardening-nginx.conf -s stop || true; kill "$(cat ./artifacts/hardening/fastcgi-nginx-host.pid)" || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS "http://127.0.0.1:${NGINX_PORT}/" | grep -q "XPSCRIPT-FASTCGI-HARDENING"; then break; fi
+            sleep 1
+          done
+          curl -fsS "http://127.0.0.1:${NGINX_PORT}/" | grep -q "XPSCRIPT-FASTCGI-HARDENING"
+          for path in \
+            '/assets/%2e%2e/_xps/metrics' \
+            '/assets/%252e%252e/_xps/metrics' \
+            '/assets/%2e%2e/secret.txt' \
+            '/assets/%252e%252e/secret.txt' \
+            '/assets/..%5csecret.txt'; do
+            code=$(curl --path-as-is -sS -o /tmp/xps-fastcgi-body -w '%{http_code}' "http://127.0.0.1:${NGINX_PORT}${path}" || true)
+            test "${code}" != "200"
+          done
+          sudo nginx -c /tmp/xpscript-hardening-nginx.conf -s stop
+          kill "$(cat ./artifacts/hardening/fastcgi-nginx-host.pid)" 2>/dev/null || true
+          trap - EXIT
+
+      - name: Create hardening application
+        shell: bash
+        run: |
+          rm -rf ./.hardening-site ./.hardening-rest ./out/hardening-webiis ./out/hardening-webiis.zip
+          mkdir -p ./.hardening-site/assets ./.hardening-site/.xpscript-cache ./.hardening-rest ./artifacts/hardening
+
+          cat > ./.hardening-site/index.xps <<'XPS'
+          [Anonymous]
+          [Get]
+          [Post]
+          Sub Index()
+              Response.ContentType = "text/plain; charset=utf-8"
+              Response.SetHeader("X-XPScript-Hardening", "ok")
+              Response.Write("XPSCRIPT-HARDENING\n")
+              Response.Write("METHOD=" & Request.Method & "\n")
+              Response.Write("PATH=" & Request.Path & "\n")
+              Response.Write("QUERY=" & Request.QueryString & "\n")
+              Response.Write("HEADER=" & Request.Header("X-Test") & "\n")
+              Response.Write("COOKIE=" & Request.Cookie("client") & "\n")
+          End Sub
+
+          XPS
+
+          cp ./.hardening-site/index.xps ./.hardening-site/main.xps
+          cat > ./.hardening-site/json-hardening.xps <<'XPS'
+          Public Class JsonHardeningRequest
+              Public Value As String
+          End Class
+
+          [Anonymous]
+          [Post]
+          [Route:/api/json-hardening]
+          Sub JsonHardening([FromBody] payload As JsonHardeningRequest)
+              Response.OK(payload)
+          End Sub
+          XPS
+          printf 'XPSCRIPT_PUBLIC_ASSET\n' > ./.hardening-site/assets/public.txt
+          printf 'XPSCRIPT_SECRET_SENTINEL\n' > ./.hardening-site/secret.txt
+          printf 'XPSCRIPT_PROTECTED_CACHE_SENTINEL\n' > ./.hardening-site/.xpscript-cache/protected.css
+
+          cat > ./.hardening-rest/index.xps <<'XPS'
+          Public Class FuzzRequest
+              Public Value As String
+          End Class
+
+          [Anonymous]
+          [Get]
+          [Route:/]
+          Sub Index()
+              Response.ContentType = "application/json; charset=utf-8"
+              Response.Write("{\"service\":\"XPSCRIPT-REST-HARDENING\"}")
+          End Sub
+
+          [Anonymous]
+          [Get]
+          [Route:/api/fuzz]
+          Sub GetFuzz()
+              Response.ContentType = "application/json; charset=utf-8"
+              Response.Write("{\"value\":\"" & Request.QueryFirst("q") & "\"}")
+          End Sub
+
+          [Anonymous]
+          [Post]
+          [Route:/api/fuzz]
+          Sub PostFuzz([FromBody] payload As FuzzRequest)
+              Response.OK(payload)
+          End Sub
+          XPS
+
+      - name: Compile generated web application
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build --             ./.hardening-site/main.xps --target webiis --runtime=false --output ./out/hardening-webiis
+          test -f ./out/hardening-webiis.zip
+          unzip -l ./out/hardening-webiis.zip | grep -qE "(^|[[:space:]])site/web.config$"
+
+      - name: Start XPScript Kestrel host
+        shell: bash
+        run: |
+          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -p:SkipUnifiedPublish=true --             web --root ./.hardening-site --address 127.0.0.1 --port "${HARDENING_PORT}"             --host 127.0.0.1 --static-files --health --metrics --sessions             > ./artifacts/hardening/kestrel.stdout.log 2> ./artifacts/hardening/kestrel.stderr.log &
+          echo $! > ./artifacts/hardening/kestrel.pid
+
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail "http://127.0.0.1:${HARDENING_PORT}/" | grep -q XPSCRIPT-HARDENING; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat ./artifacts/hardening/kestrel.stderr.log
+          exit 1
+
+      - name: Run JSON API hardening probes
+        shell: bash
+        run: |
+          python3 ./tests/security/json_api_hardening.py "${HARDENING_PORT}"
+
+      - name: Install pinned Nuclei
+        run: |
+          go install "github.com/projectdiscovery/nuclei/v3/cmd/nuclei@${NUCLEI_VERSION}"
+          "${HOME}/go/bin/nuclei" -version
+
+      - name: Fetch pinned Nuclei templates
+        run: |
+          git clone --filter=blob:none https://github.com/projectdiscovery/nuclei-templates.git ./artifacts/nuclei-templates
+          git -C ./artifacts/nuclei-templates checkout "${NUCLEI_TEMPLATES_SHA}"
+
+      - name: Run XPScript Nuclei regression templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei"             -u "http://127.0.0.1:${HARDENING_PORT}"             -t ./tests/security/nuclei/xpscript             -jsonl-export ./artifacts/hardening/nuclei-xpscript.jsonl             -silent
+          status=$?
+          set -e
+          test "${status}" -eq 0
+          if test -s ./artifacts/hardening/nuclei-xpscript.jsonl; then
+            echo "XPScript-specific hardening findings detected."
+            cat ./artifacts/hardening/nuclei-xpscript.jsonl
+            exit 1
+          fi
+
+      - name: Run curated ASP.NET IIS and .NET Nuclei templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei" \
+            -u "http://127.0.0.1:${HARDENING_PORT}" \
+            -t ./artifacts/nuclei-templates/http/misconfiguration/aspx-debug-mode.yaml \
+            -t ./artifacts/nuclei-templates/http/misconfiguration/microsoft/aspnetcore-dev-env.yaml \
+            -t ./artifacts/nuclei-templates/http/misconfiguration/iis-shortname-detect.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/files/aspnet-launchsettings-exposure.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/logs/elmah-log-file.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/logs/trace-axd-expose.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/logs/microsoft-runtime-error.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/nuget-config-exposure.yaml \
+            -t ./artifacts/nuclei-templates/http/technologies/microsoft/microsoft-iis-version.yaml \
+            -jsonl-export ./artifacts/hardening/nuclei-dotnet-iis.jsonl \
+            -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-dotnet-iis.exit-code
+
+      - name: Run curated JSON security Nuclei templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei" \
+            -u "http://127.0.0.1:${HARDENING_PORT}" \
+            -t ./artifacts/nuclei-templates/http/exposures/files/appsettings-file-disclosure.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/files/credentials-json.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/files/auth-json.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/tokens/jwk-json-leak.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/apis/swagger-api.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/config-json-exposure-fuzz.yaml \
+            -jsonl-export ./artifacts/hardening/nuclei-json-security.jsonl \
+            -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-json-security.exit-code
+
+      - name: Run generic web boundary Nuclei templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei" \
+            -u "http://127.0.0.1:${HARDENING_PORT}" \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/crlf-injection-generic.yaml \
+            -t ./artifacts/nuclei-templates/http/misconfiguration/put-method-enabled.yaml \
+            -t ./artifacts/nuclei-templates/http/miscellaneous/http-trace.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/host-header-injection.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/web-config.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/git-config.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/git-credentials-disclosure.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/configs/exposed-gitignore.yaml \
+            -t ./artifacts/nuclei-templates/http/exposures/files/ds-store-file.yaml \
+            -jsonl-export ./artifacts/hardening/nuclei-web-boundary.jsonl \
+            -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-web-boundary.exit-code
+
+      - name: Run controlled generic vulnerability Nuclei templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei" \
+            -u "http://127.0.0.1:${HARDENING_PORT}" \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/cache-poisoning.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/cache-poisoning-xss.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/cors-misconfig.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/generic-linux-lfi.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/generic-windows-lfi.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/open-redirect-generic.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/xss-uri-reflected.yaml \
+            -rate-limit 20 \
+            -bulk-size 1 \
+            -concurrency 1 \
+            -jsonl-export ./artifacts/hardening/nuclei-generic-vulnerabilities.jsonl \
+            -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-generic-vulnerabilities.exit-code
+
+      - name: Run controlled nginx to FastCGI fuzzing matrix
+        shell: bash
+        run: |
+          run_fuzz() {
+            local target="$1"
+            local output="$2"
+            set +e
+            "${HOME}/go/bin/nuclei" \
+              -u "${target}" \
+              -t ./artifacts/nuclei-templates/http/fuzzing/linux-lfi-fuzzing.yaml \
+              -t ./artifacts/nuclei-templates/http/fuzzing/windows-lfi-fuzzing.yaml \
+              -t ./artifacts/nuclei-templates/http/fuzzing/xff-403-bypass.yaml \
+              -rate-limit 20 \
+              -bulk-size 1 \
+              -concurrency 1 \
+              -jsonl-export "./artifacts/hardening/${output}.jsonl" \
+              -silent
+            status=$?
+            set -e
+            echo "${status}" > "./artifacts/hardening/${output}.exit-code"
+          }
+
+          start_fastcgi() {
+            local root="$1"
+            local fcgi_port="$2"
+            local nginx_port="$3"
+            local name="$4"
+            dotnet run --project ./tests/WebFastCgiNginxHost/WebFastCgiNginxHost.csproj -c Release -- "${root}" "${fcgi_port}" > "./artifacts/hardening/${name}-host.log" 2>&1 &
+            FASTCGI_PID=$!
+            for i in {1..30}; do
+              if grep -q "XPS-FASTCGI-NGINX-HOST=READY" "./artifacts/hardening/${name}-host.log"; then break; fi
+              sleep 1
+            done
+            grep -q "XPS-FASTCGI-NGINX-HOST=READY" "./artifacts/hardening/${name}-host.log"
+            cat > "./artifacts/hardening/${name}-nginx.conf" <<EOF
+          pid /tmp/${name}.pid;
+          events {}
+          http {
+            access_log off;
+            error_log stderr notice;
+            server {
+              listen 127.0.0.1:${nginx_port};
+              server_name 127.0.0.1;
+              location / {
+                include /etc/nginx/fastcgi_params;
+                fastcgi_param SCRIPT_FILENAME ${root}/index.xps;
+                fastcgi_param PATH_INFO \$fastcgi_path_info;
+                fastcgi_pass 127.0.0.1:${fcgi_port};
+              }
+            }
+          }
+          EOF
+            sudo nginx -c "${GITHUB_WORKSPACE}/artifacts/hardening/${name}-nginx.conf"
+          }
+
+          stop_fastcgi() {
+            local name="$1"
+            sudo nginx -c "${GITHUB_WORKSPACE}/artifacts/hardening/${name}-nginx.conf" -s stop || true
+            kill "${FASTCGI_PID}" 2>/dev/null || true
+          }
+
+          WEB_ROOT="$(realpath ./.hardening-site)"
+          start_fastcgi "${WEB_ROOT}" 19092 18084 "fastcgi-fuzz-web"
+          trap 'stop_fastcgi "fastcgi-fuzz-web"' EXIT
+          curl --silent --fail "http://127.0.0.1:18084/" | grep -q XPSCRIPT-HARDENING
+          run_fuzz "http://127.0.0.1:18084/?q=baseline" "nuclei-fuzz-fastcgi-web"
+          stop_fastcgi "fastcgi-fuzz-web"
+          trap - EXIT
+
+          REST_ROOT="$(realpath ./.hardening-rest)"
+          start_fastcgi "${REST_ROOT}" 19093 18085 "fastcgi-fuzz-rest"
+          trap 'stop_fastcgi "fastcgi-fuzz-rest"' EXIT
+          curl --silent --fail "http://127.0.0.1:18085/" | grep -q XPSCRIPT-REST-HARDENING
+          run_fuzz "http://127.0.0.1:18085/api/fuzz?q=baseline" "nuclei-fuzz-fastcgi-rest"
+          stop_fastcgi "fastcgi-fuzz-rest"
+          trap - EXIT
+
+      - name: Run controlled CGI fuzzing matrix
+        shell: bash
+        run: |
+          dotnet build ./src/XPScript.Web.Cgi/XPScript.Web.Cgi.csproj -c Release
+          python3 ./tests/security/cgi_fuzz_matrix.py \
+            --cgi-dll ./src/XPScript.Web.Cgi/bin/Release/net10.0/XPScript.Web.Cgi.dll \
+            --web-root ./.hardening-site \
+            --rest-root ./.hardening-rest \
+            --json ./artifacts/hardening/cgi-fuzz-matrix.json
+
+      - name: Run controlled Kestrel fuzzing matrix
+        shell: bash
+        run: |
+          run_fuzz() {
+            local target="$1"
+            local output="$2"
+            set +e
+            "${HOME}/go/bin/nuclei" \
+              -u "${target}" \
+              -t ./artifacts/nuclei-templates/http/fuzzing/linux-lfi-fuzzing.yaml \
+              -t ./artifacts/nuclei-templates/http/fuzzing/windows-lfi-fuzzing.yaml \
+              -t ./artifacts/nuclei-templates/http/fuzzing/xff-403-bypass.yaml \
+              -rate-limit 20 \
+              -bulk-size 1 \
+              -concurrency 1 \
+              -jsonl-export "./artifacts/hardening/${output}.jsonl" \
+              -silent
+            status=$?
+            set -e
+            echo "${status}" > "./artifacts/hardening/${output}.exit-code"
+          }
+
+          run_fuzz "http://127.0.0.1:${HARDENING_PORT}/" "nuclei-fuzz-kestrel-web"
+
+          REST_PORT=18083
+          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-build -p:SkipUnifiedPublish=true -- \
+            web --root ./.hardening-rest --address 127.0.0.1 --port "${REST_PORT}" --host 127.0.0.1 \
+            > ./artifacts/hardening/kestrel-rest.stdout.log 2> ./artifacts/hardening/kestrel-rest.stderr.log &
+          REST_PID=$!
+          trap 'kill "${REST_PID}" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail "http://127.0.0.1:${REST_PORT}/" | grep -q XPSCRIPT-REST-HARDENING; then break; fi
+            sleep 1
+          done
+          curl --silent --fail "http://127.0.0.1:${REST_PORT}/" | grep -q XPSCRIPT-REST-HARDENING
+          run_fuzz "http://127.0.0.1:${REST_PORT}/api/fuzz?q=baseline" "nuclei-fuzz-kestrel-rest"
+          kill "${REST_PID}" 2>/dev/null || true
+          trap - EXIT
+
+      - name: Run selected upstream Nuclei HTTP templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei"             -u "http://127.0.0.1:${HARDENING_PORT}"             -t ./artifacts/nuclei-templates/http/misconfiguration             -t ./artifacts/nuclei-templates/http/exposures             -severity info,low,medium,high,critical             -exclude-tags dos,fuzz,intrusive             -jsonl-export ./artifacts/hardening/nuclei-upstream.jsonl             -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-upstream.exit-code
+
+      - name: Enforce Nuclei severity policy and record scanner metadata
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("./artifacts/hardening")
+          allowlist_path = Path("./tests/security/nuclei/allowlist.json")
+          allowlist_document = json.loads(allowlist_path.read_text(encoding="utf-8"))
+          if allowlist_document.get("schema_version") != 1:
+              raise SystemExit("Unsupported Nuclei allowlist schema version.")
+          allowlist = allowlist_document.get("entries")
+          if not isinstance(allowlist, list):
+              raise SystemExit("Nuclei allowlist entries must be an array.")
+          for entry in allowlist:
+              if not isinstance(entry, dict) or not entry.get("template_id") or not entry.get("reason"):
+                  raise SystemExit("Every Nuclei allowlist entry must contain template_id and reason.")
+
+          files = sorted(root.glob("nuclei-*.jsonl"))
+          findings = []
+          counts = {"info": 0, "low": 0, "medium": 0, "high": 0, "critical": 0, "unknown": 0}
+
+          for path in files:
+              for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                  if not line.strip():
+                      continue
+                  try:
+                      finding = json.loads(line)
+                  except json.JSONDecodeError as exc:
+                      raise SystemExit(f"{path}:{line_no}: invalid Nuclei JSONL: {exc}")
+                  severity = str(finding.get("info", {}).get("severity", "unknown")).lower()
+                  counts[severity if severity in counts else "unknown"] += 1
+                  findings.append({
+                      "file": path.name,
+                      "template_id": finding.get("template-id"),
+                      "matcher_name": finding.get("matcher-name"),
+                      "severity": severity,
+                      "matched_at": finding.get("matched-at"),
+                  })
+
+          metadata = {
+              "nuclei_version": os.environ["NUCLEI_VERSION"],
+              "nuclei_templates_sha": os.environ["NUCLEI_TEMPLATES_SHA"],
+              "git_sha": os.environ["GITHUB_SHA"],
+              "finding_counts": counts,
+              "findings": findings,
+          }
+          (root / "nuclei-scan-metadata.json").write_text(
+              json.dumps(metadata, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+
+          def is_allowlisted(finding):
+              return any(
+                  entry["template_id"] == finding["template_id"]
+                  and (not entry.get("matcher_name") or entry["matcher_name"] == finding["matcher_name"])
+                  and (not entry.get("severity") or entry["severity"].lower() == finding["severity"])
+                  for entry in allowlist
+              )
+
+          for finding in findings:
+              finding["allowlisted"] = is_allowlisted(finding)
+
+          blocking = [
+              f for f in findings
+              if f["severity"] in {"high", "critical"} and not f["allowlisted"]
+          ]
+          if blocking:
+              for finding in blocking:
+                  print(
+                      f"Blocking Nuclei finding: {finding['severity']} "
+                      f"{finding['template_id']} {finding['matcher_name'] or ''} "
+                      f"{finding['matched_at'] or ''}"
+                  )
+              raise SystemExit("New high or critical Nuclei findings are not permitted.")
+          PY
+
+      - name: Run raw HTTP hardening probes
+        run: |
+          python3 ./tests/security/kestrel_hardening.py             --host 127.0.0.1             --port "${HARDENING_PORT}"             --json ./artifacts/hardening/raw-http-results.json
+
+      - name: Run nginx to Kestrel request smuggling probes
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+          cat > ./artifacts/hardening/nginx-kestrel.conf <<EOF
+          events {}
+          http {
+            access_log off;
+            error_log stderr notice;
+            server {
+              listen 127.0.0.1:18082;
+              location / {
+                proxy_http_version 1.1;
+                proxy_set_header Host 127.0.0.1;
+                proxy_set_header Connection "";
+                proxy_pass http://127.0.0.1:${HARDENING_PORT};
+              }
+            }
+          }
+          EOF
+          sudo nginx -c "${GITHUB_WORKSPACE}/artifacts/hardening/nginx-kestrel.conf"
+          trap 'sudo nginx -c "${GITHUB_WORKSPACE}/artifacts/hardening/nginx-kestrel.conf" -s stop || true' EXIT
+          for attempt in {1..20}; do
+            if curl --silent --fail http://127.0.0.1:18082/ >/dev/null; then break; fi
+            sleep 1
+          done
+          python3 ./tests/security/reverse_proxy_smuggling.py --host 127.0.0.1 --port 18082 --json ./artifacts/hardening/nginx-kestrel-smuggling.json
+
+      - name: Upload hardening artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kestrel-hardening
+          path: ./artifacts/hardening
+          retention-days: 3
+
+      - name: Stop Kestrel
+        if: always()
+        shell: bash
+        run: |
+          if test -f ./artifacts/hardening/kestrel.pid; then
+            kill "$(cat ./artifacts/hardening/kestrel.pid)" 2>/dev/null || true
+          fi
+
+  windows-iis:
+    needs: hardening
+    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Create and compile WebIIS hardening application
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ./.hardening-iis | Out-Null
+          @'
+          [Anonymous]
+          [Get]
+          Sub Index()
+              Response.ContentType = "text/plain; charset=utf-8"
+              Response.Write("XPSCRIPT-IIS-HARDENING")
+          End Sub
+          '@ | Set-Content -Encoding utf8 ./.hardening-iis/main.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./.hardening-iis/main.xps --target webiis --runtime=false --output ./out/hardening-iis
+          if (-not (Test-Path ./out/hardening-iis.zip)) { throw "WebIIS package was not generated." }
+          Expand-Archive -Force ./out/hardening-iis.zip ./out/hardening-iis-expanded
+          if (-not (Test-Path ./out/hardening-iis-expanded/site/web.config)) { throw "Generated WebIIS package has no site/web.config." }
+
+      - name: Validate IIS deployment contract
+        shell: pwsh
+        run: |
+          [xml]$config = Get-Content ./out/hardening-iis-expanded/site/web.config
+          $aspNetCore = $config.configuration.location.'system.webServer'.aspNetCore
+          if ($null -eq $aspNetCore) { throw "Generated web.config has no aspNetCore handler configuration." }
+          if ($aspNetCore.hostingModel -ne "outofprocess") { throw "WebIIS package must use out-of-process hosting." }
+          if ([string]::IsNullOrWhiteSpace($aspNetCore.processPath)) { throw "WebIIS package has no processPath." }
+          $handlers = $config.configuration.location.'system.webServer'.handlers.add
+          if ($null -eq $handlers) { throw "Generated web.config has no IIS handler mapping." }
+
+      - name: Upload Windows IIS hardening artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-iis-hardening
+          path: |
+            ./out/hardening-iis.zip
+            ./out/hardening-iis-expanded/site/web.config
+          retention-days: 3
+

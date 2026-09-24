@@ -25,6 +25,11 @@ End Sub
 
 Sub Main()
     Print ServerTransform("wasm")
+    Dim http As New XPHttpClient
+    Call http.SetBearerToken("browser-wasm-smoke-token")
+    Dim bridgeResponse As XPHttpResponse
+    Set bridgeResponse = http.Get("__xpscript_bridge/capability")
+    Call http.Dispose()
     Dim form As New UIForm("Browser Smoke")
     Call form.AddTextField("name", "Name")
     Call form.SetOnChangeCallback("name", "NameChanged", "browser")
@@ -49,6 +54,39 @@ End Sub
 
     var companion = Directory.EnumerateFiles(Path.Combine(root, ".xpscript-cache", "wasm-bridge"), "XPScript.BrowserServer.dll", SearchOption.AllDirectories).FirstOrDefault();
     if (companion is null) throw new Exception("[ServerSide] browser-WASM compile did not produce a server companion assembly.");
+
+    var compilerAssembly = typeof(XPScript.Compiler.XPScriptTranspiler).Assembly;
+    var nativeHttpRuntimeType = compilerAssembly.GetType("XPScript.Compiler.NativeHttpRuntimeSource", throwOnError: true)!;
+    var nativeHttpRuntime = (string?)nativeHttpRuntimeType.GetField(
+        "Code",
+        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?.GetRawConstantValue();
+    if (string.IsNullOrEmpty(nativeHttpRuntime))
+        throw new Exception("Browser-WASM security test could not inspect the compiler HTTP runtime source.");
+    if (!nativeHttpRuntime.Contains("AllowAutoRedirect = false", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM HTTP runtime permits automatic redirects that could forward credentials to an unintended origin.");
+    if (!nativeHttpRuntime.Contains("UseCookies = false", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM HTTP runtime unexpectedly enables the native cookie container.");
+    if (!nativeHttpRuntime.Contains("AllowAutoRedirect = false", StringComparison.Ordinal) ||
+        !nativeHttpRuntime.Contains("UseCookies = false", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM HTTP credential isolation invariants are missing.");
+
+    var correlationCookieName = XpsWebClientCorrelation.CookieNameFor("browser-wasm-cookie-smoke");
+    var correlationValue = XpsWebClientCorrelation.GetOrCreate(new Dictionary<string, string>(), correlationCookieName, out var correlationCreated);
+    if (!correlationCreated) throw new Exception("Browser-WASM cookie regression did not create a fresh correlation cookie.");
+    foreach (var secure in new[] { false, true })
+    {
+        var cookieResponse = new XpsWebResponse();
+        XpsWebClientCorrelation.SetCookie(cookieResponse, correlationCookieName, correlationValue, secure);
+        if (!cookieResponse.Headers.TryGetValue("Set-Cookie", out var cookieValues) || cookieValues.Count != 1)
+            throw new Exception("Browser-WASM correlation cookie was not emitted.");
+        var cookie = cookieValues[0];
+        if (!cookie.Contains("; HttpOnly", StringComparison.Ordinal) ||
+            !cookie.Contains("; SameSite=Lax", StringComparison.Ordinal) ||
+            !cookie.Contains("; Max-Age=2592000", StringComparison.Ordinal))
+            throw new Exception("Browser-WASM correlation cookie is missing HttpOnly, SameSite=Lax or the 30-day lifetime.");
+        if (secure != cookie.Contains("; Secure", StringComparison.Ordinal))
+            throw new Exception("Browser-WASM correlation cookie Secure flag does not match HTTP/HTTPS transport.");
+    }
 
     var noHeaderResponse = new XpsWebResponse();
     await unit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
@@ -76,6 +114,163 @@ End Sub
         new SmokeSession()));
     if (capabilityResponse.StatusCode != 200 || !capabilityResponse.Body.Contains("capability", StringComparison.Ordinal))
         throw new Exception("Server bridge capability endpoint did not issue a session-bound capability.");
+
+    var authenticatedPath = Path.Combine(root, "authenticated.xps");
+    await File.WriteAllTextAsync(authenticatedPath, """
+[Platform:browser-wasm]
+
+[Authenticated]
+[ServerSide]
+Function SecureServerValue() As String
+    SecureServerValue = "secure"
+End Function
+
+Sub Main()
+    Print SecureServerValue()
+End Sub
+""");
+    await using (var authenticatedUnit = await compiler.CompileAsync(authenticatedPath, root))
+    {
+        if (!authenticatedUnit.Routes["Index"].Policy.AllowAnonymous ||
+            !authenticatedUnit.Routes[XpsWebPathResolver.BrowserWasmAssetRoute].Policy.AllowAnonymous)
+            throw new Exception("Browser-WASM shell or assets require authentication and would prevent login UI from loading.");
+
+        var anonymousBridgeResponse = new XpsWebResponse();
+        await authenticatedUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
+            BridgeRequest("/authenticated.xps/__xpscript_bridge", new Dictionary<string, IReadOnlyList<string>>()),
+            anonymousBridgeResponse,
+            Server(root),
+            new XpsWebPrincipal(false),
+            new SmokeApplicationState(),
+            new SmokeSession()));
+        if (anonymousBridgeResponse.StatusCode != 403)
+            throw new Exception("Authenticated Browser-WASM bridge accepted an anonymous request.");
+    }
+
+    var mixedPolicyPath = Path.Combine(root, "mixed-policy.xps");
+    await File.WriteAllTextAsync(mixedPolicyPath, """
+[Platform:browser-wasm]
+
+[Anonymous]
+[ServerSide]
+Function Login() As String
+    Login = "login"
+End Function
+
+[Authenticated]
+[ServerSide]
+Function PrivateRoute() As String
+    PrivateRoute = "private"
+End Function
+
+Sub Main()
+    Print Login()
+End Sub
+""");
+    await using (var mixedPolicyUnit = await compiler.CompileAsync(mixedPolicyPath, root))
+    {
+        if (!mixedPolicyUnit.Routes["Index"].Policy.AllowAnonymous)
+            throw new Exception("Mixed-policy Browser-WASM application did not keep its login-capable shell anonymous.");
+    }
+
+    var policyPath = Path.Combine(root, "bridge-policy.xps");
+    await File.WriteAllTextAsync(policyPath, """
+[Platform:browser-wasm]
+
+[Anonymous]
+[ServerSide]
+Function PublicBridge() As String
+    PublicBridge = "public"
+End Function
+
+[Authenticated]
+[ServerSide]
+Function AuthBridge() As String
+    AuthBridge = "auth"
+End Function
+
+[Role:Admin]
+[ServerSide]
+Function AdminBridge() As String
+    AdminBridge = "admin"
+End Function
+
+[Rule:CanRead]
+[ServerSide]
+Function RuleBridge() As String
+    RuleBridge = "rule"
+End Function
+
+Sub Main()
+    Print PublicBridge()
+End Sub
+""");
+    await using (var policyUnit = await compiler.CompileAsync(policyPath, root))
+    {
+        var policyHeaders = new Dictionary<string, IReadOnlyList<string>>(bridgeHeaders, StringComparer.OrdinalIgnoreCase)
+        {
+            ["Authorization"] = new[] { "Bearer browser-wasm-policy-test" }
+        };
+        var policySession = new SmokeSession();
+        var policyCapabilityResponse = new XpsWebResponse();
+        await policyUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
+            BridgeRequest("/bridge-policy.xps/__xpscript_bridge/capability", policyHeaders),
+            policyCapabilityResponse, Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), policySession));
+        if (policyCapabilityResponse.StatusCode != 200 ||
+            !policyCapabilityResponse.Body.Contains("capability", StringComparison.Ordinal))
+            throw new Exception($"Browser-WASM policy regression could not acquire a bridge capability: HTTP {policyCapabilityResponse.StatusCode}, body '{policyCapabilityResponse.Body}'.");
+
+        using var capabilityDocument = System.Text.Json.JsonDocument.Parse(policyCapabilityResponse.Body);
+        var capability = capabilityDocument.RootElement.GetProperty("capability").GetString()
+            ?? throw new Exception("Browser-WASM policy regression received an empty bridge capability.");
+        policyHeaders["X-XPS-WASM-Capability"] = new[] { capability };
+
+        static string ProcedureId(string sourceIdentity, string procedureName)
+        {
+            var bytes = System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(sourceIdentity + "\0" + procedureName.ToUpperInvariant()));
+            return Convert.ToHexString(bytes).ToLowerInvariant()[..32];
+        }
+
+        var policySource = await File.ReadAllTextAsync(policyPath);
+        var compilerIdentity = typeof(XpsWebCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var sourceHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(policySource + "\0" + compilerIdentity + "\0" + "4")));
+
+        async Task<(int StatusCode, string Body)> InvokePolicyAsync(string procedureName, XpsWebPrincipal principal)
+        {
+            var response = new XpsWebResponse();
+            var previousConsoleErrors = Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS");
+            Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", "1");
+            try
+            {
+                await policyUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
+                    BridgePostRequest("/bridge-policy.xps/__xpscript_bridge", policyHeaders, ProcedureId(sourceHash, procedureName)),
+                    response, Server(root), principal, new SmokeApplicationState(), policySession));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", previousConsoleErrors);
+            }
+            return (response.StatusCode, System.Text.Encoding.UTF8.GetString(response.Body.Span));
+        }
+
+        var publicResult = await InvokePolicyAsync("PublicBridge", new XpsWebPrincipal(false));
+        if (publicResult.StatusCode != 200)
+            throw new Exception($"Anonymous Browser-WASM server operation was not callable anonymously: HTTP {publicResult.StatusCode}, body '{publicResult.Body}'.");
+        if ((await InvokePolicyAsync("AuthBridge", new XpsWebPrincipal(false))).StatusCode != 401)
+            throw new Exception("Authenticated Browser-WASM server operation did not reject an anonymous principal with 401.");
+        if ((await InvokePolicyAsync("AuthBridge", new XpsWebPrincipal(true, "user"))).StatusCode != 200)
+            throw new Exception("Authenticated Browser-WASM server operation rejected an authenticated principal.");
+        if ((await InvokePolicyAsync("AdminBridge", new XpsWebPrincipal(true, "user"))).StatusCode != 403)
+            throw new Exception("Role-protected Browser-WASM server operation did not reject a principal without the required role.");
+        if ((await InvokePolicyAsync("AdminBridge", new XpsWebPrincipal(true, "admin", roles: new[] { "Admin" }))).StatusCode != 200)
+            throw new Exception("Role-protected Browser-WASM server operation rejected the required role.");
+        if ((await InvokePolicyAsync("RuleBridge", new XpsWebPrincipal(true, "user"))).StatusCode != 403)
+            throw new Exception("Rule-protected Browser-WASM server operation did not reject a principal without the required rule.");
+        if ((await InvokePolicyAsync("RuleBridge", new XpsWebPrincipal(true, "reader", rules: new[] { "CanRead" }))).StatusCode != 200)
+            throw new Exception("Rule-protected Browser-WASM server operation rejected the required rule.");
+    }
 
     var cryptoPath = Path.Combine(root, "server-crypto.xps");
     await File.WriteAllTextAsync(cryptoPath, """
@@ -228,14 +423,27 @@ End Sub
         throw new Exception($"Synthetic browser-WASM dotnet.js handler returned HTTP {frameworkResponse.StatusCode} with {frameworkResponse.Body.Length} bytes.");
 
     var cacheRoot = Path.Combine(root, ".xpscript-cache", "wasm-bridge");
-    var index = Directory.EnumerateFiles(cacheRoot, "index.html", SearchOption.AllDirectories).FirstOrDefault();
-    var dotnetJs = Directory.EnumerateFiles(cacheRoot, "dotnet.js", SearchOption.AllDirectories).FirstOrDefault();
-    var browserJs = Directory.EnumerateFiles(cacheRoot, "xpscript-browser.js", SearchOption.AllDirectories).FirstOrDefault();
-    var mainJs = Directory.EnumerateFiles(cacheRoot, "main.js", SearchOption.AllDirectories).FirstOrDefault();
-    if (index is null || dotnetJs is null || browserJs is null || mainJs is null) throw new Exception("WASM publish output was not cached.");
+    var appRoots = Directory.EnumerateFiles(cacheRoot, "index.html", SearchOption.AllDirectories)
+        .Select(Path.GetDirectoryName)
+        .Where(path => path is not null &&
+            File.Exists(Path.Combine(path!, "main.js")) &&
+            File.Exists(Path.Combine(path!, "xpscript-browser.js")) &&
+            Directory.Exists(Path.Combine(path!, "_framework")))
+        .Select(path => path!)
+        .ToArray();
+    var matchingRoots = new List<string>();
+    foreach (var appRoot in appRoots)
+    {
+        var candidateBootstrap = await File.ReadAllTextAsync(Path.Combine(appRoot, "index.html"));
+        if (candidateBootstrap.Contains("<base href=\"app.xps/\">", StringComparison.Ordinal))
+            matchingRoots.Add(appRoot);
+    }
+    if (matchingRoots.Count != 1)
+        throw new Exception($"Expected exactly one cached Browser-WASM application for app.xps, found {matchingRoots.Count}.");
 
-    var frameworkRoot = Directory.GetParent(Path.GetDirectoryName(dotnetJs)!)?.FullName
-        ?? throw new Exception("Unable to determine the published browser-WASM application root.");
+    var frameworkRoot = matchingRoots[0];
+    var dotnetJs = Directory.EnumerateFiles(Path.Combine(frameworkRoot, "_framework"), "dotnet.js", SearchOption.TopDirectoryOnly).FirstOrDefault();
+    if (dotnetJs is null) throw new Exception("WASM publish output was not cached.");
     if (!File.Exists(Path.Combine(frameworkRoot, "index.html")) ||
         !File.Exists(Path.Combine(frameworkRoot, "main.js")) ||
         !File.Exists(Path.Combine(frameworkRoot, "xpscript-browser.js")))
@@ -246,6 +454,9 @@ End Sub
         throw new Exception("Browser WASM bootstrap does not anchor relative assets to its owning .xps route.");
 
     var browserModule = await File.ReadAllTextAsync(Path.Combine(frameworkRoot, "xpscript-browser.js"));
+    if (!browserModule.Contains("url !== '__xpscript_bridge' && !url.startsWith('__xpscript_bridge/')", StringComparison.Ordinal) ||
+        !browserModule.Contains("xhr.open(safeMethod, url, false)", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM server bridge no longer enforces a same-origin relative bridge URL.");
     foreach (var requiredMarker in new[]
     {
         "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result",
@@ -319,6 +530,11 @@ finally
 static XpsWebRequest BridgeRequest(string path, IReadOnlyDictionary<string, IReadOnlyList<string>> headers) => new(
     "GET", path, "", "", headers, null, 0, ReadOnlyMemory<byte>.Empty,
     "localhost", "http", "127.0.0.1", "HTTP/1.1", new Dictionary<string, string>());
+
+static XpsWebRequest BridgePostRequest(string path, IReadOnlyDictionary<string, IReadOnlyList<string>> headers, string procedureId) =>
+    new("POST", path, "", "", headers, "application/json", null,
+        System.Text.Encoding.UTF8.GetBytes($"{{\"procedure\":\"{procedureId}\",\"arguments\":[]}}"),
+        "localhost", "http", "127.0.0.1", "HTTP/1.1", new Dictionary<string, string>());
 
 static XpsServerInfo Server(string root) =>
     new("browser-wasm-server-side-smoke", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test");

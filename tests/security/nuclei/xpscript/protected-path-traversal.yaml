@@ -1,0 +1,58 @@
+id: xpscript-protected-path-traversal
+
+info:
+  name: XPScript Protected Path Traversal
+  author: xpscript
+  severity: critical
+  description: Detects traversal or direct disclosure of protected XPScript cache, source, secret, or operational resources.
+
+http:
+  - raw:
+      - |
+        GET /assets/%2e%2e/secret.txt HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+      - |
+        GET /assets/%252e%252e/secret.txt HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+      - |
+        GET /assets/%2e%2e%2fsecret.txt HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+      - |
+        GET /assets/%252e%252e%252fsecret.txt HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+      - |
+        GET /assets/..%5csecret.txt HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+      - |
+        GET /.xpscript-cache/protected.css HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+      - |
+        GET /assets/%2e%2e/.xpscript-cache/protected.css HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+      - |
+        GET /assets/%252e%252e/.xpscript-cache/protected.css HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+      - |
+        GET /assets/%2e%2e/_xps/metrics HTTP/1.1
+        Host: {{Hostname}}
+        Connection: close
+
+    unsafe: true
+    stop-at-first-match: true
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "XPSCRIPT_SECRET_SENTINEL"
+          - "XPSCRIPT_PROTECTED_CACHE_SENTINEL"
+          - "xpscript_web_requests_total"
+        condition: or

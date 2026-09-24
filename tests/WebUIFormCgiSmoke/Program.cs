@@ -10,7 +10,7 @@ await File.WriteAllTextAsync(scriptPath, """
 [Get]
 [Post]
 Sub Index()
-    Dim data As New JsonObject
+    Dim data As New XPJsonObject
     Dim form As New UIForm("Contact form")
     Dim result As String
 

@@ -314,9 +314,20 @@ public sealed class XpsWebRequest
 
     private static string DecodeUrlComponent(string value)
     {
+        var normalized = value.Replace('+', ' ');
+        for (var i = 0; i < normalized.Length; i++)
+        {
+            if (normalized[i] != '%') continue;
+            if (i + 2 >= normalized.Length ||
+                !Uri.IsHexDigit(normalized[i + 1]) ||
+                !Uri.IsHexDigit(normalized[i + 2]))
+                throw new InvalidOperationException("Request contains malformed URL encoding.");
+            i += 2;
+        }
+
         try
         {
-            return Uri.UnescapeDataString(value.Replace('+', ' '));
+            return Uri.UnescapeDataString(normalized);
         }
         catch (UriFormatException ex)
         {

@@ -68,8 +68,10 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     var sessionSameSite = "Lax";
     var sessionSecure = false;
     var operationalExternal = false;
+    var operationalAllowedNetworks = new List<string>();
     var enableStaticFiles = false;
     long? staticMaxBytes = null;
+    var staticContentTypes = new Dictionary<string, string>(new XpsKestrelOptions().StaticFileContentTypes, StringComparer.OrdinalIgnoreCase);
     string? structuredLogPath = null;
     string? logDirectory = null;
     string? httpsCertificatePath = null;
@@ -134,6 +136,9 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             case "--operational-external":
                 operationalExternal = true;
                 break;
+            case "--operational-allow":
+                operationalAllowedNetworks.Add(RequireValue(commandArgs, ref i));
+                break;
             case "--structured-log":
                 structuredLogPath = Path.GetFullPath(RequireValue(commandArgs, ref i));
                 logDirectory ??= Path.GetDirectoryName(structuredLogPath);
@@ -147,13 +152,24 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             case "--static-max-bytes":
                 staticMaxBytes = ParsePositiveLong(RequireValue(commandArgs, ref i), "--static-max-bytes");
                 break;
+            case "--static-allow":
+            {
+                enableStaticFiles = true;
+                var extension = RequireValue(commandArgs, ref i);
+                var contentType = RequireValue(commandArgs, ref i);
+                if (!extension.StartsWith(".", StringComparison.Ordinal)) extension = "." + extension;
+                staticContentTypes[extension] = contentType;
+                break;
+            }
             default:
                 throw new ArgumentException("Unknown web argument: " + commandArgs[i]);
         }
     }
 
-    if (operationalExternal && !enableHealth && !enableMetrics)
-        throw new ArgumentException("--operational-external requires --health and/or --metrics.");
+    if ((operationalExternal || operationalAllowedNetworks.Count > 0) && !enableHealth && !enableMetrics)
+        throw new ArgumentException("--operational-external/--operational-allow requires --health and/or --metrics.");
+    if (operationalExternal && operationalAllowedNetworks.Count > 0)
+        throw new ArgumentException("--operational-external cannot be combined with --operational-allow; use 0.0.0.0/0 and ::/0 explicitly if unrestricted access is required.");
     if (httpsCertificatePasswordEnvironment is not null && httpsCertificatePath is null)
         throw new ArgumentException("--https-cert-password-env requires --https-cert.");
     if (staticMaxBytes is not null && !enableStaticFiles)
@@ -182,8 +198,10 @@ static async Task<int> RunWebAsync(string[] commandArgs)
         EnableHealthEndpoint = enableHealth,
         EnableMetricsEndpoint = enableMetrics,
         OperationalEndpointsLocalOnly = !operationalExternal,
+        OperationalAllowedNetworks = operationalAllowedNetworks.AsReadOnly(),
         EnableStaticFiles = enableStaticFiles,
         MaxStaticFileBytes = staticMaxBytes ?? defaults.MaxStaticFileBytes,
+        StaticFileContentTypes = staticContentTypes,
         LogOptions = new XpsWebLogOptions { DirectoryPath = logDirectory }
     };
     options.Validate();
@@ -233,13 +251,16 @@ static async Task<int> RunWebAsync(string[] commandArgs)
             Console.WriteLine($"Sessions: enabled, in-memory store, cookie {sessionCookieName}, timeout {sessionIdleSeconds}s, SameSite={sessionSameSite}, Secure={sessionSecure}");
         else
             Console.WriteLine("Sessions: disabled");
-        if (enableHealth) Console.WriteLine($"Health endpoint: {options.HealthPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
+        var operationalAccess = operationalAllowedNetworks.Count > 0
+            ? "loopback + " + string.Join(", ", operationalAllowedNetworks)
+            : options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible";
+        if (enableHealth) Console.WriteLine($"Health endpoint: {options.HealthPath} ({operationalAccess})");
         else Console.WriteLine("Health endpoint: disabled");
-        if (enableMetrics) Console.WriteLine($"Metrics endpoint: {options.MetricsPath} ({(options.OperationalEndpointsLocalOnly ? "loopback only" : "network accessible")})");
+        if (enableMetrics) Console.WriteLine($"Metrics endpoint: {options.MetricsPath} ({operationalAccess})");
         else Console.WriteLine("Metrics endpoint: disabled");
         Console.WriteLine($"Mandatory JSONL logs: {options.LogOptions.DirectoryPath ?? XpsWebLogManager.DefaultDirectory(server)}");
         if (structuredLogPath is not null) Console.WriteLine($"Legacy structured request log: {structuredLogPath}");
-        if (options.EnableStaticFiles) Console.WriteLine($"Static files: enabled, max {options.MaxStaticFileBytes} bytes");
+        if (options.EnableStaticFiles) Console.WriteLine($"Static files: enabled, public {options.PublicStaticPath}/, authenticated {options.AuthenticatedStaticPath}/, max {options.MaxStaticFileBytes} bytes, extensions {string.Join(", ", options.StaticFileContentTypes.Keys.OrderBy(x => x))}");
         else Console.WriteLine("Static files: disabled");
 
         await app.StartAsync(shutdown.Token);
@@ -471,11 +492,11 @@ Usage:
   xpscript service install <compiled-service> --name NAME --display-name "DISPLAY NAME" [--start auto|manual|disabled]
   xpscript web <directory> [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
-                [--health] [--metrics] [--sessions]
+                [--health] [--metrics] [--operational-allow CIDR ...] [--sessions]
                 [--session-cookie NAME] [--session-timeout-seconds SECONDS]
                 [--session-same-site Strict|Lax|None] [--session-secure]
                 [--structured-log FILE] [--operational-external]
-                [--static-files] [--static-max-bytes BYTES]
+                [--static-files] [--static-max-bytes BYTES] [--static-allow EXT MIME]
   xpscript web [--config FILE] --root DIR [web options...]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] --unix-socket PATH

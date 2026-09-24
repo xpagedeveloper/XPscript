@@ -146,7 +146,7 @@ End Sub
 Sub AttachmentExport()
     Dim db As New XPDBSQLite("web-attachment-security.db")
     Dim files As Variant
-    Dim saved As JsonObject
+    Dim saved As XPJsonObject
     Dim id As String
     Dim fileNo As Integer
 
@@ -173,8 +173,8 @@ End Sub
 Sub AttachmentExportTraversal()
     Dim db As New XPDBSQLite("web-attachment-security.db")
     Dim files As Variant
-    Dim rows As JsonArray
-    Dim item As JsonObject
+    Dim rows As XPJsonArray
+    Dim item As XPJsonObject
 
     Set files = db.Attachments("customers", "id", 42)
     Set rows = files.GetMetadata()
@@ -189,8 +189,8 @@ End Sub
 Sub AttachmentExportAbsolute()
     Dim db As New XPDBSQLite("web-attachment-security.db")
     Dim files As Variant
-    Dim rows As JsonArray
-    Dim item As JsonObject
+    Dim rows As XPJsonArray
+    Dim item As XPJsonObject
 
     Set files = db.Attachments("customers", "id", 42)
     Set rows = files.GetMetadata()
@@ -205,8 +205,8 @@ End Sub
 Sub AttachmentDownload()
     Dim db As New XPDBSQLite("web-attachment-security.db")
     Dim files As Variant
-    Dim rows As JsonArray
-    Dim item As JsonObject
+    Dim rows As XPJsonArray
+    Dim item As XPJsonObject
 
     Set files = db.Attachments("customers", "id", 42)
     Set rows = files.GetMetadata()
@@ -229,6 +229,60 @@ try
 
     await using var dispatcher = new XpsWebDispatcher(root);
     var app = new XpsApplicationState();
+
+    // Keep method-dispatch hardening first: a path match must never invoke a handler for another HTTP method.
+    var wrongMethodGetRoute = await SendAsync(dispatcher, app, "POST", "/api/users/42");
+    if (wrongMethodGetRoute.StatusCode != 405)
+        throw new Exception($"POST reached or incorrectly resolved GET-only route; expected 405, got {wrongMethodGetRoute.StatusCode}.");
+    if (BodyText(wrongMethodGetRoute).Contains("user-42", StringComparison.Ordinal))
+        throw new Exception("POST executed the GET-only route handler.");
+
+    var wrongMethodPostRoute = await SendAsync(dispatcher, app, "GET", "/api/users");
+    if (wrongMethodPostRoute.StatusCode != 405)
+        throw new Exception($"GET reached or incorrectly resolved POST-only route; expected 405, got {wrongMethodPostRoute.StatusCode}.");
+
+    // Keep JSON parser hardening first so parser regressions fail before the broader REST suite.
+    var earlyMalformedJson = await SendAsync(
+        dispatcher, app, "POST", "/api/users", "{not-json", "application/json");
+    if (earlyMalformedJson.StatusCode != 400)
+        throw new Exception($"Malformed request JSON returned {earlyMalformedJson.StatusCode} instead of 400.");
+    var earlyMalformedBody = BodyText(earlyMalformedJson);
+    if (!earlyMalformedBody.Contains("body", StringComparison.OrdinalIgnoreCase) ||
+        earlyMalformedBody.Contains("StackTrace", StringComparison.OrdinalIgnoreCase) ||
+        earlyMalformedBody.Contains(".cs:", StringComparison.OrdinalIgnoreCase) ||
+        earlyMalformedBody.Contains("/home/", StringComparison.OrdinalIgnoreCase) ||
+        earlyMalformedBody.Contains("\\Users\\", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Malformed request JSON leaked parser diagnostics or paths.");
+
+    var earlyDeepJson = new string('[', 65) + "0" + new string(']', 65);
+    var deepJsonResponse = await SendAsync(
+        dispatcher, app, "POST", "/api/users", earlyDeepJson, "application/json");
+    if (deepJsonResponse.StatusCode != 400)
+        throw new Exception($"Deeply nested request JSON returned {deepJsonResponse.StatusCode} instead of 400.");
+
+    var duplicateJsonResponse = await SendAsync(
+        dispatcher, app, "POST", "/api/users",
+        "{\"name\":\"first\",\"name\":\"second\",\"email\":\"fredrik@example.com\",\"age\":42}",
+        "application/json");
+    if (duplicateJsonResponse.StatusCode != 200)
+        throw new Exception($"Duplicate-property JSON returned {duplicateJsonResponse.StatusCode}.");
+    using (var duplicateJsonDocument = XPJsonDocument.Parse(duplicateJsonResponse.Body))
+    {
+        if (duplicateJsonDocument.RootElement.GetProperty("name").GetString() != "second")
+            throw new Exception("Duplicate JSON property behavior changed; last-value-wins is expected.");
+    }
+
+    var oversizedJsonBody = "{\"name\":\"" + new string('x', XpsRequestBody.DefaultMaxJsonBytes) +
+                            "\",\"email\":\"fredrik@example.com\",\"age\":42}";
+    var oversizedJsonResponse = await SendAsync(
+        dispatcher, app, "POST", "/api/users", oversizedJsonBody, "application/json");
+    if (oversizedJsonResponse.StatusCode != 400)
+        throw new Exception($"Oversized REST JSON returned {oversizedJsonResponse.StatusCode} instead of 400.");
+    var oversizedJsonProblem = BodyText(oversizedJsonResponse);
+    if (!oversizedJsonProblem.Contains("exceeds the configured", StringComparison.OrdinalIgnoreCase) ||
+        oversizedJsonProblem.Contains("StackTrace", StringComparison.OrdinalIgnoreCase) ||
+        oversizedJsonProblem.Contains(".cs:", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Oversized REST JSON did not return the bounded generic validation error.");
 
     var get = await SendAsync(dispatcher, app, "GET", "/api/users/42", origin: "https://example.com");
     if (get.StatusCode != 200) throw new Exception($"REST GET returned {get.StatusCode}.");
@@ -268,7 +322,7 @@ try
         "application/json",
         origin: "https://client.example");
     if (create.StatusCode != 200) throw new Exception($"JSON body binding returned {create.StatusCode}: {BodyText(create)}");
-    using (var json = JsonDocument.Parse(create.Body))
+    using (var json = XPJsonDocument.Parse(create.Body))
     {
         if (!json.RootElement.TryGetProperty("name", out var name) || name.GetString() != "Fredrik")
             throw new Exception("Response.OK did not serialize bound XPScript model data.");
@@ -287,7 +341,7 @@ try
     var schemaInvalidBody = BodyText(schemaInvalid);
     if (!schemaInvalidBody.Contains("$.age", StringComparison.Ordinal) || !schemaInvalidBody.Contains("JSON Schema validation failed", StringComparison.Ordinal))
         throw new Exception("JSON Schema Problem Details did not contain structured field path errors.");
-    using (var schemaProblem = JsonDocument.Parse(schemaInvalid.Body))
+    using (var schemaProblem = XPJsonDocument.Parse(schemaInvalid.Body))
     {
         var rootElement = schemaProblem.RootElement;
         if (!rootElement.TryGetProperty("validationErrors", out var validationErrors) || validationErrors.ValueKind != JsonValueKind.Array || validationErrors.GetArrayLength() == 0)

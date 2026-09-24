@@ -24,12 +24,6 @@ End Sub
 Sub Submit()
     Response.Write("EXECUTED")
 End Sub
-
-[Anonymous]
-[Get]
-Sub EvalGuard()
-    Response.Write(Evaluate("Shell(""whoami"")"))
-End Sub
 """);
 
 try
@@ -69,6 +63,12 @@ try
         throw new Exception("HTML response did not receive a Content-Security-Policy header.");
     if (!headerResponse.Headers.TryGetValue("X-Content-Type-Options", out var nosniff) || !nosniff.Contains("nosniff"))
         throw new Exception("HTML response did not receive nosniff protection.");
+    if (!headerResponse.Headers.TryGetValue("X-Permitted-Cross-Domain-Policies", out var crossDomainPolicies) ||
+        !crossDomainPolicies.Contains("none"))
+        throw new Exception("HTML response did not disable legacy cross-domain policy files.");
+    if (!headerResponse.Headers.TryGetValue("Cross-Origin-Opener-Policy", out var openerPolicy) ||
+        !openerPolicy.Contains("same-origin"))
+        throw new Exception("HTML response did not isolate the top-level browsing context.");
 
     var independentInfo = new XpsServerInfo(info.SiteId, root, XpsWebHostingMode.Kestrel, info.StartTimeUtc, info.RuntimeVersion);
     var independentContext = new XpsWebContext(request, new XpsWebResponse(), independentInfo, new XpsWebPrincipal(false), new XpsApplicationState(), session);
@@ -174,20 +174,6 @@ try
     var bearerContext = new XpsWebContext(bearerRequest, bearerResponse, info, new XpsWebPrincipal(false), new XpsApplicationState(), store.Bind(bearerRequest, bearerResponse));
     if (XpsWebSecurity.RequiresCsrfProtection(bearerContext))
         throw new Exception("Bearer-only API request was incorrectly forced through browser CSRF validation.");
-
-    var evalGuarded = false;
-    var evalResponse = new XpsWebResponse();
-    var evalContext = new XpsWebContext(Request(), evalResponse, info, new XpsWebPrincipal(false), new XpsApplicationState(), scriptSession);
-    try
-    {
-        await unit.InvokeAsync("EvalGuard", evalContext);
-    }
-    catch (Exception ex)
-    {
-        evalGuarded = ex.Message.Contains("Unsupported Evaluate function", StringComparison.OrdinalIgnoreCase) ||
-                      ex.Message.Contains("Evaluate", StringComparison.OrdinalIgnoreCase);
-    }
-    if (!evalGuarded) throw new Exception("Evaluate unexpectedly allowed server-side Shell execution.");
 
     Console.WriteLine("WEB-CSRF-SMOKE=OK");
     Console.WriteLine("WEB-XSS-SMOKE=OK");

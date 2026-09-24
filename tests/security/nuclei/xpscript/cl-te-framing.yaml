@@ -1,0 +1,24 @@
+id: xpscript-cl-te-framing
+
+info:
+  name: XPScript Conflicting CL TE Framing Accepted
+  author: xpscript
+  severity: critical
+  description: Detects acceptance of a request carrying both Content-Length and Transfer-Encoding.
+
+http:
+  - raw:
+      - |
+        POST / HTTP/1.1
+        Host: {{Hostname}}
+        Content-Length: 4
+        Transfer-Encoding: chunked
+        Connection: close
+
+        0
+
+    unsafe: true
+    matchers:
+      - type: status
+        status:
+          - 200

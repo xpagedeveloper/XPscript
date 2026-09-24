@@ -66,10 +66,10 @@ Verify(
     """
 Option Declare
 Sub Main()
-    Dim document As JsonDocument
+    Dim document As XPJsonDocument
     Dim errCode As Integer
     On Error Resume Next
-    Set document = JsonDocument.Parse("{bad")
+    Set document = XPJsonDocument.Parse("{bad")
     errCode = Err
     On Error GoTo 0
 End Sub
@@ -81,8 +81,8 @@ Verify(
     """
 Option Declare
 Sub Main()
-    Dim client As New HttpClient
-    Dim response As HttpResponse
+    Dim client As New XPHttpClient
+    Dim response As XPHttpResponse
     Dim errCode As Integer
     On Error Resume Next
     Set response = client.Get("http://127.0.0.1:1/")

@@ -13,7 +13,8 @@ internal sealed record BrowserWasmServerBridgeProcedure(
     bool IsFunction,
     string ReturnType,
     IReadOnlyList<BrowserWasmServerBridgeParameter> Parameters,
-    int SpinnerDelayMilliseconds);
+    int SpinnerDelayMilliseconds,
+    XPScript.Web.Runtime.XpsRoutePolicy Policy);
 
 internal sealed record BrowserWasmServerBridgePlan(
     string BrowserSource,
@@ -40,7 +41,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         "Variant", "String", "Integer", "Long", "Double", "Single", "Boolean", "Byte", "Currency", "Date"
     };
 
-    public static BrowserWasmServerBridgePlan Create(string source, string sourceIdentity)
+    public static BrowserWasmServerBridgePlan Create(string source, string sourceIdentity, IReadOnlyDictionary<string, BrowserWasmServerSideOptions> serverSideOptions)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceIdentity);
@@ -61,7 +62,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         foreach (var procedure in procedures)
         {
             var body = BodyText(lines, procedure);
-            if (!HasServerRuntimeFeature(body)) continue;
+            if (!HasServerRuntimeFeature(body) && !HasServerSideMarker(body)) continue;
             ValidateRemoteProcedure(procedure);
             remote.Add(procedure);
 
@@ -99,7 +100,17 @@ internal sealed record BrowserWasmServerBridgePlan(
             ValidateSerializableSignature(procedure);
             var id = ProcedureId(sourceIdentity, procedure.Name);
             var spinnerDelay = ReadSpinnerDelay(lines, procedure);
-            if (!manifest.TryAdd(id, new BrowserWasmServerBridgeProcedure(id, procedure.Name, procedure.IsFunction, procedure.ReturnType, procedure.Parameters, spinnerDelay)))
+            var options = serverSideOptions.TryGetValue(procedure.Name, out var configured)
+                ? configured
+                : new BrowserWasmServerSideOptions(BrowserWasmServerSideOptions.DefaultSpinnerDelayMilliseconds, true, [], [], [], []);
+            var policy = new XPScript.Web.Runtime.XpsRoutePolicy(
+                options.AllowAnonymous,
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "POST" },
+                options.RequiredRules,
+                options.ForbiddenRules,
+                options.RequiredRoles,
+                options.ForbiddenRoles);
+            if (!manifest.TryAdd(id, new BrowserWasmServerBridgeProcedure(id, procedure.Name, procedure.IsFunction, procedure.ReturnType, procedure.Parameters, spinnerDelay, policy)))
                 throw new XpsWebCompilationException("browser-wasm server bridge generated a duplicate procedure id.");
         }
 
@@ -140,6 +151,9 @@ internal sealed record BrowserWasmServerBridgePlan(
         var features = RuntimeFeatures.Detect(source);
         return features.Ai || features.Sqlite || features.MsSql || ContainsApplicationCryptoCode(source);
     }
+
+    private static bool HasServerSideMarker(string source) =>
+        SpinnerDelayMarker.IsMatch(source);
 
     private static bool ContainsApplicationCryptoCode(string source)
     {
@@ -305,7 +319,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         var suffix = procedure.Id[..8];
         var argsName = "XpscriptWasmBridgeArgs" + suffix;
         var resultName = "XpscriptWasmBridgeResult" + suffix;
-        output.AppendLine($"    Dim {argsName} As New JsonArray");
+        output.AppendLine($"    Dim {argsName} As New XPJsonArray");
         foreach (var parameter in procedure.Parameters) output.AppendLine($"    Call {argsName}.Add({parameter.Name})");
         if (!procedure.IsFunction)
         {
@@ -328,8 +342,8 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine("Private " + CapabilityVariable + " As String");
         output.AppendLine();
         output.AppendLine("Private Function " + CapabilityFunction + "(spinnerDelay As Integer) As String");
-        output.AppendLine("    Dim http As New HttpClient");
-        output.AppendLine("    Dim document As JsonDocument");
+        output.AppendLine("    Dim http As New XPHttpClient");
+        output.AppendLine("    Dim document As XPJsonDocument");
         output.AppendLine("    Dim root As Variant");
         output.AppendLine("    If " + CapabilityVariable + " = \"\" Then");
         output.AppendLine("        Call http.SetHeader(\"X-XPS-WASM-Bridge\", \"1\")");
@@ -343,10 +357,10 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine("End Function");
         output.AppendLine();
         output.AppendLine("Private Function " + InvokeFunction + "(procedureId As String, arguments As Variant, spinnerDelay As Integer) As Variant");
-        output.AppendLine("    Dim http As New HttpClient");
-        output.AppendLine("    Dim payload As New JsonObject");
-        output.AppendLine("    Dim response As HttpResponse");
-        output.AppendLine("    Dim document As JsonDocument");
+        output.AppendLine("    Dim http As New XPHttpClient");
+        output.AppendLine("    Dim payload As New XPJsonObject");
+        output.AppendLine("    Dim response As XPHttpResponse");
+        output.AppendLine("    Dim document As XPJsonDocument");
         output.AppendLine("    Dim root As Variant");
         output.AppendLine("    Call http.SetHeader(\"X-XPS-WASM-Bridge\", \"1\")");
         output.AppendLine("    Call http.SetHeader(\"X-XPS-WASM-Spinner-Delay\", CStr(spinnerDelay))");
