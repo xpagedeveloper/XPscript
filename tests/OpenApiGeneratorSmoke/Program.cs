@@ -1237,7 +1237,7 @@ foreach (var marker in new[]
     "Optional ApiMappedThing As Variant",
     "Dim url2 As String",
     "Dim raw2 As XPHttpResponse",
-    "Dim result2 As Procedure_Scope_APIResponse",
+    "Dim result2 As ProcedureScope_APIResponse",
     "Dim ApiMappedThing2 As Thing"
 })
     if (!procedureScope.Source.Contains(marker, StringComparison.Ordinal))
