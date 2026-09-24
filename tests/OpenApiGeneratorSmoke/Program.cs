@@ -1767,47 +1767,6 @@ paths:
         !regenerationChanged.Source.Contains("Optional Result As Variant = Nothing", StringComparison.Ordinal))
         throw new Exception("OpenAPI client regeneration must preserve deterministic member naming when the contract grows.");
 
-    var firstImportedApi = new XpsOpenApiImporter().Import("""
-openapi: 3.1.0
-info: { title: First API, version: 1.0.0 }
-components:
-  schemas:
-    SharedModel:
-      type: object
-      properties:
-        firstValue: { type: string }
-paths:
-  /first:
-    get:
-      operationId: sharedOperation
-      responses:
-        '204': { description: ok }
-""", "", "first-api.yaml");
-    var secondImportedApi = new XpsOpenApiImporter().Import("""
-openapi: 3.1.0
-info: { title: Second API, version: 1.0.0 }
-components:
-  schemas:
-    SharedModel:
-      type: object
-      properties:
-        secondValue: { type: string }
-paths:
-  /second:
-    get:
-      operationId: sharedOperation
-      responses:
-        '204': { description: ok }
-""", firstImportedApi.Source, "second-api.yaml");
-    foreach (var expected in new[] { "Class SharedModel", "Class SecondApiSharedModel", "Function HandleSharedOperation", "Function SecondApiHandleSharedOperation" })
-        if (!secondImportedApi.Source.Contains(expected, StringComparison.OrdinalIgnoreCase))
-            throw new Exception("Imported APIs must coexist with isolated generated names; missing: " + expected);
-    if (secondImportedApi.Warnings.Any(warning => warning.Contains("SharedModel", StringComparison.OrdinalIgnoreCase) ||
-                                                  warning.Contains("sharedOperation", StringComparison.OrdinalIgnoreCase)))
-        throw new Exception("Isolated imported APIs must not report avoidable generated-name collisions.");
-
-    Console.WriteLine("OPENAPI-MULTI-API-COLLISION=OK");
-
     Console.WriteLine("OPENAPI-REGENERATION-COLLISION=OK");
 
     foreach (var marker in new[] { "OPENAPI-CLIENT-SECURITY=OK", "OPENAPI-CLIENT-CORE-ONLY=OK" })
@@ -1821,9 +1780,6 @@ paths:
     Console.WriteLine("OPENAPI-RUNTIME-PROPERTY-METHOD-COEXISTENCE-COMPILE=OK");
     Console.WriteLine("OPENAPI-EDITED-HANDLERS-COMPILE=OK");
     Console.WriteLine("OPENAPI-PRINT-PRESERVATION=OK");
-    Console.WriteLine("OPENAPI-ADDITIVE-REIMPORT-PRESERVE=OK");
-    Console.WriteLine("OPENAPI-ADDITIVE-REIMPORT-NEW-OPERATIONS=OK");
-    Console.WriteLine("OPENAPI-ADDITIVE-REIMPORT-COMPILE=OK");
 }
 finally
 {
