@@ -792,7 +792,7 @@ Usage:
   xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml] [--debug]
   xpscript mcp
   xpscript mcp install codex|claude [--scope user|project] [--force]
-  {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--] [script arguments...]
+  {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [script arguments...]
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
