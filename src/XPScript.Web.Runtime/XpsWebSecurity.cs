@@ -65,6 +65,7 @@ public static class XpsWebSecurity
         SetIfMissing(response, "Referrer-Policy", "no-referrer");
         SetIfMissing(response, "X-Frame-Options", "DENY");
         SetIfMissing(response, "X-Permitted-Cross-Domain-Policies", "none");
+        SetIfMissing(response, "Cross-Origin-Opener-Policy", "same-origin");
         SetIfMissing(response, "Permissions-Policy", "camera=(), microphone=(), geolocation=()");
         if (response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
             SetIfMissing(response, "Content-Security-Policy", DefaultCsp);
