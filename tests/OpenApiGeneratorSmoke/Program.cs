@@ -1600,6 +1600,17 @@ try
     await File.WriteAllTextAsync(scopeCollisionPath, scopeCollision.Source);
     var crossScopeRuntimePath = Path.Combine(root, "cross-scope-runtime-names.xps");
     await File.WriteAllTextAsync(crossScopeRuntimePath, crossScopeRuntimeNames.Source);
+    var propertyMethodRuntimePath = Path.Combine(root, "property-method-runtime-name.xps");
+    const string propertyMethodRuntimeSource = """
+Public Class RuntimeNameCoexistence
+    Public JsonParse As String
+
+    Public Function JsonParse(value As String) As String
+        Return value
+    End Function
+End Class
+""";
+    await File.WriteAllTextAsync(propertyMethodRuntimePath, propertyMethodRuntimeSource);
     var compilerReservedPath = Path.Combine(root, "compiler-reserved.xps");
     await File.WriteAllTextAsync(compilerReservedPath, compilerReservedClient.Source);
 
@@ -1622,6 +1633,11 @@ try
     _ = new XPScriptTranspiler().TranspileRestricted(
         crossScopeRuntimeNames.Source + "\nSub Main()\nEnd Sub\n",
         crossScopeRuntimePath,
+        CompilerDriver.CurrentRuntimeIdentifier(),
+        [root]);
+    _ = new XPScriptTranspiler().TranspileRestricted(
+        propertyMethodRuntimeSource + "\nSub Main()\nEnd Sub\n",
+        propertyMethodRuntimePath,
         CompilerDriver.CurrentRuntimeIdentifier(),
         [root]);
     _ = new XPScriptTranspiler().TranspileRestricted(
@@ -1776,6 +1792,7 @@ End Class
     Console.WriteLine("OPENAPI-3.2-SERVER-CLIENT-COMPILE=OK");
     Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
     Console.WriteLine("OPENAPI-SCOPE-COLLISION-COMPILE=OK");
+    Console.WriteLine("OPENAPI-RUNTIME-PROPERTY-METHOD-COEXISTENCE-COMPILE=OK");
     Console.WriteLine("OPENAPI-EDITED-HANDLERS-COMPILE=OK");
     Console.WriteLine("OPENAPI-PRINT-PRESERVATION=OK");
     Console.WriteLine("OPENAPI-ADDITIVE-REIMPORT-PRESERVE=OK");
