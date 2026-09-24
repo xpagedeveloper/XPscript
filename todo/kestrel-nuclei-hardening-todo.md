@@ -200,7 +200,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Add curated ASP.NET, IIS and .NET Nuclei profile for debug mode, ASP.NET Core development environment, launchSettings.json, ELMAH, Trace.axd, Microsoft runtime errors, NuGet.config, IIS short-name behavior and IIS version disclosure.
 - [x] Add curated JSON security Nuclei profile for appsettings.json, credentials.json, auth.json, JWK/JWKS exposure, Swagger/OpenAPI exposure and generic sensitive config JSON disclosure.
 - [x] Review upstream `http/exposures` findings. The pinned upstream exposures directory was scanned in run #283 with no exposure finding outside the eight informational misconfiguration/header/cookie/CSP observations classified above.
-- [ ] Add applicable generic fuzzing templates in a controlled phase.
+- [~] Add applicable generic fuzzing templates in a controlled phase. CI now runs a deliberately bounded set of upstream Linux LFI, Windows LFI and X-Forwarded-For 403-bypass fuzzing templates with concurrency 1, bulk size 1 and a 20 request/second rate limit. Awaiting end-to-end CI verification.
 - [ ] Add applicable generic vulnerability templates in a controlled phase.
 - [ ] Add ASP.NET Core and Kestrel-specific CVE templates when relevant.
 - [x] Maintain an explicit allowlist for confirmed false positives. `tests/security/nuclei/allowlist.json` is version-controlled, starts empty, requires a documented reason per entry, and CI only exempts an exact template plus optional matcher/severity match.
