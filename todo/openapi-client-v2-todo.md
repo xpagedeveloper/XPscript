@@ -79,7 +79,7 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] Methods with runtime/global function names remain unchanged when legal
 - [x] Method overloads with the same name but different valid XPScript signatures are preserved
 - [x] Case-insensitive collisions are detected in the same scope
-- [ ] Type-name collisions are handled only in type declaration scope
+- [x] Type-name collisions are handled only in type declaration scope
 - [x] Member collisions are handled independently per class
 - [x] Procedure parameters are handled in procedure parameter scope
 - [x] Local/generated helper variables are handled in procedure-local scope
