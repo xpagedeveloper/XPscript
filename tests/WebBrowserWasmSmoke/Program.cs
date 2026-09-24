@@ -50,14 +50,16 @@ End Sub
     var companion = Directory.EnumerateFiles(Path.Combine(root, ".xpscript-cache", "wasm-bridge"), "XPScript.BrowserServer.dll", SearchOption.AllDirectories).FirstOrDefault();
     if (companion is null) throw new Exception("[ServerSide] browser-WASM compile did not produce a server companion assembly.");
 
-    var generatedHttpRuntime = Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
-        .Select(path => new { Path = path, Text = File.ReadAllText(path) })
-        .FirstOrDefault(file => file.Text.Contains("internal sealed class XPScriptHttpClient", StringComparison.Ordinal));
-    if (generatedHttpRuntime is null)
-        throw new Exception("Browser-WASM compile did not retain the generated HTTP runtime for security verification.");
-    if (!generatedHttpRuntime.Text.Contains("AllowAutoRedirect = false", StringComparison.Ordinal))
+    var compilerAssembly = typeof(XPScript.Compiler.XPScriptTranspiler).Assembly;
+    var nativeHttpRuntimeType = compilerAssembly.GetType("XPScript.Compiler.NativeHttpRuntimeSource", throwOnError: true)!;
+    var nativeHttpRuntime = (string?)nativeHttpRuntimeType.GetField(
+        "Code",
+        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?.GetRawConstantValue();
+    if (string.IsNullOrEmpty(nativeHttpRuntime))
+        throw new Exception("Browser-WASM security test could not inspect the compiler HTTP runtime source.");
+    if (!nativeHttpRuntime.Contains("AllowAutoRedirect = false", StringComparison.Ordinal))
         throw new Exception("Browser-WASM HTTP runtime permits automatic redirects that could forward credentials to an unintended origin.");
-    if (!generatedHttpRuntime.Text.Contains("UseCookies = false", StringComparison.Ordinal))
+    if (!nativeHttpRuntime.Contains("UseCookies = false", StringComparison.Ordinal))
         throw new Exception("Browser-WASM HTTP runtime unexpectedly enables the native cookie container.");
 
     var noHeaderResponse = new XpsWebResponse();
