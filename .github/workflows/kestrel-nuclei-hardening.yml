@@ -386,6 +386,35 @@ jobs:
         run: |
           python3 ./tests/security/kestrel_hardening.py             --host 127.0.0.1             --port "${HARDENING_PORT}"             --json ./artifacts/hardening/raw-http-results.json
 
+      - name: Run nginx to Kestrel request smuggling probes
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+          cat > ./artifacts/hardening/nginx-kestrel.conf <<EOF
+          events {}
+          http {
+            access_log off;
+            error_log stderr notice;
+            server {
+              listen 127.0.0.1:18082;
+              location / {
+                proxy_http_version 1.1;
+                proxy_set_header Host 127.0.0.1;
+                proxy_set_header Connection "";
+                proxy_pass http://127.0.0.1:${HARDENING_PORT};
+              }
+            }
+          }
+          EOF
+          sudo nginx -c "${GITHUB_WORKSPACE}/artifacts/hardening/nginx-kestrel.conf"
+          trap 'sudo nginx -c "${GITHUB_WORKSPACE}/artifacts/hardening/nginx-kestrel.conf" -s stop || true' EXIT
+          for attempt in {1..20}; do
+            if curl --silent --fail http://127.0.0.1:18082/ >/dev/null; then break; fi
+            sleep 1
+          done
+          python3 ./tests/security/reverse_proxy_smuggling.py --host 127.0.0.1 --port 18082 --json ./artifacts/hardening/nginx-kestrel-smuggling.json
+
       - name: Upload hardening artifacts
         if: always()
         uses: actions/upload-artifact@v4
