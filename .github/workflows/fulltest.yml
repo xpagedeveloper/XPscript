@@ -38,6 +38,25 @@ jobs:
       - name: Run OpenAPI generator smoke
         run: dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release
 
+  macos-spreadsheet-regression:
+    name: macOS spreadsheet regression first
+    if: github.event_name == 'push' && github.ref == 'refs/heads/openapi-client-v2'
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler once
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Run failing spreadsheet regression first
+        shell: pwsh
+        run: ./.github/scripts/run-fulltests.ps1 -Suite runtime
+
   windows-gate:
     name: Windows Gate
     runs-on: windows-latest
