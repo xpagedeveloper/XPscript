@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Text;
 using System.Text.RegularExpressions;
+using XPScript.Compiler;
 
 namespace XPScript.Web.Compiler;
 
