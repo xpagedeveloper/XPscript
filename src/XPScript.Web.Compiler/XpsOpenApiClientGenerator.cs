@@ -77,6 +77,7 @@ public sealed class XpsOpenApiClientGenerator
             var scheme = XpsOpenApiSchema.Resolve(root, pair.Value, "OpenAPI security scheme"); var type = ReadString(scheme, "type")?.ToLowerInvariant();
             if (type == "http") { var httpScheme = ReadString(scheme, "scheme")?.ToLowerInvariant(); if (httpScheme is "bearer" or "basic") result[pair.Key] = new ClientSecurityScheme(pair.Key, httpScheme, null, null); }
             else if (type == "apikey") { var location = ReadString(scheme, "in")?.ToLowerInvariant(); var name = ReadString(scheme, "name"); if (location is "header" or "query" && !string.IsNullOrWhiteSpace(name)) result[pair.Key] = new ClientSecurityScheme(pair.Key, "apikey", location, name); }
+            else if (type is "oauth2" or "openidconnect") { result[pair.Key] = new ClientSecurityScheme(pair.Key, "bearer", null, null); }
         }
         return result;
     }
