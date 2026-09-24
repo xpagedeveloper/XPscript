@@ -178,7 +178,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [x] Verify CSRF token cannot be reused across unrelated sessions. Tokens are HMAC-bound to the site and session id, session rotation invalidates the previous token, and independent host instances do not share CSRF secret material; verified in run #224.
 - [x] Verify CSRF token length and malformed token handling. Tokens are asserted as 43-character Base64URL values; modified and invalid tokens are rejected, with runtime validation capped at 128 input characters; verified in run #224.
 - [x] Verify browser-generated requests do not leak bearer tokens to unintended origins. Browser bridge URLs are restricted to the same-origin relative `__xpscript_bridge` route, the native HTTP runtime disables automatic redirects and cookie-container forwarding, and the Browser WASM smoke app exercises XPHttpClient with a bearer token; verified in run #254.
-- [ ] Verify credential storage and cookie behavior across HTTP and HTTPS.
+- [~] Verify credential storage and cookie behavior across HTTP and HTTPS. Browser WASM now has an explicit regression for the shared correlation cookie policy: HttpOnly, SameSite=Lax, 30-day lifetime, Secure on HTTPS and intentionally omitted on HTTP. Native XPHttpClient cookie storage remains disabled. Awaiting CI verification.
 - [ ] Verify browser routes and server routes enforce the same authorization policy.
 
 ## Nuclei corpus management
