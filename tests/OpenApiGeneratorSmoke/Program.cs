@@ -1673,6 +1673,29 @@ try
             throw new Exception("Manually edited generated XPScript did not compile before reimport.");
     }
 
+    var additiveCollision = new XpsOpenApiImporter().Import("""
+openapi: 3.1.0
+info: { title: Additive Collision, version: 1.0.0 }
+components:
+  schemas:
+    CollisionModel:
+      type: object
+      properties:
+        JsonParse: { type: string }
+paths: {}
+""", """
+Public Class CollisionModel
+    Public jsonparse As Long
+End Class
+""", "additive-collision.yaml");
+    if (additiveCollision.Source.Contains("Public JsonParse As String", StringComparison.Ordinal) ||
+        additiveCollision.Source.Split("Public jsonparse As Long", StringSplitOptions.None).Length - 1 != 1)
+        throw new Exception("Additive import must treat case-insensitive same-class member names as a true collision and preserve the existing declaration.");
+    if (!additiveCollision.Warnings.Any(warning =>
+            warning.Contains("CollisionModel.JsonParse", StringComparison.OrdinalIgnoreCase) &&
+            warning.Contains("existing type 'Long' preserved", StringComparison.OrdinalIgnoreCase)))
+        throw new Exception("Additive import same-scope collision must produce a deterministic drift warning.");
+
     var importResult = new XpsOpenApiImporter().ImportFile(reimportFixture, userEdited);
 
     foreach (var preserved in new[]
