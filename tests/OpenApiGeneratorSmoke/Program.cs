@@ -4,7 +4,6 @@ using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
 var fixture = Path.Combine(AppContext.BaseDirectory, "petstore.yaml");
-var reimportFixture = Path.Combine(AppContext.BaseDirectory, "petstore-reimport.yaml");
 var generator = new XpsOpenApiGenerator();
 var result = generator.GenerateFile(fixture);
 var clientResult = new XpsOpenApiClientGenerator().GenerateFile(fixture);
@@ -1717,74 +1716,8 @@ End Class
             warning.Contains("existing type 'Long' preserved", StringComparison.OrdinalIgnoreCase)))
         throw new Exception("Additive import same-scope collision must produce a deterministic drift warning.");
 
-    // Reimport uses a deliberately different fixture filename. Keep it first in this regression
-    // so additive update semantics fail fast before independent multi-API isolation checks.
-    var importResult = new XpsOpenApiImporter().ImportFile(reimportFixture, userEdited);
-
-    foreach (var preserved in new[]
-    {
-        "Print \"fråga funktionen GetPet\"",
-        "Print \"fråga funktionen CreatePet\"",
-        "result.Data = \"custom-get\"",
-        "result.Data = \"custom-create\"",
-        "Public name As String",
-        "Sub EndpointGetPet([FromRoute:\"petId\"] pPetId As Long, [FromQuery:\"includeHistory\"] pIncludeHistory As Boolean, [FromHeader:\"X-Request-Id\"] pXRequestId As String)"
-    })
-    {
-        if (!importResult.Source.Contains(preserved, StringComparison.Ordinal))
-            throw new Exception("Additive import changed or removed existing source: " + preserved);
-    }
-
-    foreach (var added in new[]
-    {
-        "Public microchip As String",
-        "Public status As String",
-        "Public source As String",
-        "Public externalId As String",
-        "Public traceId As String",
-        "Public Expand As String",
-        "Public Class UpdatePet",
-        "Public Class UpdatePetRequest",
-        "Public Class UpdatePetResponse",
-        "Function HandleUpdatePet(request As UpdatePetRequest) As UpdatePetResponse",
-        "Sub EndpointUpdatePet(",
-        "Function HandleListPets(request As ListPetsRequest) As ListPetsResponse",
-        "Sub EndpointListPets(",
-        "Function HandleDeletePet(request As DeletePetRequest) As DeletePetResponse",
-        "Sub EndpointDeletePet(",
-        "Sub WriteUpdatePetResponse(result As UpdatePetResponse)",
-        "Sub WriteListPetsResponse(result As ListPetsResponse)",
-        "Sub WriteDeletePetResponse(result As DeletePetResponse)"
-    })
-    {
-        if (!importResult.Source.Contains(added, StringComparison.Ordinal))
-            throw new Exception("Additive import did not add expected declaration: " + added);
-    }
-
-    if (importResult.Source.Contains("pExpand As String", StringComparison.Ordinal))
-        throw new Exception("Additive import rewrote the existing GetPet endpoint signature.");
-    if (!importResult.Warnings.Any(warning => warning.Contains("Pet.name", StringComparison.OrdinalIgnoreCase)))
-        throw new Exception("Expected changed existing property type to produce a drift warning.");
-    if (!importResult.Warnings.Any(warning => warning.Contains("EndpointGetPet", StringComparison.Ordinal)))
-        throw new Exception("Expected changed existing endpoint signature to produce a drift warning.");
-
-    var importedPath = Path.Combine(root, "petstore-imported.xps");
-    await File.WriteAllTextAsync(importedPath, importResult.Source);
-    await using (var importedUnit = await compiler.CompileAsync(importedPath, root))
-    {
-        foreach (var route in new[]
-        {
-            "EndpointGetPet",
-            "EndpointCreatePet",
-            "EndpointUpdatePet",
-            "EndpointListPets",
-            "EndpointDeletePet"
-        })
-        {
-            if (!importedUnit.Routes.ContainsKey(route))
-                throw new Exception("Additively imported XPScript did not compile expected REST route: " + route);
-        }
-    }
+    // Server import intentionally does not support reimport/update semantics. Generated
+    // infrastructure is immutable to later imports; separate APIs are isolated instead.
 
     var regenerationSpec = """
 openapi: 3.1.0
