@@ -68,7 +68,6 @@ OpenAPI 3.0, 3.1 and 3.2 should share a common internal representation before se
 - [x] Otherwise derive the API name from the server domain
 - [x] Domain-derived names use readable form such as `example.com` / `api.example.com` -> `Example_API`
 - [x] Provide deterministic fallback naming when neither API metadata nor a server domain is available
-- [ ] Multiple imported APIs can coexist without accidental class-name collisions
 
 ## XPScript identifier and scope correctness
 
@@ -97,9 +96,7 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] Server generation follows all naming/scope rules
 - [x] Additive import follows all naming/scope rules
 - [x] Additive import preserves existing valid generated names
-- [x] Regeneration/update follows all naming/scope rules
-- [x] Generated ownership marker is stable and recognized by update
-- [x] Updating a generated client does not require manually editing the generated file
+- [x] Repeated generation follows all naming/scope rules deterministically
 
 ## Compatibility/regression cases
 
@@ -113,7 +110,7 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [x] Generated helper collision is tested
 - [x] Multiple security schemes normalizing to the same identifier are tested
 - [x] Additive import collision behavior is tested
-- [x] Regeneration collision behavior is tested
+- [x] Repeated generation collision behavior is tested
 - [x] Lexical keyword behavior is tested
 - [x] `__*` compiler-reserved behavior is tested
 
@@ -147,7 +144,6 @@ The current CI coverage is split strictly into **server generation** and **clien
 ### Server already covered
 
 - OpenAPI 3.1 YAML: `petstore.yaml` generates REST endpoint skeletons, models, route/path/query/header/body bindings and responses; generated source is compiled with `XpsWebCompiler`.
-- OpenAPI 3.1 YAML additive import: `petstore-reimport.yaml` verifies preservation of edited handlers/existing declarations, addition of new models/endpoints, drift warnings, and recompilation.
 - OpenAPI 3.0 JSON: `petstore.json` is exercised through the server CLI generation path.
 - OpenAPI 3.0 in-memory server compatibility is explicitly checked by `OpenApiGeneratorSmoke`.
 - Scope-collision server output is compiled through the real web compiler.
@@ -157,7 +153,6 @@ The current CI coverage is split strictly into **server generation** and **clien
 - OpenAPI 3.1 YAML: `client-ci.yaml` is generated through the CLI and compiled as XPScript.
 - OpenAPI 3.1 YML extension: the same fixture is copied to `.yml`, generated and compiled.
 - OpenAPI 3.0 JSON: `petstore.json` is generated as a client and compiled.
-- Client update/regeneration from OpenAPI 3.1 YAML is generated and compiled.
 - Smoke coverage includes security, API keys, bearer/basic auth, schemas, enums, arrays, oneOf/allOf, nullable 3.1 types, additionalProperties, parameter encoding, response validation and identifier/scope collision behavior.
 
 ### Matrix acceptance verified
