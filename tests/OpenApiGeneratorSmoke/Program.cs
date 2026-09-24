@@ -107,10 +107,10 @@ paths:
 foreach (var marker in new[]
 {
     "Private AuthOAuthLogin_i As String",
-    "Public Sub SetOAuthLogin(value As String)",
+    "Public Sub ApiSetOAuthLogin(value As String)",
     "request.SetBearerToken(AuthOAuthLogin_i)",
     "Private AuthOpenIdLogin_i As String",
-    "Public Sub SetOpenIdLogin(value As String)",
+    "Public Sub ApiSetOpenIdLogin(value As String)",
     "request.SetBearerToken(AuthOpenIdLogin_i)"
 })
     if (!oauthClient.Contains(marker, StringComparison.Ordinal))
