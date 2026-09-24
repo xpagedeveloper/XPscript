@@ -204,8 +204,8 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 - [ ] Add applicable generic vulnerability templates in a controlled phase.
 - [ ] Add ASP.NET Core and Kestrel-specific CVE templates when relevant.
 - [ ] Maintain an explicit allowlist for confirmed false positives.
-- [ ] Never silently ignore a new high or critical finding.
-- [ ] Store scanner revision, template revision and finding metadata in artifacts.
+- [x] Never silently ignore a new high or critical finding. CI parses every generated Nuclei JSONL artifact and fails the hardening job if any high or critical finding is present.
+- [x] Store scanner revision, template revision and finding metadata in artifacts. CI writes `nuclei-scan-metadata.json` with pinned scanner version, pinned template SHA, Git SHA, severity counts and finding identifiers/match metadata.
 - [ ] Add a scheduled manual review process for updating pinned scanner and template versions.
 
 ## Confirmed findings
