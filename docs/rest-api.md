@@ -81,7 +81,7 @@ components:
           maxLength: 100
 ```
 
-The generator creates compilable XPScript REST code. Component schemas become XPScript classes. OpenAPI path, query and header parameters become `[FromRoute]`, `[FromQuery]` and `[FromHeader]` bindings. JSON request bodies become `[FromBody]` parameters.
+The generator creates compilable XPScript REST code. Component schemas become XPScript classes. OpenAPI path, query, header and cookie parameters become `[FromRoute]`, `[FromQuery]`, `[FromHeader]` and `[FromCookie]` bindings. JSON request bodies become `[FromBody]` parameters.
 
 Each OpenAPI operation gets two contract classes and a handler function. For an operation with `operationId: getPet`, the generated code contains `GetPetRequest`, `GetPetResponse` and `HandleGetPet`. The HTTP route wrapper is named `EndpointGetPet`. The `Endpoint` prefix prevents an operationId from colliding with a component schema that has the same name while leaving the OpenAPI operation name unchanged in the generated handler and contracts.
 
@@ -161,6 +161,8 @@ Supported explicit bindings are:
 - `[FromQuery]`
 - `[FromHeader]`
 - `[FromHeader:"Header-Name"]`
+- `[FromCookie]`
+- `[FromCookie:"Cookie-Name"]`
 - `[FromBody]`
 
 Without an explicit binding the runtime checks a matching route parameter, then query string, then JSON body for a complex type. Query and header binding preserve HTTP multi-value semantics internally.
