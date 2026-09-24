@@ -65,6 +65,7 @@ public sealed class XpsOpenApiImporter
 
             var desiredFields = ParseFields(desiredClass.Text);
             if (desiredFields.Count == 0) continue;
+            warnings.Add($"Class {desiredClass.Name}: generated name already exists; importing into the existing class.");
             var existingFields = ParseFields(existingClass.Text)
                 .ToDictionary(field => field.Name, StringComparer.OrdinalIgnoreCase);
             var inserts = new List<string>();
@@ -108,6 +109,7 @@ public sealed class XpsOpenApiImporter
                 continue;
             }
 
+            warnings.Add($"{procedure.Kind} {procedure.Name}: generated name already exists; existing procedure preserved.");
             if (!NormalizeSignature(existing.Declaration).Equals(NormalizeSignature(procedure.Declaration), StringComparison.OrdinalIgnoreCase))
                 warnings.Add($"{procedure.Kind} {procedure.Name}: existing signature preserved; OpenAPI-generated signature differs.");
 
