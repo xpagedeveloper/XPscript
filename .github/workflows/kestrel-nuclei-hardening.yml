@@ -294,6 +294,29 @@ jobs:
           set -e
           echo "${status}" > ./artifacts/hardening/nuclei-web-boundary.exit-code
 
+      - name: Run controlled generic Nuclei fuzzing templates
+        shell: bash
+        run: |
+          set +e
+          templates=(
+            "./artifacts/nuclei-templates/http/fuzzing/linux-lfi-fuzzing.yaml"
+            "./artifacts/nuclei-templates/http/fuzzing/windows-lfi-fuzzing.yaml"
+            "./artifacts/nuclei-templates/http/fuzzing/xff-403-bypass.yaml"
+          )
+          "${HOME}/go/bin/nuclei" \
+            -u "http://127.0.0.1:${HARDENING_PORT}" \
+            -t "${templates[0]}" \
+            -t "${templates[1]}" \
+            -t "${templates[2]}" \
+            -rate-limit 20 \
+            -bulk-size 1 \
+            -concurrency 1 \
+            -jsonl-export ./artifacts/hardening/nuclei-controlled-fuzzing.jsonl \
+            -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-controlled-fuzzing.exit-code
+
       - name: Run selected upstream Nuclei HTTP templates
         shell: bash
         run: |
