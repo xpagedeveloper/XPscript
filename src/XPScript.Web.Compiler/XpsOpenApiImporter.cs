@@ -46,29 +46,11 @@ public sealed class XpsOpenApiImporter
     {
         ArgumentNullException.ThrowIfNull(existingSource);
         var desired = _generator.Generate(specification, sourceName);
-        // Import is additive, not an update/reimport mechanism. Once generated OpenAPI
-        // infrastructure exists, a new import is isolated so it cannot mutate that API.
+        // Server import is intentionally one-time. Existing handwritten source can be
+        // extended by the first import, but generated OpenAPI infrastructure is immutable.
         if (!string.IsNullOrWhiteSpace(existingSource) && ContainsGeneratedOpenApiSource(existingSource))
-        {
-            desired = IsolateCollidingApi(desired, existingSource, sourceName, forceIsolation: true);
-            var isolatedNewline = DetectNewline(existingSource);
-            var isolatedSource = AppendBlock(existingSource, NormalizeNewlines(desired.Source, isolatedNewline), isolatedNewline);
-            var isolatedClasses = ParseClasses(desired.Source).Select(x => x.Name).ToArray();
-            var isolatedClassSpans = ParseClasses(desired.Source).Select(x => (x.Start, x.End)).ToArray();
-            var isolatedProcedures = ParseProcedures(desired.Source, isolatedClassSpans)
-                .Select(x => x.Kind + " " + x.Name).ToArray();
-
-            // A generated OpenAPI block is immutable to later server imports. Separate APIs
-            // are appended as complete isolated units instead of being passed through the
-            // legacy additive class/procedure merger.
-            return new XpsOpenApiImportResult(
-                desired.OpenApiVersion,
-                isolatedSource,
-                isolatedClasses,
-                Array.Empty<string>(),
-                isolatedProcedures,
-                Array.Empty<string>());
-        }
+            throw new XpsOpenApiGenerationException(
+                "OpenAPI has already been imported into this XPScript source. Reimport/update is not supported; generate a new server source when the contract changes.");
         var source = existingSource;
         var newline = DetectNewline(source);
         var addedClasses = new List<string>();
@@ -166,58 +148,6 @@ public sealed class XpsOpenApiImporter
                      RegexOptions.CultureInvariant))
             routes.Add(match.Groups["route"].Value);
         return routes;
-    }
-
-    private static XpsOpenApiGenerationResult IsolateCollidingApi(XpsOpenApiGenerationResult desired, string existingSource, string? sourceName, bool forceIsolation = false)
-    {
-        var existingClasses = ParseClasses(existingSource).Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var desiredClasses = ParseClasses(desired.Source);
-        var existingClassSpans = ParseClasses(existingSource).Select(x => (x.Start, x.End)).ToArray();
-        var existingProcedures = ParseProcedures(existingSource, existingClassSpans)
-            .Select(x => ProcedureKey(x.Kind, x.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var desiredClassSpans = desiredClasses.Select(x => (x.Start, x.End)).ToArray();
-        var desiredProcedures = ParseProcedures(desired.Source, desiredClassSpans);
-        var collides = desiredClasses.Any(x => existingClasses.Contains(x.Name))
-            || desiredProcedures.Any(x => existingProcedures.Contains(ProcedureKey(x.Kind, x.Name)));
-        if (!collides && !forceIsolation) return desired;
-
-        var prefix = ImportPrefix(sourceName);
-
-        // Prefix every generated declaration directly. This avoids relying on model/operation
-        // metadata and also avoids replacement-order effects between base and derived names.
-        var declarationPattern = new Regex(
-            @"(?im)^(?<head>\s*(?:(?:Public|Private|Static)\s+)*(?:Class|Function|Sub)\s+)(?<name>[A-Za-z_]\w*)",
-            RegexOptions.CultureInvariant);
-        var declaredNames = declarationPattern.Matches(desired.Source)
-            .Select(match => match.Groups["name"].Value)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderByDescending(name => name.Length)
-            .ToArray();
-
-        var rewritten = desired.Source;
-        foreach (var name in declaredNames)
-            rewritten = Regex.Replace(
-                rewritten,
-                $@"\b{Regex.Escape(name)}\b",
-                prefix + name,
-                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
-        return desired with
-        {
-            Source = rewritten,
-            Operations = desired.Operations.Select(x => prefix + x).ToArray(),
-            Models = desired.Models.Select(x => prefix + x).ToArray()
-        };
-    }
-
-    private static string ImportPrefix(string? sourceName)
-    {
-        var raw = Path.GetFileNameWithoutExtension(sourceName ?? "ImportedApi");
-        var parts = Regex.Split(raw, @"[^A-Za-z0-9]+").Where(x => x.Length > 0).ToArray();
-        var prefix = string.Concat(parts.Select(x => char.ToUpperInvariant(x[0]) + x[1..]));
-        if (string.IsNullOrEmpty(prefix)) prefix = "ImportedApi";
-        if (char.IsDigit(prefix[0])) prefix = "Api" + prefix;
-        return prefix;
     }
 
     private static string InsertClassFields(string source, ClassBlock block, IReadOnlyList<string> fields, string newline)
