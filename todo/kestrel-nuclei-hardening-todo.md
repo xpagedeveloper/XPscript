@@ -173,7 +173,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Browser and WASM hardening
 
-- [ ] Add a test application that exercises browser WebAssembly HTTP calls.
+- [~] Add a test application that exercises browser WebAssembly HTTP calls. WebBrowserWasmSmoke now compiles a browser-wasm application that constructs XPHttpClient, sets a bearer token and performs a bridge HTTP call; awaiting CI verification.
 - [x] Verify CSRF retry token handling. Missing-token POST returns a bounded 403 challenge with a retry token, modified tokens remain rejected, and retry with the issued token reaches the protected route; verified in run #224.
 - [x] Verify CSRF token cannot be reused across unrelated sessions. Tokens are HMAC-bound to the site and session id, session rotation invalidates the previous token, and independent host instances do not share CSRF secret material; verified in run #224.
 - [x] Verify CSRF token length and malformed token handling. Tokens are asserted as 43-character Base64URL values; modified and invalid tokens are rejected, with runtime validation capped at 128 input characters; verified in run #224.
