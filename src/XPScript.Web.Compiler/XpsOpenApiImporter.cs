@@ -170,10 +170,13 @@ public sealed class XpsOpenApiImporter
         // ParseClasses/ParseProcedures. Those parsers exist for additive merging and may omit
         // declarations that do not participate in a merge. A distinct imported API must have
         // every generated top-level declaration isolated deterministically.
-        var names = Regex.Matches(
-                desired.Source,
-                @"(?im)^\s*(?:(?:Public|Private|Static)\s+)*(?:Class|Function|Sub)\s+(?<name>[A-Za-z_]\w*)")
-            .Select(match => match.Groups["name"].Value)
+        var names = desiredClasses.Select(x => x.Name)
+            .Concat(desired.Operations)
+            .Concat(desired.Models)
+            .Concat(Regex.Matches(
+                    desired.Source,
+                    @"(?im)^\s*(?:(?:Public|Private|Static)\s+)*(?:Class|Function|Sub)\s+(?<name>[A-Za-z_]\w*)")
+                .Select(match => match.Groups["name"].Value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(name => name.Length)
             .ToArray();
