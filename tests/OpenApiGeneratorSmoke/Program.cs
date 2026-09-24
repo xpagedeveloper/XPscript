@@ -973,6 +973,26 @@ paths:
 """, "server-security.yaml").Source;
 if (!serverSecurity.Contains("[Authenticated]", StringComparison.Ordinal) || !serverSecurity.Contains("[Anonymous]", StringComparison.Ordinal))
     throw new Exception("OpenAPI server security declarations did not generate authenticated/public route metadata.");
+
+var optionalSecurity = generator.Generate("""
+openapi: 3.1.0
+info: { title: Optional Security, version: 1.0.0 }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+security:
+  - bearerAuth: []
+  - {}
+paths:
+  /optional:
+    get:
+      operationId: optionalCall
+      responses:
+        '200': { description: ok }
+""", "optional-server-security.yaml").Source;
+if (!optionalSecurity.Contains("[Anonymous]", StringComparison.Ordinal) ||
+    optionalSecurity.Contains("[Authenticated]", StringComparison.Ordinal))
+    throw new Exception("An empty OpenAPI security requirement must allow anonymous access.");
 try
 {
     generator.Generate("""
