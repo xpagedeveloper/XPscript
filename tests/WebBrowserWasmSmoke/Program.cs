@@ -173,6 +173,95 @@ End Sub
             throw new Exception("Mixed-policy Browser-WASM application did not keep its login-capable shell anonymous.");
     }
 
+    var policyPath = Path.Combine(root, "bridge-policy.xps");
+    await File.WriteAllTextAsync(policyPath, """
+[Platform:browser-wasm]
+
+[Anonymous]
+[ServerSide]
+Function PublicBridge() As String
+    PublicBridge = "public"
+End Function
+
+[Authenticated]
+[ServerSide]
+Function AuthBridge() As String
+    AuthBridge = "auth"
+End Function
+
+[Role:Admin]
+[ServerSide]
+Function AdminBridge() As String
+    AdminBridge = "admin"
+End Function
+
+[Rule:CanRead]
+[ServerSide]
+Function RuleBridge() As String
+    RuleBridge = "rule"
+End Function
+
+Sub Main()
+    Print PublicBridge()
+End Sub
+""");
+    await using (var policyUnit = await compiler.CompileAsync(policyPath, root))
+    {
+        var policyHeaders = new Dictionary<string, IReadOnlyList<string>>(bridgeHeaders, StringComparer.OrdinalIgnoreCase)
+        {
+            ["Authorization"] = new[] { "Bearer browser-wasm-policy-test" }
+        };
+        var policySession = new SmokeSession();
+        var policyCapabilityResponse = new XpsWebResponse();
+        await policyUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
+            BridgeRequest("/bridge-policy.xps/__xpscript_bridge/capability", policyHeaders),
+            policyCapabilityResponse, Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), policySession));
+        if (policyCapabilityResponse.StatusCode != 200 ||
+            !policyCapabilityResponse.Headers.TryGetValue("Content-Type", out _))
+            throw new Exception("Browser-WASM policy regression could not acquire a bridge capability.");
+
+        using var capabilityDocument = System.Text.Json.JsonDocument.Parse(policyCapabilityResponse.Body);
+        var capability = capabilityDocument.RootElement.GetProperty("capability").GetString()
+            ?? throw new Exception("Browser-WASM policy regression received an empty bridge capability.");
+        policyHeaders["X-XPS-WASM-Capability"] = new[] { capability };
+
+        static string ProcedureId(string sourceIdentity, string procedureName)
+        {
+            var bytes = System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(sourceIdentity + "\0" + procedureName.ToUpperInvariant()));
+            return Convert.ToHexString(bytes).ToLowerInvariant()[..32];
+        }
+
+        var policySource = await File.ReadAllTextAsync(policyPath);
+        var compilerIdentity = typeof(XpsWebCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var sourceHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(policySource + "\0" + compilerIdentity + "\0" + "4")));
+
+        async Task<int> InvokePolicyAsync(string procedureName, XpsWebPrincipal principal)
+        {
+            var response = new XpsWebResponse();
+            await policyUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
+                BridgePostRequest("/bridge-policy.xps/__xpscript_bridge", policyHeaders, ProcedureId(sourceHash, procedureName)),
+                response, Server(root), principal, new SmokeApplicationState(), policySession));
+            return response.StatusCode;
+        }
+
+        if (await InvokePolicyAsync("PublicBridge", new XpsWebPrincipal(false)) != 200)
+            throw new Exception("Anonymous Browser-WASM server operation was not callable anonymously.");
+        if (await InvokePolicyAsync("AuthBridge", new XpsWebPrincipal(false)) != 401)
+            throw new Exception("Authenticated Browser-WASM server operation did not reject an anonymous principal with 401.");
+        if (await InvokePolicyAsync("AuthBridge", new XpsWebPrincipal(true, "user")) != 200)
+            throw new Exception("Authenticated Browser-WASM server operation rejected an authenticated principal.");
+        if (await InvokePolicyAsync("AdminBridge", new XpsWebPrincipal(true, "user")) != 403)
+            throw new Exception("Role-protected Browser-WASM server operation did not reject a principal without the required role.");
+        if (await InvokePolicyAsync("AdminBridge", new XpsWebPrincipal(true, "admin", roles: new[] { "Admin" })) != 200)
+            throw new Exception("Role-protected Browser-WASM server operation rejected the required role.");
+        if (await InvokePolicyAsync("RuleBridge", new XpsWebPrincipal(true, "user")) != 403)
+            throw new Exception("Rule-protected Browser-WASM server operation did not reject a principal without the required rule.");
+        if (await InvokePolicyAsync("RuleBridge", new XpsWebPrincipal(true, "reader", rules: new[] { "CanRead" })) != 200)
+            throw new Exception("Rule-protected Browser-WASM server operation rejected the required rule.");
+    }
+
     var cryptoPath = Path.Combine(root, "server-crypto.xps");
     await File.WriteAllTextAsync(cryptoPath, """
 [Platform:browser-wasm]
@@ -431,6 +520,11 @@ finally
 static XpsWebRequest BridgeRequest(string path, IReadOnlyDictionary<string, IReadOnlyList<string>> headers) => new(
     "GET", path, "", "", headers, null, 0, ReadOnlyMemory<byte>.Empty,
     "localhost", "http", "127.0.0.1", "HTTP/1.1", new Dictionary<string, string>());
+
+static XpsWebRequest BridgePostRequest(string path, IReadOnlyDictionary<string, IReadOnlyList<string>> headers, string procedureId) =>
+    new("POST", path, "", "", headers, "application/json", null,
+        System.Text.Encoding.UTF8.GetBytes($"{{\"procedure\":\"{procedureId}\",\"arguments\":[]}}"),
+        "localhost", "http", "127.0.0.1", "HTTP/1.1", new Dictionary<string, string>());
 
 static XpsServerInfo Server(string root) =>
     new("browser-wasm-server-side-smoke", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test");
