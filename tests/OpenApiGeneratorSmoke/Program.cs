@@ -1243,6 +1243,34 @@ foreach (var marker in new[]
     if (!procedureScope.Source.Contains(marker, StringComparison.Ordinal))
         throw new Exception("Generated helper did not stay inside procedure-local scope: " + marker);
 
+var typeScope = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Type Scope, version: 1.0.0 }
+components:
+  schemas:
+    JsonParse:
+      type: object
+      properties:
+        JsonParse: { type: string }
+    StrLeftBack:
+      type: object
+      properties:
+        StrLeftBack: { type: string }
+paths:
+  /types:
+    get:
+      operationId: JsonParse
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonParse' }
+""", "type-scope.yaml");
+foreach (var marker in new[] { "Public Class JsonParse", "Public JsonParse As String", "Public Class StrLeftBack", "Public StrLeftBack As String", "Public Function JsonParse(" })
+    if (!typeScope.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("Type/runtime name was incorrectly reserved outside its declaration scope: " + marker);
+
 var compilerReservedClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Compiler Reserved, version: 1.0.0 }
