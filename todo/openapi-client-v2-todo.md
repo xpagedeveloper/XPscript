@@ -109,7 +109,7 @@ The generator must only rename an OpenAPI identifier when XPScript has a real co
 - [ ] Runtime-name property and runtime-name method coexist where XPScript permits it
 - [x] Same method name with different parameter signatures is treated as a valid overload where XPScript permits it
 - [x] Case-insensitive true same-scope collisions are deterministically disambiguated
-- [ ] Parameter/member overlap is tested
+- [x] Parameter/member overlap is tested
 - [x] Generated helper collision is tested
 - [x] Multiple security schemes normalizing to the same identifier are tested
 - [ ] Additive import collision behavior is tested
