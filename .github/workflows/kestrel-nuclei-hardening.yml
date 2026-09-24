@@ -326,6 +326,28 @@ jobs:
           set -e
           echo "${status}" > ./artifacts/hardening/nuclei-web-boundary.exit-code
 
+      - name: Run controlled generic vulnerability Nuclei templates
+        shell: bash
+        run: |
+          set +e
+          "${HOME}/go/bin/nuclei" \
+            -u "http://127.0.0.1:${HARDENING_PORT}" \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/cache-poisoning.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/cache-poisoning-xss.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/cors-misconfig.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/generic-linux-lfi.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/generic-windows-lfi.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/open-redirect-generic.yaml \
+            -t ./artifacts/nuclei-templates/http/vulnerabilities/generic/xss-uri-reflected.yaml \
+            -rate-limit 20 \
+            -bulk-size 1 \
+            -concurrency 1 \
+            -jsonl-export ./artifacts/hardening/nuclei-generic-vulnerabilities.jsonl \
+            -silent
+          status=$?
+          set -e
+          echo "${status}" > ./artifacts/hardening/nuclei-generic-vulnerabilities.exit-code
+
       - name: Run controlled nginx to FastCGI fuzzing matrix
         shell: bash
         run: |
