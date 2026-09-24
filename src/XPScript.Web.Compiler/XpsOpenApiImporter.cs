@@ -164,7 +164,7 @@ public sealed class XpsOpenApiImporter
         // the specification filename/title/version changes. A shared endpoint means update the
         // existing API; disjoint APIs that merely reuse model/operation names are isolated.
         return desiredProcedures
-            .Where(x => x.StartsWith("Sub Endpoint", StringComparison.OrdinalIgnoreCase))
+            .Where(x => x.StartsWith("Sub\0Endpoint", StringComparison.OrdinalIgnoreCase))
             .Any(existingProcedures.Contains);
     }
 
