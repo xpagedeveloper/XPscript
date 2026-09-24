@@ -50,7 +50,7 @@ public sealed class XpsOpenApiImporter
             ContainsGeneratedOpenApiSource(existingSource) &&
             !ContainsGeneratedSource(existingSource, sourceName) &&
             !SharesGeneratedApiSurface(desired, existingSource))
-            desired = IsolateCollidingApi(desired, existingSource, sourceName);
+            desired = IsolateCollidingApi(desired, existingSource, sourceName, forceIsolation: true);
         var source = existingSource;
         var newline = DetectNewline(source);
         var addedClasses = new List<string>();
@@ -186,7 +186,7 @@ public sealed class XpsOpenApiImporter
                 attribute.StartsWith("[RestOptions", StringComparison.OrdinalIgnoreCase))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-    private static XpsOpenApiGenerationResult IsolateCollidingApi(XpsOpenApiGenerationResult desired, string existingSource, string? sourceName)
+    private static XpsOpenApiGenerationResult IsolateCollidingApi(XpsOpenApiGenerationResult desired, string existingSource, string? sourceName, bool forceIsolation = false)
     {
         var existingClasses = ParseClasses(existingSource).Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var desiredClasses = ParseClasses(desired.Source);
@@ -197,7 +197,7 @@ public sealed class XpsOpenApiImporter
         var desiredProcedures = ParseProcedures(desired.Source, desiredClassSpans);
         var collides = desiredClasses.Any(x => existingClasses.Contains(x.Name))
             || desiredProcedures.Any(x => existingProcedures.Contains(ProcedureKey(x.Kind, x.Name)));
-        if (!collides) return desired;
+        if (!collides && !forceIsolation) return desired;
 
         var prefix = ImportPrefix(sourceName);
         var names = desiredClasses.Select(x => x.Name)
