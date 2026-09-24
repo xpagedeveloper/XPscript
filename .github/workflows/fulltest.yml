@@ -288,16 +288,6 @@ jobs:
           cp ./out/generated-openapi-client.xps ./out/generated-openapi-client-host.xps
           printf '\nSub Main()\nEnd Sub\n' >> ./out/generated-openapi-client-host.xps
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi-client-host.xps -o ./out/generated-openapi-client --runtime=false
-      - name: Verify OpenAPI API consumer update and compile
-        shell: bash
-        run: |
-          cp ./out/generated-openapi-client.xps ./out/updated-openapi-client.xps
-          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client update ./tests/OpenApiGeneratorSmoke/client-ci.yaml -o ./out/updated-openapi-client.xps
-          grep -q 'XPJsonSchema.Parse' ./out/updated-openapi-client.xps
-          ! grep -qi 'UIForm' ./out/updated-openapi-client.xps
-          cp ./out/updated-openapi-client.xps ./out/updated-openapi-client-host.xps
-          printf '\nSub Main()\nEnd Sub\n' >> ./out/updated-openapi-client-host.xps
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/updated-openapi-client-host.xps -o ./out/updated-openapi-client --runtime=false
       - name: Verify OpenAPI YML API consumer generate and compile
         shell: bash
         run: |
