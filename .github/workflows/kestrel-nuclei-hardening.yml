@@ -304,6 +304,17 @@ jobs:
           from pathlib import Path
 
           root = Path("./artifacts/hardening")
+          allowlist_path = Path("./tests/security/nuclei/allowlist.json")
+          allowlist_document = json.loads(allowlist_path.read_text(encoding="utf-8"))
+          if allowlist_document.get("schema_version") != 1:
+              raise SystemExit("Unsupported Nuclei allowlist schema version.")
+          allowlist = allowlist_document.get("entries")
+          if not isinstance(allowlist, list):
+              raise SystemExit("Nuclei allowlist entries must be an array.")
+          for entry in allowlist:
+              if not isinstance(entry, dict) or not entry.get("template_id") or not entry.get("reason"):
+                  raise SystemExit("Every Nuclei allowlist entry must contain template_id and reason.")
+
           files = sorted(root.glob("nuclei-*.jsonl"))
           findings = []
           counts = {"info": 0, "low": 0, "medium": 0, "high": 0, "critical": 0, "unknown": 0}
@@ -338,7 +349,21 @@ jobs:
               encoding="utf-8",
           )
 
-          blocking = [f for f in findings if f["severity"] in {"high", "critical"}]
+          def is_allowlisted(finding):
+              return any(
+                  entry["template_id"] == finding["template_id"]
+                  and (not entry.get("matcher_name") or entry["matcher_name"] == finding["matcher_name"])
+                  and (not entry.get("severity") or entry["severity"].lower() == finding["severity"])
+                  for entry in allowlist
+              )
+
+          for finding in findings:
+              finding["allowlisted"] = is_allowlisted(finding)
+
+          blocking = [
+              f for f in findings
+              if f["severity"] in {"high", "critical"} and not f["allowlisted"]
+          ]
           if blocking:
               for finding in blocking:
                   print(
