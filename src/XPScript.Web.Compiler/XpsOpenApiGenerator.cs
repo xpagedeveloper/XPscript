@@ -197,10 +197,16 @@ public sealed class XpsOpenApiGenerator
         if (requirements.Count == 0) return false;
         if (root["components"] is not JsonObject components || components["securitySchemes"] is not JsonObject schemes)
             throw new XpsOpenApiGenerationException($"{context} references security but components.securitySchemes is missing.");
+        var allowsAnonymous = false;
         foreach (var requirementNode in requirements)
         {
             if (requirementNode is not JsonObject requirement)
                 throw new XpsOpenApiGenerationException($"{context} contains a security requirement that is not an object.");
+            if (requirement.Count == 0)
+            {
+                allowsAnonymous = true;
+                continue;
+            }
             foreach (var pair in requirement)
             {
                 if (!schemes.ContainsKey(pair.Key))
@@ -209,7 +215,7 @@ public sealed class XpsOpenApiGenerator
                     throw new XpsOpenApiGenerationException($"{context} scheme '{pair.Key}' must declare an array of scopes.");
             }
         }
-        return true;
+        return !allowsAnonymous;
     }
 
     private static List<ParameterModel> ReadParameters(JsonObject root, JsonNode? node, string context)
