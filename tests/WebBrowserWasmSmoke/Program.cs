@@ -324,14 +324,20 @@ End Sub
         throw new Exception($"Synthetic browser-WASM dotnet.js handler returned HTTP {frameworkResponse.StatusCode} with {frameworkResponse.Body.Length} bytes.");
 
     var cacheRoot = Path.Combine(root, ".xpscript-cache", "wasm-bridge");
-    var index = Directory.EnumerateFiles(cacheRoot, "index.html", SearchOption.AllDirectories).FirstOrDefault();
-    var dotnetJs = Directory.EnumerateFiles(cacheRoot, "dotnet.js", SearchOption.AllDirectories).FirstOrDefault();
-    var browserJs = Directory.EnumerateFiles(cacheRoot, "xpscript-browser.js", SearchOption.AllDirectories).FirstOrDefault();
-    var mainJs = Directory.EnumerateFiles(cacheRoot, "main.js", SearchOption.AllDirectories).FirstOrDefault();
-    if (index is null || dotnetJs is null || browserJs is null || mainJs is null) throw new Exception("WASM publish output was not cached.");
+    var appRoots = Directory.EnumerateFiles(cacheRoot, "index.html", SearchOption.AllDirectories)
+        .Select(Path.GetDirectoryName)
+        .Where(path => path is not null &&
+            File.Exists(Path.Combine(path!, "main.js")) &&
+            File.Exists(Path.Combine(path!, "xpscript-browser.js")) &&
+            Directory.Exists(Path.Combine(path!, "_framework")))
+        .Select(path => path!)
+        .ToArray();
+    if (appRoots.Length != 1)
+        throw new Exception($"Expected exactly one cached Browser-WASM application root, found {appRoots.Length}.");
 
-    var frameworkRoot = Directory.GetParent(Path.GetDirectoryName(dotnetJs)!)?.FullName
-        ?? throw new Exception("Unable to determine the published browser-WASM application root.");
+    var frameworkRoot = appRoots[0];
+    var dotnetJs = Directory.EnumerateFiles(Path.Combine(frameworkRoot, "_framework"), "dotnet.js", SearchOption.TopDirectoryOnly).FirstOrDefault();
+    if (dotnetJs is null) throw new Exception("WASM publish output was not cached.");
     if (!File.Exists(Path.Combine(frameworkRoot, "index.html")) ||
         !File.Exists(Path.Combine(frameworkRoot, "main.js")) ||
         !File.Exists(Path.Combine(frameworkRoot, "xpscript-browser.js")))
