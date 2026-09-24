@@ -45,12 +45,18 @@ internal static class XpsScaffolder
     private static string QuoteForDisplay(string path) => path.Any(char.IsWhiteSpace) ? "\"" + path + "\"" : path;
 
     private const string RestTemplate = """
+Public Class HealthResponse
+    Public Status As String
+End Class
+
 [RoutePrefix:/api]
 [Anonymous]
 
 [Get:/health]
 Sub Health()
-    Response.Json("{""status"":""ok""}")
+    Dim result As New HealthResponse
+    result.Status = "ok"
+    Response.OK(result)
 End Sub
 """;
 
