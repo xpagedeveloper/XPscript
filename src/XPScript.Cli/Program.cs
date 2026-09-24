@@ -47,9 +47,7 @@ static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
     if (arguments.Length == 0 || !arguments[0].Equals("run", StringComparison.OrdinalIgnoreCase))
         return;
 
-    var separator = Array.IndexOf(arguments, "--");
-    var optionCount = separator < 0 ? arguments.Length : separator;
-    var explicitInfo = arguments.Take(optionCount).Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
+    var explicitInfo = arguments.Skip(2).TakeWhile(value => value.StartsWith("--", StringComparison.Ordinal)).Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
     Environment.SetEnvironmentVariable("XPSCRIPT_RUNTIME_INFO", explicitInfo ? "1" : null);
 }
 
