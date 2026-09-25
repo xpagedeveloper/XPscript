@@ -38,7 +38,7 @@ xpscriptc run hello.xps
 xpscriptc run hello.xps first "second value"
 ```
 
-When using `xpscript run`, program arguments must be supplied explicitly with `--Args`, for example `xpscript run main.xps --Args "first second"`. This starts the generated program with `first` and `second` as its two command-line arguments. Arguments are available through `Application.ArgCount` and `Application.Args(index)`. `--info` and `--debug` are XPScript CLI options and may be placed before or after `run`; they are not forwarded to the program.
+When using `xpscript run`, program arguments must be supplied explicitly with `--Args`, for example `xpscript run main.xps --Args "first second"`. This starts the generated program with `first` and `second` as its two command-line arguments. Arguments are available through `Application.ArgCount` and `Application.Args(index)`. `--info` is an XPScript CLI option and may be placed before or after `run`; it is not forwarded to the program.
 
 ## Compile code
 
