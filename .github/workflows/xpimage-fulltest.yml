@@ -51,9 +51,20 @@ jobs:
           } else {
             throw 'XPImage executable was not generated.'
           }
-          $output = & $exe 2>&1 | Out-String
+          $psi = [System.Diagnostics.ProcessStartInfo]::new()
+          $psi.FileName = $exe
+          $psi.UseShellExecute = $false
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $process = [System.Diagnostics.Process]::new()
+          $process.StartInfo = $psi
+          if (-not $process.Start()) { throw 'Failed to start XPImage executable.' }
+          $stdout = $process.StandardOutput.ReadToEnd()
+          $stderr = $process.StandardError.ReadToEnd()
+          $process.WaitForExit()
+          $output = $stdout + $stderr
           Write-Host $output
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
           if ($output -notmatch 'XPIMAGE-RUNTIME=OK') { throw 'XPImage runtime marker missing.' }
           $notice = Get-Content ./out/xpimage/Third-party-license.txt -Raw
           if ($notice -notmatch 'Magick.NET-Q16-AnyCPU') { throw 'Generated XPImage third-party notice is missing Magick.NET.' }
