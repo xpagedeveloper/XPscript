@@ -154,6 +154,7 @@ internal static class CompilerBuildEnvironment
         var usesDesktopDialog = source.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
         var usesSqlite = source.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
         var usesMsSql = source.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
+        var usesImage = source.Contains("internal sealed class XPImage", StringComparison.Ordinal);
         var usesMySql = source.Contains("XPScriptDbMySql", StringComparison.Ordinal);
         var usesSupabaseDb = source.Contains("XPScriptDbSupabase", StringComparison.Ordinal);
         var usesExtendedArchive = Regex.IsMatch(
@@ -185,7 +186,7 @@ internal static class CompilerBuildEnvironment
         if (company is not null) propertyEntries += $"    <Company>{EscapeMsBuild(company)}</Company>\n";
         if (version is not null) propertyEntries += $"    <Version>{EscapeMsBuild(version)}</Version>\n    <FileVersion>{EscapeMsBuild(version)}</FileVersion>\n    <AssemblyVersion>{EscapeMsBuild(version)}</AssemblyVersion>\n";
         if (copyright is not null) propertyEntries += $"    <Copyright>{EscapeMsBuild(copyright)}</Copyright>\n";
-        if (usesSqlite || usesMsSql) propertyEntries += "    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>\n";
+        if (usesSqlite || usesMsSql || usesImage) propertyEntries += "    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>\n";
         var propertyGroup = $"  <PropertyGroup>\n{propertyEntries}  </PropertyGroup>\n";
         var itemEntries = "    <AssemblyMetadata Include=\"XPScriptCompiler\" Value=\"XPScript\" />\n    <AssemblyMetadata Include=\"XPScriptWebsite\" Value=\"https://xpagedeveloper.com\" />\n";
         if (escapedAssembly is not null) itemEntries += $"    <Reference Include=\"XPScript.UI.Desktop\">\n      <HintPath>{escapedAssembly}</HintPath>\n      <Private>true</Private>\n    </Reference>\n    <PackageReference Include=\"Avalonia\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia", ApplicationDependencyCatalog.AvaloniaVersion)}\" />\n    <PackageReference Include=\"Avalonia.Desktop\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Desktop", ApplicationDependencyCatalog.AvaloniaVersion)}\" />\n    <PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Themes.Fluent", ApplicationDependencyCatalog.AvaloniaVersion)}\" />\n    <PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Controls.WebView", ApplicationDependencyCatalog.AvaloniaWebViewVersion)}\" />\n";
@@ -194,6 +195,7 @@ internal static class CompilerBuildEnvironment
         if (usesMySql) itemEntries += $"    <PackageReference Include=\"MySqlConnector\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("MySqlConnector", ApplicationDependencyCatalog.MySqlConnectorVersion)}\" />\n";
         if (usesSupabaseDb) itemEntries += $"    <PackageReference Include=\"Npgsql\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Npgsql", ApplicationDependencyCatalog.NpgsqlVersion)}\" />\n";
         if (usesExtendedArchive) itemEntries += "    <PackageReference Include=\"SharpCompress\" Version=\"0.50.4\" />\n";
+        if (usesImage) itemEntries += $"    <PackageReference Include=\"Magick.NET-Q16-AnyCPU\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Magick.NET-Q16-AnyCPU", ApplicationDependencyCatalog.MagickNetVersion)}\" />\n";
         var itemGroup = $"  <ItemGroup>\n{itemEntries}  </ItemGroup>\n";
 
         var projectPath = Path.Combine(root, "Generated.csproj");
