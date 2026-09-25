@@ -53,13 +53,13 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 - [x] Resize with configurable width/height.
 - [x] Preserve aspect ratio when only one dimension is supplied.
-- [ ] Support fit/fill/contain/crop resize modes.
+- [x] Support fit/fill/contain/crop resize modes.
 - [x] Crop by x, y, width and height.
 - [x] Rotate by common angles and arbitrary angles where supported.
 - [x] Horizontal and vertical flip.
-- [ ] Add padding/canvas extension.
-- [ ] Composite one image over another at specified coordinates.
-- [ ] Opacity/alpha control for compositing.
+- [x] Add padding/canvas extension.
+- [x] Composite one image over another at specified coordinates.
+- [x] Opacity/alpha control for compositing.
 - [x] Convert between supported formats.
 - [x] JPEG quality setting.
 - [ ] PNG/WebP encoding options where practical.
@@ -80,15 +80,15 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 ## Color and effects
 
-- [ ] Brightness.
-- [ ] Contrast.
-- [ ] Saturation.
+- [x] Brightness.
+- [x] Contrast.
+- [x] Saturation.
 - [x] Grayscale.
 - [x] Invert.
 - [x] Blur.
 - [x] Sharpen.
-- [ ] Opacity.
-- [ ] Background replacement for transparent areas.
+- [x] Opacity.
+- [x] Background replacement for transparent areas.
 - [ ] Investigate additional filters only if supported cleanly by the chosen library.
 
 ## Metadata
@@ -169,14 +169,14 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 - [x] `Resize(width, height)`.
 - [x] Resize by one dimension while preserving aspect ratio.
-- [ ] Fit, fill, contain and crop resize modes.
+- [x] Fit, fill, contain and crop resize modes.
 - [x] `Crop(x, y, width, height)`.
 - [x] `Rotate(degrees)`.
 - [x] `FlipHorizontal()` and `FlipVertical()`.
-- [ ] Padding/canvas extension.
-- [ ] Composite/draw another XPImage at coordinates.
-- [ ] Per-image/composite opacity.
-- [ ] Background replacement/flattening for transparent pixels.
+- [x] Padding/canvas extension.
+- [x] Composite/draw another XPImage at coordinates.
+- [x] Per-image/composite opacity.
+- [x] Background replacement/flattening for transparent pixels.
 
 ### Drawing and annotation
 
@@ -192,14 +192,14 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 ### Effects
 
-- [ ] `Brightness(value)`.
-- [ ] `Contrast(value)`.
-- [ ] `Saturation(value)`.
+- [x] `Brightness(value)`.
+- [x] `Contrast(value)`.
+- [x] `Saturation(value)`.
 - [x] `Grayscale()`.
 - [x] `Invert()`.
 - [x] `Blur(radius)`.
 - [x] `Sharpen(amount)`.
-- [ ] Opacity adjustment.
+- [x] Opacity adjustment.
 - [ ] Add further ImageMagick effects only where they fit a stable, portable XPImage API.
 
 ### Metadata and orientation
