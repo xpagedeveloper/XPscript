@@ -197,7 +197,7 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 - [ ] verify concurrent compiler builds use isolated temp paths
 - [ ] prevent output path traversal/unrelated-file overwrite
 - [ ] review temp permissions and cleanup
-- [ ] review `Shell`, file I/O, HTTP, `Evaluate`, P/Invoke and COM for injection risks
+- [ ] review `Shell`, file I/O, HTTP, P/Invoke and COM for injection risks
 - [ ] review JSON/HTTP conversions and header/body handling
 - [ ] review `Lock/Unlock` races and cross-process assumptions
 - [ ] negative/adversarial regression tests when execution is re-enabled
