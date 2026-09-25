@@ -26,7 +26,7 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 - [x] Add a `CSVDocument` / `CSVReader` API or equivalent stable XPScript surface.
 - [x] Read CSV from file path.
 - [x] Read CSV from Byte array / stream-compatible input where practical.
-- [x] Configurable delimiter, including comma, semicolon and tab.
+- [ ] Configurable delimiter, including comma, semicolon and tab.
 - [ ] Configurable quote character and escaping behavior.
 - [x] Support RFC 4180-compatible quoted fields, embedded delimiters, embedded newlines and escaped quotes.
 - [x] Support files with or without header row.
@@ -64,7 +64,7 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 ## XLSX creation and modification
 
 - [x] Create a new workbook.
-- [x] Add, rename, reorder and remove worksheets.
+- [ ] Add, rename, reorder and remove worksheets.
 - [x] Set/get cells by row/column and A1-style address where practical.
 - [ ] Add/remove rows and columns.
 - [x] Set cell values and formulas.
@@ -72,7 +72,7 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 - [x] Support fonts, bold/italic, alignment, fill, borders and cell styles through a compact stable API.
 - [x] Support column widths and row heights.
 - [ ] Support merged cells.
-- [x] Support freeze panes and autofilter where practical.
+- [ ] Support freeze panes and autofilter where practical.
 - [ ] Support basic tables/ranges where the selected library provides reliable support.
 - [ ] Support workbook properties/metadata.
 - [x] Save as `.xlsx` file.
@@ -156,4 +156,4 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 - [ ] JSON round-trip tests.
 - [ ] SQL-result and Domino-result export integration tests when those providers are implemented.
 - [ ] Kestrel, CGI and FastCGI upload/download smoke tests.
-- [x] Add documentation and reusable examples under `docs/` and `examples/`.
+- [ ] Add documentation and reusable examples under `docs/` and `examples/`.
