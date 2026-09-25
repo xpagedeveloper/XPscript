@@ -176,6 +176,25 @@ internal sealed class XPImage : System.IDisposable
     public void Rotate(double degrees) => _image.Rotate(degrees);
     public void FlipHorizontal() => _image.Flop();
     public void FlipVertical() => _image.Flip();
+    public void Brightness(double value)
+    {
+        ValidatePercentage(value, nameof(value));
+        _image.Modulate(new ImageMagick.Percentage(100d + value), new ImageMagick.Percentage(100d), new ImageMagick.Percentage(100d));
+    }
+
+    public void Contrast(double value)
+    {
+        ValidatePercentage(value, nameof(value));
+        var steps = (int)System.Math.Round(System.Math.Abs(value) / 10d);
+        for (var i = 0; i < steps; i++) _image.Contrast(value > 0);
+    }
+
+    public void Saturation(double value)
+    {
+        ValidatePercentage(value, nameof(value));
+        _image.Modulate(new ImageMagick.Percentage(100d), new ImageMagick.Percentage(100d + value), new ImageMagick.Percentage(100d));
+    }
+
     public void Grayscale() => _image.Grayscale();
     public void Invert() => _image.Negate();
     public void Blur(double radius) => _image.Blur(radius, radius <= 0 ? 1.0 : radius);
@@ -247,6 +266,12 @@ internal sealed class XPImage : System.IDisposable
         "tiff" => ImageMagick.MagickFormat.Tiff,
         _ => throw new System.NotSupportedException("Unsupported image format: " + format)
     };
+
+    private static void ValidatePercentage(double value, string name)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value) || value < -100d || value > 100d)
+            throw new System.ArgumentOutOfRangeException(name, "Value must be between -100 and 100.");
+    }
 
     private static void ValidateOpacity(double opacity)
     {
