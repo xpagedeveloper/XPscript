@@ -35,40 +35,6 @@ jobs:
         run: |
           dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      - name: Compile and run XPImage
-        shell: pwsh
-        run: |
-          $compiler = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
-          New-Item -ItemType Directory -Force ./out/xpimage | Out-Null
-          dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage/xpimage-runtime --runtime=false --debug
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $plain = './out/xpimage/xpimage-runtime'
-          $win = "$plain.exe"
-          if (Test-Path $win -PathType Leaf) {
-            $exe = (Resolve-Path $win).Path
-          } elseif (Test-Path $plain -PathType Leaf) {
-            $exe = (Resolve-Path $plain).Path
-          } else {
-            throw 'XPImage executable was not generated.'
-          }
-          $psi = [System.Diagnostics.ProcessStartInfo]::new()
-          $psi.FileName = $exe
-          $psi.UseShellExecute = $false
-          $psi.RedirectStandardOutput = $true
-          $psi.RedirectStandardError = $true
-          $process = [System.Diagnostics.Process]::new()
-          $process.StartInfo = $psi
-          if (-not $process.Start()) { throw 'Failed to start XPImage executable.' }
-          $stdout = $process.StandardOutput.ReadToEnd()
-          $stderr = $process.StandardError.ReadToEnd()
-          $process.WaitForExit()
-          $output = $stdout + $stderr
-          Write-Host $output
-          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
-          if ($output -notmatch 'XPIMAGE-RUNTIME=OK') { throw 'XPImage runtime marker missing.' }
-          $notice = Get-Content ./out/xpimage/Third-party-license.txt -Raw
-          if ($notice -notmatch 'Magick.NET-Q16-AnyCPU') { throw 'Generated XPImage third-party notice is missing Magick.NET.' }
-
       - name: Run XPImage on plain Kestrel web
         shell: pwsh
         run: |
@@ -123,6 +89,40 @@ jobs:
               Stop-Process -Id $server.Id -Force
             }
           }
+
+      - name: Compile and run XPImage
+        shell: pwsh
+        run: |
+          $compiler = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          New-Item -ItemType Directory -Force ./out/xpimage | Out-Null
+          dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage/xpimage-runtime --runtime=false --debug
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $plain = './out/xpimage/xpimage-runtime'
+          $win = "$plain.exe"
+          if (Test-Path $win -PathType Leaf) {
+            $exe = (Resolve-Path $win).Path
+          } elseif (Test-Path $plain -PathType Leaf) {
+            $exe = (Resolve-Path $plain).Path
+          } else {
+            throw 'XPImage executable was not generated.'
+          }
+          $psi = [System.Diagnostics.ProcessStartInfo]::new()
+          $psi.FileName = $exe
+          $psi.UseShellExecute = $false
+          $psi.RedirectStandardOutput = $true
+          $psi.RedirectStandardError = $true
+          $process = [System.Diagnostics.Process]::new()
+          $process.StartInfo = $psi
+          if (-not $process.Start()) { throw 'Failed to start XPImage executable.' }
+          $stdout = $process.StandardOutput.ReadToEnd()
+          $stderr = $process.StandardError.ReadToEnd()
+          $process.WaitForExit()
+          $output = $stdout + $stderr
+          Write-Host $output
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
+          if ($output -notmatch 'XPIMAGE-RUNTIME=OK') { throw 'XPImage runtime marker missing.' }
+          $notice = Get-Content ./out/xpimage/Third-party-license.txt -Raw
+          if ($notice -notmatch 'Magick.NET-Q16-AnyCPU') { throw 'Generated XPImage third-party notice is missing Magick.NET.' }
 
       - name: Compile XPImage CLI desktop and web targets
         shell: pwsh
