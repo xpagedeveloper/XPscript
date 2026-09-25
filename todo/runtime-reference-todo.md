@@ -253,7 +253,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 
 ### 19.2 Form lifecycle and layout
 
-- [ ] create form with title, optional width/height and optional resizable flag
+- [x] create form with title, optional width/height and optional resizable flag
 - [x] modal `ShowDialog()` returning a stable result such as `OK`, `Cancel`, `Yes`, `No`
 - [ ] optionally support non-modal `Show()` later; modal dialogs are MVP
 - [ ] close/cancel behavior consistent across Windows, Linux and macOS
@@ -280,7 +280,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 
 ### 19.4 Validation
 
-- [ ] required
+- [x] required
 - [ ] min/max text length
 - [ ] numeric min/max
 - [ ] date min/max
@@ -324,7 +324,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [ ] evaluate whether one cross-platform .NET UI toolkit can provide consistent behavior without excessive runtime size
 - [ ] prefer native file/message dialogs where practical
 - [ ] define UI thread/event-loop integration
-- [ ] detect headless/server environment and return clear runtime errors
+- [x] detect headless/server environment and return clear runtime errors
 - [ ] architecture-specific dependencies for x64/arm64
 - [ ] package UI dependencies only when generated program actually uses the UI extension where feasible
 
