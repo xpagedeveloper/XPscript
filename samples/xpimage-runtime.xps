@@ -1,21 +1,24 @@
-Dim img As XPImage
-Set img = New XPImage(8, 6, "#336699")
-Dim encoded As Variant
-encoded = img.ToBytes("png")
-Dim b64 As String
-b64 = System.Convert.ToBase64String(encoded)
-Dim copy As XPImage
-Set copy = XPImage.FromBase64(b64)
-If copy.Width <> 8 Or copy.Height <> 6 Then
-    Print "XPIMAGE-ERROR"
-    End 1
-End If
-Dim uri As String
-uri = "data:image/png;base64," & b64
-Dim copy2 As XPImage
-Set copy2 = XPImage.FromBase64(uri)
-If copy2.Format <> "png" Then
-    Print "XPIMAGE-ERROR"
-    End 1
-End If
-Print "XPIMAGE-RUNTIME=OK"
+Sub Main()
+    Dim img As XPImage
+    Set img = New XPImage(8, 6, "#336699")
+    Dim encoded As Variant
+    encoded = img.ToBytes("png")
+    Dim b64 As String
+    b64 = System.Convert.ToBase64String(encoded)
+    Dim copy As XPImage
+    Set copy = XPImage.FromBase64(b64)
+    If copy.Width <> 8 Or copy.Height <> 6 Then
+        Print "XPIMAGE-ERROR"
+        End 1
+    End If
+    Dim uri As String
+    uri = "data:image/png;base64," & b64
+    Dim copy2 As XPImage
+    Set copy2 = XPImage.FromBase64(uri)
+    If copy2.Format <> "png" Then
+        Print "XPIMAGE-ERROR"
+        End 1
+    End If
+    Print "XPIMAGE-RUNTIME=OK"
+    
+End Sub
