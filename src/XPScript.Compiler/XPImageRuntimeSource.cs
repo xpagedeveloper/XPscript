@@ -43,6 +43,29 @@ internal sealed class XPImage : System.IDisposable
         return FromBytes(System.IO.File.ReadAllBytes(resolved));
     }
 
+    public static XPImage FromBase64(string data)
+    {
+        if (string.IsNullOrWhiteSpace(data)) throw new System.ArgumentException("Base64 image data cannot be empty.", nameof(data));
+        var value = data.Trim();
+        var comma = value.IndexOf(',');
+        if (value.StartsWith("data:", System.StringComparison.OrdinalIgnoreCase))
+        {
+            if (comma < 0 || value[..comma].IndexOf(";base64", System.StringComparison.OrdinalIgnoreCase) < 0)
+                throw new System.ArgumentException("Image data URI must use base64 encoding.", nameof(data));
+            value = value[(comma + 1)..];
+        }
+        if (value.Length > ((MaxEncodedBytes + 2) / 3) * 4 + 16)
+            throw new System.InvalidOperationException("Base64 image exceeds the maximum encoded size.");
+        try
+        {
+            return FromBytes(System.Convert.FromBase64String(value));
+        }
+        catch (System.FormatException ex)
+        {
+            throw new System.ArgumentException("Image data is not valid base64.", nameof(data), ex);
+        }
+    }
+
     public static XPImage FromBytes(byte[] data)
     {
         System.ArgumentNullException.ThrowIfNull(data);
