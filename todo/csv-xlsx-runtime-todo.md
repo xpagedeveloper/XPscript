@@ -24,27 +24,27 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 ## CSV read support
 
 - [ ] Add a `CSVDocument` / `CSVReader` API or equivalent stable XPScript surface.
-- [ ] Read CSV from file path.
-- [ ] Read CSV from Byte array / stream-compatible input where practical.
+- [x] Read CSV from file path.
+- [x] Read CSV from Byte array / stream-compatible input where practical.
 - [ ] Configurable delimiter, including comma, semicolon and tab.
 - [ ] Configurable quote character and escaping behavior.
-- [ ] Support RFC 4180-compatible quoted fields, embedded delimiters, embedded newlines and escaped quotes.
-- [ ] Support files with or without header row.
-- [ ] Support configurable encoding with UTF-8 as the default.
-- [ ] Detect/handle UTF-8 BOM safely.
+- [x] Support RFC 4180-compatible quoted fields, embedded delimiters, embedded newlines and escaped quotes.
+- [x] Support files with or without header row.
+- [x] Support configurable encoding with UTF-8 as the default.
+- [x] Detect/handle UTF-8 BOM safely.
 - [ ] Support bounded row, column, field-length and total-input limits.
 - [ ] Optional type inference, disabled or conservative by default to avoid surprising conversions.
 - [ ] Preserve empty field versus missing column semantics explicitly.
 
 ## CSV creation and modification
 
-- [ ] Create new CSV data in memory.
+- [x] Create new CSV data in memory.
 - [ ] Add/remove rows and columns.
-- [ ] Set/get individual cell values.
-- [ ] Write to file path.
-- [ ] Export as Byte array/string for web responses or further processing.
+- [x] Set/get individual cell values.
+- [x] Write to file path.
+- [x] Export as Byte array/string for web responses or further processing.
 - [ ] Configurable delimiter, newline convention, quote policy and encoding.
-- [ ] Quote/escape fields correctly through the selected library.
+- [x] Quote/escape fields correctly through the selected library.
 - [ ] Support append/streaming writer mode for large exports where the library supports it safely.
 
 ## XLSX workbook read support
@@ -119,14 +119,14 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 
 ## Security and resource limits
 
-- [ ] Apply existing XPScript path-security rules to input and output files.
+- [x] Apply existing XPScript path-security rules to input and output files.
 - [ ] Prevent output path traversal and unrelated-file overwrite.
 - [ ] Bound input file size, row count, column count, field length, worksheet count, cell count and decompressed XLSX size.
 - [ ] Defend against ZIP/XML decompression bombs using library/framework limits plus XPScript-level limits.
 - [ ] Disable or ignore external workbook links by default.
 - [ ] Do not execute macros, scripts or external data connections.
 - [ ] Treat formulas beginning with `=`, `+`, `-` or `@` carefully when exporting untrusted values to CSV to mitigate spreadsheet-formula injection; provide a safe-export mode enabled by default for untrusted data.
-- [ ] Dispose streams, workbook objects and file handles deterministically.
+- [x] Dispose streams, workbook objects and file handles deterministically.
 - [ ] Add concurrency tests proving separate workbook/CSV instances do not share mutable state.
 
 ## API examples to validate
