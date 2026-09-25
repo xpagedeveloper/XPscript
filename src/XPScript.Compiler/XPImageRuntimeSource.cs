@@ -104,7 +104,6 @@ internal sealed class XPImage : System.IDisposable
         if (x < 0 || y < 0 || width <= 0 || height <= 0 || (long)x + width > Width || (long)y + height > Height)
             throw new System.ArgumentOutOfRangeException(nameof(width), "Crop rectangle must be inside the image.");
         _image.Crop(new ImageMagick.MagickGeometry(x, y, (uint)width, (uint)height));
-        _image.RePage();
     }
 
     public void Rotate(double degrees) => _image.Rotate(degrees);
