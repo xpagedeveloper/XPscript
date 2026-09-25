@@ -8,16 +8,14 @@ Sub Main()
     Dim copy As XPImage
     Set copy = XPImage.FromBase64(b64)
     If copy.Width <> 8 Or copy.Height <> 6 Then
-        Print "XPIMAGE-ERROR"
-        End 1
+        Error 5, "XPImage dimension round-trip failed"
     End If
     Dim uri As String
     uri = "data:image/png;base64," & b64
     Dim copy2 As XPImage
     Set copy2 = XPImage.FromBase64(uri)
     If copy2.Format <> "png" Then
-        Print "XPIMAGE-ERROR"
-        End 1
+        Error 5, "XPImage format round-trip failed"
     End If
     Print "XPIMAGE-RUNTIME=OK"
     
