@@ -130,6 +130,8 @@ public sealed partial class XPScriptTranspiler
         // preprocessors have emitted diagnostics. Inserting markers earlier changes
         // physical line numbers seen by Type/Enum/native constructor validation.
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
+        var imageRequested = runtimeFeatures.Image;
+        source = new ImageObjectPreprocessor().Transform(source);
         var spreadsheetRequested = runtimeFeatures.Spreadsheet;
         source = new SpreadsheetObjectPreprocessor().Transform(source);
         var networkToolsRequested = runtimeFeatures.NetworkTools;
