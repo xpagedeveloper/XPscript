@@ -42,7 +42,11 @@ jobs:
           New-Item -ItemType Directory -Force ./out/xpimage | Out-Null
           dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage/xpimage-runtime --runtime=false --debug
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $exe = if (Test-Path ./out/xpimage/xpimage-runtime.exe) { './out/xpimage/xpimage-runtime.exe' } else { './out/xpimage/xpimage-runtime' }
+          $exe = if ($IsWindows) {
+            (Resolve-Path './out/xpimage/xpimage-runtime.exe').Path
+          } else {
+            (Resolve-Path './out/xpimage/xpimage-runtime').Path
+          }
           $output = & $exe 2>&1 | Out-String
           Write-Host $output
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
