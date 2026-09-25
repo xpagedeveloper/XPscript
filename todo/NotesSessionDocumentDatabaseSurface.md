@@ -46,7 +46,6 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 - [ ] CreateSAXParser
 - [ ] CreateTimer
 - [ ] CreateXSLTransformer
-- [ ] Evaluate
 - [ ] FileOpBegin
 - [ ] FileOpEnd
 - [ ] FreeResourceSearch

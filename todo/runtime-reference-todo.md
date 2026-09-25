@@ -187,23 +187,6 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 - [x] keep `ChDrive` explicitly Windows-only and provide clear behavior/error semantics elsewhere
 - [x] detailed portability checklist completed and archived: `todo/done/cross-platform-runtime-todo.md`
 
-## 15. Evaluate
-
-- [ ] remove all legacy formula-engine references from code/docs/samples/public terminology
-- [>] `Evaluate(sourceText)` executes XPScript supplied as text through an isolated evaluator
-- [>] `Evaluate(sourceText, callvar)` restricted parameter bridge implemented
-- [>] scalar/Variant and defensive-copy array semantics implemented
-- [>] evaluator scope isolated from caller locals
-- [>] `Return expression` is explicit result path
-- [>] no `Return` yields Nothing/Empty; source: `samples/evaluate-no-return.xps`
-- [>] `TypeName`, `LBound`, `UBound` plus basic conversions/string/math helpers available inside Evaluate; source: `samples/evaluate-array-helpers.xps`
-- [ ] remove old unused DataTable-based evaluator implementation
-- [ ] broaden standard XPScript function coverage inside Evaluate
-- [ ] full List/nested collection snapshot validation
-- [ ] align evaluator coercion and diagnostics with main compiler/runtime
-- [ ] safe-use documentation/examples
-- [ ] detailed checklist: `todo/evaluate-callvar-todo.md`
-
 ## 16. Security review and isolation
 
 - [ ] dedicated compiler/preprocessor/runtime/temp-build security review
@@ -368,7 +351,6 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [ ] separate file `Input$` versus console input docs
 - [ ] OS `Lock/Unlock` semantics
 - [ ] `Platform`, cross-platform `Shell` and publishing
-- [ ] XPScript-only `Evaluate`
 - [ ] UI extension documentation and examples
 - [ ] XPScript branding only; no legacy product names or formula-engine terminology
 

@@ -61,7 +61,6 @@ Status:
 - [x] EMPTY converts to empty string through the existing `CStr(null)` path.
 - [>] `NULL` propagates through forgiving Variant `+`; broader arithmetic/comparison/string propagation remains open.
 - [>] `NULL` is not silently converted to EMPTY, zero, empty string or NOTHING in the verified Variant `+` path; broader coercion review remains open.
-- [x] Boolean conditions involving `NULL` and `EMPTY` use the shared `XPScriptNullRuntime.ConditionValue` contract: both evaluate as false in `If`/`ElseIf`/`While`/`Do`/`Loop` conditions, while invalid non-convertible values produce a bounded diagnostic. Cross-platform source: `samples/null-boolean-conditions.xps` and `.github/workflows/null-boolean-conditions.yml`.
 - [x] Normal-runtime Variant Array/List mutation preserves EMPTY and NULL as distinct states, including reassignment and `ReDim Preserve`; cross-platform source: `samples/null-array-list-runtime.xps` and `.github/workflows/null-array-list-runtime.yml`.
 
 ## Object references
@@ -71,14 +70,6 @@ Status:
 - [x] Object-reference tests use `LSRef<T>.IsNothing` and object identity rather than Variant `IsNull`.
 - [x] `Delete` and shared-reference cleanup are covered by `samples/module-object-references.xps`.
 - [x] Object-reference wrappers cannot fall back to CLR type-name text conversion; implicit `LSRef<T>.ToString()` now raises a type mismatch instead of exposing implementation details.
-
-## Evaluate
-
-- [x] EMPTY and NULL semantics are preserved across the `callvar` snapshot boundary for scalar, Array and List values; source: `samples/evaluate-callvar-null-empty.xps`.
-- [x] `Return Null` returns the NULL representation instead of EMPTY; source: `samples/evaluate-null-empty-semantics.xps`.
-- [x] `Return Nothing` is rejected in Evaluate value context and maps through the bounded XPScript error 5 diagnostic; source: `samples/evaluate-return-nothing-error.xps`.
-- [x] Reaching the end without `Return` returns the Variant EMPTY representation.
-- [x] Evaluate `IsEmpty`, `IsNull`, `DataType`, `TypeName` and Variant `+` use the same shared NULL/EMPTY runtime contract as normal execution.
 
 ## Serialization and APIs
 
@@ -105,6 +96,4 @@ Status:
 - [x] Managed NULL interop is covered on Windows, Ubuntu and macOS by `.github/workflows/managed-null-interop.yml` using the referenced fixture assembly.
 - [x] Native EMPTY/NULL/NOTHING scalar ABI behavior is covered by `.github/workflows/native-scalar-abi.yml` across Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64.
 - [x] Evaluate fixture covers no-return, `Return Null`, `Return Nothing` rejection and inspection parity.
-- [x] Evaluate callvar fixture covers scalar, Array and List values containing EMPTY and NULL: `samples/evaluate-callvar-null-empty.xps`.
 - [x] Focused Null/Empty/Nothing runtime and Evaluate gates execute on Windows, Ubuntu and macOS.
-- [x] Corresponding completed Evaluate return/callvar semantics can now be closed in `todo/evaluate-callvar-todo.md`; remaining items in this file are independent normal-runtime edge cases.
