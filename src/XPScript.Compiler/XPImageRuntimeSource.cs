@@ -185,8 +185,7 @@ internal sealed class XPImage : System.IDisposable
     public void Contrast(double value)
     {
         ValidatePercentage(value, nameof(value));
-        var steps = (int)System.Math.Round(System.Math.Abs(value) / 10d);
-        for (var i = 0; i < steps; i++) _image.Contrast(value > 0);
+        _image.BrightnessContrast(new ImageMagick.Percentage(0d), new ImageMagick.Percentage(value));
     }
 
     public void Saturation(double value)
