@@ -108,16 +108,16 @@ Response
 
 ### Path security
 
-- [ ] Percent-decode and normalize request paths using one well-defined canonicalization procedure.
-- [ ] Reject malformed encodings and ambiguous path representations.
-- [ ] Reject `..` traversal and any normalized path that escapes the configured root.
-- [ ] Resolve full/canonical filesystem paths before access.
+- [x] Percent-decode and normalize request paths using one well-defined canonicalization procedure.
+- [x] Reject malformed encodings and ambiguous path representations.
+- [x] Reject `..` traversal and any normalized path that escapes the configured root.
+- [x] Resolve full/canonical filesystem paths before access.
 - [ ] Account for Windows drive/UNC semantics and Linux/macOS filesystem semantics.
 - [ ] Define and test symlink/reparse-point behavior so a file below the apparent root cannot resolve outside the allowed root unless explicitly configured.
-- [ ] Never concatenate untrusted URL paths directly into filesystem paths.
+- [x] Never concatenate untrusted URL paths directly into filesystem paths.
 - [ ] Do not allow request-controlled compiler output paths.
-- [ ] Add .net [] security and rules webb rules like [Anonymous] [Authenticated] [Post] and similar before a function for routing
-- [ ] Create a user session object that be populated with rules so we can add a rule to a user and Auto check against the tules with [rule:test] user needs that rule to run the function [rule:!test] user can not have the rule
+- [x] Add .net [] security and rules webb rules like [Anonymous] [Authenticated] [Post] and similar before a function for routing
+- [x] Create a user session object that be populated with rules so we can add a rule to a user and Auto check against the tules with [rule:test] user needs that rule to run the function [rule:!test] user can not have the rule
 
 ---
 
@@ -133,15 +133,15 @@ xpscript web --root <directory> --port <port>
 - [x] `--port` configures the listening port.
 - [x] Define default bind address; safest development default should be loopback unless an external bind is explicitly requested.
 - [x] Support explicit bind address/interface configuration.
-- [ ] Support HTTPS endpoints/configuration in production mode.
+- [x] Support HTTPS endpoints/configuration in production mode.
 - [x] Support graceful shutdown.
-- [ ] Define maximum concurrent connections and requests.
+- [x] Define maximum concurrent connections and requests.
 - [x] Configure bounded request-body size.
 - [x] Configure request-header size/time limits.
 - [x] Configure keep-alive/header timeouts.
 - [x] Configure minimum data-rate or equivalent slow-client protections where supported.
 - [ ] Support request cancellation when the client disconnects.
-- [ ] Define HTTP/1.1, HTTP/2 and optionally HTTP/3 support as separate compatibility targets.
+- [x] Define HTTP/1.1, HTTP/2 and optionally HTTP/3 support as separate compatibility targets.
 - [x] When behind a reverse proxy, trust forwarded headers only from explicitly configured trusted proxies/networks.
 - [x] Never blindly trust arbitrary `X-Forwarded-For`, `X-Forwarded-Proto` or `X-Forwarded-Host` values.
 - [x] Validate Host values against configured hosts when exposed beyond loopback.
@@ -476,10 +476,10 @@ Future configuration needs evaluation for:
 - [ ] port / bind address
 - [ ] Kestrel vs FastCGI mode
 - [ ] FastCGI TCP address / Unix socket
-- [ ] allowed hostnames
-- [ ] HTTPS certificate configuration
-- [ ] trusted proxies
-- [ ] request/header/body limits
+- [x] allowed hostnames
+- [x] HTTPS certificate configuration
+- [x] trusted proxies
+- [x] request/header/body limits
 - [ ] execution timeout policy
 - [ ] compile concurrency
 - [ ] compile cache limits/TTL
