@@ -42,12 +42,16 @@ jobs:
           New-Item -ItemType Directory -Force ./out/xpimage | Out-Null
           dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage/xpimage-runtime --runtime=false --debug
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $outputBase = (Resolve-Path './out/xpimage/xpimage-runtime').Path
-          if ($IsWindows) {
-            $output = & dotnet $outputBase 2>&1 | Out-String
+          $plain = './out/xpimage/xpimage-runtime'
+          $win = "$plain.exe"
+          if (Test-Path $win -PathType Leaf) {
+            $exe = (Resolve-Path $win).Path
+          } elseif (Test-Path $plain -PathType Leaf) {
+            $exe = (Resolve-Path $plain).Path
           } else {
-            $output = & $outputBase 2>&1 | Out-String
+            throw 'XPImage executable was not generated.'
           }
+          $output = & $exe 2>&1 | Out-String
           Write-Host $output
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ($output -notmatch 'XPIMAGE-RUNTIME=OK') { throw 'XPImage runtime marker missing.' }
