@@ -280,28 +280,28 @@ Do not expose arbitrary process-control or unrestricted filesystem escape helper
 ### 6.4 Session
 
 - [ ] Define opt-in session support; do not require sessions for every request.
-- [ ] Generate session identifiers using a cryptographically secure random generator.
-- [ ] Session id must have enough entropy to prevent guessing.
-- [ ] Store session id in a configurable cookie.
-- [ ] Default cookie should support `HttpOnly`, `Secure` when HTTPS is active, and an explicit SameSite policy.
-- [ ] Provide session id rotation to mitigate session fixation after authentication/privilege changes.
-- [ ] `Session.Get`, `Set`, `Remove`, `Clear`, `Abandon` or equivalent API.
-- [ ] Define timeout/idle expiration.
+- [x] Generate session identifiers using a cryptographically secure random generator.
+- [x] Session id must have enough entropy to prevent guessing.
+- [x] Store session id in a configurable cookie.
+- [x] Default cookie should support `HttpOnly`, `Secure` when HTTPS is active, and an explicit SameSite policy.
+- [x] Provide session id rotation to mitigate session fixation after authentication/privilege changes.
+- [x] `Session.Get`, `Set`, `Remove`, `Clear`, `Abandon` or equivalent API.
+- [x] Define timeout/idle expiration.
 - [ ] Initial single-server store may be in-memory, but store interface must allow later distributed implementations.
-- [ ] Never use unsynchronized mutable global dictionaries for concurrent session access.
-- [ ] Define locking/version semantics for two simultaneous requests using the same session.
-- [ ] Bound per-session data size and total session-memory use.
-- [ ] Do not serialize arbitrary CLR objects from untrusted session input.
+- [x] Never use unsynchronized mutable global dictionaries for concurrent session access.
+- [x] Define locking/version semantics for two simultaneous requests using the same session.
+- [x] Bound per-session data size and total session-memory use.
+- [x] Do not serialize arbitrary CLR objects from untrusted session input.
 
 ### 6.5 Application
 
 Application is shared state for one configured site/application, not global state shared across unrelated sites.
 
-- [ ] `Application.Get`, `Set`, `Remove`, `Clear` or equivalent API.
-- [ ] Define thread-safe/concurrent semantics.
+- [x] `Application.Get`, `Set`, `Remove`, `Clear` or equivalent API.
+- [x] Define thread-safe/concurrent semantics.
 - [ ] Provide atomic operations or explicit locking API only if necessary and carefully designed.
 - [ ] Isolate Application state by site/root/application id.
-- [ ] Bound memory usage.
+- [x] Bound memory usage.
 - [ ] Define lifecycle during config reload/server restart.
 - [ ] Do not place Request/Response/context objects in Application state.
 
