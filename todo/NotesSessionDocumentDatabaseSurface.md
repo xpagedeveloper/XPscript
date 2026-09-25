@@ -46,14 +46,13 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 - [ ] CreateSAXParser
 - [ ] CreateTimer
 - [ ] CreateXSLTransformer
-- [ ] Evaluate
 - [ ] FileOpBegin
 - [ ] FileOpEnd
 - [ ] FreeResourceSearch
 - [ ] FreeTimeSearch
 - [ ] GetCalendar
 - [x] GetDatabase
-- [ ] GetDbDirectory
+- [x] GetDbDirectory
 - [ ] GetDirectory
 - [x] GetEnvironmentString
 - [x] GetEnvironmentValue
@@ -78,7 +77,7 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 
 ### Properties
 
-- [ ] EmbeddedObjects
+- [x] EmbeddedObjects
 - [ ] EncryptionKeys
 - [ ] EncryptOnSend
 - [ ] FolderReferences

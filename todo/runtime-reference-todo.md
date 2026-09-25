@@ -187,23 +187,6 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 - [x] keep `ChDrive` explicitly Windows-only and provide clear behavior/error semantics elsewhere
 - [x] detailed portability checklist completed and archived: `todo/done/cross-platform-runtime-todo.md`
 
-## 15. Evaluate
-
-- [ ] remove all legacy formula-engine references from code/docs/samples/public terminology
-- [>] `Evaluate(sourceText)` executes XPScript supplied as text through an isolated evaluator
-- [>] `Evaluate(sourceText, callvar)` restricted parameter bridge implemented
-- [>] scalar/Variant and defensive-copy array semantics implemented
-- [>] evaluator scope isolated from caller locals
-- [>] `Return expression` is explicit result path
-- [>] no `Return` yields Nothing/Empty; source: `samples/evaluate-no-return.xps`
-- [>] `TypeName`, `LBound`, `UBound` plus basic conversions/string/math helpers available inside Evaluate; source: `samples/evaluate-array-helpers.xps`
-- [ ] remove old unused DataTable-based evaluator implementation
-- [ ] broaden standard XPScript function coverage inside Evaluate
-- [ ] full List/nested collection snapshot validation
-- [ ] align evaluator coercion and diagnostics with main compiler/runtime
-- [ ] safe-use documentation/examples
-- [ ] detailed checklist: `todo/evaluate-callvar-todo.md`
-
 ## 16. Security review and isolation
 
 - [ ] dedicated compiler/preprocessor/runtime/temp-build security review
@@ -211,10 +194,10 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 - [>] reserved identifier validation runs before source rewrites
 - [ ] verify scope isolation for locals, globals, statics, arrays, lists and ByRef
 - [ ] verify modules cannot overwrite unrelated module state
-- [ ] verify concurrent compiler builds use isolated temp paths
-- [ ] prevent output path traversal/unrelated-file overwrite
-- [ ] review temp permissions and cleanup
-- [ ] review `Shell`, file I/O, HTTP, `Evaluate`, P/Invoke and COM for injection risks
+- [x] verify concurrent compiler builds use isolated temp paths
+- [x] prevent output path traversal/unrelated-file overwrite
+- [x] review temp permissions and cleanup
+- [ ] review `Shell`, file I/O, HTTP, P/Invoke and COM for injection risks
 - [ ] review JSON/HTTP conversions and header/body handling
 - [ ] review `Lock/Unlock` races and cross-process assumptions
 - [ ] negative/adversarial regression tests when execution is re-enabled
@@ -246,7 +229,7 @@ Design direction: managed memory is reclaimed by .NET GC after the last strong r
 
 - [ ] Implement only after the existing compiler/language/runtime backlog is complete and stable.
 - [ ] Complete the architecture/security review before production implementation.
-- [ ] Provide shared XPScript web runtime semantics for standalone Kestrel and FastCGI hosting.
+- [x] Provide shared XPScript web runtime semantics for standalone Kestrel and FastCGI hosting.
 - [ ] Detailed architecture, object model, runtime compilation/cache, routing, CGI, FastCGI and security checklist: `todo/web-runtime-server-todo.md`.
 - [ ] Follow dependency-reuse rules in `todo/development-guidelines.md`; prefer ASP.NET Core/.NET and vetted maintained NuGet packages over custom low-level protocol/parser implementations where suitable.
 - [ ] This section must be completed before the cross-platform UI extension work begins.
@@ -257,7 +240,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 
 ### 19.1 Core classes and data model
 
-- [ ] define a top-level `UIForm` class for creating and showing simple forms
+- [x] define a top-level `UIForm` class for creating and showing simple forms
 - [ ] define a document-style form data class, proposed name `UIData`, used as the backing store for all form field values
 - [ ] reuse familiar document-style method names for value access, especially `GetItemValue`, `GetFirstItem`, `HasItem`, `ReplaceItemValue`, `RemoveItem`, `RemoveAllItems` and equivalent safe subset
 - [ ] `GetItemValue(name)` returns all values for the named field as an XPScript array
@@ -270,59 +253,59 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 
 ### 19.2 Form lifecycle and layout
 
-- [ ] create form with title, optional width/height and optional resizable flag
-- [ ] modal `ShowDialog()` returning a stable result such as `OK`, `Cancel`, `Yes`, `No`
+- [x] create form with title, optional width/height and optional resizable flag
+- [x] modal `ShowDialog()` returning a stable result such as `OK`, `Cancel`, `Yes`, `No`
 - [ ] optionally support non-modal `Show()` later; modal dialogs are MVP
 - [ ] close/cancel behavior consistent across Windows, Linux and macOS
-- [ ] simple layout abstraction that avoids requiring pixel-perfect platform-specific coordinates
+- [x] simple layout abstraction that avoids requiring pixel-perfect platform-specific coordinates
 
 ### 19.3 UI element inventory
 
 - [ ] Label
-- [ ] TextField
-- [ ] PasswordField
-- [ ] TextArea
-- [ ] NumberField
-- [ ] DateField
-- [ ] TimeField
-- [ ] DateTimeField
-- [ ] CheckBox
-- [ ] RadioButton/RadioGroup
-- [ ] ComboBox
-- [ ] ListBox
-- [ ] MultiListBox
-- [ ] Button
-- [ ] Separator/spacer
-- [ ] per-control default value, required/read-only/enabled/visible state, tooltip, placeholder and size hints where appropriate
+- [x] TextField
+- [x] PasswordField
+- [x] TextArea
+- [x] NumberField
+- [x] DateField
+- [x] TimeField
+- [x] DateTimeField
+- [x] CheckBox
+- [x] RadioButton/RadioGroup
+- [x] ComboBox
+- [x] ListBox
+- [x] MultiListBox
+- [x] Button
+- [x] Separator/spacer
+- [x] per-control default value, required/read-only/enabled/visible state, tooltip, placeholder and size hints where appropriate
 
 ### 19.4 Validation
 
-- [ ] required
-- [ ] min/max text length
-- [ ] numeric min/max
+- [x] required
+- [x] min/max text length
+- [x] numeric min/max
 - [ ] date min/max
-- [ ] regular expression
-- [ ] allowed values
+- [x] regular expression
+- [x] allowed values
 - [ ] custom XPScript validation callback
-- [ ] field-level validation errors and form-level validation before OK/submit
+- [x] field-level validation errors and form-level validation before OK/submit
 
 ### 19.5 Dialog inventory
 
 - [ ] MessageBox with stable XPScript parameters/return codes across platforms
-- [ ] OK
-- [ ] OK/Cancel
-- [ ] Yes/No
-- [ ] Yes/No/Cancel
-- [ ] Retry/Cancel
-- [ ] question/confirm
-- [ ] text input dialog
-- [ ] password input dialog
-- [ ] single-select list dialog
+- [x] OK
+- [x] OK/Cancel
+- [x] Yes/No
+- [x] Yes/No/Cancel
+- [x] Retry/Cancel
+- [x] question/confirm
+- [x] text input dialog
+- [x] password input dialog
+- [x] single-select list dialog
 - [ ] multi-select list dialog
-- [ ] file-open dialog
+- [x] file-open dialog
 - [ ] multi-file-open dialog
-- [ ] file-save dialog
-- [ ] folder selection dialog
+- [x] file-save dialog
+- [x] folder selection dialog
 - [ ] file filters, initial directory, default filename, overwrite confirmation and correct Cancel semantics
 
 ### 19.6 Data binding semantics
@@ -335,41 +318,40 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 
 ### 19.7 Cross-platform backend inventory
 
-- [ ] investigate Windows backend
-- [ ] investigate Linux backend such as GTK or equivalent
-- [ ] investigate macOS backend
-- [ ] evaluate whether one cross-platform .NET UI toolkit can provide consistent behavior without excessive runtime size
-- [ ] prefer native file/message dialogs where practical
-- [ ] define UI thread/event-loop integration
-- [ ] detect headless/server environment and return clear runtime errors
+- [x] investigate Windows backend
+- [x] investigate Linux backend such as GTK or equivalent
+- [x] investigate macOS backend
+- [x] evaluate whether one cross-platform .NET UI toolkit can provide consistent behavior without excessive runtime size
+- [x] prefer native file/message dialogs where practical
+- [x] define UI thread/event-loop integration
+- [x] detect headless/server environment and return clear runtime errors
 - [ ] architecture-specific dependencies for x64/arm64
 - [ ] package UI dependencies only when generated program actually uses the UI extension where feasible
 
 ### 19.8 UI security/lifetime
 
-- [ ] isolate all form/data instances
-- [ ] ensure password values are not logged in diagnostics or default debug output
+- [x] isolate all form/data instances
+- [x] ensure password values are not logged in diagnostics or default debug output
 - [ ] validate callbacks cannot overwrite unrelated runtime/compiler state
-- [ ] deterministically release windows/dialog/native handles
-- [ ] close/dispose event loops and native UI resources correctly
+- [x] deterministically release windows/dialog/native handles
+- [x] close/dispose event loops and native UI resources correctly
 - [ ] include UI objects in memory/lifetime and security reviews
 
 ## 19. Documentation and examples
 
 - [ ] complete English docs for every statement, function, class, property and operator
-- [ ] all end-user docs under `docs/`
+- [x] all end-user docs under `docs/`
 - [ ] reusable `.xps` programs under `examples/`; keep test fixtures under `samples/`
 - [ ] every documented API links to an example or contains an equivalent inline example
-- [ ] `docs/index.md`
+- [x] `docs/index.md`
 - [ ] language-reference index by declarations/control/operators/strings/math/date/arrays/files/HTTP/JSON/process/platform/UI/diagnostics
 - [ ] grouped or per-feature pages with syntax, parameters, return value, errors and examples
 - [ ] type coercion documentation
-- [ ] compiler CLI including output format, target RID/platform and exit codes
+- [x] compiler CLI including output format, target RID/platform and exit codes
 - [ ] separate file `Input$` versus console input docs
 - [ ] OS `Lock/Unlock` semantics
 - [ ] `Platform`, cross-platform `Shell` and publishing
-- [ ] XPScript-only `Evaluate`
-- [ ] UI extension documentation and examples
+- [x] UI extension documentation and examples
 - [ ] XPScript branding only; no legacy product names or formula-engine terminology
 
 ## 20. Quality gates

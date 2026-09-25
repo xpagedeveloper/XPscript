@@ -66,9 +66,9 @@ Primary references:
 - [ ] Parse actual text style from CD records for `Style` instead of returning a default style object.
 - [ ] Validate full LotusScript `Type` semantics for mixed/homogeneous ranges; explicit logical-element ranges now preserve their element type and untyped ranges derive homogeneous CD element types.
 - [ ] `FindAndReplace` including Notes-compatible options where the C API exposes equivalent behavior.
-- [ ] `Remove`.
-- [ ] `SetStyle`.
-- [ ] Preserve unaffected and unknown CD records byte-for-byte during range mutations.
+- [x] `Remove`.
+- [x] `SetStyle`.
+- [x] Preserve unaffected and unknown CD records byte-for-byte during range mutations.
 
 ## Rich-text editor/rewrite layer
 
@@ -77,8 +77,8 @@ Primary references:
 - [x] Preserve unknown records and unknown flag bits in the managed transform model unless a caller explicitly replaces/removes that record.
 - [x] Read rich text split across multiple physical items with the same item name and preserve physical record ordering during transformation.
 - [ ] Validate rewrite persistence against multi-segment rich text and Domino-managed re-segmentation before enabling destructive public mutations.
-- [ ] Invalidate or safely re-resolve linked objects after structural mutation using the rich-text revision.
-- [ ] Add rollback/error handling so failed writes do not leave partially modified rich text.
+- [x] Invalidate or safely re-resolve linked objects after structural mutation using the rich-text revision.
+- [x] Add rollback/error handling so failed writes do not leave partially modified rich text.
 
 ## NotesRichTextSection
 
@@ -88,8 +88,8 @@ Primary references:
 - [x] `Title`.
 - [x] `TitleStyle`.
 - [ ] `Remove`.
-- [ ] `SetBarColor`.
-- [ ] `SetTitleStyle`.
+- [x] `SetBarColor`.
+- [x] `SetTitleStyle`.
 - [ ] `NotesRichTextItem.BeginSection` / `EndSection`.
 
 ## NotesRichTextTable

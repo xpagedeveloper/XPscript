@@ -7,8 +7,8 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 ## Goals
 
 - [ ] Add a provider-neutral SQL database API to XPScript.
-- [ ] Support Microsoft SQL Server.
-- [ ] Support MariaDB/MySQL-compatible servers through a maintained .NET provider.
+- [x] Support Microsoft SQL Server.
+- [x] Support MariaDB/MySQL-compatible servers through a maintained .NET provider.
 - [ ] Support PostgreSQL.
 - [ ] Keep the public XPScript API stable across database providers where practical.
 - [ ] Build on ADO.NET provider abstractions and maintained NuGet database providers. Do not implement database wire protocols.
@@ -17,15 +17,15 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 
 ## Required NuGet provider strategy
 
-- [ ] Use `Microsoft.Data.SqlClient` for Microsoft SQL Server unless a documented compatibility/security blocker is found during implementation.
-- [ ] Use `MySqlConnector` for MariaDB/MySQL-compatible servers unless a documented compatibility/security blocker is found during implementation.
+- [x] Use `Microsoft.Data.SqlClient` for Microsoft SQL Server unless a documented compatibility/security blocker is found during implementation.
+- [x] Use `MySqlConnector` for MariaDB/MySQL-compatible servers unless a documented compatibility/security blocker is found during implementation.
 - [ ] Use `Npgsql` for PostgreSQL unless a documented compatibility/security blocker is found during implementation.
 - [ ] Use the providers' built-in connection pooling, TLS, parameter binding, transactions, async I/O, cancellation and type mapping instead of reimplementing those features.
 - [ ] Use `DbConnection`, `DbCommand`, `DbDataReader`, `DbTransaction` and related ADO.NET abstractions for the common XPScript layer where practical.
 - [ ] Keep each provider behind an XPScript-owned adapter so provider packages can be upgraded/replaced without changing the public script API.
-- [ ] Pin/centrally manage provider package versions.
+- [x] Pin/centrally manage provider package versions.
 - [ ] Verify .NET 10 support, Windows/Linux/macOS behavior where applicable, package maintenance, license and security advisories before finalizing versions.
-- [ ] Do not create custom TDS, MySQL/MariaDB or PostgreSQL protocol implementations.
+- [x] Do not create custom TDS, MySQL/MariaDB or PostgreSQL protocol implementations.
 
 ## Core object model
 
@@ -35,61 +35,61 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 - [ ] Add a result-set abstraction convertible to XPScript arrays and JSON.
 - [ ] Add a transaction abstraction.
 - [ ] Add parameter collection support.
-- [ ] Expose provider name, server/database metadata and connection state where safe.
-- [ ] Support deterministic close/dispose semantics.
+- [x] Expose provider name, server/database metadata and connection state where safe.
+- [x] Support deterministic close/dispose semantics.
 
 ## Connection configuration
 
-- [ ] Support connection strings supplied by the application.
+- [x] Support connection strings supplied by the application.
 - [ ] Support structured connection configuration so applications do not need to concatenate credentials into strings.
 - [ ] Support host, port, database/catalog, username and password where applicable.
 - [ ] Support integrated/Windows authentication for SQL Server where the provider and platform support it.
 - [ ] Support TLS options and certificate validation settings without insecure defaults.
-- [ ] Support configurable connection timeout and command timeout.
-- [ ] Use provider connection pooling by default where appropriate.
+- [x] Support configurable connection timeout and command timeout.
+- [x] Use provider connection pooling by default where appropriate.
 - [ ] Allow pooling to be disabled explicitly for testing or special cases.
-- [ ] Never include passwords, access tokens or complete secret-bearing connection strings in diagnostics.
+- [x] Never include passwords, access tokens or complete secret-bearing connection strings in diagnostics.
 
 ## Query and command execution
 
-- [ ] Execute parameterized SELECT queries.
-- [ ] Execute INSERT, UPDATE and DELETE statements.
+- [x] Execute parameterized SELECT queries.
+- [x] Execute INSERT, UPDATE and DELETE statements.
 - [ ] Execute stored procedures/functions where supported.
-- [ ] Return affected-row count for non-query commands.
-- [ ] Return scalar results.
+- [x] Return affected-row count for non-query commands.
+- [x] Return scalar results.
 - [ ] Stream/read result rows without requiring the full result set in memory.
-- [ ] Add convenience APIs for returning a complete result set when bounded and appropriate.
+- [x] Add convenience APIs for returning a complete result set when bounded and appropriate.
 - [ ] Support multiple result sets where the provider supports them.
 - [ ] Support cancellation and timeouts.
 - [ ] Add asynchronous runtime internals even if the first XPScript-facing API is synchronous.
 
 ## Parameters and SQL injection protection
 
-- [ ] Make parameters the normal documented way to pass values into SQL.
-- [ ] Support named provider parameters through a provider-neutral XPScript parameter API.
-- [ ] Map String, Integer, Long, Double, Currency/Decimal, Boolean, Date/DateTime, Byte arrays, Null and Empty safely.
+- [x] Make parameters the normal documented way to pass values into SQL.
+- [x] Support named provider parameters through a provider-neutral XPScript parameter API.
+- [x] Map String, Integer, Long, Double, Currency/Decimal, Boolean, Date/DateTime, Byte arrays, Null and Empty safely.
 - [ ] Support explicit database type/size/precision where needed.
 - [ ] Do not attempt to parameterize SQL identifiers such as table or column names. Document safe allow-list patterns instead.
 - [ ] Add adversarial SQL-injection regression tests proving values are not concatenated into commands by the runtime helpers.
 
 ## Transactions
 
-- [ ] Begin transaction.
-- [ ] Commit transaction.
-- [ ] Roll back transaction.
+- [x] Begin transaction.
+- [x] Commit transaction.
+- [x] Roll back transaction.
 - [ ] Support isolation-level selection where portable.
 - [ ] Define nested transaction/savepoint behavior explicitly per provider.
-- [ ] Ensure exceptions do not silently commit a pending transaction.
-- [ ] Deterministically release transactions and connections.
+- [x] Ensure exceptions do not silently commit a pending transaction.
+- [x] Deterministically release transactions and connections.
 
 ## Data mapping
 
-- [ ] Preserve database NULL distinctly from empty string and numeric zero.
-- [ ] Map numeric types without silent precision loss where possible.
-- [ ] Map Date/DateTime values consistently.
-- [ ] Support binary/blob values as XPScript Byte arrays.
-- [ ] Convert rows/results to `XPJsonObject` / `XPJsonArray`.
-- [ ] Define duplicate-column-name behavior.
+- [x] Preserve database NULL distinctly from empty string and numeric zero.
+- [x] Map numeric types without silent precision loss where possible.
+- [x] Map Date/DateTime values consistently.
+- [x] Support binary/blob values as XPScript Byte arrays.
+- [x] Convert rows/results to `XPJsonObject` / `XPJsonArray`.
+- [x] Define duplicate-column-name behavior.
 - [ ] Preserve provider-specific values through a documented fallback representation when no native XPScript type exists.
 
 ## Schema and metadata
@@ -114,11 +114,11 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 
 ## Security and limits
 
-- [ ] Apply maximum row/result limits for convenience APIs that materialize complete result sets.
+- [x] Apply maximum row/result limits for convenience APIs that materialize complete result sets.
 - [ ] Support configurable maximum field/blob size.
-- [ ] Support command timeout and cancellation.
-- [ ] Never log credentials or secret connection properties.
-- [ ] Avoid logging parameter values by default because they may contain personal or secret data.
+- [x] Support command timeout and cancellation.
+- [x] Never log credentials or secret connection properties.
+- [x] Avoid logging parameter values by default because they may contain personal or secret data.
 - [ ] Add opt-in safe query tracing that redacts values.
 - [ ] Validate provider names against an allow-list. Do not dynamically load arbitrary assemblies from connection data.
 - [ ] Define connection-string security guidance for web, CGI and FastCGI hosting.
@@ -126,7 +126,7 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 
 ## Web/runtime integration
 
-- [ ] Work from standalone XPScript programs.
+- [x] Work from standalone XPScript programs.
 - [ ] Work from Kestrel-hosted XPScript.
 - [ ] Work from FastCGI-hosted XPScript.
 - [ ] Work from CGI-hosted XPScript with the documented limitation that process-local pooling/state does not persist across requests.

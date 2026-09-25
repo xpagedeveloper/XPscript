@@ -54,12 +54,12 @@ Implement after the current UIForm work is complete and merged.
 
 ## Optional tool architecture
 
-- [ ] Add an `AITool` abstraction so optional AI capabilities can be attached to an `AIClient` instance.
-- [ ] Add methods such as `AddTool`, `RemoveTool`, `ClearTools` and `HasTool`.
-- [ ] Keep each tool isolated from the core transport client and from unrelated tools.
-- [ ] Allow tools to contribute request context, callable functions/tool definitions, response processing or retrieval results where appropriate.
-- [ ] Prevent one tool from silently changing endpoint, authentication or unrelated headers owned by the base client.
-- [ ] Define deterministic tool execution order.
+- [x] Add an `AITool` abstraction so optional AI capabilities can be attached to an `AIClient` instance.
+- [x] Add methods such as `AddTool`, `RemoveTool`, `ClearTools` and `HasTool`.
+- [x] Keep each tool isolated from the core transport client and from unrelated tools.
+- [x] Allow tools to contribute request context, callable functions/tool definitions, response processing or retrieval results where appropriate.
+- [x] Prevent one tool from silently changing endpoint, authentication or unrelated headers owned by the base client.
+- [x] Define deterministic tool execution order.
 - [ ] Add per-tool timeout/cancellation boundaries where external work is performed.
 
 ## MCP tool
@@ -104,9 +104,9 @@ Implement after the current UIForm work is complete and merged.
 
 - [ ] Allow MCPTool, RAGTool and EmbeddingsTool to be attached independently or together.
 - [ ] Define how RAG context, MCP tool definitions and normal user/system messages are composed into one request.
-- [ ] Prevent duplicate tool names and ambiguous routing.
+- [x] Prevent duplicate tool names and ambiguous routing.
 - [ ] Preserve raw provider tool-call payloads where possible for forward compatibility.
-- [ ] Add a configurable maximum number of recursive AI/tool iterations to prevent infinite agent loops.
+- [x] Add a configurable maximum number of recursive AI/tool iterations to prevent infinite agent loops.
 - [ ] Add a total request budget across model calls, MCP calls, retrieval calls and embedding calls.
 - [ ] Expose tool execution traces in a safe structured form without secrets.
 

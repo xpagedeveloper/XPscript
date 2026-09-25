@@ -10,7 +10,7 @@ Final verification before archival:
 - negative regression proves literals, arbitrary expressions, prefix operators, value-producing postfix use and invalid String numeric compound assignment fail compilation;
 - negative diagnostics are required to map to the exact `.xps` source line, position and source code;
 - token-like text in String literals/comments and unary `+`/`-` compatibility are regression-covered;
-- Required PR Gate, .NET 10 Build, Evaluate Runtime Compatibility, Control Flow and Escaped Quote regressions remained green on the implementation head.
+- Required PR Gate, .NET 10 Build, Control Flow and Escaped Quote regressions remained green on the implementation head.
 
 ## Postfix increment/decrement
 

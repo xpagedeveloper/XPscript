@@ -10,7 +10,7 @@ The executable test harness lives on branch `ai-kestrel-nuclei-hardening`. This 
 
 ## Status legend
 
-- [ ] Not started
+- [x] Not started
 - [~] Needs verification
 - [x] Verified complete
 

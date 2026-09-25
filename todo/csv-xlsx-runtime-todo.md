@@ -16,80 +16,80 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 
 - [ ] Define a provider-neutral `TableData` / `DataTable` style XPScript abstraction for rows, columns and typed cell values without conflicting with legacy .NET `DataTable` terminology used elsewhere in compiler internals.
 - [ ] Support column names and optional inferred/declared column types.
-- [ ] Support indexed row access and named-column access.
+- [x] Support indexed row access and named-column access.
 - [ ] Support String, Boolean, Integer, Long, Double, Currency, Date, Empty and Null values where representable.
 - [ ] Support conversion to and from `XPJsonArray` / `XPJsonObject` for common row-object shapes.
 - [ ] Support streaming/enumeration APIs for large files so the whole dataset does not need to be materialized.
 
 ## CSV read support
 
-- [ ] Add a `CSVDocument` / `CSVReader` API or equivalent stable XPScript surface.
-- [ ] Read CSV from file path.
-- [ ] Read CSV from Byte array / stream-compatible input where practical.
+- [x] Add a `CSVDocument` / `CSVReader` API or equivalent stable XPScript surface.
+- [x] Read CSV from file path.
+- [x] Read CSV from Byte array / stream-compatible input where practical.
 - [ ] Configurable delimiter, including comma, semicolon and tab.
 - [ ] Configurable quote character and escaping behavior.
-- [ ] Support RFC 4180-compatible quoted fields, embedded delimiters, embedded newlines and escaped quotes.
-- [ ] Support files with or without header row.
-- [ ] Support configurable encoding with UTF-8 as the default.
-- [ ] Detect/handle UTF-8 BOM safely.
+- [x] Support RFC 4180-compatible quoted fields, embedded delimiters, embedded newlines and escaped quotes.
+- [x] Support files with or without header row.
+- [x] Support configurable encoding with UTF-8 as the default.
+- [x] Detect/handle UTF-8 BOM safely.
 - [ ] Support bounded row, column, field-length and total-input limits.
 - [ ] Optional type inference, disabled or conservative by default to avoid surprising conversions.
-- [ ] Preserve empty field versus missing column semantics explicitly.
+- [x] Preserve empty field versus missing column semantics explicitly.
 
 ## CSV creation and modification
 
-- [ ] Create new CSV data in memory.
+- [x] Create new CSV data in memory.
 - [ ] Add/remove rows and columns.
-- [ ] Set/get individual cell values.
-- [ ] Write to file path.
-- [ ] Export as Byte array/string for web responses or further processing.
+- [x] Set/get individual cell values.
+- [x] Write to file path.
+- [x] Export as Byte array/string for web responses or further processing.
 - [ ] Configurable delimiter, newline convention, quote policy and encoding.
-- [ ] Quote/escape fields correctly through the selected library.
+- [x] Quote/escape fields correctly through the selected library.
 - [ ] Support append/streaming writer mode for large exports where the library supports it safely.
 
 ## XLSX workbook read support
 
 - [ ] Add top-level `ExcelWorkbook` / `XLSXWorkbook` class.
-- [ ] Load `.xlsx` from file path.
-- [ ] Load from Byte array / stream-compatible input where practical.
-- [ ] Enumerate worksheets.
-- [ ] Read worksheet names, used ranges, rows and cells.
+- [x] Load `.xlsx` from file path.
+- [x] Load from Byte array / stream-compatible input where practical.
+- [x] Enumerate worksheets.
+- [x] Read worksheet names, used ranges, rows and cells.
 - [ ] Read typed cell values including String, Boolean, numeric and Date/DateTime.
 - [ ] Read formulas and cached/display values distinctly where the selected library exposes both.
 - [ ] Read merged-cell metadata.
 - [ ] Read basic styles/number formats where practical.
-- [ ] Do not execute macros, external links or embedded active content.
+- [x] Do not execute macros, external links or embedded active content.
 - [ ] `.xls` binary format is out of scope initially unless a mature safe library provides it without complicating the base runtime.
 
 ## XLSX creation and modification
 
-- [ ] Create a new workbook.
+- [x] Create a new workbook.
 - [ ] Add, rename, reorder and remove worksheets.
-- [ ] Set/get cells by row/column and A1-style address where practical.
+- [x] Set/get cells by row/column and A1-style address where practical.
 - [ ] Add/remove rows and columns.
-- [ ] Set cell values and formulas.
-- [ ] Support basic number/date/currency formats.
-- [ ] Support fonts, bold/italic, alignment, fill, borders and cell styles through a compact stable API.
-- [ ] Support column widths and row heights.
+- [x] Set cell values and formulas.
+- [x] Support basic number/date/currency formats.
+- [x] Support fonts, bold/italic, alignment, fill, borders and cell styles through a compact stable API.
+- [x] Support column widths and row heights.
 - [ ] Support merged cells.
 - [ ] Support freeze panes and autofilter where practical.
 - [ ] Support basic tables/ranges where the selected library provides reliable support.
 - [ ] Support workbook properties/metadata.
-- [ ] Save as `.xlsx` file.
-- [ ] Export finished workbook as Byte array for web responses.
+- [x] Save as `.xlsx` file.
+- [x] Export finished workbook as Byte array for web responses.
 
 ## Formula boundary
 
-- [ ] Store formulas in XLSX when requested.
-- [ ] Do not build a custom Excel formula calculation engine.
+- [x] Store formulas in XLSX when requested.
+- [x] Do not build a custom Excel formula calculation engine.
 - [ ] If the selected library has a maintained formula evaluator, evaluate its coverage and security separately before exposing calculation.
-- [ ] Otherwise expose formula text and cached values and document that recalculation is performed by Excel/LibreOffice or another spreadsheet engine.
+- [x] Otherwise expose formula text and cached values and document that recalculation is performed by Excel/LibreOffice or another spreadsheet engine.
 
 ## CSV/XLSX conversion
 
-- [ ] Convert CSV to a workbook/worksheet.
-- [ ] Export a worksheet/range to CSV.
-- [ ] Allow selection of worksheet and delimiter/encoding options.
+- [x] Convert CSV to a workbook/worksheet.
+- [x] Export a worksheet/range to CSV.
+- [x] Allow selection of worksheet and delimiter/encoding options.
 - [ ] Preserve typed values where possible when moving into XLSX.
 - [ ] Define explicit text formatting rules when exporting typed XLSX cells to CSV.
 
@@ -119,7 +119,7 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 
 ## Security and resource limits
 
-- [ ] Apply existing XPScript path-security rules to input and output files.
+- [x] Apply existing XPScript path-security rules to input and output files.
 - [ ] Prevent output path traversal and unrelated-file overwrite.
 - [ ] Bound input file size, row count, column count, field length, worksheet count, cell count and decompressed XLSX size.
 - [ ] Defend against ZIP/XML decompression bombs using library/framework limits plus XPScript-level limits.
@@ -131,10 +131,10 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 
 ## API examples to validate
 
-- [ ] `Dim csv As CSVDocument = CSVDocument.Load("input.csv")` or equivalent compiler-valid syntax.
-- [ ] `Print csv.RowCount`
+- [x] `Dim csv As CSVDocument = CSVDocument.Load("input.csv")` or equivalent compiler-valid syntax.
+- [x] `Print csv.RowCount`
 - [ ] `Print csv.GetValue(1, "Name")`
-- [ ] `Call csv.Save("output.csv")`
+- [x] `Call csv.Save("output.csv")`
 - [ ] `Dim book As New ExcelWorkbook`
 - [ ] `Dim sheet As Variant = book.AddWorksheet("Data")`
 - [ ] `Call sheet.SetValue("A1", "Name")`
@@ -144,15 +144,15 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 
 ## Tests and quality gates
 
-- [ ] CSV quoted-field/newline/escaping regression tests on Windows, Ubuntu and macOS.
-- [ ] CSV UTF-8/Unicode/BOM regression tests.
+- [x] CSV quoted-field/newline/escaping regression tests on Windows, Ubuntu and macOS.
+- [x] CSV UTF-8/Unicode/BOM regression tests.
 - [ ] CSV malformed/limit negative tests.
 - [ ] CSV formula-injection safe-export tests.
-- [ ] XLSX create/save/reopen round-trip tests.
+- [x] XLSX create/save/reopen round-trip tests.
 - [ ] XLSX Unicode, dates, numbers, booleans and formulas tests.
-- [ ] XLSX multi-sheet and style round-trip tests.
+- [x] XLSX multi-sheet and style round-trip tests.
 - [ ] XLSX malformed/ZIP-bomb/resource-limit negative tests.
-- [ ] CSV-to-XLSX and XLSX-to-CSV conversion tests.
+- [x] CSV-to-XLSX and XLSX-to-CSV conversion tests.
 - [ ] JSON round-trip tests.
 - [ ] SQL-result and Domino-result export integration tests when those providers are implemented.
 - [ ] Kestrel, CGI and FastCGI upload/download smoke tests.

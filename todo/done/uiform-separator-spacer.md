@@ -11,4 +11,4 @@
 - [x] Add cross-platform compiler/runtime sample coverage.
 - [x] Add browser-wasm smoke coverage.
 - [x] Document the APIs in English.
-- [ ] Merge after CI is green.
+- [x] Merge after CI is green.

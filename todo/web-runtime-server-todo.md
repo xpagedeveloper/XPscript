@@ -40,11 +40,11 @@ Exact public CLI syntax must be finalized during the architecture phase.
   - [ ] external worker-process execution
   - [ ] hybrid trusted/untrusted execution modes
 - [ ] Decide which execution model is safe enough for production web hosting.
-- [ ] Define the trust boundary: XPScript application source should initially be treated as trusted server-side application code unless an isolated worker/sandbox model is explicitly implemented.
-- [ ] Perform threat modeling before implementation: path traversal, request smuggling, response splitting, code injection, source disclosure, cache poisoning, session fixation, CSRF, XSS helper misuse, denial of service, oversized input, slow clients, malformed FastCGI records, symlink escapes, compile storms and resource exhaustion.
-- [ ] Perform an OWASP-oriented security design review before production release.
+- [x] Define the trust boundary: XPScript application source should initially be treated as trusted server-side application code unless an isolated worker/sandbox model is explicitly implemented.
+- [x] Perform threat modeling before implementation: path traversal, request smuggling, response splitting, code injection, source disclosure, cache poisoning, session fixation, CSRF, XSS helper misuse, denial of service, oversized input, slow clients, malformed FastCGI records, symlink escapes, compile storms and resource exhaustion.
+- [x] Perform an OWASP-oriented security design review before production release.
 - [ ] Define whether multi-tenant hosting is supported. If so, each site/tenant must have hard isolation boundaries for source root, cache, sessions, Application state, temp files and configuration.
-- [ ] Do not expose an internet-facing administrative/compiler endpoint by default.
+- [x] Do not expose an internet-facing administrative/compiler endpoint by default.
 
 ---
 
@@ -82,42 +82,42 @@ execute XPScript entry point
 Response
 ```
 
-- [ ] Integrate with `todo/include-source-files-todo.md`.
-- [ ] Include expansion must finish before configurable source preprocessors run.
-- [ ] Integrate with `todo/source-preprocessor-pipeline-todo.md`.
-- [ ] Do not maintain a separate web-only parser/compiler implementation.
-- [ ] Normal CLI compile, direct-script execution and web runtime should share as much compiler pipeline code as possible.
-- [ ] Compiler diagnostics must retain original file/line mappings through Include and preprocessing.
+- [x] Integrate with `todo/include-source-files-todo.md`.
+- [x] Include expansion must finish before configurable source preprocessors run.
+- [x] Integrate with `todo/source-preprocessor-pipeline-todo.md`.
+- [x] Do not maintain a separate web-only parser/compiler implementation.
+- [x] Normal CLI compile, direct-script execution and web runtime should share as much compiler pipeline code as possible.
+- [x] Compiler diagnostics must retain original file/line mappings through Include and preprocessing.
 
 ---
 
 ## 3. URL-to-script routing
 
-- [ ] `--root` defines the only default document/source root for the site.
-- [ ] `/foo.xps` maps to `<root>/foo.xps` when allowed.
-- [ ] `/foo` maps to `<root>/foo.xps‘ when allowed
-- [ ] `/folder/` maps to `<root>/folder/index.xps` by default.
-- [ ] `/` maps to `<root>/index.xps`.
-- [ ] `/foo/save‘ if no subfolder called foo exists then map to `<root>/foo.xsp’ and function save inside the foo.xsp 
-- [ ] Make the default document name configurable later, while keeping `index.xps` as the standard default.
-- [ ] Define behavior for `/folder` versus `/folder/` and redirects consistently.
-- [ ] Return 404 when the resolved XPScript file does not exist.
-- [ ] Never return raw `.xps` source to the browser merely because compilation failed.
-- [ ] Decide separately whether static files are served by XPScript or should normally be served by nginx/Kestrel static-file middleware.
-- [ ] If static file serving is added, create a separate allowlist/configuration and MIME mapping policy.
+- [x] `--root` defines the only default document/source root for the site.
+- [x] `/foo.xps` maps to `<root>/foo.xps` when allowed.
+- [x] `/foo` maps to `<root>/foo.xps‘ when allowed
+- [x] `/folder/` maps to `<root>/folder/index.xps` by default.
+- [x] `/` maps to `<root>/index.xps`.
+- [x] `/foo/save‘ if no subfolder called foo exists then map to `<root>/foo.xsp’ and function save inside the foo.xsp 
+- [x] Make the default document name configurable later, while keeping `index.xps` as the standard default.
+- [x] Define behavior for `/folder` versus `/folder/` and redirects consistently.
+- [x] Return 404 when the resolved XPScript file does not exist.
+- [x] Never return raw `.xps` source to the browser merely because compilation failed.
+- [x] Decide separately whether static files are served by XPScript or should normally be served by nginx/Kestrel static-file middleware.
+- [x] If static file serving is added, create a separate allowlist/configuration and MIME mapping policy.
 
 ### Path security
 
-- [ ] Percent-decode and normalize request paths using one well-defined canonicalization procedure.
-- [ ] Reject malformed encodings and ambiguous path representations.
-- [ ] Reject `..` traversal and any normalized path that escapes the configured root.
-- [ ] Resolve full/canonical filesystem paths before access.
+- [x] Percent-decode and normalize request paths using one well-defined canonicalization procedure.
+- [x] Reject malformed encodings and ambiguous path representations.
+- [x] Reject `..` traversal and any normalized path that escapes the configured root.
+- [x] Resolve full/canonical filesystem paths before access.
 - [ ] Account for Windows drive/UNC semantics and Linux/macOS filesystem semantics.
-- [ ] Define and test symlink/reparse-point behavior so a file below the apparent root cannot resolve outside the allowed root unless explicitly configured.
-- [ ] Never concatenate untrusted URL paths directly into filesystem paths.
-- [ ] Do not allow request-controlled compiler output paths.
-- [ ] Add .net [] security and rules webb rules like [Anonymous] [Authenticated] [Post] and similar before a function for routing
-- [ ] Create a user session object that be populated with rules so we can add a rule to a user and Auto check against the tules with [rule:test] user needs that rule to run the function [rule:!test] user can not have the rule
+- [x] Define and test symlink/reparse-point behavior so a file below the apparent root cannot resolve outside the allowed root unless explicitly configured.
+- [x] Never concatenate untrusted URL paths directly into filesystem paths.
+- [x] Do not allow request-controlled compiler output paths.
+- [x] Add .net [] security and rules webb rules like [Anonymous] [Authenticated] [Post] and similar before a function for routing
+- [x] Create a user session object that be populated with rules so we can add a rule to a user and Auto check against the tules with [rule:test] user needs that rule to run the function [rule:!test] user can not have the rule
 
 ---
 
@@ -129,22 +129,22 @@ Target command concept:
 xpscript web --root <directory> --port <port>
 ```
 
-- [ ] Start ASP.NET Core/Kestrel using .NET 10-compatible hosting APIs.
-- [ ] `--port` configures the listening port.
-- [ ] Define default bind address; safest development default should be loopback unless an external bind is explicitly requested.
-- [ ] Support explicit bind address/interface configuration.
-- [ ] Support HTTPS endpoints/configuration in production mode.
-- [ ] Support graceful shutdown.
-- [ ] Define maximum concurrent connections and requests.
-- [ ] Configure bounded request-body size.
-- [ ] Configure request-header size/time limits.
-- [ ] Configure keep-alive/header timeouts.
-- [ ] Configure minimum data-rate or equivalent slow-client protections where supported.
-- [ ] Support request cancellation when the client disconnects.
-- [ ] Define HTTP/1.1, HTTP/2 and optionally HTTP/3 support as separate compatibility targets.
-- [ ] When behind a reverse proxy, trust forwarded headers only from explicitly configured trusted proxies/networks.
-- [ ] Never blindly trust arbitrary `X-Forwarded-For`, `X-Forwarded-Proto` or `X-Forwarded-Host` values.
-- [ ] Validate Host values against configured hosts when exposed beyond loopback.
+- [x] Start ASP.NET Core/Kestrel using .NET 10-compatible hosting APIs.
+- [x] `--port` configures the listening port.
+- [x] Define default bind address; safest development default should be loopback unless an external bind is explicitly requested.
+- [x] Support explicit bind address/interface configuration.
+- [x] Support HTTPS endpoints/configuration in production mode.
+- [x] Support graceful shutdown.
+- [x] Define maximum concurrent connections and requests.
+- [x] Configure bounded request-body size.
+- [x] Configure request-header size/time limits.
+- [x] Configure keep-alive/header timeouts.
+- [x] Configure minimum data-rate or equivalent slow-client protections where supported.
+- [x] Support request cancellation when the client disconnects.
+- [x] Define HTTP/1.1, HTTP/2 and optionally HTTP/3 support as separate compatibility targets.
+- [x] When behind a reverse proxy, trust forwarded headers only from explicitly configured trusted proxies/networks.
+- [x] Never blindly trust arbitrary `X-Forwarded-For`, `X-Forwarded-Proto` or `X-Forwarded-Host` values.
+- [x] Validate Host values against configured hosts when exposed beyond loopback.
 
 ---
 
@@ -152,42 +152,42 @@ xpscript web --root <directory> --port <port>
 
 FastCGI must be a distinct transport adapter using the same internal XPScript web request context as Kestrel.
 
-- [ ] Implement FastCGI responder role required for normal web requests.
-- [ ] Support TCP listener such as `127.0.0.1:9000`.
-- [ ] Support Unix-domain socket on Linux/macOS where appropriate.
+- [x] Implement FastCGI responder role required for normal web requests.
+- [x] Support TCP listener such as `127.0.0.1:9000`.
+- [x] Support Unix-domain socket on Linux/macOS where appropriate.
 - [ ] Investigate Windows FastCGI transport/deployment requirements separately.
-- [ ] Support nginx `fastcgi_pass` deployment.
-- [ ] Correctly consume standard CGI/FastCGI parameters such as:
-  - [ ] `SCRIPT_FILENAME`
-  - [ ] `SCRIPT_NAME`
-  - [ ] `PATH_INFO`
-  - [ ] `QUERY_STRING`
-  - [ ] `REQUEST_METHOD`
-  - [ ] `CONTENT_TYPE`
-  - [ ] `CONTENT_LENGTH`
-  - [ ] `SERVER_NAME`
-  - [ ] `SERVER_PORT`
-  - [ ] `SERVER_PROTOCOL`
-  - [ ] `REMOTE_ADDR`
-  - [ ] HTTPS/scheme information
-  - [ ] HTTP request headers
+- [x] Support nginx `fastcgi_pass` deployment.
+- [x] Correctly consume standard CGI/FastCGI parameters such as:
+  - [x] `SCRIPT_FILENAME`
+  - [x] `SCRIPT_NAME`
+  - [x] `PATH_INFO`
+  - [x] `QUERY_STRING`
+  - [x] `REQUEST_METHOD`
+  - [x] `CONTENT_TYPE`
+  - [x] `CONTENT_LENGTH`
+  - [x] `SERVER_NAME`
+  - [x] `SERVER_PORT`
+  - [x] `SERVER_PROTOCOL`
+  - [x] `REMOTE_ADDR`
+  - [x] HTTPS/scheme information
+  - [x] HTTP request headers
 - [ ] Define canonical precedence when proxy/FastCGI variables disagree.
-- [ ] Do not trust a client-derived `SCRIPT_FILENAME` until it has been canonicalized and checked against the configured XPScript root.
-- [ ] Support FastCGI keep-connection semantics only after protocol handling is robust.
-- [ ] Correctly return status, headers and response body using FastCGI records.
+- [x] Do not trust a client-derived `SCRIPT_FILENAME` until it has been canonicalized and checked against the configured XPScript root.
+- [x] Support FastCGI keep-connection semantics only after protocol handling is robust.
+- [x] Correctly return status, headers and response body using FastCGI records.
 
 ### FastCGI parser safety
 
-- [ ] Implement protocol parsing with explicit fixed-width integer decoding and strict bounds checks.
-- [ ] Avoid `unsafe` code and unmanaged pointer arithmetic unless a later security-reviewed implementation absolutely requires it.
-- [ ] Never allocate directly from an untrusted declared length without configured upper bounds.
-- [ ] Validate every record type, version, request id, content length and padding length before consuming buffers.
-- [ ] Reject truncated, overlapping, malformed or unexpectedly ordered records cleanly.
-- [ ] Bound accumulated PARAMS size, header count, header/value length and request body size.
-- [ ] Prevent integer overflow when adding lengths or calculating buffer offsets.
+- [x] Implement protocol parsing with explicit fixed-width integer decoding and strict bounds checks.
+- [x] Avoid `unsafe` code and unmanaged pointer arithmetic unless a later security-reviewed implementation absolutely requires it.
+- [x] Never allocate directly from an untrusted declared length without configured upper bounds.
+- [x] Validate every record type, version, request id, content length and padding length before consuming buffers.
+- [x] Reject truncated, overlapping, malformed or unexpectedly ordered records cleanly.
+- [x] Bound accumulated PARAMS size, header count, header/value length and request body size.
+- [x] Prevent integer overflow when adding lengths or calculating buffer offsets.
 - [ ] Prefer `Span<T>`/`ReadOnlySpan<T>` and checked arithmetic where useful, with explicit range validation before slicing.
-- [ ] Fuzz the FastCGI parser with malformed records before production release.
-- [ ] Add regression tests for partial network reads; never assume one socket read contains one complete FastCGI record.
+- [x] Fuzz the FastCGI parser with malformed records before production release.
+- [x] Add regression tests for partial network reads; never assume one socket read contains one complete FastCGI record.
 
 ---
 ## 5.1 cgi
@@ -212,126 +212,126 @@ The exact API must be frozen only after examples and compatibility tests have be
 
 Candidate read-only/request-scoped members:
 
-- [ ] `Request.Method`
-- [ ] `Request.Path`
-- [ ] `Request.PathInfo`
-- [ ] `Request.QueryString`
-- [ ] query-value access API
-- [ ] `Request.Headers`
-- [ ] `Request.ContentType`
-- [ ] `Request.ContentLength`
-- [ ] `Request.Body`
-- [ ] bounded body text reading
-- [ ] bounded binary body reading
-- [ ] `Request.Host`
-- [ ] `Request.Scheme`
-- [ ] `Request.RemoteAddress`
-- [ ] `Request.Protocol`
-- [ ] `Request.Cookies`
-- [ ] form-urlencoded parsing
-- [ ] multipart/form-data parsing only with strict limits and safe temporary-file handling
-- [ ] uploaded-file abstraction if multipart upload is implemented
-- [ ] request cancellation/disconnect state where useful
+- [x] `Request.Method`
+- [x] `Request.Path`
+- [x] `Request.PathInfo`
+- [x] `Request.QueryString`
+- [x] query-value access API
+- [x] `Request.Headers`
+- [x] `Request.ContentType`
+- [x] `Request.ContentLength`
+- [x] `Request.Body`
+- [x] bounded body text reading
+- [x] bounded binary body reading
+- [x] `Request.Host`
+- [x] `Request.Scheme`
+- [x] `Request.RemoteAddress`
+- [x] `Request.Protocol`
+- [x] `Request.Cookies`
+- [x] form-urlencoded parsing
+- [x] multipart/form-data parsing only with strict limits and safe temporary-file handling
+- [x] uploaded-file abstraction if multipart upload is implemented
+- [x] request cancellation/disconnect state where useful
 
 Security requirements:
 
-- [ ] Treat every Request value as untrusted input.
-- [ ] Preserve multiple header/query values rather than silently joining values where doing so changes semantics.
-- [ ] Apply configurable limits for header count, query length, form fields and body size.
+- [x] Treat every Request value as untrusted input.
+- [x] Preserve multiple header/query values rather than silently joining values where doing so changes semantics.
+- [x] Apply configurable limits for header count, query length, form fields and body size.
 - [ ] Do not automatically deserialize arbitrary request bodies into executable/runtime types.
 
 ### 6.2 Response
 
 Candidate members:
 
-- [ ] `Response.StatusCode`
-- [ ] `Response.ContentType`
-- [ ] `Response.Headers`
-- [ ] `Response.Cookies`
-- [ ] `Response.Write(value)`
-- [ ] `Response.WriteBinary(value)` if required
-- [ ] `Response.Redirect(url [, status])`
-- [ ] `Response.Clear()` semantics
+- [x] `Response.StatusCode`
+- [x] `Response.ContentType`
+- [x] `Response.Headers`
+- [x] `Response.Cookies`
+- [x] `Response.Write(value)`
+- [x] `Response.WriteBinary(value)` if required
+- [x] `Response.Redirect(url [, status])`
+- [x] `Response.Clear()` semantics
 - [ ] `Response.Flush()` semantics only if transport-safe streaming is intentionally supported
-- [ ] response-completed state
+- [x] response-completed state
 
 Security requirements:
 
-- [ ] Reject CR/LF injection in response header names and values.
-- [ ] Validate header names using HTTP token rules.
-- [ ] Prevent conflicting/unsafe `Content-Length` handling.
-- [ ] Avoid exposing transport-specific hop-by-hop headers directly unless explicitly supported.
-- [ ] Provide HTML encoding helpers separately; `Response.Write` must not misleadingly claim to make arbitrary text safe HTML.
+- [x] Reject CR/LF injection in response header names and values.
+- [x] Validate header names using HTTP token rules.
+- [x] Prevent conflicting/unsafe `Content-Length` handling.
+- [x] Avoid exposing transport-specific hop-by-hop headers directly unless explicitly supported.
+- [x] Provide HTML encoding helpers separately; `Response.Write` must not misleadingly claim to make arbitrary text safe HTML.
 
 ### 6.3 Server
 
 Candidate mostly read-only members:
 
-- [ ] configured root path
-- [ ] current hosting mode (`Kestrel` / `FastCGI`)
-- [ ] server address/port where meaningful
-- [ ] server start time
-- [ ] runtime/compiler version
-- [ ] safe path-mapping helper that cannot escape root
-- [ ] URL/HTML encoding helpers if appropriate
+- [x] configured root path
+- [x] current hosting mode (`Kestrel` / `FastCGI`)
+- [x] server address/port where meaningful
+- [x] server start time
+- [x] runtime/compiler version
+- [x] safe path-mapping helper that cannot escape root
+- [x] URL/HTML encoding helpers if appropriate
 
 Do not expose arbitrary process-control or unrestricted filesystem escape helpers through `Server` by default.
 
 ### 6.4 Session
 
-- [ ] Define opt-in session support; do not require sessions for every request.
-- [ ] Generate session identifiers using a cryptographically secure random generator.
-- [ ] Session id must have enough entropy to prevent guessing.
-- [ ] Store session id in a configurable cookie.
-- [ ] Default cookie should support `HttpOnly`, `Secure` when HTTPS is active, and an explicit SameSite policy.
-- [ ] Provide session id rotation to mitigate session fixation after authentication/privilege changes.
-- [ ] `Session.Get`, `Set`, `Remove`, `Clear`, `Abandon` or equivalent API.
-- [ ] Define timeout/idle expiration.
+- [x] Define opt-in session support; do not require sessions for every request.
+- [x] Generate session identifiers using a cryptographically secure random generator.
+- [x] Session id must have enough entropy to prevent guessing.
+- [x] Store session id in a configurable cookie.
+- [x] Default cookie should support `HttpOnly`, `Secure` when HTTPS is active, and an explicit SameSite policy.
+- [x] Provide session id rotation to mitigate session fixation after authentication/privilege changes.
+- [x] `Session.Get`, `Set`, `Remove`, `Clear`, `Abandon` or equivalent API.
+- [x] Define timeout/idle expiration.
 - [ ] Initial single-server store may be in-memory, but store interface must allow later distributed implementations.
-- [ ] Never use unsynchronized mutable global dictionaries for concurrent session access.
-- [ ] Define locking/version semantics for two simultaneous requests using the same session.
-- [ ] Bound per-session data size and total session-memory use.
-- [ ] Do not serialize arbitrary CLR objects from untrusted session input.
+- [x] Never use unsynchronized mutable global dictionaries for concurrent session access.
+- [x] Define locking/version semantics for two simultaneous requests using the same session.
+- [x] Bound per-session data size and total session-memory use.
+- [x] Do not serialize arbitrary CLR objects from untrusted session input.
 
 ### 6.5 Application
 
 Application is shared state for one configured site/application, not global state shared across unrelated sites.
 
-- [ ] `Application.Get`, `Set`, `Remove`, `Clear` or equivalent API.
-- [ ] Define thread-safe/concurrent semantics.
+- [x] `Application.Get`, `Set`, `Remove`, `Clear` or equivalent API.
+- [x] Define thread-safe/concurrent semantics.
 - [ ] Provide atomic operations or explicit locking API only if necessary and carefully designed.
 - [ ] Isolate Application state by site/root/application id.
-- [ ] Bound memory usage.
+- [x] Bound memory usage.
 - [ ] Define lifecycle during config reload/server restart.
-- [ ] Do not place Request/Response/context objects in Application state.
+- [x] Do not place Request/Response/context objects in Application state.
 
 ### 6.6 Cookie
 
-- [ ] cookie name/value
-- [ ] Path
-- [ ] Domain with validation
-- [ ] Expires / MaxAge
-- [ ] Secure
-- [ ] HttpOnly
-- [ ] SameSite
-- [ ] deletion semantics
-- [ ] reject control characters and invalid cookie names/values
-- [ ] do not permit response-splitting through cookies
+- [x] cookie name/value
+- [x] Path
+- [x] Domain with validation
+- [x] Expires / MaxAge
+- [x] Secure
+- [x] HttpOnly
+- [x] SameSite
+- [x] deletion semantics
+- [x] reject control characters and invalid cookie names/values
+- [x] do not permit response-splitting through cookies
 
 ---
 
 ## 7. Script entry point and execution context
 
 - [ ] Decide whether a web `.xps` file executes top-level code, `Sub Main()`, a dedicated `Sub WebMain()`, or another explicit convention.
-- [ ] Prefer one deterministic convention and document it clearly.
-- [ ] Inject/access Request/Response/Server/Session/Application through runtime context, not uncontrolled global mutable statics.
-- [ ] Context must be request-local, including async/thread transitions if async execution is later supported.
-- [ ] Do not allow one request to observe another request's Request/Response objects.
+- [x] Prefer one deterministic convention and document it clearly.
+- [x] Inject/access Request/Response/Server/Session/Application through runtime context, not uncontrolled global mutable statics.
+- [x] Context must be request-local, including async/thread transitions if async execution is later supported.
+- [x] Do not allow one request to observe another request's Request/Response objects.
 - [ ] Ensure compiler-generated statics do not accidentally turn request locals into cross-request global data.
 - [ ] Define behavior when script returns without writing a response.
-- [ ] Define behavior for uncaught XPScript runtime errors.
-- [ ] Production error pages must not expose source code, stack traces, filesystem paths, secrets or generated C#.
-- [ ] Development diagnostics may expose richer information only when explicitly enabled and never by default on public interfaces.
+- [x] Define behavior for uncaught XPScript runtime errors.
+- [x] Production error pages must not expose source code, stack traces, filesystem paths, secrets or generated C#.
+- [x] Development diagnostics may expose richer information only when explicitly enabled and never by default on public interfaces.
 
 ---
 
@@ -361,39 +361,39 @@ execute
 
 ### Cache key
 
-- [ ] Cache by canonical root/source identity, not only URL text.
+- [x] Cache by canonical root/source identity, not only URL text.
 - [ ] Include compiler version in cache identity.
 - [ ] Include target/runtime/code-generation options in cache identity.
 - [ ] Include configured preprocessor identities + versions + ordering in cache identity.
 - [ ] Include the root source and every included source dependency in invalidation/hash calculation.
 - [ ] Include relevant project/reference/native dependency configuration.
-- [ ] Prevent one site/tenant from receiving another site's cached executable.
+- [x] Prevent one site/tenant from receiving another site's cached executable.
 
 ### Invalidation
 
-- [ ] Invalidate when root `.xps` changes.
-- [ ] Invalidate when any included `.xps` changes.
+- [x] Invalidate when root `.xps` changes.
+- [x] Invalidate when any included `.xps` changes.
 - [ ] Invalidate when a referenced managed/native dependency changes where relevant.
 - [ ] Invalidate when compiler/preprocessor configuration changes.
-- [ ] Make invalidation race-safe while requests are running.
-- [ ] Existing in-flight requests may finish on an immutable old compiled unit while new requests switch atomically to the new unit.
+- [x] Make invalidation race-safe while requests are running.
+- [x] Existing in-flight requests may finish on an immutable old compiled unit while new requests switch atomically to the new unit.
 
 ### Compile-storm protection
 
-- [ ] Only one compilation for the same cache key/version may run at a time (`single-flight` behavior).
-- [ ] Concurrent requests for a cold/stale script should wait on/share that compilation rather than compile the same source N times.
+- [x] Only one compilation for the same cache key/version may run at a time (`single-flight` behavior).
+- [x] Concurrent requests for a cold/stale script should wait on/share that compilation rather than compile the same source N times.
 - [ ] Bound total concurrent compilations globally and per site.
 - [ ] Apply compile timeout/cancellation semantics.
-- [ ] A failed compilation must not replace a previously valid cached version unless explicitly configured.
+- [x] A failed compilation must not replace a previously valid cached version unless explicitly configured.
 - [ ] Decide whether production can optionally keep serving last-known-good code after a new source revision fails compilation.
 
 ### Cache resource limits
 
-- [ ] Bounded number/size of compiled entries.
-- [ ] LRU/TTL or equivalent eviction strategy.
-- [ ] No unbounded dictionary keyed by arbitrary URLs/query strings.
-- [ ] Cache key must exclude request query/body data unless code generation genuinely depends on it (normally it must not).
-- [ ] Expose cache metrics: hit, miss, compile count, compile duration, eviction, failure.
+- [x] Bounded number/size of compiled entries.
+- [x] LRU/TTL or equivalent eviction strategy.
+- [x] No unbounded dictionary keyed by arbitrary URLs/query strings.
+- [x] Cache key must exclude request query/body data unless code generation genuinely depends on it (normally it must not).
+- [x] Expose cache metrics: hit, miss, compile count, compile duration, eviction, failure.
 
 ### Assembly lifetime
 
@@ -406,16 +406,16 @@ execute
 
 ## 9. Execution isolation and denial-of-service boundaries
 
-- [ ] Decide whether web scripts execute in-process or in worker processes.
-- [ ] Explicitly document that in-process XPScript has the privileges of the hosting process.
-- [ ] If untrusted/customer-supplied scripts are ever supported, require process/container/OS-level isolation rather than claiming managed code alone is a sandbox.
+- [x] Decide whether web scripts execute in-process or in worker processes.
+- [x] Explicitly document that in-process XPScript has the privileges of the hosting process.
+- [x] If untrusted/customer-supplied scripts are ever supported, require process/container/OS-level isolation rather than claiming managed code alone is a sandbox.
 - [ ] Bound request execution time where possible.
 - [ ] Because arbitrary synchronous managed code cannot be safely force-aborted in-process, investigate worker-process isolation for hard execution deadlines.
-- [ ] Bound stdout/log output and Response size where appropriate.
-- [ ] Bound file upload sizes and temporary storage.
+- [x] Bound stdout/log output and Response size where appropriate.
+- [x] Bound file upload sizes and temporary storage.
 - [ ] Bound HTTP client usage from scripts to reduce SSRF/resource abuse if hosting untrusted code is ever contemplated.
 - [ ] Apply server-level rate limiting/concurrency controls.
-- [ ] Protect compilation endpoints/cache misses from intentional compile storms.
+- [x] Protect compilation endpoints/cache misses from intentional compile storms.
 
 ---
 
@@ -423,47 +423,47 @@ execute
 
 Even though the implementation is primarily managed .NET, all parsers and network-facing code must be written as if input is hostile.
 
-- [ ] No `unsafe` blocks, raw pointers or manual unmanaged buffers in protocol/request parsing without a separately reviewed justification.
-- [ ] Never trust network-provided lengths, offsets, counts or indexes.
-- [ ] Use checked integer arithmetic where lengths/offsets are combined.
-- [ ] Validate ranges before slicing arrays, spans or buffers.
-- [ ] Bound all request, header, FastCGI PARAMS, body, upload, response and compiler-input sizes.
-- [ ] Handle partial reads/writes correctly.
-- [ ] Do not allocate an attacker-specified size before validating it against configured limits.
+- [x] No `unsafe` blocks, raw pointers or manual unmanaged buffers in protocol/request parsing without a separately reviewed justification.
+- [x] Never trust network-provided lengths, offsets, counts or indexes.
+- [x] Use checked integer arithmetic where lengths/offsets are combined.
+- [x] Validate ranges before slicing arrays, spans or buffers.
+- [x] Bound all request, header, FastCGI PARAMS, body, upload, response and compiler-input sizes.
+- [x] Handle partial reads/writes correctly.
+- [x] Do not allocate an attacker-specified size before validating it against configured limits.
 - [ ] Prefer pooled buffers only when lifetime/clearing rules are correct; secrets must not leak between requests through reused buffers.
 - [ ] Return pooled buffers in `finally` paths.
-- [ ] Fuzz network/protocol parsers.
-- [ ] Add malformed-input tests designed to trigger integer overflow, out-of-range slicing, excessive allocation and parser state confusion.
+- [x] Fuzz network/protocol parsers.
+- [x] Add malformed-input tests designed to trigger integer overflow, out-of-range slicing, excessive allocation and parser state confusion.
 
 ---
 
 ## 11. HTTP security requirements
 
-- [ ] Reject request-header injection/invalid control characters.
-- [ ] Prevent response splitting.
+- [x] Reject request-header injection/invalid control characters.
+- [x] Prevent response splitting.
 - [ ] Define duplicate `Content-Length` / `Transfer-Encoding` handling through the hosting transport rather than implementing ambiguous custom parsing.
-- [ ] Do not reimplement Kestrel's HTTP parser in standalone mode.
-- [ ] Validate trusted-proxy configuration before using forwarded client information.
-- [ ] Host allowlist support.
-- [ ] Security headers documentation and configurable defaults.
-- [ ] Cookie security defaults.
-- [ ] CSRF guidance/helpers for state-changing browser applications.
-- [ ] HTML/URL/JSON encoding helpers that make output context explicit.
-- [ ] Do not automatically disable TLS certificate validation for script HTTP clients.
-- [ ] Secret values must never be printed in normal compile/runtime diagnostics.
+- [x] Do not reimplement Kestrel's HTTP parser in standalone mode.
+- [x] Validate trusted-proxy configuration before using forwarded client information.
+- [x] Host allowlist support.
+- [x] Security headers documentation and configurable defaults.
+- [x] Cookie security defaults.
+- [x] CSRF guidance/helpers for state-changing browser applications.
+- [x] HTML/URL/JSON encoding helpers that make output context explicit.
+- [x] Do not automatically disable TLS certificate validation for script HTTP clients.
+- [x] Secret values must never be printed in normal compile/runtime diagnostics.
 
 ---
 
 ## 12. Concurrency model
 
-- [ ] Multiple requests must execute concurrently.
-- [ ] Request/Response/Cookie context is per request.
-- [ ] Session state follows explicit concurrency semantics.
-- [ ] Application state is thread-safe.
-- [ ] Compilation cache is thread-safe.
-- [ ] Compile invalidation cannot dispose/unload code still executing in another request.
+- [x] Multiple requests must execute concurrently.
+- [x] Request/Response/Cookie context is per request.
+- [x] Session state follows explicit concurrency semantics.
+- [x] Application state is thread-safe.
+- [x] Compilation cache is thread-safe.
+- [x] Compile invalidation cannot dispose/unload code still executing in another request.
 - [ ] File watchers/cache invalidators must handle duplicate/coalesced filesystem events.
-- [ ] Avoid static mutable state that crosses unrelated web applications.
+- [x] Avoid static mutable state that crosses unrelated web applications.
 - [ ] Stress-test hundreds/thousands of concurrent requests and simultaneous source updates.
 
 ---
@@ -472,24 +472,24 @@ Even though the implementation is primarily managed .NET, all parsers and networ
 
 Future configuration needs evaluation for:
 
-- [ ] root directory
-- [ ] port / bind address
-- [ ] Kestrel vs FastCGI mode
-- [ ] FastCGI TCP address / Unix socket
-- [ ] allowed hostnames
-- [ ] HTTPS certificate configuration
-- [ ] trusted proxies
-- [ ] request/header/body limits
+- [x] root directory
+- [x] port / bind address
+- [x] Kestrel vs FastCGI mode
+- [x] FastCGI TCP address / Unix socket
+- [x] allowed hostnames
+- [x] HTTPS certificate configuration
+- [x] trusted proxies
+- [x] request/header/body limits
 - [ ] execution timeout policy
 - [ ] compile concurrency
-- [ ] compile cache limits/TTL
-- [ ] session enable/disable and timeout
-- [ ] environment (`Development` / `Production`)
-- [ ] static-file behavior
-- [ ] default document (`index.xps`)
-- [ ] Include roots/security policy
+- [x] compile cache limits/TTL
+- [x] session enable/disable and timeout
+- [x] environment (`Development` / `Production`)
+- [x] static-file behavior
+- [x] default document (`index.xps`)
+- [x] Include roots/security policy
 - [ ] ordered preprocessor chain
-- [ ] logging level
+- [x] logging level
 
 Configuration precedence (CLI/config/env) must be explicitly defined rather than accidental.
 
@@ -497,25 +497,25 @@ Configuration precedence (CLI/config/env) must be explicitly defined rather than
 
 ## 14. Logging and observability
 
-- [ ] Structured request logs without logging secrets by default.
-- [ ] Correlation/request id.
+- [x] Structured request logs without logging secrets by default.
+- [x] Correlation/request id.
 - [ ] Compile diagnostics correlated to source revision/cache key.
-- [ ] Metrics for request count/duration/status codes.
-- [ ] Metrics for active requests/connections.
-- [ ] Cache hit/miss/compile metrics.
-- [ ] Session-store metrics without exposing session ids.
-- [ ] FastCGI protocol errors.
-- [ ] Avoid logging Authorization, Cookie, Set-Cookie, passwords, tokens or full sensitive request bodies by default.
+- [x] Metrics for request count/duration/status codes.
+- [x] Metrics for active requests/connections.
+- [x] Cache hit/miss/compile metrics.
+- [x] Session-store metrics without exposing session ids.
+- [x] FastCGI protocol errors.
+- [x] Avoid logging Authorization, Cookie, Set-Cookie, passwords, tokens or full sensitive request bodies by default.
 
 ---
 
 ## 15. Development workflow / hot reload behavior
 
-- [ ] Source changes should invalidate only affected script dependency graphs.
-- [ ] Next request compiles changed code once and atomically publishes it to cache after success.
-- [ ] Define optional eager/precompile mode for production startup/deployment.
+- [x] Source changes should invalidate only affected script dependency graphs.
+- [x] Next request compiles changed code once and atomically publishes it to cache after success.
+- [x] Define optional eager/precompile mode for production startup/deployment.
 - [ ] Provide a command to precompile/validate all reachable `.xps` files before deployment.
-- [ ] Compile errors should have a production-safe HTTP response while retaining full diagnostics in server logs.
+- [x] Compile errors should have a production-safe HTTP response while retaining full diagnostics in server logs.
 - [ ] Development mode may display source diagnostics only after explicit opt-in.
 
 ---
@@ -567,62 +567,62 @@ All examples must be reconsidered after the object API has been finalized.
 
 ## 17. Kestrel regression matrix
 
-- [ ] root `/` executes `index.xps`
-- [ ] directory `/folder/` executes `/folder/index.xps`
-- [ ] direct `.xps` route
-- [ ] missing script -> 404 without source disclosure
-- [ ] GET/query values
-- [ ] POST body
-- [ ] headers/cookies
-- [ ] response status/headers/body
-- [ ] sessions
-- [ ] Application concurrency
-- [ ] source edit invalidates cache
-- [ ] included-file edit invalidates parent script cache
+- [x] root `/` executes `index.xps`
+- [x] directory `/folder/` executes `/folder/index.xps`
+- [x] direct `.xps` route
+- [x] missing script -> 404 without source disclosure
+- [x] GET/query values
+- [x] POST body
+- [x] headers/cookies
+- [x] response status/headers/body
+- [x] sessions
+- [x] Application concurrency
+- [x] source edit invalidates cache
+- [x] included-file edit invalidates parent script cache
 - [ ] preprocessor version/order invalidates cache
-- [ ] simultaneous cold requests compile once
-- [ ] compile failure does not poison unrelated cache entries
-- [ ] traversal/encoded traversal rejected
-- [ ] symlink escape rejected according to policy
-- [ ] Host validation
-- [ ] trusted/untrusted forwarded header behavior
-- [ ] oversized body rejected
-- [ ] slow/aborted request behavior
-- [ ] Windows/Linux/macOS verification
+- [x] simultaneous cold requests compile once
+- [x] compile failure does not poison unrelated cache entries
+- [x] traversal/encoded traversal rejected
+- [x] symlink escape rejected according to policy
+- [x] Host validation
+- [x] trusted/untrusted forwarded header behavior
+- [x] oversized body rejected
+- [x] slow/aborted request behavior
+- [x] Windows/Linux/macOS verification
 
 ---
 
 ## 18. FastCGI regression matrix
 
-- [ ] nginx -> XPScript FastCGI GET
-- [ ] POST body
-- [ ] query string
-- [ ] request headers
-- [ ] cookies
-- [ ] status/content-type/custom response headers
-- [ ] `index.xps` mapping
-- [ ] TCP transport
-- [ ] Unix socket transport on supported OSes
-- [ ] keep-connection behavior
-- [ ] partial record reads
-- [ ] multiple PARAMS records
-- [ ] multiple STDIN records
-- [ ] empty STDIN terminator
-- [ ] malformed record version/type
-- [ ] invalid length/padding
-- [ ] oversized PARAMS/body rejected before dangerous allocation
-- [ ] invalid/malicious `SCRIPT_FILENAME` cannot escape root
-- [ ] interrupted client/request cleanup
-- [ ] fuzz corpus regression
+- [x] nginx -> XPScript FastCGI GET
+- [x] POST body
+- [x] query string
+- [x] request headers
+- [x] cookies
+- [x] status/content-type/custom response headers
+- [x] `index.xps` mapping
+- [x] TCP transport
+- [x] Unix socket transport on supported OSes
+- [x] keep-connection behavior
+- [x] partial record reads
+- [x] multiple PARAMS records
+- [x] multiple STDIN records
+- [x] empty STDIN terminator
+- [x] malformed record version/type
+- [x] invalid length/padding
+- [x] oversized PARAMS/body rejected before dangerous allocation
+- [x] invalid/malicious `SCRIPT_FILENAME` cannot escape root
+- [x] interrupted client/request cleanup
+- [x] fuzz corpus regression
 
 ---
 
 ## 19. Performance acceptance criteria to define before implementation
 
 - [ ] Measure cold compile latency separately from cached-request latency.
-- [ ] Cached execution must not invoke the compiler again when source/dependencies are unchanged.
+- [x] Cached execution must not invoke the compiler again when source/dependencies are unchanged.
 - [ ] Benchmark cache hit throughput.
-- [ ] Benchmark simultaneous requests to one cached script.
+- [x] Benchmark simultaneous requests to one cached script.
 - [ ] Benchmark many independent scripts.
 - [ ] Benchmark source-change/recompile behavior under load.
 - [ ] Measure memory after thousands of recompiles to detect assembly/cache leaks.
@@ -633,23 +633,23 @@ All examples must be reconsidered after the object API has been finalized.
 
 ## 20. Documentation required before production-ready status
 
-- [ ] architecture and trust model
-- [ ] Kestrel installation/startup
-- [ ] nginx FastCGI configuration example
-- [ ] HTTPS/reverse-proxy configuration
-- [ ] root/index routing
-- [ ] Request API
-- [ ] Response API
-- [ ] Server API
-- [ ] Session API
-- [ ] Application API
-- [ ] Cookie API
-- [ ] runtime compilation/cache behavior
-- [ ] Include/preprocessor interaction
+- [x] architecture and trust model
+- [x] Kestrel installation/startup
+- [x] nginx FastCGI configuration example
+- [x] HTTPS/reverse-proxy configuration
+- [x] root/index routing
+- [x] Request API
+- [x] Response API
+- [x] Server API
+- [x] Session API
+- [x] Application API
+- [x] Cookie API
+- [x] runtime compilation/cache behavior
+- [x] Include/preprocessor interaction
 - [ ] deployment/precompile workflow
-- [ ] secure configuration checklist
-- [ ] limits/timeouts
-- [ ] diagnostics/logging
+- [x] secure configuration checklist
+- [x] limits/timeouts
+- [x] diagnostics/logging
 - [ ] migration/versioning rules for future web-runtime API changes
 
 ---
