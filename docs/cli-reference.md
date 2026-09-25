@@ -46,7 +46,7 @@ See [Dependency security and package patching](dependency-security-and-patching.
 
 Service files use `[Service]`, optional `[StopTimeout:value]`, `ServiceStart()`, one or more optional `[Interval:value]` procedures, and `ServiceStop()`. See [XPScript services](services.md) for the lifecycle contract.
 
-## `xpscript web` Kestrel host
+For the complete JSON `--config` file format and all supported `web` and `fastCgi` properties, see [Web and FastCGI host configuration](host-config.md).\n\n## `xpscript web` Kestrel host
 
 | Command/option | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
