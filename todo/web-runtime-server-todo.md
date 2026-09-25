@@ -371,8 +371,8 @@ execute
 
 ### Invalidation
 
-- [ ] Invalidate when root `.xps` changes.
-- [ ] Invalidate when any included `.xps` changes.
+- [x] Invalidate when root `.xps` changes.
+- [x] Invalidate when any included `.xps` changes.
 - [ ] Invalidate when a referenced managed/native dependency changes where relevant.
 - [ ] Invalidate when compiler/preprocessor configuration changes.
 - [x] Make invalidation race-safe while requests are running.
@@ -577,11 +577,11 @@ All examples must be reconsidered after the object API has been finalized.
 - [x] response status/headers/body
 - [x] sessions
 - [x] Application concurrency
-- [ ] source edit invalidates cache
-- [ ] included-file edit invalidates parent script cache
+- [x] source edit invalidates cache
+- [x] included-file edit invalidates parent script cache
 - [ ] preprocessor version/order invalidates cache
-- [ ] simultaneous cold requests compile once
-- [ ] compile failure does not poison unrelated cache entries
+- [x] simultaneous cold requests compile once
+- [x] compile failure does not poison unrelated cache entries
 - [x] traversal/encoded traversal rejected
 - [x] symlink escape rejected according to policy
 - [ ] Host validation
@@ -620,9 +620,9 @@ All examples must be reconsidered after the object API has been finalized.
 ## 19. Performance acceptance criteria to define before implementation
 
 - [ ] Measure cold compile latency separately from cached-request latency.
-- [ ] Cached execution must not invoke the compiler again when source/dependencies are unchanged.
+- [x] Cached execution must not invoke the compiler again when source/dependencies are unchanged.
 - [ ] Benchmark cache hit throughput.
-- [ ] Benchmark simultaneous requests to one cached script.
+- [x] Benchmark simultaneous requests to one cached script.
 - [ ] Benchmark many independent scripts.
 - [ ] Benchmark source-change/recompile behavior under load.
 - [ ] Measure memory after thousands of recompiles to detect assembly/cache leaks.
