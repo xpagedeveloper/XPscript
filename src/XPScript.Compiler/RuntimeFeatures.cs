@@ -15,7 +15,8 @@ public readonly record struct RuntimeFeatures(
     bool Ai,
     bool Archive = false,
     bool Spreadsheet = false,
-    bool NetworkTools = false)
+    bool NetworkTools = false,
+    bool Image = false)
 {
     public bool RequiresHttp => Http || HttpDatabase || Attachments || Ui;
     public bool RequiresJson => Json || JsonSchema || RequiresHttp || Database || Attachments || Ui;
@@ -30,6 +31,7 @@ public readonly record struct RuntimeFeatures(
         if (MsSql) yield return ("XPDbMsSql", "server or desktop target", null);
         if (Archive) yield return ("Archive", "server or desktop target", "Archive file-path operations are not available for browser-wasm targets yet.");
         if (Spreadsheet) yield return ("XPSpreadsheet", "server or desktop target", null);
+        if (Image) yield return ("XPImage", "server or desktop target", "Native Magick.NET image processing is not available for browser-wasm targets.");
         if (NetworkTools) yield return ("NetworkTools", "server or desktop target", "Browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
     }
 
@@ -71,6 +73,7 @@ public readonly record struct RuntimeFeatures(
             Ai: PreprocessorFeatureGate.ContainsAny(code, "XPAi", "XPAiResponse", "AITool"),
             Archive: PreprocessorFeatureGate.ContainsTypeReference(code, "Archive", "ArchiveEntry"),
             Spreadsheet: PreprocessorFeatureGate.ContainsTypeReference(code, "XPSpreadsheet", "XPWorksheet", "XPCell"),
-            NetworkTools: PreprocessorFeatureGate.ContainsTypeReference(code, "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo"));
+            NetworkTools: PreprocessorFeatureGate.ContainsTypeReference(code, "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo"),
+            Image: PreprocessorFeatureGate.ContainsTypeReference(code, "XPImage") || PreprocessorFeatureGate.ContainsCall(code, "XPImage.Load", "XPImage.FromBytes"));
     }
 }
