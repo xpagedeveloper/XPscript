@@ -140,7 +140,7 @@ xpscript web --root <directory> --port <port>
 - [x] Configure request-header size/time limits.
 - [x] Configure keep-alive/header timeouts.
 - [x] Configure minimum data-rate or equivalent slow-client protections where supported.
-- [ ] Support request cancellation when the client disconnects.
+- [x] Support request cancellation when the client disconnects.
 - [x] Define HTTP/1.1, HTTP/2 and optionally HTTP/3 support as separate compatibility targets.
 - [x] When behind a reverse proxy, trust forwarded headers only from explicitly configured trusted proxies/networks.
 - [x] Never blindly trust arbitrary `X-Forwarded-For`, `X-Forwarded-Proto` or `X-Forwarded-Host` values.
@@ -231,7 +231,7 @@ Candidate read-only/request-scoped members:
 - [x] form-urlencoded parsing
 - [x] multipart/form-data parsing only with strict limits and safe temporary-file handling
 - [x] uploaded-file abstraction if multipart upload is implemented
-- [ ] request cancellation/disconnect state where useful
+- [x] request cancellation/disconnect state where useful
 
 Security requirements:
 
@@ -259,8 +259,8 @@ Security requirements:
 
 - [x] Reject CR/LF injection in response header names and values.
 - [x] Validate header names using HTTP token rules.
-- [ ] Prevent conflicting/unsafe `Content-Length` handling.
-- [ ] Avoid exposing transport-specific hop-by-hop headers directly unless explicitly supported.
+- [x] Prevent conflicting/unsafe `Content-Length` handling.
+- [x] Avoid exposing transport-specific hop-by-hop headers directly unless explicitly supported.
 - [ ] Provide HTML encoding helpers separately; `Response.Write` must not misleadingly claim to make arbitrary text safe HTML.
 
 ### 6.3 Server
@@ -269,7 +269,7 @@ Candidate mostly read-only members:
 
 - [x] configured root path
 - [x] current hosting mode (`Kestrel` / `FastCGI`)
-- [ ] server address/port where meaningful
+- [x] server address/port where meaningful
 - [x] server start time
 - [x] runtime/compiler version
 - [x] safe path-mapping helper that cannot escape root
