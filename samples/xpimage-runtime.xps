@@ -23,6 +23,13 @@ Sub Main()
     img.Composite(overlay, 2, 2, 0.5)
     img.Opacity(0.9)
     img.Flatten("#ffffff")
+    img.Brightness(10)
+    img.Contrast(10)
+    img.Saturation(-10)
+    img.Grayscale()
+    img.Invert()
+    img.Blur(1)
+    img.Sharpen(1)
     If img.Width <> 16 Or img.Height <> 16 Then
         Error 5, "XPImage geometry/composition failed"
     End If
