@@ -2,13 +2,13 @@
 
 This page is the searchable reference for the XPScript compiler and host command-line interface. Each command/option includes syntax, parameter meaning, behavior, and a complete `.xps` program that can be used with it.
 
-## `xpscriptc` compiler
+## `xpscript` compiler and runtime\n\nRunning `xpscript` with no arguments prints the built-in CLI usage reference. For `run` and `compile`, `--info` and `--debug` may be placed before or after the command name. They are mutually exclusive. Program arguments for `run` are accepted only through `--Args`, which keeps XPScript CLI options unambiguous regardless of their position.\n
 
 | Command/option | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | compile | `xpscriptc source.xps -o output [options]` | `source.xps`: source file; `output`: generated application path. | Compiles an XPScript program and reports progress/timing to stderr while keeping result output on stdout. | [hello.xps](../demo/console/hello.xps) |
-| `run` | `xpscriptc run source.xps [arguments...]` | `source.xps`: program to compile/run; following values are exposed through `Application.Args`. | Builds into an isolated framework-dependent temporary output and runs the program immediately. Compiler lifecycle output is quiet by default. | [application-runtime.xps](../samples/application-runtime.xps) |
-| `--info` | `xpscriptc run source.xps --info` | none | Shows run compilation progress and automatically enables application dependency security warning mode unless `--security=off` is explicit. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `run` | `xpscript run source.xps [--Args "arg1 arg2 ..."]` | `source.xps`: program to compile/run; `--Args`: explicit argument string whose values are exposed through `Application.Args`. | Builds into an isolated framework-dependent temporary output and runs the program immediately. Compiler lifecycle output is quiet by default. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `--info` | `xpscript --info run source.xps` or `xpscript run source.xps --info` | none | Shows run compilation progress and automatically enables application dependency security warning mode unless `--security=off` is explicit. | [application-runtime.xps](../samples/application-runtime.xps) |
 | `--debug` | `xpscript run source.xps --debug` or `xpscript compile source.xps --debug` | none | Enables debug behavior and application dependency security warning mode unless explicitly overridden. | [application-runtime.xps](../samples/application-runtime.xps) |
 | `--security` | `--security=off|warn|strict` | security mode. | Controls NuGet application dependency auditing. `warn` reports findings; `strict` also fails when audit data is unavailable and blocks high/critical findings. | [Dependency security and package patching](dependency-security-and-patching.md) |
 | `-o` | `-o path` | `path`: output executable/application path. | Selects the compiler output path. | [hello.xps](../demo/console/hello.xps) |
@@ -18,7 +18,7 @@ This page is the searchable reference for the XPScript compiler and host command
 | `--result-format text` | `--result-format text` | none | Emits human-readable compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--result-format json` | `--result-format json` | none | Emits structured JSON compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--result-format xml` | `--result-format xml` | none | Emits structured XML compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
-| `--` | `-- scriptArg1 ...` | all following values are script arguments. | Ends compiler option parsing so option-looking values can be passed to the program. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `--Args` | `--Args "first second"` | one quoted argument string. | Passes arguments only to the program started by `run`. `xpscript run main.xps --Args "first second"` is equivalent to starting the generated Windows program as `main.exe first second`. | [application-runtime.xps](../samples/application-runtime.xps) |
 
 ## Dependency security and package patch commands
 
