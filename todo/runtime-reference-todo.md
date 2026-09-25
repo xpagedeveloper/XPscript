@@ -194,9 +194,9 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 - [>] reserved identifier validation runs before source rewrites
 - [ ] verify scope isolation for locals, globals, statics, arrays, lists and ByRef
 - [ ] verify modules cannot overwrite unrelated module state
-- [ ] verify concurrent compiler builds use isolated temp paths
-- [ ] prevent output path traversal/unrelated-file overwrite
-- [ ] review temp permissions and cleanup
+- [x] verify concurrent compiler builds use isolated temp paths
+- [x] prevent output path traversal/unrelated-file overwrite
+- [x] review temp permissions and cleanup
 - [ ] review `Shell`, file I/O, HTTP, P/Invoke and COM for injection risks
 - [ ] review JSON/HTTP conversions and header/body handling
 - [ ] review `Lock/Unlock` races and cross-process assumptions
