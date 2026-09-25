@@ -7,6 +7,7 @@ using XPScript.Web.FastCgi;
 using XPScript.Web.Kestrel;
 using XPScript.Web.Runtime;
 
+args = NormalizeGlobalDiagnosticOptions(args);
 ConfigureRuntimeDiagnosticEnvironment(args);
 
 if (args.Length == 0 || args[0] is "--help" or "-h")
@@ -40,6 +41,28 @@ catch (Exception ex)
 {
     Console.Error.WriteLine("error: " + ex.Message);
     return 1;
+}
+
+static string[] NormalizeGlobalDiagnosticOptions(string[] arguments)
+{
+    var commandIndex = Array.FindIndex(arguments, value =>
+        value.Equals("compile", StringComparison.OrdinalIgnoreCase) ||
+        value.Equals("run", StringComparison.OrdinalIgnoreCase));
+
+    if (commandIndex <= 0)
+        return arguments;
+
+    var prefix = arguments[..commandIndex];
+    if (prefix.Any(value => !value.Equals("--debug", StringComparison.OrdinalIgnoreCase) &&
+                            !value.Equals("--info", StringComparison.OrdinalIgnoreCase)))
+        return arguments;
+
+    var debug = prefix.Any(value => value.Equals("--debug", StringComparison.OrdinalIgnoreCase));
+    var info = prefix.Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
+    if (debug && info)
+        throw new ArgumentException("--info and --debug cannot be used together.");
+
+    return [arguments[commandIndex], .. prefix, .. arguments[(commandIndex + 1)..]];
 }
 
 static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
