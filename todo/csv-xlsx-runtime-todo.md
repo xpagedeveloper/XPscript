@@ -32,7 +32,7 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 - [x] Support files with or without header row.
 - [x] Support configurable encoding with UTF-8 as the default.
 - [x] Detect/handle UTF-8 BOM safely.
-- [x] Support bounded row, column, field-length and total-input limits.
+- [ ] Support bounded row, column, field-length and total-input limits.
 - [ ] Optional type inference, disabled or conservative by default to avoid surprising conversions.
 - [ ] Preserve empty field versus missing column semantics explicitly.
 
@@ -126,7 +126,7 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 - [ ] Disable or ignore external workbook links by default.
 - [ ] Do not execute macros, scripts or external data connections.
 - [ ] Treat formulas beginning with `=`, `+`, `-` or `@` carefully when exporting untrusted values to CSV to mitigate spreadsheet-formula injection; provide a safe-export mode enabled by default for untrusted data.
-- [x] Dispose streams, workbook objects and file handles deterministically.
+- [ ] Dispose streams, workbook objects and file handles deterministically.
 - [ ] Add concurrency tests proving separate workbook/CSV instances do not share mutable state.
 
 ## API examples to validate
