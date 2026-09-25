@@ -219,7 +219,7 @@ Initial target matrix:
 ## Password and encryption support
 
 - [x] Investigate password-protected ZIP support in the selected SharpCompress version.
-- [ ] Investigate encrypted RAR and 7z read support.
+- [x] Investigate encrypted RAR and 7z read support.
 - [x] Define how `Password` is supplied and cleared.
 - [x] Never log passwords.
 - [x] Return a distinct runtime error for missing password versus invalid password where the underlying library makes that distinction reliably.
