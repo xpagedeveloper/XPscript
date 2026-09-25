@@ -92,9 +92,12 @@ jobs:
 
           New-Item -ItemType Directory -Force ./out/xpimage-targets/web-source | Out-Null
           @'
-          Dim img As New XPImage(8, 8, "#336699")
-          Print "XPIMAGE-WEB-COMPILE=OK"
-          img.Dispose()
+          Sub Main()
+              Dim img As XPImage
+              Set img = New XPImage(8, 8, "#336699")
+              Print "XPIMAGE-WEB-COMPILE=OK"
+              img.Dispose()
+          End Sub
           '@ | Set-Content -Encoding utf8 ./out/xpimage-targets/web-source/main.xps
           dotnet $compiler ./out/xpimage-targets/web-source/main.xps --target webiis --runtime=false --output ./out/xpimage-targets/web
           if ($LASTEXITCODE -ne 0) { throw 'XPImage web compile failed.' }
