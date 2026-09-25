@@ -10,7 +10,7 @@ Implement a cross-platform archive runtime for XPScript using a stable XPScript-
 - [x] Add an `ArchiveEntry` object for files and folders inside an archive.
 - [x] Keep all third-party types, enums and implementation details hidden behind XPScript-owned runtime classes.
 - [x] Use `SharpCompress` as the preferred implementation library, subject to final compatibility, security and license verification at implementation time.
-- [ ] Verify the selected SharpCompress release is MIT licensed and supports the .NET target frameworks used by XPScript.
+- [x] Verify the selected SharpCompress release is MIT licensed and supports the .NET target frameworks used by XPScript.
 - [x] Prefer a pure managed implementation with no platform-specific native archive binaries.
 - [x] Design the runtime around `Stream` internally so file, Byte-array, HTTP, database, MIME, mobile and WASM scenarios can share the same implementation.
 - [x] Reuse existing XPScript path handling and filesystem security instead of allowing the archive library to access arbitrary paths directly.
@@ -301,7 +301,7 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 - [x] Add SharpCompress to `THIRD-PARTY-NOTICES.md` under the MIT section.
 - [x] Include the required copyright/license notice text.
 - [x] Run `scripts/validate-license-notices.ps1`.
-- [ ] Check transitive dependencies before merging.
+- [x] Check transitive dependencies before merging.
 - [ ] Check active security advisories and CVEs for the selected package version.
 - [ ] Add archive dependency review to normal dependency-update maintenance.
 
