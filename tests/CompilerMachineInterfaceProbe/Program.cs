@@ -11,7 +11,7 @@ if (args.Length != 1)
 var root = Path.GetFullPath(args[0]);
 var targetDefinition = CompilerDiagnosticCatalog.Find("XPS3002");
 Require(targetDefinition is not null, "XPS3002 diagnostic definition");
-Require(targetDefinition.Category == "execution-context", "XPS3002 definition category");
+Require(targetDefinition!.Category == "execution-context", "XPS3002 definition category");
 Require(targetDefinition.Severity == "error", "XPS3002 definition severity");
 Require(targetDefinition.DocumentationId == "diagnostic.XPS3002", "XPS3002 stable documentation id");
 Require(targetDefinition.DocumentationIds.SequenceEqual(["diagnostic.XPS3002", "target.BrowserWasm", "target.ServerSide"]), "XPS3002 documentation ids");
@@ -21,17 +21,17 @@ Require(CompilerDiagnosticCatalog.Find("xps3002") == targetDefinition, "diagnost
 Require(CompilerDiagnosticCatalog.Find("XPS9999") is null, "unknown diagnostic lookup");
 var securityUnavailableDefinition = CompilerDiagnosticCatalog.Find("XPS7001");
 Require(securityUnavailableDefinition is not null, "XPS7001 diagnostic definition");
-Require(securityUnavailableDefinition.Category == "security", "XPS7001 category");
+Require(securityUnavailableDefinition!.Category == "security", "XPS7001 category");
 Require(securityUnavailableDefinition.DocumentationIds.Contains("security.DependencyAudit"), "XPS7001 dependency audit documentation");
 var securityVulnerabilityDefinition = CompilerDiagnosticCatalog.Find("XPS7002");
 Require(securityVulnerabilityDefinition is not null, "XPS7002 diagnostic definition");
-Require(securityVulnerabilityDefinition.Category == "security", "XPS7002 category");
+Require(securityVulnerabilityDefinition!.Category == "security", "XPS7002 category");
 Require(securityVulnerabilityDefinition.Properties.SequenceEqual(["package", "version", "severity", "advisory"]), "XPS7002 properties");
 Require(securityVulnerabilityDefinition.DocumentationIds.Contains("security.DependencyAudit"), "XPS7002 dependency audit documentation");
 
 var unterminatedStringDefinition = CompilerDiagnosticCatalog.Find("XPS1006");
 Require(unterminatedStringDefinition is not null, "XPS1006 diagnostic definition");
-Require(unterminatedStringDefinition.Category == "syntax", "XPS1006 category");
+Require(unterminatedStringDefinition!.Category == "syntax", "XPS1006 category");
 Require(unterminatedStringDefinition.Properties.SequenceEqual(["foundToken", "expectedConstruct"]), "XPS1006 properties");
 
 var auditFindings = ApplicationSecurityAudit.Parse("""
@@ -47,7 +47,7 @@ Require(auditFindings[1].Package == "Moderate.Package" && auditFindings[1].Sever
 var auditUnavailable = ApplicationSecurityAudit.ParseUnavailable(
     "warning NU1900: Error occurred while getting package vulnerability data: service unavailable");
 Require(auditUnavailable is not null, "security audit unavailable warning");
-Require(auditUnavailable.Code == "NU1900", "security audit unavailable upstream code");
+Require(auditUnavailable!.Code == "NU1900", "security audit unavailable upstream code");
 Require(auditUnavailable.Message.Contains("service unavailable", StringComparison.Ordinal), "security audit unavailable message");
 
 
@@ -67,7 +67,7 @@ Require(CompilerDocumentationCatalog.All.Select(x => x.Id).SequenceEqual(
 
 var schemaSymbol = CompilerSymbolCatalog.Find("XPJsonSchema.FromJson");
 Require(schemaSymbol is not null, "XPJsonSchema.FromJson symbol definition");
-Require(schemaSymbol.Kind == "method", "symbol kind");
+Require(schemaSymbol!.Kind == "method", "symbol kind");
 Require(schemaSymbol.ReturnType == "XPJsonSchema", "symbol return type");
 Require(schemaSymbol.Parameters.SequenceEqual([new CompilerSymbolParameter("value", "Variant")]), "symbol parameters");
 Require(schemaSymbol.DocumentationId == "api.XPJsonSchema.FromJson", "symbol documentation id");
