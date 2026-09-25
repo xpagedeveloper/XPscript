@@ -1,9 +1,11 @@
 using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace XPScript.UI.Browser;
 
+[SupportedOSPlatform("browser")]
 public static partial class BrowserFormHost
 {
     private const string NavigationStateStorageKey = "xpscript.request-state.navigation";

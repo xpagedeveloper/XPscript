@@ -68,7 +68,7 @@ var values = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCas
     ["enabled"] = JsonSerializer.SerializeToElement(true)
 };
 var resultJson = XpsUIDesktopRuntimeBridge.SerializeResult(new DesktopFormResult("OK", values));
-using var result = XPJsonDocument.Parse(resultJson);
+using var result = JsonDocument.Parse(resultJson);
 var root = result.RootElement;
 if (root.GetProperty("result").GetString() != "OK")
     throw new InvalidOperationException("Desktop UIForm result mismatch.");

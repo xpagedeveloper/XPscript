@@ -89,6 +89,8 @@ internal static class CompilerOutputPublisher
 
             foreach (var publishedFile in Directory.EnumerateFiles(publishFullPath, "*", SearchOption.TopDirectoryOnly))
             {
+                if (IsUnneededNativeDebugSymbol(publishedFile)) continue;
+
                 var isExecutable = PathsEqual(publishedFile, generatedExecutableFullPath);
                 var fileName = isExecutable ? outputExecutableName : Path.GetFileName(publishedFile);
                 if (string.IsNullOrWhiteSpace(fileName) || !seenNames.Add(fileName))
@@ -151,6 +153,13 @@ internal static class CompilerOutputPublisher
         {
             try { DeleteStageDirectory(stageDirectory); } catch { }
         }
+    }
+
+    private static bool IsUnneededNativeDebugSymbol(string path)
+    {
+        var fileName = Path.GetFileName(path);
+        return fileName.Equals("libSkiaSharp.pdb", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Equals("libHarfBuzzSharp.pdb", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void StageAdditionalDependency(

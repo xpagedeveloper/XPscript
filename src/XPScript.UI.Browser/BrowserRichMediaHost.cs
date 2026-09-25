@@ -1,8 +1,10 @@
 using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.Versioning;
 using System.Text.Json;
 
 namespace XPScript.UI.Browser;
 
+[SupportedOSPlatform("browser")]
 internal static partial class BrowserRichMediaHost
 {
     internal static void Apply(JSObject root, string requestJson)

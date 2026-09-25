@@ -1,8 +1,10 @@
 using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.Versioning;
 using System.Text.Json;
 
 namespace XPScript.UI.Browser;
 
+[SupportedOSPlatform("browser")]
 public static partial class BrowserFormLifecycleHost
 {
     public static string ShowDialog(string requestJson) => Show(requestJson, (Func<string, string, string>?)null);
