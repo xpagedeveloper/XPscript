@@ -17,6 +17,15 @@ Sub Main()
     If copy2.Format <> "png" Then
         Error 5, "XPImage format round-trip failed"
     End If
+    Dim overlay As New XPImage(2, 2, "#ff0000")
+    img.Resize(12, 12, "contain")
+    img.Pad(16, 16, "transparent")
+    img.Composite(overlay, 2, 2, 0.5)
+    img.Opacity(0.9)
+    img.Flatten("#ffffff")
+    If img.Width <> 16 Or img.Height <> 16 Then
+        Error 5, "XPImage geometry/composition failed"
+    End If
     Print "XPIMAGE-RUNTIME=OK"
     
 End Sub
