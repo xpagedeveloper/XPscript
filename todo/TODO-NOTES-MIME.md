@@ -120,7 +120,7 @@ Branch: `feature/notes-mime-entity`
 - [x] Verify nested custom header create, mutation and readback
 - [x] Verify nested standard MIME header parameter lookup and mutation
 - [x] Verify nested Content-Disposition filename parameter mutation and readback
-- [ ] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
+- [x] Recheck the full Compile workflow after the existing Linux `native-csv-regression.xps` compile failure is resolved; Linux currently fails before reaching the Notes MIME compile step
 
 The remaining nested decoded-body issue is tracked separately: Notes preserves the nested RFC822 entity headers but drops its body during the current full MIME itemization writeback path. Direct-child decoded and raw streams are verified.
 
