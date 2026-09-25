@@ -832,7 +832,7 @@ Use `Application.Secrets` for sensitive material such as:
 - [x] Map existing `[Authenticated]` to the new engine.
 - [x] Map existing `[Rule:...]` behavior to the new engine without breaking compatibility.
 - [x] Standardize 401 versus 403 behavior.
-- [ ] Add tests for authentication and policy evaluation.
+- [x] Add tests for authentication and policy evaluation.
 
 ### Phase 2 - Authorization provider interfaces and management API
 
