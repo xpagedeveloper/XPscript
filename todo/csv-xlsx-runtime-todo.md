@@ -23,7 +23,7 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 
 ## CSV read support
 
-- [ ] Add a `CSVDocument` / `CSVReader` API or equivalent stable XPScript surface.
+- [x] Add a `CSVDocument` / `CSVReader` API or equivalent stable XPScript surface.
 - [x] Read CSV from file path.
 - [x] Read CSV from Byte array / stream-compatible input where practical.
 - [ ] Configurable delimiter, including comma, semicolon and tab.
@@ -32,7 +32,7 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 - [x] Support files with or without header row.
 - [x] Support configurable encoding with UTF-8 as the default.
 - [x] Detect/handle UTF-8 BOM safely.
-- [ ] Support bounded row, column, field-length and total-input limits.
+- [x] Support bounded row, column, field-length and total-input limits.
 - [ ] Optional type inference, disabled or conservative by default to avoid surprising conversions.
 - [ ] Preserve empty field versus missing column semantics explicitly.
 
@@ -131,10 +131,10 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 
 ## API examples to validate
 
-- [ ] `Dim csv As CSVDocument = CSVDocument.Load("input.csv")` or equivalent compiler-valid syntax.
-- [ ] `Print csv.RowCount`
+- [x] `Dim csv As CSVDocument = CSVDocument.Load("input.csv")` or equivalent compiler-valid syntax.
+- [x] `Print csv.RowCount`
 - [ ] `Print csv.GetValue(1, "Name")`
-- [ ] `Call csv.Save("output.csv")`
+- [x] `Call csv.Save("output.csv")`
 - [ ] `Dim book As New ExcelWorkbook`
 - [ ] `Dim sheet As Variant = book.AddWorksheet("Data")`
 - [ ] `Call sheet.SetValue("A1", "Name")`
