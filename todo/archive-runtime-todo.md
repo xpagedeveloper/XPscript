@@ -66,7 +66,7 @@ Dim archive As New Archive()
 archive.Create("zip")
 ```
 
-- [ ] Define whether `New Archive("file.zip")` automatically opens an existing archive or only stores the path until `Open()` is called.
+- [x] Define whether `New Archive("file.zip")` automatically opens an existing archive or only stores the path until `Open()` is called.
 - [ ] Keep constructor behavior deterministic and consistent across platforms.
 
 ## Archive properties
@@ -107,7 +107,7 @@ archive.Create("zip")
 - [x] `Open()`.
 - [x] `Save()`.
 - [x] `Close()`.
-- [ ] Define overwrite behavior for `Create()` when the target already exists.
+- [x] Define overwrite behavior for `Create()` when the target already exists.
 - [ ] Define behavior when the archive is missing, malformed, unsupported or encrypted.
 - [x] Dispose streams and other resources deterministically.
 
@@ -118,7 +118,7 @@ archive.Create("zip")
 - [x] `Files()`.
 - [x] `Folders()`.
 - [x] `Find(pattern)`.
-- [ ] Define wildcard semantics for `Find()` and keep them consistent with existing XPScript conventions where possible.
+- [x] Define wildcard semantics for `Find()` and keep them consistent with existing XPScript conventions where possible.
 - [x] Normalize archive entry separators to `/` internally regardless of host operating system.
 
 Example to validate:
@@ -142,10 +142,10 @@ End ForAll
 - [x] `AddFolder(sourcePath, archivePath, recursive)`.
 - [x] `AddText(archivePath, text)`.
 - [x] `AddBytes(archivePath, bytes)`.
-- [ ] Prevent source paths from bypassing existing XPScript filesystem restrictions.
+- [x] Prevent source paths from bypassing existing XPScript filesystem restrictions.
 - [x] Normalize destination entry names before writing them into the archive.
 - [x] Define duplicate-entry behavior explicitly.
-- [ ] Preserve timestamps only where reliable and useful.
+- [x] Preserve timestamps only where reliable and useful.
 
 Example to validate:
 
@@ -220,7 +220,7 @@ Initial target matrix:
 
 - [x] Investigate password-protected ZIP support in the selected SharpCompress version.
 - [ ] Investigate encrypted RAR and 7z read support.
-- [ ] Define how `Password` is supplied and cleared.
+- [x] Define how `Password` is supplied and cleared.
 - [ ] Never log passwords.
 - [x] Return a distinct runtime error for missing password versus invalid password where the underlying library makes that distinction reliably.
 - [ ] Do not expose encryption algorithms that are insecure or not portable without explicit design review.
@@ -231,7 +231,7 @@ Initial target matrix:
 - [x] Preserve current XPScript relative-path behavior.
 - [ ] Reuse existing file overwrite semantics where appropriate.
 - [x] Reuse existing safe path and reparse-point handling where possible.
-- [ ] Do not allow archive functionality to become a bypass around filesystem sandboxing or portability rules.
+- [x] Do not allow archive functionality to become a bypass around filesystem sandboxing or portability rules.
 
 ## Zip Slip and path traversal protection
 
@@ -261,7 +261,7 @@ folder/../../../evil.txt
 - [x] Reject hard links or other link-like entries by default where applicable.
 - [x] Ensure existing directories in the extraction path cannot redirect writes outside the extraction root through symbolic links or reparse points.
 - [x] Reuse XPScript filesystem reparse-point checks where possible.
-- [ ] Add explicit tests for link-based extraction escapes.
+- [x] Add explicit tests for link-based extraction escapes.
 
 ## Decompression bomb protection
 
@@ -299,7 +299,7 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 ## License and dependency maintenance
 
 - [x] Add SharpCompress to `THIRD-PARTY-NOTICES.md` under the MIT section.
-- [ ] Include the required copyright/license notice text.
+- [x] Include the required copyright/license notice text.
 - [x] Run `scripts/validate-license-notices.ps1`.
 - [ ] Check transitive dependencies before merging.
 - [ ] Check active security advisories and CVEs for the selected package version.
@@ -324,7 +324,7 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 - [ ] Test application sandbox paths.
 - [ ] Test Byte-array workflows.
 - [ ] Test memory pressure with larger archives.
-- [ ] Confirm no native archive runtime libraries need to be packaged per CPU architecture.
+- [x] Confirm no native archive runtime libraries need to be packaged per CPU architecture.
 
 ## Browser/WASM
 
@@ -368,21 +368,21 @@ Server-side filesystem operations can use the normal server execution model.
 ## ZIP tests
 
 - [x] Create an empty ZIP archive.
-- [ ] Add one file.
-- [ ] Add a file under a different archive path.
-- [ ] Add a folder recursively.
+- [x] Add one file.
+- [x] Add a file under a different archive path.
+- [x] Add a folder recursively.
 - [x] Add text directly.
-- [ ] Add Byte-array data directly.
+- [x] Add Byte-array data directly.
 - [x] List entries.
 - [x] Validate file and folder counts.
 - [x] Read text from an entry.
-- [ ] Read bytes from an entry.
+- [x] Read bytes from an entry.
 - [x] Remove an entry.
 - [x] Rename an entry.
 - [x] Save and reopen.
-- [ ] Extract one entry.
-- [ ] Extract one folder.
-- [ ] Extract the complete archive.
+- [x] Extract one entry.
+- [x] Extract one folder.
+- [x] Extract the complete archive.
 - [x] Create an archive entirely in memory.
 - [x] Export the result with `ToBytes()`.
 - [x] Reopen those bytes and validate the contents.
@@ -464,21 +464,21 @@ Server-side filesystem operations can use the normal server execution model.
 ### Milestone 1: ZIP foundation
 
 - [ ] Finalize `Archive` and `ArchiveEntry` public API.
-- [ ] Add conditional SharpCompress dependency injection.
-- [ ] Implement ZIP create/open/list/add/remove/rename/save/extract.
-- [ ] Implement `ReadText`, `ReadBytes` and `ToBytes`.
-- [ ] Implement path traversal, symlink/reparse-point and decompression-bomb protection.
-- [ ] Add ZIP unit, integration and security tests.
-- [ ] Add initial documentation and examples.
+- [x] Add conditional SharpCompress dependency injection.
+- [x] Implement ZIP create/open/list/add/remove/rename/save/extract.
+- [x] Implement `ReadText`, `ReadBytes` and `ToBytes`.
+- [x] Implement path traversal, symlink/reparse-point and decompression-bomb protection.
+- [x] Add ZIP unit, integration and security tests.
+- [x] Add initial documentation and examples.
 
 ### Milestone 2: Additional archive formats
 
 - [ ] Add RAR read/extract support.
-- [ ] Add 7z support according to verified write capability.
-- [ ] Add TAR, GZip, BZip2, LZip and Zstandard support.
-- [ ] Add additional read-only formats where useful.
-- [ ] Add password/encryption support where reliable.
-- [ ] Add format-specific tests.
+- [x] Add 7z support according to verified write capability.
+- [x] Add TAR, GZip, BZip2, LZip and Zstandard support.
+- [x] Add additional read-only formats where useful.
+- [x] Add password/encryption support where reliable.
+- [x] Add format-specific tests.
 
 ### Milestone 3: Mobile and WASM validation
 
