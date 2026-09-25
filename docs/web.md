@@ -74,7 +74,7 @@ Sub GetOrder([FromRoute] id As Integer, [FromQuery] details As Boolean, [FromHea
 End Sub
 ```
 
-Supported parameter bindings are `[FromRoute]`, `[FromQuery]`, `[FromHeader]`, `[FromHeader:"Header-Name"]` and `[FromBody]`. Route, query and header values are converted to the declared parameter type. Without an explicit binding, the runtime first checks a matching route parameter, then query string, then JSON body for a complex type.
+Supported parameter bindings are `[FromRoute]`, `[FromQuery]`, `[FromHeader]`, `[FromHeader:"Header-Name"]`, `[FromCookie]`, `[FromCookie:"Cookie-Name"]` and `[FromBody]`. Route, query, header and cookie values are converted to the declared parameter type. Without an explicit binding, the runtime first checks a matching route parameter, then query string, then JSON body for a complex type.
 
 Explicit REST routes are indexed across the web root. Duplicate route/method combinations are rejected. Parameter names in templates do not make otherwise identical templates unique, so `/api/users/{id}` and `/api/users/{name}` conflict when they use the same HTTP method.
 

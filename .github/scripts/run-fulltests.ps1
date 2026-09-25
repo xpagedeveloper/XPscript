@@ -14,9 +14,22 @@ function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeou
   foreach ($argument in $arguments) { [void] $si.ArgumentList.Add([string] $argument) }
   $p = [System.Diagnostics.Process]::new(); $p.StartInfo = $si
   try {
+    $startedAt = [DateTimeOffset]::UtcNow
+    $timer = [System.Diagnostics.Stopwatch]::StartNew()
+    Write-Host "FULLTEST_PROCESS_START label=$label timeout_ms=$timeoutMilliseconds utc=$($startedAt.ToString('O'))"
     if (-not $p.Start()) { throw "Unable to start: $label" }
+    Write-Host "FULLTEST_PROCESS_PID label=$label pid=$($p.Id)"
     $stdoutTask = $p.StandardOutput.ReadToEndAsync(); $stderrTask = $p.StandardError.ReadToEndAsync()
-    if (-not $p.WaitForExit($timeoutMilliseconds)) { Write-Error "FULLTEST_TIMEOUT: $label (pid=$($p.Id))"; try { $p.Kill($true) } catch { Write-Warning "Failed to kill ${label}: $_" }; [void] $p.WaitForExit(10000); exit 124 }
+    if (-not $p.WaitForExit($timeoutMilliseconds)) {
+      $timer.Stop()
+      Write-Host "FULLTEST_PROCESS_TIMEOUT label=$label pid=$($p.Id) elapsed_ms=$($timer.ElapsedMilliseconds)"
+      Write-Error "FULLTEST_TIMEOUT: $label (pid=$($p.Id))"
+      try { $p.Kill($true) } catch { Write-Warning "Failed to kill ${label}: $_" }
+      [void] $p.WaitForExit(10000)
+      exit 124
+    }
+    $timer.Stop()
+    Write-Host "FULLTEST_PROCESS_EXIT label=$label pid=$($p.Id) exit_code=$($p.ExitCode) elapsed_ms=$($timer.ElapsedMilliseconds)"
     $stdout = $stdoutTask.GetAwaiter().GetResult(); $stderr = $stderrTask.GetAwaiter().GetResult()
     if ($stdout) { Write-Host $stdout.TrimEnd() }; if ($stderr) { Write-Host $stderr.TrimEnd() }
     return [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $stdout + $stderr }
@@ -49,9 +62,17 @@ if (Should-Run 'notes') {
 
 if (Should-Run 'runtime') {
   Write-Host '=== XP RUNTIME FULLTEST ==='
-  # Keep the most recently failing runtime regression first for fast CI feedback.
+  # Keep the most recently failing regression first so CI surfaces it immediately.
+  Write-Host 'FULLTEST_CHECKPOINT=xpspreadsheet-invalid-format-first'
+  Compile-Xps ./demo/spreadsheet/xpspreadsheet-invalid-format.xps xpspreadsheet-invalid-format
+  $r = Invoke-Bounded (Get-XpsExe xpspreadsheet-invalid-format) @() $runtimeTimeoutMilliseconds 'unsupported spreadsheet format'
+  if ($r.ExitCode -eq 0 -or $r.Output -notmatch 'supports only \.xlsx files') { throw 'XPSpreadsheet unsupported-format regression failed.' }
+  Write-Host 'FULLTEST_CHECKPOINT=xpspreadsheet-invalid-format-passed'
+
+  # Keep the main-branch spreadsheet styles regression early as well.
   Run-Xps ./demo/spreadsheet/xpspreadsheet-styles.xps xpspreadsheet-styles | Out-Null
-  # Run the actively developed JSON Schema regression before the slower runtime matrix.
+
+  # Run the actively developed JSON Schema regression next.
   $jsonSchema = Run-Xps ./samples/xpjsonschema-runtime.xps xpjsonschema-runtime
   if ($jsonSchema.Output -notmatch 'XPJSONSCHEMA-RUNTIME=OK') { throw 'XPJsonSchema runtime regression did not complete.' }
   $jsonSchemaBoolean = Run-Xps ./samples/xpjsonschema-boolean-runtime.xps xpjsonschema-boolean-runtime
@@ -63,8 +84,6 @@ if (Should-Run 'runtime') {
     Add-Type -AssemblyName System.IO.Compression; $zip = [System.IO.Compression.ZipFile]::OpenRead($xlsx.FullName)
     try { $marker = $zip.GetEntry('docProps/custom.xml'); if ($null -eq $marker) { throw 'XPSpreadsheet workbook marker is missing.' }; $reader = [System.IO.StreamReader]::new($marker.Open()); try { $text = $reader.ReadToEnd() } finally { $reader.Dispose() }; if ($text -notmatch 'XPScriptWorkbookVersion' -or $text -notmatch '>2<') { throw 'XPSpreadsheet workbook marker is invalid.' } } finally { $zip.Dispose() }
   }
-  Compile-Xps ./demo/spreadsheet/xpspreadsheet-invalid-format.xps xpspreadsheet-invalid-format
-  $r = Invoke-Bounded (Get-XpsExe xpspreadsheet-invalid-format) @() $runtimeTimeoutMilliseconds 'unsupported spreadsheet format'; if ($r.ExitCode -eq 0 -or $r.Output -notmatch 'supports only \.xlsx files') { throw 'XPSpreadsheet unsupported-format regression failed.' }
   Run-Xps ./samples/native-csv-regression.xps native-csv-regression | Out-Null
   Run-Xps ./samples/native-xml-dom-regression.xps native-xml-dom-regression | Out-Null
   $r = Run-Xps ./samples/xpai-structured-output.xps xpai-structured

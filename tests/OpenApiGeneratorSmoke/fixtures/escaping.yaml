@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: "Escaping \"Corpus\" åäö 東京"
+  version: "1.0.0-beta+test"
+servers:
+  - url: "https://example.test/api"
+paths:
+  /quote:
+    get:
+      operationId: escapedText
+      responses:
+        '200':
+          description: "quoted \"response\""
+          content:
+            application/json:
+              schema: { type: string }

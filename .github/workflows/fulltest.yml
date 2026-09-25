@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, compiler-command-member-scope]
+    branches: [main, openapi-client-v2]
   workflow_dispatch:
 
 permissions:
@@ -15,6 +15,48 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  openapi-branch-smoke:
+    name: OpenAPI branch smoke (${{ matrix.name }})
+    if: github.event_name == 'push' && github.ref == 'refs/heads/openapi-client-v2'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+          - name: Linux
+            os: ubuntu-latest
+          - name: macOS
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run OpenAPI generator smoke
+        run: dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release
+
+  macos-spreadsheet-regression:
+    name: macOS spreadsheet regression first
+    if: github.event_name == 'push' && github.ref == 'refs/heads/openapi-client-v2'
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler once
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Run failing spreadsheet regression first
+        shell: pwsh
+        run: ./.github/scripts/run-fulltests.ps1 -Suite runtime
+
   windows-gate:
     name: Windows Gate
     runs-on: windows-latest
@@ -53,30 +95,96 @@ jobs:
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Compile ordinary application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary.exe --runtime=false
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --runtime=false
       - name: Verify generated license notice
-        shell: pwsh
+        shell: bash
         run: |
-          if (-not (Test-Path ./out/Third-party-license.txt)) { throw 'Missing Third-party-license.txt' }
-          $notice = Get-Content ./out/Third-party-license.txt -Raw
-          if ($notice -notmatch 'Apache License') { throw 'Generated notice does not contain the XPScript Apache license.' }
+          test -f ./out/Third-party-license.txt
+          grep -q 'Apache License' ./out/Third-party-license.txt
+      - name: Compile self-contained license notice probe
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out-selfcontained/ordinary --runtime=true
+      - name: Verify self-contained .NET notices
+        shell: bash
+        run: |
+          test -f ./out-selfcontained/Third-party-license.txt
+          grep -q 'Microsoft .NET runtime bundled with this application' ./out-selfcontained/Third-party-license.txt
+          grep -q '.NET third-party notices' ./out-selfcontained/Third-party-license.txt
       - name: Compile XPAi structured output
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured.exe --runtime=false
-      - name: Compile native XML DOM regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom.exe --runtime=false
-      - name: Run native XML DOM regression
-        run: ./out/native-xml-dom.exe
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --runtime=false
       - name: Compile UIForm application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform.exe --runtime=false
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --runtime=false
       - name: Compile web application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --runtime=false --output ./out/web
       - name: Compile Notes rich-text surface
-        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext.exe
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext
       - name: Compile Notes MIME surface
-        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-mime-entity-surface.xps ./out/notes-mime.exe
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-mime-entity-surface.xps ./out/notes-mime
       - name: Compile Notes core database surface
-        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-session-database-open-runtime-test.xps ./out/notes-core-database.exe
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-session-database-open-runtime-test.xps ./out/notes-core-database
 
+  compile-macos:
+    name: Compile macOS
+    needs: fulltest-windows
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile ordinary application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --runtime=false
+      - name: Verify generated license notice
+        run: |
+          test -f ./out/Third-party-license.txt
+          grep -q 'Apache License' ./out/Third-party-license.txt
+      - name: Compile XPAi structured output
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --runtime=false
+      - name: Compile native XML DOM regression
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom --runtime=false
+      - name: Run native XML DOM regression
+        run: ./out/native-xml-dom
+      - name: Compile UIForm application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --runtime=false
+      - name: Compile web application
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --runtime=false --output ./out/web
+      - name: Compile Notes rich-text surface
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext
+      - name: Compile Notes MIME surface
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-mime-entity-surface.xps ./out/notes-mime
+      - name: Compile Notes core database surface
+        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-session-database-open-runtime-test.xps ./out/notes-core-database
+
+  fulltest-unix:
+    name: ${{ matrix.name }} FullTest
+    needs: [compile-linux, compile-macos]
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu
+            os: ubuntu-latest
+          - name: macOS
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler once
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Run all ${{ matrix.name }} FullTests
+        shell: pwsh
+        run: ./.github/scripts/run-fulltests.ps1
   fulltest-windows:
     name: Windows ${{ matrix.name }} FullTest
     needs: compile-windows
@@ -110,7 +218,7 @@ jobs:
 
   compile-linux:
     name: Compile Linux
-    needs: fulltest-windows
+    needs: windows-gate
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -240,13 +348,47 @@ jobs:
         run: dotnet run --project ./tests/WebBrowserWasmMultiWindowSmoke/WebBrowserWasmMultiWindowSmoke.csproj -c Release
       - name: Verify desktop UIForm lifecycle
         run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
-
-      - name: Verify OpenAPI REST generator
-        run: dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release
-      - name: Verify OpenAPI unified CLI generate
-        run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./tests/OpenApiGeneratorSmoke/petstore.yaml -o ./out/generated-openapi.xps --force
-      - name: Verify OpenAPI unified CLI import
-        run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi import ./tests/OpenApiGeneratorSmoke/petstore-reimport.yaml -o ./out/generated-openapi.xps
+      - name: Generate OpenAPI API consumer for compile test
+        run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate ./tests/OpenApiGeneratorSmoke/client-ci.yaml -o ./out/generated-openapi-client.xps
+      - name: Verify generated OpenAPI API consumer surface
+        shell: bash
+        run: |
+          test -f ./out/generated-openapi-client.xps
+          grep -q 'Public Class ClientCI_API' ./out/generated-openapi-client.xps
+          grep -q 'XPJsonSchema.Parse' ./out/generated-openapi-client.xps
+          grep -q 'XPJsonArray' ./out/generated-openapi-client.xps
+          grep -q 'Optional Expand As Variant = Nothing' ./out/generated-openapi-client.xps
+          grep -q 'Public Class ItemChoice' ./out/generated-openapi-client.xps
+          grep -q 'Public Class ItemEnvelope' ./out/generated-openapi-client.xps
+          grep -q '^Enum ItemState$' ./out/generated-openapi-client.xps
+          grep -q '    new' ./out/generated-openapi-client.xps
+          grep -q '    active' ./out/generated-openapi-client.xps
+          grep -q '    archived' ./out/generated-openapi-client.xps
+          ! grep -qi 'UIForm' ./out/generated-openapi-client.xps
+      - name: Compile generated OpenAPI API consumer
+        shell: bash
+        run: |
+          cp ./out/generated-openapi-client.xps ./out/generated-openapi-client-host.xps
+          printf '\nSub Main()\nEnd Sub\n' >> ./out/generated-openapi-client-host.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi-client-host.xps -o ./out/generated-openapi-client --runtime=false
+      - name: Verify OpenAPI YML API consumer generate and compile
+        shell: bash
+        run: |
+          cp ./tests/OpenApiGeneratorSmoke/client-ci.yaml ./out/client-ci.yml
+          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate ./out/client-ci.yml -o ./out/generated-openapi-yml-client.xps
+          cp ./out/generated-openapi-yml-client.xps ./out/generated-openapi-yml-client-host.xps
+          printf '\nSub Main()\nEnd Sub\n' >> ./out/generated-openapi-yml-client-host.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi-yml-client-host.xps -o ./out/generated-openapi-yml-client --runtime=false
+      - name: Verify OpenAPI JSON API consumer generate and compile
+        shell: bash
+        run: |
+          dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate ./tests/OpenApiGeneratorSmoke/petstore.json -o ./out/generated-openapi-json-client.xps
+          cp ./out/generated-openapi-json-client.xps ./out/generated-openapi-json-client-host.xps
+          printf '\nSub Main()\nEnd Sub\n' >> ./out/generated-openapi-json-client-host.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/generated-openapi-json-client-host.xps -o ./out/generated-openapi-json-client --runtime=false
+      - name: Verify OpenAPI REST server generation, import, and compilation
+        shell: bash
+        run: bash ./tests/OpenApiGeneratorSmoke/run-rest-host-ci.sh
       - name: Compile ordinary application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --runtime=false
       - name: Verify generated license notice
@@ -274,67 +416,3 @@ jobs:
         run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-mime-entity-surface.xps ./out/notes-mime
       - name: Compile Notes core database surface
         run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-session-database-open-runtime-test.xps ./out/notes-core-database
-
-  compile-macos:
-    name: Compile macOS
-    needs: fulltest-windows
-    runs-on: macos-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '10.0.x'
-      - name: Restore compiler
-        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
-      - name: Build compiler
-        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      - name: Compile ordinary application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/hello.xps -o ./out/ordinary --runtime=false
-      - name: Verify generated license notice
-        run: |
-          test -f ./out/Third-party-license.txt
-          grep -q 'Apache License' ./out/Third-party-license.txt
-      - name: Compile XPAi structured output
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --runtime=false
-      - name: Compile native XML DOM regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/native-xml-dom-regression.xps -o ./out/native-xml-dom --runtime=false
-      - name: Run native XML DOM regression
-        run: ./out/native-xml-dom
-      - name: Compile UIForm application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --runtime=false
-      - name: Compile web application
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --runtime=false --output ./out/web
-      - name: Compile Notes rich-text surface
-        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-richtext-linked-objects-surface.xps ./out/notes-richtext
-      - name: Compile Notes MIME surface
-        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-mime-entity-surface.xps ./out/notes-mime
-      - name: Compile Notes core database surface
-        run: dotnet run --project ./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj -c Release -- ./samples/notes-session-database-open-runtime-test.xps ./out/notes-core-database
-
-  fulltest-unix:
-    name: ${{ matrix.name }} FullTest
-    needs: [compile-linux, compile-macos]
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Ubuntu
-            os: ubuntu-latest
-          - name: macOS
-            os: macos-latest
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '10.0.x'
-      - name: Build compiler once
-        shell: pwsh
-        run: |
-          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
-          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      - name: Run all ${{ matrix.name }} FullTests
-        shell: pwsh
-        run: ./.github/scripts/run-fulltests.ps1

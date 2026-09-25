@@ -10,7 +10,7 @@ internal static class XpsApiDocGenerator
     private static readonly Regex RoutePattern = new(@"^\s*\[(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS):([^\]]+)\]\s*$", RegexOptions.IgnoreCase);
     private static readonly Regex JsonSchemaPattern = new(@"^\s*\[JsonSchema:([^\]]+)\]\s*$", RegexOptions.IgnoreCase);
     private static readonly Regex ProcedurePattern = new(@"^\s*(?:Public\s+|Private\s+)?(Sub|Function)\s+([A-Za-z_]\w*)\s*\((.*)\)\s*(?:As\s+([A-Za-z_]\w*(?:\(\))?))?", RegexOptions.IgnoreCase);
-    private static readonly Regex ParamPattern = new(@"^(?:(?:ByVal|ByRef)\s+)?(?:\[(?:FromRoute|FromQuery|FromBody|FromHeader)(?::[^\]]+)?\]\s*)?([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*(?:\(\))?))?", RegexOptions.IgnoreCase);
+    private static readonly Regex ParamPattern = new(@"^(?:(?:ByVal|ByRef)\s+)?(?:\[(?:FromRoute|FromQuery|FromBody|FromHeader|FromCookie)(?::[^\]]+)?\]\s*)?([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*(?:\(\))?))?", RegexOptions.IgnoreCase);
 
     public static void Generate(string root)
     {

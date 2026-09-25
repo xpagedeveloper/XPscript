@@ -370,6 +370,7 @@ See [REST API development](rest-api.md). The complete runnable demo is [`demo/re
 | `FromRoute` | `[FromRoute] id As Integer` | procedure parameter. | Binds route segment. | [users.xps](../demo/rest-api/users.xps) |
 | `FromQuery` | `[FromQuery] q As String` | procedure parameter. | Binds query-string value. | [web-rest-api.xps](../samples/web-rest-api.xps) |
 | `FromHeader` | `[FromHeader] value As String` | parameter; optional explicit header name form. | Binds request header. | [web-rest-api.xps](../samples/web-rest-api.xps) |
+| `FromCookie` | `[FromCookie] value As String` | parameter; optional explicit cookie name form. | Binds request cookie. | [web-rest-api.xps](../samples/web-rest-api.xps) |
 | `FromBody` | `[FromBody] payload As Model` | typed request model parameter. | Binds JSON request body. | [users.xps](../demo/rest-api/users.xps) |
 | `Required` | `[Required]` | model field. | Requires a REST model field. | [users.xps](../demo/rest-api/users.xps) |
 | `MaxLength` | `[MaxLength:n]` | maximum character count. | Validates REST model text length. | [web-rest-api.xps](../samples/web-rest-api.xps) |

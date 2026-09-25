@@ -35,7 +35,7 @@ public sealed class XpsWebRouteMetadataParser
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     private static readonly Regex ParameterBindingPattern = new(
-        "\\[(FromRoute|FromQuery|FromBody|FromHeader)(?::(?:\"([^\"]+)\"|([^\\]]+)))?\\]\\s*(?:(ByVal|ByRef)\\s+)?([A-Za-z_]\\w*)",
+        "\\[(FromRoute|FromQuery|FromBody|FromHeader|FromCookie)(?::(?:\"([^\"]+)\"|([^\\]]+)))?\\]\\s*(?:(ByVal|ByRef)\\s+)?([A-Za-z_]\\w*)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     private static readonly HashSet<string> ShorthandHttpMethods = new(StringComparer.OrdinalIgnoreCase)
@@ -129,6 +129,14 @@ public sealed class XpsWebRouteMetadataParser
                 {
                     pendingValidation.Add(attribute);
                     output.AppendLine();
+                    continue;
+                }
+
+                // JsonName is compiler metadata for class members, not web-route metadata.
+                // Preserve it so the compiler/transpiler can consume it after route parsing.
+                if (currentClass is not null && attribute.StartsWith("JsonName(", StringComparison.OrdinalIgnoreCase))
+                {
+                    output.AppendLine(raw);
                     continue;
                 }
 

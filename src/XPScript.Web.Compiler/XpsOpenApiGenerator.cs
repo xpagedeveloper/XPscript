@@ -23,14 +23,12 @@ public sealed class XpsOpenApiGenerator
 {
     private static readonly string[] HttpMethods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"];
     private static readonly Regex IdentifierPattern = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant);
-    private static readonly HashSet<string> ReservedIdentifiers = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> LexicalKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
-        "And", "Application", "As", "Body", "Boolean", "ByRef", "ByVal", "Byte", "Call", "Case", "Class",
-        "Const", "Currency", "Date", "Dim", "Do", "Double", "Each", "Else", "ElseIf", "Empty", "End", "Error",
-        "Exit", "False", "For", "Function", "If", "Integer", "Long", "Loop", "Me", "Mod", "New", "Next", "Nothing",
-        "Not", "Null", "Object", "On", "Option", "Or", "Private", "Public", "Request", "Response", "Return", "Select",
-        "Session", "Set", "Single", "Static", "Step", "String", "Sub", "Then", "To", "True", "Variant", "Wend", "While",
-        "With", "Xor"
+        "And", "As", "Boolean", "ByRef", "ByVal", "Call", "Case", "Class", "Const", "Date", "Dim", "Do", "Double",
+        "Each", "Else", "ElseIf", "End", "Enum", "Exit", "False", "For", "Function", "If", "Integer", "Long", "Loop",
+        "Mod", "New", "Next", "Nothing", "Not", "Object", "On", "Option", "Or", "Private", "Public", "Select", "Set",
+        "Single", "Static", "Step", "String", "Sub", "Then", "To", "True", "Variant", "Wend", "While", "With", "Xor"
     };
 
     public XpsOpenApiGenerationResult GenerateFile(string specificationPath)
@@ -45,11 +43,10 @@ public sealed class XpsOpenApiGenerator
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(specification);
         var root = ParseDocument(specification, sourceName);
-        var version = ReadString(root, "openapi")
-            ?? throw new XpsOpenApiGenerationException("OpenAPI document is missing the required 'openapi' version field.");
-        if (!version.StartsWith("3.0.", StringComparison.Ordinal) && !version.StartsWith("3.1.", StringComparison.Ordinal))
-            throw new XpsOpenApiGenerationException($"OpenAPI version '{version}' is unsupported. XPScript supports OpenAPI 3.0.x and 3.1.x.");
+        var normalized = XpsOpenApiSchema.NormalizeDocument(root);
+        var version = normalized.Version;
 
+        using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version);
         var models = CollectComponentModels(root);
         var operations = CollectOperations(root, models);
         if (operations.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI document does not contain any supported path operations.");
@@ -153,6 +150,7 @@ public sealed class XpsOpenApiGenerator
         var operations = new List<OperationModel>();
         var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var rootSecurity = root["security"];
+        ValidateSecuritySchemes(root);
 
         foreach (var pathPair in paths)
         {
@@ -163,17 +161,59 @@ public sealed class XpsOpenApiGenerator
                 if (pathItem[method] is not JsonObject operation) continue;
                 var rawName = ReadString(operation, "operationId") ?? BuildOperationName(method, pathPair.Key);
                 var name = UniqueOperationName(ToTypeIdentifier(rawName, $"operation '{method.ToUpperInvariant()} {pathPair.Key}'"), usedNames);
-                var parameters = new List<ParameterModel>(pathParameters);
-                parameters.AddRange(ReadParameters(root, operation["parameters"], $"{method.ToUpperInvariant()} {pathPair.Key} parameters"));
+                var parameters = MergeParameters(pathParameters, ReadParameters(root, operation["parameters"], $"{method.ToUpperInvariant()} {pathPair.Key} parameters"));
                 EnsureUniqueParameters(parameters, method, pathPair.Key);
                 var body = ReadRequestBody(root, operation["requestBody"], name, models, $"{method.ToUpperInvariant()} {pathPair.Key} requestBody");
                 var responses = ReadResponses(root, operation["responses"], $"{method.ToUpperInvariant()} {pathPair.Key} responses");
                 var security = operation.ContainsKey("security") ? operation["security"] : rootSecurity;
-                var authenticated = security is JsonArray securityArray && securityArray.Count > 0;
+                var authenticated = ReadServerSecurity(root, security, $"{method.ToUpperInvariant()} {pathPair.Key} security");
                 operations.Add(new OperationModel(method.ToUpperInvariant(), pathPair.Key, name, parameters, body, responses, authenticated));
             }
         }
         return operations;
+    }
+
+    private static void ValidateSecuritySchemes(JsonObject root)
+    {
+        if (root["components"] is not JsonObject components || components["securitySchemes"] is not JsonObject schemes) return;
+        foreach (var pair in schemes)
+        {
+            if (pair.Value is not JsonObject scheme)
+                throw new XpsOpenApiGenerationException($"components.securitySchemes.{pair.Key} must be an object.");
+            var type = ReadString(scheme, "type")?.ToLowerInvariant()
+                ?? throw new XpsOpenApiGenerationException($"Security scheme '{pair.Key}' is missing 'type'.");
+            if (type is not ("apikey" or "http" or "oauth2" or "openidconnect" or "mutualtls"))
+                throw new XpsOpenApiGenerationException($"Security scheme '{pair.Key}' uses unsupported type '{type}'.");
+        }
+    }
+
+    private static bool ReadServerSecurity(JsonObject root, JsonNode? node, string context)
+    {
+        if (node is null) return false;
+        if (node is not JsonArray requirements)
+            throw new XpsOpenApiGenerationException($"{context} must be an array.");
+        if (requirements.Count == 0) return false;
+        if (root["components"] is not JsonObject components || components["securitySchemes"] is not JsonObject schemes)
+            throw new XpsOpenApiGenerationException($"{context} references security but components.securitySchemes is missing.");
+        var allowsAnonymous = false;
+        foreach (var requirementNode in requirements)
+        {
+            if (requirementNode is not JsonObject requirement)
+                throw new XpsOpenApiGenerationException($"{context} contains a security requirement that is not an object.");
+            if (requirement.Count == 0)
+            {
+                allowsAnonymous = true;
+                continue;
+            }
+            foreach (var pair in requirement)
+            {
+                if (!schemes.ContainsKey(pair.Key))
+                    throw new XpsOpenApiGenerationException($"{context} references undefined security scheme '{pair.Key}'.");
+                if (pair.Value is not JsonArray)
+                    throw new XpsOpenApiGenerationException($"{context} scheme '{pair.Key}' must declare an array of scopes.");
+            }
+        }
+        return !allowsAnonymous;
     }
 
     private static List<ParameterModel> ReadParameters(JsonObject root, JsonNode? node, string context)
@@ -183,16 +223,32 @@ public sealed class XpsOpenApiGenerator
         if (node is not JsonArray array) throw new XpsOpenApiGenerationException($"{context} must be an array.");
         foreach (var entry in array)
         {
-            var parameter = ResolveObject(root, entry, context);
+            var parameter = XpsOpenApiSchema.Resolve(root, entry, context);
             var name = ReadString(parameter, "name") ?? throw new XpsOpenApiGenerationException($"{context} contains a parameter without a name.");
             var location = ReadString(parameter, "in")?.ToLowerInvariant()
                 ?? throw new XpsOpenApiGenerationException($"Parameter '{name}' in {context} is missing 'in'.");
-            if (location is not ("path" or "query" or "header"))
-                throw new XpsOpenApiGenerationException($"Parameter '{name}' uses unsupported location '{location}'. Supported locations are path, query and header.");
+            if (location == "path" && !ReadBoolean(parameter, "required"))
+                throw new XpsOpenApiGenerationException($"Path parameter '{name}' in {context} must declare required: true.");
+            if (location is not ("path" or "query" or "header" or "cookie"))
+                throw new XpsOpenApiGenerationException($"Parameter '{name}' uses unsupported location '{location}'. Supported locations are path, query, header and cookie.");
             if (parameter["schema"] is not JsonObject schema)
                 throw new XpsOpenApiGenerationException($"Parameter '{name}' in {context} must declare a schema.");
-            var type = GetXpsType(root, schema, $"parameter '{name}'");
+            var type = new XpsType(XpsOpenApiSchema.XpsType(root, schema, $"parameter '{name}'"), XpsOpenApiSchema.IsObjectType(root, schema, $"parameter '{name}'"));
             result.Add(new ParameterModel(name, location, type.TypeName, type.IsObject, ReadBoolean(parameter, "required")));
+        }
+        return result;
+    }
+
+    private static List<ParameterModel> MergeParameters(IReadOnlyList<ParameterModel> inherited, IReadOnlyList<ParameterModel> operation)
+    {
+        var result = new List<ParameterModel>(inherited);
+        foreach (var parameter in operation)
+        {
+            var index = result.FindIndex(existing =>
+                existing.Name.Equals(parameter.Name, StringComparison.Ordinal) &&
+                existing.Location.Equals(parameter.Location, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0) result[index] = parameter;
+            else result.Add(parameter);
         }
         return result;
     }
@@ -205,20 +261,20 @@ public sealed class XpsOpenApiGenerator
         string context)
     {
         if (node is null) return null;
-        var requestBody = ResolveObject(root, node, context);
+        var requestBody = XpsOpenApiSchema.Resolve(root, node, context);
         if (requestBody["content"] is not JsonObject content)
             throw new XpsOpenApiGenerationException($"{context} must declare content.");
         var media = SelectJsonMediaType(content, context);
         if (media["schema"] is not JsonObject schema)
             throw new XpsOpenApiGenerationException($"{context} JSON content must declare a schema.");
 
-        if (TryGetReference(schema, out var reference))
+        if (XpsOpenApiSchema.TryGetReference(schema, out var reference))
         {
-            var resolved = ResolveObject(root, schema, context);
-            return new RequestBodyModel(ReferenceTypeName(reference, context), true, ReadBoolean(requestBody, "required"), resolved);
+            var resolved = XpsOpenApiSchema.Resolve(root, schema, context);
+            return new RequestBodyModel(XpsOpenApiSchema.ReferenceTypeName(reference, context), true, ReadBoolean(requestBody, "required"), resolved);
         }
 
-        var type = GetPrimaryType(schema);
+        var type = XpsOpenApiSchema.PrimaryType(schema);
         if (type == "object" || schema.ContainsKey("properties"))
         {
             var modelName = UniqueModelName(operationName + "Body", models.Keys);
@@ -226,7 +282,7 @@ public sealed class XpsOpenApiGenerator
             return new RequestBodyModel(modelName, true, ReadBoolean(requestBody, "required"), schema);
         }
 
-        var scalarType = GetXpsType(root, schema, context);
+        var scalarType = new XpsType(XpsOpenApiSchema.XpsType(root, schema, context), XpsOpenApiSchema.IsObjectType(root, schema, context));
         return new RequestBodyModel(scalarType.TypeName, scalarType.IsObject, ReadBoolean(requestBody, "required"), schema);
     }
 
@@ -240,7 +296,7 @@ public sealed class XpsOpenApiGenerator
             if (!pair.Key.Equals("default", StringComparison.OrdinalIgnoreCase) &&
                 (!int.TryParse(pair.Key, NumberStyles.None, CultureInfo.InvariantCulture, out var status) || status is < 100 or > 599))
                 throw new XpsOpenApiGenerationException($"Response key '{pair.Key}' in {context} is not a valid HTTP status code or 'default'.");
-            var response = ResolveObject(root, pair.Value, $"{context}.{pair.Key}");
+            var response = XpsOpenApiSchema.Resolve(root, pair.Value, $"{context}.{pair.Key}");
             string? dataType = null;
             if (response["content"] is JsonObject content)
             {
@@ -284,7 +340,7 @@ public sealed class XpsOpenApiGenerator
 
     private static void EmitModel(StringBuilder builder, JsonObject root, string name, JsonObject schema)
     {
-        var resolved = ResolveObject(root, schema, $"schema '{name}'");
+        var resolved = XpsOpenApiSchema.Resolve(root, schema, $"schema '{name}'");
         builder.AppendLine($"Public Class {name}");
         if (resolved["properties"] is not JsonObject properties || properties.Count == 0)
         {
@@ -299,9 +355,9 @@ public sealed class XpsOpenApiGenerator
             var fieldName = ValidateModelMemberName(property.Key, name);
             if (property.Value is not JsonObject propertySchema)
                 throw new XpsOpenApiGenerationException($"Schema '{name}' property '{property.Key}' must be an object.");
-            var fieldType = GetXpsType(root, propertySchema, $"schema '{name}' property '{property.Key}'");
+            var fieldType = new XpsType(XpsOpenApiSchema.XpsType(root, propertySchema, $"schema '{name}' property '{property.Key}'"), XpsOpenApiSchema.IsObjectType(root, propertySchema, $"schema '{name}' property '{property.Key}'"));
             if (required.Contains(property.Key)) builder.AppendLine("    [Required]");
-            var resolvedProperty = ResolveObject(root, propertySchema, $"schema '{name}' property '{property.Key}'");
+            var resolvedProperty = XpsOpenApiSchema.Resolve(root, propertySchema, $"schema '{name}' property '{property.Key}'");
             if (ReadString(resolvedProperty, "format")?.Equals("email", StringComparison.OrdinalIgnoreCase) == true)
                 builder.AppendLine("    [Email]");
             if (TryReadInt(resolvedProperty, "maxLength", out var maxLength) && maxLength > 0)
@@ -343,7 +399,7 @@ public sealed class XpsOpenApiGenerator
         builder.AppendLine($"    Set result = New {responseClass}");
         builder.AppendLine("    ' TODO: implement this operation and set result.StatusCode/result.Data.");
         builder.AppendLine("    result.StatusCode = 501");
-        builder.AppendLine($"    Handle{operation.Name} = result");
+        builder.AppendLine($"    Set Handle{operation.Name} = result");
         builder.AppendLine("End Function");
         builder.AppendLine();
 
@@ -403,6 +459,7 @@ public sealed class XpsOpenApiGenerator
                     "path" => "FromRoute",
                     "query" => "FromQuery",
                     "header" => "FromHeader",
+                    "cookie" => "FromCookie",
                     _ => throw new InvalidOperationException("Unsupported parameter location.")
                 };
                 var escapedName = parameter.Name.Replace("\"", "\"\"", StringComparison.Ordinal);
@@ -430,84 +487,10 @@ public sealed class XpsOpenApiGenerator
         return null;
     }
 
-    private static XpsType GetXpsType(JsonObject root, JsonObject schema, string context)
-    {
-        if (TryGetReference(schema, out var reference))
-        {
-            _ = ResolveObject(root, schema, context);
-            return new XpsType(ReferenceTypeName(reference, context), true);
-        }
-        var resolved = ResolveObject(root, schema, context);
-        var type = GetPrimaryType(resolved);
-        var format = ReadString(resolved, "format")?.ToLowerInvariant();
-        return type switch
-        {
-            "integer" => new XpsType(format == "int32" ? "Integer" : "Long", false),
-            "number" => new XpsType(format == "float" ? "Single" : "Double", false),
-            "boolean" => new XpsType("Boolean", false),
-            "string" => new XpsType(format is "date" or "date-time" ? "Date" : "String", false),
-            "array" => new XpsType("Variant", false),
-            "object" => new XpsType("Variant", false),
-            null => new XpsType("Variant", false),
-            _ => throw new XpsOpenApiGenerationException($"{context} uses unsupported schema type '{type}'.")
-        };
-    }
-
-    private static string? GetPrimaryType(JsonObject schema)
-    {
-        if (schema["type"] is JsonValue value && value.TryGetValue<string>(out var scalar)) return scalar.ToLowerInvariant();
-        if (schema["type"] is JsonArray array)
-        {
-            foreach (var item in array)
-                if (item is JsonValue candidate && candidate.TryGetValue<string>(out var text) && !text.Equals("null", StringComparison.OrdinalIgnoreCase))
-                    return text.ToLowerInvariant();
-            return null;
-        }
-        if (schema.ContainsKey("properties")) return "object";
-        return null;
-    }
-
     private static string DescribeSchemaType(JsonObject root, JsonObject schema, string context)
     {
-        if (TryGetReference(schema, out var reference)) return ReferenceTypeName(reference, context);
-        var type = GetXpsType(root, schema, context).TypeName;
-        return type == "Variant" && GetPrimaryType(schema) == "array" ? "array" : type;
-    }
-
-    private static JsonObject ResolveObject(JsonObject root, JsonNode? node, string context)
-    {
-        if (node is not JsonObject current) throw new XpsOpenApiGenerationException($"{context} must be an object.");
-        for (var depth = 0; depth < 32; depth++)
-        {
-            if (!TryGetReference(current, out var reference)) return current;
-            if (!reference.StartsWith("#/", StringComparison.Ordinal))
-                throw new XpsOpenApiGenerationException($"{context} uses external $ref '{reference}'. Only local OpenAPI references are supported in this generator version.");
-            JsonNode? target = root;
-            foreach (var rawSegment in reference[2..].Split('/'))
-            {
-                var segment = rawSegment.Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal);
-                target = target is JsonObject objectNode && objectNode.TryGetPropertyValue(segment, out var next) ? next : null;
-                if (target is null) throw new XpsOpenApiGenerationException($"{context} references missing OpenAPI component '{reference}'.");
-            }
-            if (target is not JsonObject targetObject)
-                throw new XpsOpenApiGenerationException($"{context} reference '{reference}' does not resolve to an object.");
-            current = targetObject;
-        }
-        throw new XpsOpenApiGenerationException($"{context} exceeds the maximum $ref resolution depth.");
-    }
-
-    private static bool TryGetReference(JsonObject schema, out string reference)
-    {
-        reference = ReadString(schema, "$ref") ?? string.Empty;
-        return reference.Length > 0;
-    }
-
-    private static string ReferenceTypeName(string reference, string context)
-    {
-        if (!reference.StartsWith("#/components/schemas/", StringComparison.Ordinal))
-            throw new XpsOpenApiGenerationException($"{context} schema reference '{reference}' must point to #/components/schemas/... for typed XPScript generation.");
-        var raw = reference[(reference.LastIndexOf('/') + 1)..].Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal);
-        return ToTypeIdentifier(raw, context);
+        if (XpsOpenApiSchema.TryGetReference(schema, out var reference)) return XpsOpenApiSchema.ReferenceTypeName(reference, context);
+        return XpsOpenApiSchema.XpsType(root, schema, context);
     }
 
     private static void EnsureUniqueParameters(IReadOnlyList<ParameterModel> parameters, string method, string path)
@@ -529,8 +512,8 @@ public sealed class XpsOpenApiGenerator
 
     private static string ValidateModelMemberName(string name, string modelName)
     {
-        if (!IdentifierPattern.IsMatch(name) || ReservedIdentifiers.Contains(name))
-            throw new XpsOpenApiGenerationException($"Schema '{modelName}' property '{name}' cannot be represented losslessly as an XPScript field name. Rename the OpenAPI property to a valid non-reserved XPScript identifier.");
+        if (!IdentifierPattern.IsMatch(name) || IsDeclarationReserved(name))
+            throw new XpsOpenApiGenerationException($"Schema '{modelName}' property '{name}' cannot be represented losslessly as an XPScript field name. Rename the OpenAPI property to a valid XPScript identifier in that declaration scope.");
         return name;
     }
 
@@ -542,9 +525,11 @@ public sealed class XpsOpenApiGenerator
         var joined = string.Concat(parts.Select(Pascalize));
         if (joined.Length == 0 || char.IsDigit(joined[0])) joined = "Api" + joined;
         if (!IdentifierPattern.IsMatch(joined)) throw new XpsOpenApiGenerationException($"{context} cannot be converted to an XPScript identifier.");
-        if (ReservedIdentifiers.Contains(joined)) joined = "Api" + joined;
+        if (IsDeclarationReserved(joined)) joined = "Api" + joined;
         return joined;
     }
+
+    private static bool IsDeclarationReserved(string identifier) => identifier.StartsWith("__", StringComparison.OrdinalIgnoreCase) || LexicalKeywords.Contains(identifier);
 
     private static string Pascalize(string value) => value.Length == 0 ? value : char.ToUpperInvariant(value[0]) + value[1..];
 

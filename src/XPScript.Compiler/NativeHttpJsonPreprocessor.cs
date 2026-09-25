@@ -23,7 +23,33 @@ internal sealed class NativeHttpJsonPreprocessor
             var dim = Regex.Match(line, $@"^Dim\s+([A-Za-z_]\w*)\s+As\s+({NativeTypePattern})\s*$", RegexOptions.IgnoreCase);
             if (dim.Success) { var name = dim.Groups[1].Value; var type = dim.Groups[2].Value; nativeVariables.Add(name); nativeTypes[name] = type; output.Add(indent + $"Dim {name} As Variant"); continue; }
 
-            var rewritten = line;
+            // Public XP runtime objects are implemented behind the native preprocessor and therefore
+            // use Variant storage when they appear as class fields as well as local variables.
+            var field = Regex.Match(line, $@"^(Public|Private)\s+([A-Za-z_]\w*)\s+As\s+({NativeTypePattern})\s*$", RegexOptions.IgnoreCase);
+            if (field.Success)
+            {
+                output.Add(indent + $"{field.Groups[1].Value} {field.Groups[2].Value} As Variant");
+                continue;
+            }
+
+            // Native XP objects can also occur in generated/public procedure signatures. Their
+            // implementation contract is Variant at the XPScript transpiler boundary, just like
+            // locals and fields; preserve the public source API while normalizing before parsing.
+            var rewritten = Regex.Replace(
+                line,
+                $@"\bAs\s+({NativeTypePattern})\b",
+                "As Variant",
+                RegexOptions.IgnoreCase);
+
+            // Set is reserved for user-defined XPScript object references. Native XP runtime
+            // objects are Variant-backed after this preprocessor, so assignment to their public
+            // fields must use normal value assignment at the transpiler boundary.
+            rewritten = Regex.Replace(
+                rewritten,
+                @"(?<![A-Za-z0-9_])Set\s+([A-Za-z_]\w*\.(?:Raw|Json|Validation)\s*=)",
+                "$1",
+                RegexOptions.IgnoreCase);
+
             rewritten = Regex.Replace(rewritten, @"\bXPJsonDocument\.Parse\s*\(", "XPScriptNativeJson.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.Parse\s*\(", "XPScriptJsonSchema.Parse(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPJsonSchema\.FromJson\s*\(", "XPScriptJsonSchema.FromJson(", RegexOptions.IgnoreCase);

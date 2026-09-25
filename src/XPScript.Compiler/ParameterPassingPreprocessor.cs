@@ -13,7 +13,7 @@ internal sealed class ParameterPassingPreprocessor
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ArgumentDeclaration = new(
-        @"^(?<leading>\s*)(?:(?<modifier>ByVal|ByRef)\s+)?(?<name>[A-Za-z_]\w*)(?<rest>.*)$",
+        @"^(?<leading>\s*)(?<optional>Optional\s+)?(?:(?<modifier>ByVal|ByRef)\s+)?(?<name>[A-Za-z_]\w*)(?<rest>.*)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public string Transform(string source)
@@ -51,7 +51,7 @@ internal sealed class ParameterPassingPreprocessor
                     activeParameters[originalName] = generatedName;
 
                     var emittedModifier = modifier.Equals("ByVal", StringComparison.OrdinalIgnoreCase) ? "ByVal " : "";
-                    arguments[argIndex] = declaration.Groups["leading"].Value + emittedModifier + generatedName + declaration.Groups["rest"].Value;
+                    arguments[argIndex] = declaration.Groups["leading"].Value + declaration.Groups["optional"].Value + emittedModifier + generatedName + declaration.Groups["rest"].Value;
                 }
 
                 lines[i] = header.Groups["prefix"].Value + string.Join(",", arguments) + header.Groups["suffix"].Value;

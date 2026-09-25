@@ -9,6 +9,10 @@ internal sealed class NothingComparisonValidator
         @"(?ix)(?:\bNothing\b\s*(?<op><>|=)|(?<op><>|=)\s*\bNothing\b)",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex OptionalNothingDefault = new(
+        @"(?ix)\bOptional\b[^,)]*?=\s*Nothing\b",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex SetNothingAssignment = new(
         @"(?ix)\bSet\b[^:=\r\n]*=\s*Nothing\b",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -29,6 +33,7 @@ internal sealed class NothingComparisonValidator
             if (masked.Trim().Length == 0)
                 continue;
 
+            masked = OptionalNothingDefault.Replace(masked, match => new string(' ', match.Length));
             masked = SetNothingAssignment.Replace(masked, match => new string(' ', match.Length));
             masked = DirectNothingAssignment.Replace(masked, match => new string(' ', match.Length));
             var match = InvalidComparison.Match(masked);

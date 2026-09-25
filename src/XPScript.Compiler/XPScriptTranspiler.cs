@@ -103,6 +103,8 @@ public sealed partial class XPScriptTranspiler
         // source markers. Marker insertion adds physical lines and would otherwise shift
         // diagnostics away from the user's XPScript source.
         source = new EscapedQuotePreprocessor().Transform(source);
+        var jsonNames = new JsonNameMetadataPreprocessor();
+        source = jsonNames.Transform(source);
         source = new ReservedIdentifierPreprocessor().Transform(source, sourceName);
         source = new IfLayoutPreprocessor().Transform(source);
         source = new ParameterlessProcedureHeaderPreprocessor().Transform(source);
@@ -175,6 +177,7 @@ public sealed partial class XPScriptTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
+        generated = jsonNames.ApplyToGeneratedCode(generated);
         generated = new ParameterPassingPostProcessor().Transform(generated);
         generated = new NativeInteropDiagnosticsPostProcessor().Transform(generated);
         generated = moduleGlobals.Inject(generated);
