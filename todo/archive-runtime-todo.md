@@ -87,17 +87,17 @@ archive.Create("zip")
 
 ## ArchiveEntry properties
 
-- [ ] `Name As String`.
-- [ ] `FullName As String`.
-- [ ] `Extension As String`.
-- [ ] `Size As Long`.
-- [ ] `CompressedSize As Long`.
-- [ ] `CompressionRatio`.
-- [ ] `Created` where the archive format exposes it reliably.
-- [ ] `Modified` where the archive format exposes it reliably.
-- [ ] `CRC` where available.
-- [ ] `IsDirectory As Boolean`.
-- [ ] `IsEncrypted As Boolean`.
+- [x] `Name As String`.
+- [x] `FullName As String`.
+- [x] `Extension As String`.
+- [x] `Size As Long`.
+- [x] `CompressedSize As Long`.
+- [x] `CompressionRatio`.
+- [x] `Created` where the archive format exposes it reliably.
+- [x] `Modified` where the archive format exposes it reliably.
+- [x] `CRC` where available.
+- [x] `IsDirectory As Boolean`.
+- [x] `IsEncrypted As Boolean`.
 - [ ] Define consistent fallback values when a format does not expose a metadata field.
 
 ## Archive lifecycle
@@ -184,7 +184,7 @@ archive.Save()
 ## In-memory archive support
 
 - [x] Add `ToBytes()`.
-- [ ] Support loading from Byte arrays.
+- [x] Support loading from Byte arrays.
 - [ ] Consider a future stream abstraction if XPScript adds a first-class stream object.
 - [ ] Make in-memory operation the primary integration path for HTTP responses, REST APIs, Notes MIME attachments, database BLOBs and browser/WASM downloads.
 
@@ -214,7 +214,7 @@ Initial target matrix:
 - [ ] XZ read-only unless reliable writing support is available at implementation time.
 - [ ] ARC, ARJ, ACE, LZW and other SharpCompress-supported legacy formats as read-only where practical.
 - [ ] Verify the exact read/write capability matrix against the selected package version before implementation.
-- [ ] Expose `IsReadOnly = True` for formats such as RAR that cannot be modified.
+- [x] Expose `IsReadOnly = True` for formats such as RAR that cannot be modified.
 
 ## Password and encryption support
 
