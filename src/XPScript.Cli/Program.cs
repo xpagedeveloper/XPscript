@@ -505,10 +505,10 @@ XPScript CLI
 One executable is used for compiler, runtime execution, project scaffolding and web hosting.
 
 Usage:
-  xpscript [--info|--debug] compile <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [--result-format text|json|xml]
+  xpscript [--info] compile <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [--result-format text|json|xml]
   xpscript dependencies <source.xps> [--platform RID|--rid RID] [--json]
   xpscript security <source.xps> [--platform RID|--rid RID] [--json]
-  xpscript [--info|--debug] run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
+  xpscript [--info] run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
   xpscript <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [compiler options...]
   xpscript new <rest|web|desktop|cli> <directory>
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
@@ -533,7 +533,7 @@ Command model:
   web      Run the standalone Kestrel runtime.
   fastcgi  Run the FastCGI web runtime.
 
-Running `xpscript` without arguments prints this usage reference. `--info` and `--debug` may appear before or after `run`/`compile`, but cannot be combined. For `run`, only the value supplied to `--Args` is forwarded to the compiled program; for example `xpscript run main.xps --Args "first second"` launches the generated program as `main.exe first second` on Windows.\n\nThe same xpscript executable owns all command modes. The XPScript.Compiler project provides shared compiler services and command handling.
+Running `xpscript` without arguments prints this usage reference. `--info` may appear before or after `run`/`compile`. For `run`, only the value supplied to `--Args` is forwarded to the compiled program; for example `xpscript run main.xps --Args "first second"` launches the generated program as `main.exe first second` on Windows.\n\nThe same xpscript executable owns all command modes. The XPScript.Compiler project provides shared compiler services and command handling.
 
 Config:
   --config FILE loads JSON host settings from the selected file.
@@ -556,7 +556,6 @@ Examples:
   xpscript compile hello.xps
   xpscript compile hello.xps --platform linux-x64 -o hello
   xpscript run hello.xps
-  xpscript --debug run hello.xps
   xpscript run hello.xps --info
   xpscript run hello.xps --Args "first second"
   xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto
