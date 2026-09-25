@@ -216,28 +216,28 @@ Candidate read-only/request-scoped members:
 - [x] `Request.Path`
 - [x] `Request.PathInfo`
 - [x] `Request.QueryString`
-- [ ] query-value access API
+- [x] query-value access API
 - [x] `Request.Headers`
 - [x] `Request.ContentType`
 - [x] `Request.ContentLength`
 - [x] `Request.Body`
-- [ ] bounded body text reading
-- [ ] bounded binary body reading
+- [x] bounded body text reading
+- [x] bounded binary body reading
 - [x] `Request.Host`
 - [x] `Request.Scheme`
 - [x] `Request.RemoteAddress`
 - [x] `Request.Protocol`
 - [x] `Request.Cookies`
-- [ ] form-urlencoded parsing
-- [ ] multipart/form-data parsing only with strict limits and safe temporary-file handling
-- [ ] uploaded-file abstraction if multipart upload is implemented
+- [x] form-urlencoded parsing
+- [x] multipart/form-data parsing only with strict limits and safe temporary-file handling
+- [x] uploaded-file abstraction if multipart upload is implemented
 - [ ] request cancellation/disconnect state where useful
 
 Security requirements:
 
 - [ ] Treat every Request value as untrusted input.
-- [ ] Preserve multiple header/query values rather than silently joining values where doing so changes semantics.
-- [ ] Apply configurable limits for header count, query length, form fields and body size.
+- [x] Preserve multiple header/query values rather than silently joining values where doing so changes semantics.
+- [x] Apply configurable limits for header count, query length, form fields and body size.
 - [ ] Do not automatically deserialize arbitrary request bodies into executable/runtime types.
 
 ### 6.2 Response
@@ -257,8 +257,8 @@ Candidate members:
 
 Security requirements:
 
-- [ ] Reject CR/LF injection in response header names and values.
-- [ ] Validate header names using HTTP token rules.
+- [x] Reject CR/LF injection in response header names and values.
+- [x] Validate header names using HTTP token rules.
 - [ ] Prevent conflicting/unsafe `Content-Length` handling.
 - [ ] Avoid exposing transport-specific hop-by-hop headers directly unless explicitly supported.
 - [ ] Provide HTML encoding helpers separately; `Response.Write` must not misleadingly claim to make arbitrary text safe HTML.
@@ -267,13 +267,13 @@ Security requirements:
 
 Candidate mostly read-only members:
 
-- [ ] configured root path
+- [x] configured root path
 - [ ] current hosting mode (`Kestrel` / `FastCGI`)
 - [ ] server address/port where meaningful
 - [ ] server start time
 - [ ] runtime/compiler version
-- [ ] safe path-mapping helper that cannot escape root
-- [ ] URL/HTML encoding helpers if appropriate
+- [x] safe path-mapping helper that cannot escape root
+- [x] URL/HTML encoding helpers if appropriate
 
 Do not expose arbitrary process-control or unrestricted filesystem escape helpers through `Server` by default.
 
@@ -307,16 +307,16 @@ Application is shared state for one configured site/application, not global stat
 
 ### 6.6 Cookie
 
-- [ ] cookie name/value
-- [ ] Path
-- [ ] Domain with validation
-- [ ] Expires / MaxAge
-- [ ] Secure
-- [ ] HttpOnly
-- [ ] SameSite
-- [ ] deletion semantics
-- [ ] reject control characters and invalid cookie names/values
-- [ ] do not permit response-splitting through cookies
+- [x] cookie name/value
+- [x] Path
+- [x] Domain with validation
+- [x] Expires / MaxAge
+- [x] Secure
+- [x] HttpOnly
+- [x] SameSite
+- [x] deletion semantics
+- [x] reject control characters and invalid cookie names/values
+- [x] do not permit response-splitting through cookies
 
 ---
 
