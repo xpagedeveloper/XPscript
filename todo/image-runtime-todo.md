@@ -149,6 +149,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [ ] `XPImage(width, height, background)`.
 - [ ] `XPImage.Load(path)`.
 - [ ] `XPImage.FromBytes(data)`.
+- [ ] `XPImage.FromBase64(data)` accepting raw base64 and `data:image/...;base64,...` input.
 - [ ] `Width`.
 - [ ] `Height`.
 - [ ] `Format`.
@@ -209,6 +210,13 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [ ] Explicit metadata/profile stripping.
 - [ ] `AutoOrient()`.
 - [ ] Keep metadata untrusted and enforce size/resource limits.
+
+## FullTest verification
+
+- [ ] Add a dedicated XPImage FullTest workflow that runs on Windows, Linux and macOS.
+- [ ] FullTest must compile and execute XPImage creation, file/bytes/base64 loading, all supported formats, editing/effects/metadata, resource limits, web output and Browser-WASM `[ServerSide]` behavior.
+- [ ] FullTest must verify an application without XPImage does not acquire Magick.NET and an XPImage application does include the required generated license notices.
+- [ ] FullTest must fail on compiler/runtime warnings relevant to XPImage.
 
 ## Implementation completion criteria
 
