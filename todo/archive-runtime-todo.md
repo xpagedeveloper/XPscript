@@ -53,13 +53,13 @@ Implement a cross-platform archive runtime for XPScript using a stable XPScript-
 Dim archive As New Archive("backup.zip")
 ```
 
-- [ ] Support constructing from a Byte array or equivalent in-memory XPScript value.
+- [x] Support constructing from a Byte array or equivalent in-memory XPScript value.
 
 ```text
 Dim archive As New Archive(bytes)
 ```
 
-- [ ] Support creating an empty archive and specifying the format explicitly.
+- [x] Support creating an empty archive and specifying the format explicitly.
 
 ```text
 Dim archive As New Archive()
@@ -143,7 +143,7 @@ End ForAll
 - [x] `AddText(archivePath, text)`.
 - [x] `AddBytes(archivePath, bytes)`.
 - [ ] Prevent source paths from bypassing existing XPScript filesystem restrictions.
-- [ ] Normalize destination entry names before writing them into the archive.
+- [x] Normalize destination entry names before writing them into the archive.
 - [ ] Define duplicate-entry behavior explicitly.
 - [ ] Preserve timestamps only where reliable and useful.
 
@@ -164,14 +164,14 @@ archive.Save()
 - [ ] Investigate which archive formats support direct modification cleanly through SharpCompress.
 - [ ] Where direct in-place modification is not safe or available, rebuild the archive into a temporary stream/file and atomically replace the original.
 - [ ] Ensure failed modifications do not corrupt the original archive.
-- [ ] Reject modification attempts for read-only archive formats with a clear XPScript runtime error.
+- [x] Reject modification attempts for read-only archive formats with a clear XPScript runtime error.
 
 ## Extraction
 
 - [x] `Extract(entryName, targetPath)`.
 - [x] `ExtractAll(targetDirectory)`.
 - [x] `ExtractFolder(folderName, targetDirectory)`.
-- [ ] Support extracting directly to Byte arrays where appropriate without touching disk.
+- [x] Support extracting directly to Byte arrays where appropriate without touching disk.
 - [ ] Ensure extraction is transactional where practical when a failure occurs partway through processing.
 
 ## Reading entries without extraction
@@ -186,7 +186,7 @@ archive.Save()
 - [x] Add `ToBytes()`.
 - [x] Support loading from Byte arrays.
 - [ ] Consider a future stream abstraction if XPScript adds a first-class stream object.
-- [ ] Make in-memory operation the primary integration path for HTTP responses, REST APIs, Notes MIME attachments, database BLOBs and browser/WASM downloads.
+- [x] Make in-memory operation the primary integration path for HTTP responses, REST APIs, Notes MIME attachments, database BLOBs and browser/WASM downloads.
 
 Example to validate:
 
@@ -203,7 +203,7 @@ data = archive.ToBytes()
 
 Initial target matrix:
 
-- [ ] ZIP read/write.
+- [x] ZIP read/write.
 - [ ] 7z read/write where the selected SharpCompress version supports writing reliably.
 - [ ] TAR read/write.
 - [ ] GZip read/write.
@@ -228,9 +228,9 @@ Initial target matrix:
 ## Filesystem integration
 
 - [x] Route physical source and destination paths through `XPScriptFileSystemRuntime.ResolvePath()` or the equivalent existing filesystem boundary.
-- [ ] Preserve current XPScript relative-path behavior.
+- [x] Preserve current XPScript relative-path behavior.
 - [ ] Reuse existing file overwrite semantics where appropriate.
-- [ ] Reuse existing safe path and reparse-point handling where possible.
+- [x] Reuse existing safe path and reparse-point handling where possible.
 - [ ] Do not allow archive functionality to become a bypass around filesystem sandboxing or portability rules.
 
 ## Zip Slip and path traversal protection
@@ -243,7 +243,7 @@ Initial target matrix:
 - [x] Resolve the final extraction path before writing.
 - [x] Verify the final extraction path remains under the requested extraction root.
 - [x] Reject entries that escape the extraction root after normalization.
-- [ ] Apply XPScript-owned path traversal checks even if SharpCompress also contains Zip Slip protection.
+- [x] Apply XPScript-owned path traversal checks even if SharpCompress also contains Zip Slip protection.
 
 Security regression entries should include at least:
 
@@ -259,8 +259,8 @@ folder/../../../evil.txt
 
 - [x] Reject archive symlink entries by default.
 - [x] Reject hard links or other link-like entries by default where applicable.
-- [ ] Ensure existing directories in the extraction path cannot redirect writes outside the extraction root through symbolic links or reparse points.
-- [ ] Reuse XPScript filesystem reparse-point checks where possible.
+- [x] Ensure existing directories in the extraction path cannot redirect writes outside the extraction root through symbolic links or reparse points.
+- [x] Reuse XPScript filesystem reparse-point checks where possible.
 - [ ] Add explicit tests for link-based extraction escapes.
 
 ## Decompression bomb protection
@@ -269,9 +269,9 @@ folder/../../../evil.txt
 - [x] Define a secure maximum individual uncompressed entry size.
 - [x] Define a secure maximum total extracted byte count.
 - [x] Define a secure maximum compression ratio.
-- [ ] Abort safely before resource exhaustion when a limit is exceeded.
+- [x] Abort safely before resource exhaustion when a limit is exceeded.
 - [ ] Apply the same limits to `ReadText()`, `ReadBytes()`, extraction and in-memory workflows.
-- [ ] Ensure limits are enforced independently of archive metadata that may be malicious or incorrect.
+- [x] Ensure limits are enforced independently of archive metadata that may be malicious or incorrect.
 
 Potential future public properties if override support is required:
 
@@ -329,7 +329,7 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 ## Browser/WASM
 
 - [ ] Verify the selected SharpCompress package can be linked for the XPScript browser/WASM target.
-- [ ] Support archive operations over Byte arrays/in-memory streams.
+- [x] Support archive operations over Byte arrays/in-memory streams.
 - [ ] Support listing entries client-side.
 - [ ] Support reading entries client-side where memory limits permit.
 - [ ] Support creating ZIP output in memory for browser downloads where practical.
@@ -348,22 +348,22 @@ Server-side filesystem operations can use the normal server execution model.
 
 ## Runtime errors
 
-- [ ] Archive not found.
+- [x] Archive not found.
 - [ ] Unsupported archive format.
 - [ ] Invalid or corrupt archive.
 - [ ] Encrypted archive requires password.
 - [ ] Invalid password.
-- [ ] Archive entry not found.
-- [ ] Archive format is read-only.
+- [x] Archive entry not found.
+- [x] Archive format is read-only.
 - [ ] Unsupported compression method.
-- [ ] Extraction path outside target directory.
-- [ ] Symlink or reparse-point extraction rejected.
+- [x] Extraction path outside target directory.
+- [x] Symlink or reparse-point extraction rejected.
 - [x] Maximum archive entry count exceeded.
-- [ ] Maximum entry size exceeded.
+- [x] Maximum entry size exceeded.
 - [x] Maximum total extracted size exceeded.
 - [x] Maximum compression ratio exceeded.
 - [ ] Save or replacement operation failed without corrupting the original archive.
-- [ ] Map errors into existing XPScript runtime error conventions.
+- [x] Map errors into existing XPScript runtime error conventions.
 
 ## ZIP tests
 
