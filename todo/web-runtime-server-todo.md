@@ -158,33 +158,33 @@ FastCGI must be a distinct transport adapter using the same internal XPScript we
 - [ ] Investigate Windows FastCGI transport/deployment requirements separately.
 - [x] Support nginx `fastcgi_pass` deployment.
 - [ ] Correctly consume standard CGI/FastCGI parameters such as:
-  - [ ] `SCRIPT_FILENAME`
-  - [ ] `SCRIPT_NAME`
-  - [ ] `PATH_INFO`
-  - [ ] `QUERY_STRING`
-  - [ ] `REQUEST_METHOD`
-  - [ ] `CONTENT_TYPE`
-  - [ ] `CONTENT_LENGTH`
-  - [ ] `SERVER_NAME`
+  - [x] `SCRIPT_FILENAME`
+  - [x] `SCRIPT_NAME`
+  - [x] `PATH_INFO`
+  - [x] `QUERY_STRING`
+  - [x] `REQUEST_METHOD`
+  - [x] `CONTENT_TYPE`
+  - [x] `CONTENT_LENGTH`
+  - [x] `SERVER_NAME`
   - [ ] `SERVER_PORT`
-  - [ ] `SERVER_PROTOCOL`
-  - [ ] `REMOTE_ADDR`
-  - [ ] HTTPS/scheme information
-  - [ ] HTTP request headers
+  - [x] `SERVER_PROTOCOL`
+  - [x] `REMOTE_ADDR`
+  - [x] HTTPS/scheme information
+  - [x] HTTP request headers
 - [ ] Define canonical precedence when proxy/FastCGI variables disagree.
-- [ ] Do not trust a client-derived `SCRIPT_FILENAME` until it has been canonicalized and checked against the configured XPScript root.
+- [x] Do not trust a client-derived `SCRIPT_FILENAME` until it has been canonicalized and checked against the configured XPScript root.
 - [ ] Support FastCGI keep-connection semantics only after protocol handling is robust.
 - [x] Correctly return status, headers and response body using FastCGI records.
 
 ### FastCGI parser safety
 
-- [ ] Implement protocol parsing with explicit fixed-width integer decoding and strict bounds checks.
+- [x] Implement protocol parsing with explicit fixed-width integer decoding and strict bounds checks.
 - [ ] Avoid `unsafe` code and unmanaged pointer arithmetic unless a later security-reviewed implementation absolutely requires it.
-- [ ] Never allocate directly from an untrusted declared length without configured upper bounds.
-- [ ] Validate every record type, version, request id, content length and padding length before consuming buffers.
-- [ ] Reject truncated, overlapping, malformed or unexpectedly ordered records cleanly.
-- [ ] Bound accumulated PARAMS size, header count, header/value length and request body size.
-- [ ] Prevent integer overflow when adding lengths or calculating buffer offsets.
+- [x] Never allocate directly from an untrusted declared length without configured upper bounds.
+- [x] Validate every record type, version, request id, content length and padding length before consuming buffers.
+- [x] Reject truncated, overlapping, malformed or unexpectedly ordered records cleanly.
+- [x] Bound accumulated PARAMS size, header count, header/value length and request body size.
+- [x] Prevent integer overflow when adding lengths or calculating buffer offsets.
 - [ ] Prefer `Span<T>`/`ReadOnlySpan<T>` and checked arithmetic where useful, with explicit range validation before slicing.
 - [ ] Fuzz the FastCGI parser with malformed records before production release.
 - [ ] Add regression tests for partial network reads; never assume one socket read contains one complete FastCGI record.
@@ -380,8 +380,8 @@ execute
 
 ### Compile-storm protection
 
-- [ ] Only one compilation for the same cache key/version may run at a time (`single-flight` behavior).
-- [ ] Concurrent requests for a cold/stale script should wait on/share that compilation rather than compile the same source N times.
+- [x] Only one compilation for the same cache key/version may run at a time (`single-flight` behavior).
+- [x] Concurrent requests for a cold/stale script should wait on/share that compilation rather than compile the same source N times.
 - [ ] Bound total concurrent compilations globally and per site.
 - [ ] Apply compile timeout/cancellation semantics.
 - [ ] A failed compilation must not replace a previously valid cached version unless explicitly configured.
@@ -389,11 +389,11 @@ execute
 
 ### Cache resource limits
 
-- [ ] Bounded number/size of compiled entries.
+- [x] Bounded number/size of compiled entries.
 - [ ] LRU/TTL or equivalent eviction strategy.
 - [ ] No unbounded dictionary keyed by arbitrary URLs/query strings.
 - [ ] Cache key must exclude request query/body data unless code generation genuinely depends on it (normally it must not).
-- [ ] Expose cache metrics: hit, miss, compile count, compile duration, eviction, failure.
+- [x] Expose cache metrics: hit, miss, compile count, compile duration, eviction, failure.
 
 ### Assembly lifetime
 
