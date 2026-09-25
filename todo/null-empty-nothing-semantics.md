@@ -95,5 +95,3 @@ Status:
 - [x] HTTP EMPTY/NULL/NOTHING request boundaries are covered on Windows, Ubuntu and macOS by `.github/workflows/native-http-build.yml` using `samples/native-http-null-boundaries.xps` and the local request-inspection server.
 - [x] Managed NULL interop is covered on Windows, Ubuntu and macOS by `.github/workflows/managed-null-interop.yml` using the referenced fixture assembly.
 - [x] Native EMPTY/NULL/NOTHING scalar ABI behavior is covered by `.github/workflows/native-scalar-abi.yml` across Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64.
-- [x] Evaluate fixture covers no-return, `Return Null`, `Return Nothing` rejection and inspection parity.
-- [x] Focused Null/Empty/Nothing runtime and Evaluate gates execute on Windows, Ubuntu and macOS.
