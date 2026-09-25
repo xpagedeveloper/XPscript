@@ -302,7 +302,7 @@ See [Getting started](getting-started.md) for hosting commands and deployment pa
 | Command/option | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | compile source | `xpscriptc source.xps -o output` | source file and output path. | Compiles XPScript. | [hello.xps](../demo/console/hello.xps) |
-| run source | `xpscriptc run source.xps [-- scriptArgs...]` | source plus optional script arguments. | Compiles in isolated temp output and runs immediately. | [hello.xps](../demo/console/hello.xps) |
+| run source | `xpscript run source.xps [--Args "arg1 arg2 ..."]` | source plus optional script arguments. | Compiles in isolated temp output and runs immediately. | [hello.xps](../demo/console/hello.xps) |
 | `-o` | `-o path` | output path. | Selects compiler output. | [hello.xps](../demo/console/hello.xps) |
 | `--platform` / `--rid` | `--platform RID` or `--rid RID` | runtime identifier such as `win-x64`, `linux-x64`, `osx-arm64`. | Selects target runtime. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `--runtime=false` | `--runtime=false` | none | Produces framework-dependent output. | [hello.xps](../demo/console/hello.xps) |
