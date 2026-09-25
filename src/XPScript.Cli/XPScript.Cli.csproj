@@ -50,5 +50,11 @@
 
     <Message Condition="'$(Configuration)' == 'Release'" Importance="high" Text="Publishing macOS Apple Silicon arm64 self-contained single-file XPscript toolchain" />
     <Exec Condition="'$(Configuration)' == 'Release'" Command="&quot;$(DotNetExecutable)&quot; publish &quot;$(MSBuildProjectFullPath)&quot; -c &quot;$(Configuration)&quot; -r osx-arm64 -p:SkipUnifiedPublish=true --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:NoWarn=IL3000 -p:DebugType=None -p:DebugSymbols=false -o &quot;$(UnifiedPublishDirectory)/osx-arm64&quot; --nologo" />
+
+    <ItemGroup>
+      <UnifiedNativeDebugSymbols Include="$(UnifiedPublishDirectory)/**/libSkiaSharp.pdb" />
+      <UnifiedNativeDebugSymbols Include="$(UnifiedPublishDirectory)/**/libHarfBuzzSharp.pdb" />
+    </ItemGroup>
+    <Delete Files="@(UnifiedNativeDebugSymbols)" />
   </Target>
 </Project>
