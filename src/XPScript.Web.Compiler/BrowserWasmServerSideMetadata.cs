@@ -30,6 +30,10 @@ internal static class BrowserWasmServerSideMetadata
         @"\bNotes(?!Const\b)[A-Za-z_]\w*\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex XPImageRuntimeType = new(
+        @"\bXPImage\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private sealed class AnnotatedProcedureSet : IReadOnlySet<string>
     {
         private readonly IReadOnlyDictionary<string, BrowserWasmServerSideOptions> _options;
