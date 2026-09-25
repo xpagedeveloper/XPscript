@@ -129,7 +129,8 @@ public sealed class XpsWebCompiler
             var generatedPath = Path.Combine(workspace, "Generated.cs");
             var usesSqlite = generated.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
             var usesMsSql = generated.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
-            await File.WriteAllTextAsync(projectPath, BuildProject(typeof(XpsWebContext).Assembly.Location, usesSqlite, usesMsSql), cancellationToken).ConfigureAwait(false);
+            var usesImage = generated.Contains("internal sealed class XPImage", StringComparison.Ordinal);
+            await File.WriteAllTextAsync(projectPath, BuildProject(typeof(XpsWebContext).Assembly.Location, usesSqlite, usesMsSql, usesImage), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(generatedPath, generated, cancellationToken).ConfigureAwait(false);
 
             var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workspace, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
@@ -461,7 +462,7 @@ internal static class Script
         }
     }
 
-    private static string BuildProject(string webRuntimeAssemblyPath, bool usesSqlite, bool usesMsSql)
+    private static string BuildProject(string webRuntimeAssemblyPath, bool usesSqlite, bool usesMsSql, bool usesImage)
     {
         var escapedPath = SecurityElement.Escape(webRuntimeAssemblyPath) ?? throw new XpsWebCompilationException("Unable to encode the web runtime assembly path.");
         var sqlitePackage = usesSqlite
@@ -474,7 +475,12 @@ internal static class Script
     <PackageReference Include="Microsoft.Data.SqlClient" Version="{MicrosoftDataSqlClientVersion}" />
 """
             : string.Empty;
-        return $$"""
+        var imagePackage = usesImage
+            ? $"""
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="{ApplicationDependencyCatalog.MagickNetVersion}" />
+"""
+            : string.Empty;
+        return $"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -486,7 +492,7 @@ internal static class Script
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="XPScript.Web.Runtime"><HintPath>{{escapedPath}}</HintPath><Private>false</Private></Reference>
-{{sqlitePackage}}{{msSqlPackage}}  </ItemGroup>
+{{sqlitePackage}}{{msSqlPackage}}{{imagePackage}}  </ItemGroup>
 </Project>
 """;
     }
