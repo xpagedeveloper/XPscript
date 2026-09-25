@@ -476,9 +476,7 @@ internal static class Script
 """
             : string.Empty;
         var imagePackage = usesImage
-            ? $"""
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="{ApplicationDependencyCatalog.MagickNetVersion}" />
-"""
+            ? "    <PackageReference Include=\"Magick.NET-Q16-AnyCPU\" Version=\"" + ApplicationDependencyCatalog.MagickNetVersion + "\" />" + Environment.NewLine
             : string.Empty;
         return $"""
 <Project Sdk="Microsoft.NET.Sdk">
@@ -491,8 +489,8 @@ internal static class Script
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="XPScript.Web.Runtime"><HintPath>{{escapedPath}}</HintPath><Private>false</Private></Reference>
-{{sqlitePackage}}{{msSqlPackage}}{{imagePackage}}  </ItemGroup>
+    <Reference Include="XPScript.Web.Runtime"><HintPath>{escapedPath}</HintPath><Private>false</Private></Reference>
+{sqlitePackage}{msSqlPackage}{imagePackage}  </ItemGroup>
 </Project>
 """;
     }
