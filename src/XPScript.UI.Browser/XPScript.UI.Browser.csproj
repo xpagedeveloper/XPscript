@@ -6,6 +6,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>XPScript.UI.Browser</AssemblyName>
     <RootNamespace>XPScript.UI.Browser</RootNamespace>
-    <SupportedPlatformIdentifier>browser</SupportedPlatformIdentifier>
   </PropertyGroup>
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
 </Project>
