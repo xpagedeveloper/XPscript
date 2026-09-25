@@ -53,7 +53,7 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 - [ ] FreeTimeSearch
 - [ ] GetCalendar
 - [x] GetDatabase
-- [ ] GetDbDirectory
+- [x] GetDbDirectory
 - [ ] GetDirectory
 - [x] GetEnvironmentString
 - [x] GetEnvironmentValue
