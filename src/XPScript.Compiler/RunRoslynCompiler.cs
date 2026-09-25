@@ -119,10 +119,24 @@ global using System.Threading.Tasks;
 
     private static IEnumerable<MetadataReference> ReferencesFor(string generatedSource)
     {
-        var usesDesktopUi = generatedSource.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
-                            generatedSource.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
-                            generatedSource.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
-        return usesDesktopUi ? FrameworkReferences.Value.AddRange(DesktopReferences.Value) : FrameworkReferences.Value;
+        if (!UsesDesktopUi(generatedSource))
+            return FrameworkReferences.Value;
+
+        return FrameworkReferences.Value.AddRange(DesktopReferences.Value);
+    }
+
+    private static bool UsesDesktopUi(string generatedSource)
+    {
+        // Inspect only the script-facing part. The generated base runtime can contain UI
+        // support types even when the application itself is CLI or web-only; those must
+        // never cause Avalonia/Desktop assemblies to be referenced by the Roslyn fast path.
+        const string baseUiRuntimeSentinel = "internal static class XPScriptUI";
+        var runtimeIndex = generatedSource.IndexOf(baseUiRuntimeSentinel, StringComparison.Ordinal);
+        var applicationSource = runtimeIndex >= 0 ? generatedSource[..runtimeIndex] : generatedSource;
+
+        return applicationSource.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
+               applicationSource.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
+               applicationSource.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
     }
 
     private static ImmutableArray<MetadataReference> CreateDesktopReferences()
