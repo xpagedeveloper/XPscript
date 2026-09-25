@@ -67,7 +67,7 @@ archive.Create("zip")
 ```
 
 - [x] Define whether `New Archive("file.zip")` automatically opens an existing archive or only stores the path until `Open()` is called.
-- [ ] Keep constructor behavior deterministic and consistent across platforms.
+- [x] Keep constructor behavior deterministic and consistent across platforms.
 
 ## Archive properties
 
@@ -83,7 +83,7 @@ archive.Create("zip")
 - [x] `CompressedSize As Long`.
 - [x] `UncompressedSize As Long`.
 - [x] `Entries` as an XPScript-compatible collection/array suitable for `ForAll`.
-- [ ] Consider exposing resource-limit properties only if there is a clear need to override secure defaults.
+- [x] Consider exposing resource-limit properties only if there is a clear need to override secure defaults.
 
 ## ArchiveEntry properties
 
@@ -98,7 +98,7 @@ archive.Create("zip")
 - [x] `CRC` where available.
 - [x] `IsDirectory As Boolean`.
 - [x] `IsEncrypted As Boolean`.
-- [ ] Define consistent fallback values when a format does not expose a metadata field.
+- [x] Define consistent fallback values when a format does not expose a metadata field.
 
 ## Archive lifecycle
 
@@ -229,7 +229,7 @@ Initial target matrix:
 
 - [x] Route physical source and destination paths through `XPScriptFileSystemRuntime.ResolvePath()` or the equivalent existing filesystem boundary.
 - [x] Preserve current XPScript relative-path behavior.
-- [ ] Reuse existing file overwrite semantics where appropriate.
+- [x] Reuse existing file overwrite semantics where appropriate.
 - [x] Reuse existing safe path and reparse-point handling where possible.
 - [x] Do not allow archive functionality to become a bypass around filesystem sandboxing or portability rules.
 
@@ -322,7 +322,7 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 - [ ] Test trimming.
 - [ ] Test AOT compilation.
 - [ ] Test application sandbox paths.
-- [ ] Test Byte-array workflows.
+- [x] Test Byte-array workflows.
 - [ ] Test memory pressure with larger archives.
 - [x] Confirm no native archive runtime libraries need to be packaged per CPU architecture.
 
@@ -389,11 +389,11 @@ Server-side filesystem operations can use the normal server execution model.
 
 ## RAR tests
 
-- [ ] Open a RAR archive.
-- [ ] List files and folders.
-- [ ] Read an entry.
-- [ ] Extract an entry.
-- [ ] Extract the complete archive.
+- [x] Open a RAR archive.
+- [x] List files and folders.
+- [x] Read an entry.
+- [x] Extract an entry.
+- [x] Extract the complete archive.
 - [ ] Test encrypted RAR where supported.
 - [x] Verify `IsReadOnly = True`.
 - [x] Verify `AddFile`, `Remove`, `Rename` and `Save` reject unsupported modification cleanly.
@@ -437,14 +437,14 @@ Server-side filesystem operations can use the normal server execution model.
 ## Documentation
 
 - [x] Document `Archive` constructors.
-- [ ] Document all `Archive` properties.
-- [ ] Document all `Archive` methods.
+- [x] Document all `Archive` properties.
+- [x] Document all `Archive` methods.
 - [x] Document `ArchiveEntry`.
 - [x] Document the format read/write matrix.
 - [x] Document RAR read-only behavior.
 - [x] Document password support and limitations.
-- [ ] Document secure extraction behavior.
-- [ ] Document resource limits.
+- [x] Document secure extraction behavior.
+- [x] Document resource limits.
 - [x] Document Byte-array/in-memory usage.
 - [ ] Document browser/WASM limitations.
 - [ ] Document server-side archive handling.
