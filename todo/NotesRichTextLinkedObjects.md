@@ -77,7 +77,7 @@ Primary references:
 - [x] Preserve unknown records and unknown flag bits in the managed transform model unless a caller explicitly replaces/removes that record.
 - [x] Read rich text split across multiple physical items with the same item name and preserve physical record ordering during transformation.
 - [ ] Validate rewrite persistence against multi-segment rich text and Domino-managed re-segmentation before enabling destructive public mutations.
-- [ ] Invalidate or safely re-resolve linked objects after structural mutation using the rich-text revision.
+- [x] Invalidate or safely re-resolve linked objects after structural mutation using the rich-text revision.
 - [x] Add rollback/error handling so failed writes do not leave partially modified rich text.
 
 ## NotesRichTextSection
