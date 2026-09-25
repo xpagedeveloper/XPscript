@@ -31,7 +31,7 @@ Necessary build/meta checks such as Compile, IntelliSense API documentation, Doc
 - [x] Verify the consolidated Windows -> Ubuntu/macOS workflow is green.
 - [x] Remove superseded focused and per-area FullTest workflows after replacements are green.
 - [x] Document the feature-test lifecycle rule.
-- [ ] Run the complete post-removal CI before merge.
+- [x] Run the complete post-removal CI before merge.
 
 ## Rule for future features
 
