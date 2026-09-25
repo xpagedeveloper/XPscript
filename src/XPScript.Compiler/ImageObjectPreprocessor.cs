@@ -8,7 +8,7 @@ internal sealed class ImageObjectPreprocessor
     [
         "Width", "Height", "Format", "DpiX", "DpiY", "Clone", "Resize", "Crop", "Rotate",
         "FlipHorizontal", "FlipVertical", "Brightness", "Contrast", "Saturation", "Grayscale", "Invert", "Blur", "Sharpen",
-        "AutoOrient", "StripMetadata", "ToBytes", "Save", "Dispose", "Pad", "Composite", "Opacity", "Flatten"
+        "AutoOrient", "GetExif", "SetExif", "GetMetadata", "SetMetadata", "StripMetadata", "ToBytes", "Save", "Dispose", "Pad", "Composite", "Opacity", "Flatten"
     ];
 
     public string Transform(string source)
