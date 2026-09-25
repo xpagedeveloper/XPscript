@@ -93,16 +93,16 @@ Response
 
 ## 3. URL-to-script routing
 
-- [ ] `--root` defines the only default document/source root for the site.
-- [ ] `/foo.xps` maps to `<root>/foo.xps` when allowed.
+- [x] `--root` defines the only default document/source root for the site.
+- [x] `/foo.xps` maps to `<root>/foo.xps` when allowed.
 - [ ] `/foo` maps to `<root>/foo.xps‘ when allowed
-- [ ] `/folder/` maps to `<root>/folder/index.xps` by default.
-- [ ] `/` maps to `<root>/index.xps`.
+- [x] `/folder/` maps to `<root>/folder/index.xps` by default.
+- [x] `/` maps to `<root>/index.xps`.
 - [ ] `/foo/save‘ if no subfolder called foo exists then map to `<root>/foo.xsp’ and function save inside the foo.xsp 
 - [ ] Make the default document name configurable later, while keeping `index.xps` as the standard default.
 - [ ] Define behavior for `/folder` versus `/folder/` and redirects consistently.
-- [ ] Return 404 when the resolved XPScript file does not exist.
-- [ ] Never return raw `.xps` source to the browser merely because compilation failed.
+- [x] Return 404 when the resolved XPScript file does not exist.
+- [x] Never return raw `.xps` source to the browser merely because compilation failed.
 - [ ] Decide separately whether static files are served by XPScript or should normally be served by nginx/Kestrel static-file middleware.
 - [ ] If static file serving is added, create a separate allowlist/configuration and MIME mapping policy.
 
@@ -129,12 +129,12 @@ Target command concept:
 xpscript web --root <directory> --port <port>
 ```
 
-- [ ] Start ASP.NET Core/Kestrel using .NET 10-compatible hosting APIs.
-- [ ] `--port` configures the listening port.
-- [ ] Define default bind address; safest development default should be loopback unless an external bind is explicitly requested.
-- [ ] Support explicit bind address/interface configuration.
+- [x] Start ASP.NET Core/Kestrel using .NET 10-compatible hosting APIs.
+- [x] `--port` configures the listening port.
+- [x] Define default bind address; safest development default should be loopback unless an external bind is explicitly requested.
+- [x] Support explicit bind address/interface configuration.
 - [ ] Support HTTPS endpoints/configuration in production mode.
-- [ ] Support graceful shutdown.
+- [x] Support graceful shutdown.
 - [ ] Define maximum concurrent connections and requests.
 - [ ] Configure bounded request-body size.
 - [ ] Configure request-header size/time limits.
@@ -152,11 +152,11 @@ xpscript web --root <directory> --port <port>
 
 FastCGI must be a distinct transport adapter using the same internal XPScript web request context as Kestrel.
 
-- [ ] Implement FastCGI responder role required for normal web requests.
-- [ ] Support TCP listener such as `127.0.0.1:9000`.
-- [ ] Support Unix-domain socket on Linux/macOS where appropriate.
+- [x] Implement FastCGI responder role required for normal web requests.
+- [x] Support TCP listener such as `127.0.0.1:9000`.
+- [x] Support Unix-domain socket on Linux/macOS where appropriate.
 - [ ] Investigate Windows FastCGI transport/deployment requirements separately.
-- [ ] Support nginx `fastcgi_pass` deployment.
+- [x] Support nginx `fastcgi_pass` deployment.
 - [ ] Correctly consume standard CGI/FastCGI parameters such as:
   - [ ] `SCRIPT_FILENAME`
   - [ ] `SCRIPT_NAME`
@@ -174,7 +174,7 @@ FastCGI must be a distinct transport adapter using the same internal XPScript we
 - [ ] Define canonical precedence when proxy/FastCGI variables disagree.
 - [ ] Do not trust a client-derived `SCRIPT_FILENAME` until it has been canonicalized and checked against the configured XPScript root.
 - [ ] Support FastCGI keep-connection semantics only after protocol handling is robust.
-- [ ] Correctly return status, headers and response body using FastCGI records.
+- [x] Correctly return status, headers and response body using FastCGI records.
 
 ### FastCGI parser safety
 
@@ -212,22 +212,22 @@ The exact API must be frozen only after examples and compatibility tests have be
 
 Candidate read-only/request-scoped members:
 
-- [ ] `Request.Method`
-- [ ] `Request.Path`
-- [ ] `Request.PathInfo`
-- [ ] `Request.QueryString`
+- [x] `Request.Method`
+- [x] `Request.Path`
+- [x] `Request.PathInfo`
+- [x] `Request.QueryString`
 - [ ] query-value access API
-- [ ] `Request.Headers`
-- [ ] `Request.ContentType`
-- [ ] `Request.ContentLength`
-- [ ] `Request.Body`
+- [x] `Request.Headers`
+- [x] `Request.ContentType`
+- [x] `Request.ContentLength`
+- [x] `Request.Body`
 - [ ] bounded body text reading
 - [ ] bounded binary body reading
-- [ ] `Request.Host`
-- [ ] `Request.Scheme`
-- [ ] `Request.RemoteAddress`
-- [ ] `Request.Protocol`
-- [ ] `Request.Cookies`
+- [x] `Request.Host`
+- [x] `Request.Scheme`
+- [x] `Request.RemoteAddress`
+- [x] `Request.Protocol`
+- [x] `Request.Cookies`
 - [ ] form-urlencoded parsing
 - [ ] multipart/form-data parsing only with strict limits and safe temporary-file handling
 - [ ] uploaded-file abstraction if multipart upload is implemented
@@ -244,13 +244,13 @@ Security requirements:
 
 Candidate members:
 
-- [ ] `Response.StatusCode`
-- [ ] `Response.ContentType`
-- [ ] `Response.Headers`
-- [ ] `Response.Cookies`
-- [ ] `Response.Write(value)`
+- [x] `Response.StatusCode`
+- [x] `Response.ContentType`
+- [x] `Response.Headers`
+- [x] `Response.Cookies`
+- [x] `Response.Write(value)`
 - [ ] `Response.WriteBinary(value)` if required
-- [ ] `Response.Redirect(url [, status])`
+- [x] `Response.Redirect(url [, status])`
 - [ ] `Response.Clear()` semantics
 - [ ] `Response.Flush()` semantics only if transport-safe streaming is intentionally supported
 - [ ] response-completed state
