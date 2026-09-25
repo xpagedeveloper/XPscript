@@ -46,7 +46,7 @@ Normal execution keeps dependency security checking off to preserve the fast pat
 xpscript run app.xps
 ```
 
-`--info` and `--debug` automatically enable warning mode:
+`--info` automatically enables warning mode:
 
 ```text
 xpscript run app.xps --info
@@ -64,7 +64,7 @@ The behavior can be selected explicitly:
 
 `off` disables the application dependency audit. `warn` reports vulnerability and audit-availability warnings without intentionally blocking the build. `strict` also treats unavailable vulnerability information as a failure and blocks on high/critical application dependency findings.
 
-An explicit `--security=off` overrides the automatic security check enabled by `--info` or `--debug`.
+An explicit `--security=off` overrides the automatic security check enabled by `--info`.
 
 ## Compatible package patching
 
