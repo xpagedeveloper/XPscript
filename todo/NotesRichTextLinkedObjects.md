@@ -67,7 +67,7 @@ Primary references:
 - [ ] Validate full LotusScript `Type` semantics for mixed/homogeneous ranges; explicit logical-element ranges now preserve their element type and untyped ranges derive homogeneous CD element types.
 - [ ] `FindAndReplace` including Notes-compatible options where the C API exposes equivalent behavior.
 - [x] `Remove`.
-- [ ] `SetStyle`.
+- [x] `SetStyle`.
 - [x] Preserve unaffected and unknown CD records byte-for-byte during range mutations.
 
 ## Rich-text editor/rewrite layer
