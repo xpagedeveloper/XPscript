@@ -246,7 +246,7 @@ Design direction: managed memory is reclaimed by .NET GC after the last strong r
 
 - [ ] Implement only after the existing compiler/language/runtime backlog is complete and stable.
 - [ ] Complete the architecture/security review before production implementation.
-- [ ] Provide shared XPScript web runtime semantics for standalone Kestrel and FastCGI hosting.
+- [x] Provide shared XPScript web runtime semantics for standalone Kestrel and FastCGI hosting.
 - [ ] Detailed architecture, object model, runtime compilation/cache, routing, CGI, FastCGI and security checklist: `todo/web-runtime-server-todo.md`.
 - [ ] Follow dependency-reuse rules in `todo/development-guidelines.md`; prefer ASP.NET Core/.NET and vetted maintained NuGet packages over custom low-level protocol/parser implementations where suitable.
 - [ ] This section must be completed before the cross-platform UI extension work begins.
@@ -257,7 +257,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 
 ### 19.1 Core classes and data model
 
-- [ ] define a top-level `UIForm` class for creating and showing simple forms
+- [x] define a top-level `UIForm` class for creating and showing simple forms
 - [ ] define a document-style form data class, proposed name `UIData`, used as the backing store for all form field values
 - [ ] reuse familiar document-style method names for value access, especially `GetItemValue`, `GetFirstItem`, `HasItem`, `ReplaceItemValue`, `RemoveItem`, `RemoveAllItems` and equivalent safe subset
 - [ ] `GetItemValue(name)` returns all values for the named field as an XPScript array
@@ -271,7 +271,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 ### 19.2 Form lifecycle and layout
 
 - [ ] create form with title, optional width/height and optional resizable flag
-- [ ] modal `ShowDialog()` returning a stable result such as `OK`, `Cancel`, `Yes`, `No`
+- [x] modal `ShowDialog()` returning a stable result such as `OK`, `Cancel`, `Yes`, `No`
 - [ ] optionally support non-modal `Show()` later; modal dialogs are MVP
 - [ ] close/cancel behavior consistent across Windows, Linux and macOS
 - [ ] simple layout abstraction that avoids requiring pixel-perfect platform-specific coordinates
@@ -279,20 +279,20 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 ### 19.3 UI element inventory
 
 - [ ] Label
-- [ ] TextField
-- [ ] PasswordField
-- [ ] TextArea
-- [ ] NumberField
-- [ ] DateField
-- [ ] TimeField
-- [ ] DateTimeField
-- [ ] CheckBox
-- [ ] RadioButton/RadioGroup
+- [x] TextField
+- [x] PasswordField
+- [x] TextArea
+- [x] NumberField
+- [x] DateField
+- [x] TimeField
+- [x] DateTimeField
+- [x] CheckBox
+- [x] RadioButton/RadioGroup
 - [ ] ComboBox
-- [ ] ListBox
-- [ ] MultiListBox
+- [x] ListBox
+- [x] MultiListBox
 - [ ] Button
-- [ ] Separator/spacer
+- [x] Separator/spacer
 - [ ] per-control default value, required/read-only/enabled/visible state, tooltip, placeholder and size hints where appropriate
 
 ### 19.4 Validation
