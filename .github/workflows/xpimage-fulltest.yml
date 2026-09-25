@@ -66,6 +66,8 @@ jobs:
             $uri = "http://127.0.0.1:$port/"
             $response = $null
             for ($attempt = 0; $attempt -lt 90; $attempt++) {
+              $server.Refresh()
+              if ($server.HasExited) { break }
               try {
                 $response = Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 5
                 if ($response.StatusCode -eq 200) { break }
@@ -74,7 +76,12 @@ jobs:
               }
             }
             if ($null -eq $response -or $response.StatusCode -ne 200) {
+              $server.Refresh()
+              Write-Host '--- Kestrel stdout ---'
+              if (Test-Path $stdout) { Get-Content $stdout }
+              Write-Host '--- Kestrel stderr ---'
               if (Test-Path $stderr) { Get-Content $stderr }
+              if ($server.HasExited) { throw "XPImage plain Kestrel web process exited with code $($server.ExitCode)." }
               throw 'XPImage plain Kestrel web request failed.'
             }
             if ($response.Headers['Content-Type'] -notmatch '^image/png') {
