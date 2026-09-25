@@ -6,8 +6,8 @@ Implement a cross-platform archive runtime for XPScript using a stable XPScript-
 
 ## Required implementation strategy
 
-- [ ] Add a format-independent public `Archive` object.
-- [ ] Add an `ArchiveEntry` object for files and folders inside an archive.
+- [x] Add a format-independent public `Archive` object.
+- [x] Add an `ArchiveEntry` object for files and folders inside an archive.
 - [ ] Keep all third-party types, enums and implementation details hidden behind XPScript-owned runtime classes.
 - [ ] Use `SharpCompress` as the preferred implementation library, subject to final compatibility, security and license verification at implementation time.
 - [ ] Verify the selected SharpCompress release is MIT licensed and supports the .NET target frameworks used by XPScript.
@@ -20,34 +20,34 @@ Implement a cross-platform archive runtime for XPScript using a stable XPScript-
 
 ## Goals
 
-- [ ] Create archives.
-- [ ] Open existing archives.
-- [ ] List files and folders.
-- [ ] Add files.
-- [ ] Add folders recursively.
-- [ ] Add in-memory text and Byte-array data.
-- [ ] Remove files and folders where the archive format supports modification.
-- [ ] Rename entries where the archive format supports modification.
-- [ ] Extract individual files.
-- [ ] Extract folders.
-- [ ] Extract complete archives.
-- [ ] Read archive entries directly into text or Byte arrays without extracting to disk.
-- [ ] Support file-based and in-memory archive workflows.
+- [x] Create archives.
+- [x] Open existing archives.
+- [x] List files and folders.
+- [x] Add files.
+- [x] Add folders recursively.
+- [x] Add in-memory text and Byte-array data.
+- [x] Remove files and folders where the archive format supports modification.
+- [x] Rename entries where the archive format supports modification.
+- [x] Extract individual files.
+- [x] Extract folders.
+- [x] Extract complete archives.
+- [x] Read archive entries directly into text or Byte arrays without extracting to disk.
+- [x] Support file-based and in-memory archive workflows.
 - [ ] Keep behavior consistent across Windows, Linux and macOS.
 - [ ] Validate Android, iOS and browser/WASM scenarios.
 
 ## Core object model
 
-- [ ] Add public XPScript object `Archive`.
-- [ ] Add public XPScript object `ArchiveEntry`.
-- [ ] Implement internal runtime class `XPScriptArchive`.
-- [ ] Implement internal runtime class `XPScriptArchiveEntry`.
-- [ ] Add a runtime source component such as `ArchiveRuntimeSource.cs` following existing runtime-source injection patterns.
+- [x] Add public XPScript object `Archive`.
+- [x] Add public XPScript object `ArchiveEntry`.
+- [x] Implement internal runtime class `XPScriptArchive`.
+- [x] Implement internal runtime class `XPScriptArchiveEntry`.
+- [x] Add a runtime source component such as `ArchiveRuntimeSource.cs` following existing runtime-source injection patterns.
 - [ ] Confirm the exact constructor and member syntax against current XPScript compiler rules before freezing the public API.
 
 ## Archive constructors
 
-- [ ] Support opening or targeting an archive by path.
+- [x] Support opening or targeting an archive by path.
 
 ```text
 Dim archive As New Archive("backup.zip")
@@ -71,18 +71,18 @@ archive.Create("zip")
 
 ## Archive properties
 
-- [ ] `Path As String`.
-- [ ] `Format As String`.
-- [ ] `Password As String` where supported.
-- [ ] `CompressionLevel As Integer` or a stable XPScript-owned equivalent.
-- [ ] `Exists As Boolean`.
-- [ ] `IsEncrypted As Boolean`.
-- [ ] `IsReadOnly As Boolean`.
-- [ ] `FileCount As Long`.
-- [ ] `FolderCount As Long`.
-- [ ] `CompressedSize As Long`.
-- [ ] `UncompressedSize As Long`.
-- [ ] `Entries` as an XPScript-compatible collection/array suitable for `ForAll`.
+- [x] `Path As String`.
+- [x] `Format As String`.
+- [x] `Password As String` where supported.
+- [x] `CompressionLevel As Integer` or a stable XPScript-owned equivalent.
+- [x] `Exists As Boolean`.
+- [x] `IsEncrypted As Boolean`.
+- [x] `IsReadOnly As Boolean`.
+- [x] `FileCount As Long`.
+- [x] `FolderCount As Long`.
+- [x] `CompressedSize As Long`.
+- [x] `UncompressedSize As Long`.
+- [x] `Entries` as an XPScript-compatible collection/array suitable for `ForAll`.
 - [ ] Consider exposing resource-limit properties only if there is a clear need to override secure defaults.
 
 ## ArchiveEntry properties
@@ -102,24 +102,24 @@ archive.Create("zip")
 
 ## Archive lifecycle
 
-- [ ] `Create()`.
-- [ ] `Create(format)`.
-- [ ] `Open()`.
-- [ ] `Save()`.
-- [ ] `Close()`.
+- [x] `Create()`.
+- [x] `Create(format)`.
+- [x] `Open()`.
+- [x] `Save()`.
+- [x] `Close()`.
 - [ ] Define overwrite behavior for `Create()` when the target already exists.
 - [ ] Define behavior when the archive is missing, malformed, unsupported or encrypted.
 - [ ] Dispose streams and other resources deterministically.
 
 ## Listing and lookup
 
-- [ ] `Contains(entryName)`.
-- [ ] `GetEntry(entryName)`.
-- [ ] `Files()`.
-- [ ] `Folders()`.
-- [ ] `Find(pattern)`.
+- [x] `Contains(entryName)`.
+- [x] `GetEntry(entryName)`.
+- [x] `Files()`.
+- [x] `Folders()`.
+- [x] `Find(pattern)`.
 - [ ] Define wildcard semantics for `Find()` and keep them consistent with existing XPScript conventions where possible.
-- [ ] Normalize archive entry separators to `/` internally regardless of host operating system.
+- [x] Normalize archive entry separators to `/` internally regardless of host operating system.
 
 Example to validate:
 
@@ -135,13 +135,13 @@ End ForAll
 
 ## Adding content
 
-- [ ] `AddFile(sourcePath)`.
-- [ ] `AddFile(sourcePath, archivePath)`.
-- [ ] `AddFolder(sourcePath)`.
-- [ ] `AddFolder(sourcePath, archivePath)`.
-- [ ] `AddFolder(sourcePath, archivePath, recursive)`.
-- [ ] `AddText(archivePath, text)`.
-- [ ] `AddBytes(archivePath, bytes)`.
+- [x] `AddFile(sourcePath)`.
+- [x] `AddFile(sourcePath, archivePath)`.
+- [x] `AddFolder(sourcePath)`.
+- [x] `AddFolder(sourcePath, archivePath)`.
+- [x] `AddFolder(sourcePath, archivePath, recursive)`.
+- [x] `AddText(archivePath, text)`.
+- [x] `AddBytes(archivePath, bytes)`.
 - [ ] Prevent source paths from bypassing existing XPScript filesystem restrictions.
 - [ ] Normalize destination entry names before writing them into the archive.
 - [ ] Define duplicate-entry behavior explicitly.
@@ -159,8 +159,8 @@ archive.Save()
 
 ## Modifying archives
 
-- [ ] `Remove(entryName)`.
-- [ ] `Rename(entryName, newName)`.
+- [x] `Remove(entryName)`.
+- [x] `Rename(entryName, newName)`.
 - [ ] Investigate which archive formats support direct modification cleanly through SharpCompress.
 - [ ] Where direct in-place modification is not safe or available, rebuild the archive into a temporary stream/file and atomically replace the original.
 - [ ] Ensure failed modifications do not corrupt the original archive.
@@ -168,22 +168,22 @@ archive.Save()
 
 ## Extraction
 
-- [ ] `Extract(entryName, targetPath)`.
-- [ ] `ExtractAll(targetDirectory)`.
-- [ ] `ExtractFolder(folderName, targetDirectory)`.
+- [x] `Extract(entryName, targetPath)`.
+- [x] `ExtractAll(targetDirectory)`.
+- [x] `ExtractFolder(folderName, targetDirectory)`.
 - [ ] Support extracting directly to Byte arrays where appropriate without touching disk.
 - [ ] Ensure extraction is transactional where practical when a failure occurs partway through processing.
 
 ## Reading entries without extraction
 
-- [ ] `ReadText(entryName)`.
-- [ ] `ReadBytes(entryName)`.
-- [ ] Define text encoding behavior and sensible defaults.
+- [x] `ReadText(entryName)`.
+- [x] `ReadBytes(entryName)`.
+- [x] Define text encoding behavior and sensible defaults.
 - [ ] Allow large entries to use streaming internally so the whole archive does not need to be buffered in memory.
 
 ## In-memory archive support
 
-- [ ] Add `ToBytes()`.
+- [x] Add `ToBytes()`.
 - [ ] Support loading from Byte arrays.
 - [ ] Consider a future stream abstraction if XPScript adds a first-class stream object.
 - [ ] Make in-memory operation the primary integration path for HTTP responses, REST APIs, Notes MIME attachments, database BLOBs and browser/WASM downloads.
@@ -227,7 +227,7 @@ Initial target matrix:
 
 ## Filesystem integration
 
-- [ ] Route physical source and destination paths through `XPScriptFileSystemRuntime.ResolvePath()` or the equivalent existing filesystem boundary.
+- [x] Route physical source and destination paths through `XPScriptFileSystemRuntime.ResolvePath()` or the equivalent existing filesystem boundary.
 - [ ] Preserve current XPScript relative-path behavior.
 - [ ] Reuse existing file overwrite semantics where appropriate.
 - [ ] Reuse existing safe path and reparse-point handling where possible.
@@ -235,14 +235,14 @@ Initial target matrix:
 
 ## Zip Slip and path traversal protection
 
-- [ ] Treat every archive entry name as untrusted input.
-- [ ] Reject absolute archive paths.
-- [ ] Reject rooted Windows paths.
-- [ ] Reject UNC paths.
-- [ ] Normalize `.` and `..` path components.
-- [ ] Resolve the final extraction path before writing.
-- [ ] Verify the final extraction path remains under the requested extraction root.
-- [ ] Reject entries that escape the extraction root after normalization.
+- [x] Treat every archive entry name as untrusted input.
+- [x] Reject absolute archive paths.
+- [x] Reject rooted Windows paths.
+- [x] Reject UNC paths.
+- [x] Normalize `.` and `..` path components.
+- [x] Resolve the final extraction path before writing.
+- [x] Verify the final extraction path remains under the requested extraction root.
+- [x] Reject entries that escape the extraction root after normalization.
 - [ ] Apply XPScript-owned path traversal checks even if SharpCompress also contains Zip Slip protection.
 
 Security regression entries should include at least:
@@ -257,18 +257,18 @@ folder/../../../evil.txt
 
 ## Symlink and reparse-point protection
 
-- [ ] Reject archive symlink entries by default.
-- [ ] Reject hard links or other link-like entries by default where applicable.
+- [x] Reject archive symlink entries by default.
+- [x] Reject hard links or other link-like entries by default where applicable.
 - [ ] Ensure existing directories in the extraction path cannot redirect writes outside the extraction root through symbolic links or reparse points.
 - [ ] Reuse XPScript filesystem reparse-point checks where possible.
 - [ ] Add explicit tests for link-based extraction escapes.
 
 ## Decompression bomb protection
 
-- [ ] Define a secure maximum archive entry count.
-- [ ] Define a secure maximum individual uncompressed entry size.
-- [ ] Define a secure maximum total extracted byte count.
-- [ ] Define a secure maximum compression ratio.
+- [x] Define a secure maximum archive entry count.
+- [x] Define a secure maximum individual uncompressed entry size.
+- [x] Define a secure maximum total extracted byte count.
+- [x] Define a secure maximum compression ratio.
 - [ ] Abort safely before resource exhaustion when a limit is exceeded.
 - [ ] Apply the same limits to `ReadText()`, `ReadBytes()`, extraction and in-memory workflows.
 - [ ] Ensure limits are enforced independently of archive metadata that may be malicious or incorrect.
