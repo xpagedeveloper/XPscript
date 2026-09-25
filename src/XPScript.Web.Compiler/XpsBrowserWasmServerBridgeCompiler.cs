@@ -40,6 +40,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     private const string AvaloniaVersion = "12.0.3";
     private const string MicrosoftDataSqliteVersion = "10.0.11";
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
+    private const string MagickNetVersion = "14.17.1";
     private static readonly Regex VariantDeclaration = new(@"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+As\s+Variant\s*$", RegexOptions.CultureInvariant);
 
     private sealed class BuildGate
@@ -229,6 +230,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
                      generated.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
         var usesSqlite = generated.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
         var usesMsSql = generated.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
+        var usesImage = generated.Contains("internal sealed class XPImage", StringComparison.Ordinal);
         var items = new StringBuilder();
         if (usesUi)
         {
@@ -241,6 +243,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         }
         if (usesSqlite) items.AppendLine($"    <PackageReference Include=\"Microsoft.Data.Sqlite\" Version=\"{MicrosoftDataSqliteVersion}\" />");
         if (usesMsSql) items.AppendLine($"    <PackageReference Include=\"Microsoft.Data.SqlClient\" Version=\"{MicrosoftDataSqlClientVersion}\" />");
+        if (usesImage) items.AppendLine($"    <PackageReference Include=\"Magick.NET-Q16-AnyCPU\" Version=\"{MagickNetVersion}\" />");
         var itemGroup = items.Length == 0 ? string.Empty : $"  <ItemGroup>\n{items}  </ItemGroup>\n";
         return $"""
 <Project Sdk="Microsoft.NET.Sdk">
