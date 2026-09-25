@@ -78,7 +78,7 @@ Branch: `feature/notes-mime-entity`
 - [x] Confirm `Content-Disposition` remains `attachment` through save/reopen
 - [x] Implement and verify `Content-Disposition` filename parameter readback separately
 - [x] Confirm both supported header semantics after save/reopen
-- [ ] Confirm the updated Notes MIME surface compiles in branch CI
+- [x] Confirm the updated Notes MIME surface compiles in branch CI
 - [x] Update `docs/notes-mime-entity.md` and `skills/xpscript-programming/SKILL.md` with the final verified direct-child `GetNthHeader`/parameter behavior
 - [x] Implement direct-child `GetParamVal` and `SetParamVal` for MIME header parameters
 - [x] Implement arbitrary direct-child `GetNthHeader(name, occurrence)` lookup
