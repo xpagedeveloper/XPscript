@@ -270,7 +270,7 @@ folder/../../../evil.txt
 - [x] Define a secure maximum total extracted byte count.
 - [x] Define a secure maximum compression ratio.
 - [x] Abort safely before resource exhaustion when a limit is exceeded.
-- [ ] Apply the same limits to `ReadText()`, `ReadBytes()`, extraction and in-memory workflows.
+- [x] Apply the same limits to `ReadText()`, `ReadBytes()`, extraction and in-memory workflows.
 - [x] Ensure limits are enforced independently of archive metadata that may be malicious or incorrect.
 
 Potential future public properties if override support is required:
