@@ -1,215 +1,87 @@
-# XPScript security review TODO
+# XPScript compiler and runtime security review closeout
 
 (c) xpagedeveloper.com 2026
 
-This checklist tracks static security hardening separately from runtime verification.
+This checklist is the evidence index for the compiler, preprocessing, runtime and temporary-build security review referenced by `todo/runtime-reference-todo.md` section 16 and `docs/security.md`.
 
-Status:
-- `[x]` implemented and verified by a permanent build/runtime/compiler regression
-- `[>]` implemented/reviewed, awaiting complete verification
-- `[ ]` not implemented/reviewed
+XPScript is a general-purpose programming language, not a hostile-code sandbox. Powerful APIs execute with the privileges of the XPScript process. The supported trust boundaries and deployment requirements are documented in `docs/security.md`.
 
-## Compiler-generated identifiers
+## Compiler and preprocessing isolation
 
-- [x] identifiers beginning with `__` are reserved before source rewrites
-- [x] runtime-owned type names are reserved against user type declarations
-- [x] all names in comma-separated `Dim`, `Static`, module `Public` and module `Private` declarations are validated, not only the first name
-- [x] commas inside array dimensions do not split declaration items
-- [x] regression sources: `samples/reserved-identifier-error.xps`, `samples/reserved-runtime-type-error.xps`, `samples/reserved-multiple-identifiers-error.xps`, `samples/reserved-module-multiple-identifiers-error.xps`, `samples/reserved-array-dimension-commas.xps`
-- [x] build/diagnostic verification of the complete reserved-identifier matrix on Windows, Ubuntu and macOS
+- [x] compiler-generated `__*` identifiers are reserved and rejected before source rewriting; permanent negative coverage: `.github/workflows/security-identifier-regression.yml`
+- [x] runtime/public helper type names cannot be replaced by user declarations; permanent negative coverage: `.github/workflows/security-identifier-regression.yml`
+- [x] each compiler invocation uses an isolated GUID workspace; coverage: `.github/workflows/compiler-workspace-isolation.yml`
+- [x] parallel compiler invocations do not share generated source, project or publish state; coverage: `.github/workflows/compiler-parallel-isolation.yml` and `.github/workflows/security-concurrent-compile-regression.yml`
+- [x] child build processes receive invocation-local TEMP/TMP/TMPDIR, DOTNET_CLI_HOME and NUGET_PACKAGES state; coverage: `.github/workflows/compiler-process-isolation.yml`
+- [x] include/preprocessor work participates in invocation isolation and does not create a shared generated-source workspace; coverage: `.github/workflows/compiler-parallel-isolation.yml` and `.github/workflows/source-preprocessor-pipeline.yml`
+- [x] temporary workspace permissions and symlink/reparse-point behavior are hardened and regression-tested; coverage: `.github/workflows/compiler-permission-symlink.yml`
+- [x] compiler temporary state is cleaned through deterministic/finally paths and lifetime/concurrency regressions; coverage: `.github/workflows/compiler-lifetime-concurrency.yml` and `docs/security.md`
 
-## Compiler temporary workspace
+## Output and dependency path safety
 
-- [x] every compile invocation uses a GUID-named workspace under the XPScript temp root
-- [x] generated project/source/publish directories are invocation-local
-- [x] cleanup is attempted in `finally`
-- [x] compiler-owned cleanup refuses a symlink/reparse-point workspace root and does not recursively follow linked descendants
-- [x] Unix compiler temp directories are hardened to user-only directory mode where supported
-- [x] Unix generated/staged temp files are hardened to user-only read/write mode where supported
-- [x] Windows invocation/staging directories remove inherited ACLs and grant the current Windows security principal full control through its SID; child files inherit that ACL
-- [x] final executable/dependency publication is staged beside the destination and committed with executable last
-- [x] staged publication keeps backups and rolls back the whole output set on a publication failure on a best-effort basis
-- [x] `TEMP`, `TMP`, `TMPDIR`, `DOTNET_CLI_HOME` and `NUGET_PACKAGES` are invocation-local for generated builds
-- [x] inherited MSBuild path redirection variables are removed from generated build processes
-- [x] `dotnet` is resolved to an absolute host path rather than relying on a relative/current-directory PATH hit
-- [x] Windows ACL behavior is verified using the current SID so local/domain/service account naming does not affect the grant model
-- [x] 10+ concurrent compiles cannot share or overwrite compiler-owned temporary state
-- [x] crash/kill does not create reusable trusted workspace state for later compiler invocations
-- [x] detailed checklist: `todo/done/compiler-temp-isolation-todo.md`
+- [x] output publication rejects source overwrite, link targets and unsafe destination traversal; coverage: `.github/workflows/compiler-output-safety.yml`
+- [x] managed/native project-local dependency traversal and symlink escapes are rejected; coverage: `.github/workflows/cross-platform-path-security.yml` and `.github/workflows/compiler-output-safety.yml`
+- [x] application-local native output collisions and executable overwrite are rejected; coverage: `.github/workflows/compiler-output-safety.yml`
+- [x] staged output publication uses bounded trusted paths and best-effort rollback rather than writing generated build state directly into unrelated locations; documented in `docs/security.md`
 
-## Project-local managed/native dependencies
+## Runtime state isolation
 
-- [x] `Reference` and `ReferenceNative` reject rooted paths
-- [x] lexical `..` escape outside the source directory is rejected
-- [x] application-local native declarations reject absolute/rooted paths before packaging
-- [x] missing dependencies, duplicate output names and executable overwrite collisions are rejected
-- [x] existing path components are checked for symlink/reparse-point resolution outside the source directory
-- [x] unresolved symbolic links/reparse points are rejected instead of trusted
-- [x] a dependency already located at its final output target is left in place instead of replacing its own source
-- [x] native dependency publication revalidates the source immediately before open, rejects a linked/reparse-point file, and copies from the already-open read-only handle into staging
-- [x] source path changes after the native dependency handle is opened cannot redirect that copy to a different pathname target
-- [x] managed `Reference` staging uses the same handle-based validated regular-file copy path as native dependency staging
-- [x] OS-specific no-follow/open-reparse semantics are used for dependency staging: Unix opens with `O_NOFOLLOW`; Windows opens with `FILE_FLAG_OPEN_REPARSE_POINT` and rejects reparse-point handles; verified by Compiler Output Safety and Cross Platform Managed References on Windows, Ubuntu and macOS
-- [x] complete project-local dependency matrix is verified by `Cross Platform Managed References` on Windows, Ubuntu and macOS
+- [x] application/runtime state isolation has permanent regression coverage: `.github/workflows/application-runtime-isolation.yml`
+- [x] Evaluate cannot implicitly access caller locals, globals or statics; coverage: `.github/workflows/evaluate-security-closeout.yml`
+- [x] Evaluate callvar arrays and Lists use defensive snapshots with nesting, element and payload budgets; coverage: `.github/workflows/evaluate-callvar-array.yml`, `.github/workflows/evaluate-runtime-compatibility.yml` and `.github/workflows/evaluate-security-closeout.yml`
+- [x] module/global state semantics are explicitly implemented and covered by module/runtime regressions; unrelated module state is not exposed through Evaluate or compiler-generated shared evaluator state
+- [x] generated ByRef/local state is invocation scoped according to normal runtime semantics and is covered by existing language/runtime and memory-lifetime regressions
 
-## Output publication
+## Powerful API and injection review
 
-- [x] explicitly supplied existing regular output files may be replaced; this is the compiler overwrite/upgrade policy
-- [x] source-controlled managed/native dependency metadata cannot choose arbitrary final output paths; dependency output is reduced to validated file names beside the requested executable
-- [x] executable plus native dependencies are staged before final publication
-- [x] output path is normalized and an existing directory target is rejected
-- [x] output path may not overwrite the `.xps` source file
-- [x] output directory components and existing output targets may not be symbolic links/junctions/reparse points
-- [x] output/dependency targets may not replace the currently running process image or the loaded XPScript compiler assembly
-- [x] protected compiler/runtime target checks are repeated again at final commit time
-- [x] dependencies are committed before executable replacement so a dependency failure cannot expose the new executable
-- [x] publication rollback restores previously backed-up output files when a later operation in the same batch fails, on a best-effort basis
-- [x] forced rollback/failure and protected-target behavior is verified on Windows, Ubuntu and macOS by `Compiler Output Safety`
+- [x] `Shell` process execution reviewed. Structured arguments use `ProcessStartInfo.ArgumentList` where practical, batch metacharacters are rejected, and explicit command-shell invocation remains an application trust boundary; coverage: `.github/workflows/structured-shellargs.yml` and cross-platform Shell regressions
+- [x] File I/O reviewed for traversal expectations, symlink/TOCTOU boundaries, permissions and file-lock behavior; coverage: `.github/workflows/file-io-security-closeout.yml`, `.github/workflows/fileio-entry-symlink-safety.yml`, `docs/fileio-toctou.md`
+- [x] HTTP reviewed for URL validation, CR/LF header injection, redirects, response/request bounds and diagnostic redaction; coverage: `.github/workflows/http-security-closeout.yml`
+- [x] JSON reviewed for input/output size, nesting/node budgets, mutation rollback and non-finite number handling; coverage: `.github/workflows/json-security-closeout.yml`
+- [x] Evaluate reviewed for caller-state isolation, mutable-object rejection, resource budgets and diagnostic redaction; coverage: `.github/workflows/evaluate-security-closeout.yml`
+- [x] native P/Invoke reviewed for application-local loader confinement, dependency loading, explicit ByVal ABI requirements and target architecture selection; coverage: `.github/workflows/native-interop-security-closeout.yml`
+- [x] COM/OLE compatibility reviewed as a Windows-only privileged integration boundary; coverage: `.github/workflows/com-compatibility-security-closeout.yml`
+- [x] diagnostics reviewed for source literal, path, URL, header/payload and compiler-workspace disclosure; coverage: `.github/workflows/diagnostics-security-closeout.yml` and `docs/diagnostics-security.md`
 
-## Shell / process execution
+## HTTP and JSON boundary handling
 
-- [x] normal executables and PowerShell script arguments are passed with `ProcessStartInfo.ArgumentList` where possible
-- [x] `UseShellExecute` is disabled
-- [x] Windows `.cmd`/`.bat` execution uses the system-directory `cmd.exe`, not `COMSPEC`
-- [x] `.cmd`/`.bat` arguments reject embedded quotes/control characters and command-shell metacharacters including `&`, `|`, `<`, `>`, `^`, `%`, `!`
-- [x] PowerShell resolution ignores relative PATH entries and prefers known absolute installation paths
-- [x] bare executable/script names are resolved by XPScript through absolute PATH entries before `ProcessStartInfo` is created
-- [x] current-directory lookup and relative PATH entries are not used implicitly for bare executable names
-- [x] Windows extension probing is limited to validated `PATHEXT` suffixes with safe defaults
-- [x] direct `cmd.exe /c ...` remains an explicit command-shell boundary controlled by the application
-- [x] PATH itself remains a trust boundary: an absolute user-writable PATH directory can still intentionally supply an executable with the requested name
-- [x] `Shell()` must be treated as a powerful API and must not receive untrusted command text without application-level validation
-- [x] regression sources: `samples/shell-batch-metachar-error.xps`, `samples/shell-path-resolution.xps`
-- [x] structured `ShellArgs(executable, arguments [, windowStyle])` accepts executable and argument array/list separately and passes each argument through `ProcessStartInfo.ArgumentList`; verified by `Structured ShellArgs` on Windows, Ubuntu and macOS
-- [x] build/runtime verification of the complete quoting and path behavior matrix on Windows, Ubuntu and macOS by `Cross Platform Compiler Shell`
+- [x] HTTP header names and values are validated and control-character injection is rejected
+- [x] redirects are not automatically followed with application headers
+- [x] HTTP request and response body resource limits are enforced while streaming
+- [x] JSON graph and serialization budgets are enforced
+- [x] application-level SSRF, authorization and schema validation remain explicit caller responsibilities and are documented in `docs/security.md`
 
-## File I/O
+## Locking and concurrency
 
-- [x] standard file APIs use OS/.NET path resolution rather than hard-coded Windows separators
-- [x] FileShare behavior is centralized
-- [x] Binary/Random region coordination uses explicit `Lock`/`Unlock`
-- [x] lock conflicts are normalized into XPScript errors
-- [x] standard File I/O diagnostics no longer echo full resolved paths or raw underlying exception messages in the newly hardened paths
-- [x] `FileCopy` and `Name` refuse an existing destination that is a symbolic link/reparse-point target
-- [x] `Kill` refuses a symbolic-link/reparse-point file target instead of deleting through filesystem indirection
-- [x] `Name` refuses a symbolic-link/reparse-point source as well as a linked destination
-- [x] `RmDir` refuses a symbolic-link/reparse-point directory target
-- [x] general-purpose file APIs intentionally remain OS-permission-based rather than becoming an implicit directory sandbox
-- [x] TOCTOU behavior between symlink/attribute/existence checks and final directory-entry operations reviewed; `Kill`, `Name` and `RmDir` do not follow a replaced symlink entry to modify its target, verified by `File IO Entry Symlink Safety` on Windows, Ubuntu and macOS
-- [x] Windows versus Unix delete-while-open behavior is verified on Windows, Ubuntu and macOS
-- [x] cross-process byte-range locks are verified on Windows, Ubuntu and macOS, including overlap conflict, non-overlap coexistence and reacquisition after release
-- [x] complete File I/O security matrix is verified by `File IO Security Closeout` on Windows, Ubuntu and macOS
+- [x] `Lock`/`Unlock` behavior is OS-backed and cross-process assumptions are documented and regression-tested in file-I/O portability/security coverage
+- [x] compiler concurrency uses isolated workspaces rather than shared mutable build directories
+- [x] concurrent compilation regression coverage is permanent on Windows, Ubuntu and macOS
 
-## Evaluate
+## Negative and adversarial regression coverage
 
-- [x] caller scope is not implicitly exposed
-- [x] `callvar` is the explicit input bridge; normal parameters use ByRef semantics and explicit `ByVal` creates an isolated copy
-- [x] multi-value Evaluate packs supplied values into a zero-based `callvar` array
-- [x] explicit `ByVal` arrays/Lists are recursively snapshotted and returned collections are detached
-- [x] arbitrary unsupported mutable object references are rejected in the isolated ByVal snapshot path; verified by `Evaluate Security Closeout` on Windows, Ubuntu and macOS
-- [x] snapshot depth, element count and estimated payload are bounded for ByVal inputs
-- [x] diagnostics crossing the Evaluate boundary are sanitized so callvar values are not echoed
-- [x] `Evaluate` documentation states that it is not a complete hostile-code sandbox
-- [x] concurrent-thread and multi-value invocation isolation is permanently regression-tested
-- [x] nested `Evaluate` is not currently exposed inside the Evaluate runtime; attempted nested evaluation is rejected with bounded error 5 without caller mutation or value leakage, verified by `Evaluate Security Closeout` on Windows, Ubuntu and macOS
-- [x] complete Evaluate security boundary is verified by `Evaluate Security Closeout` on Windows, Ubuntu and macOS
+- [x] reserved compiler/runtime identifiers have negative tests
+- [x] output/path traversal, symlink/reparse-point and overwrite attempts have negative tests
+- [x] Shell batch-injection metacharacters have negative tests
+- [x] HTTP invalid header/resource-limit cases have negative tests
+- [x] JSON resource-budget and invalid-number cases have negative tests
+- [x] Evaluate object/state/resource boundary cases have negative tests
+- [x] native dependency/loading and ABI misuse cases have negative tests
+- [x] diagnostics have redaction regressions for sensitive source and runtime values
 
-## HTTP
+## Documentation and residual trust boundaries
 
-- [x] `SetHeader` validates header names as HTTP token characters before storing them
-- [x] `SetHeader` rejects CR, LF, NUL and other prohibited control characters in header values before request construction
-- [x] `RemoveHeader` applies the same header-name validation
-- [x] URLs are restricted to absolute `http://` and `https://` schemes
-- [x] invalid URL/network/timeout diagnostics do not echo the complete request URL or underlying exception message
-- [x] invalid `Content-Type` is converted to a bounded XPScript error instead of leaking parser exception text
-- [x] automatic redirects are disabled; 3xx responses are returned to the caller so credentials/custom headers are not silently forwarded across origins
-- [x] request bodies are limited to 8 MiB UTF-8
-- [x] response bodies are limited to 64 MiB and read with `ResponseHeadersRead`; oversized declared or streamed bodies are rejected
-- [x] default timeout is 30 seconds and Timeout rejects zero, negative, NaN and Infinity values
-- [x] timeout is enforced per request and may be changed between requests
-- [x] XPHttpClient owns/disposes its handler and exposes deterministic `Dispose()` semantics
-- [x] raw response bytes can be saved without text conversion
-- [x] multipart responses expose all parts through `Parts`, including per-part content type, text body, file metadata and binary-safe save support
-- [x] `Files` exposes a filtered file-only multipart view and UTF-8 `filename*=` metadata is decoded
-- [x] loopback/private-network access remains intentionally available because this is a general-purpose HTTP API; SSRF host/network allowlists are an application boundary
-- [x] controlled-endpoint regression verifies redirects, request/response limits, timeout, disposal, binary responses and mixed text/file multipart responses on Windows, Ubuntu and macOS
-- [x] regression sources include `samples/native-http-header-validation.xps`, `samples/native-http-resource-limits.xps` and `samples/native-http-binary-files.xps`
+- [x] compiler/runtime security boundaries and powerful APIs are documented in `docs/security.md`
+- [x] diagnostics disclosure policy is documented in `docs/diagnostics-security.md`
+- [x] File I/O TOCTOU limitations are documented in `docs/fileio-toctou.md`
+- [x] Evaluate safe-use and non-sandbox semantics are documented in `docs/evaluate.md`
+- [x] native interop trust boundary is documented in `docs/platform-native.md`
+- [x] HTTP/JSON limits and caller responsibilities are documented in `docs/native-http-json.md`
+- [x] security documentation integrity is permanently checked by `.github/workflows/security-documentation-closeout.yml`
 
-## JSON
+## Closeout
 
-- [x] parser input is limited to 8 MiB UTF-8
-- [x] parse/serialization nesting is limited to 64 levels
-- [x] JSON graph size is limited to 100000 nodes
-- [x] estimated JSON payload is limited to 16 MiB
-- [x] serialized JSON output is limited to 16 MiB UTF-8
-- [x] `XPJsonObject.Set`, `XPJsonArray.Add` and `XPJsonArray.Set` validate resulting graph budgets and roll back failed mutations
-- [x] budget arithmetic overflow is normalized to a bounded XPScript error; verified by `JSON Security Closeout` on Windows, Ubuntu and macOS
-- [x] non-finite Single/Double values (`NaN`/`Infinity`) are rejected for JSON conversion
-- [x] parsed numeric conversion refuses non-finite Double results; verified by the `1e400` regression in `JSON Security Closeout` on Windows, Ubuntu and macOS
-- [x] malformed JSON diagnostics do not echo the complete JSON source payload
-- [x] regression source: `samples/json-resource-limits.xps`
-- [x] build/runtime verification of parse/depth/node/payload/numeric limits on Windows, Ubuntu and macOS
-- [x] complete JSON security matrix is verified by `JSON Security Closeout` on Windows, Ubuntu and macOS
+- [x] dedicated compiler/preprocessor/runtime/temp-build security review completed
+- [x] core compiler/runtime security items in `todo/runtime-reference-todo.md` section 16 have permanent regression or documentation evidence
+- [x] known residual risks are explicit trust boundaries rather than silently assumed sandbox guarantees
 
-## Native interop
-
-- [x] target-specific native library selection is compile-target based
-- [x] application-local native file extensions are target validated
-- [x] loader failures are wrapped with XPScript diagnostics
-- [x] native parameters must be explicit `ByVal`; `ByRef` and omitted passing mode are rejected until target-correct ref/out marshalling is implemented
-- [x] application-local native declarations are marked internally during preprocessing and emitted with their normal portable filename only after secure wrapper generation
-- [x] application-local native libraries are resolved through `DllImportResolver` from exactly `AppContext.BaseDirectory` / executable directory
-- [x] application-local resolution does not search current working directory, PATH or arbitrary loader directories
-- [x] application-local library files that are symlinks/reparse points are rejected before `NativeLibrary.Load`
-- [x] bare system-library declarations bypass the application-local resolver and remain OS-loader-resolved
-- [x] documentation states that native interop executes unmanaged code with process privileges
-- [x] negative ABI source: `samples/native-byref-error.xps`
-- [x] supported `ByVal Integer` scalar parameter and Integer return ABI is verified on Windows x64/arm64, Linux x64/arm64 and macOS x64/arm64 by `Native Scalar ABI`
-- [x] application-local loader behavior is verified on Windows, Ubuntu and macOS by `Native Application Local Loader`, including executable-directory resolution from a foreign working directory and rejection of linked application-local libraries
-- [x] transitive native dependency search/preloading behavior is reviewed and regression-tested by `Native Transitive Loader Security`; executable-local dependencies win over current-directory copies and missing trusted dependencies do not fall back to current-directory libraries on Windows, Ubuntu and macOS
-- [x] complete native interop security matrix is verified by `Native Interop Security Closeout`, `Native Scalar ABI`, `Native Application Local Loader` and `Native Transitive Loader Security`
-
-## COM / compatibility APIs
-
-- [x] standalone inventory found `GetObject(pathname, className)` as the retained COM/OLE activation entry point
-- [x] `GetObject` is explicitly Windows-only
-- [x] pathname mode uses COM moniker binding; ProgID mode resolves/activates the registered COM class
-- [x] no separate general `CreateObject`/ActiveX factory was found in the preferred standalone API surface during this review
-- [x] COM activation is documented as a powerful local-code/integration boundary and should receive only trusted monikers/ProgIDs
-- [x] legacy disabled coverage exists in `samples/runtime-sax.xps`
-- [x] `GetObject` activation failures are sanitized to a generic XPScript error and do not echo underlying COM exception text; verified by `COM GetObject Runtime`
-- [x] runtime verification on Windows covers Variant-held COM objects, dot-method/property invocation and sanitized activation failures via `COM GetObject Runtime`
-- [x] complete COM compatibility security boundary is verified by `COM Compatibility Security Closeout` on Windows, Ubuntu and macOS plus `COM GetObject Runtime` on Windows
-
-## Diagnostics
-
-- [x] Evaluate diagnostics have explicit secret sanitization
-- [x] native HTTP validation/network diagnostics do not echo URL/header payload values in hardened paths
-- [x] JSON parser/budget diagnostics do not echo JSON payloads
-- [x] Shell process-start errors no longer echo the requested executable/script path in the generic start failure
-- [x] COM `GetObject` activation failures no longer echo underlying COM exception details
-- [x] File I/O portability diagnostics no longer include full resolved paths/raw filesystem exception messages in hardened paths
-- [x] failed generated builds no longer append generated C# source context to public compiler diagnostics
-- [x] invocation temp-root paths are replaced with `<compiler-workspace>` in generated-build diagnostics
-- [x] source absolute paths in generated-build diagnostics are reduced to source file names where recognized
-- [x] source-code lines attached to structured diagnostics preserve layout but mask characters inside string literals
-- [x] generic unexpected compiler exceptions return `Compilation failed.` instead of raw exception text through `CompileWithResultAsync`
-- [x] dependency-not-found compiler diagnostics expose only the dependency file name rather than the declared path
-- [x] remaining compiler/preprocessor diagnostics that deliberately include source tokens or identifiers are reviewed under `docs/diagnostics-security.md`; semantic identifiers may remain when useful, while payload-bearing string literals and secret-bearing values must be redacted
-- [x] native interop loader diagnostics no longer attach raw inner loader exceptions and no longer expose full OS-description text
-- [x] shared compiler string-literal redaction is provided by `CompilerDiagnosticRedaction.MaskStringLiterals`; runtime APIs retain subsystem-specific bounded redaction because their sensitive value shapes differ
-- [x] compiler workspace/path hardening no longer appends raw OS exception messages for permission, canonicalization, SID lookup or `icacls` failures
-- [x] complete diagnostics security policy and representative compiler redaction corpus are verified by `Diagnostics Security Closeout` on Windows, Ubuntu and macOS
-
-## Documentation
-
-- [x] `docs/evaluate.md` documents Evaluate ByRef/ByVal isolation semantics and the non-sandbox boundary
-- [x] `docs/platform-native.md` documents native/process platform behavior, native ABI constraints and application-local resolver policy
-- [x] native HTTP documentation covers redirect policy, resource budgets, binary responses and multipart parts
-- [x] `docs/security.md` covers powerful APIs, compiler hardening, native-loader rules and COM trust boundaries
-- [x] security documentation is linked from `docs/index.md` and README
-- [x] complete security documentation coverage, link presence, stale-status detection and HTTP-limit consistency are verified by `Documentation Security Closeout`
-
-## Verification gate
-
-No item in this file becomes `[x]` until the corresponding static change has been built and its positive/negative runtime or compiler regression has passed on the relevant supported platform matrix.
+Future features that introduce new privileged APIs, new source-to-code rewriting stages, new native loaders, new network transports or hostile-code execution models require a new threat-model update and corresponding negative regressions before release.
