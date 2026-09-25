@@ -7,6 +7,7 @@ using XPScript.Web.FastCgi;
 using XPScript.Web.Kestrel;
 using XPScript.Web.Runtime;
 
+args = NormalizeGlobalDiagnosticOptions(args);
 ConfigureRuntimeDiagnosticEnvironment(args);
 
 if (args.Length == 0 || args[0] is "--help" or "-h")
@@ -40,6 +41,28 @@ catch (Exception ex)
 {
     Console.Error.WriteLine("error: " + ex.Message);
     return 1;
+}
+
+static string[] NormalizeGlobalDiagnosticOptions(string[] arguments)
+{
+    var commandIndex = Array.FindIndex(arguments, value =>
+        value.Equals("compile", StringComparison.OrdinalIgnoreCase) ||
+        value.Equals("run", StringComparison.OrdinalIgnoreCase));
+
+    if (commandIndex <= 0)
+        return arguments;
+
+    var prefix = arguments[..commandIndex];
+    if (prefix.Any(value => !value.Equals("--debug", StringComparison.OrdinalIgnoreCase) &&
+                            !value.Equals("--info", StringComparison.OrdinalIgnoreCase)))
+        return arguments;
+
+    var debug = prefix.Any(value => value.Equals("--debug", StringComparison.OrdinalIgnoreCase));
+    var info = prefix.Any(value => value.Equals("--info", StringComparison.OrdinalIgnoreCase));
+    if (debug && info)
+        throw new ArgumentException("--info and --debug cannot be used together.");
+
+    return [arguments[commandIndex], .. prefix, .. arguments[(commandIndex + 1)..]];
 }
 
 static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
@@ -482,10 +505,10 @@ XPScript CLI
 One executable is used for compiler, runtime execution, project scaffolding and web hosting.
 
 Usage:
-  xpscript compile <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [--result-format text|json|xml]
+  xpscript [--info] compile <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [--result-format text|json|xml]
   xpscript dependencies <source.xps> [--platform RID|--rid RID] [--json]
   xpscript security <source.xps> [--platform RID|--rid RID] [--json]
-  xpscript run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [script arguments...]
+  xpscript [--info] run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
   xpscript <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [compiler options...]
   xpscript new <rest|web|desktop|cli> <directory>
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
@@ -503,14 +526,14 @@ Usage:
 
 Command model:
   compile  Compile an XPScript source file.
-  run      Compile to an isolated temporary output and execute on the current OS/architecture.
+  run      Compile to an isolated temporary output and execute on the current OS/architecture. Program arguments are passed only through --Args.
   new      Create a REST, web, desktop or CLI starter in a required target directory. Use . for the current directory.
   openapi  Generate XPScript REST server source from OpenAPI 3.0/3.1 YAML or JSON.
   service  Install compiled XPScript services using the native service manager.
   web      Run the standalone Kestrel runtime.
   fastcgi  Run the FastCGI web runtime.
 
-The same xpscript executable owns all command modes. The XPScript.Compiler project provides shared compiler services and command handling.
+Running `xpscript` without arguments prints this usage reference. `--info` may appear before or after `run`/`compile`. For `run`, only the value supplied to `--Args` is forwarded to the compiled program; for example `xpscript run main.xps --Args "first second"` launches the generated program as `main.exe first second` on Windows.\n\nThe same xpscript executable owns all command modes. The XPScript.Compiler project provides shared compiler services and command handling.
 
 Config:
   --config FILE loads JSON host settings from the selected file.
@@ -533,6 +556,8 @@ Examples:
   xpscript compile hello.xps
   xpscript compile hello.xps --platform linux-x64 -o hello
   xpscript run hello.xps
+  xpscript run hello.xps --info
+  xpscript run hello.xps --Args "first second"
   xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto
   xpscript web ./site
   xpscript web --config ./production.cfg

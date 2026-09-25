@@ -38,7 +38,7 @@ xpscriptc run hello.xps
 xpscriptc run hello.xps first "second value"
 ```
 
-Arguments are available through `Application.ArgCount` and `Application.Args(index)`.
+When using `xpscript run`, program arguments must be supplied explicitly with `--Args`, for example `xpscript run main.xps --Args "first second"`. This starts the generated program with `first` and `second` as its two command-line arguments. Arguments are available through `Application.ArgCount` and `Application.Args(index)`. `--info` is an XPScript CLI option and may be placed before or after `run`; it is not forwarded to the program.
 
 ## Compile code
 
@@ -117,7 +117,7 @@ Basic production-style invocation:
 xpscript web --root /srv/xpsite --address 0.0.0.0 --port 8080 --host www.example.com
 ```
 
-Kestrel can use a JSON `web.cfg`. Explicit command-line values override config values.
+Kestrel can use a JSON `web.cfg`. Explicit command-line values override config values. See [Web and FastCGI host configuration](host-config.md) for the complete file format, supported properties, path rules and examples.
 
 ## Kestrel parameters
 

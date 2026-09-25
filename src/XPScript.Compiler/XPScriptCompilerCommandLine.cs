@@ -405,7 +405,6 @@ public static class XPScriptCompilerCommandLine
             string? sourceArgument = null;
             var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
             var scriptArgs = new List<string>();
-            var parseRunOptions = true;
             var restricted = false;
             var info = false;
             ApplicationSecurityMode? securityMode = null;
@@ -416,22 +415,22 @@ public static class XPScriptCompilerCommandLine
             {
                 var value = commandLineArgs[i];
 
-                if (sourceArgument is null && !value.StartsWith("--", StringComparison.Ordinal))
+                if (value.Equals("--args", StringComparison.OrdinalIgnoreCase))
                 {
-                    sourceArgument = value;
+                    if (i + 1 >= commandLineArgs.Length)
+                        throw new ArgumentException("--Args requires one quoted argument string.");
+                    foreach (var argument in SplitRunArguments(commandLineArgs[++i]))
+                        scriptArgs.Add(argument);
                     continue;
                 }
 
-                if (sourceArgument is not null && parseRunOptions && !value.StartsWith("--", StringComparison.Ordinal))
-                    parseRunOptions = false;
-
-                if (parseRunOptions && value == "--no-daemon")
+                if (value == "--no-daemon")
                 {
                     noDaemon = true;
                     continue;
                 }
 
-                if (parseRunOptions && value == "--info")
+                if (value == "--info")
                 {
                     if (debug)
                         throw new ArgumentException("--info and --debug cannot be used together.");
@@ -439,7 +438,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (parseRunOptions && value == "--debug")
+                if (value == "--debug")
                 {
                     if (info)
                         throw new ArgumentException("--info and --debug cannot be used together.");
@@ -447,13 +446,13 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (parseRunOptions && value.StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
+                if (value.StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
                 {
                     securityMode = ApplicationSecurityModeContext.Parse(value["--security=".Length..]);
                     continue;
                 }
 
-                if (parseRunOptions && value == "--security")
+                if (value == "--security")
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--security requires off, warn, or strict.");
@@ -461,7 +460,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (parseRunOptions && (value == "--rid" || value == "--platform"))
+                if (value == "--rid" || value == "--platform")
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException(value + " requires a runtime identifier.");
@@ -469,7 +468,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (parseRunOptions && value == "--result-format")
+                if (value == "--result-format")
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--result-format requires text, json, or xml.");
@@ -479,13 +478,13 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (parseRunOptions && value == "--restricted")
+                if (value == "--restricted")
                 {
                     restricted = true;
                     continue;
                 }
 
-                if (parseRunOptions && value == "--source-root")
+                if (value == "--source-root")
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--source-root requires a directory path.");
@@ -494,7 +493,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (parseRunOptions && value == "--preprocessor")
+                if (value == "--preprocessor")
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--preprocessor requires a specification.");
@@ -502,10 +501,17 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
+                if (!value.StartsWith("--", StringComparison.Ordinal) && sourceArgument is null)
+                {
+                    sourceArgument = value;
+                    continue;
+                }
+
                 if (sourceArgument is null)
                     throw new ArgumentException("run requires an .xps source file.");
 
-                scriptArgs.Add(value);
+                throw new ArgumentException(
+                    "Unexpected run argument: " + value + ". Use --Args \"first second\" to pass arguments to the XPScript program.");
             }
 
             if (sourceArgument is null)
@@ -733,6 +739,38 @@ public static class XPScriptCompilerCommandLine
         }
     }
 
+    private static IEnumerable<string> SplitRunArguments(string value)
+    {
+        var current = new System.Text.StringBuilder();
+        var inQuotes = false;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var ch = value[i];
+            if (ch == '"')
+            {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (char.IsWhiteSpace(ch) && !inQuotes)
+            {
+                if (current.Length > 0)
+                {
+                    yield return current.ToString();
+                    current.Clear();
+                }
+                continue;
+            }
+
+            current.Append(ch);
+        }
+
+        if (inQuotes)
+            throw new ArgumentException("--Args contains an unmatched quote.");
+        if (current.Length > 0)
+            yield return current.ToString();
+    }
+
     private static bool ParseBooleanCompileOption(string optionName, string value)
     {
         if (bool.TryParse(value, out var result)) return result;
@@ -802,11 +840,11 @@ XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
 Usage:
-  {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--embed-assets] [--result-format text|json|xml] [--debug] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
-  xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml] [--debug]
+  {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml]
   xpscript mcp
   xpscript mcp install codex|claude [--scope user|project] [--force]
-  {runCommand} <source.xps> [--info] [--debug] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [script arguments...]
+  {runCommand} <source.xps> [--info] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64

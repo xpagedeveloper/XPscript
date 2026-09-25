@@ -214,7 +214,7 @@ This is the compact reference for XPScript language commands, functions, runtime
 | Command/option | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | Compile | `xpscriptc source.xps -o output` | source, output | Compiles an XPScript source file. | [hello.xps](../samples/hello.xps) |
-| Run | `xpscriptc run source.xps` | source, script arguments | Compiles and runs a source file. | [hello.xps](../samples/hello.xps) |
+| Run | `xpscript run source.xps [--Args "arg1 arg2 ..."]` | source, optional explicit program arguments | Compiles and runs a source file. Only `--Args` values are forwarded to the generated program. | [hello.xps](../samples/hello.xps) |
 | `--platform` / `--rid` | `--platform win-x64` or `--rid win-x64` | RID | Selects target operating system and architecture. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `--runtime` | `--runtime=true|false` | boolean | Includes (`true`) or excludes (`false`, default) the .NET 10 runtime. | [hello.xps](../samples/hello.xps) |
 | `--single-file` | `--single-file=true|false` | boolean | Bundles application libraries into the executable when `true` (default); emits separate application files when `false`. | [hello.xps](../samples/hello.xps) |
