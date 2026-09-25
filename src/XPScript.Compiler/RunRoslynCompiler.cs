@@ -125,7 +125,7 @@ global using System.Threading.Tasks;
         return FrameworkReferences.Value.AddRange(DesktopReferences.Value);
     }
 
-    private static bool UsesDesktopUi(string generatedSource)
+    internal static bool UsesDesktopUi(string generatedSource)
     {
         // Inspect only the script-facing part. The generated base runtime can contain UI
         // support types even when the application itself is CLI or web-only; those must
