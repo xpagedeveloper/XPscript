@@ -106,6 +106,73 @@ internal sealed class XPImage : System.IDisposable
         _image.Crop(new ImageMagick.MagickGeometry(x, y, (uint)width, (uint)height));
     }
 
+    public void Resize(int width, int height, string mode)
+    {
+        ValidateDimensions(width, height);
+        var normalized = (mode ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalized.Length == 0 || normalized == "stretch")
+        {
+            _image.Resize((uint)width, (uint)height);
+            return;
+        }
+
+        var scaleX = width / (double)Width;
+        var scaleY = height / (double)Height;
+        var scale = normalized switch
+        {
+            "fit" or "contain" => System.Math.Min(scaleX, scaleY),
+            "fill" or "crop" => System.Math.Max(scaleX, scaleY),
+            _ => throw new System.ArgumentException("Resize mode must be stretch, fit, contain, fill or crop.", nameof(mode))
+        };
+        var resizedWidth = System.Math.Max(1, checked((int)System.Math.Round(Width * scale)));
+        var resizedHeight = System.Math.Max(1, checked((int)System.Math.Round(Height * scale)));
+        ValidateDimensions(resizedWidth, resizedHeight);
+        _image.Resize((uint)resizedWidth, (uint)resizedHeight);
+
+        if (normalized is "fill" or "crop")
+        {
+            var x = System.Math.Max(0, (resizedWidth - width) / 2);
+            var y = System.Math.Max(0, (resizedHeight - height) / 2);
+            _image.Crop(new ImageMagick.MagickGeometry(x, y, (uint)width, (uint)height));
+        }
+    }
+
+    public void Pad(int width, int height, string background)
+    {
+        ValidateDimensions(width, height);
+        if (width < Width || height < Height)
+            throw new System.ArgumentOutOfRangeException(nameof(width), "Canvas cannot be smaller than the image.");
+        _image.BackgroundColor = ParseColor(background);
+        _image.Extent((uint)width, (uint)height, ImageMagick.Gravity.Center);
+    }
+
+    public void Composite(XPImage overlay, int x, int y)
+    {
+        System.ArgumentNullException.ThrowIfNull(overlay);
+        _image.Composite(overlay._image, x, y, ImageMagick.CompositeOperator.Over);
+    }
+
+    public void Composite(XPImage overlay, int x, int y, double opacity)
+    {
+        System.ArgumentNullException.ThrowIfNull(overlay);
+        ValidateOpacity(opacity);
+        using var copy = (ImageMagick.MagickImage)overlay._image.Clone();
+        copy.Evaluate(ImageMagick.Channels.Alpha, ImageMagick.EvaluateOperator.Multiply, opacity);
+        _image.Composite(copy, x, y, ImageMagick.CompositeOperator.Over);
+    }
+
+    public void Opacity(double opacity)
+    {
+        ValidateOpacity(opacity);
+        _image.Evaluate(ImageMagick.Channels.Alpha, ImageMagick.EvaluateOperator.Multiply, opacity);
+    }
+
+    public void Flatten(string background)
+    {
+        _image.BackgroundColor = ParseColor(background);
+        _image.Alpha(ImageMagick.AlphaOption.Remove);
+    }
+
     public void Rotate(double degrees) => _image.Rotate(degrees);
     public void FlipHorizontal() => _image.Flop();
     public void FlipVertical() => _image.Flip();
@@ -180,6 +247,12 @@ internal sealed class XPImage : System.IDisposable
         "tiff" => ImageMagick.MagickFormat.Tiff,
         _ => throw new System.NotSupportedException("Unsupported image format: " + format)
     };
+
+    private static void ValidateOpacity(double opacity)
+    {
+        if (double.IsNaN(opacity) || double.IsInfinity(opacity) || opacity < 0d || opacity > 1d)
+            throw new System.ArgumentOutOfRangeException(nameof(opacity), "Opacity must be between 0 and 1.");
+    }
 
     private static void ValidateDimensions(int width, int height)
     {
