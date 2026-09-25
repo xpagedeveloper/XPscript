@@ -257,7 +257,7 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [x] modal `ShowDialog()` returning a stable result such as `OK`, `Cancel`, `Yes`, `No`
 - [ ] optionally support non-modal `Show()` later; modal dialogs are MVP
 - [ ] close/cancel behavior consistent across Windows, Linux and macOS
-- [ ] simple layout abstraction that avoids requiring pixel-perfect platform-specific coordinates
+- [x] simple layout abstraction that avoids requiring pixel-perfect platform-specific coordinates
 
 ### 19.3 UI element inventory
 
@@ -271,41 +271,41 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 - [x] DateTimeField
 - [x] CheckBox
 - [x] RadioButton/RadioGroup
-- [ ] ComboBox
+- [x] ComboBox
 - [x] ListBox
 - [x] MultiListBox
-- [ ] Button
+- [x] Button
 - [x] Separator/spacer
-- [ ] per-control default value, required/read-only/enabled/visible state, tooltip, placeholder and size hints where appropriate
+- [x] per-control default value, required/read-only/enabled/visible state, tooltip, placeholder and size hints where appropriate
 
 ### 19.4 Validation
 
 - [x] required
-- [ ] min/max text length
-- [ ] numeric min/max
+- [x] min/max text length
+- [x] numeric min/max
 - [ ] date min/max
-- [ ] regular expression
-- [ ] allowed values
+- [x] regular expression
+- [x] allowed values
 - [ ] custom XPScript validation callback
-- [ ] field-level validation errors and form-level validation before OK/submit
+- [x] field-level validation errors and form-level validation before OK/submit
 
 ### 19.5 Dialog inventory
 
 - [ ] MessageBox with stable XPScript parameters/return codes across platforms
-- [ ] OK
-- [ ] OK/Cancel
-- [ ] Yes/No
-- [ ] Yes/No/Cancel
-- [ ] Retry/Cancel
-- [ ] question/confirm
-- [ ] text input dialog
-- [ ] password input dialog
-- [ ] single-select list dialog
+- [x] OK
+- [x] OK/Cancel
+- [x] Yes/No
+- [x] Yes/No/Cancel
+- [x] Retry/Cancel
+- [x] question/confirm
+- [x] text input dialog
+- [x] password input dialog
+- [x] single-select list dialog
 - [ ] multi-select list dialog
-- [ ] file-open dialog
+- [x] file-open dialog
 - [ ] multi-file-open dialog
-- [ ] file-save dialog
-- [ ] folder selection dialog
+- [x] file-save dialog
+- [x] folder selection dialog
 - [ ] file filters, initial directory, default filename, overwrite confirmation and correct Cancel semantics
 
 ### 19.6 Data binding semantics
@@ -318,40 +318,40 @@ Design goal: add a small, platform-native UI extension for simple forms and dial
 
 ### 19.7 Cross-platform backend inventory
 
-- [ ] investigate Windows backend
-- [ ] investigate Linux backend such as GTK or equivalent
-- [ ] investigate macOS backend
-- [ ] evaluate whether one cross-platform .NET UI toolkit can provide consistent behavior without excessive runtime size
-- [ ] prefer native file/message dialogs where practical
-- [ ] define UI thread/event-loop integration
+- [x] investigate Windows backend
+- [x] investigate Linux backend such as GTK or equivalent
+- [x] investigate macOS backend
+- [x] evaluate whether one cross-platform .NET UI toolkit can provide consistent behavior without excessive runtime size
+- [x] prefer native file/message dialogs where practical
+- [x] define UI thread/event-loop integration
 - [x] detect headless/server environment and return clear runtime errors
 - [ ] architecture-specific dependencies for x64/arm64
 - [ ] package UI dependencies only when generated program actually uses the UI extension where feasible
 
 ### 19.8 UI security/lifetime
 
-- [ ] isolate all form/data instances
-- [ ] ensure password values are not logged in diagnostics or default debug output
+- [x] isolate all form/data instances
+- [x] ensure password values are not logged in diagnostics or default debug output
 - [ ] validate callbacks cannot overwrite unrelated runtime/compiler state
-- [ ] deterministically release windows/dialog/native handles
-- [ ] close/dispose event loops and native UI resources correctly
+- [x] deterministically release windows/dialog/native handles
+- [x] close/dispose event loops and native UI resources correctly
 - [ ] include UI objects in memory/lifetime and security reviews
 
 ## 19. Documentation and examples
 
 - [ ] complete English docs for every statement, function, class, property and operator
-- [ ] all end-user docs under `docs/`
+- [x] all end-user docs under `docs/`
 - [ ] reusable `.xps` programs under `examples/`; keep test fixtures under `samples/`
 - [ ] every documented API links to an example or contains an equivalent inline example
-- [ ] `docs/index.md`
+- [x] `docs/index.md`
 - [ ] language-reference index by declarations/control/operators/strings/math/date/arrays/files/HTTP/JSON/process/platform/UI/diagnostics
 - [ ] grouped or per-feature pages with syntax, parameters, return value, errors and examples
 - [ ] type coercion documentation
-- [ ] compiler CLI including output format, target RID/platform and exit codes
+- [x] compiler CLI including output format, target RID/platform and exit codes
 - [ ] separate file `Input$` versus console input docs
 - [ ] OS `Lock/Unlock` semantics
 - [ ] `Platform`, cross-platform `Shell` and publishing
-- [ ] UI extension documentation and examples
+- [x] UI extension documentation and examples
 - [ ] XPScript branding only; no legacy product names or formula-engine terminology
 
 ## 20. Quality gates
