@@ -108,7 +108,7 @@ archive.Create("zip")
 - [x] `Save()`.
 - [x] `Close()`.
 - [x] Define overwrite behavior for `Create()` when the target already exists.
-- [ ] Define behavior when the archive is missing, malformed, unsupported or encrypted.
+- [x] Define behavior when the archive is missing, malformed, unsupported or encrypted.
 - [x] Dispose streams and other resources deterministically.
 
 ## Listing and lookup
@@ -161,7 +161,7 @@ archive.Save()
 
 - [x] `Remove(entryName)`.
 - [x] `Rename(entryName, newName)`.
-- [ ] Investigate which archive formats support direct modification cleanly through SharpCompress.
+- [x] Investigate which archive formats support direct modification cleanly through SharpCompress.
 - [ ] Where direct in-place modification is not safe or available, rebuild the archive into a temporary stream/file and atomically replace the original.
 - [ ] Ensure failed modifications do not corrupt the original archive.
 - [x] Reject modification attempts for read-only archive formats with a clear XPScript runtime error.
@@ -221,9 +221,9 @@ Initial target matrix:
 - [x] Investigate password-protected ZIP support in the selected SharpCompress version.
 - [ ] Investigate encrypted RAR and 7z read support.
 - [x] Define how `Password` is supplied and cleared.
-- [ ] Never log passwords.
+- [x] Never log passwords.
 - [x] Return a distinct runtime error for missing password versus invalid password where the underlying library makes that distinction reliably.
-- [ ] Do not expose encryption algorithms that are insecure or not portable without explicit design review.
+- [x] Do not expose encryption algorithms that are insecure or not portable without explicit design review.
 
 ## Filesystem integration
 
@@ -349,13 +349,13 @@ Server-side filesystem operations can use the normal server execution model.
 ## Runtime errors
 
 - [x] Archive not found.
-- [ ] Unsupported archive format.
-- [ ] Invalid or corrupt archive.
+- [x] Unsupported archive format.
+- [x] Invalid or corrupt archive.
 - [x] Encrypted archive requires password.
 - [x] Invalid password.
 - [x] Archive entry not found.
 - [x] Archive format is read-only.
-- [ ] Unsupported compression method.
+- [x] Unsupported compression method.
 - [x] Extraction path outside target directory.
 - [x] Symlink or reparse-point extraction rejected.
 - [x] Maximum archive entry count exceeded.
@@ -395,8 +395,8 @@ Server-side filesystem operations can use the normal server execution model.
 - [ ] Extract an entry.
 - [ ] Extract the complete archive.
 - [ ] Test encrypted RAR where supported.
-- [ ] Verify `IsReadOnly = True`.
-- [ ] Verify `AddFile`, `Remove`, `Rename` and `Save` reject unsupported modification cleanly.
+- [x] Verify `IsReadOnly = True`.
+- [x] Verify `AddFile`, `Remove`, `Rename` and `Save` reject unsupported modification cleanly.
 
 ## Other format tests
 
@@ -420,8 +420,8 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Extreme compression ratio.
 - [ ] Incorrect archive size metadata.
 - [ ] Corrupt compressed stream.
-- [ ] Password-protected archive with missing password.
-- [ ] Password-protected archive with incorrect password.
+- [x] Password-protected archive with missing password.
+- [x] Password-protected archive with incorrect password.
 - [ ] Verify failed extraction does not leave unsafe partial files outside controlled locations.
 
 ## Cross-platform CI
@@ -463,7 +463,7 @@ Server-side filesystem operations can use the normal server execution model.
 
 ### Milestone 1: ZIP foundation
 
-- [ ] Finalize `Archive` and `ArchiveEntry` public API.
+- [x] Finalize `Archive` and `ArchiveEntry` public API.
 - [x] Add conditional SharpCompress dependency injection.
 - [x] Implement ZIP create/open/list/add/remove/rename/save/extract.
 - [x] Implement `ReadText`, `ReadBytes` and `ToBytes`.
@@ -473,7 +473,7 @@ Server-side filesystem operations can use the normal server execution model.
 
 ### Milestone 2: Additional archive formats
 
-- [ ] Add RAR read/extract support.
+- [x] Add RAR read/extract support.
 - [x] Add 7z support according to verified write capability.
 - [x] Add TAR, GZip, BZip2, LZip and Zstandard support.
 - [x] Add additional read-only formats where useful.
