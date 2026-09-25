@@ -23,7 +23,7 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 - [ ] Use the providers' built-in connection pooling, TLS, parameter binding, transactions, async I/O, cancellation and type mapping instead of reimplementing those features.
 - [ ] Use `DbConnection`, `DbCommand`, `DbDataReader`, `DbTransaction` and related ADO.NET abstractions for the common XPScript layer where practical.
 - [ ] Keep each provider behind an XPScript-owned adapter so provider packages can be upgraded/replaced without changing the public script API.
-- [ ] Pin/centrally manage provider package versions.
+- [x] Pin/centrally manage provider package versions.
 - [ ] Verify .NET 10 support, Windows/Linux/macOS behavior where applicable, package maintenance, license and security advisories before finalizing versions.
 - [x] Do not create custom TDS, MySQL/MariaDB or PostgreSQL protocol implementations.
 
@@ -45,10 +45,10 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 - [ ] Support host, port, database/catalog, username and password where applicable.
 - [ ] Support integrated/Windows authentication for SQL Server where the provider and platform support it.
 - [ ] Support TLS options and certificate validation settings without insecure defaults.
-- [ ] Support configurable connection timeout and command timeout.
-- [ ] Use provider connection pooling by default where appropriate.
+- [x] Support configurable connection timeout and command timeout.
+- [x] Use provider connection pooling by default where appropriate.
 - [ ] Allow pooling to be disabled explicitly for testing or special cases.
-- [ ] Never include passwords, access tokens or complete secret-bearing connection strings in diagnostics.
+- [x] Never include passwords, access tokens or complete secret-bearing connection strings in diagnostics.
 
 ## Query and command execution
 
@@ -67,7 +67,7 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 
 - [x] Make parameters the normal documented way to pass values into SQL.
 - [x] Support named provider parameters through a provider-neutral XPScript parameter API.
-- [ ] Map String, Integer, Long, Double, Currency/Decimal, Boolean, Date/DateTime, Byte arrays, Null and Empty safely.
+- [x] Map String, Integer, Long, Double, Currency/Decimal, Boolean, Date/DateTime, Byte arrays, Null and Empty safely.
 - [ ] Support explicit database type/size/precision where needed.
 - [ ] Do not attempt to parameterize SQL identifiers such as table or column names. Document safe allow-list patterns instead.
 - [ ] Add adversarial SQL-injection regression tests proving values are not concatenated into commands by the runtime helpers.
@@ -85,9 +85,9 @@ Implement after `todo/pdf-runtime-todo.md` is complete and merged. Complete this
 ## Data mapping
 
 - [x] Preserve database NULL distinctly from empty string and numeric zero.
-- [ ] Map numeric types without silent precision loss where possible.
+- [x] Map numeric types without silent precision loss where possible.
 - [x] Map Date/DateTime values consistently.
-- [ ] Support binary/blob values as XPScript Byte arrays.
+- [x] Support binary/blob values as XPScript Byte arrays.
 - [x] Convert rows/results to `XPJsonObject` / `XPJsonArray`.
 - [x] Define duplicate-column-name behavior.
 - [ ] Preserve provider-specific values through a documented fallback representation when no native XPScript type exists.
