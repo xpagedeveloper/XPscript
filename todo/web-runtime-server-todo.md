@@ -42,9 +42,9 @@ Exact public CLI syntax must be finalized during the architecture phase.
 - [ ] Decide which execution model is safe enough for production web hosting.
 - [x] Define the trust boundary: XPScript application source should initially be treated as trusted server-side application code unless an isolated worker/sandbox model is explicitly implemented.
 - [x] Perform threat modeling before implementation: path traversal, request smuggling, response splitting, code injection, source disclosure, cache poisoning, session fixation, CSRF, XSS helper misuse, denial of service, oversized input, slow clients, malformed FastCGI records, symlink escapes, compile storms and resource exhaustion.
-- [ ] Perform an OWASP-oriented security design review before production release.
+- [x] Perform an OWASP-oriented security design review before production release.
 - [ ] Define whether multi-tenant hosting is supported. If so, each site/tenant must have hard isolation boundaries for source root, cache, sessions, Application state, temp files and configuration.
-- [ ] Do not expose an internet-facing administrative/compiler endpoint by default.
+- [x] Do not expose an internet-facing administrative/compiler endpoint by default.
 
 ---
 
@@ -82,12 +82,12 @@ execute XPScript entry point
 Response
 ```
 
-- [ ] Integrate with `todo/include-source-files-todo.md`.
-- [ ] Include expansion must finish before configurable source preprocessors run.
-- [ ] Integrate with `todo/source-preprocessor-pipeline-todo.md`.
-- [ ] Do not maintain a separate web-only parser/compiler implementation.
-- [ ] Normal CLI compile, direct-script execution and web runtime should share as much compiler pipeline code as possible.
-- [ ] Compiler diagnostics must retain original file/line mappings through Include and preprocessing.
+- [x] Integrate with `todo/include-source-files-todo.md`.
+- [x] Include expansion must finish before configurable source preprocessors run.
+- [x] Integrate with `todo/source-preprocessor-pipeline-todo.md`.
+- [x] Do not maintain a separate web-only parser/compiler implementation.
+- [x] Normal CLI compile, direct-script execution and web runtime should share as much compiler pipeline code as possible.
+- [x] Compiler diagnostics must retain original file/line mappings through Include and preprocessing.
 
 ---
 
@@ -100,10 +100,10 @@ Response
 - [x] `/` maps to `<root>/index.xps`.
 - [x] `/foo/save‘ if no subfolder called foo exists then map to `<root>/foo.xsp’ and function save inside the foo.xsp 
 - [x] Make the default document name configurable later, while keeping `index.xps` as the standard default.
-- [ ] Define behavior for `/folder` versus `/folder/` and redirects consistently.
+- [x] Define behavior for `/folder` versus `/folder/` and redirects consistently.
 - [x] Return 404 when the resolved XPScript file does not exist.
 - [x] Never return raw `.xps` source to the browser merely because compilation failed.
-- [ ] Decide separately whether static files are served by XPScript or should normally be served by nginx/Kestrel static-file middleware.
+- [x] Decide separately whether static files are served by XPScript or should normally be served by nginx/Kestrel static-file middleware.
 - [x] If static file serving is added, create a separate allowlist/configuration and MIME mapping policy.
 
 ### Path security
@@ -331,7 +331,7 @@ Application is shared state for one configured site/application, not global stat
 - [ ] Define behavior when script returns without writing a response.
 - [x] Define behavior for uncaught XPScript runtime errors.
 - [x] Production error pages must not expose source code, stack traces, filesystem paths, secrets or generated C#.
-- [ ] Development diagnostics may expose richer information only when explicitly enabled and never by default on public interfaces.
+- [x] Development diagnostics may expose richer information only when explicitly enabled and never by default on public interfaces.
 
 ---
 
@@ -408,7 +408,7 @@ execute
 
 - [x] Decide whether web scripts execute in-process or in worker processes.
 - [x] Explicitly document that in-process XPScript has the privileges of the hosting process.
-- [ ] If untrusted/customer-supplied scripts are ever supported, require process/container/OS-level isolation rather than claiming managed code alone is a sandbox.
+- [x] If untrusted/customer-supplied scripts are ever supported, require process/container/OS-level isolation rather than claiming managed code alone is a sandbox.
 - [ ] Bound request execution time where possible.
 - [ ] Because arbitrary synchronous managed code cannot be safely force-aborted in-process, investigate worker-process isolation for hard execution deadlines.
 - [x] Bound stdout/log output and Response size where appropriate.
@@ -432,14 +432,14 @@ Even though the implementation is primarily managed .NET, all parsers and networ
 - [x] Do not allocate an attacker-specified size before validating it against configured limits.
 - [ ] Prefer pooled buffers only when lifetime/clearing rules are correct; secrets must not leak between requests through reused buffers.
 - [ ] Return pooled buffers in `finally` paths.
-- [ ] Fuzz network/protocol parsers.
-- [ ] Add malformed-input tests designed to trigger integer overflow, out-of-range slicing, excessive allocation and parser state confusion.
+- [x] Fuzz network/protocol parsers.
+- [x] Add malformed-input tests designed to trigger integer overflow, out-of-range slicing, excessive allocation and parser state confusion.
 
 ---
 
 ## 11. HTTP security requirements
 
-- [ ] Reject request-header injection/invalid control characters.
+- [x] Reject request-header injection/invalid control characters.
 - [x] Prevent response splitting.
 - [ ] Define duplicate `Content-Length` / `Transfer-Encoding` handling through the hosting transport rather than implementing ambiguous custom parsing.
 - [x] Do not reimplement Kestrel's HTTP parser in standalone mode.
@@ -449,7 +449,7 @@ Even though the implementation is primarily managed .NET, all parsers and networ
 - [x] Cookie security defaults.
 - [x] CSRF guidance/helpers for state-changing browser applications.
 - [x] HTML/URL/JSON encoding helpers that make output context explicit.
-- [ ] Do not automatically disable TLS certificate validation for script HTTP clients.
+- [x] Do not automatically disable TLS certificate validation for script HTTP clients.
 - [x] Secret values must never be printed in normal compile/runtime diagnostics.
 
 ---
@@ -587,7 +587,7 @@ All examples must be reconsidered after the object API has been finalized.
 - [x] Host validation
 - [x] trusted/untrusted forwarded header behavior
 - [x] oversized body rejected
-- [ ] slow/aborted request behavior
+- [x] slow/aborted request behavior
 - [x] Windows/Linux/macOS verification
 
 ---
