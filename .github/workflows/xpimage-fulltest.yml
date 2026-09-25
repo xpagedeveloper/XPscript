@@ -75,9 +75,6 @@ jobs:
           $compiler = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
           New-Item -ItemType Directory -Force ./out/xpimage-targets | Out-Null
 
-          dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage-targets/cli --runtime=false
-          if ($LASTEXITCODE -ne 0) { throw 'XPImage CLI compile failed.' }
-
           $desktopSource = @'
           Sub Main()
               Dim img As XPImage
@@ -101,6 +98,9 @@ jobs:
           '@ | Set-Content -Encoding utf8 ./out/xpimage-targets/web-source/main.xps
           dotnet $compiler ./out/xpimage-targets/web-source/main.xps --target webiis --runtime=false --output ./out/xpimage-targets/web
           if ($LASTEXITCODE -ne 0) { throw 'XPImage web compile failed.' }
+
+          dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage-targets/cli --runtime=false
+          if ($LASTEXITCODE -ne 0) { throw 'XPImage CLI compile failed.' }
 
           foreach ($noticePath in @(
             './out/xpimage-targets/Third-party-license.txt',
