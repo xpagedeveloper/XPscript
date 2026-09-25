@@ -77,7 +77,7 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 
 ### Properties
 
-- [ ] EmbeddedObjects
+- [x] EmbeddedObjects
 - [ ] EncryptionKeys
 - [ ] EncryptOnSend
 - [ ] FolderReferences
