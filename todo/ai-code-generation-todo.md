@@ -58,7 +58,7 @@ Compiler validation
 
 ## 2. Official XPScript AI skill
 
-- [ ] Create an official XPScript coding skill.
+- [x] Create an official XPScript coding skill.
 - [ ] Teach the workflow rather than copying the entire language manual into the skill.
 - [ ] Identify application target before generation.
 - [ ] Retrieve current XPScript language/API knowledge.
@@ -490,7 +490,7 @@ test result
 - [ ] Rebuild/reindex changed knowledge chunks.
 - [ ] Validate RAG metadata.
 - [ ] Run a small deterministic AI smoke benchmark separately from normal compiler CI where model access is available.
-- [ ] Keep compiler CI independent from external AI provider availability.
+- [x] Keep compiler CI independent from external AI provider availability.
 
 ## 20. Observability
 
