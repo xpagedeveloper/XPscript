@@ -8,14 +8,14 @@ Implement a cross-platform archive runtime for XPScript using a stable XPScript-
 
 - [x] Add a format-independent public `Archive` object.
 - [x] Add an `ArchiveEntry` object for files and folders inside an archive.
-- [ ] Keep all third-party types, enums and implementation details hidden behind XPScript-owned runtime classes.
-- [ ] Use `SharpCompress` as the preferred implementation library, subject to final compatibility, security and license verification at implementation time.
+- [x] Keep all third-party types, enums and implementation details hidden behind XPScript-owned runtime classes.
+- [x] Use `SharpCompress` as the preferred implementation library, subject to final compatibility, security and license verification at implementation time.
 - [ ] Verify the selected SharpCompress release is MIT licensed and supports the .NET target frameworks used by XPScript.
 - [ ] Prefer a pure managed implementation with no platform-specific native archive binaries.
 - [ ] Design the runtime around `Stream` internally so file, Byte-array, HTTP, database, MIME, mobile and WASM scenarios can share the same implementation.
 - [ ] Reuse existing XPScript path handling and filesystem security instead of allowing the archive library to access arbitrary paths directly.
-- [ ] Add the dependency only when generated code actually uses the archive runtime.
-- [ ] Add the selected package and license information to `THIRD-PARTY-NOTICES.md`.
+- [x] Add the dependency only when generated code actually uses the archive runtime.
+- [x] Add the selected package and license information to `THIRD-PARTY-NOTICES.md`.
 - [ ] Ensure `scripts/validate-license-notices.ps1` passes after the new dependency is added.
 
 ## Goals
@@ -283,12 +283,12 @@ MaxCompressionRatio
 
 ## Compiler integration
 
-- [ ] Update `CompilerBuildEnvironment.cs` to detect archive runtime use.
-- [ ] Add SharpCompress only when the generated program needs the archive runtime.
+- [x] Update `CompilerBuildEnvironment.cs` to detect archive runtime use.
+- [x] Add SharpCompress only when the generated program needs the archive runtime.
 - [ ] Follow the same conditional package-reference pattern already used for SQLite, SQL Server, MySQL, PostgreSQL/Supabase and UI dependencies.
-- [ ] Use a stable generated-source marker such as `XPScriptArchive` for dependency detection.
-- [ ] Keep applications that do not use `Archive` completely unaffected in package size and dependencies.
-- [ ] Pin the SharpCompress version used by generated projects.
+- [x] Use a stable generated-source marker such as `XPScriptArchive` for dependency detection.
+- [x] Keep applications that do not use `Archive` completely unaffected in package size and dependencies.
+- [x] Pin the SharpCompress version used by generated projects.
 
 Conceptual detection:
 
@@ -298,7 +298,7 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 
 ## License and dependency maintenance
 
-- [ ] Add SharpCompress to `THIRD-PARTY-NOTICES.md` under the MIT section.
+- [x] Add SharpCompress to `THIRD-PARTY-NOTICES.md` under the MIT section.
 - [ ] Include the required copyright/license notice text.
 - [ ] Run `scripts/validate-license-notices.ps1`.
 - [ ] Check transitive dependencies before merging.
@@ -503,5 +503,5 @@ XPScript archive runtime
 SharpCompress
 ```
 
-- [ ] XPScript scripts must never depend directly on SharpCompress namespaces, classes, enums or package-specific behavior.
-- [ ] Preserve the ability to replace or upgrade the underlying archive engine without breaking the public XPScript API.
+- [x] XPScript scripts must never depend directly on SharpCompress namespaces, classes, enums or package-specific behavior.
+- [x] Preserve the ability to replace or upgrade the underlying archive engine without breaking the public XPScript API.
