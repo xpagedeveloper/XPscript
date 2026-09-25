@@ -117,7 +117,7 @@ Basic production-style invocation:
 xpscript web --root /srv/xpsite --address 0.0.0.0 --port 8080 --host www.example.com
 ```
 
-Kestrel can use a JSON `web.cfg`. Explicit command-line values override config values.
+Kestrel can use a JSON `web.cfg`. Explicit command-line values override config values. See [Web and FastCGI host configuration](host-config.md) for the complete file format, supported properties, path rules and examples.
 
 ## Kestrel parameters
 
