@@ -95,11 +95,11 @@ Response
 
 - [x] `--root` defines the only default document/source root for the site.
 - [x] `/foo.xps` maps to `<root>/foo.xps` when allowed.
-- [ ] `/foo` maps to `<root>/foo.xps‘ when allowed
+- [x] `/foo` maps to `<root>/foo.xps‘ when allowed
 - [x] `/folder/` maps to `<root>/folder/index.xps` by default.
 - [x] `/` maps to `<root>/index.xps`.
-- [ ] `/foo/save‘ if no subfolder called foo exists then map to `<root>/foo.xsp’ and function save inside the foo.xsp 
-- [ ] Make the default document name configurable later, while keeping `index.xps` as the standard default.
+- [x] `/foo/save‘ if no subfolder called foo exists then map to `<root>/foo.xsp’ and function save inside the foo.xsp 
+- [x] Make the default document name configurable later, while keeping `index.xps` as the standard default.
 - [ ] Define behavior for `/folder` versus `/folder/` and redirects consistently.
 - [x] Return 404 when the resolved XPScript file does not exist.
 - [x] Never return raw `.xps` source to the browser merely because compilation failed.
@@ -567,9 +567,9 @@ All examples must be reconsidered after the object API has been finalized.
 
 ## 17. Kestrel regression matrix
 
-- [ ] root `/` executes `index.xps`
-- [ ] directory `/folder/` executes `/folder/index.xps`
-- [ ] direct `.xps` route
+- [x] root `/` executes `index.xps`
+- [x] directory `/folder/` executes `/folder/index.xps`
+- [x] direct `.xps` route
 - [x] missing script -> 404 without source disclosure
 - [ ] GET/query values
 - [ ] POST body
@@ -582,8 +582,8 @@ All examples must be reconsidered after the object API has been finalized.
 - [ ] preprocessor version/order invalidates cache
 - [ ] simultaneous cold requests compile once
 - [ ] compile failure does not poison unrelated cache entries
-- [ ] traversal/encoded traversal rejected
-- [ ] symlink escape rejected according to policy
+- [x] traversal/encoded traversal rejected
+- [x] symlink escape rejected according to policy
 - [ ] Host validation
 - [ ] trusted/untrusted forwarded header behavior
 - [ ] oversized body rejected
@@ -600,9 +600,9 @@ All examples must be reconsidered after the object API has been finalized.
 - [ ] request headers
 - [ ] cookies
 - [ ] status/content-type/custom response headers
-- [ ] `index.xps` mapping
-- [ ] TCP transport
-- [ ] Unix socket transport on supported OSes
+- [x] `index.xps` mapping
+- [x] TCP transport
+- [x] Unix socket transport on supported OSes
 - [ ] keep-connection behavior
 - [ ] partial record reads
 - [ ] multiple PARAMS records
