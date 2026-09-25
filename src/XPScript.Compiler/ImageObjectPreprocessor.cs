@@ -7,7 +7,7 @@ internal sealed class ImageObjectPreprocessor
     private static readonly string[] Members =
     [
         "Width", "Height", "Format", "DpiX", "DpiY", "Clone", "Resize", "Crop", "Rotate",
-        "FlipHorizontal", "FlipVertical", "Grayscale", "Invert", "Blur", "Sharpen",
+        "FlipHorizontal", "FlipVertical", "Brightness", "Contrast", "Saturation", "Grayscale", "Invert", "Blur", "Sharpen",
         "AutoOrient", "StripMetadata", "ToBytes", "Save", "Dispose", "Pad", "Composite", "Opacity", "Flatten"
     ];
 
