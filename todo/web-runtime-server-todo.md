@@ -136,15 +136,15 @@ xpscript web --root <directory> --port <port>
 - [ ] Support HTTPS endpoints/configuration in production mode.
 - [x] Support graceful shutdown.
 - [ ] Define maximum concurrent connections and requests.
-- [ ] Configure bounded request-body size.
-- [ ] Configure request-header size/time limits.
-- [ ] Configure keep-alive/header timeouts.
-- [ ] Configure minimum data-rate or equivalent slow-client protections where supported.
+- [x] Configure bounded request-body size.
+- [x] Configure request-header size/time limits.
+- [x] Configure keep-alive/header timeouts.
+- [x] Configure minimum data-rate or equivalent slow-client protections where supported.
 - [ ] Support request cancellation when the client disconnects.
 - [ ] Define HTTP/1.1, HTTP/2 and optionally HTTP/3 support as separate compatibility targets.
-- [ ] When behind a reverse proxy, trust forwarded headers only from explicitly configured trusted proxies/networks.
-- [ ] Never blindly trust arbitrary `X-Forwarded-For`, `X-Forwarded-Proto` or `X-Forwarded-Host` values.
-- [ ] Validate Host values against configured hosts when exposed beyond loopback.
+- [x] When behind a reverse proxy, trust forwarded headers only from explicitly configured trusted proxies/networks.
+- [x] Never blindly trust arbitrary `X-Forwarded-For`, `X-Forwarded-Proto` or `X-Forwarded-Host` values.
+- [x] Validate Host values against configured hosts when exposed beyond loopback.
 
 ---
 
@@ -249,11 +249,11 @@ Candidate members:
 - [x] `Response.Headers`
 - [x] `Response.Cookies`
 - [x] `Response.Write(value)`
-- [ ] `Response.WriteBinary(value)` if required
+- [x] `Response.WriteBinary(value)` if required
 - [x] `Response.Redirect(url [, status])`
-- [ ] `Response.Clear()` semantics
+- [x] `Response.Clear()` semantics
 - [ ] `Response.Flush()` semantics only if transport-safe streaming is intentionally supported
-- [ ] response-completed state
+- [x] response-completed state
 
 Security requirements:
 
