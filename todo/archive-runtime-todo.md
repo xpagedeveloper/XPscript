@@ -144,7 +144,7 @@ End ForAll
 - [x] `AddBytes(archivePath, bytes)`.
 - [ ] Prevent source paths from bypassing existing XPScript filesystem restrictions.
 - [x] Normalize destination entry names before writing them into the archive.
-- [ ] Define duplicate-entry behavior explicitly.
+- [x] Define duplicate-entry behavior explicitly.
 - [ ] Preserve timestamps only where reliable and useful.
 
 Example to validate:
@@ -367,25 +367,25 @@ Server-side filesystem operations can use the normal server execution model.
 
 ## ZIP tests
 
-- [ ] Create an empty ZIP archive.
+- [x] Create an empty ZIP archive.
 - [ ] Add one file.
 - [ ] Add a file under a different archive path.
 - [ ] Add a folder recursively.
-- [ ] Add text directly.
+- [x] Add text directly.
 - [ ] Add Byte-array data directly.
-- [ ] List entries.
-- [ ] Validate file and folder counts.
-- [ ] Read text from an entry.
+- [x] List entries.
+- [x] Validate file and folder counts.
+- [x] Read text from an entry.
 - [ ] Read bytes from an entry.
-- [ ] Remove an entry.
-- [ ] Rename an entry.
-- [ ] Save and reopen.
+- [x] Remove an entry.
+- [x] Rename an entry.
+- [x] Save and reopen.
 - [ ] Extract one entry.
 - [ ] Extract one folder.
 - [ ] Extract the complete archive.
-- [ ] Create an archive entirely in memory.
-- [ ] Export the result with `ToBytes()`.
-- [ ] Reopen those bytes and validate the contents.
+- [x] Create an archive entirely in memory.
+- [x] Export the result with `ToBytes()`.
+- [x] Reopen those bytes and validate the contents.
 
 ## RAR tests
 
@@ -402,8 +402,8 @@ Server-side filesystem operations can use the normal server execution model.
 
 - [ ] Add round-trip tests for every format supported for writing.
 - [ ] Add read/extract tests for every read-only format exposed publicly.
-- [ ] Include nested directories and Unicode filenames.
-- [ ] Include empty files and empty folders where the format supports them.
+- [x] Include nested directories and Unicode filenames.
+- [x] Include empty files and empty folders where the format supports them.
 - [ ] Include malformed archive negative tests.
 
 ## Security tests
@@ -455,7 +455,7 @@ Server-side filesystem operations can use the normal server execution model.
 - [ ] Add `archive-create.xps`.
 - [ ] Add `archive-list.xps`.
 - [ ] Add `archive-extract.xps`.
-- [ ] Add `archive-memory.xps`.
+- [x] Add `archive-memory.xps`.
 - [ ] Add `archive-rar.xps`.
 - [ ] Add `archive-password.xps` if password support is exposed in v1.
 
@@ -482,7 +482,7 @@ Server-side filesystem operations can use the normal server execution model.
 
 ### Milestone 3: Mobile and WASM validation
 
-- [ ] Complete Byte-array and stream-oriented workflows.
+- [x] Complete Byte-array and stream-oriented workflows.
 - [ ] Validate Android.
 - [ ] Validate iOS and AOT.
 - [ ] Validate browser/WASM.
