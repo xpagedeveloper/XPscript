@@ -571,12 +571,12 @@ All examples must be reconsidered after the object API has been finalized.
 - [x] directory `/folder/` executes `/folder/index.xps`
 - [x] direct `.xps` route
 - [x] missing script -> 404 without source disclosure
-- [ ] GET/query values
-- [ ] POST body
-- [ ] headers/cookies
-- [ ] response status/headers/body
-- [ ] sessions
-- [ ] Application concurrency
+- [x] GET/query values
+- [x] POST body
+- [x] headers/cookies
+- [x] response status/headers/body
+- [x] sessions
+- [x] Application concurrency
 - [ ] source edit invalidates cache
 - [ ] included-file edit invalidates parent script cache
 - [ ] preprocessor version/order invalidates cache
@@ -596,15 +596,15 @@ All examples must be reconsidered after the object API has been finalized.
 
 - [ ] nginx -> XPScript FastCGI GET
 - [ ] POST body
-- [ ] query string
-- [ ] request headers
-- [ ] cookies
-- [ ] status/content-type/custom response headers
+- [x] query string
+- [x] request headers
+- [x] cookies
+- [x] status/content-type/custom response headers
 - [x] `index.xps` mapping
 - [x] TCP transport
 - [x] Unix socket transport on supported OSes
 - [ ] keep-connection behavior
-- [ ] partial record reads
+- [x] partial record reads
 - [ ] multiple PARAMS records
 - [ ] multiple STDIN records
 - [ ] empty STDIN terminator
