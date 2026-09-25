@@ -325,7 +325,7 @@ Application is shared state for one configured site/application, not global stat
 - [ ] Decide whether a web `.xps` file executes top-level code, `Sub Main()`, a dedicated `Sub WebMain()`, or another explicit convention.
 - [ ] Prefer one deterministic convention and document it clearly.
 - [ ] Inject/access Request/Response/Server/Session/Application through runtime context, not uncontrolled global mutable statics.
-- [ ] Context must be request-local, including async/thread transitions if async execution is later supported.
+- [x] Context must be request-local, including async/thread transitions if async execution is later supported.
 - [ ] Do not allow one request to observe another request's Request/Response objects.
 - [ ] Ensure compiler-generated statics do not accidentally turn request locals into cross-request global data.
 - [ ] Define behavior when script returns without writing a response.
@@ -424,12 +424,12 @@ execute
 Even though the implementation is primarily managed .NET, all parsers and network-facing code must be written as if input is hostile.
 
 - [ ] No `unsafe` blocks, raw pointers or manual unmanaged buffers in protocol/request parsing without a separately reviewed justification.
-- [ ] Never trust network-provided lengths, offsets, counts or indexes.
-- [ ] Use checked integer arithmetic where lengths/offsets are combined.
-- [ ] Validate ranges before slicing arrays, spans or buffers.
+- [x] Never trust network-provided lengths, offsets, counts or indexes.
+- [x] Use checked integer arithmetic where lengths/offsets are combined.
+- [x] Validate ranges before slicing arrays, spans or buffers.
 - [ ] Bound all request, header, FastCGI PARAMS, body, upload, response and compiler-input sizes.
 - [ ] Handle partial reads/writes correctly.
-- [ ] Do not allocate an attacker-specified size before validating it against configured limits.
+- [x] Do not allocate an attacker-specified size before validating it against configured limits.
 - [ ] Prefer pooled buffers only when lifetime/clearing rules are correct; secrets must not leak between requests through reused buffers.
 - [ ] Return pooled buffers in `finally` paths.
 - [ ] Fuzz network/protocol parsers.
@@ -442,11 +442,11 @@ Even though the implementation is primarily managed .NET, all parsers and networ
 - [ ] Reject request-header injection/invalid control characters.
 - [ ] Prevent response splitting.
 - [ ] Define duplicate `Content-Length` / `Transfer-Encoding` handling through the hosting transport rather than implementing ambiguous custom parsing.
-- [ ] Do not reimplement Kestrel's HTTP parser in standalone mode.
+- [x] Do not reimplement Kestrel's HTTP parser in standalone mode.
 - [ ] Validate trusted-proxy configuration before using forwarded client information.
-- [ ] Host allowlist support.
+- [x] Host allowlist support.
 - [ ] Security headers documentation and configurable defaults.
-- [ ] Cookie security defaults.
+- [x] Cookie security defaults.
 - [ ] CSRF guidance/helpers for state-changing browser applications.
 - [ ] HTML/URL/JSON encoding helpers that make output context explicit.
 - [ ] Do not automatically disable TLS certificate validation for script HTTP clients.
@@ -457,10 +457,10 @@ Even though the implementation is primarily managed .NET, all parsers and networ
 ## 12. Concurrency model
 
 - [ ] Multiple requests must execute concurrently.
-- [ ] Request/Response/Cookie context is per request.
-- [ ] Session state follows explicit concurrency semantics.
-- [ ] Application state is thread-safe.
-- [ ] Compilation cache is thread-safe.
+- [x] Request/Response/Cookie context is per request.
+- [x] Session state follows explicit concurrency semantics.
+- [x] Application state is thread-safe.
+- [x] Compilation cache is thread-safe.
 - [ ] Compile invalidation cannot dispose/unload code still executing in another request.
 - [ ] File watchers/cache invalidators must handle duplicate/coalesced filesystem events.
 - [ ] Avoid static mutable state that crosses unrelated web applications.
@@ -608,10 +608,10 @@ All examples must be reconsidered after the object API has been finalized.
 - [ ] multiple PARAMS records
 - [ ] multiple STDIN records
 - [ ] empty STDIN terminator
-- [ ] malformed record version/type
+- [x] malformed record version/type
 - [ ] invalid length/padding
-- [ ] oversized PARAMS/body rejected before dangerous allocation
-- [ ] invalid/malicious `SCRIPT_FILENAME` cannot escape root
+- [x] oversized PARAMS/body rejected before dangerous allocation
+- [x] invalid/malicious `SCRIPT_FILENAME` cannot escape root
 - [ ] interrupted client/request cleanup
 - [ ] fuzz corpus regression
 
