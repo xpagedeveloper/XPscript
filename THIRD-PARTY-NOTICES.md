@@ -57,6 +57,7 @@ The MIT license text is available at [opensource.org/licenses/MIT](https://opens
 
 ### Apache License 2.0
 
+- [Magick.NET](https://github.com/dlemstra/Magick.NET) (`14.17.1`) is the XPImage runtime backend and is distributed under the Apache License 2.0. Magick.NET packages include the ImageMagick native runtime used for image decoding, encoding, metadata, drawing and image processing. Applications that use XPImage include the applicable Magick.NET/ImageMagick package license and notice material in the compiler-generated `Third-party-license.txt`.
 - [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw), including `bundle_e_sqlite3`, `core`, `lib.e_sqlite3`, and `provider.e_sqlite3` (`2.1.12`)
 
 The Apache License 2.0 text is available at [apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0). SQLite itself is a separate public-domain work; the SQLitePCLRaw package notices apply to the managed package and its native distribution.
