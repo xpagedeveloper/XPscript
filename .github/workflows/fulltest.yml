@@ -287,7 +287,7 @@ jobs:
           printf '%s\n' "$compiled_output" | grep -qx 'first'
           printf '%s\n' "$compiled_output" | grep -qx 'second'
           set +e
-          output="$(timeout --kill-after=5s 45s "${cli[@]}" run ./out/scaffold-test/myapp/main.xps first second 2>&1)"
+          output="$(timeout --kill-after=5s 45s "${cli[@]}" run ./out/scaffold-test/myapp/main.xps --Args "first second" 2>&1)"
           run_status=$?
           set -e
           printf '%s\n' "$output"
