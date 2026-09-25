@@ -73,6 +73,6 @@ public readonly record struct RuntimeFeatures(
             Archive: PreprocessorFeatureGate.ContainsTypeReference(code, "Archive", "ArchiveEntry"),
             Spreadsheet: PreprocessorFeatureGate.ContainsTypeReference(code, "XPSpreadsheet", "XPWorksheet", "XPCell"),
             NetworkTools: PreprocessorFeatureGate.ContainsTypeReference(code, "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo"),
-            Image: PreprocessorFeatureGate.ContainsTypeReference(code, "XPImage") || PreprocessorFeatureGate.ContainsCall(code, "XPImage.Load", "XPImage.FromBytes"));
+            Image: PreprocessorFeatureGate.ContainsTypeReference(code, "XPImage") || PreprocessorFeatureGate.ContainsCall(code, "XPImage.Load", "XPImage.FromBytes", "XPImage.FromBase64"));
     }
 }
