@@ -104,7 +104,7 @@ Response
 - [x] Return 404 when the resolved XPScript file does not exist.
 - [x] Never return raw `.xps` source to the browser merely because compilation failed.
 - [ ] Decide separately whether static files are served by XPScript or should normally be served by nginx/Kestrel static-file middleware.
-- [ ] If static file serving is added, create a separate allowlist/configuration and MIME mapping policy.
+- [x] If static file serving is added, create a separate allowlist/configuration and MIME mapping policy.
 
 ### Path security
 
@@ -173,7 +173,7 @@ FastCGI must be a distinct transport adapter using the same internal XPScript we
   - [x] HTTP request headers
 - [ ] Define canonical precedence when proxy/FastCGI variables disagree.
 - [x] Do not trust a client-derived `SCRIPT_FILENAME` until it has been canonicalized and checked against the configured XPScript root.
-- [ ] Support FastCGI keep-connection semantics only after protocol handling is robust.
+- [x] Support FastCGI keep-connection semantics only after protocol handling is robust.
 - [x] Correctly return status, headers and response body using FastCGI records.
 
 ### FastCGI parser safety
@@ -187,7 +187,7 @@ FastCGI must be a distinct transport adapter using the same internal XPScript we
 - [x] Prevent integer overflow when adding lengths or calculating buffer offsets.
 - [ ] Prefer `Span<T>`/`ReadOnlySpan<T>` and checked arithmetic where useful, with explicit range validation before slicing.
 - [ ] Fuzz the FastCGI parser with malformed records before production release.
-- [ ] Add regression tests for partial network reads; never assume one socket read contains one complete FastCGI record.
+- [x] Add regression tests for partial network reads; never assume one socket read contains one complete FastCGI record.
 
 ---
 ## 5.1 cgi
@@ -445,7 +445,7 @@ Even though the implementation is primarily managed .NET, all parsers and networ
 - [x] Do not reimplement Kestrel's HTTP parser in standalone mode.
 - [ ] Validate trusted-proxy configuration before using forwarded client information.
 - [x] Host allowlist support.
-- [ ] Security headers documentation and configurable defaults.
+- [x] Security headers documentation and configurable defaults.
 - [x] Cookie security defaults.
 - [ ] CSRF guidance/helpers for state-changing browser applications.
 - [ ] HTML/URL/JSON encoding helpers that make output context explicit.
@@ -475,7 +475,7 @@ Future configuration needs evaluation for:
 - [ ] root directory
 - [ ] port / bind address
 - [ ] Kestrel vs FastCGI mode
-- [ ] FastCGI TCP address / Unix socket
+- [x] FastCGI TCP address / Unix socket
 - [x] allowed hostnames
 - [x] HTTPS certificate configuration
 - [x] trusted proxies
@@ -485,8 +485,8 @@ Future configuration needs evaluation for:
 - [ ] compile cache limits/TTL
 - [ ] session enable/disable and timeout
 - [ ] environment (`Development` / `Production`)
-- [ ] static-file behavior
-- [ ] default document (`index.xps`)
+- [x] static-file behavior
+- [x] default document (`index.xps`)
 - [ ] Include roots/security policy
 - [ ] ordered preprocessor chain
 - [ ] logging level
@@ -584,9 +584,9 @@ All examples must be reconsidered after the object API has been finalized.
 - [x] compile failure does not poison unrelated cache entries
 - [x] traversal/encoded traversal rejected
 - [x] symlink escape rejected according to policy
-- [ ] Host validation
-- [ ] trusted/untrusted forwarded header behavior
-- [ ] oversized body rejected
+- [x] Host validation
+- [x] trusted/untrusted forwarded header behavior
+- [x] oversized body rejected
 - [ ] slow/aborted request behavior
 - [ ] Windows/Linux/macOS verification
 
@@ -595,7 +595,7 @@ All examples must be reconsidered after the object API has been finalized.
 ## 18. FastCGI regression matrix
 
 - [ ] nginx -> XPScript FastCGI GET
-- [ ] POST body
+- [x] POST body
 - [x] query string
 - [x] request headers
 - [x] cookies
@@ -605,11 +605,11 @@ All examples must be reconsidered after the object API has been finalized.
 - [x] Unix socket transport on supported OSes
 - [ ] keep-connection behavior
 - [x] partial record reads
-- [ ] multiple PARAMS records
-- [ ] multiple STDIN records
-- [ ] empty STDIN terminator
+- [x] multiple PARAMS records
+- [x] multiple STDIN records
+- [x] empty STDIN terminator
 - [x] malformed record version/type
-- [ ] invalid length/padding
+- [x] invalid length/padding
 - [x] oversized PARAMS/body rejected before dangerous allocation
 - [x] invalid/malicious `SCRIPT_FILENAME` cannot escape root
 - [ ] interrupted client/request cleanup
