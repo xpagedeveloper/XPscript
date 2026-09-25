@@ -109,7 +109,7 @@ archive.Create("zip")
 - [x] `Close()`.
 - [ ] Define overwrite behavior for `Create()` when the target already exists.
 - [ ] Define behavior when the archive is missing, malformed, unsupported or encrypted.
-- [ ] Dispose streams and other resources deterministically.
+- [x] Dispose streams and other resources deterministically.
 
 ## Listing and lookup
 
@@ -358,10 +358,10 @@ Server-side filesystem operations can use the normal server execution model.
 - [ ] Unsupported compression method.
 - [ ] Extraction path outside target directory.
 - [ ] Symlink or reparse-point extraction rejected.
-- [ ] Maximum archive entry count exceeded.
+- [x] Maximum archive entry count exceeded.
 - [ ] Maximum entry size exceeded.
-- [ ] Maximum total extracted size exceeded.
-- [ ] Maximum compression ratio exceeded.
+- [x] Maximum total extracted size exceeded.
+- [x] Maximum compression ratio exceeded.
 - [ ] Save or replacement operation failed without corrupting the original archive.
 - [ ] Map errors into existing XPScript runtime error conventions.
 
