@@ -202,6 +202,30 @@ internal sealed class XPImage : System.IDisposable
 
     public void AutoOrient() => _image.AutoOrient();
 
+    public string GetExif(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("EXIF name cannot be empty.", nameof(name));
+        return _image.GetAttribute("exif:" + name.Trim()) ?? string.Empty;
+    }
+
+    public void SetExif(string name, string value)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("EXIF name cannot be empty.", nameof(name));
+        _image.SetAttribute("exif:" + name.Trim(), value ?? string.Empty);
+    }
+
+    public string GetMetadata(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("Metadata name cannot be empty.", nameof(name));
+        return _image.GetAttribute(name.Trim()) ?? string.Empty;
+    }
+
+    public void SetMetadata(string name, string value)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("Metadata name cannot be empty.", nameof(name));
+        _image.SetAttribute(name.Trim(), value ?? string.Empty);
+    }
+
     public void StripMetadata()
     {
         _image.Strip();
