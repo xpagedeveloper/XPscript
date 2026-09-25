@@ -166,7 +166,7 @@ FastCGI must be a distinct transport adapter using the same internal XPScript we
   - [x] `CONTENT_TYPE`
   - [x] `CONTENT_LENGTH`
   - [x] `SERVER_NAME`
-  - [ ] `SERVER_PORT`
+  - [x] `SERVER_PORT`
   - [x] `SERVER_PROTOCOL`
   - [x] `REMOTE_ADDR`
   - [x] HTTPS/scheme information
@@ -279,7 +279,7 @@ Do not expose arbitrary process-control or unrestricted filesystem escape helper
 
 ### 6.4 Session
 
-- [ ] Define opt-in session support; do not require sessions for every request.
+- [x] Define opt-in session support; do not require sessions for every request.
 - [x] Generate session identifiers using a cryptographically secure random generator.
 - [x] Session id must have enough entropy to prevent guessing.
 - [x] Store session id in a configurable cookie.
@@ -390,7 +390,7 @@ execute
 ### Cache resource limits
 
 - [x] Bounded number/size of compiled entries.
-- [ ] LRU/TTL or equivalent eviction strategy.
+- [x] LRU/TTL or equivalent eviction strategy.
 - [x] No unbounded dictionary keyed by arbitrary URLs/query strings.
 - [x] Cache key must exclude request query/body data unless code generation genuinely depends on it (normally it must not).
 - [x] Expose cache metrics: hit, miss, compile count, compile duration, eviction, failure.
@@ -482,8 +482,8 @@ Future configuration needs evaluation for:
 - [x] request/header/body limits
 - [ ] execution timeout policy
 - [ ] compile concurrency
-- [ ] compile cache limits/TTL
-- [ ] session enable/disable and timeout
+- [x] compile cache limits/TTL
+- [x] session enable/disable and timeout
 - [ ] environment (`Development` / `Production`)
 - [x] static-file behavior
 - [x] default document (`index.xps`)
@@ -511,11 +511,11 @@ Configuration precedence (CLI/config/env) must be explicitly defined rather than
 
 ## 15. Development workflow / hot reload behavior
 
-- [ ] Source changes should invalidate only affected script dependency graphs.
-- [ ] Next request compiles changed code once and atomically publishes it to cache after success.
-- [ ] Define optional eager/precompile mode for production startup/deployment.
+- [x] Source changes should invalidate only affected script dependency graphs.
+- [x] Next request compiles changed code once and atomically publishes it to cache after success.
+- [x] Define optional eager/precompile mode for production startup/deployment.
 - [ ] Provide a command to precompile/validate all reachable `.xps` files before deployment.
-- [ ] Compile errors should have a production-safe HTTP response while retaining full diagnostics in server logs.
+- [x] Compile errors should have a production-safe HTTP response while retaining full diagnostics in server logs.
 - [ ] Development mode may display source diagnostics only after explicit opt-in.
 
 ---
