@@ -31,7 +31,6 @@ public readonly record struct RuntimeFeatures(
         if (MsSql) yield return ("XPDbMsSql", "server or desktop target", null);
         if (Archive) yield return ("Archive", "server or desktop target", "Archive file-path operations are not available for browser-wasm targets yet.");
         if (Spreadsheet) yield return ("XPSpreadsheet", "server or desktop target", null);
-        if (Image) yield return ("XPImage", "server or desktop target", "Native Magick.NET image processing is not available for browser-wasm targets.");
         if (NetworkTools) yield return ("NetworkTools", "server or desktop target", "Browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
     }
 
