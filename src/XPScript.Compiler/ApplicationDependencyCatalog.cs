@@ -13,6 +13,7 @@ public static class ApplicationDependencyCatalog
     public const string MySqlConnectorVersion = "2.6.2";
     public const string NpgsqlVersion = "10.0.3";
     public const string MimeKitVersion = "4.17.0";
+    public const string MagickNetVersion = "14.17.1";
 
     public static IReadOnlyList<ApplicationPackageReference> Defaults { get; } =
     [
@@ -24,7 +25,8 @@ public static class ApplicationDependencyCatalog
         new("Microsoft.Data.SqlClient", MicrosoftDataSqlClientVersion, "SQL Server database"),
         new("MySqlConnector", MySqlConnectorVersion, "MySQL database"),
         new("Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database"),
-        new("MimeKit", MimeKitVersion, "Notes MIME support")
+        new("MimeKit", MimeKitVersion, "Notes MIME support"),
+        new("Magick.NET-Q16-AnyCPU", MagickNetVersion, "XPImage runtime")
     ];
 
     public static IReadOnlyList<ApplicationPackagePatchGroup> PatchGroups { get; } =
@@ -67,6 +69,8 @@ public static class ApplicationDependencyCatalog
             Add(result, "Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database");
         if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal) || generatedSource.Contains("NotesMIMEEntity", StringComparison.Ordinal))
             Add(result, "MimeKit", MimeKitVersion, "Notes MIME support");
+        if (generatedSource.Contains("internal sealed class XPImage", StringComparison.Ordinal))
+            Add(result, "Magick.NET-Q16-AnyCPU", MagickNetVersion, "XPImage runtime");
         return result;
     }
 
