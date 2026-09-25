@@ -291,7 +291,7 @@ internal static class RunCompiler
         var desktopAssembly = typeof(XPScript.UI.Desktop.DesktopFormHost).Assembly.Location;
         var directory = Path.GetDirectoryName(desktopAssembly)
             ?? throw new CompilerException("Desktop UI runtime assembly directory is unavailable for the run fast path.");
-        var names = new[]
+        var required = new[]
         {
             "XPScript.UI.Desktop.dll",
             "Avalonia.Base.dll",
@@ -300,14 +300,48 @@ internal static class RunCompiler
             "Avalonia.Themes.Fluent.dll",
             "Avalonia.Controls.WebView.dll"
         };
-        foreach (var name in names)
+        foreach (var name in required)
         {
             var source = Path.Combine(directory, name);
             if (!File.Exists(source))
                 throw new CompilerException("Desktop UI dependency is unavailable for the run fast path: " + name);
-            var target = Path.Combine(outputRoot, name);
+        }
+
+        // Avalonia.Desktop selects the platform backend at runtime. The compile-time
+        // references above are not the complete runtime closure: Win32/X11/Native,
+        // Skia and HarfBuzz assemblies are loaded only when Avalonia starts.
+        // Stage the desktop runtime closure from the already restored CLI/compiler
+        // output instead of forcing the fast path through another MSBuild restore.
+        var runtimeNames = Directory.EnumerateFiles(directory, "*.dll", SearchOption.TopDirectoryOnly)
+            .Where(path =>
+            {
+                var name = Path.GetFileName(path);
+                return name.Equals("XPScript.UI.Desktop.dll", StringComparison.OrdinalIgnoreCase) ||
+                       name.StartsWith("Avalonia.", StringComparison.OrdinalIgnoreCase) ||
+                       name.StartsWith("SkiaSharp", StringComparison.OrdinalIgnoreCase) ||
+                       name.StartsWith("HarfBuzzSharp", StringComparison.OrdinalIgnoreCase) ||
+                       name.StartsWith("MicroCom.Runtime", StringComparison.OrdinalIgnoreCase) ||
+                       name.StartsWith("Tmds.DBus.Protocol", StringComparison.OrdinalIgnoreCase);
+            });
+
+        foreach (var source in runtimeNames)
+        {
+            var target = Path.Combine(outputRoot, Path.GetFileName(source));
             CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Desktop UI runtime dependency");
             CompilerPathSecurity.HardenTemporaryFile(target);
+        }
+
+        var runtimes = Path.Combine(directory, "runtimes");
+        if (Directory.Exists(runtimes))
+        {
+            foreach (var source in Directory.EnumerateFiles(runtimes, "*", SearchOption.AllDirectories))
+            {
+                var relative = Path.GetRelativePath(runtimes, source);
+                var target = Path.Combine(outputRoot, "runtimes", relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Desktop UI native runtime dependency");
+                CompilerPathSecurity.HardenTemporaryFile(target);
+            }
         }
     }
 

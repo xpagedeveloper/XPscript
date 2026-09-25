@@ -28,6 +28,12 @@ public sealed class XpsWebPathResolver
         var segments = NormalizeUrlPath(requestPath);
         if (segments.Count == 0) return ResolveCandidate(_defaultDocumentName, null, fileExists);
 
+        // Keep URL routing canonical independently of filesystem behavior. APFS/HFS+
+        // can transparently match decomposed Unicode against a composed filename,
+        // which would otherwise create a second URL for the same script.
+        if (segments.Any(segment => !segment.IsNormalized(System.Text.NormalizationForm.FormC)))
+            return XpsRouteResolution.NotFound;
+
         // A browser-wasm application is addressed as /app.xps and its generated
         // static assets live below that logical route, for example
         // /app.xps/_framework/dotnet.js. Resolve those requests back to app.xps.
