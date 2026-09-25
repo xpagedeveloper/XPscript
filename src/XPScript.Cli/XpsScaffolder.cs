@@ -25,7 +25,7 @@ internal static class XpsScaffolder
             "rest" => ("index.xps", RestTemplate, $"xpscript web {QuoteForDisplay(target)}"),
             "web" => ("index.xps", WebTemplate, $"xpscript web {QuoteForDisplay(target)}"),
             "desktop" => ("main.xps", DesktopTemplate, $"xpscript run {QuoteForDisplay(Path.Combine(target, "main.xps"))}"),
-            "cli" => ("main.xps", CliTemplate, $"xpscript run {QuoteForDisplay(Path.Combine(target, "main.xps"))} argument1 argument2"),
+            "cli" => ("main.xps", CliTemplate, $"xpscript run {QuoteForDisplay(Path.Combine(target, "main.xps"))} --Args \"argument1 argument2\""),
             _ => throw new InvalidOperationException("Unsupported scaffold type.")
         };
 
