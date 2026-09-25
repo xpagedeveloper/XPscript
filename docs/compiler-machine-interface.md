@@ -170,7 +170,6 @@ xpscript daemon quit
 
 Use `run --no-daemon` when a one-shot local compilation is required without starting or reusing the daemon. Use `run --debug` for troubleshooting: debug runs deliberately bypass the warm daemon and perform a fresh local validation/build so generated-code diagnostics and detailed runtime tracing correspond to the current source.
 
-The daemon protocol itself also carries a `debug` flag on `compileRun`. Normal daemon requests redact unexpected internal exception details. A request explicitly marked `debug=true` may return detailed exception information, including implementation stack information, for local troubleshooting. Clients must therefore treat debug output as developer-only diagnostic data and must not publish it to untrusted logs or users. Authentication failures never disclose debug detail.
 
 The daemon is an optimization, not a separate compiler implementation. Compiler semantics, security mode, source preprocessors, include restrictions and runtime target are supplied per request and use the same compiler pipeline as direct invocation. Compile requests are serialized inside the daemon because the complete build/dependency-staging pipeline is not treated as concurrently writable.
 
