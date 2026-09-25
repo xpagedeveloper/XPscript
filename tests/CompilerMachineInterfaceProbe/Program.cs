@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Xml.Serialization;
 using System.Text.Json;
 using XPScript.Compiler;
@@ -834,7 +835,7 @@ try { Directory.Delete(outputRoot, recursive: true); } catch { }
 Console.WriteLine("CompilerMachineInterfaceProbe OK");
 return 0;
 
-static void Require(bool condition, string message)
+static void Require([DoesNotReturnIf(false)] bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
 }
