@@ -11,12 +11,12 @@ Implement a cross-platform archive runtime for XPScript using a stable XPScript-
 - [x] Keep all third-party types, enums and implementation details hidden behind XPScript-owned runtime classes.
 - [x] Use `SharpCompress` as the preferred implementation library, subject to final compatibility, security and license verification at implementation time.
 - [ ] Verify the selected SharpCompress release is MIT licensed and supports the .NET target frameworks used by XPScript.
-- [ ] Prefer a pure managed implementation with no platform-specific native archive binaries.
-- [ ] Design the runtime around `Stream` internally so file, Byte-array, HTTP, database, MIME, mobile and WASM scenarios can share the same implementation.
-- [ ] Reuse existing XPScript path handling and filesystem security instead of allowing the archive library to access arbitrary paths directly.
+- [x] Prefer a pure managed implementation with no platform-specific native archive binaries.
+- [x] Design the runtime around `Stream` internally so file, Byte-array, HTTP, database, MIME, mobile and WASM scenarios can share the same implementation.
+- [x] Reuse existing XPScript path handling and filesystem security instead of allowing the archive library to access arbitrary paths directly.
 - [x] Add the dependency only when generated code actually uses the archive runtime.
 - [x] Add the selected package and license information to `THIRD-PARTY-NOTICES.md`.
-- [ ] Ensure `scripts/validate-license-notices.ps1` passes after the new dependency is added.
+- [x] Ensure `scripts/validate-license-notices.ps1` passes after the new dependency is added.
 
 ## Goals
 
@@ -33,7 +33,7 @@ Implement a cross-platform archive runtime for XPScript using a stable XPScript-
 - [x] Extract complete archives.
 - [x] Read archive entries directly into text or Byte arrays without extracting to disk.
 - [x] Support file-based and in-memory archive workflows.
-- [ ] Keep behavior consistent across Windows, Linux and macOS.
+- [x] Keep behavior consistent across Windows, Linux and macOS.
 - [ ] Validate Android, iOS and browser/WASM scenarios.
 
 ## Core object model
@@ -43,7 +43,7 @@ Implement a cross-platform archive runtime for XPScript using a stable XPScript-
 - [x] Implement internal runtime class `XPScriptArchive`.
 - [x] Implement internal runtime class `XPScriptArchiveEntry`.
 - [x] Add a runtime source component such as `ArchiveRuntimeSource.cs` following existing runtime-source injection patterns.
-- [ ] Confirm the exact constructor and member syntax against current XPScript compiler rules before freezing the public API.
+- [x] Confirm the exact constructor and member syntax against current XPScript compiler rules before freezing the public API.
 
 ## Archive constructors
 
@@ -204,25 +204,25 @@ data = archive.ToBytes()
 Initial target matrix:
 
 - [x] ZIP read/write.
-- [ ] 7z read/write where the selected SharpCompress version supports writing reliably.
-- [ ] TAR read/write.
-- [ ] GZip read/write.
+- [x] 7z read/write where the selected SharpCompress version supports writing reliably.
+- [x] TAR read/write.
+- [x] GZip read/write.
 - [ ] BZip2 read/write.
 - [ ] LZip read/write.
 - [ ] Zstandard read/write.
-- [ ] RAR read/extract only.
-- [ ] XZ read-only unless reliable writing support is available at implementation time.
-- [ ] ARC, ARJ, ACE, LZW and other SharpCompress-supported legacy formats as read-only where practical.
-- [ ] Verify the exact read/write capability matrix against the selected package version before implementation.
+- [x] RAR read/extract only.
+- [x] XZ read-only unless reliable writing support is available at implementation time.
+- [x] ARC, ARJ, ACE, LZW and other SharpCompress-supported legacy formats as read-only where practical.
+- [x] Verify the exact read/write capability matrix against the selected package version before implementation.
 - [x] Expose `IsReadOnly = True` for formats such as RAR that cannot be modified.
 
 ## Password and encryption support
 
-- [ ] Investigate password-protected ZIP support in the selected SharpCompress version.
+- [x] Investigate password-protected ZIP support in the selected SharpCompress version.
 - [ ] Investigate encrypted RAR and 7z read support.
 - [ ] Define how `Password` is supplied and cleared.
 - [ ] Never log passwords.
-- [ ] Return a distinct runtime error for missing password versus invalid password where the underlying library makes that distinction reliably.
+- [x] Return a distinct runtime error for missing password versus invalid password where the underlying library makes that distinction reliably.
 - [ ] Do not expose encryption algorithms that are insecure or not portable without explicit design review.
 
 ## Filesystem integration
@@ -285,7 +285,7 @@ MaxCompressionRatio
 
 - [x] Update `CompilerBuildEnvironment.cs` to detect archive runtime use.
 - [x] Add SharpCompress only when the generated program needs the archive runtime.
-- [ ] Follow the same conditional package-reference pattern already used for SQLite, SQL Server, MySQL, PostgreSQL/Supabase and UI dependencies.
+- [x] Follow the same conditional package-reference pattern already used for SQLite, SQL Server, MySQL, PostgreSQL/Supabase and UI dependencies.
 - [x] Use a stable generated-source marker such as `XPScriptArchive` for dependency detection.
 - [x] Keep applications that do not use `Archive` completely unaffected in package size and dependencies.
 - [x] Pin the SharpCompress version used by generated projects.
@@ -300,18 +300,18 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 
 - [x] Add SharpCompress to `THIRD-PARTY-NOTICES.md` under the MIT section.
 - [ ] Include the required copyright/license notice text.
-- [ ] Run `scripts/validate-license-notices.ps1`.
+- [x] Run `scripts/validate-license-notices.ps1`.
 - [ ] Check transitive dependencies before merging.
 - [ ] Check active security advisories and CVEs for the selected package version.
 - [ ] Add archive dependency review to normal dependency-update maintenance.
 
 ## Windows, Linux and macOS
 
-- [ ] Run the same public `Archive` API on Windows.
-- [ ] Run the same public `Archive` API on Linux.
-- [ ] Run the same public `Archive` API on macOS.
-- [ ] Test path separator normalization.
-- [ ] Test Unicode filenames.
+- [x] Run the same public `Archive` API on Windows.
+- [x] Run the same public `Archive` API on Linux.
+- [x] Run the same public `Archive` API on macOS.
+- [x] Test path separator normalization.
+- [x] Test Unicode filenames.
 - [ ] Test case-sensitive and case-insensitive filesystem behavior.
 - [ ] Test large files and archives where practical.
 
@@ -351,8 +351,8 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Archive not found.
 - [ ] Unsupported archive format.
 - [ ] Invalid or corrupt archive.
-- [ ] Encrypted archive requires password.
-- [ ] Invalid password.
+- [x] Encrypted archive requires password.
+- [x] Invalid password.
 - [x] Archive entry not found.
 - [x] Archive format is read-only.
 - [ ] Unsupported compression method.
@@ -408,16 +408,16 @@ Server-side filesystem operations can use the normal server execution model.
 
 ## Security tests
 
-- [ ] Zip Slip path traversal archive.
-- [ ] Absolute path archive entry.
-- [ ] Windows drive-root path archive entry.
-- [ ] UNC path archive entry.
+- [x] Zip Slip path traversal archive.
+- [x] Absolute path archive entry.
+- [x] Windows drive-root path archive entry.
+- [x] UNC path archive entry.
 - [ ] Mixed separator traversal.
-- [ ] Symlink escape attempt.
+- [x] Symlink escape attempt.
 - [ ] Reparse-point escape attempt on Windows.
-- [ ] Excessive entry count.
-- [ ] Excessive uncompressed size.
-- [ ] Extreme compression ratio.
+- [x] Excessive entry count.
+- [x] Excessive uncompressed size.
+- [x] Extreme compression ratio.
 - [ ] Incorrect archive size metadata.
 - [ ] Corrupt compressed stream.
 - [ ] Password-protected archive with missing password.
@@ -426,9 +426,9 @@ Server-side filesystem operations can use the normal server execution model.
 
 ## Cross-platform CI
 
-- [ ] Run archive runtime tests on Windows x64.
-- [ ] Run archive runtime tests on Linux x64.
-- [ ] Run archive runtime tests on macOS.
+- [x] Run archive runtime tests on Windows x64.
+- [x] Run archive runtime tests on Linux x64.
+- [x] Run archive runtime tests on macOS.
 - [ ] Add Android build validation.
 - [ ] Add iOS build validation.
 - [ ] Add browser/WASM build validation.
@@ -436,16 +436,16 @@ Server-side filesystem operations can use the normal server execution model.
 
 ## Documentation
 
-- [ ] Document `Archive` constructors.
+- [x] Document `Archive` constructors.
 - [ ] Document all `Archive` properties.
 - [ ] Document all `Archive` methods.
-- [ ] Document `ArchiveEntry`.
-- [ ] Document the format read/write matrix.
-- [ ] Document RAR read-only behavior.
-- [ ] Document password support and limitations.
+- [x] Document `ArchiveEntry`.
+- [x] Document the format read/write matrix.
+- [x] Document RAR read-only behavior.
+- [x] Document password support and limitations.
 - [ ] Document secure extraction behavior.
 - [ ] Document resource limits.
-- [ ] Document Byte-array/in-memory usage.
+- [x] Document Byte-array/in-memory usage.
 - [ ] Document browser/WASM limitations.
 - [ ] Document server-side archive handling.
 - [ ] Document Android/iOS usage and storage considerations.
