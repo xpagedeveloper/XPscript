@@ -15,4 +15,4 @@
 - [x] Local deterministic smoke sample
 - [x] Windows/Linux/macOS CI coverage
 - [x] User documentation
-- [ ] Merge after CI and review are green
+- [x] Merge after CI and review are green
