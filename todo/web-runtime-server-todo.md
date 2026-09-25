@@ -268,10 +268,10 @@ Security requirements:
 Candidate mostly read-only members:
 
 - [x] configured root path
-- [ ] current hosting mode (`Kestrel` / `FastCGI`)
+- [x] current hosting mode (`Kestrel` / `FastCGI`)
 - [ ] server address/port where meaningful
-- [ ] server start time
-- [ ] runtime/compiler version
+- [x] server start time
+- [x] runtime/compiler version
 - [x] safe path-mapping helper that cannot escape root
 - [x] URL/HTML encoding helpers if appropriate
 
@@ -330,7 +330,7 @@ Application is shared state for one configured site/application, not global stat
 - [ ] Ensure compiler-generated statics do not accidentally turn request locals into cross-request global data.
 - [ ] Define behavior when script returns without writing a response.
 - [ ] Define behavior for uncaught XPScript runtime errors.
-- [ ] Production error pages must not expose source code, stack traces, filesystem paths, secrets or generated C#.
+- [x] Production error pages must not expose source code, stack traces, filesystem paths, secrets or generated C#.
 - [ ] Development diagnostics may expose richer information only when explicitly enabled and never by default on public interfaces.
 
 ---
@@ -361,13 +361,13 @@ execute
 
 ### Cache key
 
-- [ ] Cache by canonical root/source identity, not only URL text.
+- [x] Cache by canonical root/source identity, not only URL text.
 - [ ] Include compiler version in cache identity.
 - [ ] Include target/runtime/code-generation options in cache identity.
 - [ ] Include configured preprocessor identities + versions + ordering in cache identity.
 - [ ] Include the root source and every included source dependency in invalidation/hash calculation.
 - [ ] Include relevant project/reference/native dependency configuration.
-- [ ] Prevent one site/tenant from receiving another site's cached executable.
+- [x] Prevent one site/tenant from receiving another site's cached executable.
 
 ### Invalidation
 
@@ -375,8 +375,8 @@ execute
 - [ ] Invalidate when any included `.xps` changes.
 - [ ] Invalidate when a referenced managed/native dependency changes where relevant.
 - [ ] Invalidate when compiler/preprocessor configuration changes.
-- [ ] Make invalidation race-safe while requests are running.
-- [ ] Existing in-flight requests may finish on an immutable old compiled unit while new requests switch atomically to the new unit.
+- [x] Make invalidation race-safe while requests are running.
+- [x] Existing in-flight requests may finish on an immutable old compiled unit while new requests switch atomically to the new unit.
 
 ### Compile-storm protection
 
@@ -391,8 +391,8 @@ execute
 
 - [x] Bounded number/size of compiled entries.
 - [ ] LRU/TTL or equivalent eviction strategy.
-- [ ] No unbounded dictionary keyed by arbitrary URLs/query strings.
-- [ ] Cache key must exclude request query/body data unless code generation genuinely depends on it (normally it must not).
+- [x] No unbounded dictionary keyed by arbitrary URLs/query strings.
+- [x] Cache key must exclude request query/body data unless code generation genuinely depends on it (normally it must not).
 - [x] Expose cache metrics: hit, miss, compile count, compile duration, eviction, failure.
 
 ### Assembly lifetime
@@ -461,7 +461,7 @@ Even though the implementation is primarily managed .NET, all parsers and networ
 - [x] Session state follows explicit concurrency semantics.
 - [x] Application state is thread-safe.
 - [x] Compilation cache is thread-safe.
-- [ ] Compile invalidation cannot dispose/unload code still executing in another request.
+- [x] Compile invalidation cannot dispose/unload code still executing in another request.
 - [ ] File watchers/cache invalidators must handle duplicate/coalesced filesystem events.
 - [ ] Avoid static mutable state that crosses unrelated web applications.
 - [ ] Stress-test hundreds/thousands of concurrent requests and simultaneous source updates.
@@ -497,15 +497,15 @@ Configuration precedence (CLI/config/env) must be explicitly defined rather than
 
 ## 14. Logging and observability
 
-- [ ] Structured request logs without logging secrets by default.
-- [ ] Correlation/request id.
+- [x] Structured request logs without logging secrets by default.
+- [x] Correlation/request id.
 - [ ] Compile diagnostics correlated to source revision/cache key.
 - [ ] Metrics for request count/duration/status codes.
 - [ ] Metrics for active requests/connections.
-- [ ] Cache hit/miss/compile metrics.
+- [x] Cache hit/miss/compile metrics.
 - [ ] Session-store metrics without exposing session ids.
 - [ ] FastCGI protocol errors.
-- [ ] Avoid logging Authorization, Cookie, Set-Cookie, passwords, tokens or full sensitive request bodies by default.
+- [x] Avoid logging Authorization, Cookie, Set-Cookie, passwords, tokens or full sensitive request bodies by default.
 
 ---
 
@@ -570,7 +570,7 @@ All examples must be reconsidered after the object API has been finalized.
 - [ ] root `/` executes `index.xps`
 - [ ] directory `/folder/` executes `/folder/index.xps`
 - [ ] direct `.xps` route
-- [ ] missing script -> 404 without source disclosure
+- [x] missing script -> 404 without source disclosure
 - [ ] GET/query values
 - [ ] POST body
 - [ ] headers/cookies
