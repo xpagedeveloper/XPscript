@@ -192,6 +192,7 @@ public sealed partial class XPScriptTranspiler
         generated += "\n\n" + CrossPlatformRuntimeSource.Code + "\n";
         generated += "\n\n" + DateObjectRuntimeSource.Code + "\n";
         if (usesSpreadsheet) generated += "\n\n" + SpreadsheetRuntimeSource.Code + "\n";
+        if (runtimeFeatures.Image) generated += "\n\n" + XPImageRuntimeSource.Code + "\n";
         if (usesNetworkTools) generated += "\n\n" + NetworkToolsRuntimeSource.Code + "\n";
         if (usesArchive) { generated += "\n\n" + ArchiveRuntimeSource.Code + "\n"; generated += "\n\n" + ArchiveMemoryRuntimeSource.Code + "\n"; generated += "\n\n" + ArchiveIteratorRuntimeSource.Code + "\n"; }
         if (usesExtendedArchive) { generated += "\n\n" + ArchiveExtendedReaderRuntimeSource.Code + "\n"; generated += "\n\n" + ArchiveExtendedWriterRuntimeSource.Code + "\n"; generated += "\n\n" + ArchiveExtendedWriterFactoryRuntimeSource.Code + "\n"; }
