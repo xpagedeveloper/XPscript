@@ -40,7 +40,7 @@ jobs:
         run: |
           $compiler = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
           New-Item -ItemType Directory -Force ./out/xpimage | Out-Null
-          dotnet $compiler --debug ./samples/xpimage-runtime.xps -o ./out/xpimage/xpimage-runtime --runtime=false
+          dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage/xpimage-runtime --runtime=false --debug
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $exe = if (Test-Path ./out/xpimage/xpimage-runtime.exe) { './out/xpimage/xpimage-runtime.exe' } else { './out/xpimage/xpimage-runtime' }
           $output = & $exe 2>&1 | Out-String
