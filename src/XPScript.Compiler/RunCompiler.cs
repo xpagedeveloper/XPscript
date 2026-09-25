@@ -86,6 +86,8 @@ internal static class RunCompiler
         {
             var assembly = await RunRoslynCompiler.CompileAsync(generatedSource, outputRoot, debug, cancellationToken).ConfigureAwait(false);
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
+            if (RunRoslynCompiler.UsesDesktopUi(generatedSource))
+                StageDesktopDependencies(outputRoot);
             return assembly;
         }
 
@@ -282,6 +284,31 @@ internal static class RunCompiler
   </PropertyGroup>
 {packageItems}{items}</Project>
 """;
+    }
+
+    private static void StageDesktopDependencies(string outputRoot)
+    {
+        var desktopAssembly = typeof(XPScript.UI.Desktop.DesktopFormHost).Assembly.Location;
+        var directory = Path.GetDirectoryName(desktopAssembly)
+            ?? throw new CompilerException("Desktop UI runtime assembly directory is unavailable for the run fast path.");
+        var names = new[]
+        {
+            "XPScript.UI.Desktop.dll",
+            "Avalonia.Base.dll",
+            "Avalonia.Controls.dll",
+            "Avalonia.Desktop.dll",
+            "Avalonia.Themes.Fluent.dll",
+            "Avalonia.Controls.WebView.dll"
+        };
+        foreach (var name in names)
+        {
+            var source = Path.Combine(directory, name);
+            if (!File.Exists(source))
+                throw new CompilerException("Desktop UI dependency is unavailable for the run fast path: " + name);
+            var target = Path.Combine(outputRoot, name);
+            CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Desktop UI runtime dependency");
+            CompilerPathSecurity.HardenTemporaryFile(target);
+        }
     }
 
     private static void StageMimeKit(string outputRoot)

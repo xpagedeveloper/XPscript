@@ -21,15 +21,13 @@ global using System.Threading.Tasks;
 """;
 
     private static readonly Lazy<ImmutableArray<MetadataReference>> FrameworkReferences = new(CreateFrameworkReferences, LazyThreadSafetyMode.ExecutionAndPublication);
+    private static readonly Lazy<ImmutableArray<MetadataReference>> DesktopReferences = new(CreateDesktopReferences, LazyThreadSafetyMode.ExecutionAndPublication);
 
     public static bool CanCompile(string generatedSource, bool hasManagedReferences)
     {
         if (hasManagedReferences) return false;
 
-        return !generatedSource.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) &&
-               !generatedSource.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) &&
-               !generatedSource.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal) &&
-               !generatedSource.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal) &&
+        return !generatedSource.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal) &&
                !generatedSource.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal) &&
                !generatedSource.Contains("MimeKit.", StringComparison.Ordinal);
     }
@@ -85,7 +83,7 @@ global using System.Threading.Tasks;
         var compilation = CSharpCompilation.Create(
             "Generated",
             [implicitUsingsTree, syntaxTree],
-            FrameworkReferences.Value,
+            ReferencesFor(generatedSource),
             new CSharpCompilationOptions(
                 OutputKind.ConsoleApplication,
                 mainTypeName: "Program",
@@ -117,6 +115,53 @@ global using System.Threading.Tasks;
         CompilerPathSecurity.HardenTemporaryFile(pdbPath);
         await WriteRuntimeConfigAsync(outputRoot, cancellationToken).ConfigureAwait(false);
         return assemblyPath;
+    }
+
+    private static IEnumerable<MetadataReference> ReferencesFor(string generatedSource)
+    {
+        if (!UsesDesktopUi(generatedSource))
+            return FrameworkReferences.Value;
+
+        return FrameworkReferences.Value.AddRange(DesktopReferences.Value);
+    }
+
+    internal static bool UsesDesktopUi(string generatedSource)
+    {
+        // Inspect only the script-facing part. The generated base runtime can contain UI
+        // support types even when the application itself is CLI or web-only; those must
+        // never cause Avalonia/Desktop assemblies to be referenced by the Roslyn fast path.
+        const string baseUiRuntimeSentinel = "internal static class XPScriptUI";
+        var runtimeIndex = generatedSource.IndexOf(baseUiRuntimeSentinel, StringComparison.Ordinal);
+        var applicationSource = runtimeIndex >= 0 ? generatedSource[..runtimeIndex] : generatedSource;
+
+        return applicationSource.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
+               applicationSource.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
+               applicationSource.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
+    }
+
+    private static ImmutableArray<MetadataReference> CreateDesktopReferences()
+    {
+        var desktopAssembly = typeof(XPScript.UI.Desktop.DesktopFormHost).Assembly;
+        var directory = Path.GetDirectoryName(desktopAssembly.Location)
+            ?? throw new CompilerException("Desktop UI runtime assembly directory is unavailable for the run fast path.");
+        var names = new[]
+        {
+            "XPScript.UI.Desktop.dll",
+            "Avalonia.Base.dll",
+            "Avalonia.Controls.dll",
+            "Avalonia.Desktop.dll",
+            "Avalonia.Themes.Fluent.dll",
+            "Avalonia.Controls.WebView.dll"
+        };
+        var builder = ImmutableArray.CreateBuilder<MetadataReference>();
+        foreach (var name in names)
+        {
+            var path = Path.Combine(directory, name);
+            if (!File.Exists(path))
+                throw new CompilerException("Desktop UI dependency is unavailable for the run fast path: " + name);
+            builder.Add(MetadataReference.CreateFromFile(path));
+        }
+        return builder.ToImmutable();
     }
 
     private static ImmutableArray<MetadataReference> CreateFrameworkReferences()
