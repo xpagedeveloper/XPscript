@@ -137,7 +137,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Define maximum encoded image file size.
 - [x] Define maximum pixel count and width/height.
 - [x] Reject decompression-bomb style inputs or excessive decoded dimensions.
-- [ ] Bound temporary buffers and intermediate image sizes.
+- [x] Bound temporary buffers and intermediate image sizes.
 - [ ] Treat uploaded images and metadata as untrusted input.
 - [ ] Do not execute embedded scripts, external references or unsupported active content.
 - [x] Dispose native/unmanaged image resources deterministically.
