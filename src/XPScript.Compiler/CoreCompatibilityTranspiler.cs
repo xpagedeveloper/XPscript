@@ -869,7 +869,17 @@ internal sealed class CoreCompatibilityTranspiler
             var root = targetMatch.Groups["name"].Value;
             if (!scalarTypes.TryGetValue(root, out var actualType) || !actualType.Equals(parameter.Type, StringComparison.OrdinalIgnoreCase))
                 return false;
-            args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} = {ConvertExpression(parameter.Type, "__lsv")})";
+            if (IsRuntimeObjectType(parameter.Type))
+            {
+                // Runtime objects are represented directly in generated C#. Preserve a
+                // true CLR ref argument instead of wrapping it in the dynamic LSByRef
+                // adapter used by scalar XPScript values.
+                args[i] = "ByRef " + target;
+            }
+            else
+            {
+                args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} = {ConvertExpression(parameter.Type, "__lsv")})";
+            }
         }
         return true;
     }
