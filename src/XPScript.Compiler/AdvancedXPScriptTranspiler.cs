@@ -1013,8 +1013,10 @@ internal static class LSForAllRuntime
         foreach (var part in SplitOutsideStrings(raw, ','))
         {
             var declaration = ParseArgumentDeclaration(part.Trim());
-            if (declaration.IsByRef && !declaration.IsList && !_classes.ContainsKey(declaration.XPScriptType)) throw new CompilerException("ByRef scalar parameters are not supported yet.");
-            result.Add(declaration.IsList ? $"LSList<{MapType(declaration.XPScriptType)}> {declaration.Name}" : $"{MapType(declaration.XPScriptType)} {declaration.Name}");
+            if (declaration.IsByRef && !declaration.IsList && !_classes.ContainsKey(declaration.XPScriptType) && !IsRuntimeObjectType(declaration.XPScriptType))
+                throw new CompilerException("ByRef scalar parameters are not supported yet.");
+            var modifier = declaration.IsByRef && IsRuntimeObjectType(declaration.XPScriptType) ? "ref " : "";
+            result.Add(declaration.IsList ? $"LSList<{MapType(declaration.XPScriptType)}> {declaration.Name}" : $"{modifier}{MapType(declaration.XPScriptType)} {declaration.Name}");
         }
         return string.Join(", ", result);
     }
@@ -1025,6 +1027,9 @@ internal static class LSForAllRuntime
         if (!match.Success) throw new CompilerException($"Unsupported argument declaration: {raw}");
         return (match.Groups[2].Value, string.IsNullOrWhiteSpace(match.Groups[4].Value) ? "Variant" : match.Groups[4].Value, !string.IsNullOrWhiteSpace(match.Groups[3].Value), match.Groups[1].Value.Equals("ByRef", StringComparison.OrdinalIgnoreCase));
     }
+
+    private static bool IsRuntimeObjectType(string type) =>
+        type.Equals("XPImage", StringComparison.OrdinalIgnoreCase);
 
     private void RegisterVariable(string name, string xpscriptType, bool isList)
     {
