@@ -99,7 +99,7 @@ jobs:
               Print "XPIMAGE-CONCURRENCY=OK"
           End Sub
           '@ | Set-Content -Encoding utf8 ./out/xpimage-concurrency/concurrency.xps
-          dotnet $compiler ./out/xpimage-concurrency/concurrency.xps -o ./out/xpimage-concurrency/app --runtime=false
+          dotnet $compiler ./out/xpimage-concurrency/concurrency.xps -o ./out/xpimage-concurrency/app --runtime=false --single-file=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           $appDir = (Resolve-Path './out/xpimage-concurrency').Path
