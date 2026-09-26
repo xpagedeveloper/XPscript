@@ -365,6 +365,11 @@ jobs:
               Set img = New XPImage(8, 8, "#663399")
               Set img = Nothing
               Dim form As New UIForm("XPImage Desktop Compile")
+              Dim uiImage As XPImage
+              Set uiImage = New XPImage(12, 10, "#336699")
+              Call form.AddImage("preview", uiImage, "XPImage preview")
+              uiImage.Resize(6, 5, "stretch")
+              Call form.SetImageSource("preview", uiImage)
           End Sub
           '@
           $desktopSource | Set-Content -Encoding utf8 ./out/xpimage-targets/xpimage-desktop.xps
