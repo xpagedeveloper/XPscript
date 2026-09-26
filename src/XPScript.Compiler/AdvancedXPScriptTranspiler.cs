@@ -525,6 +525,7 @@ internal static class LSForAllRuntime
         Write(sb, $"{visibilityFn} {modifierFn}{returnType} {nameFn}({arguments})");
         Write(sb, "{");
         _indent++;
+        EmitRuntimeObjectByValCopies(sb, fn.Groups[3].Value);
         Write(sb, $"{returnType} __result = {DefaultValue(returnType)};");
         return true;
     }
@@ -1031,6 +1032,19 @@ internal static class LSForAllRuntime
 
     private static bool IsRuntimeObjectType(string type) =>
         type.Equals("XPImage", StringComparison.OrdinalIgnoreCase);
+
+    private void EmitRuntimeObjectByValCopies(StringBuilder sb, string rawArguments)
+    {
+        foreach (var part in SplitOutsideStrings(rawArguments, ','))
+        {
+            if (string.IsNullOrWhiteSpace(part)) continue;
+            var raw = part.Trim();
+            if (!Regex.IsMatch(raw, @"^ByVal\b", RegexOptions.IgnoreCase)) continue;
+            var declaration = ParseArgumentDeclaration(raw);
+            if (IsRuntimeObjectType(declaration.XPScriptType))
+                Write(sb, $"{declaration.Name} = {declaration.Name}?.Clone();");
+        }
+    }
 
     private void RegisterVariable(string name, string xpscriptType, bool isList)
     {
