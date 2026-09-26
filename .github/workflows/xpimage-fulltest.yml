@@ -41,19 +41,12 @@ jobs:
           New-Item -ItemType Directory -Force ./out/xpimage-kestrel | Out-Null
           @'
           [Anonymous]
-          [Get:/]
-          Sub Index()
-              Response.ContentType = "text/plain"
-              Response.Write("XPIMAGE-KESTREL-BASIC=OK")
-          End Sub
-
-          [Anonymous]
-          [Get:/image]
-          Sub ImageOnly()
+          [Get:/construct]
+          Sub Construct()
               Dim img As XPImage
               Set img = New XPImage(8, 8, "#336699")
               Response.ContentType = "text/plain"
-              Response.Write("XPIMAGE-KESTREL-IMAGE=" & img.Width & "x" & img.Height)
+              Response.Write("XPIMAGE-CONSTRUCT=" & CStr(img.Width) & "x" & CStr(img.Height))
           End Sub
 
           [Anonymous]
@@ -64,7 +57,18 @@ jobs:
               Dim bytes As Byte[]
               bytes = img.ToBytes("png")
               Response.ContentType = "text/plain"
-              Response.Write("XPIMAGE-KESTREL-BYTES=" & Len(bytes))
+              Response.Write("XPIMAGE-BYTES=" & CStr(Len(bytes)))
+          End Sub
+
+          [Anonymous]
+          [Get:/binary]
+          Sub Binary()
+              Dim img As XPImage
+              Set img = New XPImage(8, 8, "#336699")
+              Dim bytes As Byte[]
+              bytes = img.ToBytes("png")
+              Response.ContentType = "image/png"
+              Response.WriteBinary(bytes)
           End Sub
           '@ | Set-Content -Encoding utf8 ./out/xpimage-kestrel/index.xps
 
@@ -82,6 +86,7 @@ jobs:
           $env:XPSCRIPT_WEB_CONSOLE_ERRORS = '1'
           $server = Start-Process dotnet -ArgumentList $args -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
           if ($null -eq $previousConsoleErrors) { Remove-Item Env:XPSCRIPT_WEB_CONSOLE_ERRORS -ErrorAction SilentlyContinue } else { $env:XPSCRIPT_WEB_CONSOLE_ERRORS = $previousConsoleErrors }
+
           function Dump-KestrelDiagnostics {
             Write-Host '--- Kestrel stdout ---'
             if (Test-Path $stdout) { Get-Content $stdout }
@@ -95,34 +100,54 @@ jobs:
               }
             }
           }
-          function Invoke-Checkpoint([string]$Path, [string]$Expected) {
+
+          function Invoke-XPImageCheckpoint([string]$Path, [string]$Expected) {
             $uri = "http://127.0.0.1:$port$Path"
-            Write-Host "XPImage Kestrel checkpoint START $Path"
-            for ($attempt = 0; $attempt -lt 30; $attempt++) {
+            Write-Host "XPImage Kestrel checkpoint: $Path"
+            try {
+              $response = Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 20
+            } catch {
+              Dump-KestrelDiagnostics
+              throw "XPImage Kestrel checkpoint '$Path' failed: $($_.Exception.Message)"
+            }
+            if ($response.StatusCode -ne 200) {
+              Dump-KestrelDiagnostics
+              throw "XPImage Kestrel checkpoint '$Path' returned HTTP $($response.StatusCode)."
+            }
+            if ($Expected -and ([string]$response.Content) -notmatch $Expected) {
+              Dump-KestrelDiagnostics
+              throw "XPImage Kestrel checkpoint '$Path' did not return '$Expected'."
+            }
+            return $response
+          }
+
+          try {
+            $ready = $false
+            for ($attempt = 0; $attempt -lt 90; $attempt++) {
               $server.Refresh()
               if ($server.HasExited) { break }
               try {
-                $response = Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 3
-                if ($response.StatusCode -eq 200) {
-                  $body = [string]$response.Content
-                  Write-Host "XPImage Kestrel checkpoint DONE $Path => $body"
-                  if ($body -notmatch $Expected) { throw "Unexpected checkpoint response for $Path : $body" }
-                  return
-                }
-              } catch {
-                Write-Host "checkpoint $Path attempt $($attempt + 1): $($_.Exception.Message)"
-              }
-              Start-Sleep -Milliseconds 500
+                $probe = Invoke-WebRequest -Uri "http://127.0.0.1:$port/construct" -UseBasicParsing -TimeoutSec 5
+                if ($probe.StatusCode -eq 200) { $ready = $true; break }
+              } catch { Start-Sleep -Seconds 1 }
             }
-            Dump-KestrelDiagnostics
-            $server.Refresh()
-            if ($server.HasExited) { throw "XPImage Kestrel exited during checkpoint $Path with code $($server.ExitCode)." }
-            throw "XPImage Kestrel checkpoint failed: $Path"
-          }
-          try {
-            Invoke-Checkpoint '/' 'XPIMAGE-KESTREL-BASIC=OK'
-            Invoke-Checkpoint '/image' 'XPIMAGE-KESTREL-IMAGE=8x8'
-            Invoke-Checkpoint '/bytes' 'XPIMAGE-KESTREL-BYTES=[1-9][0-9]*'
+            if (-not $ready) {
+              Dump-KestrelDiagnostics
+              $server.Refresh()
+              if ($server.HasExited) { throw "XPImage Kestrel exited with code $($server.ExitCode)." }
+              throw 'XPImage Kestrel did not become ready at /construct.'
+            }
+
+            $construct = Invoke-XPImageCheckpoint '/construct' 'XPIMAGE-CONSTRUCT=8x8'
+            $bytes = Invoke-XPImageCheckpoint '/bytes' 'XPIMAGE-BYTES=[1-9][0-9]*'
+            $binary = Invoke-XPImageCheckpoint '/binary' ''
+            if ($binary.Headers['Content-Type'] -notmatch '^image/png') {
+              throw "XPImage Kestrel MIME type was '$($binary.Headers['Content-Type'])', expected image/png."
+            }
+            $body = [byte[]]$binary.Content
+            if ($body.Length -lt 8 -or $body[0] -ne 0x89 -or $body[1] -ne 0x50 -or $body[2] -ne 0x4e -or $body[3] -ne 0x47) {
+              throw 'XPImage Kestrel /binary response is not PNG data.'
+            }
           } finally {
             if ($null -ne $server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force }
           }
