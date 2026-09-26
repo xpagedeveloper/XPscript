@@ -239,10 +239,9 @@ internal sealed class XPImage : System.IDisposable
         ValidateCoordinate(y, nameof(y));
         if (string.IsNullOrEmpty(text)) return;
         if (text.Length > MaxMetadataValueChars) throw new System.InvalidOperationException("Image text exceeds the maximum length.");
-        if (string.IsNullOrWhiteSpace(fontFamily)) throw new System.ArgumentException("Font family cannot be empty.", nameof(fontFamily));
         if (!double.IsFinite(fontSize) || fontSize <= 0 || fontSize > MaxDimension) throw new System.ArgumentOutOfRangeException(nameof(fontSize));
         new ImageMagick.Drawing.Drawables()
-            .Font(fontFamily.Trim())
+            .Font(ResolveFont(fontFamily))
             .FontPointSize(fontSize)
             .StrokeColor(ImageMagick.MagickColors.Transparent)
             .FillColor(ParseColor(color))
@@ -257,7 +256,7 @@ internal sealed class XPImage : System.IDisposable
         if (!string.IsNullOrEmpty(text))
         {
             new ImageMagick.Drawing.Drawables()
-                .Font(fontFamily.Trim())
+                .Font(ResolveFont(fontFamily))
                 .FontPointSize(fontSize)
                 .StrokeColor(ImageMagick.MagickColors.Transparent)
                 .FillColor(ParseColor(color))
@@ -483,6 +482,31 @@ internal sealed class XPImage : System.IDisposable
             "software" => ImageMagick.ExifTag.Software,
             _ => throw new System.ArgumentException("Unsupported XPImage EXIF string tag: " + name, nameof(name))
         };
+    }
+
+    private static string ResolveFont(string fontFamily)
+    {
+        if (string.IsNullOrWhiteSpace(fontFamily)) throw new System.ArgumentException("Font family cannot be empty.", nameof(fontFamily));
+        var requested = fontFamily.Trim();
+        if (System.IO.Path.IsPathRooted(requested))
+            throw new System.ArgumentException("XPImage font paths must be relative to the application directory.", nameof(fontFamily));
+
+        if (requested.IndexOf('/') >= 0 || requested.IndexOf('\\') >= 0 || requested.EndsWith(".ttf", System.StringComparison.OrdinalIgnoreCase) || requested.EndsWith(".otf", System.StringComparison.OrdinalIgnoreCase))
+        {
+            var resolved = XPScriptFileSystemRuntime.ResolvePath(requested);
+            if (!System.IO.File.Exists(resolved)) throw new System.IO.FileNotFoundException("XPImage font file was not found.", resolved);
+            return resolved;
+        }
+
+        try
+        {
+            foreach (var family in ImageMagick.MagickNET.FontFamilies)
+                if (string.Equals(family, requested, System.StringComparison.OrdinalIgnoreCase))
+                    return family;
+        }
+        catch { }
+
+        throw new System.InvalidOperationException("XPImage font family '" + requested + "' is not available. Use an installed font family or a relative .ttf/.otf font file.");
     }
 
     private static void ValidateCoordinate(double value, string name)
