@@ -983,6 +983,11 @@ internal sealed class CoreCompatibilityTranspiler
                 var actual = lines[++i].Trim();
                 var procId = _statementProcedure[statementId];
                 var control = _controls[procId];
+                // Keep both resume labels genuinely referenced. C# reports an unreferenced
+                // label as CS0164, and XPscript compilation promotes compiler warnings to
+                // diagnostics. The before-label is a valid Resume target even when this
+                // particular procedure only uses Resume Next.
+                output.Add(indent + $"if (false) goto {StatementBeforeLabel(statementId)};");
                 output.Add(indent + StatementBeforeLabel(statementId) + ":;");
                 output.Add(indent + $"__lsErrCtx.Statement = {statementId};");
                 output.Add(indent + "try { " + actual + " }");
