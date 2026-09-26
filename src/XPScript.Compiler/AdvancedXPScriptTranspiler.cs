@@ -73,6 +73,7 @@ internal sealed class AdvancedXPScriptTranspiler
     private readonly Dictionary<string, ClassInfo> _classes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _variableTypes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _objectVariables = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _runtimeObjectVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _listVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<ForAllContext> _forAll = new();
 
@@ -466,6 +467,7 @@ internal static class LSForAllRuntime
             _currentReturnType = null;
             _variableTypes.Clear();
             _objectVariables.Clear();
+            _runtimeObjectVariables.Clear();
             _listVariables.Clear();
             RegisterArguments(sub.Groups[3].Value);
 
@@ -1028,11 +1030,10 @@ internal static class LSForAllRuntime
     {
         if (isList) { _listVariables[name] = MapType(xpscriptType); return; }
         var type = MapType(xpscriptType); _variableTypes[name] = type;
-        // Runtime object types such as XPImage use the same LSRef<T> representation as
-        // user-defined classes and therefore require the same strongly typed member-access
-        // lowering. Treat every mapped LSRef<T> as an object variable.
-        if (_classes.ContainsKey(xpscriptType) || type.StartsWith("LSRef<", StringComparison.Ordinal) || type.Equals("XPImage?", StringComparison.Ordinal))
+        if (_classes.ContainsKey(xpscriptType) || type.StartsWith("LSRef<", StringComparison.Ordinal))
             _objectVariables[name] = xpscriptType;
+        else if (type.Equals("XPImage?", StringComparison.Ordinal))
+            _runtimeObjectVariables.Add(name);
     }
 
     private string TransformCondition(string expression) => Regex.Replace(TransformExpression(expression), @"(?<![<>=!])=(?!=)", "==");
@@ -1079,6 +1080,14 @@ internal static class LSForAllRuntime
             // Len(image.GetProfile("icc")); leaving the LSRef<T> receiver intact makes the
             // later ByRef lowering treat it as dynamic and produces an invalid ref argument.
             text = Regex.Replace(text, $@"\b{name}\.", $"{objectVariable.Key}.Value!.", RegexOptions.IgnoreCase);
+        }
+
+        foreach (var runtimeObject in _runtimeObjectVariables)
+        {
+            var name = Regex.Escape(runtimeObject);
+            text = Regex.Replace(text, $@"\b{name}\s+Is\s+Not\s+Nothing\b", $"{runtimeObject} is not null", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, $@"\b{name}\s+Is\s+Nothing\b", $"{runtimeObject} is null", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, $@"\b{name}\.", $"{runtimeObject}!.", RegexOptions.IgnoreCase);
         }
 
         if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var classInfo))
