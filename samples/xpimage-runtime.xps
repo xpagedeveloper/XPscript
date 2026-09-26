@@ -54,7 +54,44 @@ Sub VerifyUnsupportedActiveContent()
     If activeErr = 0 Then Error 5, "XPImage unsupported active image content was accepted"
 End Sub
 
+Sub VerifyOutputPathSafety()
+    Dim image As XPImage
+    Set image = New XPImage(2, 2, "#123456")
+
+    Dim traversalErr As Integer
+    On Error Resume Next
+    image.Save("../xpimage-traversal.png")
+    traversalErr = Err
+    On Error GoTo 0
+    If traversalErr = 0 Then Error 5, "XPImage output path traversal was accepted"
+
+    Dim overwritePath As String
+    overwritePath = "xpimage-overwrite-sentinel.txt"
+    Dim sentinelFile As Integer
+    sentinelFile = FreeFile()
+    Open overwritePath For Output As #sentinelFile
+    Print #sentinelFile, "XPIMAGE-SENTINEL"
+    Close #sentinelFile
+
+    Dim overwriteErr As Integer
+    On Error Resume Next
+    image.Save(overwritePath)
+    overwriteErr = Err
+    On Error GoTo 0
+    If overwriteErr = 0 Then Error 5, "XPImage existing-file overwrite was accepted"
+
+    Dim verifyFile As Integer
+    Dim sentinelText As String
+    verifyFile = FreeFile()
+    Open overwritePath For Input As #verifyFile
+    Line Input #verifyFile, sentinelText
+    Close #verifyFile
+    If sentinelText <> "XPIMAGE-SENTINEL" Then Error 5, "XPImage changed an unrelated existing file"
+    Kill overwritePath
+End Sub
+
 Sub Main()
+    Call VerifyOutputPathSafety()
     Call VerifyUnsupportedActiveContent()
     Call VerifyOversizedRotation()
     Dim parameterImage As XPImage
