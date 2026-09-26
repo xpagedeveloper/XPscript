@@ -43,18 +43,21 @@ Sub Main()
     Dim xmpBytes As Byte[]
     xmpBytes = System.Text.Encoding.UTF8.GetBytes(xmpText)
     metadataImage.SetProfile("xmp", xmpBytes)
+    Dim limitErr As Integer
     Dim oversizedMetadata As String
     oversizedMetadata = String(65537, "x")
     On Error Resume Next
     metadataImage.SetMetadata("comment", oversizedMetadata)
-    If Err = 0 Then Error 5, "XPImage oversized metadata value was accepted"
+    limitErr = Err
     On Error GoTo 0
+    If limitErr = 0 Then Error 5, "XPImage oversized metadata value was accepted"
     Dim oversizedProfile As Byte[]
     oversizedProfile = New Byte[8388609]
     On Error Resume Next
     metadataImage.SetProfile("xmp", oversizedProfile)
-    If Err = 0 Then Error 5, "XPImage oversized profile was accepted"
+    limitErr = Err
     On Error GoTo 0
+    If limitErr = 0 Then Error 5, "XPImage oversized profile was accepted"
     If Len(metadataImage.GetProfile("icc")) = 0 Then Error 5, "XPImage ICC profile setup failed"
     If Len(metadataImage.GetProfile("xmp")) = 0 Then Error 5, "XPImage XMP profile setup failed"
     metadataImage.Resize(9, 9)
