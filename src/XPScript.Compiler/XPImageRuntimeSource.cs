@@ -233,6 +233,41 @@ internal sealed class XPImage : System.IDisposable
 
     public void AutoOrient() => _image.AutoOrient();
 
+    public void DrawText(double x, double y, string text, string fontFamily, double fontSize, string color)
+    {
+        ValidateCoordinate(x, nameof(x));
+        ValidateCoordinate(y, nameof(y));
+        if (string.IsNullOrEmpty(text)) return;
+        if (text.Length > MaxMetadataValueChars) throw new System.InvalidOperationException("Image text exceeds the maximum length.");
+        if (string.IsNullOrWhiteSpace(fontFamily)) throw new System.ArgumentException("Font family cannot be empty.", nameof(fontFamily));
+        if (!double.IsFinite(fontSize) || fontSize <= 0 || fontSize > MaxDimension) throw new System.ArgumentOutOfRangeException(nameof(fontSize));
+        new ImageMagick.Drawing.Drawables()
+            .Font(fontFamily.Trim())
+            .FontPointSize(fontSize)
+            .StrokeColor(ImageMagick.MagickColors.Transparent)
+            .FillColor(ParseColor(color))
+            .Text(x, y, text)
+            .Draw(Image);
+    }
+
+    public void WatermarkText(double x, double y, string text, string fontFamily, double fontSize, string color, double opacity)
+    {
+        ValidateOpacity(opacity);
+        using var layer = new ImageMagick.MagickImage(ImageMagick.MagickColors.Transparent, Image.Width, Image.Height);
+        if (!string.IsNullOrEmpty(text))
+        {
+            new ImageMagick.Drawing.Drawables()
+                .Font(fontFamily.Trim())
+                .FontPointSize(fontSize)
+                .StrokeColor(ImageMagick.MagickColors.Transparent)
+                .FillColor(ParseColor(color))
+                .Text(x, y, text)
+                .Draw(layer);
+        }
+        layer.Evaluate(ImageMagick.Channels.Alpha, ImageMagick.EvaluateOperator.Multiply, opacity);
+        Image.Composite(layer, 0, 0, ImageMagick.CompositeOperator.Over);
+    }
+
     public void DrawLine(double x1, double y1, double x2, double y2, string color, double strokeWidth)
     {
         ValidateCoordinate(x1, nameof(x1));
