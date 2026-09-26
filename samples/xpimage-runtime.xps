@@ -11,6 +11,15 @@ Sub Main()
     Set img = New XPImage(8, 6, "#336699")
     Dim encoded As Variant
     encoded = img.ToBytes("png")
+    Dim encodedJpeg As Byte[]
+    encodedJpeg = img.ToBytes("jpeg", 82)
+    If Len(encodedJpeg) = 0 Then Error 5, "XPImage JPEG quality encoding failed"
+    Dim encodedWebP As Byte[]
+    encodedWebP = img.ToBytes("webp", 80)
+    If Len(encodedWebP) = 0 Then Error 5, "XPImage WebP quality encoding failed"
+    Dim encodedPng As Byte[]
+    encodedPng = img.ToBytes("png", 90)
+    If Len(encodedPng) = 0 Then Error 5, "XPImage PNG quality encoding failed"
     Dim b64 As String
     b64 = System.Convert.ToBase64String(encoded)
     Dim copy As XPImage
