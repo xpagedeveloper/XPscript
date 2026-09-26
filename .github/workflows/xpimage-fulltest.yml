@@ -127,6 +127,21 @@ jobs:
           End Sub
 
           [Anonymous]
+          [Post:/upload]
+          Sub Upload()
+              Dim file As Variant
+              Set file = Request.FileFirst("image")
+              If file Is Nothing Then Error 5, "XPImage upload missing"
+              Dim img As XPImage
+              Set img = XPImage.FromBytes(file.Bytes())
+              img.Resize(4, 3)
+              Dim bytes As Byte[]
+              bytes = img.ToBytes("png")
+              Response.ContentType = "image/png"
+              Response.WriteBinary(bytes)
+          End Sub
+
+          [Anonymous]
           [Get:/binary]
           Sub Binary()
               Dim img As XPImage
@@ -213,6 +228,16 @@ jobs:
             $body = [byte[]]$binary.Content
             if ($body.Length -lt 8 -or $body[0] -ne 0x89 -or $body[1] -ne 0x50 -or $body[2] -ne 0x4e -or $body[3] -ne 0x47) {
               throw 'XPImage Kestrel /binary response is not PNG data.'
+            }
+            $uploadSource = Join-Path (Resolve-Path './out/xpimage-kestrel').Path 'upload-source.png'
+            $sourceBytes = [byte[]]$binary.Content
+            [System.IO.File]::WriteAllBytes($uploadSource, $sourceBytes)
+            $upload = Invoke-WebRequest -Uri "http://127.0.0.1:$port/upload" -Method Post -Form @{ image = Get-Item $uploadSource } -UseBasicParsing -TimeoutSec 20
+            if ($upload.StatusCode -ne 200) { throw "XPImage upload returned HTTP $($upload.StatusCode)." }
+            if ($upload.Headers['Content-Type'] -notmatch '^image/png') { throw "XPImage upload MIME type was '$($upload.Headers['Content-Type'])'." }
+            $uploadBody = [byte[]]$upload.Content
+            if ($uploadBody.Length -lt 8 -or $uploadBody[0] -ne 0x89 -or $uploadBody[1] -ne 0x50 -or $uploadBody[2] -ne 0x4e -or $uploadBody[3] -ne 0x47) {
+              throw 'XPImage upload response is not PNG data.'
             }
           } finally {
             if ($null -ne $server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force }
