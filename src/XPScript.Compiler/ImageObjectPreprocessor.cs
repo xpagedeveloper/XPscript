@@ -8,7 +8,7 @@ internal sealed class ImageObjectPreprocessor
     [
         "Width", "Height", "Format", "DpiX", "DpiY", "Clone", "Resize", "Crop", "Rotate",
         "FlipHorizontal", "FlipVertical", "Brightness", "Contrast", "Saturation", "Grayscale", "Invert", "Blur", "Sharpen",
-        "AutoOrient", "GetExif", "SetExif", "GetMetadata", "SetMetadata", "StripMetadata", "ToBytes", "Save", "Dispose", "Pad", "Composite", "Opacity", "Flatten"
+        "AutoOrient", "GetExif", "SetExif", "GetMetadata", "SetMetadata", "StripMetadata", "ToBytes", "Save", "Recycle", "Pad", "Composite", "Opacity", "Flatten"
     ];
 
     public string Transform(string source)
@@ -53,6 +53,15 @@ internal sealed class ImageObjectPreprocessor
                     var member = Members.FirstOrDefault(x => x.Equals(m.Groups[1].Value, StringComparison.OrdinalIgnoreCase));
                     return image + "." + (member ?? m.Groups[1].Value);
                 }, RegexOptions.IgnoreCase);
+            }
+
+            var nullAssignment = Regex.Match(rewritten, @"^([A-Za-z_]\w*)\s*=\s*(?:Nothing|Null|null)\s*$", RegexOptions.IgnoreCase);
+            if (nullAssignment.Success && images.Contains(nullAssignment.Groups[1].Value))
+            {
+                var name = nullAssignment.Groups[1].Value;
+                output.Add(indent + $"if ({name} is XPImage __xpimageRecycle) __xpimageRecycle.Recycle()");
+                output.Add(indent + $"{name} = null");
+                continue;
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
