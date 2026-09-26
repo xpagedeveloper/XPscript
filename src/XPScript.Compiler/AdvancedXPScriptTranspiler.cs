@@ -1233,7 +1233,22 @@ internal static class LSForAllRuntime
         }
     }
 
-    private string TransformArgumentList(string raw) => string.IsNullOrWhiteSpace(raw) ? "" : string.Join(", ", SplitOutsideStrings(raw, ',').Select(TransformExpression));
+    private string TransformArgumentList(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+        return string.Join(", ", SplitOutsideStrings(raw, ',').Select(argument =>
+        {
+            var trimmed = argument.Trim();
+            var byRefRuntimeObject = Regex.Match(trimmed, @"^ByRef\s+([A-Za-z_]\w*)$", RegexOptions.IgnoreCase);
+            if (byRefRuntimeObject.Success)
+            {
+                var name = byRefRuntimeObject.Groups[1].Value;
+                if (_variableTypes.TryGetValue(name, out var type) && type.Equals("XPImage?", StringComparison.Ordinal))
+                    return "ref " + name;
+            }
+            return TransformExpression(argument);
+        }));
+    }
 
     private string ConvertInputValue(string name, string fileNo)
     {
