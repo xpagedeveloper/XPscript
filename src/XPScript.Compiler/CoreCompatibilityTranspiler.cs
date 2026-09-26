@@ -783,6 +783,10 @@ internal sealed class CoreCompatibilityTranspiler
         foreach (var p in parameters)
         {
             if (Regex.IsMatch(line, $@"\b{Regex.Escape(p.Name)}\s+As\s+Variant\b", RegexOptions.IgnoreCase)) continue;
+            // Runtime object parameters (for example XPImage) are ordinary nullable CLR
+            // references. They must not use the LSRef<T>.Value lowering used by
+            // user-defined XPScript classes.
+            if (IsRuntimeObjectType(p.Type)) continue;
             line = ReplaceOutsideStrings(line, $@"(?<![\w.]){Regex.Escape(p.Name)}(?![\w])", p.Name + ".Value");
         }
         return line;
