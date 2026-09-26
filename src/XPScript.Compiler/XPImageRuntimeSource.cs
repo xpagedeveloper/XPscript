@@ -231,11 +231,14 @@ internal sealed class XPImage : System.IDisposable
         _image.Strip();
     }
 
-    public byte[] ToBytes(string format)
+    public byte[] ToBytes(string format) => ToBytes(format, null);
+
+    public byte[] ToBytes(string format, int? quality)
     {
         var normalized = NormalizeFormat(format);
-        _image.Format = ParseFormat(normalized);
-        var bytes = _image.ToByteArray();
+        Image.Format = ParseFormat(normalized);
+        ApplyEncodingQuality(normalized, quality);
+        var bytes = Image.ToByteArray();
         _format = normalized;
         return bytes;
     }
@@ -247,13 +250,9 @@ internal sealed class XPImage : System.IDisposable
         if (string.IsNullOrWhiteSpace(path)) throw new System.ArgumentException("Image path cannot be empty.", nameof(path));
         var resolved = XPScriptFileSystemRuntime.ResolvePath(path);
         var format = NormalizeFormat(System.IO.Path.GetExtension(resolved).TrimStart('.'));
-        _image.Format = ParseFormat(format);
-        if (quality.HasValue)
-        {
-            if (quality.Value < 1 || quality.Value > 100) throw new System.ArgumentOutOfRangeException(nameof(quality));
-            _image.Quality = (uint)quality.Value;
-        }
-        _image.Write(resolved);
+        Image.Format = ParseFormat(format);
+        ApplyEncodingQuality(format, quality);
+        Image.Write(resolved);
         _format = format;
     }
 
@@ -289,6 +288,15 @@ internal sealed class XPImage : System.IDisposable
             "tif" or "tiff" => "tiff",
             _ => throw new System.NotSupportedException("Unsupported image format: " + value)
         };
+    }
+
+    private void ApplyEncodingQuality(string format, int? quality)
+    {
+        if (!quality.HasValue) return;
+        if (quality.Value < 1 || quality.Value > 100) throw new System.ArgumentOutOfRangeException(nameof(quality));
+        if (format is not ("jpeg" or "webp" or "png"))
+            throw new System.ArgumentException("Quality is supported only for JPEG, WebP and PNG output.", nameof(quality));
+        Image.Quality = (uint)quality.Value;
     }
 
     private static ImageMagick.MagickFormat ParseFormat(string format) => format switch
