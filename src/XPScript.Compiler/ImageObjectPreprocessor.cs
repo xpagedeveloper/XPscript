@@ -19,17 +19,45 @@ internal sealed class ImageObjectPreprocessor
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var output = new List<string>(lines.Length + 8);
         var images = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var scopeImages = new Stack<HashSet<string>>();
 
         foreach (var raw in lines)
         {
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
 
+            var scopeStart = Regex.Match(line, @"^(?:Public\s+|Private\s+)?(?:Sub|Function)\s+([A-Za-z_]\w*)\b", RegexOptions.IgnoreCase);
+            if (scopeStart.Success)
+            {
+                scopeImages.Push(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                output.Add(raw);
+                continue;
+            }
+
+            var scopeEnd = Regex.Match(line, @"^End\s+(?:Sub|Function)\s*$", RegexOptions.IgnoreCase);
+            if (scopeEnd.Success && scopeImages.Count > 0)
+            {
+                foreach (var image in scopeImages.Pop().OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                    output.Add(indent + $"if ({image} is XPImage __xpimageRecycle_{image}) __xpimageRecycle_{image}.Recycle()");
+                output.Add(raw);
+                continue;
+            }
+
+            var exitScope = Regex.Match(line, @"^Exit\s+(?:Sub|Function)\s*$", RegexOptions.IgnoreCase);
+            if (exitScope.Success && scopeImages.Count > 0)
+            {
+                foreach (var image in scopeImages.Peek().OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                    output.Add(indent + $"if ({image} is XPImage __xpimageRecycle_{image}) __xpimageRecycle_{image}.Recycle()");
+                output.Add(raw);
+                continue;
+            }
+
             var dimNew = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+XPImage\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
             if (dimNew.Success)
             {
                 var name = dimNew.Groups[1].Value;
                 images.Add(name);
+                if (scopeImages.Count > 0) scopeImages.Peek().Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
                 var args = dimNew.Groups[2].Value.Trim();
                 output.Add(indent + $"{name} = new XPImage({args})");
@@ -40,6 +68,7 @@ internal sealed class ImageObjectPreprocessor
             if (dim.Success)
             {
                 images.Add(dim.Groups[1].Value);
+                if (scopeImages.Count > 0) scopeImages.Peek().Add(dim.Groups[1].Value);
                 output.Add(indent + $"Dim {dim.Groups[1].Value} As Variant");
                 continue;
             }
@@ -65,6 +94,11 @@ internal sealed class ImageObjectPreprocessor
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
+            if (set.Success && images.Contains(set.Groups[1].Value))
+            {
+                var name = set.Groups[1].Value;
+                output.Add(indent + $"if ({name} is XPImage __xpimageOld_{name}) __xpimageOld_{name}.Recycle()");
+            }
             if (set.Success && (images.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPImage.", StringComparison.OrdinalIgnoreCase) || set.Groups[2].Value.Contains("new XPImage", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
 
