@@ -324,7 +324,13 @@ internal sealed class CoreCompatibilityTranspiler
             var line = StripComment(originalLine).Trim();
             if (line.Length == 0) { output.Add(originalLine); continue; }
 
-            var transformed = TransformCoreLine(line, proc, arrays, scalarTypes, staticNames, control, hasGoSub);
+            // XPImage is a CLR runtime object, not an LSRef<T>/Variant value. Keep
+            // explicitly typed local declarations intact so the advanced transpiler can
+            // emit XPImage? and CLR ref call sites without losing the static type.
+            var runtimeObjectDim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
+            var transformed = runtimeObjectDim.Success && IsRuntimeObjectType(runtimeObjectDim.Groups[2].Value)
+                ? [line]
+                : TransformCoreLine(line, proc, arrays, scalarTypes, staticNames, control, hasGoSub);
             foreach (var expanded in transformed)
             {
                 var finalLine = RewriteByRefParameterUses(expanded, proc.Parameters.Where(x => x.ByRef && !x.IsArray && !x.IsList).ToList());
