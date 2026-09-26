@@ -133,7 +133,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 ## Security and resource limits
 
 - [x] Apply existing safe path rules for image file reads and writes.
-- [ ] Prevent output path traversal and unrelated-file overwrite.
+- [x] Prevent output path traversal and unrelated-file overwrite.
 - [x] Define maximum encoded image file size.
 - [x] Define maximum pixel count and width/height.
 - [x] Reject decompression-bomb style inputs or excessive decoded dimensions.
