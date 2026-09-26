@@ -13,7 +13,7 @@ internal sealed class AdvancedXPScriptTranspiler
     {
         ["String"] = "string", ["Integer"] = "int", ["Long"] = "long", ["Double"] = "double",
         ["Single"] = "float", ["Boolean"] = "bool", ["Byte"] = "byte", ["Currency"] = "decimal",
-        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object", ["Byte[]"] = "byte[]"
+        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object", ["Byte[]"] = "byte[]", ["XPImage"] = "XPImage"
     };
 
     private static readonly string[] RuntimeFunctions =
