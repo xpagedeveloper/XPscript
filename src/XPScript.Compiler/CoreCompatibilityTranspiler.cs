@@ -192,7 +192,7 @@ internal sealed class CoreCompatibilityTranspiler
         return new ProcedureInfo(
             _nextProcedureId++,
             match.Groups[3].Value,
-            ParseParameters(match.Groups[4].Value, treatOmittedAsByRef: false, sourceName, lineNumber, sourceLine ?? line),
+            ParseParameters(match.Groups[4].Value, treatOmittedAsByRef: true, sourceName, lineNumber, sourceLine ?? line),
             !string.IsNullOrWhiteSpace(match.Groups[1].Value),
             className);
     }
@@ -371,11 +371,13 @@ internal sealed class CoreCompatibilityTranspiler
         {
             if (p.ByRef && !p.IsArray && !p.IsList)
             {
-                // Object references already have reference semantics and must retain
-                // their declared type. XPImage is a runtime object (XPImage?), while
-                // user-defined classes are LSRef<T>; neither should be lowered to Variant.
-                if (!_classes.Contains(p.Type) && !IsRuntimeObjectType(p.Type))
-                    result = Regex.Replace(result, $@"\bByRef\s+{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", p.Name + " As Variant", RegexOptions.IgnoreCase);
+                // XPScript procedure parameters are ByRef by default. Runtime objects such
+                // as XPImage stay strongly typed; the call-site rewriter preserves their
+                // reference identity instead of lowering them through Variant.
+                if (IsRuntimeObjectType(p.Type))
+                    result = Regex.Replace(result, $@"(?:(?:ByVal|ByRef)\s+)?{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", "ByRef " + p.Name + " As " + p.Type, RegexOptions.IgnoreCase);
+                else if (!_classes.Contains(p.Type))
+                    result = Regex.Replace(result, $@"(?:(?:ByVal|ByRef)\s+)?{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", p.Name + " As Variant", RegexOptions.IgnoreCase);
             }
             else if (p.IsArray)
             {
