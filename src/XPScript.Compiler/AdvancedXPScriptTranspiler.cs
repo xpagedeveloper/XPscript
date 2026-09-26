@@ -1028,7 +1028,11 @@ internal static class LSForAllRuntime
     {
         if (isList) { _listVariables[name] = MapType(xpscriptType); return; }
         var type = MapType(xpscriptType); _variableTypes[name] = type;
-        if (_classes.ContainsKey(xpscriptType)) _objectVariables[name] = xpscriptType;
+        // Runtime object types such as XPImage use the same LSRef<T> representation as
+        // user-defined classes and therefore require the same strongly typed member-access
+        // lowering. Treat every mapped LSRef<T> as an object variable.
+        if (_classes.ContainsKey(xpscriptType) || type.StartsWith("LSRef<", StringComparison.Ordinal) || type.Equals("XPImage?", StringComparison.Ordinal))
+            _objectVariables[name] = xpscriptType;
     }
 
     private string TransformCondition(string expression) => Regex.Replace(TransformExpression(expression), @"(?<![<>=!])=(?!=)", "==");
