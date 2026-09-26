@@ -13,7 +13,7 @@ internal sealed class AdvancedXPScriptTranspiler
     {
         ["String"] = "string", ["Integer"] = "int", ["Long"] = "long", ["Double"] = "double",
         ["Single"] = "float", ["Boolean"] = "bool", ["Byte"] = "byte", ["Currency"] = "decimal",
-        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object", ["Byte[]"] = "byte[]", ["XPImage"] = "XPImage"
+        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object", ["Byte[]"] = "byte[]", ["XPImage"] = "XPImage?"
     };
 
     private static readonly string[] RuntimeFunctions =
@@ -888,7 +888,7 @@ internal static class LSForAllRuntime
         var rhsRaw = match.Groups[2].Value.Trim();
         if (functionResultClass?.Equals("XPImage", StringComparison.OrdinalIgnoreCase) == true)
         {
-            if (rhsRaw.Equals("Nothing", StringComparison.OrdinalIgnoreCase)) { Write(sb, "__result = null!;"); return true; }
+            if (rhsRaw.Equals("Nothing", StringComparison.OrdinalIgnoreCase)) { Write(sb, "__result = null;"); return true; }
             var rhsImage = TransformExpression(rhsRaw);
             Write(sb, $"__result = {rhsImage};");
             return true;
@@ -1240,7 +1240,7 @@ internal static class LSForAllRuntime
     {
         if (type.StartsWith("LSRef<", StringComparison.Ordinal)) return $"new {type}()";
         if (type.StartsWith("LSList<", StringComparison.Ordinal)) return "new()";
-        return type switch { "string" => "\"\"", "bool" => "false", "DateTime" => "default", "dynamic" => "null!", "object" => "null!", "byte[]" => "System.Array.Empty<byte>()", _ => "0" };
+        return type switch { "string" => "\"\"", "bool" => "false", "DateTime" => "default", "dynamic" => "null!", "object" => "null!", "byte[]" => "System.Array.Empty<byte>()", "XPImage?" => "null", _ => "0" };
     }
 
     private static string FindEntryPoint(string[] lines)
