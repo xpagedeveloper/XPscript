@@ -54,6 +54,14 @@ jobs:
         run: |
           $compiler = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
           New-Item -ItemType Directory -Force ./out/xpimage | Out-Null
+          $fontCandidates = @(
+            'C:/Windows/Fonts/arial.ttf',
+            '/System/Library/Fonts/Supplemental/Arial.ttf',
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+          )
+          $fontSource = $fontCandidates | Where-Object { Test-Path $_ -PathType Leaf } | Select-Object -First 1
+          if (-not $fontSource) { throw 'XPImage FullTest could not locate its platform test font.' }
+          Copy-Item $fontSource ./samples/xpimage-test-font.ttf -Force
           dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage/xpimage-runtime --runtime=false --debug
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $plain = './out/xpimage/xpimage-runtime'
