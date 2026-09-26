@@ -1,0 +1,8 @@
+Sub Main()
+    Dim bytes As Byte[]
+    If Len(bytes) <> 0 Then Error 5, "New Byte[] must be empty"
+    bytes = Base64DecodeBinary("AQID/w==")
+    If Len(bytes) <> 4 Then Error 5, "Len(Byte[]) failed"
+    If LenB(bytes) <> 4 Then Error 5, "LenB(Byte[]) failed"
+    Print "BYTE-ARRAY=OK"
+End Sub
