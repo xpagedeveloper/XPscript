@@ -139,7 +139,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Reject decompression-bomb style inputs or excessive decoded dimensions.
 - [x] Bound temporary buffers and intermediate image sizes.
 - [x] Treat uploaded images and metadata as untrusted input.
-- [ ] Do not execute embedded scripts, external references or unsupported active content.
+- [x] Do not execute embedded scripts, external references or unsupported active content.
 - [x] Dispose native/unmanaged image resources deterministically.
 - [ ] Add concurrency tests proving image instances do not share mutable state.
 
