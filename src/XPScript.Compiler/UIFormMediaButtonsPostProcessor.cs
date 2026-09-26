@@ -88,6 +88,15 @@ internal sealed class UIFormMediaButtonsPostProcessor
                 """
     private static string NormalizeMediaSource(object? value, string kind)
     {
+        if (value is XPImage image)
+        {
+            if (!kind.Equals("image", StringComparison.OrdinalIgnoreCase))
+                throw new XPScriptRuntimeException(5, $"UIForm {kind} source does not accept XPImage.");
+            var bytes = image.ToBytes("png");
+            if (bytes.LongLength is < 1 or > 32L * 1024 * 1024)
+                throw new XPScriptRuntimeException(5, "UIForm image source must contain between 1 byte and 32 MiB.");
+            return "data:image/png;base64," + Convert.ToBase64String(bytes);
+        }
         var text = XPScriptRuntime.CStr(value).Trim();
         if (text.Length is < 1 or > 4096) throw new XPScriptRuntimeException(5, $"UIForm {kind} source must contain between 1 and 4096 characters.");
         if (text.Any(char.IsControl)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source contains a control character.");
