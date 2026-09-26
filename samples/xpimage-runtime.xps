@@ -184,6 +184,8 @@ Sub Main()
     Dim watermark As XPImage
     Set watermark = New XPImage(4, 4, "#ff0000")
     drawing.WatermarkImage(watermark, 2, 2, 0.5)
+    drawing.DrawText(2, 14, "XP", "DejaVu-Sans", 8, "#000000")
+    drawing.WatermarkText(2, 22, "WM", "DejaVu-Sans", 7, "#0000ff", 0.5)
     If drawing.Width <> 36 Or drawing.Height <> 28 Then Error 5, "XPImage drawing/border geometry failed"
     Dim drawingBytes As Byte[]
     drawingBytes = drawing.ToBytes("png")
