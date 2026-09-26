@@ -224,6 +224,7 @@ internal static class LSForAllRuntime
         _procedureKind = ProcedureKind.None;
         _variableTypes.Clear();
         _objectVariables.Clear();
+        _runtimeObjectVariables.Clear();
         _listVariables.Clear();
         _forAll.Clear();
         _indent = 1;
