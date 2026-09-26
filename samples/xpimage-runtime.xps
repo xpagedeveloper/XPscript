@@ -25,6 +25,10 @@ Sub ResizeImageByRef(image As XPImage)
     image.Resize(2, 2)
 End Sub
 
+Sub ReplaceImageByRef(image As XPImage)
+    Set image = New XPImage(3, 3, "#334455")
+End Sub
+
 Sub Main()
     Dim parameterImage As XPImage
     Set parameterImage = New XPImage(4, 4, "#112233")
@@ -32,6 +36,8 @@ Sub Main()
     If parameterImage.Width <> 4 Or parameterImage.Height <> 4 Then Error 5, "XPImage ByVal parameter was not copied"
     Call ResizeImageByRef(parameterImage)
     If parameterImage.Width <> 2 Or parameterImage.Height <> 2 Then Error 5, "XPImage ByRef parameter did not preserve reference"
+    Call ReplaceImageByRef(parameterImage)
+    If parameterImage.Width <> 3 Or parameterImage.Height <> 3 Then Error 5, "XPImage ByRef parameter reassignment did not reach caller"
     Dim img As XPImage
     Set img = New XPImage(8, 6, "#336699")
     Dim encoded As Variant
