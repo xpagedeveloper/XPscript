@@ -58,8 +58,9 @@ jobs:
           $args = @(
             'run', '--project', './src/XPScript.Cli/XPScript.Cli.csproj',
             '-c', 'Release', '-p:SkipUnifiedPublish=true', '--',
-            'web', '--root', './out/xpimage-kestrel',
-            '--address', '127.0.0.1', '--port', [string]$port, '--host', '127.0.0.1'
+            'web', '--debug', '--root', './out/xpimage-kestrel',
+            '--address', '127.0.0.1', '--port', [string]$port, '--host', '127.0.0.1',
+            '--log-directory', './out/xpimage-kestrel/logs'
           )
           $previousConsoleErrors = $env:XPSCRIPT_WEB_CONSOLE_ERRORS
           $env:XPSCRIPT_WEB_CONSOLE_ERRORS = '1'
@@ -84,6 +85,13 @@ jobs:
               if (Test-Path $stdout) { Get-Content $stdout }
               Write-Host '--- Kestrel stderr ---'
               if (Test-Path $stderr) { Get-Content $stderr }
+              Write-Host '--- Kestrel application/error logs ---'
+              if (Test-Path './out/xpimage-kestrel/logs') {
+                Get-ChildItem './out/xpimage-kestrel/logs' -File | ForEach-Object {
+                  Write-Host "--- $($_.Name) ---"
+                  Get-Content $_.FullName
+                }
+              }
               if ($server.HasExited) { throw "XPImage plain Kestrel web process exited with code $($server.ExitCode)." }
               throw 'XPImage plain Kestrel web request failed.'
             }
