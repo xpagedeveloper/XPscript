@@ -126,7 +126,8 @@ internal sealed class XPImage : System.IDisposable
         var normalized = (mode ?? string.Empty).Trim().ToLowerInvariant();
         if (normalized.Length == 0 || normalized == "stretch")
         {
-            _image.Resize((uint)width, (uint)height);
+            var geometry = new ImageMagick.MagickGeometry((uint)width, (uint)height) { IgnoreAspectRatio = true };
+            _image.Resize(geometry);
             return;
         }
 
