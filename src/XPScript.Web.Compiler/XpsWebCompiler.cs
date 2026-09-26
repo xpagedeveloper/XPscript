@@ -140,7 +140,7 @@ public sealed class XpsWebCompiler
             DebugStep($"workspace-ready image={usesImage}", fullSourcePath);
 
             var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workspace, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
-            psi.ArgumentList.Add("build"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c"); psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("--nologo"); psi.ArgumentList.Add("--no-restore");
+            psi.ArgumentList.Add("publish"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c"); psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("--nologo"); psi.ArgumentList.Add("--no-restore"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(Path.Combine(workspace, "publish"));
             DebugStep("restore:start", fullSourcePath);
             await RunDotNetAsync(workspace, ["restore", projectPath, "--nologo"], cancellationToken).ConfigureAwait(false);
             DebugStep("restore:done", fullSourcePath);
@@ -148,7 +148,7 @@ public sealed class XpsWebCompiler
             await RunProcessAsync(psi, cancellationToken).ConfigureAwait(false);
             DebugStep("build:done", fullSourcePath);
 
-            var assemblyPath = Path.Combine(workspace, "bin", "Release", "net10.0", "XPScript.WebUnit.dll");
+            var assemblyPath = Path.Combine(workspace, "publish", "XPScript.WebUnit.dll");
             if (!File.Exists(assemblyPath)) throw new XpsWebCompilationException("Web compiler completed without producing a loadable assembly.");
             var assemblyBytes = await File.ReadAllBytesAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
             var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
@@ -172,16 +172,24 @@ public sealed class XpsWebCompiler
     private static XpsCompiledWebUnit LoadCompiledUnit(byte[] assemblyBytes, byte[]? pdbBytes, XpsWebRouteParseResult parsed, string dependencyDirectory)
     {
         var loadContext = new AssemblyLoadContext("XPScriptWeb-" + Guid.NewGuid().ToString("N"), isCollectible: true);
+        var componentAssemblyPath = Path.Combine(dependencyDirectory, "XPScript.WebUnit.dll");
+        var dependencyResolver = File.Exists(componentAssemblyPath) ? new AssemblyDependencyResolver(componentAssemblyPath) : null;
         Assembly? ResolveManaged(AssemblyLoadContext context, AssemblyName name)
         {
             var shared = ResolveSharedAssembly(context, name);
             if (shared is not null) return shared;
             if (string.IsNullOrWhiteSpace(name.Name)) return null;
+            var resolved = dependencyResolver?.ResolveAssemblyToPath(name);
+            if (!string.IsNullOrWhiteSpace(resolved) && File.Exists(resolved))
+                return context.LoadFromAssemblyPath(resolved);
             var candidate = Path.Combine(dependencyDirectory, name.Name + ".dll");
             return File.Exists(candidate) ? context.LoadFromAssemblyPath(candidate) : null;
         }
         IntPtr ResolveNative(Assembly assembly, string name)
         {
+            var resolved = dependencyResolver?.ResolveUnmanagedDllToPath(name);
+            if (!string.IsNullOrWhiteSpace(resolved) && File.Exists(resolved) && NativeLibrary.TryLoad(resolved, out var resolvedHandle))
+                return resolvedHandle;
             foreach (var candidate in NativeLibraryCandidates(dependencyDirectory, name))
                 if (File.Exists(candidate) && NativeLibrary.TryLoad(candidate, out var handle)) return handle;
             return IntPtr.Zero;
