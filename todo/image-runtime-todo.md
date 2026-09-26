@@ -9,7 +9,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 ## Required implementation strategy
 
 - [x] Use Magick.NET as the image-processing backend. Do not build the image engine from scratch.
-- [ ] Use an Apache-2.0 licensed Magick.NET package/configuration suitable for Windows, Linux and macOS.
+- [x] Use an Apache-2.0 licensed Magick.NET package/configuration suitable for Windows, Linux and macOS.
 - [x] Pin and centrally manage the selected Magick.NET package/version.
 - [ ] Verify .NET 10 compatibility, Windows/Linux/macOS support, maintenance activity, security advisories/CVEs and transitive/native dependencies.
 - [ ] Use ImageMagick/Magick.NET codecs, resampling, transforms, effects, compositing, drawing, EXIF/profile and encoding APIs rather than duplicating those algorithms.
