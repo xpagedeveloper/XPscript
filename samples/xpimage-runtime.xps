@@ -6,6 +6,28 @@ Function MakeReturnedImage() As XPImage
     Set MakeReturnedImage = returned
 End Function
 
+Sub VerifyOversizedMetadata(image As XPImage)
+    Dim oversizedMetadata As String
+    Dim limitErr As Integer
+    oversizedMetadata = String(65537, "x")
+    On Error Resume Next
+    image.SetMetadata("comment", oversizedMetadata)
+    limitErr = Err
+    On Error GoTo 0
+    If limitErr = 0 Then Error 5, "XPImage oversized metadata value was accepted"
+End Sub
+
+Sub VerifyOversizedProfile(image As XPImage)
+    Dim oversizedProfile As Byte[]
+    Dim limitErr As Integer
+    oversizedProfile = New Byte[8388609]
+    On Error Resume Next
+    image.SetProfile("xmp", oversizedProfile)
+    limitErr = Err
+    On Error GoTo 0
+    If limitErr = 0 Then Error 5, "XPImage oversized profile was accepted"
+End Sub
+
 Sub Main()
     Dim img As XPImage
     Set img = New XPImage(8, 6, "#336699")
@@ -43,21 +65,8 @@ Sub Main()
     Dim xmpBytes As Byte[]
     xmpBytes = System.Text.Encoding.UTF8.GetBytes(xmpText)
     metadataImage.SetProfile("xmp", xmpBytes)
-    Dim limitErr As Integer
-    Dim oversizedMetadata As String
-    oversizedMetadata = String(65537, "x")
-    On Error Resume Next
-    metadataImage.SetMetadata("comment", oversizedMetadata)
-    limitErr = Err
-    On Error GoTo 0
-    If limitErr = 0 Then Error 5, "XPImage oversized metadata value was accepted"
-    Dim oversizedProfile As Byte[]
-    oversizedProfile = New Byte[8388609]
-    On Error Resume Next
-    metadataImage.SetProfile("xmp", oversizedProfile)
-    limitErr = Err
-    On Error GoTo 0
-    If limitErr = 0 Then Error 5, "XPImage oversized profile was accepted"
+    Call VerifyOversizedMetadata(metadataImage)
+    Call VerifyOversizedProfile(metadataImage)
     If Len(metadataImage.GetProfile("icc")) = 0 Then Error 5, "XPImage ICC profile setup failed"
     If Len(metadataImage.GetProfile("xmp")) = 0 Then Error 5, "XPImage XMP profile setup failed"
     metadataImage.Resize(9, 9)
