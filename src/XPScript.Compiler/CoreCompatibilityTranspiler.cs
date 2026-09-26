@@ -1055,6 +1055,7 @@ internal sealed class CoreCompatibilityTranspiler
         "date" => "DateTime",
         "variant" => "dynamic",
         "object" => "object",
+        "xpimage" => "XPImage?",
         "void" => "void",
         _ => $"LSRef<{xpscriptType}>"
     };
@@ -1064,7 +1065,7 @@ internal sealed class CoreCompatibilityTranspiler
         "string" => "\"\"",
         "bool" => "false",
         "DateTime" => "default",
-        "dynamic" or "object" => "null!",
+        "dynamic" or "object" or "XPImage?" => "null!",
         _ when type.StartsWith("LSRef<", StringComparison.Ordinal) => "new()",
         _ => "0"
     };
