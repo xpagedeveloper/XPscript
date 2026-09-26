@@ -37,11 +37,13 @@ Sub Main()
     Dim metadataImage As New XPImage(6, 6, "#224466")
     metadataImage.SetExif("Artist", "XPScript")
     metadataImage.SetMetadata("comment", "XPImage metadata")
+    metadataImage.Resize(9, 9)
+    metadataImage.Brightness(5)
     Dim metadataBytes As Byte[]
     metadataBytes = metadataImage.ToBytes("jpeg", 90)
     Dim metadataCopy As XPImage
     Set metadataCopy = XPImage.FromBytes(metadataBytes)
-    If metadataCopy.GetExif("Artist") <> "XPScript" Then Error 5, "XPImage EXIF round-trip failed"
+    If metadataCopy.GetExif("Artist") <> "XPScript" Then Error 5, "XPImage EXIF preservation failed after editing"
     If metadataCopy.GetMetadata("comment") <> "XPImage metadata" Then Error 5, "XPImage metadata round-trip failed"
     metadataCopy.StripMetadata()
     If metadataCopy.GetExif("Artist") <> "" Then Error 5, "XPImage metadata stripping failed"
