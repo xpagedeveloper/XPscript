@@ -179,6 +179,7 @@ Sub Main()
     drawing.DrawLine(1, 1, 30, 22, "#ff0000", 2)
     drawing.DrawRectangle(3, 3, 12, 8, "#0000ff", 1, "#00ff00")
     drawing.DrawEllipse(22, 12, 5, 4, "#000000", 1, "transparent")
+    drawing.DrawRoundedRectangle(8, 12, 10, 8, 2, 2, "#663399", 1, "#ffeeaa")
     drawing.Border(2, "#663399")
     If drawing.Width <> 36 Or drawing.Height <> 28 Then Error 5, "XPImage drawing/border geometry failed"
     Dim drawingBytes As Byte[]
