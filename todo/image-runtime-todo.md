@@ -12,7 +12,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Use an Apache-2.0 licensed Magick.NET package/configuration suitable for Windows, Linux and macOS.
 - [x] Pin and centrally manage the selected Magick.NET package/version.
 - [x] Verify .NET 10 compatibility, Windows/Linux/macOS support, maintenance activity, security advisories/CVEs and transitive/native dependencies.
-- [ ] Use ImageMagick/Magick.NET codecs, resampling, transforms, effects, compositing, drawing, EXIF/profile and encoding APIs rather than duplicating those algorithms.
+- [x] Use ImageMagick/Magick.NET codecs, resampling, transforms, effects, compositing, drawing, EXIF/profile and encoding APIs rather than duplicating those algorithms.
 - [x] Wrap Magick.NET behind the stable XPScript-owned XPImage API; no Magick.NET types may leak into the public XPScript API.
 - [ ] Reuse existing XPScript path-security, HTTP, web response, upload, diagnostics and resource-lifetime infrastructure.
 - [x] Keep Magick.NET out of applications that do not use XPImage.
