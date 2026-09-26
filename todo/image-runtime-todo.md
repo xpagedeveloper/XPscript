@@ -73,7 +73,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Draw rectangles and rounded rectangles where supported.
 - [x] Draw ellipses/circles.
 - [x] Fill shapes.
-- [ ] Draw images/icons onto another image.
+- [x] Draw images/icons onto another image.
 - [x] Add borders.
 - [x] Add simple watermark text or watermark image.
 - [x] Support text alignment and basic wrapping.
@@ -188,7 +188,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Draw lines.
 - [x] Draw rectangles and rounded rectangles.
 - [x] Draw ellipses/circles.
-- [ ] Filled and outlined shapes.
+- [x] Filled and outlined shapes.
 - [x] Borders.
 - [x] Text and image watermarks.
 
