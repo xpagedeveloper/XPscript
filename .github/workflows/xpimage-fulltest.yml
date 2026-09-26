@@ -69,6 +69,24 @@ jobs:
           $notice = Get-Content ./out/xpimage/Third-party-license.txt -Raw
           if ($notice -notmatch 'Magick.NET-Q16-AnyCPU') { throw 'Generated XPImage third-party notice is missing Magick.NET.' }
 
+      - name: Verify non-XPImage app excludes Magick.NET
+        shell: pwsh
+        run: |
+          $compiler = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
+          New-Item -ItemType Directory -Force ./out/no-xpimage | Out-Null
+          @'
+          Sub Main()
+              Print "NO-XPIMAGE=OK"
+          End Sub
+          '@ | Set-Content -Encoding utf8 ./out/no-xpimage/no-xpimage.xps
+          dotnet $compiler ./out/no-xpimage/no-xpimage.xps -o ./out/no-xpimage/app --runtime=false
+          if ($LASTEXITCODE -ne 0) { throw 'Non-XPImage compile failed.' }
+          $magickFiles = Get-ChildItem ./out/no-xpimage -Recurse -File | Where-Object { $_.Name -match 'Magick' }
+          if ($magickFiles) { $magickFiles | ForEach-Object { Write-Host $_.FullName }; throw 'Non-XPImage application acquired Magick.NET files.' }
+          Get-ChildItem ./out/no-xpimage -Recurse -File -Filter 'Third-party-license.txt' | ForEach-Object {
+            if ((Get-Content $_.FullName -Raw) -match 'Magick.NET|ImageMagick') { throw "Non-XPImage third-party notice contains Magick.NET: $($_.FullName)" }
+          }
+
       - name: Run XPImage on plain Kestrel web
         shell: pwsh
         run: |
