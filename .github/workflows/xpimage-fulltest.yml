@@ -35,6 +35,20 @@ jobs:
         run: |
           dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify XPImage profile resource limit
+        shell: pwsh
+        run: |
+          $runtimeSource = Get-Content ./src/XPScript.Compiler/XPImageRuntimeSource.cs -Raw
+          if ($runtimeSource -notmatch 'MaxProfileBytes\s*=\s*8\s*\*\s*1024\s*\*\s*1024') {
+            throw 'XPImage profile limit is not pinned to 8 MiB.'
+          }
+          if ($runtimeSource -notmatch 'data\.LongLength\s*>\s*MaxProfileBytes') {
+            throw 'XPImage SetProfile does not enforce MaxProfileBytes.'
+          }
+          if ($runtimeSource -notmatch 'bytes\.LongLength\s*>\s*MaxProfileBytes') {
+            throw 'XPImage GetProfile does not enforce MaxProfileBytes.'
+          }
+
       - name: Compile and run XPImage
         shell: pwsh
         run: |
