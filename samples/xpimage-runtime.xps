@@ -29,7 +29,19 @@ Sub ReplaceImageByRef(image As XPImage)
     Set image = New XPImage(3, 3, "#334455")
 End Sub
 
+Sub VerifyOversizedRotation()
+    Dim rotationLimitImage As XPImage
+    Set rotationLimitImage = New XPImage(32768, 1, "#000000")
+    Dim rotationLimitErr As Integer
+    On Error Resume Next
+    rotationLimitImage.Rotate(45)
+    rotationLimitErr = Err
+    On Error GoTo 0
+    If rotationLimitErr = 0 Then Error 5, "XPImage oversized rotation was accepted"
+End Sub
+
 Sub Main()
+    Call VerifyOversizedRotation()
     Dim parameterImage As XPImage
     Set parameterImage = New XPImage(4, 4, "#112233")
     Call ResizeImageByVal(parameterImage)
