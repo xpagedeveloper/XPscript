@@ -24,7 +24,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 - [x] Add a cross-platform XPScript image API named `XPImage` for creating new images and modifying existing images.
 - [x] Support Windows, Linux and macOS with the same public XPScript API.
-- [ ] Keep image processing deterministic and suitable for CLI, desktop and web-hosted XPScript.
+- [x] Keep image processing deterministic and suitable for CLI, desktop and web-hosted XPScript.
 - [x] Support file-based and in-memory Byte-array workflows.
 
 ## Core object model
