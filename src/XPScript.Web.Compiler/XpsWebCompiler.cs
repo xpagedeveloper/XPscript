@@ -95,7 +95,9 @@ public sealed class XpsWebCompiler
         if (!Directory.Exists(fullSourceRoot)) throw new DirectoryNotFoundException("Web source root was not found.");
         if (!Path.GetExtension(fullSourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase)) throw new XpsWebCompilationException("Web source files must use the .xps extension.");
 
+        DebugStep("read-source:start", fullSourcePath);
         var source = await File.ReadAllTextAsync(fullSourcePath, cancellationToken).ConfigureAwait(false);
+        DebugStep("read-source:done", fullSourcePath);
         XpsWebRecursionValidator.Validate(source, fullSourcePath);
         var metadataSource = new ServerSideMetadataPreprocessor().Transform(source);
         if (source.Contains("[Platform:browser-wasm]", StringComparison.OrdinalIgnoreCase))
@@ -112,8 +114,10 @@ public sealed class XpsWebCompiler
         string generated;
         try
         {
+            DebugStep("transpile:start", fullSourcePath);
             generated = new XPScriptTranspiler().TranspileRestricted(compilerSource, fullSourcePath, CompilerDriver.CurrentRuntimeIdentifier(), [fullSourceRoot]);
             generated = InjectWebObjects(generated);
+            DebugStep("transpile:done", fullSourcePath);
         }
         catch (CompilerException ex)
         {
@@ -132,11 +136,16 @@ public sealed class XpsWebCompiler
             var usesImage = generated.Contains("internal sealed class XPImage", StringComparison.Ordinal);
             await File.WriteAllTextAsync(projectPath, BuildProject(typeof(XpsWebContext).Assembly.Location, usesSqlite, usesMsSql, usesImage), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(generatedPath, generated, cancellationToken).ConfigureAwait(false);
+            DebugStep($"workspace-ready image={usesImage}", fullSourcePath);
 
             var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workspace, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
             psi.ArgumentList.Add("build"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c"); psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("--nologo"); psi.ArgumentList.Add("--no-restore");
+            DebugStep("restore:start", fullSourcePath);
             await RunDotNetAsync(workspace, ["restore", projectPath, "--nologo"], cancellationToken).ConfigureAwait(false);
+            DebugStep("restore:done", fullSourcePath);
+            DebugStep("build:start", fullSourcePath);
             await RunProcessAsync(psi, cancellationToken).ConfigureAwait(false);
+            DebugStep("build:done", fullSourcePath);
 
             var assemblyPath = Path.Combine(workspace, "bin", "Release", "net10.0", "XPScript.WebUnit.dll");
             if (!File.Exists(assemblyPath)) throw new XpsWebCompilationException("Web compiler completed without producing a loadable assembly.");
@@ -147,7 +156,10 @@ public sealed class XpsWebCompiler
             if (!string.IsNullOrWhiteSpace(snapshotIdentity) && !string.IsNullOrWhiteSpace(persistentCacheDirectory))
                 await PersistArtifactAsync(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity, assemblyBytes, pdbBytes, cancellationToken).ConfigureAwait(false);
 
-            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
+            DebugStep("load:start", fullSourcePath);
+            var unit = LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
+            DebugStep("load:done", fullSourcePath);
+            return unit;
         }
         finally { try { Directory.Delete(workspace, recursive: true); } catch { } }
     }
@@ -493,6 +505,12 @@ internal static class Script
 {sqlitePackage}{msSqlPackage}{imagePackage}  </ItemGroup>
 </Project>
 """;
+    }
+
+    private static void DebugStep(string step, string sourcePath)
+    {
+        if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal)) return;
+        Console.Error.WriteLine($"[XPScript.Web.Compiler {DateTimeOffset.UtcNow:O}] {step}: {Path.GetFileName(sourcePath)}");
     }
 
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
