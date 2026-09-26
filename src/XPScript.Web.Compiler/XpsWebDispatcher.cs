@@ -151,10 +151,31 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         }
         catch (Exception ex)
         {
+            WriteDebugException(context, ex, scriptPath, requestedRoute);
             XpsWebConsoleErrorFallback.Write(ex, ToWebPath(scriptPath), context.Request.Path);
             if (!context.Response.Completed)
                 WriteTerminalResponse(context.Response, 500, "Internal Server Error", context.Request.Method);
         }
+    }
+
+    private static void WriteDebugException(XpsWebContext context, Exception exception, string? scriptPath, string? requestedRoute)
+    {
+        if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_DEBUG"), "1", StringComparison.Ordinal))
+            return;
+
+        var attributes = new Dictionary<string, object?>
+        {
+            ["debug.exception.type"] = exception.GetType().FullName,
+            ["debug.exception.message"] = exception.Message,
+            ["debug.exception.stack_trace"] = exception.ToString(),
+            ["debug.script.path"] = scriptPath is null ? null : ToWebPath(scriptPath),
+            ["debug.route"] = requestedRoute,
+            ["debug.runtime.version"] = Environment.Version.ToString(),
+            ["debug.framework"] = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+            ["debug.os"] = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+            ["debug.architecture"] = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString()
+        };
+        context.Logger?.WriteDiagnostic("web.debug.exception", "Unhandled web execution exception", attributes, context);
     }
 
     public string RenderPrometheusMetrics()
