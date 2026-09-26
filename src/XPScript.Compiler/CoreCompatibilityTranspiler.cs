@@ -15,6 +15,8 @@ internal sealed class CoreCompatibilityTranspiler
         public required int ProcedureId { get; init; }
         public Dictionary<int, string> Handlers { get; } = new();
         public List<int> Statements { get; } = [];
+        public bool HasResumeCurrent { get; set; }
+        public bool HasResumeNext { get; set; }
         public Dictionary<int, string> GoSubs { get; } = new();
     }
 
@@ -190,7 +192,7 @@ internal sealed class CoreCompatibilityTranspiler
         return new ProcedureInfo(
             _nextProcedureId++,
             match.Groups[3].Value,
-            ParseParameters(match.Groups[4].Value, treatOmittedAsByRef: false, sourceName, lineNumber, sourceLine ?? line),
+            ParseParameters(match.Groups[4].Value, treatOmittedAsByRef: true, sourceName, lineNumber, sourceLine ?? line),
             !string.IsNullOrWhiteSpace(match.Groups[1].Value),
             className);
     }
@@ -322,7 +324,13 @@ internal sealed class CoreCompatibilityTranspiler
             var line = StripComment(originalLine).Trim();
             if (line.Length == 0) { output.Add(originalLine); continue; }
 
-            var transformed = TransformCoreLine(line, proc, arrays, scalarTypes, staticNames, control, hasGoSub);
+            // XPImage is a CLR runtime object, not an LSRef<T>/Variant value. Keep
+            // explicitly typed local declarations intact so the advanced transpiler can
+            // emit XPImage? and CLR ref call sites without losing the static type.
+            var runtimeObjectDim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
+            var transformed = runtimeObjectDim.Success && IsRuntimeObjectType(runtimeObjectDim.Groups[2].Value)
+                ? [line]
+                : TransformCoreLine(line, proc, arrays, scalarTypes, staticNames, control, hasGoSub);
             foreach (var expanded in transformed)
             {
                 var finalLine = RewriteByRefParameterUses(expanded, proc.Parameters.Where(x => x.ByRef && !x.IsArray && !x.IsList).ToList());
@@ -369,7 +377,19 @@ internal sealed class CoreCompatibilityTranspiler
         {
             if (p.ByRef && !p.IsArray && !p.IsList)
             {
-                result = Regex.Replace(result, $@"\bByRef\s+{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", p.Name + " As Variant", RegexOptions.IgnoreCase);
+                // XPScript procedure parameters are ByRef by default. Runtime objects such
+                // as XPImage stay strongly typed; the call-site rewriter preserves their
+                // reference identity instead of lowering them through Variant.
+                if (IsRuntimeObjectType(p.Type))
+                    result = Regex.Replace(result, $@"(?:(?:ByVal|ByRef)\s+)?{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", "ByRef " + p.Name + " As " + p.Type, RegexOptions.IgnoreCase);
+                else if (!_classes.Contains(p.Type))
+                    result = Regex.Replace(result, $@"(?:(?:ByVal|ByRef)\s+)?{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", p.Name + " As Variant", RegexOptions.IgnoreCase);
+            }
+            else if (!p.ByRef && !p.IsArray && !p.IsList && IsRuntimeObjectType(p.Type))
+            {
+                // Explicit ByVal on runtime objects is semantically significant. Preserve
+                // it so the advanced transpiler can clone the object at procedure entry.
+                result = Regex.Replace(result, $@"(?:(?:ByVal|ByRef)\s+)?{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", "ByVal " + p.Name + " As " + p.Type, RegexOptions.IgnoreCase);
             }
             else if (p.IsArray)
             {
@@ -381,6 +401,9 @@ internal sealed class CoreCompatibilityTranspiler
             result += " As " + ResolveDefaultType(proc.Name);
         return result;
     }
+
+    private static bool IsRuntimeObjectType(string type) =>
+        type.Equals("XPImage", StringComparison.OrdinalIgnoreCase);
 
     private Dictionary<string, ArrayInfo> DiscoverArrays(List<string> body, ProcedureInfo proc)
     {
@@ -647,8 +670,16 @@ internal sealed class CoreCompatibilityTranspiler
         if (resume.Success)
         {
             var target = resume.Groups[1].Value;
-            if (string.IsNullOrWhiteSpace(target) || target == "0") output.Add($"Call LSCoreMarker.ResumeCurrent({proc.Id})");
-            else if (target.Equals("Next", StringComparison.OrdinalIgnoreCase)) output.Add($"Call LSCoreMarker.ResumeNext({proc.Id})");
+            if (string.IsNullOrWhiteSpace(target) || target == "0")
+            {
+                control.HasResumeCurrent = true;
+                output.Add($"Call LSCoreMarker.ResumeCurrent({proc.Id})");
+            }
+            else if (target.Equals("Next", StringComparison.OrdinalIgnoreCase))
+            {
+                control.HasResumeNext = true;
+                output.Add($"Call LSCoreMarker.ResumeNext({proc.Id})");
+            }
             else output.Add($"Call LSCoreMarker.ResumeLabel(\"{target}\")");
             return output;
         }
@@ -766,6 +797,10 @@ internal sealed class CoreCompatibilityTranspiler
         foreach (var p in parameters)
         {
             if (Regex.IsMatch(line, $@"\b{Regex.Escape(p.Name)}\s+As\s+Variant\b", RegexOptions.IgnoreCase)) continue;
+            // Runtime object parameters (for example XPImage) are ordinary nullable CLR
+            // references. They must not use the LSRef<T>.Value lowering used by
+            // user-defined XPScript classes.
+            if (IsRuntimeObjectType(p.Type)) continue;
             line = ReplaceOutsideStrings(line, $@"(?<![\w.]){Regex.Escape(p.Name)}(?![\w])", p.Name + ".Value");
         }
         return line;
@@ -846,7 +881,17 @@ internal sealed class CoreCompatibilityTranspiler
             var root = targetMatch.Groups["name"].Value;
             if (!scalarTypes.TryGetValue(root, out var actualType) || !actualType.Equals(parameter.Type, StringComparison.OrdinalIgnoreCase))
                 return false;
-            args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} = {ConvertExpression(parameter.Type, "__lsv")})";
+            if (IsRuntimeObjectType(parameter.Type))
+            {
+                // Runtime objects are represented directly in generated C#. Preserve a
+                // true CLR ref argument instead of wrapping it in the dynamic LSByRef
+                // adapter used by scalar XPScript values.
+                args[i] = "ByRef " + target;
+            }
+            else
+            {
+                args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} = {ConvertExpression(parameter.Type, "__lsv")})";
+            }
         }
         return true;
     }
@@ -979,12 +1024,14 @@ internal sealed class CoreCompatibilityTranspiler
                 var actual = lines[++i].Trim();
                 var procId = _statementProcedure[statementId];
                 var control = _controls[procId];
-                output.Add(indent + StatementBeforeLabel(statementId) + ":;");
+                if (control.HasResumeCurrent)
+                    output.Add(indent + StatementBeforeLabel(statementId) + ":;");
                 output.Add(indent + $"__lsErrCtx.Statement = {statementId};");
                 output.Add(indent + "try { " + actual + " }");
                 var handlerCases = string.Join(" ", control.Handlers.Select(h => $"case {h.Key}: goto {LabelName(h.Value)};"));
                 output.Add(indent + $"catch (Exception __lsEx) {{ var __lsAction = LSControlRuntime.Capture(__lsErrCtx, __lsEx, {statementId}); if (__lsAction == -1) goto {StatementAfterLabel(statementId)}; switch (__lsAction) {{ {handlerCases} default: throw; }} }}");
-                output.Add(indent + StatementAfterLabel(statementId) + ":;");
+                if (control.HasResumeNext || control.Handlers.Count == 0)
+                    output.Add(indent + StatementAfterLabel(statementId) + ":;");
                 continue;
             }
 
@@ -1020,6 +1067,7 @@ internal sealed class CoreCompatibilityTranspiler
         "date" => "DateTime",
         "variant" => "dynamic",
         "object" => "object",
+        "xpimage" => "XPImage?",
         "void" => "void",
         _ => $"LSRef<{xpscriptType}>"
     };
@@ -1029,7 +1077,7 @@ internal sealed class CoreCompatibilityTranspiler
         "string" => "\"\"",
         "bool" => "false",
         "DateTime" => "default",
-        "dynamic" or "object" => "null!",
+        "dynamic" or "object" or "XPImage?" => "null!",
         _ when type.StartsWith("LSRef<", StringComparison.Ordinal) => "new()",
         _ => "0"
     };

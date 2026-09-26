@@ -311,3 +311,16 @@ See [Getting started](getting-started.md) for hosting commands and deployment pa
 | XPScript WebServer `web` | `xpscript web --root PATH [options]` | web root plus host options. | Starts XPScript WebServer web host. | [index.xps](../demo/kestrel/index.xps) |
 | FastCGI | `xpscript fastcgi --root PATH --listen ADDRESS:PORT` | web root and private FastCGI endpoint. | Starts persistent FastCGI host. | [index.xps](../demo/fastcgi/index.xps) |
 | WebIIS target | `xpscript compile source.xps --target webiis` | source route and `webiis` target. | Creates direct IIS deployment package/target output. | [main.xps](../demo/webiis/main.xps) |
+
+### Byte arrays
+
+XPScript supports an explicit `Byte[]` variable for binary data returned by APIs such as image, file, HTTP, archive, and encoding operations.
+
+```xpscript
+Dim bytes As Byte[]
+bytes = img.ToBytes("png")
+Print Len(bytes)
+```
+
+`Byte[]` is a binary byte array. `Len(bytes)` returns the number of bytes in the array. `LenB(bytes)` also returns the number of bytes. A newly declared `Byte[]` is an empty array, so its length is zero. Use `Variant` when code intentionally needs a dynamically typed value instead of an explicitly typed byte array.
+

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
@@ -71,7 +72,7 @@ public sealed class XpsWebCompiler
             var pdbPath = Path.Combine(artifactDirectory, "XPScript.WebUnit.pdb");
             var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
             TouchPersistentArtifact(artifactDirectory);
-            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
+            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, artifactDirectory);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or XpsWebCompilationException)
         {
@@ -95,7 +96,9 @@ public sealed class XpsWebCompiler
         if (!Directory.Exists(fullSourceRoot)) throw new DirectoryNotFoundException("Web source root was not found.");
         if (!Path.GetExtension(fullSourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase)) throw new XpsWebCompilationException("Web source files must use the .xps extension.");
 
+        DebugStep("read-source:start", fullSourcePath);
         var source = await File.ReadAllTextAsync(fullSourcePath, cancellationToken).ConfigureAwait(false);
+        DebugStep("read-source:done", fullSourcePath);
         XpsWebRecursionValidator.Validate(source, fullSourcePath);
         var metadataSource = new ServerSideMetadataPreprocessor().Transform(source);
         if (source.Contains("[Platform:browser-wasm]", StringComparison.OrdinalIgnoreCase))
@@ -112,8 +115,10 @@ public sealed class XpsWebCompiler
         string generated;
         try
         {
+            DebugStep("transpile:start", fullSourcePath);
             generated = new XPScriptTranspiler().TranspileRestricted(compilerSource, fullSourcePath, CompilerDriver.CurrentRuntimeIdentifier(), [fullSourceRoot]);
             generated = InjectWebObjects(generated);
+            DebugStep("transpile:done", fullSourcePath);
         }
         catch (CompilerException ex)
         {
@@ -129,32 +134,68 @@ public sealed class XpsWebCompiler
             var generatedPath = Path.Combine(workspace, "Generated.cs");
             var usesSqlite = generated.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
             var usesMsSql = generated.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
-            await File.WriteAllTextAsync(projectPath, BuildProject(typeof(XpsWebContext).Assembly.Location, usesSqlite, usesMsSql), cancellationToken).ConfigureAwait(false);
+            var usesImage = generated.Contains("internal sealed class XPImage", StringComparison.Ordinal);
+            await File.WriteAllTextAsync(projectPath, BuildProject(typeof(XpsWebContext).Assembly.Location, usesSqlite, usesMsSql, usesImage), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(generatedPath, generated, cancellationToken).ConfigureAwait(false);
+            DebugStep($"workspace-ready image={usesImage}", fullSourcePath);
 
             var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workspace, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
-            psi.ArgumentList.Add("build"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c"); psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("--nologo"); psi.ArgumentList.Add("--no-restore");
+            psi.ArgumentList.Add("publish"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c"); psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("--nologo"); psi.ArgumentList.Add("--no-restore"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(Path.Combine(workspace, "publish"));
+            DebugStep("restore:start", fullSourcePath);
             await RunDotNetAsync(workspace, ["restore", projectPath, "--nologo"], cancellationToken).ConfigureAwait(false);
+            DebugStep("restore:done", fullSourcePath);
+            DebugStep("build:start", fullSourcePath);
             await RunProcessAsync(psi, cancellationToken).ConfigureAwait(false);
+            DebugStep("build:done", fullSourcePath);
 
-            var assemblyPath = Path.Combine(workspace, "bin", "Release", "net10.0", "XPScript.WebUnit.dll");
+            var assemblyPath = Path.Combine(workspace, "publish", "XPScript.WebUnit.dll");
             if (!File.Exists(assemblyPath)) throw new XpsWebCompilationException("Web compiler completed without producing a loadable assembly.");
             var assemblyBytes = await File.ReadAllBytesAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
             var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
             var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
 
+            string dependencyDirectory = Path.GetDirectoryName(assemblyPath)!;
             if (!string.IsNullOrWhiteSpace(snapshotIdentity) && !string.IsNullOrWhiteSpace(persistentCacheDirectory))
-                await PersistArtifactAsync(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity, assemblyBytes, pdbBytes, cancellationToken).ConfigureAwait(false);
+            {
+                dependencyDirectory = await PersistArtifactAsync(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity, assemblyBytes, pdbBytes, Path.GetDirectoryName(assemblyPath)!, cancellationToken).ConfigureAwait(false);
+                DebugStep("dependencies:persisted", fullSourcePath);
+            }
 
-            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
+            DebugStep("load:start", fullSourcePath);
+            var unit = LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, dependencyDirectory);
+            DebugStep("load:done", fullSourcePath);
+            return unit;
         }
         finally { try { Directory.Delete(workspace, recursive: true); } catch { } }
     }
 
-    private static XpsCompiledWebUnit LoadCompiledUnit(byte[] assemblyBytes, byte[]? pdbBytes, XpsWebRouteParseResult parsed)
+    private static XpsCompiledWebUnit LoadCompiledUnit(byte[] assemblyBytes, byte[]? pdbBytes, XpsWebRouteParseResult parsed, string dependencyDirectory)
     {
         var loadContext = new AssemblyLoadContext("XPScriptWeb-" + Guid.NewGuid().ToString("N"), isCollectible: true);
-        loadContext.Resolving += ResolveSharedAssembly;
+        var componentAssemblyPath = Path.Combine(dependencyDirectory, "XPScript.WebUnit.dll");
+        var dependencyResolver = File.Exists(componentAssemblyPath) ? new AssemblyDependencyResolver(componentAssemblyPath) : null;
+        Assembly? ResolveManaged(AssemblyLoadContext context, AssemblyName name)
+        {
+            var shared = ResolveSharedAssembly(context, name);
+            if (shared is not null) return shared;
+            if (string.IsNullOrWhiteSpace(name.Name)) return null;
+            var resolved = dependencyResolver?.ResolveAssemblyToPath(name);
+            if (!string.IsNullOrWhiteSpace(resolved) && File.Exists(resolved))
+                return context.LoadFromAssemblyPath(resolved);
+            var candidate = Path.Combine(dependencyDirectory, name.Name + ".dll");
+            return File.Exists(candidate) ? context.LoadFromAssemblyPath(candidate) : null;
+        }
+        IntPtr ResolveNative(Assembly assembly, string name)
+        {
+            var resolved = dependencyResolver?.ResolveUnmanagedDllToPath(name);
+            if (!string.IsNullOrWhiteSpace(resolved) && File.Exists(resolved) && NativeLibrary.TryLoad(resolved, out var resolvedHandle))
+                return resolvedHandle;
+            foreach (var candidate in NativeLibraryCandidates(dependencyDirectory, name))
+                if (File.Exists(candidate) && NativeLibrary.TryLoad(candidate, out var handle)) return handle;
+            return IntPtr.Zero;
+        }
+        loadContext.Resolving += ResolveManaged;
+        loadContext.ResolvingUnmanagedDll += ResolveNative;
         try
         {
             using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);
@@ -170,7 +211,8 @@ public sealed class XpsWebCompiler
         }
         catch
         {
-            loadContext.Resolving -= ResolveSharedAssembly;
+            loadContext.Resolving -= ResolveManaged;
+            loadContext.ResolvingUnmanagedDll -= ResolveNative;
             loadContext.Unload();
             throw;
         }
@@ -188,8 +230,8 @@ public sealed class XpsWebCompiler
     private static string HashText(string value)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
-    private static async Task PersistArtifactAsync(
-        string cacheRoot, string siteRoot, string sourcePath, string snapshotIdentity, byte[] assemblyBytes, byte[]? pdbBytes, CancellationToken cancellationToken)
+    private static async Task<string> PersistArtifactAsync(
+        string cacheRoot, string siteRoot, string sourcePath, string snapshotIdentity, byte[] assemblyBytes, byte[]? pdbBytes, string buildOutputDirectory, CancellationToken cancellationToken)
     {
         var artifactDirectory = PersistentArtifactDirectory(cacheRoot, siteRoot, sourcePath, snapshotIdentity);
         Directory.CreateDirectory(artifactDirectory);
@@ -197,8 +239,10 @@ public sealed class XpsWebCompiler
         if (pdbBytes is not null)
             await WriteAtomicAsync(Path.Combine(artifactDirectory, "XPScript.WebUnit.pdb"), pdbBytes, cancellationToken).ConfigureAwait(false);
 
+        await CopyRuntimeDependenciesAsync(buildOutputDirectory, artifactDirectory, cancellationToken).ConfigureAwait(false);
+
         var sourceDirectory = Directory.GetParent(artifactDirectory)?.FullName;
-        if (sourceDirectory is null) return;
+        if (sourceDirectory is null) return artifactDirectory;
         foreach (var directory in Directory.EnumerateDirectories(sourceDirectory))
         {
             if (Path.GetFullPath(directory).Equals(Path.GetFullPath(artifactDirectory), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) continue;
@@ -206,6 +250,46 @@ public sealed class XpsWebCompiler
         }
         TouchPersistentArtifact(artifactDirectory);
         MaintainPersistentCache(cacheRoot, artifactDirectory, force: true);
+        return artifactDirectory;
+    }
+
+    private static async Task CopyRuntimeDependenciesAsync(string sourceDirectory, string destinationDirectory, CancellationToken cancellationToken)
+    {
+        foreach (var source in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(sourceDirectory, source);
+            if (relative.Equals("XPScript.WebUnit.dll", StringComparison.OrdinalIgnoreCase) ||
+                relative.Equals("XPScript.WebUnit.pdb", StringComparison.OrdinalIgnoreCase)) continue;
+            var destination = Path.Combine(destinationDirectory, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            await using var input = File.OpenRead(source);
+            await using var output = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+            await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static IEnumerable<string> NativeLibraryCandidates(string root, string name)
+    {
+        var fileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { name };
+        if (OperatingSystem.IsWindows())
+        {
+            fileNames.Add(name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ? name : name + ".dll");
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            fileNames.Add(name.StartsWith("lib", StringComparison.Ordinal) ? name : "lib" + name);
+            fileNames.Add(name.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase) ? name : name + ".dylib");
+            fileNames.Add((name.StartsWith("lib", StringComparison.Ordinal) ? name : "lib" + name) + ".dylib");
+        }
+        else
+        {
+            fileNames.Add(name.StartsWith("lib", StringComparison.Ordinal) ? name : "lib" + name);
+            fileNames.Add(name.EndsWith(".so", StringComparison.OrdinalIgnoreCase) ? name : name + ".so");
+            fileNames.Add((name.StartsWith("lib", StringComparison.Ordinal) ? name : "lib" + name) + ".so");
+        }
+
+        foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            if (fileNames.Contains(Path.GetFileName(file))) yield return file;
     }
 
     private static void MaintainPersistentCache(string cacheRoot, string? preserveDirectory, bool force = false)
@@ -461,7 +545,7 @@ internal static class Script
         }
     }
 
-    private static string BuildProject(string webRuntimeAssemblyPath, bool usesSqlite, bool usesMsSql)
+    private static string BuildProject(string webRuntimeAssemblyPath, bool usesSqlite, bool usesMsSql, bool usesImage)
     {
         var escapedPath = SecurityElement.Escape(webRuntimeAssemblyPath) ?? throw new XpsWebCompilationException("Unable to encode the web runtime assembly path.");
         var sqlitePackage = usesSqlite
@@ -474,7 +558,10 @@ internal static class Script
     <PackageReference Include="Microsoft.Data.SqlClient" Version="{MicrosoftDataSqlClientVersion}" />
 """
             : string.Empty;
-        return $$"""
+        var imagePackage = usesImage
+            ? "    <PackageReference Include=\"Magick.NET-Q16-AnyCPU\" Version=\"" + ApplicationDependencyCatalog.MagickNetVersion + "\" />" + Environment.NewLine
+            : string.Empty;
+        return $"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -485,10 +572,16 @@ internal static class Script
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="XPScript.Web.Runtime"><HintPath>{{escapedPath}}</HintPath><Private>false</Private></Reference>
-{{sqlitePackage}}{{msSqlPackage}}  </ItemGroup>
+    <Reference Include="XPScript.Web.Runtime"><HintPath>{escapedPath}</HintPath><Private>false</Private></Reference>
+{sqlitePackage}{msSqlPackage}{imagePackage}  </ItemGroup>
 </Project>
 """;
+    }
+
+    private static void DebugStep(string step, string sourcePath)
+    {
+        if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal)) return;
+        Console.Error.WriteLine($"[XPScript.Web.Compiler {DateTimeOffset.UtcNow:O}] {step}: {Path.GetFileName(sourcePath)}");
     }
 
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, CancellationToken cancellationToken)

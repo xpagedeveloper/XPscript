@@ -209,18 +209,26 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         XPScriptCompilationSnapshot expectedSnapshot)
     {
         var persistentCacheDirectory = ResolvePersistentCacheDirectory(fullSiteRoot);
+        DebugStep($"compile:start persistent={(persistentCacheDirectory is not null)}", fullPath);
         if (persistentCacheDirectory is not null)
         {
             var persisted = await _compiler.TryLoadPersistentAsync(
                 fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, CancellationToken.None).ConfigureAwait(false);
-            if (persisted is not null) return persisted;
+            if (persisted is not null)
+            {
+                DebugStep("persistent-cache:hit", fullPath);
+                return persisted;
+            }
+            DebugStep("persistent-cache:miss", fullPath);
         }
 
         Interlocked.Increment(ref _compilationStarts);
         var started = Stopwatch.GetTimestamp();
         try
         {
-            return await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot, persistentCacheDirectory).ConfigureAwait(false);
+            var unit = await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot, persistentCacheDirectory).ConfigureAwait(false);
+            DebugStep("compile:done", fullPath);
+            return unit;
         }
         catch
         {
@@ -232,6 +240,12 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             var elapsed = Stopwatch.GetElapsedTime(started);
             Interlocked.Add(ref _compilationDurationTicks, Math.Max(0, elapsed.Ticks));
         }
+    }
+
+    private static void DebugStep(string step, string sourcePath)
+    {
+        if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal)) return;
+        Console.Error.WriteLine($"[XPScript.Web.Cache {DateTimeOffset.UtcNow:O}] {step}: {Path.GetFileName(sourcePath)}");
     }
 
     private string? ResolvePersistentCacheDirectory(string fullSiteRoot)

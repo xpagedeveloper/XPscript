@@ -13,7 +13,7 @@ internal sealed class AdvancedXPScriptTranspiler
     {
         ["String"] = "string", ["Integer"] = "int", ["Long"] = "long", ["Double"] = "double",
         ["Single"] = "float", ["Boolean"] = "bool", ["Byte"] = "byte", ["Currency"] = "decimal",
-        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object"
+        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object", ["Byte[]"] = "byte[]", ["XPImage"] = "XPImage?"
     };
 
     private static readonly string[] RuntimeFunctions =
@@ -73,6 +73,7 @@ internal sealed class AdvancedXPScriptTranspiler
     private readonly Dictionary<string, ClassInfo> _classes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _variableTypes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _objectVariables = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _runtimeObjectVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _listVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<ForAllContext> _forAll = new();
 
@@ -223,6 +224,7 @@ internal static class LSForAllRuntime
         _procedureKind = ProcedureKind.None;
         _variableTypes.Clear();
         _objectVariables.Clear();
+        _runtimeObjectVariables.Clear();
         _listVariables.Clear();
         _forAll.Clear();
         _indent = 1;
@@ -466,6 +468,7 @@ internal static class LSForAllRuntime
             _currentReturnType = null;
             _variableTypes.Clear();
             _objectVariables.Clear();
+            _runtimeObjectVariables.Clear();
             _listVariables.Clear();
             RegisterArguments(sub.Groups[3].Value);
 
@@ -490,6 +493,7 @@ internal static class LSForAllRuntime
 
             Write(sb, "{");
             _indent++;
+            EmitRuntimeObjectByValCopies(sb, sub.Groups[3].Value);
             return true;
         }
 
@@ -509,7 +513,9 @@ internal static class LSForAllRuntime
 
         _currentProcedure = nameFn;
         _currentReturnType = returnType;
-        _currentReturnObjectClass = _classes.ContainsKey(xpscriptReturnType) ? xpscriptReturnType : null;
+        _currentReturnObjectClass = _classes.ContainsKey(xpscriptReturnType) || xpscriptReturnType.Equals("XPImage", StringComparison.OrdinalIgnoreCase)
+            ? xpscriptReturnType
+            : null;
         _procedureKind = ProcedureKind.Function;
         _variableTypes.Clear();
         _objectVariables.Clear();
@@ -520,6 +526,7 @@ internal static class LSForAllRuntime
         Write(sb, $"{visibilityFn} {modifierFn}{returnType} {nameFn}({arguments})");
         Write(sb, "{");
         _indent++;
+        EmitRuntimeObjectByValCopies(sb, fn.Groups[3].Value);
         Write(sb, $"{returnType} __result = {DefaultValue(returnType)};");
         return true;
     }
@@ -781,7 +788,7 @@ internal static class LSForAllRuntime
             Write(sb, $"LSRef<{className}> {name} = LSRef<{className}>.Create(new {className}({TransformArgumentList(newObject.Groups[3].Value)}));"); return true;
         }
 
-        var dim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
+        var dim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*(?:\[\])?))?$", RegexOptions.IgnoreCase);
         if (!dim.Success) return false;
         var variable = dim.Groups[1].Value; var xpscriptType = string.IsNullOrWhiteSpace(dim.Groups[2].Value) ? "Variant" : dim.Groups[2].Value;
         var mapped = MapType(xpscriptType); RegisterVariable(variable, xpscriptType, false); Write(sb, $"{mapped} {variable} = {DefaultValue(mapped)};"); return true;
@@ -884,6 +891,13 @@ internal static class LSForAllRuntime
         if (lhs is null) throw new CompilerException($"Set target is not an object reference: {lhsRaw}");
         var targetClass = functionResultClass ?? ResolveObjectReferenceClass(lhsRaw) ?? throw new CompilerException($"Cannot determine object type for Set target: {lhsRaw}");
         var rhsRaw = match.Groups[2].Value.Trim();
+        if (functionResultClass?.Equals("XPImage", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            if (rhsRaw.Equals("Nothing", StringComparison.OrdinalIgnoreCase)) { Write(sb, "__result = null;"); return true; }
+            var rhsImage = TransformExpression(rhsRaw);
+            Write(sb, $"__result = {rhsImage};");
+            return true;
+        }
         if (rhsRaw.Equals("Nothing", StringComparison.OrdinalIgnoreCase)) { Write(sb, $"{lhs} = new LSRef<{targetClass}>();"); return true; }
 
         var newMatch = Regex.Match(rhsRaw, @"^New\s+([A-Za-z_]\w*)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
@@ -1002,8 +1016,10 @@ internal static class LSForAllRuntime
         foreach (var part in SplitOutsideStrings(raw, ','))
         {
             var declaration = ParseArgumentDeclaration(part.Trim());
-            if (declaration.IsByRef && !declaration.IsList && !_classes.ContainsKey(declaration.XPScriptType)) throw new CompilerException("ByRef scalar parameters are not supported yet.");
-            result.Add(declaration.IsList ? $"LSList<{MapType(declaration.XPScriptType)}> {declaration.Name}" : $"{MapType(declaration.XPScriptType)} {declaration.Name}");
+            if (declaration.IsByRef && !declaration.IsList && !_classes.ContainsKey(declaration.XPScriptType) && !IsRuntimeObjectType(declaration.XPScriptType))
+                throw new CompilerException("ByRef scalar parameters are not supported yet.");
+            var modifier = declaration.IsByRef && IsRuntimeObjectType(declaration.XPScriptType) ? "ref " : "";
+            result.Add(declaration.IsList ? $"LSList<{MapType(declaration.XPScriptType)}> {declaration.Name}" : $"{modifier}{MapType(declaration.XPScriptType)} {declaration.Name}");
         }
         return string.Join(", ", result);
     }
@@ -1015,11 +1031,30 @@ internal static class LSForAllRuntime
         return (match.Groups[2].Value, string.IsNullOrWhiteSpace(match.Groups[4].Value) ? "Variant" : match.Groups[4].Value, !string.IsNullOrWhiteSpace(match.Groups[3].Value), match.Groups[1].Value.Equals("ByRef", StringComparison.OrdinalIgnoreCase));
     }
 
+    private static bool IsRuntimeObjectType(string type) =>
+        type.Equals("XPImage", StringComparison.OrdinalIgnoreCase);
+
+    private void EmitRuntimeObjectByValCopies(StringBuilder sb, string rawArguments)
+    {
+        foreach (var part in SplitOutsideStrings(rawArguments, ','))
+        {
+            if (string.IsNullOrWhiteSpace(part)) continue;
+            var raw = part.Trim();
+            if (!Regex.IsMatch(raw, @"^ByVal\b", RegexOptions.IgnoreCase)) continue;
+            var declaration = ParseArgumentDeclaration(raw);
+            if (IsRuntimeObjectType(declaration.XPScriptType))
+                Write(sb, $"{declaration.Name} = {declaration.Name}?.Clone();");
+        }
+    }
+
     private void RegisterVariable(string name, string xpscriptType, bool isList)
     {
         if (isList) { _listVariables[name] = MapType(xpscriptType); return; }
         var type = MapType(xpscriptType); _variableTypes[name] = type;
-        if (_classes.ContainsKey(xpscriptType)) _objectVariables[name] = xpscriptType;
+        if (_classes.ContainsKey(xpscriptType) || type.StartsWith("LSRef<", StringComparison.Ordinal))
+            _objectVariables[name] = xpscriptType;
+        else if (type.Equals("XPImage?", StringComparison.Ordinal))
+            _runtimeObjectVariables.Add(name);
     }
 
     private string TransformCondition(string expression) => Regex.Replace(TransformExpression(expression), @"(?<![<>=!])=(?!=)", "==");
@@ -1061,7 +1096,19 @@ internal static class LSForAllRuntime
             var name = Regex.Escape(objectVariable.Key);
             text = Regex.Replace(text, $@"\b{name}\s+Is\s+Not\s+Nothing\b", $"!{objectVariable.Key}.IsNothing", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, $@"\b{name}\s+Is\s+Nothing\b", $"{objectVariable.Key}.IsNothing", RegexOptions.IgnoreCase);
+            // Member access must always be performed on the strongly typed value held by
+            // LSRef<T>. This is especially important inside runtime-function arguments, e.g.
+            // Len(image.GetProfile("icc")); leaving the LSRef<T> receiver intact makes the
+            // later ByRef lowering treat it as dynamic and produces an invalid ref argument.
             text = Regex.Replace(text, $@"\b{name}\.", $"{objectVariable.Key}.Value!.", RegexOptions.IgnoreCase);
+        }
+
+        foreach (var runtimeObject in _runtimeObjectVariables)
+        {
+            var name = Regex.Escape(runtimeObject);
+            text = Regex.Replace(text, $@"\b{name}\s+Is\s+Not\s+Nothing\b", $"{runtimeObject} is not null", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, $@"\b{name}\s+Is\s+Nothing\b", $"{runtimeObject} is null", RegexOptions.IgnoreCase);
+            text = Regex.Replace(text, $@"\b{name}\.", $"{runtimeObject}!.", RegexOptions.IgnoreCase);
         }
 
         if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var classInfo))
@@ -1202,7 +1249,22 @@ internal static class LSForAllRuntime
         }
     }
 
-    private string TransformArgumentList(string raw) => string.IsNullOrWhiteSpace(raw) ? "" : string.Join(", ", SplitOutsideStrings(raw, ',').Select(TransformExpression));
+    private string TransformArgumentList(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+        return string.Join(", ", SplitOutsideStrings(raw, ',').Select(argument =>
+        {
+            var trimmed = argument.Trim();
+            var byRefRuntimeObject = Regex.Match(trimmed, @"^ByRef\s+([A-Za-z_]\w*)$", RegexOptions.IgnoreCase);
+            if (byRefRuntimeObject.Success)
+            {
+                var name = byRefRuntimeObject.Groups[1].Value;
+                if (_variableTypes.TryGetValue(name, out var type) && type.Equals("XPImage?", StringComparison.Ordinal))
+                    return "ref " + name;
+            }
+            return TransformExpression(argument);
+        }));
+    }
 
     private string ConvertInputValue(string name, string fileNo)
     {
@@ -1231,7 +1293,7 @@ internal static class LSForAllRuntime
     {
         if (type.StartsWith("LSRef<", StringComparison.Ordinal)) return $"new {type}()";
         if (type.StartsWith("LSList<", StringComparison.Ordinal)) return "new()";
-        return type switch { "string" => "\"\"", "bool" => "false", "DateTime" => "default", "dynamic" => "null!", "object" => "null!", _ => "0" };
+        return type switch { "string" => "\"\"", "bool" => "false", "DateTime" => "default", "dynamic" => "null!", "object" => "null!", "byte[]" => "System.Array.Empty<byte>()", "XPImage?" => "null", _ => "0" };
     }
 
     private static string FindEntryPoint(string[] lines)

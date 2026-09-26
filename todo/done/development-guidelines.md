@@ -23,6 +23,10 @@ License review is required before merging any feature or dependency that uses ex
 
 - Identify direct and transitive dependencies with `dotnet list <project>.csproj package --include-transitive`.
 - Record each applicable license, copyright holder, source URL, version and required attribution or notice in `THIRD-PARTY-NOTICES.md`.
+- Every external NuGet package that XPscript references directly or may add to a generated application must be represented in `THIRD-PARTY-NOTICES.md` before the dependency is merged.
+- Every external NuGet package included in a generated/compiled application must also be represented in the compiler-generated `Third-party-license.txt` for that application, based on the exact restored package graph. This includes applicable transitive packages and package-local `LICENSE`, `NOTICE` and `ThirdPartyNotices` material.
+- Conditional dependencies must remain conditional in generated notices: include their license/notice material when the package is actually part of the compiled application's restored graph, and do not add unrelated optional package notices to applications that do not use them.
+- Adding or changing an external NuGet dependency must update the package catalog/project reference, repository third-party notice, generated-application notice handling when necessary, and license-validation CI in the same change.
 - Inspect package `LICENSE`, `NOTICE` and `ThirdPartyNotices` files, including files belonging to native runtime assets.
 - Check whether the license permits the planned source and binary distribution, and record any obligations such as retaining notices, publishing modifications, or providing source.
 - XPscript may only use licenses that permit commercial use, commercial distribution and the intended closed or open source distribution model. Licenses with a non-commercial restriction, evaluation-only terms, field-of-use restriction or incompatible redistribution requirement must be rejected before adoption.

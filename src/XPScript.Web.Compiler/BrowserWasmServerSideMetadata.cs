@@ -30,6 +30,10 @@ internal static class BrowserWasmServerSideMetadata
         @"\bNotes(?!Const\b)[A-Za-z_]\w*\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex XPImageRuntimeType = new(
+        @"\bXPImage\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private sealed class AnnotatedProcedureSet : IReadOnlySet<string>
     {
         private readonly IReadOnlyDictionary<string, BrowserWasmServerSideOptions> _options;
@@ -165,7 +169,9 @@ internal static class BrowserWasmServerSideMetadata
         if (pending is not null)
             throw new XpsWebCompilationException("[ServerSide] is not followed by a Sub or Function declaration.");
 
-        ValidateNotesBoundary(lines, result.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase));
+        var annotatedProcedures = result.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        ValidateNotesBoundary(lines, annotatedProcedures);
+        ValidateXPImageBoundary(lines, annotatedProcedures);
         return result;
     }
 
@@ -249,6 +255,46 @@ internal static class BrowserWasmServerSideMetadata
                 ["currentContext"] = currentContext,
                 ["requiredContext"] = "ServerSide"
             });
+
+    private static void ValidateXPImageBoundary(string[] lines, IReadOnlySet<string> annotatedProcedures)
+    {
+        string? currentProcedure = null;
+        var classDepth = 0;
+        foreach (var line in lines)
+        {
+            var clean = StripComment(line).Trim();
+            if (clean.Length == 0) continue;
+            if (ClassHeader.IsMatch(clean)) { classDepth++; continue; }
+            if (clean.Equals("End Class", StringComparison.OrdinalIgnoreCase)) { classDepth = Math.Max(0, classDepth - 1); continue; }
+            var header = ProcedureHeader.Match(clean);
+            if (header.Success)
+            {
+                currentProcedure = header.Groups[2].Value;
+                if (XPImageRuntimeType.IsMatch(BlankStringLiterals(clean))) ValidateXPImageUse(classDepth, currentProcedure, annotatedProcedures);
+                continue;
+            }
+            if (Regex.IsMatch(clean, @"^End\\s+(?:Sub|Function)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)) { currentProcedure = null; continue; }
+            if (XPImageRuntimeType.IsMatch(BlankStringLiterals(clean))) ValidateXPImageUse(classDepth, currentProcedure, annotatedProcedures);
+        }
+    }
+
+    private static void ValidateXPImageUse(int classDepth, string? currentProcedure, IReadOnlySet<string> annotatedProcedures)
+    {
+        if (classDepth != 0)
+            throw ServerSideRequired(
+                currentProcedure ?? "XPImage",
+                "browser-wasm XPImage access is not supported inside class methods. Move image work to a module Sub or Function marked [ServerSide].",
+                "ClassMethod");
+        if (currentProcedure is null)
+            throw ServerSideRequired(
+                "XPImage",
+                "browser-wasm XPImage objects cannot be module-level state. Create and use XPImage inside a module Sub or Function marked [ServerSide].",
+                "Module");
+        if (!annotatedProcedures.Contains(currentProcedure))
+            throw ServerSideRequired(
+                currentProcedure,
+                $"browser-wasm procedure '{currentProcedure}' uses XPImage but is not marked [ServerSide]. XPImage and Magick.NET execute on the web server, never in the client WebAssembly runtime.");
+    }
 
     private static void ValidateNotesBoundary(string[] lines, IReadOnlySet<string> annotatedProcedures)
     {

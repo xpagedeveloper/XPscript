@@ -4,98 +4,111 @@
 
 Implement after `todo/hcl-domino-data-todo.md` is complete and merged.
 
+Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/SkiaSharp evaluation implementation has been discarded; implementation starts clean from this TODO.
+
 ## Required implementation strategy
 
-- [ ] Use a mature, maintained cross-platform NuGet image-processing library. Do not build the image engine from scratch.
-- [ ] Evaluate `SixLabors.ImageSharp` first for raster image loading, encoding, resizing, cropping, transforms, effects, metadata and drawing integration, subject to final license/security review.
-- [ ] Evaluate `SixLabors.ImageSharp.Drawing` for vector shapes/text drawing where required, subject to final license/security review.
-- [ ] If ImageSharp licensing or a required capability makes it unsuitable, evaluate another maintained cross-platform NuGet implementation and document the reason for the choice.
-- [ ] Use the selected library's built-in PNG, JPEG, WebP, GIF, BMP and supported TIFF codecs instead of implementing codecs manually.
-- [ ] Use its built-in resampling, EXIF/metadata, transforms and encoding APIs rather than duplicating those algorithms.
-- [ ] Reuse existing XPScript path-security, HTTP, JSON, web response, upload, diagnostics and resource-lifetime infrastructure.
-- [ ] Wrap the NuGet implementation behind a stable XPScript-owned image API so the underlying package can later be upgraded or replaced without breaking scripts.
-- [ ] Verify .NET 10 compatibility, Windows/Linux/macOS support, license, maintenance activity, security advisories/CVEs and transitive dependencies before final package selection.
-- [ ] Pin/centrally manage package versions and include dependency/security maintenance in CI/release processes.
+- [x] Use Magick.NET as the image-processing backend. Do not build the image engine from scratch.
+- [x] Use an Apache-2.0 licensed Magick.NET package/configuration suitable for Windows, Linux and macOS.
+- [x] Pin and centrally manage the selected Magick.NET package/version.
+- [x] Verify .NET 10 compatibility, Windows/Linux/macOS support, maintenance activity, security advisories/CVEs and transitive/native dependencies.
+- [x] Use ImageMagick/Magick.NET codecs, resampling, transforms, effects, compositing, drawing, EXIF/profile and encoding APIs rather than duplicating those algorithms.
+- [x] Wrap Magick.NET behind the stable XPScript-owned XPImage API; no Magick.NET types may leak into the public XPScript API.
+- [x] Reuse existing XPScript path-security, HTTP, web response, upload, diagnostics and resource-lifetime infrastructure.
+- [x] Keep Magick.NET out of applications that do not use XPImage.
+- [x] Browser-WASM may use XPImage only inside module-level `[ServerSide]` Functions/Subs; Magick.NET and native assets must remain in the server companion and never enter the WASM client.
+- [x] Reject XPImage use in browser-side procedures, class methods and module-level browser state with the normal execution-context diagnostic.
+- [x] Ensure Magick.NET native/runtime assets are staged correctly for compiled and run applications on each supported platform.
 
 ## Goals
 
-- [ ] Add a cross-platform XPScript image API for creating new images and modifying existing images.
-- [ ] Support Windows, Linux and macOS with the same public XPScript API.
-- [ ] Keep image processing deterministic and suitable for CLI, desktop and web-hosted XPScript.
-- [ ] Support file-based and in-memory Byte-array workflows.
+- [x] Add a cross-platform XPScript image API named `XPImage` for creating new images and modifying existing images.
+- [x] Support Windows, Linux and macOS with the same public XPScript API.
+- [x] Keep image processing deterministic and suitable for CLI, desktop and web-hosted XPScript.
+- [x] Support file-based and in-memory Byte-array workflows.
 
 ## Core object model
 
-- [ ] Add a top-level `ImageDocument` or `XPSImage` class.
-- [ ] Support creating a blank raster image with width, height and optional background.
-- [ ] Support loading from a file path.
-- [ ] Support loading from Byte array or equivalent in-memory XPScript value.
-- [ ] Expose Width, Height and image format.
-- [ ] Support cloning/copying without shared mutable backing state.
-- [ ] Support Save(path) and ToBytes(format).
-- [ ] Support explicit/disposable resource lifetime where required by the selected library.
+- [x] Add the top-level `XPImage` class.
+- [x] Support creating a blank raster image with width, height and optional background.
+- [x] Support loading from a file path.
+- [x] Support loading from Byte array or equivalent in-memory XPScript value.
+- [x] Expose Width, Height and image format.
+- [x] Support cloning/copying without shared mutable backing state.
+- [x] Support Save(path) and ToBytes(format).
+- [x] Support explicit/disposable resource lifetime where required by the selected library.
 
 ## Supported raster formats
 
-- [ ] PNG.
-- [ ] JPEG/JPG.
-- [ ] WebP where the selected maintained library supports it reliably.
-- [ ] GIF static-image read/write where practical.
-- [ ] BMP read/write where practical.
-- [ ] Investigate TIFF support as an optional capability.
-- [ ] Detect input format from content rather than trusting file extension alone.
-- [ ] Reject unsupported or malformed formats with clear runtime errors.
+- [x] PNG.
+- [x] JPEG/JPG.
+- [x] WebP where the selected maintained library supports it reliably.
+- [x] GIF static-image read/write where practical.
+- [x] BMP read/write where practical.
+- [x] Support TIFF read/write through Magick.NET.
+- [x] Detect input format from content rather than trusting file extension alone.
+- [x] Reject unsupported or malformed formats with clear runtime errors.
 
 ## Basic editing
 
-- [ ] Resize with configurable width/height.
-- [ ] Preserve aspect ratio when only one dimension is supplied.
-- [ ] Support fit/fill/contain/crop resize modes.
-- [ ] Crop by x, y, width and height.
-- [ ] Rotate by common angles and arbitrary angles where supported.
-- [ ] Horizontal and vertical flip.
-- [ ] Add padding/canvas extension.
-- [ ] Composite one image over another at specified coordinates.
-- [ ] Opacity/alpha control for compositing.
-- [ ] Convert between supported formats.
-- [ ] JPEG quality setting.
-- [ ] PNG/WebP encoding options where practical.
+- [x] Resize with configurable width/height.
+- [x] Preserve aspect ratio when only one dimension is supplied.
+- [x] Support fit/fill/contain/crop resize modes.
+- [x] Crop by x, y, width and height.
+- [x] Rotate by common angles and arbitrary angles where supported.
+- [x] Horizontal and vertical flip.
+- [x] Add padding/canvas extension.
+- [x] Composite one image over another at specified coordinates.
+- [x] Opacity/alpha control for compositing.
+- [x] Convert between supported formats.
+- [x] JPEG quality setting.
+- [x] PNG/WebP encoding options where practical.
 
 ## Drawing and annotation
 
-- [ ] Draw text with font family, size and basic style.
-- [ ] Support Unicode text.
-- [ ] Define font discovery/fallback behavior cross-platform.
-- [ ] Draw lines.
-- [ ] Draw rectangles and rounded rectangles where supported.
-- [ ] Draw ellipses/circles.
-- [ ] Fill shapes.
-- [ ] Draw images/icons onto another image.
-- [ ] Add borders.
-- [ ] Add simple watermark text or watermark image.
-- [ ] Support text alignment and basic wrapping.
+- [x] Draw text with font family, size and basic style.
+- [x] Support Unicode text.
+- [x] Define font discovery/fallback behavior cross-platform.
+- [x] Draw lines.
+- [x] Draw rectangles and rounded rectangles where supported.
+- [x] Draw ellipses/circles.
+- [x] Fill shapes.
+- [x] Draw images/icons onto another image.
+- [x] Add borders.
+- [x] Add simple watermark text or watermark image.
+- [x] Support text alignment and basic wrapping.
 
 ## Color and effects
 
-- [ ] Brightness.
-- [ ] Contrast.
-- [ ] Saturation.
-- [ ] Grayscale.
-- [ ] Invert.
-- [ ] Blur.
-- [ ] Sharpen.
-- [ ] Opacity.
-- [ ] Background replacement for transparent areas.
+- [x] Brightness.
+- [x] Contrast.
+- [x] Saturation.
+- [x] Grayscale.
+- [x] Invert.
+- [x] Blur.
+- [x] Sharpen.
+- [x] Opacity.
+- [x] Background replacement for transparent areas.
 - [ ] Investigate additional filters only if supported cleanly by the chosen library.
 
 ## Metadata
 
-- [ ] Read basic metadata such as format, pixel dimensions and DPI.
-- [ ] Read EXIF metadata where available.
-- [ ] Allow stripping metadata for privacy.
-- [ ] Preserve metadata only when explicitly configured and safe.
-- [ ] Handle image orientation metadata correctly on load or provide explicit auto-orient behavior.
-- [ ] Never trust EXIF or other metadata values as safe application input.
+- [x] Read basic metadata such as format, pixel dimensions and DPI.
+- [x] Read EXIF metadata where available.
+- [x] Preserve EXIF, ICC, XMP and other supported metadata/profiles by default when the destination format supports them.
+- [x] Never strip metadata implicitly during normal XPImage editing.
+- [x] Allow explicit metadata/profile removal when requested by the script.
+- [x] Handle image orientation metadata correctly on load or provide explicit auto-orient behavior.
+- [x] Never trust EXIF or other metadata values as safe application input.
+
+## Avalonia desktop integration
+
+- [ ] Allow an `XPImage` instance to be used directly as the source of an Avalonia-backed UI image.
+- [ ] Extend UIForm image source handling so it accepts both the existing String source and `XPImage`.
+- [ ] Bridge XPImage to Avalonia entirely in memory without temporary files.
+- [ ] Give Avalonia an independent/read-safe representation so later XPImage mutations cannot corrupt the displayed image.
+- [ ] Dispose Avalonia bitmap/stream resources deterministically when replaced or detached.
+- [ ] Keep Avalonia types out of the public XPImage API and keep Avalonia dependencies out of CLI/web applications.
 
 ## AI image integration boundary
 
@@ -112,42 +125,106 @@ Implement after `todo/hcl-domino-data-todo.md` is complete and merged.
 - [ ] Allow images to be returned directly via Kestrel, CGI and FastCGI without creating public temporary files.
 - [ ] Set correct MIME type for PNG, JPEG, WebP, GIF and other supported formats.
 - [ ] Support inline and attachment responses where useful.
-- [ ] Support reading uploaded images from the existing web upload model.
+- [x] Support reading uploaded images from the existing web upload model.
+- [x] Support a fully in-memory HTTP image-processing flow: receive an uploaded image via POST, create `XPImage` from the uploaded bytes, edit/resize it, and return the encoded result directly in the HTTP response without creating a temporary image file on disk.
+- [x] Add FullTest coverage for the in-memory POST flow: upload a real image, resize it with `XPImage`, return it as binary HTTP output, and verify response MIME type, image format and resulting dimensions without relying on a temporary image file.
 - [ ] Apply the same image size/pixel/resource limits to standalone and web execution.
 
 ## Security and resource limits
 
-- [ ] Apply existing safe path rules for image file reads and writes.
-- [ ] Prevent output path traversal and unrelated-file overwrite.
-- [ ] Define maximum encoded image file size.
-- [ ] Define maximum pixel count and width/height.
-- [ ] Reject decompression-bomb style inputs or excessive decoded dimensions.
-- [ ] Bound temporary buffers and intermediate image sizes.
-- [ ] Treat uploaded images and metadata as untrusted input.
-- [ ] Do not execute embedded scripts, external references or unsupported active content.
-- [ ] Dispose native/unmanaged image resources deterministically.
-- [ ] Add concurrency tests proving image instances do not share mutable state.
+- [x] Apply existing safe path rules for image file reads and writes.
+- [x] Prevent output path traversal and unrelated-file overwrite.
+- [x] Define maximum encoded image file size.
+- [x] Define maximum pixel count and width/height.
+- [x] Reject decompression-bomb style inputs or excessive decoded dimensions.
+- [x] Bound temporary buffers and intermediate image sizes.
+- [x] Treat uploaded images and metadata as untrusted input.
+- [x] Do not execute embedded scripts, external references or unsupported active content.
+- [x] Dispose native/unmanaged image resources deterministically.
+- [x] Add concurrency tests proving image instances do not share mutable state.
 
-## API examples to validate
+## Public XPImage API to implement
 
-- [ ] `Dim img As New ImageDocument(800, 600)`.
-- [ ] `Dim img As ImageDocument = ImageDocument.Load("input.png")` or equivalent valid XPScript form.
-- [ ] `Call img.Resize(400, 300)`.
-- [ ] `Call img.Crop(10, 10, 200, 100)`.
-- [ ] `Call img.DrawText("Hello", 20, 20)`.
-- [ ] `Call img.Save("output.webp")`.
-- [ ] `data = img.ToBytes("png")`.
-- [ ] Validate the exact syntax against current compiler object/member rules before freezing the public API.
+### Construction, loading and properties
 
-## Tests and quality gates
+- [x] `XPImage(width, height)`.
+- [x] `XPImage(width, height, background)`.
+- [x] `XPImage.Load(path)`.
+- [x] `XPImage.FromBytes(data)`.
+- [x] `XPImage.FromBase64(data)` accepting raw base64 and `data:image/...;base64,...` input.
+- [x] `Width`.
+- [x] `Height`.
+- [x] `Format`.
+- [x] `DpiX`.
+- [x] `DpiY`.
+- [x] `Clone()`.
+- [x] `Dispose()`.
 
-- [ ] Create/read/write round-trip tests for each supported format.
-- [ ] Resize/crop/rotate/flip regression tests.
-- [ ] Text and Unicode rendering tests.
-- [ ] Alpha/compositing tests.
-- [ ] Metadata stripping tests.
-- [ ] Malformed image negative tests.
-- [ ] Oversized/decompression-bomb limit tests.
-- [ ] Cross-platform tests on Windows, Ubuntu and macOS.
-- [ ] Kestrel, CGI and FastCGI image response tests.
-- [ ] Add documentation and reusable examples under `docs/` and `examples/`.
+### Output and encoding
+
+- [x] `Save(path)`.
+- [x] `Save(path, quality)` where quality applies to the selected encoder.
+- [x] `ToBytes(format)`.
+- [x] Expose practical JPEG quality and PNG/WebP encoding options without exposing Magick.NET types.
+
+### Geometry and composition
+
+- [x] `Resize(width, height)`.
+- [x] Resize by one dimension while preserving aspect ratio.
+- [x] Fit, fill, contain and crop resize modes.
+- [x] `Crop(x, y, width, height)`.
+- [x] `Rotate(degrees)`.
+- [x] `FlipHorizontal()` and `FlipVertical()`.
+- [x] Padding/canvas extension.
+- [x] Composite/draw another XPImage at coordinates.
+- [x] Per-image/composite opacity.
+- [x] Background replacement/flattening for transparent pixels.
+
+### Drawing and annotation
+
+- [x] Draw text with font family, size, style and color.
+- [x] Unicode text and documented cross-platform font discovery/fallback.
+- [x] Text alignment and basic wrapping.
+- [x] Draw lines.
+- [x] Draw rectangles and rounded rectangles.
+- [x] Draw ellipses/circles.
+- [x] Filled and outlined shapes.
+- [x] Borders.
+- [x] Text and image watermarks.
+
+### Effects
+
+- [x] `Brightness(value)`.
+- [x] `Contrast(value)`.
+- [x] `Saturation(value)`.
+- [x] `Grayscale()`.
+- [x] `Invert()`.
+- [x] `Blur(radius)`.
+- [x] `Sharpen(amount)`.
+- [x] Opacity adjustment.
+- [ ] Add further ImageMagick effects only where they fit a stable, portable XPImage API.
+
+### Metadata and orientation
+
+- [x] Read EXIF metadata through an XPScript-owned representation.
+- [x] Read/write supported image metadata/profile values where practical.
+- [x] Preserve supported metadata/profiles by default.
+- [x] Explicit metadata/profile stripping.
+- [x] `AutoOrient()`.
+- [x] Keep metadata untrusted and enforce size/resource limits.
+
+## FullTest verification
+
+- [x] Add a dedicated XPImage FullTest workflow that runs on Windows, Linux and macOS.
+- [ ] FullTest must compile and execute XPImage creation, file/bytes/base64 loading, all supported formats, editing/effects/metadata, resource limits, web output and Browser-WASM `[ServerSide]` behavior.
+- [x] FullTest must verify an application without XPImage does not acquire Magick.NET and an XPImage application does include the required generated license notices.
+- [ ] FullTest must fail on compiler/runtime warnings relevant to XPImage.
+
+## Implementation completion criteria
+
+- [x] XPImage uses only the selected Magick.NET backend.
+- [x] No ImageSharp or SkiaSharp dependency or image-runtime implementation remains.
+- [x] No Magick.NET implementation types leak into XPScript source syntax or public XPImage API.
+- [ ] CLI, desktop, Kestrel, CGI and FastCGI can use the same XPImage object model.
+- [x] Applications that do not use XPImage do not acquire Magick.NET dependencies.
+- [ ] Documentation and reusable examples are added under `docs/` and `examples/`.

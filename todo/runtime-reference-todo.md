@@ -17,6 +17,32 @@ Status:
 - [x] `Sub`, `Function`, `Call`, `Exit Sub`, `Exit Function`
 - [x] scalar types: Variant, Boolean, Byte, Integer, Long, Single, Double, Currency, String, Date, Object
 - [x] `Dim`, `Static`, `ByVal`, explicit `ByRef`, `Set`, `New`, `Delete`
+
+### Runtime-object ByVal/ByRef verification
+
+XPImage exposed a compiler-lowering gap that must be checked against every strongly typed runtime object added to XPScript. The intended semantics are:
+
+- [x] Omitted parameter mode for a runtime object follows normal XPScript semantics and is `ByRef`.
+- [x] Explicit `ByRef` keeps the strongly typed runtime object reference; member mutation affects the caller and `Set parameter = ...` reassignment reaches the caller.
+- [x] Explicit `ByVal` creates a new runtime-object instance at procedure entry. For XPImage this is implemented with `Clone()`, so member mutation and parameter reassignment cannot mutate/replace the caller's object.
+- [x] Runtime objects remain strongly typed through preprocessing, core compatibility lowering, advanced transpilation and parameter-passing postprocessing; they must not be degraded to `Variant` or wrapped as `LSRef<T>.Value`.
+- [x] Direct typed `ByRef` call arguments lower to normal C# `ref` arguments instead of temporary scalar-reference wrappers.
+- [x] Explicit `ByVal` survives the core compatibility pass so the advanced transpiler can emit the runtime-object copy for both `Sub` and `Function`.
+- [x] XPImage regression coverage verifies ByVal member isolation, default/ByRef member mutation and ByRef reassignment on Windows, Linux and macOS.
+
+When verifying another runtime object, do not assume XPImage's `Clone()` implementation is universally correct. Define that object's copy operation explicitly and verify that the copy is independent for every mutable state it owns.
+
+Checklist for each existing or future strongly typed runtime object:
+- [ ] Inventory all runtime-object types and classify whether they are mutable, immutable or handle/resource wrappers.
+- [ ] Verify omitted mode/default `ByRef` behavior.
+- [ ] Verify explicit `ByRef` member mutation.
+- [ ] Verify explicit `ByRef` reassignment reaches the caller.
+- [ ] Verify explicit `ByVal` creates the required independent copy for mutable objects, including nested mutable state.
+- [ ] Verify explicit `ByVal` reassignment remains local to the callee.
+- [ ] Verify both `Sub` and `Function` parameters.
+- [ ] Verify preprocessing never rewrites the runtime-object declaration to `Variant`.
+- [ ] Verify generated C# remains strongly typed and uses direct `ref` only for runtime-object ByRef parameters.
+- [ ] Add cross-platform regression coverage before marking the runtime object's ByVal/ByRef semantics complete.
 - [x] `Optional` parameters, defaults, omitted trailing arguments and omitted slots
 - [x] module-level `Public` scalar variables
 - [x] module-level `Private` scalar variables
