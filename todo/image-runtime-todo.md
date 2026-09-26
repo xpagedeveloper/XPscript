@@ -141,7 +141,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Treat uploaded images and metadata as untrusted input.
 - [x] Do not execute embedded scripts, external references or unsupported active content.
 - [x] Dispose native/unmanaged image resources deterministically.
-- [ ] Add concurrency tests proving image instances do not share mutable state.
+- [x] Add concurrency tests proving image instances do not share mutable state.
 
 ## Public XPImage API to implement
 
