@@ -231,6 +231,26 @@ internal sealed class XPImage : System.IDisposable
         _image.SetAttribute(name.Trim(), value ?? string.Empty);
     }
 
+    public byte[] GetProfile(string name)
+    {
+        var normalized = NormalizeProfileName(name);
+        var profile = Image.GetProfile(normalized);
+        return profile?.ToByteArray() ?? System.Array.Empty<byte>();
+    }
+
+    public void SetProfile(string name, byte[] data)
+    {
+        var normalized = NormalizeProfileName(name);
+        System.ArgumentNullException.ThrowIfNull(data);
+        if (data.LongLength > MaxEncodedBytes) throw new System.InvalidOperationException("Image profile exceeds the maximum size.");
+        Image.SetProfile(new ImageMagick.ImageProfile(normalized, data));
+    }
+
+    public void SetSrgbProfile()
+    {
+        Image.SetProfile(ImageMagick.ColorProfiles.SRGB);
+    }
+
     public void StripMetadata()
     {
         _image.Strip();
@@ -273,6 +293,16 @@ internal sealed class XPImage : System.IDisposable
     }
 
     void System.IDisposable.Dispose() => Recycle();
+
+    private static string NormalizeProfileName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("Profile name cannot be empty.", nameof(name));
+        var normalized = name.Trim().ToLowerInvariant();
+        if (normalized == "icm") normalized = "icc";
+        if (normalized is not ("icc" or "xmp"))
+            throw new System.ArgumentException("Supported XPImage profile names are ICC and XMP.", nameof(name));
+        return normalized;
+    }
 
     private static ImageMagick.ExifTag<string> ParseExifStringTag(string name)
     {
