@@ -256,7 +256,9 @@ internal sealed class XPImage : System.IDisposable
         _format = format;
     }
 
-    public void Dispose() => _image.Dispose();
+    public void Recycle() => _image.Dispose();
+
+    void System.IDisposable.Dispose() => Recycle();
 
     private static ImageMagick.MagickColor ParseColor(string value)
     {
