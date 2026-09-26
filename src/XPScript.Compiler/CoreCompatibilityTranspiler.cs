@@ -371,10 +371,10 @@ internal sealed class CoreCompatibilityTranspiler
         {
             if (p.ByRef && !p.IsArray && !p.IsList)
             {
-                // Object/class references already have reference semantics through LSRef<T>.
-                // Lowering them to Variant here loses the receiver type and can corrupt
-                // On Error marker post-processing for member calls in the procedure.
-                if (!_classes.Contains(p.Type))
+                // Object references already have reference semantics and must retain
+                // their declared type. XPImage is a runtime object (XPImage?), while
+                // user-defined classes are LSRef<T>; neither should be lowered to Variant.
+                if (!_classes.Contains(p.Type) && !IsRuntimeObjectType(p.Type))
                     result = Regex.Replace(result, $@"\bByRef\s+{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", p.Name + " As Variant", RegexOptions.IgnoreCase);
             }
             else if (p.IsArray)
@@ -387,6 +387,9 @@ internal sealed class CoreCompatibilityTranspiler
             result += " As " + ResolveDefaultType(proc.Name);
         return result;
     }
+
+    private static bool IsRuntimeObjectType(string type) =>
+        type.Equals("XPImage", StringComparison.OrdinalIgnoreCase);
 
     private Dictionary<string, ArrayInfo> DiscoverArrays(List<string> body, ProcedureInfo proc)
     {
