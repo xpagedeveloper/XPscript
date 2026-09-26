@@ -179,7 +179,19 @@ internal sealed class XPImage : System.IDisposable
         _image.Alpha(ImageMagick.AlphaOption.Remove);
     }
 
-    public void Rotate(double degrees) => _image.Rotate(degrees);
+    public void Rotate(double degrees)
+    {
+        if (double.IsNaN(degrees) || double.IsInfinity(degrees))
+            throw new System.ArgumentOutOfRangeException(nameof(degrees));
+        var radians = degrees * (System.Math.PI / 180d);
+        var cosine = System.Math.Abs(System.Math.Cos(radians));
+        var sine = System.Math.Abs(System.Math.Sin(radians));
+        var rotatedWidth = checked((int)System.Math.Ceiling((Width * cosine) + (Height * sine)));
+        var rotatedHeight = checked((int)System.Math.Ceiling((Width * sine) + (Height * cosine)));
+        ValidateDimensions(rotatedWidth, rotatedHeight);
+        _image.Rotate(degrees);
+        ValidateDimensions(Width, Height);
+    }
     public void FlipHorizontal() => _image.Flop();
     public void FlipVertical() => _image.Flip();
     public void Brightness(double value)
@@ -273,6 +285,8 @@ internal sealed class XPImage : System.IDisposable
         Image.Format = ParseFormat(normalized);
         ApplyEncodingQuality(normalized, quality);
         var bytes = Image.ToByteArray();
+        if (bytes.LongLength > MaxEncodedBytes)
+            throw new System.InvalidOperationException("Encoded image exceeds the maximum size.");
         _format = normalized;
         return bytes;
     }
