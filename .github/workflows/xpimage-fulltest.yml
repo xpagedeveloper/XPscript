@@ -101,30 +101,80 @@ jobs:
           '@ | Set-Content -Encoding utf8 ./out/xpimage-concurrency/concurrency.xps
           dotnet $compiler ./out/xpimage-concurrency/concurrency.xps -o ./out/xpimage-concurrency/app --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $plain = './out/xpimage-concurrency/app'
-          $win = "$plain.exe"
-          if (Test-Path $win -PathType Leaf) { $exe = (Resolve-Path $win).Path } else { $exe = (Resolve-Path $plain).Path }
-          $workers = @()
-          1..16 | ForEach-Object {
-            $psi = [System.Diagnostics.ProcessStartInfo]::new()
-            $psi.FileName = $exe
-            $psi.UseShellExecute = $false
-            $psi.RedirectStandardOutput = $true
-            $psi.RedirectStandardError = $true
-            $p = [System.Diagnostics.Process]::new()
-            $p.StartInfo = $psi
-            if (-not $p.Start()) { throw 'Failed to start XPImage concurrency worker.' }
-            $workers += $p
+
+          $appDir = (Resolve-Path './out/xpimage-concurrency').Path
+          $appDll = Join-Path $appDir 'app.dll'
+          if (-not (Test-Path $appDll -PathType Leaf)) {
+            throw 'Generated XPImage assembly app.dll was not found.'
           }
-          foreach ($p in $workers) {
-            $stdout = $p.StandardOutput.ReadToEnd()
-            $stderr = $p.StandardError.ReadToEnd()
-            $p.WaitForExit()
-            $output = $stdout + $stderr
-            Write-Host $output
-            if ($p.ExitCode -ne 0) { throw "XPImage concurrency worker failed with exit code $($p.ExitCode)." }
-            if ($output -notmatch 'XPIMAGE-CONCURRENCY=OK') { throw 'XPImage concurrency worker marker missing.' }
-          }
+          @'
+          using System;
+          using System.Collections.Concurrent;
+          using System.Reflection;
+          using System.Runtime.Loader;
+          using System.Threading.Tasks;
+
+          var appPath = Path.GetFullPath(args[0]);
+          var appDir = Path.GetDirectoryName(appPath)!;
+          AssemblyLoadContext.Default.Resolving += (_, name) =>
+          {
+              var candidate = Path.Combine(appDir, name.Name + ".dll");
+              return File.Exists(candidate) ? AssemblyLoadContext.Default.LoadFromAssemblyPath(candidate) : null;
+          };
+          var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(appPath);
+          var type = assembly.GetType("XPImage", throwOnError: true)!;
+          var ctor = type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null,
+              new[] { typeof(int), typeof(int), typeof(string) }, null)!;
+          var resize = type.GetMethod("Resize", new[] { typeof(int), typeof(int), typeof(string) })!;
+          var setMetadata = type.GetMethod("SetMetadata", new[] { typeof(string), typeof(string) })!;
+          var getMetadata = type.GetMethod("GetMetadata", new[] { typeof(string) })!;
+          var recycle = type.GetMethod("Recycle", Type.EmptyTypes)!;
+          var width = type.GetProperty("Width")!;
+          var height = type.GetProperty("Height")!;
+          var errors = new ConcurrentQueue<string>();
+
+          Parallel.For(0, 16, i =>
+          {
+              object? image = null;
+              try
+              {
+                  image = ctor.Invoke(new object[] { 32, 32, "#112233" });
+                  var expectedWidth = 17 + i;
+                  var expectedHeight = 18 + i;
+                  var marker = "isolated-" + i;
+                  resize.Invoke(image, new object[] { expectedWidth, expectedHeight, "stretch" });
+                  setMetadata.Invoke(image, new object[] { "comment", marker });
+                  if ((int)width.GetValue(image)! != expectedWidth || (int)height.GetValue(image)! != expectedHeight)
+                      errors.Enqueue("dimensions-" + i);
+                  if (!string.Equals((string?)getMetadata.Invoke(image, new object[] { "comment" }), marker, StringComparison.Ordinal))
+                      errors.Enqueue("metadata-" + i);
+              }
+              catch (Exception ex)
+              {
+                  errors.Enqueue(i + ":" + (ex.InnerException?.Message ?? ex.Message));
+              }
+              finally
+              {
+                  if (image != null) recycle.Invoke(image, null);
+              }
+          });
+
+          if (!errors.IsEmpty)
+              throw new Exception("XPImage same-process isolation failed: " + string.Join(", ", errors));
+          Console.WriteLine("XPIMAGE-CONCURRENCY=OK");
+          '@ | Set-Content -Encoding utf8 ./out/xpimage-concurrency/Program.cs
+          @'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net10.0</TargetFramework>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <Nullable>enable</Nullable>
+            </PropertyGroup>
+          </Project>
+          '@ | Set-Content -Encoding utf8 ./out/xpimage-concurrency/concurrency-test.csproj
+          dotnet run --project ./out/xpimage-concurrency/concurrency-test.csproj -- $appDll
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify non-XPImage app excludes Magick.NET
         shell: pwsh
