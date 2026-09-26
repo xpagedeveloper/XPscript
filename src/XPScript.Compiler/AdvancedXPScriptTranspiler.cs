@@ -13,7 +13,7 @@ internal sealed class AdvancedXPScriptTranspiler
     {
         ["String"] = "string", ["Integer"] = "int", ["Long"] = "long", ["Double"] = "double",
         ["Single"] = "float", ["Boolean"] = "bool", ["Byte"] = "byte", ["Currency"] = "decimal",
-        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object"
+        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object", ["Byte[]"] = "byte[]"
     };
 
     private static readonly string[] RuntimeFunctions =
@@ -781,7 +781,7 @@ internal static class LSForAllRuntime
             Write(sb, $"LSRef<{className}> {name} = LSRef<{className}>.Create(new {className}({TransformArgumentList(newObject.Groups[3].Value)}));"); return true;
         }
 
-        var dim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
+        var dim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*(?:\[\])?))?$", RegexOptions.IgnoreCase);
         if (!dim.Success) return false;
         var variable = dim.Groups[1].Value; var xpscriptType = string.IsNullOrWhiteSpace(dim.Groups[2].Value) ? "Variant" : dim.Groups[2].Value;
         var mapped = MapType(xpscriptType); RegisterVariable(variable, xpscriptType, false); Write(sb, $"{mapped} {variable} = {DefaultValue(mapped)};"); return true;
@@ -1231,7 +1231,7 @@ internal static class LSForAllRuntime
     {
         if (type.StartsWith("LSRef<", StringComparison.Ordinal)) return $"new {type}()";
         if (type.StartsWith("LSList<", StringComparison.Ordinal)) return "new()";
-        return type switch { "string" => "\"\"", "bool" => "false", "DateTime" => "default", "dynamic" => "null!", "object" => "null!", _ => "0" };
+        return type switch { "string" => "\"\"", "bool" => "false", "DateTime" => "default", "dynamic" => "null!", "object" => "null!", "byte[]" => "System.Array.Empty<byte>()", _ => "0" };
     }
 
     private static string FindEntryPoint(string[] lines)
