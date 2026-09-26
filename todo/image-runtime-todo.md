@@ -125,9 +125,9 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [ ] Allow images to be returned directly via Kestrel, CGI and FastCGI without creating public temporary files.
 - [ ] Set correct MIME type for PNG, JPEG, WebP, GIF and other supported formats.
 - [ ] Support inline and attachment responses where useful.
-- [ ] Support reading uploaded images from the existing web upload model.
-- [ ] Support a fully in-memory HTTP image-processing flow: receive an uploaded image via POST, create `XPImage` from the uploaded bytes, edit/resize it, and return the encoded result directly in the HTTP response without creating a temporary image file on disk.
-- [ ] Add FullTest coverage for the in-memory POST flow: upload a real image, resize it with `XPImage`, return it as binary HTTP output, and verify response MIME type, image format and resulting dimensions without relying on a temporary image file.
+- [x] Support reading uploaded images from the existing web upload model.
+- [x] Support a fully in-memory HTTP image-processing flow: receive an uploaded image via POST, create `XPImage` from the uploaded bytes, edit/resize it, and return the encoded result directly in the HTTP response without creating a temporary image file on disk.
+- [x] Add FullTest coverage for the in-memory POST flow: upload a real image, resize it with `XPImage`, return it as binary HTTP output, and verify response MIME type, image format and resulting dimensions without relying on a temporary image file.
 - [ ] Apply the same image size/pixel/resource limits to standalone and web execution.
 
 ## Security and resource limits
@@ -138,7 +138,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Define maximum pixel count and width/height.
 - [x] Reject decompression-bomb style inputs or excessive decoded dimensions.
 - [x] Bound temporary buffers and intermediate image sizes.
-- [ ] Treat uploaded images and metadata as untrusted input.
+- [x] Treat uploaded images and metadata as untrusted input.
 - [ ] Do not execute embedded scripts, external references or unsupported active content.
 - [x] Dispose native/unmanaged image resources deterministically.
 - [ ] Add concurrency tests proving image instances do not share mutable state.
