@@ -8,6 +8,9 @@ internal sealed class XPImage : System.IDisposable
     private const long MaxEncodedBytes = 64L * 1024 * 1024;
     private const long MaxPixels = 100_000_000;
     private const int MaxDimension = 32_768;
+    private const int MaxMetadataNameChars = 256;
+    private const int MaxMetadataValueChars = 64 * 1024;
+    private const int MaxProfileBytes = 8 * 1024 * 1024;
     private ImageMagick.MagickImage? _image;
     private string _format;
 
@@ -208,41 +211,45 @@ internal sealed class XPImage : System.IDisposable
         var profile = Image.GetExifProfile();
         if (profile is null) return string.Empty;
         var value = profile.GetValue(tag);
-        return value?.GetValue()?.ToString() ?? string.Empty;
+        return ValidateMetadataValue(value?.GetValue()?.ToString() ?? string.Empty);
     }
 
     public void SetExif(string name, string value)
     {
         var tag = ParseExifStringTag(name);
+        var safeValue = ValidateMetadataValue(value ?? string.Empty);
         var profile = Image.GetExifProfile() ?? new ImageMagick.ExifProfile();
-        profile.SetValue(tag, value ?? string.Empty);
+        profile.SetValue(tag, safeValue);
         Image.SetProfile(profile);
     }
 
     public string GetMetadata(string name)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("Metadata name cannot be empty.", nameof(name));
-        return _image.GetAttribute(name.Trim()) ?? string.Empty;
+        var normalized = ValidateMetadataName(name);
+        return ValidateMetadataValue(_image.GetAttribute(normalized) ?? string.Empty);
     }
 
     public void SetMetadata(string name, string value)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("Metadata name cannot be empty.", nameof(name));
-        _image.SetAttribute(name.Trim(), value ?? string.Empty);
+        var normalized = ValidateMetadataName(name);
+        _image.SetAttribute(normalized, ValidateMetadataValue(value ?? string.Empty));
     }
 
     public byte[] GetProfile(string name)
     {
         var normalized = NormalizeProfileName(name);
         var profile = Image.GetProfile(normalized);
-        return profile?.ToByteArray() ?? System.Array.Empty<byte>();
+        if (profile is null) return System.Array.Empty<byte>();
+        var bytes = profile.ToByteArray();
+        if (bytes.LongLength > MaxProfileBytes) throw new System.InvalidOperationException("Image profile exceeds the maximum size.");
+        return bytes;
     }
 
     public void SetProfile(string name, byte[] data)
     {
         var normalized = NormalizeProfileName(name);
         System.ArgumentNullException.ThrowIfNull(data);
-        if (data.LongLength > MaxEncodedBytes) throw new System.InvalidOperationException("Image profile exceeds the maximum size.");
+        if (data.LongLength > MaxProfileBytes) throw new System.InvalidOperationException("Image profile exceeds the maximum size.");
         Image.SetProfile(new ImageMagick.ImageProfile(normalized, data));
     }
 
@@ -293,6 +300,20 @@ internal sealed class XPImage : System.IDisposable
     }
 
     void System.IDisposable.Dispose() => Recycle();
+
+    private static string ValidateMetadataName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("Metadata name cannot be empty.", nameof(name));
+        var normalized = name.Trim();
+        if (normalized.Length > MaxMetadataNameChars) throw new System.InvalidOperationException("Image metadata name exceeds the maximum length.");
+        return normalized;
+    }
+
+    private static string ValidateMetadataValue(string value)
+    {
+        if (value.Length > MaxMetadataValueChars) throw new System.InvalidOperationException("Image metadata value exceeds the maximum length.");
+        return value;
+    }
 
     private static string NormalizeProfileName(string name)
     {
