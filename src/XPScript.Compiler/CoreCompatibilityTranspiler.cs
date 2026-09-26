@@ -369,7 +369,11 @@ internal sealed class CoreCompatibilityTranspiler
         {
             if (p.ByRef && !p.IsArray && !p.IsList)
             {
-                result = Regex.Replace(result, $@"\bByRef\s+{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", p.Name + " As Variant", RegexOptions.IgnoreCase);
+                // Object/class references already have reference semantics through LSRef<T>.
+                // Lowering them to Variant here loses the receiver type and can corrupt
+                // On Error marker post-processing for member calls in the procedure.
+                if (!_classes.Contains(p.Type))
+                    result = Regex.Replace(result, $@"\bByRef\s+{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", p.Name + " As Variant", RegexOptions.IgnoreCase);
             }
             else if (p.IsArray)
             {
