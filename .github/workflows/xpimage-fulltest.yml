@@ -45,6 +45,7 @@ jobs:
           Sub Index()
               Dim img As XPImage
               Set img = New XPImage(8, 8, "#336699")
+              Dim bytes As Byte[]
               bytes = img.ToBytes("png")
               Response.ContentType = "image/png"
               Response.WriteBinary(bytes)
