@@ -255,6 +255,20 @@ internal sealed class XPImage : System.IDisposable
         drawables.Draw(Image);
     }
 
+    public void DrawRoundedRectangle(double x, double y, double width, double height, double radiusX, double radiusY, string strokeColor, double strokeWidth, string fillColor)
+    {
+        ValidateShape(x, y, width, height);
+        if (!double.IsFinite(radiusX) || radiusX < 0 || radiusX > width / 2d) throw new System.ArgumentOutOfRangeException(nameof(radiusX));
+        if (!double.IsFinite(radiusY) || radiusY < 0 || radiusY > height / 2d) throw new System.ArgumentOutOfRangeException(nameof(radiusY));
+        ValidateStrokeWidth(strokeWidth);
+        var drawables = new ImageMagick.Drawing.Drawables()
+            .StrokeColor(ParseColor(strokeColor))
+            .StrokeWidth(strokeWidth)
+            .FillColor(ParseColor(fillColor))
+            .RoundRectangle(x, y, x + width, y + height, radiusX, radiusY);
+        drawables.Draw(Image);
+    }
+
     public void DrawEllipse(double centerX, double centerY, double radiusX, double radiusY, string strokeColor, double strokeWidth, string fillColor)
     {
         ValidateCoordinate(centerX, nameof(centerX));
