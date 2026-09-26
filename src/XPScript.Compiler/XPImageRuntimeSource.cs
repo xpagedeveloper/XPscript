@@ -83,10 +83,12 @@ internal sealed class XPImage : System.IDisposable
         if (data.LongLength > MaxEncodedBytes) throw new System.InvalidOperationException("Image exceeds the maximum encoded size.");
         try
         {
-            var info = new ImageMagick.MagickImageInfo(data);
+            var detected = ImageMagick.MagickFormatInfo.Create(data)?.Format ?? ImageMagick.MagickFormat.Unknown;
+            var format = NormalizeDecodedFormat(detected);
+            var settings = new ImageMagick.MagickReadSettings { Format = ParseFormat(format) };
+            var info = new ImageMagick.MagickImageInfo(data, settings);
             ValidateDimensions(checked((int)info.Width), checked((int)info.Height));
-            var image = new ImageMagick.MagickImage(data);
-            var format = image.Format.ToString();
+            var image = new ImageMagick.MagickImage(data, settings);
             return new XPImage(image, format);
         }
         catch (ImageMagick.MagickException ex)
@@ -369,6 +371,17 @@ internal sealed class XPImage : System.IDisposable
         if (string.IsNullOrWhiteSpace(value)) return new ImageMagick.MagickColor("transparent");
         return new ImageMagick.MagickColor(value);
     }
+
+    private static string NormalizeDecodedFormat(ImageMagick.MagickFormat format) => format switch
+    {
+        ImageMagick.MagickFormat.Jpeg => "jpeg",
+        ImageMagick.MagickFormat.Png => "png",
+        ImageMagick.MagickFormat.WebP => "webp",
+        ImageMagick.MagickFormat.Gif => "gif",
+        ImageMagick.MagickFormat.Bmp => "bmp",
+        ImageMagick.MagickFormat.Tiff => "tiff",
+        _ => throw new System.NotSupportedException("Unsupported input image format: " + format)
+    };
 
     private static string NormalizeFormat(string value)
     {
