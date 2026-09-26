@@ -181,6 +181,9 @@ Sub Main()
     drawing.DrawEllipse(22, 12, 5, 4, "#000000", 1, "transparent")
     drawing.DrawRoundedRectangle(8, 12, 10, 8, 2, 2, "#663399", 1, "#ffeeaa")
     drawing.Border(2, "#663399")
+    Dim watermark As XPImage
+    Set watermark = New XPImage(4, 4, "#ff0000")
+    drawing.WatermarkImage(watermark, 2, 2, 0.5)
     If drawing.Width <> 36 Or drawing.Height <> 28 Then Error 5, "XPImage drawing/border geometry failed"
     Dim drawingBytes As Byte[]
     drawingBytes = drawing.ToBytes("png")
