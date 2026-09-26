@@ -20,6 +20,7 @@ internal sealed class ImageObjectPreprocessor
         var output = new List<string>(lines.Length + 8);
         var images = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var scopeImages = new Stack<HashSet<string>>();
+        var scopeNames = new Stack<string>();
 
         foreach (var raw in lines)
         {
@@ -30,6 +31,7 @@ internal sealed class ImageObjectPreprocessor
             if (scopeStart.Success)
             {
                 scopeImages.Push(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                scopeNames.Push(scopeStart.Groups[1].Value);
                 output.Add(raw);
                 continue;
             }
@@ -38,7 +40,8 @@ internal sealed class ImageObjectPreprocessor
             if (scopeEnd.Success && scopeImages.Count > 0)
             {
                 foreach (var image in scopeImages.Pop().OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
-                    output.Add(indent + $"if ({image} is XPImage __xpimageRecycle_{image}) __xpimageRecycle_{image}.Recycle()");
+                    output.Add(indent + $"XPImage.RecycleOwned({image})");
+                if (scopeNames.Count > 0) scopeNames.Pop();
                 output.Add(raw);
                 continue;
             }
@@ -47,7 +50,7 @@ internal sealed class ImageObjectPreprocessor
             if (exitScope.Success && scopeImages.Count > 0)
             {
                 foreach (var image in scopeImages.Peek().OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
-                    output.Add(indent + $"if ({image} is XPImage __xpimageRecycle_{image}) __xpimageRecycle_{image}.Recycle()");
+                    output.Add(indent + $"XPImage.RecycleOwned({image})");
                 output.Add(raw);
                 continue;
             }
@@ -88,16 +91,21 @@ internal sealed class ImageObjectPreprocessor
             if (nullAssignment.Success && images.Contains(nullAssignment.Groups[1].Value))
             {
                 var name = nullAssignment.Groups[1].Value;
-                output.Add(indent + $"if ({name} is XPImage __xpimageRecycle) __xpimageRecycle.Recycle()");
-                output.Add(indent + $"{name} = null");
+                output.Add(indent + $"XPImage.RecycleOwned({name})");
+                output.Add(indent + $"{name} = Nothing");
                 continue;
             }
 
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
+            if (set.Success && scopeImages.Count > 0 && scopeNames.Count > 0 && set.Groups[1].Value.Equals(scopeNames.Peek(), StringComparison.OrdinalIgnoreCase))
+            {
+                var returned = Regex.Match(set.Groups[2].Value.Trim(), @"^[A-Za-z_]\w*$");
+                if (returned.Success) scopeImages.Peek().Remove(returned.Value);
+            }
             if (set.Success && images.Contains(set.Groups[1].Value))
             {
                 var name = set.Groups[1].Value;
-                output.Add(indent + $"if ({name} is XPImage __xpimageOld_{name}) __xpimageOld_{name}.Recycle()");
+                output.Add(indent + $"XPImage.RecycleOwned({name})");
             }
             if (set.Success && (images.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("XPImage.", StringComparison.OrdinalIgnoreCase) || set.Groups[2].Value.Contains("new XPImage", StringComparison.Ordinal)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;
