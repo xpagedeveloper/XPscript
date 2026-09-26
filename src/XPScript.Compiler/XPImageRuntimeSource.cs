@@ -8,7 +8,7 @@ internal sealed class XPImage : System.IDisposable
     private const long MaxEncodedBytes = 64L * 1024 * 1024;
     private const long MaxPixels = 100_000_000;
     private const int MaxDimension = 32_768;
-    private ImageMagick.MagickImage _image;
+    private ImageMagick.MagickImage? _image;
     private string _format;
 
     public XPImage(int width, int height) : this(width, height, "transparent") { }
@@ -27,9 +27,10 @@ internal sealed class XPImage : System.IDisposable
         _format = NormalizeFormat(format);
     }
 
-    public int Width => checked((int)_image.Width);
-    public int Height => checked((int)_image.Height);
+    public int Width => checked((int)Image.Width);
+    public int Height => checked((int)Image.Height);
     public string Format => _format;
+    private ImageMagick.MagickImage Image => _image ?? throw new System.ObjectDisposedException(nameof(XPImage));
     public double DpiX => _image.Density?.X ?? 0d;
     public double DpiY => _image.Density?.Y ?? 0d;
 
@@ -256,7 +257,16 @@ internal sealed class XPImage : System.IDisposable
         _format = format;
     }
 
-    public void Recycle() => _image.Dispose();
+    public static void RecycleOwned(object? value)
+    {
+        if (value is XPImage image) image.Recycle();
+    }
+
+    public void Recycle()
+    {
+        var image = System.Threading.Interlocked.Exchange(ref _image, null);
+        image?.Dispose();
+    }
 
     void System.IDisposable.Dispose() => Recycle();
 
