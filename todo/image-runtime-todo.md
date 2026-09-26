@@ -99,7 +99,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Never strip metadata implicitly during normal XPImage editing.
 - [x] Allow explicit metadata/profile removal when requested by the script.
 - [x] Handle image orientation metadata correctly on load or provide explicit auto-orient behavior.
-- [ ] Never trust EXIF or other metadata values as safe application input.
+- [x] Never trust EXIF or other metadata values as safe application input.
 
 ## Avalonia desktop integration
 
@@ -211,7 +211,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Preserve supported metadata/profiles by default.
 - [x] Explicit metadata/profile stripping.
 - [x] `AutoOrient()`.
-- [ ] Keep metadata untrusted and enforce size/resource limits.
+- [x] Keep metadata untrusted and enforce size/resource limits.
 
 ## FullTest verification
 
