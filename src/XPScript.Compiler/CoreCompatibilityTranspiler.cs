@@ -651,8 +651,16 @@ internal sealed class CoreCompatibilityTranspiler
         if (resume.Success)
         {
             var target = resume.Groups[1].Value;
-            if (string.IsNullOrWhiteSpace(target) || target == "0") output.Add($"Call LSCoreMarker.ResumeCurrent({proc.Id})");
-            else if (target.Equals("Next", StringComparison.OrdinalIgnoreCase)) output.Add($"Call LSCoreMarker.ResumeNext({proc.Id})");
+            if (string.IsNullOrWhiteSpace(target) || target == "0")
+            {
+                control.HasResumeCurrent = true;
+                output.Add($"Call LSCoreMarker.ResumeCurrent({proc.Id})");
+            }
+            else if (target.Equals("Next", StringComparison.OrdinalIgnoreCase))
+            {
+                control.HasResumeNext = true;
+                output.Add($"Call LSCoreMarker.ResumeNext({proc.Id})");
+            }
             else output.Add($"Call LSCoreMarker.ResumeLabel(\"{target}\")");
             return output;
         }
@@ -983,17 +991,14 @@ internal sealed class CoreCompatibilityTranspiler
                 var actual = lines[++i].Trim();
                 var procId = _statementProcedure[statementId];
                 var control = _controls[procId];
-                // Keep both resume labels genuinely referenced. C# reports an unreferenced
-                // label as CS0164, and XPscript compilation promotes compiler warnings to
-                // diagnostics. The before-label is a valid Resume target even when this
-                // particular procedure only uses Resume Next.
-                output.Add(indent + $"if (false) goto {StatementBeforeLabel(statementId)};");
-                output.Add(indent + StatementBeforeLabel(statementId) + ":;");
+                if (control.HasResumeCurrent)
+                    output.Add(indent + StatementBeforeLabel(statementId) + ":;");
                 output.Add(indent + $"__lsErrCtx.Statement = {statementId};");
                 output.Add(indent + "try { " + actual + " }");
                 var handlerCases = string.Join(" ", control.Handlers.Select(h => $"case {h.Key}: goto {LabelName(h.Value)};"));
                 output.Add(indent + $"catch (Exception __lsEx) {{ var __lsAction = LSControlRuntime.Capture(__lsErrCtx, __lsEx, {statementId}); if (__lsAction == -1) goto {StatementAfterLabel(statementId)}; switch (__lsAction) {{ {handlerCases} default: throw; }} }}");
-                output.Add(indent + StatementAfterLabel(statementId) + ":;");
+                if (control.HasResumeNext || control.Handlers.Count == 0)
+                    output.Add(indent + StatementAfterLabel(statementId) + ":;");
                 continue;
             }
 
