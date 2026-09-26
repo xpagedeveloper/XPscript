@@ -33,8 +33,6 @@ Sub Main()
     If img.Width <> 16 Or img.Height <> 16 Then
         Error 5, "XPImage geometry/composition failed"
     End If
-    img.Recycle()
-    Set img = Nothing
     Print "XPIMAGE-RUNTIME=OK"
     
 End Sub
