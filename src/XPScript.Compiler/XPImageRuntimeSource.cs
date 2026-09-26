@@ -235,7 +235,7 @@ internal sealed class XPImage : System.IDisposable
         ValidateCoordinate(x2, nameof(x2));
         ValidateCoordinate(y2, nameof(y2));
         ValidateStrokeWidth(strokeWidth);
-        var drawables = new ImageMagick.Drawables()
+        var drawables = new ImageMagick.Drawing.Drawables()
             .StrokeColor(ParseColor(color))
             .StrokeWidth(strokeWidth)
             .FillColor(ImageMagick.MagickColors.Transparent)
@@ -247,7 +247,7 @@ internal sealed class XPImage : System.IDisposable
     {
         ValidateShape(x, y, width, height);
         ValidateStrokeWidth(strokeWidth);
-        var drawables = new ImageMagick.Drawables()
+        var drawables = new ImageMagick.Drawing.Drawables()
             .StrokeColor(ParseColor(strokeColor))
             .StrokeWidth(strokeWidth)
             .FillColor(ParseColor(fillColor))
@@ -262,7 +262,7 @@ internal sealed class XPImage : System.IDisposable
         if (!double.IsFinite(radiusX) || radiusX <= 0) throw new System.ArgumentOutOfRangeException(nameof(radiusX));
         if (!double.IsFinite(radiusY) || radiusY <= 0) throw new System.ArgumentOutOfRangeException(nameof(radiusY));
         ValidateStrokeWidth(strokeWidth);
-        var drawables = new ImageMagick.Drawables()
+        var drawables = new ImageMagick.Drawing.Drawables()
             .StrokeColor(ParseColor(strokeColor))
             .StrokeWidth(strokeWidth)
             .FillColor(ParseColor(fillColor))
