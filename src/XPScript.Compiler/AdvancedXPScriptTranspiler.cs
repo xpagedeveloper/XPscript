@@ -493,6 +493,7 @@ internal static class LSForAllRuntime
 
             Write(sb, "{");
             _indent++;
+            EmitRuntimeObjectByValCopies(sb, sub.Groups[3].Value);
             return true;
         }
 
