@@ -145,10 +145,6 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         {
             throw;
         }
-        catch (FileNotFoundException)
-        {
-            WriteTerminalResponse(context.Response, 404, "Not Found", context.Request.Method);
-        }
         catch (Exception ex)
         {
             WriteDebugException(context, ex, scriptPath, requestedRoute);
