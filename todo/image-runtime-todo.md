@@ -18,7 +18,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Keep Magick.NET out of applications that do not use XPImage.
 - [ ] Browser-WASM may use XPImage only inside module-level `[ServerSide]` Functions/Subs; Magick.NET and native assets must remain in the server companion and never enter the WASM client.
 - [ ] Reject XPImage use in browser-side procedures, class methods and module-level browser state with the normal execution-context diagnostic.
-- [ ] Ensure Magick.NET native/runtime assets are staged correctly for compiled and run applications on each supported platform.
+- [x] Ensure Magick.NET native/runtime assets are staged correctly for compiled and run applications on each supported platform.
 
 ## Goals
 
@@ -215,7 +215,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 - [x] Add a dedicated XPImage FullTest workflow that runs on Windows, Linux and macOS.
 - [ ] FullTest must compile and execute XPImage creation, file/bytes/base64 loading, all supported formats, editing/effects/metadata, resource limits, web output and Browser-WASM `[ServerSide]` behavior.
-- [ ] FullTest must verify an application without XPImage does not acquire Magick.NET and an XPImage application does include the required generated license notices.
+- [x] FullTest must verify an application without XPImage does not acquire Magick.NET and an XPImage application does include the required generated license notices.
 - [ ] FullTest must fail on compiler/runtime warnings relevant to XPImage.
 
 ## Implementation completion criteria
@@ -224,5 +224,5 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] No ImageSharp or SkiaSharp dependency or image-runtime implementation remains.
 - [x] No Magick.NET implementation types leak into XPScript source syntax or public XPImage API.
 - [ ] CLI, desktop, Kestrel, CGI and FastCGI can use the same XPImage object model.
-- [ ] Applications that do not use XPImage do not acquire Magick.NET dependencies.
+- [x] Applications that do not use XPImage do not acquire Magick.NET dependencies.
 - [ ] Documentation and reusable examples are added under `docs/` and `examples/`.
