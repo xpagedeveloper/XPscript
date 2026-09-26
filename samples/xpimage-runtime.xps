@@ -17,7 +17,21 @@ Sub VerifyOversizedMetadata(image As XPImage)
     If limitErr = 0 Then Error 5, "XPImage oversized metadata value was accepted"
 End Sub
 
+Sub ResizeImageByVal(ByVal image As XPImage)
+    image.Resize(1, 1)
+End Sub
+
+Sub ResizeImageByRef(image As XPImage)
+    image.Resize(2, 2)
+End Sub
+
 Sub Main()
+    Dim parameterImage As XPImage
+    Set parameterImage = New XPImage(4, 4, "#112233")
+    Call ResizeImageByVal(parameterImage)
+    If parameterImage.Width <> 4 Or parameterImage.Height <> 4 Then Error 5, "XPImage ByVal parameter was not copied"
+    Call ResizeImageByRef(parameterImage)
+    If parameterImage.Width <> 2 Or parameterImage.Height <> 2 Then Error 5, "XPImage ByRef parameter did not preserve reference"
     Dim img As XPImage
     Set img = New XPImage(8, 6, "#336699")
     Dim encoded As Variant
