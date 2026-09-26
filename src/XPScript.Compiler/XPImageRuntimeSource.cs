@@ -77,6 +77,8 @@ internal sealed class XPImage : System.IDisposable
         if (data.LongLength > MaxEncodedBytes) throw new System.InvalidOperationException("Image exceeds the maximum encoded size.");
         try
         {
+            var info = new ImageMagick.MagickImageInfo(data);
+            ValidateDimensions(checked((int)info.Width), checked((int)info.Height));
             var image = new ImageMagick.MagickImage(data);
             var format = image.Format.ToString();
             return new XPImage(image, format);
