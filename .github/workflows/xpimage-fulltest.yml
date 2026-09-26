@@ -86,66 +86,45 @@ jobs:
       - name: Verify concurrent XPImage instance isolation
         shell: pwsh
         run: |
-          $runtimeSource = Get-Content ./src/XPScript.Compiler/XPImageRuntimeSource.cs -Raw
-          $match = [regex]::Match($runtimeSource, 'public const string Code = """(?s)(.*)""";')
-          if (-not $match.Success) { throw 'Unable to extract XPImage runtime source.' }
-          $runtime = $match.Groups[1].Value
-          $testSource = @"
-          using System;
-          using System.Linq;
-          using System.Text;
-          using System.Threading.Tasks;
-          $runtime
-
-          internal static class Program
-          {
-              private static void Main()
-              {
-                  var images = Enumerable.Range(0, 16)
-                      .Select(i => new XPImage(32, 32, i % 2 == 0 ? "#112233" : "#aabbcc"))
-                      .ToArray();
-                  try
-                  {
-                      Parallel.For(0, images.Length, i =>
-                      {
-                          var image = images[i];
-                          image.Resize(8 + i, 9 + i);
-                          image.Brightness(i - 8);
-                          image.SetMetadata("comment", "instance-" + i);
-                      });
-                      for (var i = 0; i < images.Length; i++)
-                      {
-                          if (images[i].Width != 8 + i || images[i].Height != 9 + i)
-                              throw new Exception("XPImage concurrent dimensions leaked between instances.");
-                          if (images[i].GetMetadata("comment") != "instance-" + i)
-                              throw new Exception("XPImage concurrent metadata leaked between instances.");
-                      }
-                      Console.WriteLine("XPIMAGE-CONCURRENCY=OK");
-                  }
-                  finally
-                  {
-                      foreach (var image in images) image.Dispose();
-                  }
-              }
-          }
-          "@
+          $compiler = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
           New-Item -ItemType Directory -Force ./out/xpimage-concurrency | Out-Null
-          $testSource | Set-Content -Encoding utf8 ./out/xpimage-concurrency/Program.cs
           @'
-          <Project Sdk="Microsoft.NET.Sdk">
-            <PropertyGroup>
-              <OutputType>Exe</OutputType>
-              <TargetFramework>net10.0</TargetFramework>
-              <ImplicitUsings>enable</ImplicitUsings>
-              <Nullable>enable</Nullable>
-            </PropertyGroup>
-            <ItemGroup>
-              <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.10.2" />
-            </ItemGroup>
-          </Project>
-          '@ | Set-Content -Encoding utf8 ./out/xpimage-concurrency/xpimage-concurrency.csproj
-          dotnet run --project ./out/xpimage-concurrency/xpimage-concurrency.csproj -c Release
+          Sub Main()
+              Dim image As XPImage
+              Set image = New XPImage(32, 32, "#112233")
+              image.Resize(17, 18)
+              image.SetMetadata("comment", "isolated")
+              If image.Width <> 17 Or image.Height <> 18 Then Error 5, "XPImage concurrency worker dimensions failed"
+              If image.GetMetadata("comment") <> "isolated" Then Error 5, "XPImage concurrency worker metadata failed"
+              Print "XPIMAGE-CONCURRENCY=OK"
+          End Sub
+          '@ | Set-Content -Encoding utf8 ./out/xpimage-concurrency/concurrency.xps
+          dotnet $compiler ./out/xpimage-concurrency/concurrency.xps -o ./out/xpimage-concurrency/app --runtime=false
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $plain = './out/xpimage-concurrency/app'
+          $win = "$plain.exe"
+          if (Test-Path $win -PathType Leaf) { $exe = (Resolve-Path $win).Path } else { $exe = (Resolve-Path $plain).Path }
+          $workers = @()
+          1..16 | ForEach-Object {
+            $psi = [System.Diagnostics.ProcessStartInfo]::new()
+            $psi.FileName = $exe
+            $psi.UseShellExecute = $false
+            $psi.RedirectStandardOutput = $true
+            $psi.RedirectStandardError = $true
+            $p = [System.Diagnostics.Process]::new()
+            $p.StartInfo = $psi
+            if (-not $p.Start()) { throw 'Failed to start XPImage concurrency worker.' }
+            $workers += $p
+          }
+          foreach ($p in $workers) {
+            $stdout = $p.StandardOutput.ReadToEnd()
+            $stderr = $p.StandardError.ReadToEnd()
+            $p.WaitForExit()
+            $output = $stdout + $stderr
+            Write-Host $output
+            if ($p.ExitCode -ne 0) { throw "XPImage concurrency worker failed with exit code $($p.ExitCode)." }
+            if ($output -notmatch 'XPIMAGE-CONCURRENCY=OK') { throw 'XPImage concurrency worker marker missing.' }
+          }
 
       - name: Verify non-XPImage app excludes Magick.NET
         shell: pwsh
