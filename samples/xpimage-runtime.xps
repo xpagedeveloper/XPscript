@@ -40,7 +40,22 @@ Sub VerifyOversizedRotation()
     If rotationLimitErr = 0 Then Error 5, "XPImage oversized rotation was accepted"
 End Sub
 
+Sub VerifyUnsupportedActiveContent()
+    Dim svgText As String
+    svgText = "<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><image href='https://example.invalid/external.png' width='8' height='8'/></svg>"
+    Dim svgBytes As Byte[]
+    svgBytes = System.Text.Encoding.UTF8.GetBytes(svgText)
+    Dim activeErr As Integer
+    On Error Resume Next
+    Dim activeImage As XPImage
+    Set activeImage = XPImage.FromBytes(svgBytes)
+    activeErr = Err
+    On Error GoTo 0
+    If activeErr = 0 Then Error 5, "XPImage unsupported active image content was accepted"
+End Sub
+
 Sub Main()
+    Call VerifyUnsupportedActiveContent()
     Call VerifyOversizedRotation()
     Dim parameterImage As XPImage
     Set parameterImage = New XPImage(4, 4, "#112233")
