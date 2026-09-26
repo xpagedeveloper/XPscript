@@ -1,3 +1,11 @@
+Function MakeReturnedImage() As XPImage
+    Dim localOnly As XPImage
+    Set localOnly = New XPImage(3, 3, "#010203")
+    Dim returned As XPImage
+    Set returned = New XPImage(5, 4, "#abcdef")
+    Set MakeReturnedImage = returned
+End Function
+
 Sub Main()
     Dim img As XPImage
     Set img = New XPImage(8, 6, "#336699")
@@ -33,6 +41,14 @@ Sub Main()
     If img.Width <> 16 Or img.Height <> 16 Then
         Error 5, "XPImage geometry/composition failed"
     End If
+    Dim owned As XPImage
+    Set owned = MakeReturnedImage()
+    If owned.Width <> 5 Or owned.Height <> 4 Then
+        Error 5, "Returned XPImage was recycled at function exit"
+    End If
+    Set owned = New XPImage(2, 2, "#ffffff")
+    If owned.Width <> 2 Then Error 5, "XPImage reassignment failed"
+    Set owned = Nothing
     Print "XPIMAGE-RUNTIME=OK"
     
 End Sub
