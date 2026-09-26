@@ -56,7 +56,7 @@ Sub Main()
     If copy2.Format <> "png" Then
         Error 5, "XPImage format round-trip failed"
     End If
-    Dim metadataImage As New XPImage(6, 6, "#224466")
+    Dim metadataImage As XPImage\n    Set metadataImage = New XPImage(6, 6, "#224466")
     metadataImage.SetExif("Artist", "XPScript")
     metadataImage.SetMetadata("comment", "XPImage metadata")
     metadataImage.SetSrgbProfile()
