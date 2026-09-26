@@ -385,6 +385,12 @@ internal sealed class CoreCompatibilityTranspiler
                 else if (!_classes.Contains(p.Type))
                     result = Regex.Replace(result, $@"(?:(?:ByVal|ByRef)\s+)?{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", p.Name + " As Variant", RegexOptions.IgnoreCase);
             }
+            else if (!p.ByRef && !p.IsArray && !p.IsList && IsRuntimeObjectType(p.Type))
+            {
+                // Explicit ByVal on runtime objects is semantically significant. Preserve
+                // it so the advanced transpiler can clone the object at procedure entry.
+                result = Regex.Replace(result, $@"(?:(?:ByVal|ByRef)\s+)?{Regex.Escape(p.Name)}\s*(?:As\s+[A-Za-z_]\w*)?", "ByVal " + p.Name + " As " + p.Type, RegexOptions.IgnoreCase);
+            }
             else if (p.IsArray)
             {
                 result = Regex.Replace(result, $@"(?:(?:ByVal|ByRef)\s+)?{Regex.Escape(p.Name)}\s*\(\)\s*(?:As\s+[A-Za-z_]\w*)?", p.Name + " As Variant", RegexOptions.IgnoreCase);
