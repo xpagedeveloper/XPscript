@@ -552,9 +552,34 @@ internal sealed class XPImage : System.IDisposable
         return result;
     }
 
+    private static string ResolveDefaultFont()
+    {
+        var candidates = System.OperatingSystem.IsWindows()
+            ? new[] { @"C:\Windows\Fonts\arial.ttf", "Arial" }
+            : System.OperatingSystem.IsMacOS()
+                ? new[] { "/System/Library/Fonts/Supplemental/Arial.ttf", "Arial" }
+                : new[] { "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "DejaVu Sans", "DejaVu-Sans" };
+
+        foreach (var candidate in candidates)
+        {
+            if (System.IO.Path.IsPathRooted(candidate) && System.IO.File.Exists(candidate))
+                return candidate;
+            try
+            {
+                foreach (var family in ImageMagick.MagickNET.FontFamilies)
+                    if (string.Equals(family, candidate, System.StringComparison.OrdinalIgnoreCase))
+                        return family;
+            }
+            catch { }
+        }
+
+        throw new System.InvalidOperationException("XPImage could not locate the platform default font.");
+    }
+
     private static string ResolveFont(string fontFamily)
     {
-        if (string.IsNullOrWhiteSpace(fontFamily)) throw new System.ArgumentException("Font family cannot be empty.", nameof(fontFamily));
+        if (string.IsNullOrWhiteSpace(fontFamily))
+            return ResolveDefaultFont();
         var requested = fontFamily.Trim();
         if (System.IO.Path.IsPathRooted(requested))
             throw new System.ArgumentException("XPImage font paths must be relative to the application directory.", nameof(fontFamily));
