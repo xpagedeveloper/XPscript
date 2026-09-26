@@ -141,9 +141,19 @@ jobs:
           New-Item -ItemType Directory -Force ./out/xpimage-targets | Out-Null
 
           $desktopSource = @'
+          Function MakeDesktopImage() As XPImage
+              Dim localOnly As XPImage
+              Set localOnly = New XPImage(4, 4, "#112233")
+              Dim returned As XPImage
+              Set returned = New XPImage(8, 8, "#336699")
+              Set MakeDesktopImage = returned
+          End Function
+
           Sub Main()
               Dim img As XPImage
-              Set img = New XPImage(8, 8, "#336699")
+              Set img = MakeDesktopImage()
+              Set img = New XPImage(8, 8, "#663399")
+              Set img = Nothing
               Dim form As New UIForm("XPImage Desktop Compile")
           End Sub
           '@
@@ -153,9 +163,19 @@ jobs:
 
           New-Item -ItemType Directory -Force ./out/xpimage-targets/web-source | Out-Null
           @'
+          Function MakeWebImage() As XPImage
+              Dim localOnly As XPImage
+              Set localOnly = New XPImage(4, 4, "#112233")
+              Dim returned As XPImage
+              Set returned = New XPImage(8, 8, "#336699")
+              Set MakeWebImage = returned
+          End Function
+
           Sub Main()
               Dim img As XPImage
-              Set img = New XPImage(8, 8, "#336699")
+              Set img = MakeWebImage()
+              Set img = New XPImage(8, 8, "#663399")
+              Set img = Nothing
               Print "XPIMAGE-WEB-COMPILE=OK"
           End Sub
           '@ | Set-Content -Encoding utf8 ./out/xpimage-targets/web-source/main.xps
