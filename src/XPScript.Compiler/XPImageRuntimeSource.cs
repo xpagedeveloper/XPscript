@@ -304,11 +304,23 @@ internal sealed class XPImage : System.IDisposable
     public void Save(string path, int? quality)
     {
         if (string.IsNullOrWhiteSpace(path)) throw new System.ArgumentException("Image path cannot be empty.", nameof(path));
+        if (System.IO.Path.IsPathRooted(path))
+            throw new System.ArgumentException("XPImage output path must be relative to the application directory.", nameof(path));
+        var root = XPScriptFileSystemRuntime.ResolvePath(".");
         var resolved = XPScriptFileSystemRuntime.ResolvePath(path);
+        var relative = System.IO.Path.GetRelativePath(root, resolved);
+        if (relative == ".." || relative.StartsWith(".." + System.IO.Path.DirectorySeparatorChar, System.StringComparison.Ordinal) || System.IO.Path.IsPathRooted(relative))
+            throw new System.ArgumentException("XPImage output path must remain inside the application directory.", nameof(path));
+        if (System.IO.File.Exists(resolved) || System.IO.Directory.Exists(resolved))
+            throw new System.IO.IOException("XPImage output path already exists.");
+        var parent = System.IO.Path.GetDirectoryName(resolved);
+        if (!string.IsNullOrEmpty(parent) && !System.IO.Directory.Exists(parent))
+            throw new System.IO.DirectoryNotFoundException("XPImage output directory does not exist.");
         var format = NormalizeFormat(System.IO.Path.GetExtension(resolved).TrimStart('.'));
         Image.Format = ParseFormat(format);
         ApplyEncodingQuality(format, quality);
-        Image.Write(resolved);
+        using (var stream = new System.IO.FileStream(resolved, System.IO.FileMode.CreateNew, System.IO.FileAccess.Write, System.IO.FileShare.None))
+            Image.Write(stream);
         _format = format;
     }
 
