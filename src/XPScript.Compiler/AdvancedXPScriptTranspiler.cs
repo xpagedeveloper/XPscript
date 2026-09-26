@@ -509,7 +509,9 @@ internal static class LSForAllRuntime
 
         _currentProcedure = nameFn;
         _currentReturnType = returnType;
-        _currentReturnObjectClass = _classes.ContainsKey(xpscriptReturnType) ? xpscriptReturnType : null;
+        _currentReturnObjectClass = _classes.ContainsKey(xpscriptReturnType) || xpscriptReturnType.Equals("XPImage", StringComparison.OrdinalIgnoreCase)
+            ? xpscriptReturnType
+            : null;
         _procedureKind = ProcedureKind.Function;
         _variableTypes.Clear();
         _objectVariables.Clear();
@@ -884,6 +886,13 @@ internal static class LSForAllRuntime
         if (lhs is null) throw new CompilerException($"Set target is not an object reference: {lhsRaw}");
         var targetClass = functionResultClass ?? ResolveObjectReferenceClass(lhsRaw) ?? throw new CompilerException($"Cannot determine object type for Set target: {lhsRaw}");
         var rhsRaw = match.Groups[2].Value.Trim();
+        if (functionResultClass?.Equals("XPImage", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            if (rhsRaw.Equals("Nothing", StringComparison.OrdinalIgnoreCase)) { Write(sb, "__result = null!;"); return true; }
+            var rhsImage = TransformExpression(rhsRaw);
+            Write(sb, $"__result = {rhsImage};");
+            return true;
+        }
         if (rhsRaw.Equals("Nothing", StringComparison.OrdinalIgnoreCase)) { Write(sb, $"{lhs} = new LSRef<{targetClass}>();"); return true; }
 
         var newMatch = Regex.Match(rhsRaw, @"^New\s+([A-Za-z_]\w*)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
