@@ -188,6 +188,8 @@ Sub Main()
     textFont = "xpimage-test-font.ttf"
     drawing.DrawText(2, 14, "XP", textFont, 8, "#000000")
     drawing.WatermarkText(2, 22, "WM", textFont, 7, "#0000ff", 0.5)
+    drawing.DrawTextAligned(18, 10, "Åäö", textFont, 7, "#222222", "center")
+    drawing.DrawTextWrapped(2, 8, 28, "Unicode åäö café text wraps", textFont, 5, "#333333", "left")
     If drawing.Width <> 36 Or drawing.Height <> 28 Then Error 5, "XPImage drawing/border geometry failed"
     Dim drawingBytes As Byte[]
     drawingBytes = drawing.ToBytes("png")
