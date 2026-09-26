@@ -62,7 +62,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Opacity/alpha control for compositing.
 - [x] Convert between supported formats.
 - [x] JPEG quality setting.
-- [ ] PNG/WebP encoding options where practical.
+- [x] PNG/WebP encoding options where practical.
 
 ## Drawing and annotation
 
@@ -163,7 +163,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] `Save(path)`.
 - [x] `Save(path, quality)` where quality applies to the selected encoder.
 - [x] `ToBytes(format)`.
-- [ ] Expose practical JPEG quality and PNG/WebP encoding options without exposing Magick.NET types.
+- [x] Expose practical JPEG quality and PNG/WebP encoding options without exposing Magick.NET types.
 
 ### Geometry and composition
 
