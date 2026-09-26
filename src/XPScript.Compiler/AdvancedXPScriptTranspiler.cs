@@ -1070,11 +1070,11 @@ internal static class LSForAllRuntime
             var name = Regex.Escape(objectVariable.Key);
             text = Regex.Replace(text, $@"\b{name}\s+Is\s+Not\s+Nothing\b", $"!{objectVariable.Key}.IsNothing", RegexOptions.IgnoreCase);
             text = Regex.Replace(text, $@"\b{name}\s+Is\s+Nothing\b", $"{objectVariable.Key}.IsNothing", RegexOptions.IgnoreCase);
-            // Do not rewrite an object variable when it is already the argument of a runtime
-            // function. The runtime function accepts object?, and preserving the LSRef<T> here
-            // lets nested member calls such as Len(image.GetProfile("icc")) be lowered without
-            // losing the receiver's strong type through a dynamic ref argument.
-            text = Regex.Replace(text, $@"(?<!XPScriptRuntime\.[A-Za-z_]\w*\()\b{name}\.", $"{objectVariable.Key}.Value!.", RegexOptions.IgnoreCase);
+            // Member access must always be performed on the strongly typed value held by
+            // LSRef<T>. This is especially important inside runtime-function arguments, e.g.
+            // Len(image.GetProfile("icc")); leaving the LSRef<T> receiver intact makes the
+            // later ByRef lowering treat it as dynamic and produces an invalid ref argument.
+            text = Regex.Replace(text, $@"\b{name}\.", $"{objectVariable.Key}.Value!.", RegexOptions.IgnoreCase);
         }
 
         if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var classInfo))
