@@ -176,6 +176,11 @@ internal sealed class XPImage : System.IDisposable
         _image.Composite(copy, x, y, ImageMagick.CompositeOperator.Over);
     }
 
+    public void WatermarkImage(XPImage watermark, int x, int y, double opacity)
+    {
+        Composite(watermark, x, y, opacity);
+    }
+
     public void Opacity(double opacity)
     {
         ValidateOpacity(opacity);
