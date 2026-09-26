@@ -161,6 +161,7 @@ internal static class LSHclSelectedRuntime
         if (XPScriptNullRuntime.IsNull(value)) throw new XPScriptRuntimeException(94, "Invalid use of Null.");
         if (value is null) return 0;
         if (value is string text) return text.Length;
+        if (value is byte[] bytes) return bytes.Length;
         return LenB(value);
     }
 
@@ -171,6 +172,7 @@ internal static class LSHclSelectedRuntime
         {
             null => 0,
             string text => checked(text.Length * 2),
+            byte[] bytes => bytes.Length,
             byte => 1,
             bool => 2,
             short or int => 2,
