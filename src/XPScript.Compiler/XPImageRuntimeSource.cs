@@ -204,14 +204,19 @@ internal sealed class XPImage : System.IDisposable
 
     public string GetExif(string name)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("EXIF name cannot be empty.", nameof(name));
-        return _image.GetAttribute("exif:" + name.Trim()) ?? string.Empty;
+        var tag = ParseExifStringTag(name);
+        var profile = Image.GetExifProfile();
+        if (profile is null) return string.Empty;
+        var value = profile.GetValue(tag);
+        return value?.GetValue()?.ToString() ?? string.Empty;
     }
 
     public void SetExif(string name, string value)
     {
-        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("EXIF name cannot be empty.", nameof(name));
-        _image.SetAttribute("exif:" + name.Trim(), value ?? string.Empty);
+        var tag = ParseExifStringTag(name);
+        var profile = Image.GetExifProfile() ?? new ImageMagick.ExifProfile();
+        profile.SetValue(tag, value ?? string.Empty);
+        Image.SetProfile(profile);
     }
 
     public string GetMetadata(string name)
@@ -268,6 +273,23 @@ internal sealed class XPImage : System.IDisposable
     }
 
     void System.IDisposable.Dispose() => Recycle();
+
+    private static ImageMagick.ExifTag<string> ParseExifStringTag(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new System.ArgumentException("EXIF name cannot be empty.", nameof(name));
+        return name.Trim().ToLowerInvariant() switch
+        {
+            "artist" => ImageMagick.ExifTag.Artist,
+            "copyright" => ImageMagick.ExifTag.Copyright,
+            "datetime" => ImageMagick.ExifTag.DateTime,
+            "documentname" => ImageMagick.ExifTag.DocumentName,
+            "imagedescription" => ImageMagick.ExifTag.ImageDescription,
+            "make" => ImageMagick.ExifTag.Make,
+            "model" => ImageMagick.ExifTag.Model,
+            "software" => ImageMagick.ExifTag.Software,
+            _ => throw new System.ArgumentException("Unsupported XPImage EXIF string tag: " + name, nameof(name))
+        };
+    }
 
     private static ImageMagick.MagickColor ParseColor(string value)
     {
