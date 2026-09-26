@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
@@ -71,7 +72,7 @@ public sealed class XpsWebCompiler
             var pdbPath = Path.Combine(artifactDirectory, "XPScript.WebUnit.pdb");
             var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
             TouchPersistentArtifact(artifactDirectory);
-            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
+            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, artifactDirectory);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or XpsWebCompilationException)
         {
@@ -153,21 +154,40 @@ public sealed class XpsWebCompiler
             var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
             var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
 
+            string dependencyDirectory = Path.GetDirectoryName(assemblyPath)!;
             if (!string.IsNullOrWhiteSpace(snapshotIdentity) && !string.IsNullOrWhiteSpace(persistentCacheDirectory))
-                await PersistArtifactAsync(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity, assemblyBytes, pdbBytes, cancellationToken).ConfigureAwait(false);
+            {
+                dependencyDirectory = await PersistArtifactAsync(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity, assemblyBytes, pdbBytes, Path.GetDirectoryName(assemblyPath)!, cancellationToken).ConfigureAwait(false);
+                DebugStep("dependencies:persisted", fullSourcePath);
+            }
 
             DebugStep("load:start", fullSourcePath);
-            var unit = LoadCompiledUnit(assemblyBytes, pdbBytes, parsed);
+            var unit = LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, dependencyDirectory);
             DebugStep("load:done", fullSourcePath);
             return unit;
         }
         finally { try { Directory.Delete(workspace, recursive: true); } catch { } }
     }
 
-    private static XpsCompiledWebUnit LoadCompiledUnit(byte[] assemblyBytes, byte[]? pdbBytes, XpsWebRouteParseResult parsed)
+    private static XpsCompiledWebUnit LoadCompiledUnit(byte[] assemblyBytes, byte[]? pdbBytes, XpsWebRouteParseResult parsed, string dependencyDirectory)
     {
         var loadContext = new AssemblyLoadContext("XPScriptWeb-" + Guid.NewGuid().ToString("N"), isCollectible: true);
-        loadContext.Resolving += ResolveSharedAssembly;
+        Assembly? ResolveManaged(AssemblyLoadContext context, AssemblyName name)
+        {
+            var shared = ResolveSharedAssembly(context, name);
+            if (shared is not null) return shared;
+            if (string.IsNullOrWhiteSpace(name.Name)) return null;
+            var candidate = Path.Combine(dependencyDirectory, name.Name + ".dll");
+            return File.Exists(candidate) ? context.LoadFromAssemblyPath(candidate) : null;
+        }
+        IntPtr ResolveNative(Assembly assembly, string name)
+        {
+            foreach (var candidate in NativeLibraryCandidates(dependencyDirectory, name))
+                if (File.Exists(candidate) && NativeLibrary.TryLoad(candidate, out var handle)) return handle;
+            return IntPtr.Zero;
+        }
+        loadContext.Resolving += ResolveManaged;
+        loadContext.ResolvingUnmanagedDll += ResolveNative;
         try
         {
             using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);
@@ -183,7 +203,8 @@ public sealed class XpsWebCompiler
         }
         catch
         {
-            loadContext.Resolving -= ResolveSharedAssembly;
+            loadContext.Resolving -= ResolveManaged;
+            loadContext.ResolvingUnmanagedDll -= ResolveNative;
             loadContext.Unload();
             throw;
         }
@@ -201,8 +222,8 @@ public sealed class XpsWebCompiler
     private static string HashText(string value)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
-    private static async Task PersistArtifactAsync(
-        string cacheRoot, string siteRoot, string sourcePath, string snapshotIdentity, byte[] assemblyBytes, byte[]? pdbBytes, CancellationToken cancellationToken)
+    private static async Task<string> PersistArtifactAsync(
+        string cacheRoot, string siteRoot, string sourcePath, string snapshotIdentity, byte[] assemblyBytes, byte[]? pdbBytes, string buildOutputDirectory, CancellationToken cancellationToken)
     {
         var artifactDirectory = PersistentArtifactDirectory(cacheRoot, siteRoot, sourcePath, snapshotIdentity);
         Directory.CreateDirectory(artifactDirectory);
@@ -210,8 +231,10 @@ public sealed class XpsWebCompiler
         if (pdbBytes is not null)
             await WriteAtomicAsync(Path.Combine(artifactDirectory, "XPScript.WebUnit.pdb"), pdbBytes, cancellationToken).ConfigureAwait(false);
 
+        await CopyRuntimeDependenciesAsync(buildOutputDirectory, artifactDirectory, cancellationToken).ConfigureAwait(false);
+
         var sourceDirectory = Directory.GetParent(artifactDirectory)?.FullName;
-        if (sourceDirectory is null) return;
+        if (sourceDirectory is null) return artifactDirectory;
         foreach (var directory in Directory.EnumerateDirectories(sourceDirectory))
         {
             if (Path.GetFullPath(directory).Equals(Path.GetFullPath(artifactDirectory), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) continue;
@@ -219,6 +242,46 @@ public sealed class XpsWebCompiler
         }
         TouchPersistentArtifact(artifactDirectory);
         MaintainPersistentCache(cacheRoot, artifactDirectory, force: true);
+        return artifactDirectory;
+    }
+
+    private static async Task CopyRuntimeDependenciesAsync(string sourceDirectory, string destinationDirectory, CancellationToken cancellationToken)
+    {
+        foreach (var source in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(sourceDirectory, source);
+            if (relative.Equals("XPScript.WebUnit.dll", StringComparison.OrdinalIgnoreCase) ||
+                relative.Equals("XPScript.WebUnit.pdb", StringComparison.OrdinalIgnoreCase)) continue;
+            var destination = Path.Combine(destinationDirectory, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            await using var input = File.OpenRead(source);
+            await using var output = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+            await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static IEnumerable<string> NativeLibraryCandidates(string root, string name)
+    {
+        var fileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { name };
+        if (OperatingSystem.IsWindows())
+        {
+            fileNames.Add(name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ? name : name + ".dll");
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            fileNames.Add(name.StartsWith("lib", StringComparison.Ordinal) ? name : "lib" + name);
+            fileNames.Add(name.EndsWith(".dylib", StringComparison.OrdinalIgnoreCase) ? name : name + ".dylib");
+            fileNames.Add((name.StartsWith("lib", StringComparison.Ordinal) ? name : "lib" + name) + ".dylib");
+        }
+        else
+        {
+            fileNames.Add(name.StartsWith("lib", StringComparison.Ordinal) ? name : "lib" + name);
+            fileNames.Add(name.EndsWith(".so", StringComparison.OrdinalIgnoreCase) ? name : name + ".so");
+            fileNames.Add((name.StartsWith("lib", StringComparison.Ordinal) ? name : "lib" + name) + ".so");
+        }
+
+        foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            if (fileNames.Contains(Path.GetFileName(file))) yield return file;
     }
 
     private static void MaintainPersistentCache(string cacheRoot, string? preserveDirectory, bool force = false)
