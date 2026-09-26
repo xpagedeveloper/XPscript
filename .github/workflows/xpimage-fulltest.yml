@@ -92,7 +92,7 @@ jobs:
           Sub Main()
               Dim image As XPImage
               Set image = New XPImage(32, 32, "#112233")
-              image.Resize(17, 18)
+              image.Resize(17, 18, "stretch")
               image.SetMetadata("comment", "isolated")
               If image.Width <> 17 Or image.Height <> 18 Then Error 5, "XPImage concurrency worker dimensions failed"
               If image.GetMetadata("comment") <> "isolated" Then Error 5, "XPImage concurrency worker metadata failed"
