@@ -49,7 +49,6 @@ jobs:
               bytes = img.ToBytes("png")
               Response.ContentType = "image/png"
               Response.WriteBinary(bytes)
-              img.Dispose()
           End Sub
           '@ | Set-Content -Encoding utf8 ./out/xpimage-kestrel/index.xps
 
@@ -146,7 +145,6 @@ jobs:
               Dim img As XPImage
               Set img = New XPImage(8, 8, "#336699")
               Dim form As New UIForm("XPImage Desktop Compile")
-              img.Dispose()
           End Sub
           '@
           $desktopSource | Set-Content -Encoding utf8 ./out/xpimage-targets/xpimage-desktop.xps
@@ -159,7 +157,6 @@ jobs:
               Dim img As XPImage
               Set img = New XPImage(8, 8, "#336699")
               Print "XPIMAGE-WEB-COMPILE=OK"
-              img.Dispose()
           End Sub
           '@ | Set-Content -Encoding utf8 ./out/xpimage-targets/web-source/main.xps
           dotnet $compiler ./out/xpimage-targets/web-source/main.xps --target webiis --runtime=false --output ./out/xpimage-targets/web
