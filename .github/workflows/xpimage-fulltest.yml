@@ -69,7 +69,7 @@ jobs:
           try {
             $uri = "http://127.0.0.1:$port/"
             $response = $null
-            for ($attempt = 0; $attempt -lt 90; $attempt++) {
+            for ($attempt = 0; $attempt -lt 300; $attempt++) {
               $server.Refresh()
               if ($server.HasExited) { break }
               try {
