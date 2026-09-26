@@ -15,6 +15,8 @@ internal sealed class CoreCompatibilityTranspiler
         public required int ProcedureId { get; init; }
         public Dictionary<int, string> Handlers { get; } = new();
         public List<int> Statements { get; } = [];
+        public bool HasResumeCurrent { get; set; }
+        public bool HasResumeNext { get; set; }
         public Dictionary<int, string> GoSubs { get; } = new();
     }
 
