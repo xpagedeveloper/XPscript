@@ -37,6 +37,14 @@ Sub Main()
     Dim metadataImage As New XPImage(6, 6, "#224466")
     metadataImage.SetExif("Artist", "XPScript")
     metadataImage.SetMetadata("comment", "XPImage metadata")
+    metadataImage.SetSrgbProfile()
+    Dim xmpText As String
+    xmpText = "<?xpacket begin='﻿' id='W5M0MpCehiHzreSzNTczkc9d'?><x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'><rdf:Description rdf:about='' xmlns:xps='https://xpagedeveloper.com/xpscript/' xps:marker='XPImage-XMP'/></rdf:RDF></x:xmpmeta><?xpacket end='w'?>"
+    Dim xmpBytes As Byte[]
+    xmpBytes = System.Text.Encoding.UTF8.GetBytes(xmpText)
+    metadataImage.SetProfile("xmp", xmpBytes)
+    If Len(metadataImage.GetProfile("icc")) = 0 Then Error 5, "XPImage ICC profile setup failed"
+    If Len(metadataImage.GetProfile("xmp")) = 0 Then Error 5, "XPImage XMP profile setup failed"
     metadataImage.Resize(9, 9)
     metadataImage.Brightness(5)
     Dim metadataBytes As Byte[]
@@ -45,6 +53,11 @@ Sub Main()
     Set metadataCopy = XPImage.FromBytes(metadataBytes)
     If metadataCopy.GetExif("Artist") <> "XPScript" Then Error 5, "XPImage EXIF preservation failed after editing"
     If metadataCopy.GetMetadata("comment") <> "XPImage metadata" Then Error 5, "XPImage metadata round-trip failed"
+    If Len(metadataCopy.GetProfile("icc")) = 0 Then Error 5, "XPImage ICC profile preservation failed after editing"
+    Dim xmpRoundTrip As Byte[]
+    xmpRoundTrip = metadataCopy.GetProfile("xmp")
+    If Len(xmpRoundTrip) = 0 Then Error 5, "XPImage XMP profile preservation failed after editing"
+    If InStr(System.Text.Encoding.UTF8.GetString(xmpRoundTrip), "XPImage-XMP") = 0 Then Error 5, "XPImage XMP profile content changed after editing"
     metadataCopy.StripMetadata()
     If metadataCopy.GetExif("Artist") <> "" Then Error 5, "XPImage metadata stripping failed"
 
