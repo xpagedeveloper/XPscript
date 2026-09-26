@@ -228,6 +228,58 @@ internal sealed class XPImage : System.IDisposable
 
     public void AutoOrient() => _image.AutoOrient();
 
+    public void DrawLine(double x1, double y1, double x2, double y2, string color, double strokeWidth)
+    {
+        ValidateCoordinate(x1, nameof(x1));
+        ValidateCoordinate(y1, nameof(y1));
+        ValidateCoordinate(x2, nameof(x2));
+        ValidateCoordinate(y2, nameof(y2));
+        ValidateStrokeWidth(strokeWidth);
+        var drawables = new ImageMagick.Drawables()
+            .StrokeColor(ParseColor(color))
+            .StrokeWidth(strokeWidth)
+            .FillColor(ImageMagick.MagickColors.Transparent)
+            .Line(x1, y1, x2, y2);
+        drawables.Draw(Image);
+    }
+
+    public void DrawRectangle(double x, double y, double width, double height, string strokeColor, double strokeWidth, string fillColor)
+    {
+        ValidateShape(x, y, width, height);
+        ValidateStrokeWidth(strokeWidth);
+        var drawables = new ImageMagick.Drawables()
+            .StrokeColor(ParseColor(strokeColor))
+            .StrokeWidth(strokeWidth)
+            .FillColor(ParseColor(fillColor))
+            .Rectangle(x, y, x + width, y + height);
+        drawables.Draw(Image);
+    }
+
+    public void DrawEllipse(double centerX, double centerY, double radiusX, double radiusY, string strokeColor, double strokeWidth, string fillColor)
+    {
+        ValidateCoordinate(centerX, nameof(centerX));
+        ValidateCoordinate(centerY, nameof(centerY));
+        if (!double.IsFinite(radiusX) || radiusX <= 0) throw new System.ArgumentOutOfRangeException(nameof(radiusX));
+        if (!double.IsFinite(radiusY) || radiusY <= 0) throw new System.ArgumentOutOfRangeException(nameof(radiusY));
+        ValidateStrokeWidth(strokeWidth);
+        var drawables = new ImageMagick.Drawables()
+            .StrokeColor(ParseColor(strokeColor))
+            .StrokeWidth(strokeWidth)
+            .FillColor(ParseColor(fillColor))
+            .Ellipse(centerX, centerY, radiusX, radiusY, 0, 360);
+        drawables.Draw(Image);
+    }
+
+    public void Border(int size, string color)
+    {
+        if (size <= 0) throw new System.ArgumentOutOfRangeException(nameof(size));
+        var width = checked(Width + checked(size * 2));
+        var height = checked(Height + checked(size * 2));
+        ValidateDimensions(width, height);
+        Image.BorderColor = ParseColor(color);
+        Image.Border((uint)size);
+    }
+
     public string GetExif(string name)
     {
         var tag = ParseExifStringTag(name);
@@ -377,6 +429,25 @@ internal sealed class XPImage : System.IDisposable
             "software" => ImageMagick.ExifTag.Software,
             _ => throw new System.ArgumentException("Unsupported XPImage EXIF string tag: " + name, nameof(name))
         };
+    }
+
+    private static void ValidateCoordinate(double value, string name)
+    {
+        if (!double.IsFinite(value)) throw new System.ArgumentOutOfRangeException(name);
+    }
+
+    private static void ValidateStrokeWidth(double value)
+    {
+        if (!double.IsFinite(value) || value < 0 || value > MaxDimension)
+            throw new System.ArgumentOutOfRangeException(nameof(value));
+    }
+
+    private static void ValidateShape(double x, double y, double width, double height)
+    {
+        ValidateCoordinate(x, nameof(x));
+        ValidateCoordinate(y, nameof(y));
+        if (!double.IsFinite(width) || width <= 0) throw new System.ArgumentOutOfRangeException(nameof(width));
+        if (!double.IsFinite(height) || height <= 0) throw new System.ArgumentOutOfRangeException(nameof(height));
     }
 
     private static ImageMagick.MagickColor ParseColor(string value)
