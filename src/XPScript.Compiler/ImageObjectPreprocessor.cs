@@ -61,7 +61,7 @@ internal sealed class ImageObjectPreprocessor
                 var name = dimNew.Groups[1].Value;
                 images.Add(name);
                 if (scopeImages.Count > 0) scopeImages.Peek().Add(name);
-                output.Add(indent + $"Dim {name} As Variant");
+                output.Add(indent + $"Dim {name} As XPImage");
                 var args = dimNew.Groups[2].Value.Trim();
                 output.Add(indent + $"{name} = new XPImage({args})");
                 continue;
@@ -72,7 +72,7 @@ internal sealed class ImageObjectPreprocessor
             {
                 images.Add(dim.Groups[1].Value);
                 if (scopeImages.Count > 0) scopeImages.Peek().Add(dim.Groups[1].Value);
-                output.Add(indent + $"Dim {dim.Groups[1].Value} As Variant");
+                output.Add(indent + $"Dim {dim.Groups[1].Value} As XPImage");
                 continue;
             }
 
