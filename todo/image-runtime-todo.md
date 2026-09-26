@@ -66,17 +66,17 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 ## Drawing and annotation
 
-- [ ] Draw text with font family, size and basic style.
-- [ ] Support Unicode text.
-- [ ] Define font discovery/fallback behavior cross-platform.
+- [x] Draw text with font family, size and basic style.
+- [x] Support Unicode text.
+- [x] Define font discovery/fallback behavior cross-platform.
 - [x] Draw lines.
 - [x] Draw rectangles and rounded rectangles where supported.
 - [x] Draw ellipses/circles.
 - [x] Fill shapes.
 - [ ] Draw images/icons onto another image.
 - [x] Add borders.
-- [ ] Add simple watermark text or watermark image.
-- [ ] Support text alignment and basic wrapping.
+- [x] Add simple watermark text or watermark image.
+- [x] Support text alignment and basic wrapping.
 
 ## Color and effects
 
@@ -182,15 +182,15 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 ### Drawing and annotation
 
-- [ ] Draw text with font family, size, style and color.
-- [ ] Unicode text and documented cross-platform font discovery/fallback.
-- [ ] Text alignment and basic wrapping.
+- [x] Draw text with font family, size, style and color.
+- [x] Unicode text and documented cross-platform font discovery/fallback.
+- [x] Text alignment and basic wrapping.
 - [x] Draw lines.
 - [x] Draw rectangles and rounded rectangles.
 - [x] Draw ellipses/circles.
 - [ ] Filled and outlined shapes.
 - [x] Borders.
-- [ ] Text and image watermarks.
+- [x] Text and image watermarks.
 
 ### Effects
 
