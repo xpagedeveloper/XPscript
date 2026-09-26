@@ -11,6 +11,9 @@ internal sealed class XPImage : System.IDisposable
     private const int MaxMetadataNameChars = 256;
     private const int MaxMetadataValueChars = 64 * 1024;
     private const int MaxProfileBytes = 8 * 1024 * 1024;
+    private const ulong MaxPixelCacheMemoryBytes = 256UL * 1024 * 1024;
+    private const ulong MaxPixelCacheDiskBytes = 512UL * 1024 * 1024;
+    private static int _resourceLimitsInitialized;
     private ImageMagick.MagickImage? _image;
     private string _format;
 
@@ -18,6 +21,7 @@ internal sealed class XPImage : System.IDisposable
 
     public XPImage(int width, int height, string background)
     {
+        EnsureResourceLimits();
         ValidateDimensions(width, height);
         _image = new ImageMagick.MagickImage(ParseColor(background), (uint)width, (uint)height);
         _format = "png";
@@ -25,6 +29,7 @@ internal sealed class XPImage : System.IDisposable
 
     private XPImage(ImageMagick.MagickImage image, string format)
     {
+        EnsureResourceLimits();
         _image = image;
         ValidateDimensions(checked((int)image.Width), checked((int)image.Height));
         _format = NormalizeFormat(format);
@@ -72,6 +77,7 @@ internal sealed class XPImage : System.IDisposable
 
     public static XPImage FromBytes(byte[] data)
     {
+        EnsureResourceLimits();
         System.ArgumentNullException.ThrowIfNull(data);
         if (data.LongLength == 0) throw new System.ArgumentException("Image data cannot be empty.", nameof(data));
         if (data.LongLength > MaxEncodedBytes) throw new System.InvalidOperationException("Image exceeds the maximum encoded size.");
@@ -409,6 +415,19 @@ internal sealed class XPImage : System.IDisposable
     {
         if (double.IsNaN(opacity) || double.IsInfinity(opacity) || opacity < 0d || opacity > 1d)
             throw new System.ArgumentOutOfRangeException(nameof(opacity), "Opacity must be between 0 and 1.");
+    }
+
+    private static void EnsureResourceLimits()
+    {
+        if (System.Threading.Interlocked.Exchange(ref _resourceLimitsInitialized, 1) != 0) return;
+
+        ImageMagick.ResourceLimits.Width = (ulong)MaxDimension;
+        ImageMagick.ResourceLimits.Height = (ulong)MaxDimension;
+        ImageMagick.ResourceLimits.Area = (ulong)MaxPixels;
+        ImageMagick.ResourceLimits.Memory = MaxPixelCacheMemoryBytes;
+        ImageMagick.ResourceLimits.MaxMemoryRequest = MaxPixelCacheMemoryBytes;
+        ImageMagick.ResourceLimits.Disk = MaxPixelCacheDiskBytes;
+        ImageMagick.ResourceLimits.MaxProfileSize = (ulong)MaxProfileBytes;
     }
 
     private static void ValidateDimensions(int width, int height)
