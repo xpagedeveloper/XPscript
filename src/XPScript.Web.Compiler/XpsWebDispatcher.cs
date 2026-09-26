@@ -158,7 +158,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         }
     }
 
-    private static void WriteDebugException(XpsWebContext context, Exception exception, string? scriptPath, string? requestedRoute)
+    private void WriteDebugException(XpsWebContext context, Exception exception, string? scriptPath, string? requestedRoute)
     {
         if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_DEBUG"), "1", StringComparison.Ordinal))
             return;
