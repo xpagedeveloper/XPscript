@@ -95,7 +95,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 - [x] Read basic metadata such as format, pixel dimensions and DPI.
 - [x] Read EXIF metadata where available.
-- [ ] Preserve EXIF, ICC, XMP and other supported metadata/profiles by default when the destination format supports them.
+- [x] Preserve EXIF, ICC, XMP and other supported metadata/profiles by default when the destination format supports them.
 - [x] Never strip metadata implicitly during normal XPImage editing.
 - [x] Allow explicit metadata/profile removal when requested by the script.
 - [x] Handle image orientation metadata correctly on load or provide explicit auto-orient behavior.
@@ -208,7 +208,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 - [x] Read EXIF metadata through an XPScript-owned representation.
 - [x] Read/write supported image metadata/profile values where practical.
-- [ ] Preserve supported metadata/profiles by default.
+- [x] Preserve supported metadata/profiles by default.
 - [x] Explicit metadata/profile stripping.
 - [x] `AutoOrient()`.
 - [ ] Keep metadata untrusted and enforce size/resource limits.
