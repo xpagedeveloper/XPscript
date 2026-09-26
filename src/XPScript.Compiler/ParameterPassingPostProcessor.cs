@@ -156,7 +156,7 @@ internal sealed class ParameterPassingPostProcessor
 
             if (IsDirectRefArgument(argument))
             {
-                callArgs[argIndex] = "ref " + argument;
+                callArgs[argIndex] = "ref " + NormalizeDirectRefArgument(argument);
                 continue;
             }
 
@@ -229,8 +229,19 @@ internal sealed class ParameterPassingPostProcessor
         return -1;
     }
 
-    private static bool IsDirectRefArgument(string value) =>
-        Regex.IsMatch(value, @"^[A-Za-z_]\w*$", RegexOptions.CultureInvariant);
+    private static bool IsDirectRefArgument(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.StartsWith("ref ", StringComparison.Ordinal))
+            trimmed = trimmed[4..].Trim();
+        return Regex.IsMatch(trimmed, @"^[A-Za-z_]\w*$", RegexOptions.CultureInvariant);
+    }
+
+    private static string NormalizeDirectRefArgument(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed.StartsWith("ref ", StringComparison.Ordinal) ? trimmed[4..].Trim() : trimmed;
+    }
 
     private static bool IsAssignableArgument(string value) =>
         Regex.IsMatch(value, @"^(?:this\.)?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$", RegexOptions.CultureInvariant);
