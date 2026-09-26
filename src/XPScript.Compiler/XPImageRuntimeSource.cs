@@ -249,6 +249,39 @@ internal sealed class XPImage : System.IDisposable
             .Draw(Image);
     }
 
+    public void DrawTextAligned(double x, double y, string text, string fontFamily, double fontSize, string color, string alignment)
+    {
+        ValidateCoordinate(x, nameof(x));
+        ValidateCoordinate(y, nameof(y));
+        if (string.IsNullOrEmpty(text)) return;
+        if (text.Length > MaxMetadataValueChars) throw new System.InvalidOperationException("Image text exceeds the maximum length.");
+        if (!double.IsFinite(fontSize) || fontSize <= 0 || fontSize > MaxDimension) throw new System.ArgumentOutOfRangeException(nameof(fontSize));
+        new ImageMagick.Drawing.Drawables()
+            .Font(ResolveFont(fontFamily))
+            .FontPointSize(fontSize)
+            .TextAlignment(ParseTextAlignment(alignment))
+            .StrokeColor(ImageMagick.MagickColors.Transparent)
+            .FillColor(ParseColor(color))
+            .Text(x, y, text)
+            .Draw(Image);
+    }
+
+    public void DrawTextWrapped(double x, double y, double width, string text, string fontFamily, double fontSize, string color, string alignment)
+    {
+        ValidateCoordinate(x, nameof(x));
+        ValidateCoordinate(y, nameof(y));
+        if (!double.IsFinite(width) || width <= 0 || width > MaxDimension) throw new System.ArgumentOutOfRangeException(nameof(width));
+        if (string.IsNullOrEmpty(text)) return;
+        var lines = WrapText(text, fontSize, width);
+        var lineHeight = fontSize * 1.25;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var anchorX = string.Equals(alignment, "center", System.StringComparison.OrdinalIgnoreCase) ? x + width / 2d :
+                string.Equals(alignment, "right", System.StringComparison.OrdinalIgnoreCase) ? x + width : x;
+            DrawTextAligned(anchorX, y + i * lineHeight, lines[i], fontFamily, fontSize, color, alignment);
+        }
+    }
+
     public void WatermarkText(double x, double y, string text, string fontFamily, double fontSize, string color, double opacity)
     {
         ValidateOpacity(opacity);
@@ -482,6 +515,41 @@ internal sealed class XPImage : System.IDisposable
             "software" => ImageMagick.ExifTag.Software,
             _ => throw new System.ArgumentException("Unsupported XPImage EXIF string tag: " + name, nameof(name))
         };
+    }
+
+    private static ImageMagick.TextAlignment ParseTextAlignment(string alignment)
+    {
+        if (string.IsNullOrWhiteSpace(alignment) || string.Equals(alignment, "left", System.StringComparison.OrdinalIgnoreCase)) return ImageMagick.TextAlignment.Left;
+        if (string.Equals(alignment, "center", System.StringComparison.OrdinalIgnoreCase)) return ImageMagick.TextAlignment.Center;
+        if (string.Equals(alignment, "right", System.StringComparison.OrdinalIgnoreCase)) return ImageMagick.TextAlignment.Right;
+        throw new System.ArgumentException("Text alignment must be left, center or right.", nameof(alignment));
+    }
+
+    private static System.Collections.Generic.List<string> WrapText(string text, double fontSize, double width)
+    {
+        var maxChars = System.Math.Max(1, (int)System.Math.Floor(width / (fontSize * 0.6)));
+        var result = new System.Collections.Generic.List<string>();
+        foreach (var paragraph in text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+        {
+            var words = paragraph.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) { result.Add(string.Empty); continue; }
+            var line = "";
+            foreach (var word in words)
+            {
+                var remaining = word;
+                while (remaining.Length > maxChars)
+                {
+                    if (line.Length > 0) { result.Add(line); line = ""; }
+                    result.Add(remaining.Substring(0, maxChars));
+                    remaining = remaining.Substring(maxChars);
+                }
+                var candidate = line.Length == 0 ? remaining : line + " " + remaining;
+                if (candidate.Length > maxChars && line.Length > 0) { result.Add(line); line = remaining; }
+                else line = candidate;
+            }
+            if (line.Length > 0) result.Add(line);
+        }
+        return result;
     }
 
     private static string ResolveFont(string fontFamily)
