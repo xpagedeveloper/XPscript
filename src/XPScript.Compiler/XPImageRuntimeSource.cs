@@ -365,6 +365,16 @@ internal sealed class XPImage : System.IDisposable
         if (y < 0 || y >= Height) throw new System.ArgumentOutOfRangeException(nameof(y), "Pixel y coordinate is outside the image.");
     }
 
+    public void MakeTransparent(string color)
+    {
+        Image.Transparent(ParseColor(color));
+    }
+
+    public void ReplaceColor(string sourceColor, string targetColor)
+    {
+        Image.Opaque(ParseColor(sourceColor), ParseColor(targetColor));
+    }
+
     public void AutoOrient() => _image.AutoOrient();
 
     public void DrawText(double x, double y, string text, string fontFamily, double fontSize, string color)
