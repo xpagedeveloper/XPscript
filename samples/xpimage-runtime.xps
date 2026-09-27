@@ -182,12 +182,17 @@ Sub Main()
     img.Emboss(1, 1)
     img.MotionBlur(1, 1, 15)
     img.OilPaint(1, 1)
-    img.Trim()
     img.Blur(1)
     img.Sharpen(1)
     If img.Width <> 16 Or img.Height <> 16 Then
         Error 5, "XPImage geometry/composition failed"
     End If
+    Dim trimImage As XPImage
+    Set trimImage = New XPImage(20, 20, "#ffffff")
+    trimImage.DrawRectangle(5, 5, 10, 10, "#000000", 0, "#000000")
+    trimImage.Trim()
+    If trimImage.Width >= 20 Or trimImage.Height >= 20 Then Error 5, "XPImage Trim did not reduce bordered image dimensions"
+
     Dim thresholdImage As XPImage
     Set thresholdImage = New XPImage(16, 16, "#808080")
     thresholdImage.DrawRectangle(0, 0, 8, 16, "#202020", 0, "#202020")
