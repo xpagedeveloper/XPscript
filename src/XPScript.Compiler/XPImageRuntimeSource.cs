@@ -38,6 +38,14 @@ internal sealed class XPImage : System.IDisposable
     public int Width => checked((int)Image.Width);
     public int Height => checked((int)Image.Height);
     public string Format => _format;
+    public bool HasAlpha => Image.HasAlpha;
+    public string ColorSpace => Image.ColorSpace.ToString();
+    public string ColorType => Image.ColorType.ToString();
+    public double ImageGamma => Image.Gamma;
+    public int Depth => checked((int)Image.Depth);
+    public int Quality => checked((int)Image.Quality);
+    public string Orientation => Image.Orientation.ToString();
+    public long PixelCount => checked((long)Width * Height);
     private ImageMagick.MagickImage Image => _image ?? throw new System.ObjectDisposedException(nameof(XPImage));
     public double DpiX => _image.Density?.X ?? 0d;
     public double DpiY => _image.Density?.Y ?? 0d;
