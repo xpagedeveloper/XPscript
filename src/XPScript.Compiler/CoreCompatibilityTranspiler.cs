@@ -797,10 +797,10 @@ internal sealed class CoreCompatibilityTranspiler
         foreach (var p in parameters)
         {
             if (Regex.IsMatch(line, $@"\b{Regex.Escape(p.Name)}\s+As\s+Variant\b", RegexOptions.IgnoreCase)) continue;
-            // Runtime object parameters (for example XPImage) are ordinary nullable CLR
-            // references. They must not use the LSRef<T>.Value lowering used by
-            // user-defined XPScript classes.
-            if (IsRuntimeObjectType(p.Type)) continue;
+            // Runtime objects and user-defined class parameters are already represented
+            // as their usable object value at this stage. Only scalar parameters lowered
+            // through the compatibility reference wrapper require .Value.
+            if (IsRuntimeObjectType(p.Type) || _classes.Contains(p.Type)) continue;
             line = ReplaceOutsideStrings(line, $@"(?<![\w.]){Regex.Escape(p.Name)}(?![\w])", p.Name + ".Value");
         }
         return line;
