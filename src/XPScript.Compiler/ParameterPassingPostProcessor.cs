@@ -197,8 +197,7 @@ internal sealed class ParameterPassingPostProcessor
         if (markerIndex < 0) markerIndex = cleaned.IndexOf(ByValPrefix, StringComparison.Ordinal);
         if (markerIndex < 0) return null;
         var beforeName = cleaned[..markerIndex].TrimEnd();
-        var lastSpace = beforeName.LastIndexOf(' ');
-        return lastSpace < 0 ? null : beforeName[..lastSpace].Trim();
+        return beforeName.Length == 0 ? null : beforeName;
     }
 
     private static string TakeTrailingMemberReceiver(StringBuilder output)
