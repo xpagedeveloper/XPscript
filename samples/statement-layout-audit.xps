@@ -24,8 +24,8 @@ Class ChildBox As _
 End Class
 
 Function AddValues( _
-    leftValue As Integer, _
-    rightValue As Integer _
+    ByVal leftValue As Integer, _
+    ByVal rightValue As Integer _
 ) As Integer
     AddValues = leftValue + rightValue
 End Function
