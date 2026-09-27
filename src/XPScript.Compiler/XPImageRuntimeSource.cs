@@ -269,6 +269,27 @@ internal sealed class XPImage : System.IDisposable
         Image.AutoThreshold(thresholdMethod);
     }
 
+    public void Sepia(double threshold)
+    {
+        if (!double.IsFinite(threshold) || threshold < 0d || threshold > 100d)
+            throw new System.ArgumentOutOfRangeException(nameof(threshold), "Sepia threshold must be between 0 and 100.");
+        Image.SepiaTone(new ImageMagick.Percentage(threshold));
+    }
+
+    public void Hue(double value)
+    {
+        if (!double.IsFinite(value) || value < -100d || value > 100d)
+            throw new System.ArgumentOutOfRangeException(nameof(value), "Hue must be between -100 and 100.");
+        Image.Modulate(new ImageMagick.Percentage(100d), new ImageMagick.Percentage(100d), new ImageMagick.Percentage(100d + value));
+    }
+
+    public void Colorize(string color, double percentage)
+    {
+        if (!double.IsFinite(percentage) || percentage < 0d || percentage > 100d)
+            throw new System.ArgumentOutOfRangeException(nameof(percentage), "Colorize percentage must be between 0 and 100.");
+        Image.Colorize(ParseColor(color), new ImageMagick.Percentage(percentage));
+    }
+
     public void Blur(double radius) => _image.Blur(radius, radius <= 0 ? 1.0 : radius);
     public void Sharpen(double amount) => _image.Sharpen(0, amount <= 0 ? 1.0 : amount);
 
