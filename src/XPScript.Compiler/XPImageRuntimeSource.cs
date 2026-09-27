@@ -454,7 +454,8 @@ internal sealed class XPImage : System.IDisposable
     public double Compare(XPImage other)
     {
         if (other is null) throw new System.ArgumentNullException(nameof(other));
-        return Image.Compare(other.Image, ImageMagick.ErrorMetric.RootMeanSquared);
+        var distortion = Image.Compare(other.Image, ImageMagick.ErrorMetric.RootMeanSquared);
+        return Math.Clamp(distortion * 100d, 0d, 100d);
     }
 
     public XPImage Difference(XPImage other)
