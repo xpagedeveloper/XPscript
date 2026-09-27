@@ -228,6 +228,16 @@ internal sealed class XPImage : System.IDisposable
 
     public void Grayscale() => _image.Grayscale();
     public void Invert() => _image.Negate();
+    public void AutoLevel() => Image.AutoLevel();
+    public void AutoGamma() => Image.AutoGamma();
+    public void Normalize() => Image.Normalize();
+
+    public void Gamma(double value)
+    {
+        if (!double.IsFinite(value) || value <= 0d || value > 10d)
+            throw new System.ArgumentOutOfRangeException(nameof(value), "Gamma must be greater than 0 and at most 10.");
+        Image.GammaCorrect(value);
+    }
     public void Blur(double radius) => _image.Blur(radius, radius <= 0 ? 1.0 : radius);
     public void Sharpen(double amount) => _image.Sharpen(0, amount <= 0 ? 1.0 : amount);
 
