@@ -41,7 +41,7 @@ internal sealed class XPImage : System.IDisposable
     public bool HasAlpha => Image.HasAlpha;
     public string ColorSpace => Image.ColorSpace.ToString();
     public string ColorType => Image.ColorType.ToString();
-    public double ImageGamma => Image.Gamma;
+    public double Gamma => Image.Gamma;
     public int Depth => checked((int)Image.Depth);
     public int Quality => checked((int)Image.Quality);
     public string Orientation => Image.Orientation.ToString();
@@ -240,7 +240,7 @@ internal sealed class XPImage : System.IDisposable
     public void AutoGamma() => Image.AutoGamma();
     public void Normalize() => Image.Normalize();
 
-    public void Gamma(double value)
+    public void ChangeGamma(double value)
     {
         if (!double.IsFinite(value) || value <= 0d || value > 10d)
             throw new System.ArgumentOutOfRangeException(nameof(value), "Gamma must be greater than 0 and at most 10.");
