@@ -164,9 +164,19 @@ internal sealed class ParameterPassingPostProcessor
 
             var tempName = "__xps_byref_temp_" + argIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
             var tempType = signature.ParameterTypes[argIndex];
-            declarations.Add((string.IsNullOrWhiteSpace(tempType) ? "var" : tempType) + " " + tempName + " = " + argument + ";");
+            var visibleAssignable = IsAssignableArgument(argument) && IsVisibleAssignableArgument(argument, localNames);
+            if (string.Equals(tempType, "dynamic", StringComparison.Ordinal) && !visibleAssignable && !argument.Contains("LSByRefRuntime.Create(", StringComparison.Ordinal))
+            {
+                var backingName = tempName + "_value";
+                declarations.Add("dynamic " + backingName + " = " + argument + ";");
+                declarations.Add("dynamic " + tempName + " = LSByRefRuntime.Create(() => (object?)" + backingName + ", __lsv => " + backingName + " = __lsv);");
+            }
+            else
+            {
+                declarations.Add((string.IsNullOrWhiteSpace(tempType) ? "var" : tempType) + " " + tempName + " = " + argument + ";");
+            }
             callArgs[argIndex] = "ref " + tempName;
-            if (IsAssignableArgument(argument) && IsVisibleAssignableArgument(argument, localNames))
+            if (visibleAssignable)
                 writeBacks.Add(argument + " = " + tempName + ";");
         }
 
