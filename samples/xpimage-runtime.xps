@@ -180,6 +180,8 @@ Sub Main()
     img.Median(1)
     img.EdgeDetect(1)
     img.Emboss(1, 1)
+    img.MotionBlur(1, 1, 15)
+    img.OilPaint(1)
     img.Blur(1)
     img.Sharpen(1)
     If img.Width <> 16 Or img.Height <> 16 Then
@@ -253,6 +255,20 @@ Sub Main()
     invalidEmbossErr = Err
     On Error GoTo 0
     If invalidEmbossErr = 0 Then Error 5, "XPImage invalid Emboss sigma was accepted"
+
+    Dim invalidMotionBlurErr As Integer
+    On Error Resume Next
+    img.MotionBlur(1, 0, 15)
+    invalidMotionBlurErr = Err
+    On Error GoTo 0
+    If invalidMotionBlurErr = 0 Then Error 5, "XPImage invalid MotionBlur sigma was accepted"
+
+    Dim invalidOilPaintErr As Integer
+    On Error Resume Next
+    img.OilPaint(-1)
+    invalidOilPaintErr = Err
+    On Error GoTo 0
+    If invalidOilPaintErr = 0 Then Error 5, "XPImage invalid OilPaint radius was accepted"
 
     Dim drawing As XPImage
     Set drawing = New XPImage(32, 24, "#ffffff")
