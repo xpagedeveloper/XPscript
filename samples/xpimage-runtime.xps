@@ -213,6 +213,20 @@ Sub Main()
     On Error GoTo 0
     If invalidSetPixelErr = 0 Then Error 5, "XPImage SetPixel accepted an out-of-range coordinate"
 
+    Dim transparentImage As XPImage
+    Set transparentImage = New XPImage(4, 4, "#ff0000")
+    transparentImage.MakeTransparent("#ff0000")
+    Dim transparentBytes As Byte[]
+    transparentBytes = transparentImage.ToBytes("png")
+    If Len(transparentBytes) = 0 Then Error 5, "XPImage MakeTransparent encoding failed"
+
+    Dim replaceImage As XPImage
+    Set replaceImage = New XPImage(4, 4, "#ff0000")
+    replaceImage.ReplaceColor("#ff0000", "#0000ff")
+    Dim replacedColor As String
+    replacedColor = replaceImage.GetPixel(0, 0)
+    If Len(replacedColor) = 0 Then Error 5, "XPImage ReplaceColor returned no pixel color"
+
     Dim thresholdImage As XPImage
     Set thresholdImage = New XPImage(16, 16, "#808080")
     thresholdImage.DrawRectangle(0, 0, 8, 16, "#202020", 0, "#202020")
