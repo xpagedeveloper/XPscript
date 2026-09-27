@@ -338,6 +338,8 @@ internal sealed class XPImage : System.IDisposable
     public void Blur(double radius) => _image.Blur(radius, radius <= 0 ? 1.0 : radius);
     public void Sharpen(double amount) => _image.Sharpen(0, amount <= 0 ? 1.0 : amount);
 
+    public void Trim() => Image.Trim();
+
     public void AutoOrient() => _image.AutoOrient();
 
     public void DrawText(double x, double y, string text, string fontFamily, double fontSize, string color)
