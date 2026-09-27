@@ -47,7 +47,8 @@ Sub Main()
     End If
     Print "FUNCTION_CALL=OK"
 
-    names(0) = "one"\n    names(1) = "two"
+    names(0) = "one"
+    names(1) = "two"
     ForAll name In names
         forallCount = forallCount + 1
     End ForAll
