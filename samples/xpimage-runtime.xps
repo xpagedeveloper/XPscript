@@ -173,6 +173,16 @@ Sub Main()
     img.AutoGamma()
     img.Normalize()
     img.ChangeGamma(1.1)
+If img.PixelCount <> 1024 Then Error 5, "XPImage PixelCount property failed"
+If img.Depth <= 0 Then Error 5, "XPImage Depth property failed"
+If img.Quality < 0 Then Error 5, "XPImage Quality property failed"
+If Len(img.ColorSpace) = 0 Then Error 5, "XPImage ColorSpace property failed"
+If Len(img.ColorType) = 0 Then Error 5, "XPImage ColorType property failed"
+If Len(img.Orientation) = 0 Then Error 5, "XPImage Orientation property failed"
+If img.Gamma <= 0 Then Error 5, "XPImage Gamma property failed"
+Dim alphaPropertyImage As XPImage
+Set alphaPropertyImage = New XPImage(2, 2, "#80ff0000")
+If Not alphaPropertyImage.HasAlpha Then Error 5, "XPImage HasAlpha property failed"
     img.Sepia(80)
     img.Hue(15)
     img.Colorize("#336699", 25)
