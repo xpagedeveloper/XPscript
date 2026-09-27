@@ -211,7 +211,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
   - [x] Trim().
   - [x] GetPixel() / SetPixel().
   - [x] MakeTransparent() / ReplaceColor().
-  - [ ] Statistics() / Histogram().
+  - [x] Statistics() / Histogram().
   - [ ] Compare() / Difference().
   - [ ] Properties: HasAlpha, ColorSpace, ColorType, Gamma, Depth, Quality, Orientation and PixelCount.
   - [ ] Document the extended XPImage processing API under docs/xpimage/.
