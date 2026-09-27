@@ -340,6 +340,27 @@ internal sealed class XPImage : System.IDisposable
 
     public void Trim() => Image.Trim();
 
+    public string GetPixel(int x, int y)
+    {
+        ValidatePixelCoordinate(x, y);
+        using var pixels = Image.GetPixels();
+        var color = pixels.GetPixel(x, y).ToColor() ?? ImageMagick.MagickColors.Transparent;
+        return color.ToString();
+    }
+
+    public void SetPixel(int x, int y, string color)
+    {
+        ValidatePixelCoordinate(x, y);
+        using var pixels = Image.GetPixels();
+        pixels.SetPixel(x, y, ParseColor(color));
+    }
+
+    private void ValidatePixelCoordinate(int x, int y)
+    {
+        if (x < 0 || x >= Width) throw new System.ArgumentOutOfRangeException(nameof(x), "Pixel x coordinate is outside the image.");
+        if (y < 0 || y >= Height) throw new System.ArgumentOutOfRangeException(nameof(y), "Pixel y coordinate is outside the image.");
+    }
+
     public void AutoOrient() => _image.AutoOrient();
 
     public void DrawText(double x, double y, string text, string fontFamily, double fontSize, string color)
