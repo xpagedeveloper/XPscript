@@ -881,20 +881,25 @@ internal sealed class CoreCompatibilityTranspiler
             var root = targetMatch.Groups["name"].Value;
             if (!scalarTypes.TryGetValue(root, out var actualType) || !actualType.Equals(parameter.Type, StringComparison.OrdinalIgnoreCase))
                 return false;
-            if (IsRuntimeObjectType(parameter.Type))
+            if (IsRuntimeObjectType(parameter.Type) || !IsScalarByRefType(parameter.Type))
             {
-                // Runtime objects are represented directly in generated C#. Preserve a
-                // true CLR ref argument instead of wrapping it in the dynamic LSByRef
-                // adapter used by scalar XPScript values.
-                args[i] = "ByRef " + target;
+                // Strongly typed object references must stay strongly typed. The generic
+                // parameter-passing postprocessor supplies CLR ref semantics and temporary
+                // values for non-addressable arguments; lowering these through LSByRefValue
+                // loses LSRef<T>/runtime-object type information.
+                continue;
             }
-            else
-            {
-                args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} = {ConvertExpression(parameter.Type, "__lsv")})";
-            }
+
+            args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} = {ConvertExpression(parameter.Type, "__lsv")})";
         }
         return true;
     }
+
+    private static bool IsScalarByRefType(string type) => type.ToLowerInvariant() switch
+    {
+        "variant" or "string" or "integer" or "long" or "double" or "single" or "boolean" or "byte" or "currency" or "date" => true,
+        _ => false
+    };
 
     private string RewriteErrorExpressions(string line)
     {
