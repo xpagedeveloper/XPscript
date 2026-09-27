@@ -238,6 +238,37 @@ internal sealed class XPImage : System.IDisposable
             throw new System.ArgumentOutOfRangeException(nameof(value), "Gamma must be greater than 0 and at most 10.");
         Image.GammaCorrect(value);
     }
+    public void Threshold(double percentage)
+    {
+        if (!double.IsFinite(percentage) || percentage < 0d || percentage > 100d)
+            throw new System.ArgumentOutOfRangeException(nameof(percentage), "Threshold must be between 0 and 100.");
+        Image.Threshold(new ImageMagick.Percentage(percentage));
+    }
+
+    public void AdaptiveThreshold(int width, int height, double offset)
+    {
+        if (width < 1 || height < 1 || width > MaxDimension || height > MaxDimension)
+            throw new System.ArgumentOutOfRangeException(nameof(width), "Adaptive threshold dimensions must be between 1 and 32768.");
+        if (!double.IsFinite(offset) || offset < -100d || offset > 100d)
+            throw new System.ArgumentOutOfRangeException(nameof(offset), "Adaptive threshold offset must be between -100 and 100.");
+        Image.AdaptiveThreshold((uint)width, (uint)height, new ImageMagick.Percentage(offset));
+    }
+
+    public void AutoThreshold() => AutoThreshold("otsu");
+
+    public void AutoThreshold(string method)
+    {
+        var value = (method ?? string.Empty).Trim().ToLowerInvariant();
+        var thresholdMethod = value switch
+        {
+            "" or "otsu" => ImageMagick.AutoThresholdMethod.OTSU,
+            "kapur" => ImageMagick.AutoThresholdMethod.Kapur,
+            "triangle" => ImageMagick.AutoThresholdMethod.Triangle,
+            _ => throw new System.ArgumentException("AutoThreshold method must be otsu, kapur or triangle.", nameof(method))
+        };
+        Image.AutoThreshold(thresholdMethod);
+    }
+
     public void Blur(double radius) => _image.Blur(radius, radius <= 0 ? 1.0 : radius);
     public void Sharpen(double amount) => _image.Sharpen(0, amount <= 0 ? 1.0 : amount);
 
