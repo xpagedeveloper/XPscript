@@ -326,11 +326,13 @@ internal sealed class XPImage : System.IDisposable
         Image.MotionBlur(radius, sigma, angle);
     }
 
-    public void OilPaint(double radius)
+    public void OilPaint(double radius, double sigma)
     {
         if (!double.IsFinite(radius) || radius < 0d || radius > MaxDimension)
             throw new System.ArgumentOutOfRangeException(nameof(radius), "OilPaint radius must be between 0 and 32768.");
-        Image.OilPaint(radius);
+        if (!double.IsFinite(sigma) || sigma <= 0d || sigma > MaxDimension)
+            throw new System.ArgumentOutOfRangeException(nameof(sigma), "OilPaint sigma must be greater than 0 and at most 32768.");
+        Image.OilPaint(radius, sigma);
     }
 
     public void Blur(double radius) => _image.Blur(radius, radius <= 0 ? 1.0 : radius);
