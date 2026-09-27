@@ -8,7 +8,7 @@ internal sealed class ParameterPassingPostProcessor
     private const string ByRefPrefix = "__xps_byref_";
     private const string ByValPrefix = "__xps_byval_";
 
-    private sealed record ProcedureSignature(string Name, bool[] ByRef, bool ReturnsVoid);
+    private sealed record ProcedureSignature(string Name, bool[] ByRef, string?[] ParameterTypes, bool ReturnsVoid);
 
     private static readonly Regex MethodDeclaration = new(
         @"^(?<indent>\s*)(?<prefix>(?:public|private|internal)\s+(?:static\s+)?[^\r\n(]+?\s+)(?<name>[A-Za-z_]\w*)\((?<params>[^\r\n()]*)\)(?<tail>\s*)$",
@@ -34,9 +34,11 @@ internal sealed class ParameterPassingPostProcessor
             return match.Value;
 
         var byRef = new bool[rawParameters.Count];
+        var parameterTypes = new string?[rawParameters.Count];
         for (var i = 0; i < rawParameters.Count; i++)
         {
             var parameter = rawParameters[i].Trim();
+            parameterTypes[i] = ExtractParameterType(parameter);
             if (parameter.Contains(ByRefPrefix, StringComparison.Ordinal))
             {
                 byRef[i] = true;
@@ -48,7 +50,7 @@ internal sealed class ParameterPassingPostProcessor
         var name = match.Groups["name"].Value;
         var prefix = match.Groups["prefix"].Value;
         var returnsVoid = Regex.IsMatch(prefix, @"\bvoid\s+$", RegexOptions.CultureInvariant);
-        signatures[name] = new ProcedureSignature(name, byRef, returnsVoid);
+        signatures[name] = new ProcedureSignature(name, byRef, parameterTypes, returnsVoid);
         return match.Groups["indent"].Value + prefix + name + "(" + string.Join(", ", rawParameters.Select(x => x.Trim())) + ")" + match.Groups["tail"].Value;
     }
 
@@ -161,7 +163,8 @@ internal sealed class ParameterPassingPostProcessor
             }
 
             var tempName = "__xps_byref_temp_" + argIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            declarations.Add("var " + tempName + " = " + argument + ";");
+            var tempType = signature.ParameterTypes[argIndex];
+            declarations.Add((string.IsNullOrWhiteSpace(tempType) ? "var" : tempType) + " " + tempName + " = " + argument + ";");
             callArgs[argIndex] = "ref " + tempName;
             if (IsAssignableArgument(argument))
                 writeBacks.Add(argument + " = " + tempName + ";");
@@ -185,6 +188,17 @@ internal sealed class ParameterPassingPostProcessor
         }
 
         return body.ToString();
+    }
+
+    private static string? ExtractParameterType(string parameter)
+    {
+        var cleaned = Regex.Replace(parameter, @"^(?:ref|out|in)\s+", "", RegexOptions.CultureInvariant).Trim();
+        var markerIndex = cleaned.IndexOf(ByRefPrefix, StringComparison.Ordinal);
+        if (markerIndex < 0) markerIndex = cleaned.IndexOf(ByValPrefix, StringComparison.Ordinal);
+        if (markerIndex < 0) return null;
+        var beforeName = cleaned[..markerIndex].TrimEnd();
+        var lastSpace = beforeName.LastIndexOf(' ');
+        return lastSpace < 0 ? null : beforeName[..lastSpace].Trim();
     }
 
     private static string TakeTrailingMemberReceiver(StringBuilder output)
