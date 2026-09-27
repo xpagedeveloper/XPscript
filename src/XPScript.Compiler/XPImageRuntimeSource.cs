@@ -351,8 +351,12 @@ internal sealed class XPImage : System.IDisposable
     public void SetPixel(int x, int y, string color)
     {
         ValidatePixelCoordinate(x, y);
+        var parsed = ParseColor(color);
+        using var colorImage = new ImageMagick.MagickImage(parsed, 1, 1);
+        using var colorPixels = colorImage.GetPixels();
+        var channels = colorPixels.GetPixel(0, 0).ToArray();
         using var pixels = Image.GetPixels();
-        pixels.SetPixel(x, y, ParseColor(color));
+        pixels.SetPixel(x, y, channels);
     }
 
     private void ValidatePixelCoordinate(int x, int y)
