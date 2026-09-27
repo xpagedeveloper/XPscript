@@ -64,13 +64,6 @@ internal sealed class ParameterPassingPreprocessor
                 continue;
             }
 
-            // Local declarations shadow parameter names from this point onward. Do not
-            // rewrite the declaration itself or later references to the local as a
-            // parameter marker.
-            var local = Regex.Match(line, @"^\s*(?:Dim|Static|Const)\s+([A-Za-z_]\w*)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-            if (local.Success)
-                activeParameters.Remove(local.Groups[1].Value);
-
             lines[i] = ReplaceIdentifiers(line, activeParameters);
         }
 
