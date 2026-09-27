@@ -209,7 +209,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
   - [x] Despeckle(), Median(), EdgeDetect(), Emboss().
   - [x] MotionBlur(), OilPaint().
   - [x] Trim().
-  - [ ] GetPixel() / SetPixel().
+  - [x] GetPixel() / SetPixel().
   - [ ] MakeTransparent() / ReplaceColor().
   - [ ] Statistics() / Histogram().
   - [ ] Compare() / Difference().
