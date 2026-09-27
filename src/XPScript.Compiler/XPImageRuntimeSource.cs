@@ -426,6 +426,19 @@ internal sealed class XPImage : System.IDisposable
 
     public byte[] ToBytes(string format) => ToBytes(format, null);
 
+    public string MimeType() => MimeType(_format);
+
+    public static string MimeType(string format) => NormalizeFormat(format) switch
+    {
+        "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        "bmp" => "image/bmp",
+        "tiff" => "image/tiff",
+        _ => throw new System.ArgumentException("Unsupported image format.", nameof(format))
+    };
+
     public byte[] ToBytes(string format, int? quality)
     {
         var normalized = NormalizeFormat(format);
