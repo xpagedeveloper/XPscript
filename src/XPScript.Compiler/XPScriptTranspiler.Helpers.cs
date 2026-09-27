@@ -105,10 +105,11 @@ public sealed partial class XPScriptTranspiler
         var prefix = generated[..activation];
         var suffix = generated[activation..];
         var removedIds = new HashSet<int>();
-        var wrapperPattern = new Regex(@"(?m)^(?<indent>[ \t]*)__ls_stmt_before_(?<id>\d+):;\r?\n[ \t]*try \{ (?<statement>.*) \}\r?\n[ \t]*catch \(Exception __lsEx\) \{.*\}\r?\n[ \t]*__ls_stmt_after_\d+:;\r?\n?", RegexOptions.CultureInvariant);
+        var wrapperPattern = new Regex(@"(?m)^(?<indent>[ \t]*)(?:__ls_stmt_before_(?<beforeId>\d+):;\r?\n[ \t]*)?try \{ (?<statement>.*) \}\r?\n[ \t]*catch \(Exception __lsEx\) \{.*\}\r?\n[ \t]*__ls_stmt_after_(?<afterId>\d+):;\r?\n?", RegexOptions.CultureInvariant);
         prefix = wrapperPattern.Replace(prefix, match =>
         {
-            removedIds.Add(int.Parse(match.Groups["id"].Value));
+            var id = match.Groups["beforeId"].Success ? match.Groups["beforeId"].Value : match.Groups["afterId"].Value;
+            removedIds.Add(int.Parse(id));
             return match.Groups["indent"].Value + match.Groups["statement"].Value + Environment.NewLine;
         });
         generated = prefix + suffix;
