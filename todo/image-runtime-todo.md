@@ -103,12 +103,12 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 ## Avalonia desktop integration
 
-- [ ] Allow an `XPImage` instance to be used directly as the source of an Avalonia-backed UI image.
-- [ ] Extend UIForm image source handling so it accepts both the existing String source and `XPImage`.
-- [ ] Bridge XPImage to Avalonia entirely in memory without temporary files.
-- [ ] Give Avalonia an independent/read-safe representation so later XPImage mutations cannot corrupt the displayed image.
+- [x] Allow an `XPImage` instance to be used directly as the source of an Avalonia-backed UI image.
+- [x] Extend UIForm image source handling so it accepts both the existing String source and `XPImage`.
+- [x] Bridge XPImage to Avalonia entirely in memory without temporary files.
+- [x] Give Avalonia an independent/read-safe representation so later XPImage mutations cannot corrupt the displayed image.
 - [ ] Dispose Avalonia bitmap/stream resources deterministically when replaced or detached.
-- [ ] Keep Avalonia types out of the public XPImage API and keep Avalonia dependencies out of CLI/web applications.
+- [x] Keep Avalonia types out of the public XPImage API and keep Avalonia dependencies out of CLI/web applications.
 
 ## AI image integration boundary
 
