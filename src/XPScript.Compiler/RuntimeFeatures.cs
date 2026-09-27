@@ -19,7 +19,7 @@ public readonly record struct RuntimeFeatures(
     bool Image = false)
 {
     public bool RequiresHttp => Http || HttpDatabase || Attachments || Ui;
-    public bool RequiresJson => Json || JsonSchema || RequiresHttp || Database || Attachments || Ui;
+    public bool RequiresJson => Json || JsonSchema || RequiresHttp || Database || Attachments || Ui || Image;
     public bool RequiresHttpDatabaseTypes => HttpDatabase || Attachments;
 
     public IEnumerable<(string Symbol, string AllowedTargets, string? Detail)> UnavailableFor(string runtimeIdentifier)
