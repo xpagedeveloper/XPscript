@@ -451,6 +451,19 @@ internal sealed class XPImage : System.IDisposable
         return result;
     }
 
+    public double Compare(XPImage other)
+    {
+        if (other is null) throw new System.ArgumentNullException(nameof(other));
+        return Image.Compare(other.Image, ImageMagick.ErrorMetric.RootMeanSquared);
+    }
+
+    public XPImage Difference(XPImage other)
+    {
+        if (other is null) throw new System.ArgumentNullException(nameof(other));
+        var difference = Image.Compare(other.Image, ImageMagick.ErrorMetric.RootMeanSquared, out _);
+        return new XPImage((ImageMagick.MagickImage)difference, _format);
+    }
+
     public void AutoOrient() => _image.AutoOrient();
 
     public void DrawText(double x, double y, string text, string fontFamily, double fontSize, string color)
