@@ -252,7 +252,9 @@ Sub Main()
     Set compareChanged = New XPImage(4, 4, "#112233")
     compareChanged.SetPixel(0, 0, "#ffffff")
     If compareLeft.Compare(compareSame) <> 0 Then Error 5, "XPImage Compare identical images failed"
-    If compareLeft.Compare(compareChanged) <= 0 Then Error 5, "XPImage Compare changed image failed"
+    Dim comparePercentage As Double
+    comparePercentage = compareLeft.Compare(compareChanged)
+    If comparePercentage <= 0 Or comparePercentage > 100 Then Error 5, "XPImage Compare percentage failed"
     Dim differenceImage As XPImage
     Set differenceImage = compareLeft.Difference(compareChanged)
     If differenceImage.Width <> 4 Or differenceImage.Height <> 4 Then Error 5, "XPImage Difference dimensions failed"
