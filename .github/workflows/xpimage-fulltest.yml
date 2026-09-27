@@ -249,8 +249,18 @@ jobs:
               Set img = New XPImage(8, 8, "#336699")
               Dim bytes As Byte[]
               bytes = img.ToBytes("png")
-              Response.ContentType = "image/png"
+              Response.ContentType = img.MimeType()
               Response.WriteBinary(bytes)
+          End Sub
+
+          [Anonymous]
+          [Get:/attachment]
+          Sub Attachment()
+              Dim img As XPImage
+              Set img = New XPImage(8, 8, "#336699")
+              Dim bytes As Byte[]
+              bytes = img.ToBytes("webp")
+              Response.SendFile(bytes, "image.webp", img.MimeType(), False)
           End Sub
           '@ | Set-Content -Encoding utf8 ./out/xpimage-kestrel/index.xps
 
@@ -330,6 +340,9 @@ jobs:
             if ($body.Length -lt 8 -or $body[0] -ne 0x89 -or $body[1] -ne 0x50 -or $body[2] -ne 0x4e -or $body[3] -ne 0x47) {
               throw 'XPImage Kestrel /binary response is not PNG data.'
             }
+            $attachment = Invoke-XPImageCheckpoint '/attachment' ''
+            if ($attachment.Headers['Content-Type'] -notmatch '^image/webp') { throw "XPImage attachment MIME type was '$($attachment.Headers['Content-Type'])'." }
+            if ($attachment.Headers['Content-Disposition'] -notmatch '^attachment;') { throw "XPImage attachment Content-Disposition was '$($attachment.Headers['Content-Disposition'])'." }
             $uploadSource = Join-Path (Resolve-Path './out/xpimage-kestrel').Path 'upload-source.png'
             $sourceBytes = [byte[]]$binary.Content
             [System.IO.File]::WriteAllBytes($uploadSource, $sourceBytes)
