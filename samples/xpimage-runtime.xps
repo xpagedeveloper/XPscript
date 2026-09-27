@@ -244,6 +244,22 @@ Sub Main()
     On Error GoTo 0
     If invalidHistogramErr = 0 Then Error 5, "XPImage Histogram accepted invalid maxColors"
 
+    Dim compareLeft As XPImage
+    Dim compareSame As XPImage
+    Dim compareChanged As XPImage
+    Set compareLeft = New XPImage(4, 4, "#112233")
+    Set compareSame = New XPImage(4, 4, "#112233")
+    Set compareChanged = New XPImage(4, 4, "#112233")
+    compareChanged.SetPixel(0, 0, "#ffffff")
+    If compareLeft.Compare(compareSame) <> 0 Then Error 5, "XPImage Compare identical images failed"
+    If compareLeft.Compare(compareChanged) <= 0 Then Error 5, "XPImage Compare changed image failed"
+    Dim differenceImage As XPImage
+    Set differenceImage = compareLeft.Difference(compareChanged)
+    If differenceImage.Width <> 4 Or differenceImage.Height <> 4 Then Error 5, "XPImage Difference dimensions failed"
+    Dim differenceBytes As Byte[]
+    differenceBytes = differenceImage.ToBytes("png")
+    If Len(differenceBytes) = 0 Then Error 5, "XPImage Difference encoding failed"
+
     Dim thresholdImage As XPImage
     Set thresholdImage = New XPImage(16, 16, "#808080")
     thresholdImage.DrawRectangle(0, 0, 8, 16, "#202020", 0, "#202020")
