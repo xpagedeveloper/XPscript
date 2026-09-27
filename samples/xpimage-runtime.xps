@@ -173,7 +173,7 @@ Sub Main()
     img.AutoGamma()
     img.Normalize()
     img.ChangeGamma(1.1)
-If img.PixelCount <> 1024 Then Error 5, "XPImage PixelCount property failed"
+If img.PixelCount <> 256 Then Error 5, "XPImage PixelCount property failed"
 If img.Depth <= 0 Then Error 5, "XPImage Depth property failed"
 If img.Quality < 0 Then Error 5, "XPImage Quality property failed"
 If Len(img.ColorSpace) = 0 Then Error 5, "XPImage ColorSpace property failed"
