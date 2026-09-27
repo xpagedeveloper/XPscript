@@ -227,6 +227,23 @@ Sub Main()
     replacedColor = replaceImage.GetPixel(0, 0)
     If Len(replacedColor) = 0 Then Error 5, "XPImage ReplaceColor returned no pixel color"
 
+    Dim analysisImage As XPImage
+    Set analysisImage = New XPImage(2, 2, "#ff0000")
+    analysisImage.SetPixel(0, 0, "#0000ff")
+    Dim imageStats As XPJsonObject
+    Set imageStats = analysisImage.Statistics()
+    If imageStats.Get("pixelCount") <> 4 Then Error 5, "XPImage Statistics pixel count failed"
+    Dim imageHistogram As XPJsonArray
+    Set imageHistogram = analysisImage.Histogram(2)
+    If imageHistogram.Count <> 2 Then Error 5, "XPImage Histogram color count failed"
+
+    Dim invalidHistogramErr As Integer
+    On Error Resume Next
+    analysisImage.Histogram(0)
+    invalidHistogramErr = Err
+    On Error GoTo 0
+    If invalidHistogramErr = 0 Then Error 5, "XPImage Histogram accepted invalid maxColors"
+
     Dim thresholdImage As XPImage
     Set thresholdImage = New XPImage(16, 16, "#808080")
     thresholdImage.DrawRectangle(0, 0, 8, 16, "#202020", 0, "#202020")
