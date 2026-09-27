@@ -199,13 +199,19 @@ Sub Main()
     Dim pixelColor As String
     pixelColor = pixelImage.GetPixel(1, 1)
     If Len(pixelColor) = 0 Then Error 5, "XPImage GetPixel returned no color"
+    Dim invalidGetPixelErr As Integer
     On Error Resume Next
     pixelImage.GetPixel(2, 0)
-    If Err = 0 Then Error 5, "XPImage GetPixel accepted an out-of-range coordinate"
-    Err = 0
-    pixelImage.SetPixel(-1, 0, "#ffffff")
-    If Err = 0 Then Error 5, "XPImage SetPixel accepted an out-of-range coordinate"
+    invalidGetPixelErr = Err
     On Error GoTo 0
+    If invalidGetPixelErr = 0 Then Error 5, "XPImage GetPixel accepted an out-of-range coordinate"
+
+    Dim invalidSetPixelErr As Integer
+    On Error Resume Next
+    pixelImage.SetPixel(-1, 0, "#ffffff")
+    invalidSetPixelErr = Err
+    On Error GoTo 0
+    If invalidSetPixelErr = 0 Then Error 5, "XPImage SetPixel accepted an out-of-range coordinate"
 
     Dim thresholdImage As XPImage
     Set thresholdImage = New XPImage(16, 16, "#808080")
