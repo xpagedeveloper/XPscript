@@ -193,6 +193,20 @@ Sub Main()
     trimImage.Trim()
     If trimImage.Width >= 20 Or trimImage.Height >= 20 Then Error 5, "XPImage Trim did not reduce bordered image dimensions"
 
+    Dim pixelImage As XPImage
+    Set pixelImage = New XPImage(2, 2, "#000000")
+    pixelImage.SetPixel(1, 1, "#ff0000")
+    Dim pixelColor As String
+    pixelColor = pixelImage.GetPixel(1, 1)
+    If Len(pixelColor) = 0 Then Error 5, "XPImage GetPixel returned no color"
+    On Error Resume Next
+    pixelImage.GetPixel(2, 0)
+    If Err = 0 Then Error 5, "XPImage GetPixel accepted an out-of-range coordinate"
+    Err = 0
+    pixelImage.SetPixel(-1, 0, "#ffffff")
+    If Err = 0 Then Error 5, "XPImage SetPixel accepted an out-of-range coordinate"
+    On Error GoTo 0
+
     Dim thresholdImage As XPImage
     Set thresholdImage = New XPImage(16, 16, "#808080")
     thresholdImage.DrawRectangle(0, 0, 8, 16, "#202020", 0, "#202020")
