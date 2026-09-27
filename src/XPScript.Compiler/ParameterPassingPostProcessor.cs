@@ -247,7 +247,10 @@ internal sealed class ParameterPassingPostProcessor
         var trimmed = value.Trim();
         if (trimmed.StartsWith("ref ", StringComparison.Ordinal))
             trimmed = trimmed[4..].Trim();
-        return Regex.IsMatch(trimmed, @"^[A-Za-z_]\w*$", RegexOptions.CultureInvariant);
+        // Only compiler-generated parameter markers are guaranteed to be valid CLR ref
+        // arguments here. Ordinary identifiers may be constants, fields or other values
+        // that cannot legally be passed by ref; route those through a temporary instead.
+        return Regex.IsMatch(trimmed, @"^__xps_byref_[A-Za-z_]\w*$", RegexOptions.CultureInvariant);
     }
 
     private static string NormalizeDirectRefArgument(string value)
