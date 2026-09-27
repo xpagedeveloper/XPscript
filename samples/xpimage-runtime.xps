@@ -173,6 +173,9 @@ Sub Main()
     img.AutoGamma()
     img.Normalize()
     img.Gamma(1.1)
+    img.Sepia(80)
+    img.Hue(15)
+    img.Colorize("#336699", 25)
     img.Blur(1)
     img.Sharpen(1)
     If img.Width <> 16 Or img.Height <> 16 Then
@@ -211,6 +214,20 @@ Sub Main()
     invalidAutoThresholdErr = Err
     On Error GoTo 0
     If invalidAutoThresholdErr = 0 Then Error 5, "XPImage invalid auto-threshold method was accepted"
+
+    Dim invalidColorizeErr As Integer
+    On Error Resume Next
+    img.Colorize("#ffffff", 101)
+    invalidColorizeErr = Err
+    On Error GoTo 0
+    If invalidColorizeErr = 0 Then Error 5, "XPImage invalid Colorize percentage was accepted"
+
+    Dim invalidHueErr As Integer
+    On Error Resume Next
+    img.Hue(101)
+    invalidHueErr = Err
+    On Error GoTo 0
+    If invalidHueErr = 0 Then Error 5, "XPImage invalid Hue value was accepted"
 
     Dim drawing As XPImage
     Set drawing = New XPImage(32, 24, "#ffffff")
