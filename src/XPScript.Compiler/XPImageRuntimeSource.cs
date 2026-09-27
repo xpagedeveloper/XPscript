@@ -292,11 +292,11 @@ internal sealed class XPImage : System.IDisposable
 
     public void Despeckle() => Image.Despeckle();
 
-    public void Median(double radius)
+    public void Median(int radius)
     {
-        if (!double.IsFinite(radius) || radius < 0d || radius > MaxDimension)
+        if (radius < 0 || radius > MaxDimension)
             throw new System.ArgumentOutOfRangeException(nameof(radius), "Median radius must be between 0 and 32768.");
-        Image.MedianFilter(radius);
+        Image.MedianFilter((uint)radius);
     }
 
     public void EdgeDetect(double radius)
