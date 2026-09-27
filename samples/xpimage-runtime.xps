@@ -182,6 +182,7 @@ Sub Main()
     img.Emboss(1, 1)
     img.MotionBlur(1, 1, 15)
     img.OilPaint(1, 1)
+    img.Trim()
     img.Blur(1)
     img.Sharpen(1)
     If img.Width <> 16 Or img.Height <> 16 Then
