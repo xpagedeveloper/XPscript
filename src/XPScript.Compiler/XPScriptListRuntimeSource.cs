@@ -39,6 +39,19 @@ internal sealed class LSList<T> : ILSList, IXPScriptIterable, System.Collections
     public object? GetValue(object? tag) => this[tag];
     public void SetValue(object? tag, object? value) => this[tag] = Coerce(value);
 
+    public void Append(T value)
+    {
+        var index = 0;
+        string tag;
+        do
+        {
+            tag = index.ToString(CultureInfo.InvariantCulture);
+            index++;
+        }
+        while (_values.ContainsKey(tag));
+        this[tag] = value;
+    }
+
     public void Erase(object? tag)
     {
         var key = NormalizeTag(tag);
