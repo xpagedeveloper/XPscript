@@ -290,6 +290,31 @@ internal sealed class XPImage : System.IDisposable
         Image.Colorize(ParseColor(color), new ImageMagick.Percentage(percentage));
     }
 
+    public void Despeckle() => Image.Despeckle();
+
+    public void Median(double radius)
+    {
+        if (!double.IsFinite(radius) || radius < 0d || radius > MaxDimension)
+            throw new System.ArgumentOutOfRangeException(nameof(radius), "Median radius must be between 0 and 32768.");
+        Image.MedianFilter(radius);
+    }
+
+    public void EdgeDetect(double radius)
+    {
+        if (!double.IsFinite(radius) || radius < 0d || radius > MaxDimension)
+            throw new System.ArgumentOutOfRangeException(nameof(radius), "EdgeDetect radius must be between 0 and 32768.");
+        Image.Edge(radius);
+    }
+
+    public void Emboss(double radius, double sigma)
+    {
+        if (!double.IsFinite(radius) || radius < 0d || radius > MaxDimension)
+            throw new System.ArgumentOutOfRangeException(nameof(radius), "Emboss radius must be between 0 and 32768.");
+        if (!double.IsFinite(sigma) || sigma <= 0d || sigma > MaxDimension)
+            throw new System.ArgumentOutOfRangeException(nameof(sigma), "Emboss sigma must be greater than 0 and at most 32768.");
+        Image.Emboss(radius, sigma);
+    }
+
     public void Blur(double radius) => _image.Blur(radius, radius <= 0 ? 1.0 : radius);
     public void Sharpen(double amount) => _image.Sharpen(0, amount <= 0 ? 1.0 : amount);
 
