@@ -477,3 +477,25 @@ Host sessions must be enabled. See [REST API development](rest-api.md).
 | `Application.Log.Error` | `Application.Log.Error(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an ERROR event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
 | `Application.Log.Critical` | `Application.Log.Critical(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes a FATAL event to the application JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
 | `Application.Audit.Write` | `Application.Audit.Write(eventName, message [, attributes])` | Stable event name, message and optional `XPJsonObject`. | Writes an immutable-intent audit event to the security JSONL stream. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+
+
+## XPImage
+
+XPImage is the cross-platform raster image runtime backed internally by Magick.NET. Magick.NET types are not exposed to XPscript. The complete processing guide is in [XPImage](xpimage/index.md).
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `XPImage` | `New XPImage(width, height [, background])` | Pixel dimensions and optional color. | Creates a bounded raster image. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.ChangeGamma` | `image.ChangeGamma(value)` | Positive gamma correction value, at most 10. | Applies gamma correction to the image pixels. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Compare` | `image.Compare(other)` | Another XPImage. | Returns normalized RMS image difference from 0 (identical) through 100 (maximum difference). | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Difference` | `image.Difference(other)` | Another XPImage. | Returns a new XPImage containing ImageMagick's visual difference image. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Statistics` | `image.Statistics()` | none | Returns an XPJsonObject with dimensions, pixel count and per-channel minimum, maximum, mean and standard deviation. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Histogram` | `image.Histogram([maxColors])` | Optional maximum number of colors, 1 through 4096; default 20. | Returns an XPJsonArray of the most frequent colors with count and percentage. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.HasAlpha` | `image.HasAlpha` | none | Reports whether the image has an alpha channel. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.ColorSpace` | `image.ColorSpace` | none | Returns the current color-space name. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.ColorType` | `image.ColorType` | none | Returns the current ImageMagick color-type name. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Gamma` | `image.Gamma` | none | Returns the image gamma value. Use ChangeGamma to modify pixels. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Depth` | `image.Depth` | none | Returns the image bit depth reported by ImageMagick. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Quality` | `image.Quality` | none | Returns the current encoder/image quality value. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Orientation` | `image.Orientation` | none | Returns the current orientation name. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.PixelCount` | `image.PixelCount` | none | Returns Width multiplied by Height as a 64-bit count. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
