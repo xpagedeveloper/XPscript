@@ -375,6 +375,82 @@ internal sealed class XPImage : System.IDisposable
         Image.Opaque(ParseColor(sourceColor), ParseColor(targetColor));
     }
 
+    public XPScriptJsonObject Statistics()
+    {
+        var result = XPScriptNativeJson.CreateObject();
+        result.Set("width", Width);
+        result.Set("height", Height);
+        result.Set("pixelCount", (long)Width * Height);
+
+        using var pixels = Image.GetPixels();
+        var channels = Image.HasAlpha ? 4 : 3;
+        var sums = new double[channels];
+        var sumsSquared = new double[channels];
+        var minima = Enumerable.Repeat(double.PositiveInfinity, channels).ToArray();
+        var maxima = Enumerable.Repeat(double.NegativeInfinity, channels).ToArray();
+        var count = 0L;
+        for (var y = 0; y < Height; y++)
+        {
+            for (var x = 0; x < Width; x++)
+            {
+                var values = pixels.GetPixel(x, y).ToArray();
+                for (var channel = 0; channel < channels && channel < values.Length; channel++)
+                {
+                    var value = values[channel] / (double)ushort.MaxValue;
+                    sums[channel] += value;
+                    sumsSquared[channel] += value * value;
+                    minima[channel] = Math.Min(minima[channel], value);
+                    maxima[channel] = Math.Max(maxima[channel], value);
+                }
+                count++;
+            }
+        }
+
+        var names = Image.HasAlpha ? new[] { "red", "green", "blue", "alpha" } : new[] { "red", "green", "blue" };
+        for (var channel = 0; channel < names.Length; channel++)
+        {
+            var stats = XPScriptNativeJson.CreateObject();
+            var mean = count == 0 ? 0d : sums[channel] / count;
+            var variance = count == 0 ? 0d : Math.Max(0d, sumsSquared[channel] / count - mean * mean);
+            stats.Set("minimum", count == 0 ? 0d : minima[channel]);
+            stats.Set("maximum", count == 0 ? 0d : maxima[channel]);
+            stats.Set("mean", mean);
+            stats.Set("standardDeviation", Math.Sqrt(variance));
+            result.Set(names[channel], stats);
+        }
+        return result;
+    }
+
+    public XPScriptJsonArray Histogram() => Histogram(20);
+
+    public XPScriptJsonArray Histogram(int maxColors)
+    {
+        if (maxColors < 1 || maxColors > 4096)
+            throw new System.ArgumentOutOfRangeException(nameof(maxColors), "Histogram maxColors must be between 1 and 4096.");
+
+        var counts = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        using var pixels = Image.GetPixels();
+        for (var y = 0; y < Height; y++)
+        {
+            for (var x = 0; x < Width; x++)
+            {
+                var color = (pixels.GetPixel(x, y).ToColor() ?? ImageMagick.MagickColors.Transparent).ToString();
+                counts[color] = counts.TryGetValue(color, out var current) ? current + 1 : 1;
+            }
+        }
+
+        var result = XPScriptNativeJson.CreateArray();
+        foreach (var pair in counts.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key, StringComparer.Ordinal).Take(maxColors))
+        {
+            var item = XPScriptNativeJson.CreateObject();
+            item.Set("color", pair.Key);
+            item.Set("count", pair.Value);
+            item.Set("percentage", Width == 0 || Height == 0 ? 0d : pair.Value * 100d / ((long)Width * Height));
+            result.Add(item);
+        }
+        return result;
+    }
+
     public void AutoOrient() => _image.AutoOrient();
 
     public void DrawText(double x, double y, string text, string fontFamily, double fontSize, string color)
