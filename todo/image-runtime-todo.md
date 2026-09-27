@@ -203,7 +203,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] `Sharpen(amount)`.
 - [x] Opacity adjustment.
 - [ ] Add further ImageMagick effects only where they fit a stable, portable XPImage API.
-  - [x] AutoLevel(), AutoGamma(), Normalize(), Gamma(value).
+  - [x] AutoLevel(), AutoGamma(), Normalize(), ChangeGamma(value).
   - [x] Threshold(), AdaptiveThreshold(), AutoThreshold().
   - [x] Sepia(), Hue(), Colorize().
   - [x] Despeckle(), Median(), EdgeDetect(), Emboss().
