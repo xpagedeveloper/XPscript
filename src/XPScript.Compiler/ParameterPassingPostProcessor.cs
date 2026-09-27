@@ -135,13 +135,13 @@ internal sealed class ParameterPassingPostProcessor
 
             var receiver = TakeTrailingMemberReceiver(output);
             var callTarget = receiver.Length == 0 ? identifier : receiver + identifier;
-            output.Append(BuildTemporaryByRefCall(callTarget, args, signature));
+            output.Append(BuildTemporaryByRefCall(callTarget, args, signature, GetCurrentMethodLocals(generated, start)));
             i = close + 1;
         }
         return output.ToString();
     }
 
-    private static string BuildTemporaryByRefCall(string callTarget, IReadOnlyList<string> sourceArgs, ProcedureSignature signature)
+    private static string BuildTemporaryByRefCall(string callTarget, IReadOnlyList<string> sourceArgs, ProcedureSignature signature, IReadOnlySet<string> localNames)
     {
         var callArgs = new string[sourceArgs.Count];
         var declarations = new List<string>();
@@ -166,7 +166,7 @@ internal sealed class ParameterPassingPostProcessor
             var tempType = signature.ParameterTypes[argIndex];
             declarations.Add((string.IsNullOrWhiteSpace(tempType) ? "var" : tempType) + " " + tempName + " = " + argument + ";");
             callArgs[argIndex] = "ref " + tempName;
-            if (IsAssignableArgument(argument))
+            if (IsAssignableArgument(argument) && IsVisibleAssignableArgument(argument, localNames))
                 writeBacks.Add(argument + " = " + tempName + ";");
         }
 
@@ -258,6 +258,31 @@ internal sealed class ParameterPassingPostProcessor
 
     private static bool IsAssignableArgument(string value) =>
         Regex.IsMatch(value, @"^(?:this\.)?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$", RegexOptions.CultureInvariant);
+
+    private static bool IsVisibleAssignableArgument(string value, IReadOnlySet<string> localNames)
+    {
+        var root = value.StartsWith("this.", StringComparison.Ordinal) ? "this" : value.Split('.')[0];
+        return root.Equals("this", StringComparison.Ordinal) || localNames.Contains(root);
+    }
+
+    private static HashSet<string> GetCurrentMethodLocals(string generated, int callIndex)
+    {
+        var result = new HashSet<string>(StringComparer.Ordinal);
+        var declaration = MethodDeclaration.Matches(generated).Cast<Match>().LastOrDefault(x => x.Index < callIndex);
+        if (declaration is null) return result;
+
+        foreach (var parameter in SplitArguments(declaration.Groups["params"].Value))
+        {
+            var match = Regex.Match(parameter.Trim(), @"(?:ref\s+)?[^\s]+\s+([A-Za-z_]\w*)$", RegexOptions.CultureInvariant);
+            if (match.Success) result.Add(match.Groups[1].Value);
+        }
+
+        var bodyStart = declaration.Index + declaration.Length;
+        var prefix = generated[bodyStart..callIndex];
+        foreach (Match local in Regex.Matches(prefix, @"(?m)^\s*(?:const\s+)?[^\s;{}]+\s+([A-Za-z_]\w*)\s*(?:=|;)", RegexOptions.CultureInvariant))
+            result.Add(local.Groups[1].Value);
+        return result;
+    }
 
     private static bool IsDeclarationOccurrence(string generated, int identifierStart)
     {
