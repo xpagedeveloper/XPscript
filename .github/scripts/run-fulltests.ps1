@@ -47,6 +47,8 @@ if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
   Run-Xps ./samples/array-sort-regression.xps array-sort-regression | Out-Null
   Run-Xps ./samples/statement-layout-audit.xps statement-layout-audit | Out-Null
+  $scope = Run-Xps ./samples/scope-isolation.xps scope-isolation
+  foreach ($expected in @('LOCAL=40','STATIC=1','STATIC=2','GLOBAL=7','BYREF=4','ARRAY=22:3','LIST=kept:2')) { if ($scope.Output -notmatch [regex]::Escape($expected)) { throw "Scope isolation regression missing: $expected" } }
   Write-Host 'LANGUAGE_FULLTEST: passed'
 }
 
