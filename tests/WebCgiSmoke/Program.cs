@@ -31,6 +31,7 @@ try
     await RunAdapterRegression(root, scriptPath);
     await RunHeadRegression(root, scriptPath);
     await RunExecutableRegression(root, scriptPath);
+    await RunXPImageExecutableRegression(root);
     await RunInvalidBodyRegression(root, scriptPath);
     await RunTraversalRegression(root, scriptPath);
     Console.WriteLine("WEB-CGI-SMOKE=OK");
@@ -221,6 +222,81 @@ static async Task RunExecutableRegression(string root, string scriptPath)
         throw new Exception("CGI executable lost XPScript response header.");
     if (!stdout.EndsWith("GET|Fredrik Norling|Cgi", StringComparison.Ordinal))
         throw new Exception("CGI executable did not execute the XPScript route: " + stdout);
+}
+
+static async Task RunXPImageExecutableRegression(string root)
+{
+    var imageScriptPath = Path.Combine(root, "xpimage.xps");
+    await File.WriteAllTextAsync(imageScriptPath, """
+[Anonymous]
+[Get]
+Sub Index()
+    Dim image As New XPImage(8, 8, "#336699")
+    Dim bytes As Byte[]
+    bytes = image.ToBytes("png")
+    Response.ContentType = image.MimeType()
+    Response.WriteBinary(bytes)
+End Sub
+""");
+
+    var repoRoot = FindRepoRoot();
+    var cgiDll = Path.Combine(repoRoot, "src", "XPScript.Web.Cgi", "bin", "Release", "net10.0", "XPScript.Web.Cgi.dll");
+    if (!File.Exists(cgiDll)) throw new Exception("Built CGI executable assembly was not found: " + cgiDll);
+
+    var start = new ProcessStartInfo("dotnet")
+    {
+        UseShellExecute = false,
+        RedirectStandardInput = true,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        CreateNoWindow = true
+    };
+    start.ArgumentList.Add(cgiDll);
+    start.Environment["XPSCRIPT_WEB_ROOT"] = root;
+    start.Environment["XPSCRIPT_SITE_ID"] = "cgi-xpimage-smoke";
+    start.Environment["REQUEST_METHOD"] = "GET";
+    start.Environment["SCRIPT_NAME"] = "/xpimage.xps";
+    start.Environment["SCRIPT_FILENAME"] = imageScriptPath;
+    start.Environment["SERVER_NAME"] = "localhost";
+    start.Environment["SERVER_PROTOCOL"] = "HTTP/1.1";
+    start.Environment["REMOTE_ADDR"] = "127.0.0.1";
+    start.Environment["HTTPS"] = "off";
+
+    using var process = Process.Start(start) ?? throw new Exception("Failed to start XPImage CGI executable.");
+    process.StandardInput.Close();
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    await using var stdout = new MemoryStream();
+    var stdoutTask = process.StandardOutput.BaseStream.CopyToAsync(stdout, timeout.Token);
+    var stderrTask = process.StandardError.ReadToEndAsync(timeout.Token);
+    await process.WaitForExitAsync(timeout.Token);
+    await stdoutTask;
+    var stderr = await stderrTask;
+    var output = stdout.ToArray();
+
+    if (process.ExitCode != 0)
+        throw new Exception($"XPImage CGI executable failed with exit {process.ExitCode}. stderr={stderr}");
+    var separator = FindHeaderTerminator(output);
+    if (separator < 0) throw new Exception("XPImage CGI response did not contain a header terminator.");
+    var headers = Encoding.ASCII.GetString(output, 0, separator);
+    if (!headers.Contains("Status: 200 OK\r\n", StringComparison.Ordinal))
+        throw new Exception("XPImage CGI response did not return status 200.");
+    if (!headers.Contains("Content-Type: image/png", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("XPImage CGI response did not return image/png.");
+    var bodyOffset = separator + 4;
+    if (output.Length < bodyOffset + 8 ||
+        output[bodyOffset] != 0x89 || output[bodyOffset + 1] != 0x50 ||
+        output[bodyOffset + 2] != 0x4e || output[bodyOffset + 3] != 0x47)
+        throw new Exception("XPImage CGI response body is not PNG data.");
+    if (Directory.EnumerateFiles(root).Any(path => Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase)))
+        throw new Exception("XPImage CGI response created a public temporary PNG file.");
+}
+
+static int FindHeaderTerminator(byte[] data)
+{
+    for (var i = 0; i <= data.Length - 4; i++)
+        if (data[i] == 13 && data[i + 1] == 10 && data[i + 2] == 13 && data[i + 3] == 10)
+            return i;
+    return -1;
 }
 
 static async Task RunInvalidBodyRegression(string root, string scriptPath)
