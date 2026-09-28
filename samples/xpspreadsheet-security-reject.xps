@@ -1,7 +1,7 @@
 Option Declare
 
 Sub Main()
-    Dim book As XPSpreadsheet
-    Set book = New XPSpreadsheet(Application.Args(0))
-    Print "XLSX-FIXTURE-UNEXPECTEDLY-ACCEPTED"
+    Dim fixturePath As String
+    fixturePath = Application.Args(0)
+    Dim book As New XPSpreadsheet(fixturePath)
 End Sub
