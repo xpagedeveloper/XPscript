@@ -1,0 +1,25 @@
+Option Declare
+
+Sub Main()
+    Dim csv As New XPCsvDocument
+    Dim row As XPCsvRow
+    Dim book As XPSpreadsheet
+    Dim sheet As XPWorksheet
+    Dim exported As XPCsvDocument
+
+    Call csv.Headers.Add("id")
+    Call csv.Headers.Add("name")
+    Set row = csv.AddRow()
+    Call row.Set("id", "001")
+    Call row.Set("name", "Åsa")
+
+    Set book = csv.ToSpreadsheet("Data")
+    Set sheet = book.Worksheet("Data")
+    book.SaveAs("csv-xlsx-roundtrip.xlsx")
+
+    Set exported = sheet.ToCsv(True)
+    Call exported.Save("csv-xlsx-roundtrip.csv")
+
+    Print "ROWS=" & CStr(exported.RowCount)
+    Print "NAME=" & exported.Rows[0].Get("name")
+End Sub
