@@ -460,7 +460,10 @@ internal sealed class XPScriptArchive
                 return;
             }
             try { System.IO.File.Replace(temp, destination, null); }
-            catch (PlatformNotSupportedException) { System.IO.File.Move(temp, destination, true); }
+            catch (Exception ex) when (ex is PlatformNotSupportedException || ex is System.IO.IOException)
+            {
+                System.IO.File.Move(temp, destination, true);
+            }
         }
         catch (Exception ex)
         {
@@ -512,6 +515,7 @@ internal sealed class XPScriptArchive
         var format = NormalizeExtendedWriteFormat(Format);
         var parent = System.IO.Path.GetDirectoryName(_path!);
         if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+        var temp = _path! + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
         try
         {
@@ -541,7 +545,6 @@ internal sealed class XPScriptArchive
                 .FirstOrDefault(m => m.Name == "OpenWriter" && m.GetParameters().Length == 3 && m.GetParameters()[0].ParameterType == typeof(System.IO.Stream))
                 ?? throw new MissingMethodException("SharpCompress WriterFactory.OpenWriter(Stream, ArchiveType, IWriterOptions) was not found.");
 
-            var temp = _path! + "." + Guid.NewGuid().ToString("N") + ".tmp";
             using var stream = new System.IO.FileStream(temp, System.IO.FileMode.CreateNew, System.IO.FileAccess.Write, System.IO.FileShare.None);
             var writer = openWriter.Invoke(null, [stream, archiveType, options])
                 ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to create the archive writer.");
@@ -575,10 +578,13 @@ internal sealed class XPScriptArchive
         }
         catch (System.Reflection.TargetInvocationException ex)
         {
+            try { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); } catch { }
             throw new XPScriptRuntimeException(5, "Unable to write extended archive: " + (ex.InnerException?.Message ?? ex.Message));
         }
-        catch (Exception ex) when (ex is not XPScriptRuntimeException)
+        catch (Exception ex)
         {
+            try { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); } catch { }
+            if (ex is XPScriptRuntimeException) throw;
             throw new XPScriptRuntimeException(5, "Unable to write extended archive: " + ex.Message);
         }
     }
