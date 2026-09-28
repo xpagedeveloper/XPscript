@@ -297,13 +297,24 @@ internal sealed class XPScriptArchive
     public void ExtractAll(object? targetDirectory)
     {
         var root = XPScriptFileSystemRuntime.ResolvePath(targetDirectory);
-        System.IO.Directory.CreateDirectory(root);
-        if (UseExtendedBackend)
+        var parent = System.IO.Path.GetDirectoryName(root);
+        if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+        var staging = root.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar) + ".xps-extract-" + Guid.NewGuid().ToString("N");
+        try
         {
-            ExtractAllExtended(root);
-            return;
+            System.IO.Directory.CreateDirectory(staging);
+            if (UseExtendedBackend) ExtractAllExtended(staging);
+            else ExtractAllZip(staging);
+            CommitStagedExtraction(staging, root);
         }
+        finally
+        {
+            try { if (System.IO.Directory.Exists(staging)) System.IO.Directory.Delete(staging, true); } catch { }
+        }
+    }
 
+    private void ExtractAllZip(string root)
+    {
         using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Read);
         ValidateZip(archive.Entries);
         foreach (var entry in archive.Entries)
@@ -321,6 +332,27 @@ internal sealed class XPScriptArchive
             using var input = entry.Open();
             using var output = new System.IO.FileStream(target, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None);
             CopyLimited(input, output, entry.Length);
+        }
+    }
+
+    private static void CommitStagedExtraction(string staging, string root)
+    {
+        System.IO.Directory.CreateDirectory(root);
+        foreach (var directory in System.IO.Directory.EnumerateDirectories(staging, "*", System.IO.SearchOption.AllDirectories))
+        {
+            var relative = System.IO.Path.GetRelativePath(staging, directory);
+            var target = SafePath(root, relative.Replace('\\', '/'));
+            EnsureNoReparseParents(root, target);
+            System.IO.Directory.CreateDirectory(target);
+        }
+        foreach (var file in System.IO.Directory.EnumerateFiles(staging, "*", System.IO.SearchOption.AllDirectories))
+        {
+            var relative = System.IO.Path.GetRelativePath(staging, file);
+            var target = SafePath(root, relative.Replace('\\', '/'));
+            EnsureNoReparseParents(root, target);
+            var parent = System.IO.Path.GetDirectoryName(target);
+            if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+            System.IO.File.Move(file, target, true);
         }
     }
 
