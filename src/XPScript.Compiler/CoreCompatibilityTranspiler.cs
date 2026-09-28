@@ -281,7 +281,7 @@ internal sealed class CoreCompatibilityTranspiler
             i = j;
         }
 
-        return string.Join(Environment.NewLine, output);
+        return string.Join(Environment.NewLine, output).Replace("__LS_BYREF_ASSIGN__", "=", StringComparison.Ordinal);
     }
 
     private ProcedureInfo? ParseProcedureHeaderForLookup(string line, string? className)
@@ -890,7 +890,7 @@ internal sealed class CoreCompatibilityTranspiler
                 continue;
             }
 
-            args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} = {ConvertExpression(parameter.Type, "__lsv")})";
+            args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} __LS_BYREF_ASSIGN__ {ConvertExpression(parameter.Type, "__lsv")})";
         }
         return true;
     }
