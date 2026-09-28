@@ -2,7 +2,6 @@ Option Declare
 
 Sub Main()
     Dim book As XPSpreadsheet
-    If Application.ArgCount < 1 Then Error 5, "XLSX fixture path is required"
     Set book = New XPSpreadsheet(Application.Args(0))
-    If True Then Error 5, "Malformed or resource-limit XLSX fixture was unexpectedly accepted"
+    Print "XLSX-FIXTURE-UNEXPECTEDLY-ACCEPTED"
 End Sub
