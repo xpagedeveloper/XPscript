@@ -48,9 +48,22 @@ Sub RunCommand(command As String)
 
     Print ""
     Print "> " & command
-    Call Shell("cmd.exe /d /s /c \"" & command & " > \"" & logFile & "\" 2>&1\"")
-    Sleep 3000
+    Dim doneFile As String
+    doneFile = Environ("TEMP") & "\\xpscript-android-setup.done"
+
+    If Dir(logFile) <> "" Then Kill logFile
+    If Dir(doneFile) <> "" Then Kill doneFile
+
+    ' cmd.exe stays alive until the child command completes. It writes a marker
+    ' only after stdout/stderr have been redirected to the log.
+    Call Shell("cmd.exe /d /s /c \"" & command & " > \"" & logFile & "\" 2>&1 & echo done > \"" & doneFile & "\"\"")
+
+    Do While Dir(doneFile) = ""
+        Sleep 500
+    Loop
+
     Call PrintFile(logFile)
+    Kill doneFile
 End Sub
 
 Sub RunAdb(adb As String, arguments As String)
