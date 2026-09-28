@@ -456,3 +456,26 @@ Call csv.Save("output.csv")
 XPSpreadsheet validates XLSX packages before parsing workbook XML. Current hard limits are 64 MiB total expanded package data, 16 MiB for an individual ZIP part, and 4096 ZIP entries. The reader also requires the XLSX content-types part and `xl/workbook.xml`.
 
 Malformed packages and packages exceeding these limits fail with an XPScript runtime error. CI exercises these cases with deterministic local fixtures, including malformed input, a missing workbook part, excessive ZIP entries and an oversized expanded part.
+
+
+## CSV and JSON row objects
+
+`XPCsvDocument.ToJson()` converts a header-based CSV document to an `XPJsonArray` containing one `XPJsonObject` per row. Header names become JSON property names.
+
+`XPCsvDocument.FromJson(rows)` performs the reverse conversion. The first JSON object defines the CSV columns and their order. A property missing from a later row becomes an empty CSV field because CSV has no separate missing-property representation.
+
+```xpscript
+Dim csv As New XPCsvDocument
+Dim rows As XPJsonArray
+Dim copy As New XPCsvDocument
+
+Call csv.Headers.Add("id")
+Call csv.Headers.Add("name")
+Call csv.AddRow(Array("001", "Åsa"))
+
+Set rows = csv.ToJson()
+Call copy.FromJson(rows)
+Print copy.Rows[0].Get("name")
+```
+
+The runtime regression is `samples/csv-json-roundtrip.xps`.
