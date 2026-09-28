@@ -404,6 +404,27 @@ Common bits include `ReadOnly=1`, `Hidden=2`, `System=4`, `Directory=16`, `Archi
 
 Windows exposes native Windows attributes. On macOS/Linux XPscript synthesizes `Hidden=2` for names beginning with `.`; other bits depend on what the runtime/filesystem exposes. Do not assume Windows-only metadata exists on Unix-like systems.
 
+## Process execution
+
+Use `ShellExecute` when XPscript code needs to wait for a child process, inspect its exit code, or capture stdout/stderr. Pass arguments as an XPscript array/list rather than concatenating a command string.
+
+```xpscript
+Dim args(1) As String
+Dim result As Variant
+
+args(0) = "--version"
+args(1) = "--verbose"
+Set result = ShellExecute("tool", args)
+
+If result.ExitCode = 0 Then
+    Print result.Output
+Else
+    Print result.Error
+End If
+```
+
+`ShellExecute(executable, arguments [, timeoutMilliseconds])` returns an `XPShellResult` with `ExitCode`, `Output`, `Error`, and `TimedOut`. Timeout `0` waits indefinitely. A timed-out process tree is terminated and returns `TimedOut=True` and `ExitCode=-1`. Non-zero child exit codes are normal results. Missing/unstartable executables raise an XPscript runtime error. Prefer this structured API over command-string concatenation whenever values can vary.
+
 ## Error handling
 
 Use XPscript error handling, not C#/Java exception syntax:
