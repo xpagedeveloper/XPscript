@@ -70,8 +70,19 @@ internal sealed class XPScriptArchive
             _pendingEntries.Clear();
             var parent = System.IO.Path.GetDirectoryName(_path!);
             if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
-            using var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Create, System.IO.FileAccess.ReadWrite, System.IO.FileShare.None);
-            using var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, false);
+            var temp = _path! + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                using (var stream = new System.IO.FileStream(temp, System.IO.FileMode.CreateNew, System.IO.FileAccess.ReadWrite, System.IO.FileShare.None))
+                using (var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, false)) { }
+                ReplaceArchiveFile(temp, _path!);
+            }
+            catch (Exception ex)
+            {
+                try { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); } catch { }
+                if (ex is XPScriptRuntimeException) throw;
+                throw new XPScriptRuntimeException(5, "Archive creation failed without replacing the original archive: " + ex.Message);
+            }
             return;
         }
 
