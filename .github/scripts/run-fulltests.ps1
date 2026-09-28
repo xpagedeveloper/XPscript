@@ -46,7 +46,7 @@ Write-Host "FULLTEST_SUITE=$Suite"
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
   # Keep the actively developed scope isolation regression first so CI surfaces failures immediately.
-  Write-Host "FULLTEST_COMPILE=scope-isolation-debug"; $scopeCompile = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/scope-isolation.xps','-o','./out/fulltest/scope-isolation','--runtime=false','--debug') $compileTimeoutMilliseconds 'compile scope-isolation'; if ($scopeCompile.ExitCode -ne 0) { exit $scopeCompile.ExitCode }; Write-Host 'FULLTEST_RUN=scope-isolation'; $scope = Invoke-Bounded (Get-XpsExe 'scope-isolation') @() $runtimeTimeoutMilliseconds 'run scope-isolation'; if ($scope.ExitCode -ne 0) { exit $scope.ExitCode }
+  $scope = Run-Xps ./samples/scope-isolation.xps scope-isolation
   foreach ($expected in @('LOCAL=40','STATIC=1','STATIC=2','GLOBAL=7','BYREF=4','ARRAY=22:3','LIST=kept:2')) { if ($scope.Output -notmatch [regex]::Escape($expected)) { throw "Scope isolation regression missing: $expected" } }
   Run-Xps ./samples/array-sort-regression.xps array-sort-regression | Out-Null
   Run-Xps ./samples/statement-layout-audit.xps statement-layout-audit | Out-Null
