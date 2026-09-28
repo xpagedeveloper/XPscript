@@ -1,14 +1,13 @@
 Option Declare
 
 Sub Main()
-    Dim args(2) As String
+    Dim args(3) As String
     Dim result As Variant
 
     args(0) = "-NoLogo"
     args(1) = "-NoProfile"
     args(2) = "-Command"
 
-    ReDim Preserve args(3)
     args(3) = "[Console]::Out.Write('stdout-ok'); [Console]::Error.Write('stderr-ok'); exit 7"
     Set result = ShellExecute("pwsh", args)
 
