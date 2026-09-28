@@ -767,7 +767,7 @@ internal sealed class XPScriptArchive
         }
         if (declaredSize >= 0 && written > declaredSize + 1024 * 1024)
             throw new XPScriptRuntimeException(5, "Archive entry expanded beyond its declared size.");
-        return written;
+        if (declaredSize >= 0 && written != declaredSize)\n            throw new XPScriptRuntimeException(5, "Archive entry data is truncated or does not match its declared size.");\n        return written;
     }
 
     private static void EnsureNoReparseParents(string root, string target)
