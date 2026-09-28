@@ -1,0 +1,35 @@
+Option Declare
+
+Sub Main()
+    Dim csv As New XPCsvDocument
+    Dim row As XPCsvRow
+    Dim jsonRows As XPJsonArray
+    Dim copy As New XPCsvDocument
+
+    Call csv.Headers.Add("id")
+    Call csv.Headers.Add("name")
+    Call csv.Headers.Add("note")
+
+    Set row = csv.AddRow()
+    Call row.Set("id", "001")
+    Call row.Set("name", "Åsa")
+    Call row.Set("note", "")
+
+    Set row = csv.AddRow()
+    Call row.Set("id", "002")
+    Call row.Set("name", "李")
+    Call row.Set("note", "quoted, value")
+
+    Set jsonRows = csv.ToJson()
+    If jsonRows.Count <> 2 Then Error 5, "CSV to JSON row count failed"
+
+    Call copy.FromJson(jsonRows)
+    If copy.RowCount <> 2 Then Error 5, "JSON to CSV row count failed"
+    If copy.Rows[0].Get("id") <> "001" Then Error 5, "JSON round-trip leading zero failed"
+    If copy.Rows[0].Get("name") <> "Åsa" Then Error 5, "JSON round-trip Unicode failed"
+    If copy.Rows[0].Get("note") <> "" Then Error 5, "JSON round-trip empty value failed"
+    If copy.Rows[1].Get("name") <> "李" Then Error 5, "JSON round-trip CJK failed"
+    If copy.Rows[1].Get("note") <> "quoted, value" Then Error 5, "JSON round-trip delimiter text failed"
+
+    Print "CSV-JSON-ROUNDTRIP=OK"
+End Sub
