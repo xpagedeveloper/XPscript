@@ -527,6 +527,37 @@ End Sub
             throw new Exception($"Browser WASM bootstrap did not register '{requiredImport}'.");
     }
 
+    var archivePath = Path.Combine(root, "archive-browser.xps");
+    await File.WriteAllTextAsync(archivePath, """
+[Platform:browser-wasm]
+
+Sub Main()
+    Dim zip As New Archive()
+    zip.Create("zip")
+    zip.AddText("manifest.txt", "browser-zip")
+    Dim zipBytes As Variant
+    zipBytes = zip.ToBytes()
+
+    Dim reopened As New Archive(zipBytes)
+    Print reopened.ReadText("manifest.txt")
+    ForAll entry In reopened.Entries
+        Print entry.FullName
+    End ForAll
+
+    Dim seed() As Byte
+    Dim extended As New Archive(seed, True)
+    extended.Create("7z")
+    extended.AddText("manifest.txt", "browser-7z")
+    Dim extendedBytes As Variant
+    extendedBytes = extended.ToBytes()
+End Sub
+""");
+    await using (var archiveUnit = await compiler.CompileAsync(archivePath, root))
+    {
+        if (!archiveUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
+            throw new Exception("Archive browser-WASM compile did not produce the WASM route.");
+    }
+
     Console.WriteLine("browser-wasm smoke passed");
 }
 catch (Exception ex)
