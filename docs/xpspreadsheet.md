@@ -429,3 +429,53 @@ XPSpreadsheet still does not provide a full spreadsheet application or calculati
 Because of that limitation, XPSpreadsheet deliberately refuses to overwrite external/unmarked XLSX workbooks. `SaveAsSimple()` is the explicit opt-in operation for creating a simplified XPScript workbook from data that XPSpreadsheet can read.
 
 The file-based API is not available for `browser-wasm` targets in this version.
+
+
+## CSV interoperability example
+
+A complete reusable CSV to XLSX to CSV example is available in `examples/csv-xlsx-roundtrip.xps`. It demonstrates headers, rows, Unicode data, workbook creation, worksheet lookup, XLSX persistence and CSV export.
+
+The shortest conversion path is:
+
+```xpscript
+Dim csv As XPCsvDocument
+Dim book As XPSpreadsheet
+Dim sheet As XPWorksheet
+
+Set csv = XPCsvDocument.Load("input.csv")
+Set book = csv.ToSpreadsheet("Data")
+book.SaveAs("output.xlsx")
+
+Set sheet = book.Worksheet("Data")
+Set csv = sheet.ToCsv(True)
+Call csv.Save("output.csv")
+```
+
+## XLSX input safety limits
+
+XPSpreadsheet validates XLSX packages before parsing workbook XML. Current hard limits are 64 MiB total expanded package data, 16 MiB for an individual ZIP part, and 4096 ZIP entries. The reader also requires the XLSX content-types part and `xl/workbook.xml`.
+
+Malformed packages and packages exceeding these limits fail with an XPScript runtime error. CI exercises these cases with deterministic local fixtures, including malformed input, a missing workbook part, excessive ZIP entries and an oversized expanded part.
+
+
+## CSV and JSON row objects
+
+`XPCsvDocument.ToJson()` converts a header-based CSV document to an `XPJsonArray` containing one `XPJsonObject` per row. Header names become JSON property names.
+
+`XPCsvDocument.FromJson(rows)` performs the reverse conversion. The first JSON object defines the CSV columns and their order. A property missing from a later row becomes an empty CSV field because CSV has no separate missing-property representation.
+
+```xpscript
+Dim csv As New XPCsvDocument
+Dim rows As XPJsonArray
+Dim copy As New XPCsvDocument
+
+Call csv.Headers.Add("id")
+Call csv.Headers.Add("name")
+Call csv.AddRow(Array("001", "Åsa"))
+
+Set rows = csv.ToJson()
+Call copy.FromJson(rows)
+Print copy.Rows[0].Get("name")
+```
+
+The runtime regression is `samples/csv-json-roundtrip.xps`.

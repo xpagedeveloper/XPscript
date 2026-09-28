@@ -95,8 +95,8 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 
 ## JSON integration
 
-- [ ] Convert CSV rows to `XPJsonArray` of row objects using headers as property names.
-- [ ] Create CSV from `XPJsonArray` / row-object JSON.
+- [x] Convert CSV rows to `XPJsonArray` of row objects using headers as property names.
+- [x] Create CSV from `XPJsonArray` / row-object JSON.
 - [ ] Convert worksheet ranges to JSON.
 - [ ] Populate worksheet ranges from JSON.
 - [ ] Preserve missing versus empty values where possible and document unavoidable format differences.
@@ -151,9 +151,9 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 - [x] XLSX create/save/reopen round-trip tests.
 - [ ] XLSX Unicode, dates, numbers, booleans and formulas tests.
 - [x] XLSX multi-sheet and style round-trip tests.
-- [ ] XLSX malformed/ZIP-bomb/resource-limit negative tests.
+- [x] XLSX malformed/ZIP-bomb/resource-limit negative tests.
 - [x] CSV-to-XLSX and XLSX-to-CSV conversion tests.
-- [ ] JSON round-trip tests.
+- [x] JSON round-trip tests.
 - [ ] SQL-result and Domino-result export integration tests when those providers are implemented.
 - [ ] Kestrel, CGI and FastCGI upload/download smoke tests.
-- [ ] Add documentation and reusable examples under `docs/` and `examples/`.
+- [x] Add documentation and reusable examples under `docs/` and `examples/`.

@@ -1,0 +1,7 @@
+Option Declare
+
+Sub Main()
+    Dim fixturePath As String
+    fixturePath = Application.Args(0)
+    Dim book As New XPSpreadsheet(fixturePath)
+End Sub

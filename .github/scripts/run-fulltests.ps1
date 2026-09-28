@@ -81,6 +81,9 @@ if (Should-Run 'runtime') {
   $jsonSchemaBoolean = Run-Xps ./samples/xpjsonschema-boolean-runtime.xps xpjsonschema-boolean-runtime
   if ($jsonSchemaBoolean.Output -notmatch 'XPJSONSCHEMA-BOOLEAN-RUNTIME=OK') { throw 'XPJsonSchema boolean-schema regression did not complete.' }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/SpreadsheetCapabilityProbe/SpreadsheetCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Spreadsheet compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/SpreadsheetSecurityFixtures/SpreadsheetSecurityFixtures.csproj','-c','Release','--','./out/spreadsheet-security-fixtures') $compileTimeoutMilliseconds 'Spreadsheet security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  Compile-Xps ./samples/xpspreadsheet-security-reject.xps xpspreadsheet-security-reject
+  foreach ($fixture in @('malformed.xlsx','missing-workbook.xlsx','too-many-parts.xlsx','oversized-part.xlsx')) { Expect-XpsFailure xpspreadsheet-security-reject @("../../out/spreadsheet-security-fixtures/$fixture") "XLSX $fixture" }
   foreach ($sample in @('xpspreadsheet-basic','xpspreadsheet-worksheets','xpspreadsheet-ranges','xpspreadsheet-formatting','xpspreadsheet-autofilter','xpspreadsheet-csv-interop')) { Run-Xps "./demo/spreadsheet/$sample.xps" $sample | Out-Null }
   if (-not $IsWindows) {
     $xlsx = Get-ChildItem -Path . -Filter 'xpspreadsheet-basic.xlsx' -File -Recurse | Select-Object -First 1; if ($null -eq $xlsx) { throw 'XPSpreadsheet round-trip did not create expected XLSX.' }
@@ -88,6 +91,8 @@ if (Should-Run 'runtime') {
     try { $marker = $zip.GetEntry('docProps/custom.xml'); if ($null -eq $marker) { throw 'XPSpreadsheet workbook marker is missing.' }; $reader = [System.IO.StreamReader]::new($marker.Open()); try { $text = $reader.ReadToEnd() } finally { $reader.Dispose() }; if ($text -notmatch 'XPScriptWorkbookVersion' -or $text -notmatch '>2<') { throw 'XPSpreadsheet workbook marker is invalid.' } } finally { $zip.Dispose() }
   }
   Run-Xps ./samples/native-csv-regression.xps native-csv-regression | Out-Null
+  $csvJson = Run-Xps ./samples/csv-json-roundtrip.xps csv-json-roundtrip
+  if ($csvJson.Output -notmatch 'CSV-JSON-ROUNDTRIP=OK') { throw 'CSV JSON round-trip regression did not complete.' }
   Run-Xps ./samples/native-xml-dom-regression.xps native-xml-dom-regression | Out-Null
   $r = Run-Xps ./samples/xpai-structured-output.xps xpai-structured
   if ($r.Output -notmatch 'XPAI-STRUCTURED-RUNTIME=OK') { throw 'XPAi structured output runtime regression did not complete.' }
