@@ -444,7 +444,6 @@ var browserTargetRestrictions = new (string Source, string Symbol, string Allowe
 {
     ("Dim db As XPDBSQLite", "XPDBSQLite", "server or desktop target"),
     ("Dim db As XPDbMsSql", "XPDbMsSql", "server or desktop target"),
-    ("Dim archive As Archive", "Archive", "server or desktop target"),
     ("Dim sheet As XPSpreadsheet", "XPSpreadsheet", "server or desktop target"),
     ("Dim tools As NetworkTools", "NetworkTools", "server or desktop target")
 };
@@ -460,6 +459,11 @@ foreach (var restriction in browserTargetRestrictions)
     Require(diagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, $"Browser WASM {restriction.Symbol} active target");
     Require(diagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == restriction.AllowedTargets) == true, $"Browser WASM {restriction.Symbol} allowed targets");
 }
+
+var browserArchivePath = Path.Combine(outputRoot, "browser-archive-memory.xps");
+await File.WriteAllTextAsync(browserArchivePath, "Dim archive As Archive");
+var browserArchiveResult = await driver.ValidateWithResultAsync(browserArchivePath, "browser-wasm");
+Require(!browserArchiveResult.Errors.Any(d => d.DiagnosticCode == "XPS3001" && d.Properties?.Any(p => p.Name == "symbol" && p.Value == "Archive") == true), "Browser WASM in-memory Archive should be target-available");
 
 var supportedTargetContexts = new[]
 {
