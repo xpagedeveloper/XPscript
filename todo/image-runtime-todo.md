@@ -107,12 +107,12 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Extend UIForm image source handling so it accepts both the existing String source and `XPImage`.
 - [x] Bridge XPImage to Avalonia entirely in memory without temporary files.
 - [x] Give Avalonia an independent/read-safe representation so later XPImage mutations cannot corrupt the displayed image.
-- [ ] Dispose Avalonia bitmap/stream resources deterministically when replaced or detached.
+- [x] Dispose Avalonia bitmap/stream resources deterministically when replaced or detached.
 - [x] Keep Avalonia types out of the public XPImage API and keep Avalonia dependencies out of CLI/web applications.
 
 ## AI image integration boundary
 
-- [ ] Keep local image processing separate from AI image generation/editing.
+- [x] Keep local image processing separate from AI image generation/editing.
 - [ ] Add an optional future `AIImageTool` that can attach to `AIClient` rather than hard-coding AI generation into the image runtime.
 - [ ] Allow AIImageTool to create images from prompts through a configurable OpenAI-compatible or provider-specific endpoint adapter.
 - [ ] Allow AIImageTool to edit supplied source images where the configured provider supports image editing.
@@ -123,12 +123,12 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 ## Web runtime integration
 
 - [ ] Allow images to be returned directly via Kestrel, CGI and FastCGI without creating public temporary files.
-- [ ] Set correct MIME type for PNG, JPEG, WebP, GIF and other supported formats.
-- [ ] Support inline and attachment responses where useful.
+- [x] Set correct MIME type for PNG, JPEG, WebP, GIF and other supported formats.
+- [x] Support inline and attachment responses where useful.
 - [x] Support reading uploaded images from the existing web upload model.
 - [x] Support a fully in-memory HTTP image-processing flow: receive an uploaded image via POST, create `XPImage` from the uploaded bytes, edit/resize it, and return the encoded result directly in the HTTP response without creating a temporary image file on disk.
 - [x] Add FullTest coverage for the in-memory POST flow: upload a real image, resize it with `XPImage`, return it as binary HTTP output, and verify response MIME type, image format and resulting dimensions without relying on a temporary image file.
-- [ ] Apply the same image size/pixel/resource limits to standalone and web execution.
+- [x] Apply the same image size/pixel/resource limits to standalone and web execution.
 
 ## Security and resource limits
 
