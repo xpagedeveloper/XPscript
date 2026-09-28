@@ -1,0 +1,4 @@
+Dim archive As New Archive("example.zip")
+archive.ExtractAll("extracted")
+
+Print "Extracted " & CStr(archive.FileCount) & " files"
