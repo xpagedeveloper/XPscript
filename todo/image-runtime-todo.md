@@ -122,7 +122,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 
 ## Web runtime integration
 
-- [ ] Allow images to be returned directly via Kestrel, CGI and FastCGI without creating public temporary files.
+- [x] Allow images to be returned directly via Kestrel, CGI and FastCGI without creating public temporary files.
 - [x] Set correct MIME type for PNG, JPEG, WebP, GIF and other supported formats.
 - [x] Support inline and attachment responses where useful.
 - [x] Support reading uploaded images from the existing web upload model.
@@ -237,6 +237,6 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] XPImage uses only the selected Magick.NET backend.
 - [x] No ImageSharp or SkiaSharp dependency or image-runtime implementation remains.
 - [x] No Magick.NET implementation types leak into XPScript source syntax or public XPImage API.
-- [ ] CLI, desktop, Kestrel, CGI and FastCGI can use the same XPImage object model.
+- [x] CLI, desktop, Kestrel, CGI and FastCGI can use the same XPImage object model.
 - [x] Applications that do not use XPImage do not acquire Magick.NET dependencies.
 - [ ] Documentation and reusable examples are added under `docs/` and `examples/`.
