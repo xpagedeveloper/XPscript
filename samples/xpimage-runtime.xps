@@ -129,6 +129,38 @@ Sub Main()
     If copy2.Format <> "png" Then
         Error 5, "XPImage format round-trip failed"
     End If
+    ' Verify every supported raster format through in-memory and file round trips.
+    Dim formatNames List As String
+    formatNames(0) = "png"
+    formatNames(1) = "jpeg"
+    formatNames(2) = "webp"
+    formatNames(3) = "gif"
+    formatNames(4) = "bmp"
+    formatNames(5) = "tiff"
+    Dim formatIndex As Integer
+    For formatIndex = 0 To 5
+        Dim formatName As String
+        formatName = formatNames(formatIndex)
+        Dim formatBytes As Byte[]
+        formatBytes = img.ToBytes(formatName)
+        If Len(formatBytes) = 0 Then Error 5, "XPImage " & formatName & " encoding failed"
+        Dim formatCopy As XPImage
+        Set formatCopy = XPImage.FromBytes(formatBytes)
+        If formatCopy.Width <> 8 Or formatCopy.Height <> 6 Then Error 5, "XPImage " & formatName & " byte round-trip dimensions failed"
+        Dim formatPath As String
+        formatPath = "xpimage-format-" & CStr(formatIndex) & ".dat"
+        Dim formatFile As Integer
+        formatFile = FreeFile()
+        Open formatPath For Binary Access Write As #formatFile
+        Put #formatFile, , formatBytes
+        Close #formatFile
+        Dim loadedFormat As XPImage
+        Set loadedFormat = XPImage.Load(formatPath)
+        If loadedFormat.Width <> 8 Or loadedFormat.Height <> 6 Then Error 5, "XPImage " & formatName & " file round-trip dimensions failed"
+        If LCase(loadedFormat.Format) <> formatName And Not (formatName = "jpeg" And LCase(loadedFormat.Format) = "jpg") Then Error 5, "XPImage " & formatName & " content format detection failed"
+        Kill formatPath
+    Next
+
     Dim metadataImage As XPImage
     Set metadataImage = New XPImage(6, 6, "#224466")
     metadataImage.SetExif("Artist", "XPScript")
