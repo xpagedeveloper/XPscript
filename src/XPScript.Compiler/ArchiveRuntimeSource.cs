@@ -162,10 +162,14 @@ internal sealed class XPScriptArchive
             return removed > 0;
         }
 
-        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
-        var matches = archive.Entries.Where(x => x.FullName.Equals(name, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(name.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
-        foreach (var entry in matches) entry.Delete();
-        return matches.Count > 0;
+        var removed = false;
+        MutateZip(archive =>
+        {
+            var matches = archive.Entries.Where(x => x.FullName.Equals(name, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(name.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
+            foreach (var entry in matches) entry.Delete();
+            removed = matches.Count > 0;
+        });
+        return removed;
     }
 
     public bool Rename(object? entryName, object? newName)
@@ -189,24 +193,28 @@ internal sealed class XPScriptArchive
             return true;
         }
 
-        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
-        var entries = archive.Entries.Where(x => x.FullName.Equals(oldKey, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(oldKey.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
-        if (entries.Count == 0) return false;
-        foreach (var entry in entries)
+        var renamed = false;
+        MutateZip(archive =>
         {
-            var suffix = entry.FullName.Length == oldKey.Length ? "" : entry.FullName[oldKey.TrimEnd('/').Length..];
-            var targetName = Normalize(newKey.TrimEnd('/') + suffix + (entry.FullName.EndsWith("/", StringComparison.Ordinal) && !suffix.EndsWith("/", StringComparison.Ordinal) ? "/" : ""));
-            var replacement = archive.CreateEntry(targetName, ResolveCompressionLevel());
-            replacement.LastWriteTime = entry.LastWriteTime;
-            if (!entry.FullName.EndsWith("/", StringComparison.Ordinal))
+            var entries = archive.Entries.Where(x => x.FullName.Equals(oldKey, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(oldKey.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (entries.Count == 0) return;
+            foreach (var entry in entries)
             {
-                using var input = entry.Open();
-                using var output = replacement.Open();
-                input.CopyTo(output);
+                var suffix = entry.FullName.Length == oldKey.Length ? "" : entry.FullName[oldKey.TrimEnd('/').Length..];
+                var targetName = Normalize(newKey.TrimEnd('/') + suffix + (entry.FullName.EndsWith("/", StringComparison.Ordinal) && !suffix.EndsWith("/", StringComparison.Ordinal) ? "/" : ""));
+                var replacement = archive.CreateEntry(targetName, ResolveCompressionLevel());
+                replacement.LastWriteTime = entry.LastWriteTime;
+                if (!entry.FullName.EndsWith("/", StringComparison.Ordinal))
+                {
+                    using var input = entry.Open();
+                    using var output = replacement.Open();
+                    input.CopyTo(output);
+                }
             }
-        }
-        foreach (var entry in entries) entry.Delete();
-        return true;
+            foreach (var entry in entries) entry.Delete();
+            renamed = true;
+        });
+        return renamed;
     }
 
     public bool Contains(object? entryName)
@@ -326,12 +334,14 @@ internal sealed class XPScriptArchive
         }
 
         if (!System.IO.File.Exists(_path!)) Create("zip");
-        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
-        archive.GetEntry(name)?.Delete();
-        var entry = archive.CreateEntry(name, ResolveCompressionLevel());
-        entry.LastWriteTime = new DateTimeOffset(modified.ToUniversalTime());
-        using var output = entry.Open();
-        output.Write(bytes, 0, bytes.Length);
+        MutateZip(archive =>
+        {
+            archive.GetEntry(name)?.Delete();
+            var entry = archive.CreateEntry(name, ResolveCompressionLevel());
+            entry.LastWriteTime = new DateTimeOffset(modified.ToUniversalTime());
+            using var output = entry.Open();
+            output.Write(bytes, 0, bytes.Length);
+        });
     }
 
     private void AddDirectoryEntry(string name)
@@ -346,8 +356,10 @@ internal sealed class XPScriptArchive
         }
 
         if (!System.IO.File.Exists(_path!)) Create("zip");
-        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
-        if (archive.GetEntry(name) is null) archive.CreateEntry(name, System.IO.Compression.CompressionLevel.NoCompression);
+        MutateZip(archive =>
+        {
+            if (archive.GetEntry(name) is null) archive.CreateEntry(name, System.IO.Compression.CompressionLevel.NoCompression);
+        });
     }
 
     private void UpsertPending(PendingArchiveEntry entry)
@@ -415,6 +427,45 @@ internal sealed class XPScriptArchive
         var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Open, access, System.IO.FileShare.None);
         try { return new System.IO.Compression.ZipArchive(stream, mode, false); }
         catch { stream.Dispose(); throw; }
+    }
+
+    private void MutateZip(System.Action<System.IO.Compression.ZipArchive> mutation)
+    {
+        EnsurePath();
+        if (!System.IO.File.Exists(_path!)) throw new XPScriptRuntimeException(53, "Archive file was not found.");
+        var temp = _path! + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            System.IO.File.Copy(_path!, temp, false);
+            using (var stream = new System.IO.FileStream(temp, System.IO.FileMode.Open, System.IO.FileAccess.ReadWrite, System.IO.FileShare.None))
+            using (var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Update, false))
+                mutation(archive);
+            ReplaceArchiveFile(temp, _path!);
+        }
+        catch (Exception ex)
+        {
+            try { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); } catch { }
+            if (ex is XPScriptRuntimeException) throw;
+            throw new XPScriptRuntimeException(5, "Archive save or replacement failed without replacing the original archive: " + ex.Message);
+        }
+    }
+
+    private static void ReplaceArchiveFile(string temp, string destination)
+    {
+        try
+        {
+            if (!System.IO.File.Exists(destination))
+            {
+                System.IO.File.Move(temp, destination);
+                return;
+            }
+            try { System.IO.File.Replace(temp, destination, null); }
+            catch (PlatformNotSupportedException) { System.IO.File.Move(temp, destination, true); }
+        }
+        catch (Exception ex)
+        {
+            throw new XPScriptRuntimeException(5, "Archive replacement failed; the original archive was left unchanged: " + ex.Message);
+        }
     }
 
     private void EnsurePath()
@@ -490,7 +541,8 @@ internal sealed class XPScriptArchive
                 .FirstOrDefault(m => m.Name == "OpenWriter" && m.GetParameters().Length == 3 && m.GetParameters()[0].ParameterType == typeof(System.IO.Stream))
                 ?? throw new MissingMethodException("SharpCompress WriterFactory.OpenWriter(Stream, ArchiveType, IWriterOptions) was not found.");
 
-            using var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None);
+            var temp = _path! + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            using var stream = new System.IO.FileStream(temp, System.IO.FileMode.CreateNew, System.IO.FileAccess.Write, System.IO.FileShare.None);
             var writer = openWriter.Invoke(null, [stream, archiveType, options])
                 ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to create the archive writer.");
             try
@@ -518,6 +570,8 @@ internal sealed class XPScriptArchive
             {
                 if (writer is IDisposable disposable) disposable.Dispose();
             }
+            stream.Dispose();
+            ReplaceArchiveFile(temp, _path!);
         }
         catch (System.Reflection.TargetInvocationException ex)
         {
