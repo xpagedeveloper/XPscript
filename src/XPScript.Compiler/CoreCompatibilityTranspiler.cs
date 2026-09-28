@@ -281,7 +281,7 @@ internal sealed class CoreCompatibilityTranspiler
             i = j;
         }
 
-        return string.Join(Environment.NewLine, output).Replace("__LS_BYREF_ASSIGN__", "=", StringComparison.Ordinal);
+        return string.Join(Environment.NewLine, output);
     }
 
     private ProcedureInfo? ParseProcedureHeaderForLookup(string line, string? className)
