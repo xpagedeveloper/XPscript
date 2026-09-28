@@ -217,3 +217,23 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 
 | `Application.Log.CaptureExchange` | `Application.Log.CaptureExchange = True` | Boolean request flag. | Writes a redacted, size-limited request and response capture for the current request. | [application-web-logging.xps](../samples/application-web-logging.xps) |
 | `ApplicationLogRuntime.CaptureExchange` | `Application.Log.CaptureExchange` | Boolean request flag. | Generated runtime property for exchange capture. | [application-web-logging.xps](../samples/application-web-logging.xps) |
+
+
+## XPImage generated runtime declarations
+
+| Member | Syntax | Parameters | Behavior | Example |
+|---|---|---|---|---|
+| `XPImage` | `New XPImage(width, height [, background])` | Width, height, optional background color. | Creates a bounded raster image backed internally by Magick.NET. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.ChangeGamma` | `image.ChangeGamma(value)` | Gamma correction value greater than 0 and at most 10. | Applies gamma correction. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Compare` | `image.Compare(other)` | Another XPImage. | Returns normalized RMS difference from 0 through 100. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Difference` | `image.Difference(other)` | Another XPImage. | Returns a new visual-difference XPImage. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Statistics` | `image.Statistics()` | none | Returns image/channel statistics as XPJsonObject. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Histogram` | `image.Histogram([maxColors])` | Optional 1-4096 color limit; default 20. | Returns most frequent colors as XPJsonArray. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.HasAlpha` | `image.HasAlpha` | none | Reports alpha-channel presence. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.ColorSpace` | `image.ColorSpace` | none | Returns color-space name. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.ColorType` | `image.ColorType` | none | Returns color-type name. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Gamma` | `image.Gamma` | none | Returns image gamma; use ChangeGamma to modify pixels. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Depth` | `image.Depth` | none | Returns image bit depth. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Quality` | `image.Quality` | none | Returns current quality value. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.Orientation` | `image.Orientation` | none | Returns orientation name. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+| `XPImage.PixelCount` | `image.PixelCount` | none | Returns Width multiplied by Height. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |

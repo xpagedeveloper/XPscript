@@ -1,0 +1,37 @@
+Option Declare
+
+Public sharedValue As Long
+
+Sub Mutate(ByRef value As Long, values() As Long, items List As String)
+    Dim sharedValue As Long
+    Static calls As Long
+
+    sharedValue = 40
+    calls = calls + 1
+    value = value + calls
+    values(1) = values(1) + 10
+    items("inside") = CStr(calls)
+
+    Print "LOCAL=" & CStr(sharedValue)
+    Print "STATIC=" & CStr(calls)
+End Sub
+
+Sub Main()
+    Dim localValue As Long
+    Dim values(1 To 2) As Long
+    Dim items List As String
+
+    sharedValue = 7
+    localValue = 1
+    values(1) = 2
+    values(2) = 3
+    items("outside") = "kept"
+
+    Call Mutate(localValue, values, items)
+    Call Mutate(localValue, values, items)
+
+    Print "GLOBAL=" & CStr(sharedValue)
+    Print "BYREF=" & CStr(localValue)
+    Print "ARRAY=" & CStr(values(1)) & ":" & CStr(values(2))
+    Print "LIST=" & items("outside") & ":" & items("inside")
+End Sub

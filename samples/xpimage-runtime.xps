@@ -1,0 +1,428 @@
+Function MakeReturnedImage() As XPImage
+    Dim localOnly As XPImage
+    Set localOnly = New XPImage(3, 3, "#010203")
+    Dim returned As XPImage
+    Set returned = New XPImage(5, 4, "#abcdef")
+    Set MakeReturnedImage = returned
+End Function
+
+Sub VerifyOversizedMetadata(image As XPImage)
+    Dim oversizedMetadata As String
+    Dim limitErr As Integer
+    oversizedMetadata = String(65537, "x")
+    On Error Resume Next
+    image.SetMetadata("comment", oversizedMetadata)
+    limitErr = Err
+    On Error GoTo 0
+    If limitErr = 0 Then Error 5, "XPImage oversized metadata value was accepted"
+End Sub
+
+Sub ResizeImageByVal(ByVal image As XPImage)
+    image.Resize(1, 1)
+End Sub
+
+Sub ResizeImageByRef(image As XPImage)
+    image.Resize(2, 2)
+End Sub
+
+Sub ReplaceImageByRef(image As XPImage)
+    Set image = New XPImage(3, 3, "#334455")
+End Sub
+
+Sub VerifyOversizedRotation()
+    Dim rotationLimitImage As XPImage
+    Set rotationLimitImage = New XPImage(32768, 1, "#000000")
+    Dim rotationLimitErr As Integer
+    On Error Resume Next
+    rotationLimitImage.Rotate(45)
+    rotationLimitErr = Err
+    On Error GoTo 0
+    If rotationLimitErr = 0 Then Error 5, "XPImage oversized rotation was accepted"
+End Sub
+
+Sub VerifyUnsupportedActiveContent()
+    Dim svgText As String
+    svgText = "<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><image href='https://example.invalid/external.png' width='8' height='8'/></svg>"
+    Dim svgBytes As Byte[]
+    svgBytes = System.Text.Encoding.UTF8.GetBytes(svgText)
+    Dim activeErr As Integer
+    On Error Resume Next
+    Dim activeImage As XPImage
+    Set activeImage = XPImage.FromBytes(svgBytes)
+    activeErr = Err
+    On Error GoTo 0
+    If activeErr = 0 Then Error 5, "XPImage unsupported active image content was accepted"
+End Sub
+
+Sub VerifyOutputPathSafety()
+    Dim image As XPImage
+    Set image = New XPImage(2, 2, "#123456")
+
+    Dim traversalErr As Integer
+    On Error Resume Next
+    image.Save("../xpimage-traversal.png")
+    traversalErr = Err
+    On Error GoTo 0
+    If traversalErr = 0 Then Error 5, "XPImage output path traversal was accepted"
+
+    Dim overwritePath As String
+    overwritePath = "xpimage-overwrite-sentinel.txt"
+    Dim sentinelFile As Integer
+    sentinelFile = FreeFile()
+    Open overwritePath For Output As #sentinelFile
+    Print #sentinelFile, "XPIMAGE-SENTINEL"
+    Close #sentinelFile
+
+    Dim overwriteErr As Integer
+    On Error Resume Next
+    image.Save(overwritePath)
+    overwriteErr = Err
+    On Error GoTo 0
+    If overwriteErr = 0 Then Error 5, "XPImage existing-file overwrite was accepted"
+
+    Dim verifyFile As Integer
+    Dim sentinelText As String
+    verifyFile = FreeFile()
+    Open overwritePath For Input As #verifyFile
+    Line Input #verifyFile, sentinelText
+    Close #verifyFile
+    If sentinelText <> "XPIMAGE-SENTINEL" Then Error 5, "XPImage changed an unrelated existing file"
+    Kill overwritePath
+End Sub
+
+Sub Main()
+    Call VerifyOutputPathSafety()
+    Call VerifyUnsupportedActiveContent()
+    Call VerifyOversizedRotation()
+    Dim parameterImage As XPImage
+    Set parameterImage = New XPImage(4, 4, "#112233")
+    Call ResizeImageByVal(parameterImage)
+    If parameterImage.Width <> 4 Or parameterImage.Height <> 4 Then Error 5, "XPImage ByVal parameter was not copied"
+    Call ResizeImageByRef(parameterImage)
+    If parameterImage.Width <> 2 Or parameterImage.Height <> 2 Then Error 5, "XPImage ByRef parameter did not preserve reference"
+    Call ReplaceImageByRef(parameterImage)
+    If parameterImage.Width <> 3 Or parameterImage.Height <> 3 Then Error 5, "XPImage ByRef parameter reassignment did not reach caller"
+    Dim img As XPImage
+    Set img = New XPImage(8, 6, "#336699")
+    Dim encoded As Variant
+    encoded = img.ToBytes("png")
+    Dim encodedJpeg As Byte[]
+    encodedJpeg = img.ToBytes("jpeg", 82)
+    If Len(encodedJpeg) = 0 Then Error 5, "XPImage JPEG quality encoding failed"
+    Dim encodedWebP As Byte[]
+    encodedWebP = img.ToBytes("webp", 80)
+    If Len(encodedWebP) = 0 Then Error 5, "XPImage WebP quality encoding failed"
+    Dim encodedPng As Byte[]
+    encodedPng = img.ToBytes("png", 90)
+    If Len(encodedPng) = 0 Then Error 5, "XPImage PNG quality encoding failed"
+    Dim b64 As String
+    b64 = System.Convert.ToBase64String(encoded)
+    Dim copy As XPImage
+    Set copy = XPImage.FromBase64(b64)
+    If copy.Width <> 8 Or copy.Height <> 6 Then
+        Error 5, "XPImage dimension round-trip failed"
+    End If
+    Dim uri As String
+    uri = "data:image/png;base64," & b64
+    Dim copy2 As XPImage
+    Set copy2 = XPImage.FromBase64(uri)
+    If copy2.Format <> "png" Then
+        Error 5, "XPImage format round-trip failed"
+    End If
+    ' Verify every supported raster format through in-memory and file round trips.
+    Dim formatNames List As String
+    formatNames(0) = "png"
+    formatNames(1) = "jpeg"
+    formatNames(2) = "webp"
+    formatNames(3) = "gif"
+    formatNames(4) = "bmp"
+    formatNames(5) = "tiff"
+    Dim formatIndex As Integer
+    Dim formatCopy As XPImage
+    Dim loadedFormat As XPImage
+    For formatIndex = 0 To 5
+        Dim formatName As String
+        formatName = formatNames(formatIndex)
+        Dim formatBytes As Byte[]
+        formatBytes = img.ToBytes(formatName)
+        If Len(formatBytes) = 0 Then Error 5, "XPImage " & formatName & " encoding failed"
+        Set formatCopy = XPImage.FromBytes(formatBytes)
+        If formatCopy.Width <> 8 Or formatCopy.Height <> 6 Then Error 5, "XPImage " & formatName & " byte round-trip dimensions failed"
+        Dim formatSavePath As String
+        Dim formatLoadPath As String
+        formatSavePath = "xpimage-format-" & CStr(formatIndex) & "." & formatName
+        formatLoadPath = "xpimage-format-" & CStr(formatIndex) & ".dat"
+        formatCopy.Save(formatSavePath)
+        Name formatSavePath As formatLoadPath
+        Set loadedFormat = XPImage.Load(formatLoadPath)
+        If loadedFormat.Width <> 8 Or loadedFormat.Height <> 6 Then Error 5, "XPImage " & formatName & " file round-trip dimensions failed"
+        If LCase(loadedFormat.Format) <> formatName And Not (formatName = "jpeg" And LCase(loadedFormat.Format) = "jpg") Then Error 5, "XPImage " & formatName & " content format detection failed"
+        Kill formatLoadPath
+    Next
+
+    Dim metadataImage As XPImage
+    Set metadataImage = New XPImage(6, 6, "#224466")
+    metadataImage.SetExif("Artist", "XPScript")
+    metadataImage.SetMetadata("comment", "XPImage metadata")
+    metadataImage.SetSrgbProfile()
+    Dim xmpText As String
+    xmpText = "<?xpacket begin='﻿' id='W5M0MpCehiHzreSzNTczkc9d'?><x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'><rdf:Description rdf:about='' xmlns:xps='https://xpagedeveloper.com/xpscript/' xps:marker='XPImage-XMP'/></rdf:RDF></x:xmpmeta><?xpacket end='w'?>"
+    Dim xmpBytes As Byte[]
+    xmpBytes = System.Text.Encoding.UTF8.GetBytes(xmpText)
+    metadataImage.SetProfile("xmp", xmpBytes)
+    Call VerifyOversizedMetadata(metadataImage)
+    If Len(metadataImage.GetProfile("icc")) = 0 Then Error 5, "XPImage ICC profile setup failed"
+    If Len(metadataImage.GetProfile("xmp")) = 0 Then Error 5, "XPImage XMP profile setup failed"
+    metadataImage.Resize(9, 9)
+    metadataImage.Brightness(5)
+    Dim metadataBytes As Byte[]
+    metadataBytes = metadataImage.ToBytes("jpeg", 90)
+    Dim metadataCopy As XPImage
+    Set metadataCopy = XPImage.FromBytes(metadataBytes)
+    If metadataCopy.GetExif("Artist") <> "XPScript" Then Error 5, "XPImage EXIF preservation failed after editing"
+    If metadataCopy.GetMetadata("comment") <> "XPImage metadata" Then Error 5, "XPImage metadata round-trip failed"
+    If Len(metadataCopy.GetProfile("icc")) = 0 Then Error 5, "XPImage ICC profile preservation failed after editing"
+    Dim xmpRoundTrip As Byte[]
+    xmpRoundTrip = metadataCopy.GetProfile("xmp")
+    If Len(xmpRoundTrip) = 0 Then Error 5, "XPImage XMP profile preservation failed after editing"
+    If InStr(System.Text.Encoding.UTF8.GetString(xmpRoundTrip), "XPImage-XMP") = 0 Then Error 5, "XPImage XMP profile content changed after editing"
+    metadataCopy.StripMetadata()
+    If metadataCopy.GetExif("Artist") <> "" Then Error 5, "XPImage metadata stripping failed"
+
+    Dim overlay As New XPImage(2, 2, "#ff0000")
+    img.Resize(12, 12, "contain")
+    img.Pad(16, 16, "transparent")
+    img.Composite(overlay, 2, 2, 0.5)
+    img.Opacity(0.9)
+    img.Flatten("#ffffff")
+    img.Brightness(10)
+    img.Contrast(10)
+    img.Saturation(-10)
+    img.Grayscale()
+    img.Invert()
+    img.AutoLevel()
+    img.AutoGamma()
+    img.Normalize()
+    img.ChangeGamma(1.1)
+If img.PixelCount <> 256 Then Error 5, "XPImage PixelCount property failed"
+If img.Depth <= 0 Then Error 5, "XPImage Depth property failed"
+If img.Quality < 0 Then Error 5, "XPImage Quality property failed"
+If Len(img.ColorSpace) = 0 Then Error 5, "XPImage ColorSpace property failed"
+If Len(img.ColorType) = 0 Then Error 5, "XPImage ColorType property failed"
+If Len(img.Orientation) = 0 Then Error 5, "XPImage Orientation property failed"
+If img.Gamma <= 0 Then Error 5, "XPImage Gamma property failed"
+Dim alphaPropertyImage As XPImage
+Set alphaPropertyImage = New XPImage(2, 2, "#80ff0000")
+If Not alphaPropertyImage.HasAlpha Then Error 5, "XPImage HasAlpha property failed"
+    img.Sepia(80)
+    img.Hue(15)
+    img.Colorize("#336699", 25)
+    img.Despeckle()
+    img.Median(1)
+    img.EdgeDetect(1)
+    img.Emboss(1, 1)
+    img.MotionBlur(1, 1, 15)
+    img.OilPaint(1, 1)
+    img.Blur(1)
+    img.Sharpen(1)
+    If img.Width <> 16 Or img.Height <> 16 Then
+        Error 5, "XPImage geometry/composition failed"
+    End If
+    Dim trimImage As XPImage
+    Set trimImage = New XPImage(20, 20, "#ffffff")
+    trimImage.DrawRectangle(5, 5, 10, 10, "#000000", 0, "#000000")
+    trimImage.Trim()
+    If trimImage.Width >= 20 Or trimImage.Height >= 20 Then Error 5, "XPImage Trim did not reduce bordered image dimensions"
+
+    Dim pixelImage As XPImage
+    Set pixelImage = New XPImage(2, 2, "#000000")
+    pixelImage.SetPixel(1, 1, "#ff0000")
+    Dim pixelColor As String
+    pixelColor = pixelImage.GetPixel(1, 1)
+    If Len(pixelColor) = 0 Then Error 5, "XPImage GetPixel returned no color"
+    Dim invalidGetPixelErr As Integer
+    On Error Resume Next
+    pixelImage.GetPixel(2, 0)
+    invalidGetPixelErr = Err
+    On Error GoTo 0
+    If invalidGetPixelErr = 0 Then Error 5, "XPImage GetPixel accepted an out-of-range coordinate"
+
+    Dim invalidSetPixelErr As Integer
+    On Error Resume Next
+    pixelImage.SetPixel(-1, 0, "#ffffff")
+    invalidSetPixelErr = Err
+    On Error GoTo 0
+    If invalidSetPixelErr = 0 Then Error 5, "XPImage SetPixel accepted an out-of-range coordinate"
+
+    Dim transparentImage As XPImage
+    Set transparentImage = New XPImage(4, 4, "#ff0000")
+    transparentImage.MakeTransparent("#ff0000")
+    Dim transparentBytes As Byte[]
+    transparentBytes = transparentImage.ToBytes("png")
+    If Len(transparentBytes) = 0 Then Error 5, "XPImage MakeTransparent encoding failed"
+
+    Dim replaceImage As XPImage
+    Set replaceImage = New XPImage(4, 4, "#ff0000")
+    replaceImage.ReplaceColor("#ff0000", "#0000ff")
+    Dim replacedColor As String
+    replacedColor = replaceImage.GetPixel(0, 0)
+    If Len(replacedColor) = 0 Then Error 5, "XPImage ReplaceColor returned no pixel color"
+
+    Dim analysisImage As XPImage
+    Set analysisImage = New XPImage(2, 2, "#ff0000")
+    analysisImage.SetPixel(0, 0, "#0000ff")
+    Dim imageStats As XPJsonObject
+    Set imageStats = analysisImage.Statistics()
+    If imageStats.Get("pixelCount") <> 4 Then Error 5, "XPImage Statistics pixel count failed"
+    Dim imageHistogram As XPJsonArray
+    Set imageHistogram = analysisImage.Histogram(2)
+    If imageHistogram.Count <> 2 Then Error 5, "XPImage Histogram color count failed"
+
+    Dim invalidHistogramErr As Integer
+    On Error Resume Next
+    analysisImage.Histogram(0)
+    invalidHistogramErr = Err
+    On Error GoTo 0
+    If invalidHistogramErr = 0 Then Error 5, "XPImage Histogram accepted invalid maxColors"
+
+    Dim compareLeft As XPImage
+    Dim compareSame As XPImage
+    Dim compareChanged As XPImage
+    Set compareLeft = New XPImage(4, 4, "#112233")
+    Set compareSame = New XPImage(4, 4, "#112233")
+    Set compareChanged = New XPImage(4, 4, "#112233")
+    compareChanged.SetPixel(0, 0, "#ffffff")
+    If compareLeft.Compare(compareSame) <> 0 Then Error 5, "XPImage Compare identical images failed"
+    Dim comparePercentage As Double
+    comparePercentage = compareLeft.Compare(compareChanged)
+    If comparePercentage <= 0 Or comparePercentage > 100 Then Error 5, "XPImage Compare percentage failed"
+    Dim differenceImage As XPImage
+    Set differenceImage = compareLeft.Difference(compareChanged)
+    If differenceImage.Width <> 4 Or differenceImage.Height <> 4 Then Error 5, "XPImage Difference dimensions failed"
+    Dim differenceBytes As Byte[]
+    differenceBytes = differenceImage.ToBytes("png")
+    If Len(differenceBytes) = 0 Then Error 5, "XPImage Difference encoding failed"
+
+    Dim thresholdImage As XPImage
+    Set thresholdImage = New XPImage(16, 16, "#808080")
+    thresholdImage.DrawRectangle(0, 0, 8, 16, "#202020", 0, "#202020")
+    thresholdImage.Threshold(50)
+    Dim thresholdBytes As Byte[]
+    thresholdBytes = thresholdImage.ToBytes("png")
+    If Len(thresholdBytes) = 0 Then Error 5, "XPImage Threshold encoding failed"
+
+    Dim adaptiveImage As XPImage
+    Set adaptiveImage = New XPImage(16, 16, "#808080")
+    adaptiveImage.DrawRectangle(0, 0, 8, 16, "#202020", 0, "#202020")
+    adaptiveImage.AdaptiveThreshold(3, 3, 5)
+    adaptiveImage.AutoThreshold()
+    adaptiveImage.AutoThreshold("otsu")
+    adaptiveImage.AutoThreshold("kapur")
+    adaptiveImage.AutoThreshold("triangle")
+    Dim adaptiveBytes As Byte[]
+    adaptiveBytes = adaptiveImage.ToBytes("png")
+    If Len(adaptiveBytes) = 0 Then Error 5, "XPImage adaptive/auto threshold encoding failed"
+
+    Dim invalidThresholdErr As Integer
+    On Error Resume Next
+    thresholdImage.Threshold(101)
+    invalidThresholdErr = Err
+    On Error GoTo 0
+    If invalidThresholdErr = 0 Then Error 5, "XPImage invalid threshold percentage was accepted"
+
+    Dim invalidAutoThresholdErr As Integer
+    On Error Resume Next
+    adaptiveImage.AutoThreshold("invalid")
+    invalidAutoThresholdErr = Err
+    On Error GoTo 0
+    If invalidAutoThresholdErr = 0 Then Error 5, "XPImage invalid auto-threshold method was accepted"
+
+    Dim invalidColorizeErr As Integer
+    On Error Resume Next
+    img.Colorize("#ffffff", 101)
+    invalidColorizeErr = Err
+    On Error GoTo 0
+    If invalidColorizeErr = 0 Then Error 5, "XPImage invalid Colorize percentage was accepted"
+
+    Dim invalidHueErr As Integer
+    On Error Resume Next
+    img.Hue(101)
+    invalidHueErr = Err
+    On Error GoTo 0
+    If invalidHueErr = 0 Then Error 5, "XPImage invalid Hue value was accepted"
+
+    Dim invalidMedianErr As Integer
+    On Error Resume Next
+    img.Median(-1)
+    invalidMedianErr = Err
+    On Error GoTo 0
+    If invalidMedianErr = 0 Then Error 5, "XPImage invalid Median radius was accepted"
+
+    Dim invalidEdgeErr As Integer
+    On Error Resume Next
+    img.EdgeDetect(-1)
+    invalidEdgeErr = Err
+    On Error GoTo 0
+    If invalidEdgeErr = 0 Then Error 5, "XPImage invalid EdgeDetect radius was accepted"
+
+    Dim invalidEmbossErr As Integer
+    On Error Resume Next
+    img.Emboss(1, 0)
+    invalidEmbossErr = Err
+    On Error GoTo 0
+    If invalidEmbossErr = 0 Then Error 5, "XPImage invalid Emboss sigma was accepted"
+
+    Dim invalidMotionBlurErr As Integer
+    On Error Resume Next
+    img.MotionBlur(1, 0, 15)
+    invalidMotionBlurErr = Err
+    On Error GoTo 0
+    If invalidMotionBlurErr = 0 Then Error 5, "XPImage invalid MotionBlur sigma was accepted"
+
+    Dim invalidOilPaintErr As Integer
+    On Error Resume Next
+    img.OilPaint(-1, 1)
+    invalidOilPaintErr = Err
+    On Error GoTo 0
+    If invalidOilPaintErr = 0 Then Error 5, "XPImage invalid OilPaint radius was accepted"
+
+    Dim invalidOilPaintSigmaErr As Integer
+    On Error Resume Next
+    img.OilPaint(1, 0)
+    invalidOilPaintSigmaErr = Err
+    On Error GoTo 0
+    If invalidOilPaintSigmaErr = 0 Then Error 5, "XPImage invalid OilPaint sigma was accepted"
+
+    Dim drawing As XPImage
+    Set drawing = New XPImage(32, 24, "#ffffff")
+    drawing.DrawLine(1, 1, 30, 22, "#ff0000", 2)
+    drawing.DrawRectangle(3, 3, 12, 8, "#0000ff", 1, "#00ff00")
+    drawing.DrawEllipse(22, 12, 5, 4, "#000000", 1, "transparent")
+    drawing.DrawRoundedRectangle(8, 12, 10, 8, 2, 2, "#663399", 1, "#ffeeaa")
+    drawing.Border(2, "#663399")
+    Dim watermark As XPImage
+    Set watermark = New XPImage(4, 4, "#ff0000")
+    drawing.WatermarkImage(watermark, 2, 2, 0.5)
+    Dim textFont As String
+    textFont = "xpimage-test-font.ttf"
+    drawing.DrawText(2, 14, "XP", textFont, 8, "#000000")
+    drawing.WatermarkText(2, 22, "WM", textFont, 7, "#0000ff", 0.5)
+    drawing.DrawTextAligned(18, 10, "Åäö", textFont, 7, "#222222", "center")
+    drawing.DrawText(2, 7, "Default", "", 5, "#111111")
+    drawing.DrawTextWrapped(2, 8, 28, "Unicode åäö café text wraps", textFont, 5, "#333333", "left")
+    If drawing.Width <> 36 Or drawing.Height <> 28 Then Error 5, "XPImage drawing/border geometry failed"
+    Dim drawingBytes As Byte[]
+    drawingBytes = drawing.ToBytes("png")
+    If Len(drawingBytes) = 0 Then Error 5, "XPImage drawing encoding failed"
+
+    Dim owned As XPImage
+    Set owned = MakeReturnedImage()
+    If owned.Width <> 5 Or owned.Height <> 4 Then
+        Error 5, "Returned XPImage was recycled at function exit"
+    End If
+    Set owned = New XPImage(2, 2, "#ffffff")
+    If owned.Width <> 2 Then Error 5, "XPImage reassignment failed"
+    Set owned = Nothing
+    Print "XPIMAGE-RUNTIME=OK"
+    
+End Sub

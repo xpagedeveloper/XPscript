@@ -216,7 +216,7 @@ internal sealed class SourceTypeValidator
             if (string.IsNullOrWhiteSpace(raw)) continue;
             var p = Regex.Match(
                 raw.Trim(),
-                @"^(?<mods>(?:(?:Optional|ByVal|ByRef)\s+)*)?(?<name>[A-Za-z_]\w*)\s*(?<array>\(\))?\s*(?:As\s+(?<type>[A-Za-z_]\w*))?(?:\s*=\s*.+)?$",
+                @"^(?<mods>(?:(?:Optional|ByVal|ByRef)\s+)*)?(?<name>[A-Za-z_]\w*)\s*(?:(?<array>\(\))|(?<list>List))?\s*(?:As\s+(?<type>[A-Za-z_]\w*))?(?:\s*=\s*.+)?$",
                 RegexOptions.IgnoreCase);
             if (!p.Success) continue;
 

@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using XPScript.Web.FastCgi;
+using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
 var root = Path.Combine(Path.GetTempPath(), "xps-fastcgi-smoke-" + Guid.NewGuid().ToString("N"));
@@ -270,6 +271,60 @@ try
     {
     }
 
+    var imageScriptPath = Path.Combine(root, "xpimage.xps");
+    await File.WriteAllTextAsync(imageScriptPath, """
+[Anonymous]
+[Get]
+Sub Index()
+    Dim image As New XPImage(8, 8, "#336699")
+    Dim bytes As Byte[]
+    bytes = image.ToBytes("png")
+    Response.ContentType = image.MimeType()
+    Response.WriteBinary(bytes)
+End Sub
+""");
+    await using (var dispatcher = new XpsWebDispatcher(root, new XpsWebCompilationCacheOptions
+    {
+        MaxEntries = 4,
+        MaxSourceBytes = 1024 * 1024,
+        IdleTtl = TimeSpan.FromMinutes(1),
+        FailureBackoff = TimeSpan.FromSeconds(1),
+        ConfigurationIdentity = "xpimage-fastcgi-smoke-v1"
+    }))
+    await using (var imageAdapter = new XpsFastCgiAdapter(options, server, dispatcher))
+    {
+        var imageInput = BuildRequest(
+            29,
+            new Dictionary<string, string>
+            {
+                ["REQUEST_METHOD"] = "GET",
+                ["SCRIPT_NAME"] = "/xpimage.xps",
+                ["SERVER_NAME"] = "localhost",
+                ["SERVER_PROTOCOL"] = "HTTP/1.1",
+                ["REMOTE_ADDR"] = "127.0.0.1",
+                ["HTTP_HOST"] = "localhost",
+                ["SCRIPT_FILENAME"] = imageScriptPath
+            },
+            []);
+        var imageStream = new FragmentedDuplexStream(imageInput, 3);
+        await imageAdapter.ProcessConnectionAsync(imageStream);
+        var imageOutput = ParseResponseBytes(imageStream.Written);
+        var separator = FindHeaderTerminator(imageOutput);
+        if (separator < 0) throw new Exception("XPImage FastCGI response did not contain a header terminator.");
+        var headers = Encoding.ASCII.GetString(imageOutput, 0, separator);
+        if (!headers.Contains("Status: 200", StringComparison.Ordinal))
+            throw new Exception("XPImage FastCGI response did not return status 200.");
+        if (!headers.Contains("Content-Type: image/png", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("XPImage FastCGI response did not return image/png.");
+        var bodyOffset = separator + 4;
+        if (imageOutput.Length < bodyOffset + 8 ||
+            imageOutput[bodyOffset] != 0x89 || imageOutput[bodyOffset + 1] != 0x50 ||
+            imageOutput[bodyOffset + 2] != 0x4e || imageOutput[bodyOffset + 3] != 0x47)
+            throw new Exception("XPImage FastCGI response body is not PNG data.");
+        if (Directory.EnumerateFiles(root).Any(path => Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase)))
+            throw new Exception("XPImage FastCGI response created a public temporary PNG file.");
+    }
+
     Console.WriteLine("WEB-FASTCGI-SMOKE=OK");
 }
 finally
@@ -336,6 +391,32 @@ static void WriteLength(Stream output, int length)
     Span<byte> encoded = stackalloc byte[4];
     BinaryPrimitives.WriteUInt32BigEndian(encoded, (uint)length | 0x80000000u);
     output.Write(encoded);
+}
+
+static int FindHeaderTerminator(byte[] data)
+{
+    for (var i = 0; i <= data.Length - 4; i++)
+        if (data[i] == 13 && data[i + 1] == 10 && data[i + 2] == 13 && data[i + 3] == 10)
+            return i;
+    return -1;
+}
+
+static byte[] ParseResponseBytes(byte[] raw)
+{
+    var offset = 0;
+    using var stdout = new MemoryStream();
+    while (offset < raw.Length)
+    {
+        if (offset + 8 > raw.Length) throw new Exception("Truncated FastCGI response header.");
+        var type = raw[offset + 1];
+        var contentLength = BinaryPrimitives.ReadUInt16BigEndian(raw.AsSpan(offset + 4, 2));
+        var paddingLength = raw[offset + 6];
+        offset += 8;
+        if (offset + contentLength + paddingLength > raw.Length) throw new Exception("Truncated FastCGI response record.");
+        if (type == 6 && contentLength > 0) stdout.Write(raw, offset, contentLength);
+        offset += contentLength + paddingLength;
+    }
+    return stdout.ToArray();
 }
 
 static string ParseResponse(byte[] raw)

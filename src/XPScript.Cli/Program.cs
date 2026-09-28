@@ -76,6 +76,13 @@ static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
 
 static async Task<int> RunWebAsync(string[] commandArgs)
 {
+    var debug = commandArgs.Any(value => value.Equals("--debug", StringComparison.OrdinalIgnoreCase));
+    if (debug)
+    {
+        Environment.SetEnvironmentVariable("XPSCRIPT_RUNTIME_DEBUG", "1");
+        Environment.SetEnvironmentVariable("XPSCRIPT_WEB_DEBUG", "1");
+        commandArgs = commandArgs.Where(value => !value.Equals("--debug", StringComparison.OrdinalIgnoreCase)).ToArray();
+    }
     commandArgs = XpsHostConfig.Apply("web", commandArgs);
     var root = RequireRoot(commandArgs);
     var address = IPAddress.Loopback;

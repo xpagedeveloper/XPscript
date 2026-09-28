@@ -8,7 +8,7 @@ internal sealed class ParameterPassingPostProcessor
     private const string ByRefPrefix = "__xps_byref_";
     private const string ByValPrefix = "__xps_byval_";
 
-    private sealed record ProcedureSignature(string Name, bool[] ByRef, bool ReturnsVoid);
+    private sealed record ProcedureSignature(string Name, bool[] ByRef, string?[] ParameterTypes, bool ReturnsVoid);
 
     private static readonly Regex MethodDeclaration = new(
         @"^(?<indent>\s*)(?<prefix>(?:public|private|internal)\s+(?:static\s+)?[^\r\n(]+?\s+)(?<name>[A-Za-z_]\w*)\((?<params>[^\r\n()]*)\)(?<tail>\s*)$",
@@ -34,9 +34,11 @@ internal sealed class ParameterPassingPostProcessor
             return match.Value;
 
         var byRef = new bool[rawParameters.Count];
+        var parameterTypes = new string?[rawParameters.Count];
         for (var i = 0; i < rawParameters.Count; i++)
         {
             var parameter = rawParameters[i].Trim();
+            parameterTypes[i] = ExtractParameterType(parameter);
             if (parameter.Contains(ByRefPrefix, StringComparison.Ordinal))
             {
                 byRef[i] = true;
@@ -47,8 +49,8 @@ internal sealed class ParameterPassingPostProcessor
 
         var name = match.Groups["name"].Value;
         var prefix = match.Groups["prefix"].Value;
-        var returnsVoid = Regex.IsMatch(prefix, @"\bvoid\s+$", RegexOptions.CultureInvariant);
-        signatures[name] = new ProcedureSignature(name, byRef, returnsVoid);
+        var returnsVoid = Regex.IsMatch(prefix, @"(?:^|\s)void\s*$", RegexOptions.CultureInvariant);
+        signatures[name] = new ProcedureSignature(name, byRef, parameterTypes, returnsVoid);
         return match.Groups["indent"].Value + prefix + name + "(" + string.Join(", ", rawParameters.Select(x => x.Trim())) + ")" + match.Groups["tail"].Value;
     }
 
@@ -133,13 +135,13 @@ internal sealed class ParameterPassingPostProcessor
 
             var receiver = TakeTrailingMemberReceiver(output);
             var callTarget = receiver.Length == 0 ? identifier : receiver + identifier;
-            output.Append(BuildTemporaryByRefCall(callTarget, args, signature));
+            output.Append(BuildTemporaryByRefCall(callTarget, args, signature, GetCurrentMethodLocals(generated, start)));
             i = close + 1;
         }
         return output.ToString();
     }
 
-    private static string BuildTemporaryByRefCall(string callTarget, IReadOnlyList<string> sourceArgs, ProcedureSignature signature)
+    private static string BuildTemporaryByRefCall(string callTarget, IReadOnlyList<string> sourceArgs, ProcedureSignature signature, IReadOnlySet<string> localNames)
     {
         var callArgs = new string[sourceArgs.Count];
         var declarations = new List<string>();
@@ -156,14 +158,25 @@ internal sealed class ParameterPassingPostProcessor
 
             if (IsDirectRefArgument(argument))
             {
-                callArgs[argIndex] = "ref " + argument;
+                callArgs[argIndex] = "ref " + NormalizeDirectRefArgument(argument);
                 continue;
             }
 
             var tempName = "__xps_byref_temp_" + argIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            declarations.Add("var " + tempName + " = " + argument + ";");
+            var tempType = signature.ParameterTypes[argIndex];
+            var visibleAssignable = IsAssignableArgument(argument) && IsVisibleAssignableArgument(argument, localNames);
+            if (string.Equals(tempType, "dynamic", StringComparison.Ordinal) && !visibleAssignable && !argument.Contains("LSByRefRuntime.Create(", StringComparison.Ordinal))
+            {
+                var backingName = tempName + "_value";
+                declarations.Add("dynamic " + backingName + " = " + argument + ";");
+                declarations.Add("dynamic " + tempName + " = LSByRefRuntime.Create(() => (object?)" + backingName + ", __lsv => " + backingName + " = __lsv);");
+            }
+            else
+            {
+                declarations.Add((string.IsNullOrWhiteSpace(tempType) ? "var" : tempType) + " " + tempName + " = " + argument + ";");
+            }
             callArgs[argIndex] = "ref " + tempName;
-            if (IsAssignableArgument(argument))
+            if (visibleAssignable)
                 writeBacks.Add(argument + " = " + tempName + ";");
         }
 
@@ -185,6 +198,16 @@ internal sealed class ParameterPassingPostProcessor
         }
 
         return body.ToString();
+    }
+
+    private static string? ExtractParameterType(string parameter)
+    {
+        var cleaned = Regex.Replace(parameter, @"^(?:ref|out|in)\s+", "", RegexOptions.CultureInvariant).Trim();
+        var markerIndex = cleaned.IndexOf(ByRefPrefix, StringComparison.Ordinal);
+        if (markerIndex < 0) markerIndex = cleaned.IndexOf(ByValPrefix, StringComparison.Ordinal);
+        if (markerIndex < 0) return null;
+        var beforeName = cleaned[..markerIndex].TrimEnd();
+        return beforeName.Length == 0 ? null : beforeName;
     }
 
     private static string TakeTrailingMemberReceiver(StringBuilder output)
@@ -229,11 +252,50 @@ internal sealed class ParameterPassingPostProcessor
         return -1;
     }
 
-    private static bool IsDirectRefArgument(string value) =>
-        Regex.IsMatch(value, @"^[A-Za-z_]\w*$", RegexOptions.CultureInvariant);
+    private static bool IsDirectRefArgument(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.StartsWith("ref ", StringComparison.Ordinal))
+            trimmed = trimmed[4..].Trim();
+        // Only compiler-generated parameter markers are guaranteed to be valid CLR ref
+        // arguments here. Ordinary identifiers may be constants, fields or other values
+        // that cannot legally be passed by ref; route those through a temporary instead.
+        return Regex.IsMatch(trimmed, @"^__xps_byref_[A-Za-z_]\w*$", RegexOptions.CultureInvariant);
+    }
+
+    private static string NormalizeDirectRefArgument(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed.StartsWith("ref ", StringComparison.Ordinal) ? trimmed[4..].Trim() : trimmed;
+    }
 
     private static bool IsAssignableArgument(string value) =>
         Regex.IsMatch(value, @"^(?:this\.)?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$", RegexOptions.CultureInvariant);
+
+    private static bool IsVisibleAssignableArgument(string value, IReadOnlySet<string> localNames)
+    {
+        var root = value.StartsWith("this.", StringComparison.Ordinal) ? "this" : value.Split('.')[0];
+        return root.Equals("this", StringComparison.Ordinal) || localNames.Contains(root);
+    }
+
+    private static HashSet<string> GetCurrentMethodLocals(string generated, int callIndex)
+    {
+        var result = new HashSet<string>(StringComparer.Ordinal);
+        var declaration = MethodDeclaration.Matches(generated).Cast<Match>().LastOrDefault(x => x.Index < callIndex);
+        if (declaration is null) return result;
+
+        foreach (var parameter in SplitArguments(declaration.Groups["params"].Value))
+        {
+            var match = Regex.Match(parameter.Trim(), @"(?:ref\s+)?[^\s]+\s+([A-Za-z_]\w*)$", RegexOptions.CultureInvariant);
+            if (match.Success) result.Add(match.Groups[1].Value);
+        }
+
+        var bodyStart = declaration.Index + declaration.Length;
+        var prefix = generated[bodyStart..callIndex];
+        foreach (Match local in Regex.Matches(prefix, @"(?m)^\s*(?:const\s+)?[^\s;{}]+\s+([A-Za-z_]\w*)\s*(?:=|;)", RegexOptions.CultureInvariant))
+            result.Add(local.Groups[1].Value);
+        return result;
+    }
 
     private static bool IsDeclarationOccurrence(string generated, int identifierStart)
     {

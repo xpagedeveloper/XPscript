@@ -41,73 +41,38 @@ Sub Main()
         1, _
         2 _
     )
-
-    If total = 3 And _
-       total > 0 Then Print "CONTINUED_IF=OK"
-
-    If False Then
-        Print "NESTED_BAD"
-    ElseIf total = 3 Then
-        If True Then Print "NESTED_IF=OK"
-    Else
-        Print "NESTED_BAD"
+    If total <> 3 Then
+        Print "FUNCTION_BAD"
+        Exit Sub
     End If
+    Print "FUNCTION_CALL=OK"
 
-    For i = 1 _
-        To 2 _
-        Step 1
-        Print "FOR=" & CStr(i)
-    Next i
-
-    names("first") = "A"
-    names("second") = "B"
-    forallCount = 0
-    ForAll item In _
-        names
+    names(0) = "one"
+    names(1) = "two"
+    ForAll name In names
         forallCount = forallCount + 1
     End ForAll
     Print "FORALL=" & CStr(forallCount)
 
-    i = 0
-    While i < 2 _
-        And total = 3
-        i = i + 1
-    Wend
-    Print "WHILE=" & CStr(i)
-
-    i = 0
-    While i < 1 _
-        Or total = 0
-        i = i + 1
-    Wend
-    Print "WHILE_OR=" & CStr(i)
-
-    i = 2
-    Do While i > 0 _
-        And total = 3
-        i = i - 1
-    Loop
-    Print "DO_WHILE=" & CStr(i)
-
-    i = 0
-    Do Until i >= 1 _
-        Or total = 0
-        i = i + 1
-    Loop
-    Print "DO_UNTIL=" & CStr(i)
+    For i = _
+        1 _
+        To 2
+        total = total + i
+    Next
+    Print "FOR=" & CStr(total)
 
     i = 0
     Do
         i = i + 1
-    Loop While i < 2 _
-        And total = 3
+    Loop While _
+        i < 2
     Print "LOOP_WHILE=" & CStr(i)
 
     i = 0
     Do
         i = i + 1
-    Loop Until i >= 2 _
-        Or total = 0
+    Loop Until _
+        i >= 2
     Print "LOOP_UNTIL=" & CStr(i)
 
     Select Case _

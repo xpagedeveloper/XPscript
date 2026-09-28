@@ -272,6 +272,50 @@ End Sub
             throw new Exception("Rule-protected Browser-WASM server operation rejected the required rule.");
     }
 
+    var imagePath = Path.Combine(root, "server-xpimage.xps");
+    await File.WriteAllTextAsync(imagePath, """
+[Platform:browser-wasm]
+
+[ServerSide]
+Function ImageOnServer() As Long
+    Dim image As New XPImage(8, 8, "#336699")
+    ImageOnServer = Len(image.ToBytes("png"))
+End Function
+
+Sub Main()
+    Print ImageOnServer()
+End Sub
+""");
+    await using (var imageUnit = await compiler.CompileAsync(imagePath, root))
+    {
+        if (!imageUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
+            throw new Exception("[ServerSide] XPImage browser-WASM compile did not produce the WASM route.");
+    }
+
+    var unsafeImagePath = Path.Combine(root, "unsafe-xpimage.xps");
+    await File.WriteAllTextAsync(unsafeImagePath, """
+[Platform:browser-wasm]
+
+Function ImageInBrowser() As Long
+    Dim image As New XPImage(8, 8, "#336699")
+    ImageInBrowser = Len(image.ToBytes("png"))
+End Function
+
+Sub Main()
+    Print ImageInBrowser()
+End Sub
+""");
+    try
+    {
+        await using var ignored = await compiler.CompileAsync(unsafeImagePath, root);
+        throw new Exception("Unannotated XPImage browser-WASM code compiled without [ServerSide].");
+    }
+    catch (XpsWebCompilationException ex) when (ex.Message.Contains("not marked [ServerSide]", StringComparison.OrdinalIgnoreCase))
+    {
+        if (ex.DiagnosticCode != "XPS3002" || ex.Category != "execution-context")
+            throw new Exception("XPImage missing [ServerSide] diagnostic was not structured as XPS3002.");
+    }
+
     var cryptoPath = Path.Combine(root, "server-crypto.xps");
     await File.WriteAllTextAsync(cryptoPath, """
 [Platform:browser-wasm]

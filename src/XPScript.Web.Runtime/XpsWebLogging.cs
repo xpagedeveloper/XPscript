@@ -194,6 +194,20 @@ public sealed class XpsWebLogManager : IDisposable
             NormalizeSeverity(severity), NormalizeEventName(eventName), Clean(message, 8192), attributes);
     }
 
+    public void WriteDiagnostic(string eventName, string message, IReadOnlyDictionary<string, object?> attributes, XpsWebContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var merged = BaseAttributes();
+        merged["event.category"] = "debug";
+        merged["request.id"] = context.RequestId;
+        if (!string.IsNullOrWhiteSpace(context.ClientSessionId)) merged["session.id"] = context.ClientSessionId;
+        merged["http.request.method"] = context.Request.Method;
+        merged["url.path"] = context.Request.Path;
+        foreach (var pair in attributes)
+            merged[CleanKey(pair.Key)] = pair.Value is string value ? Clean(value, 32768) : pair.Value;
+        Write(XpsWebLogKind.Application, "DEBUG", NormalizeEventName(eventName), Clean(message, 8192), merged);
+    }
+
     public void WriteSecurity(string eventName, string message, IReadOnlyDictionary<string, object?>? attributes = null)
     {
         var merged = BaseAttributes();

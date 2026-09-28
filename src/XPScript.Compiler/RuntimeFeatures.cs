@@ -15,10 +15,11 @@ public readonly record struct RuntimeFeatures(
     bool Ai,
     bool Archive = false,
     bool Spreadsheet = false,
-    bool NetworkTools = false)
+    bool NetworkTools = false,
+    bool Image = false)
 {
     public bool RequiresHttp => Http || HttpDatabase || Attachments || Ui;
-    public bool RequiresJson => Json || JsonSchema || RequiresHttp || Database || Attachments || Ui;
+    public bool RequiresJson => Json || JsonSchema || RequiresHttp || Database || Attachments || Ui || Image;
     public bool RequiresHttpDatabaseTypes => HttpDatabase || Attachments;
 
     public IEnumerable<(string Symbol, string AllowedTargets, string? Detail)> UnavailableFor(string runtimeIdentifier)
@@ -71,6 +72,7 @@ public readonly record struct RuntimeFeatures(
             Ai: PreprocessorFeatureGate.ContainsAny(code, "XPAi", "XPAiResponse", "AITool"),
             Archive: PreprocessorFeatureGate.ContainsTypeReference(code, "Archive", "ArchiveEntry"),
             Spreadsheet: PreprocessorFeatureGate.ContainsTypeReference(code, "XPSpreadsheet", "XPWorksheet", "XPCell"),
-            NetworkTools: PreprocessorFeatureGate.ContainsTypeReference(code, "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo"));
+            NetworkTools: PreprocessorFeatureGate.ContainsTypeReference(code, "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo"),
+            Image: PreprocessorFeatureGate.ContainsTypeReference(code, "XPImage") || PreprocessorFeatureGate.ContainsCall(code, "XPImage.Load", "XPImage.FromBytes", "XPImage.FromBase64"));
     }
 }

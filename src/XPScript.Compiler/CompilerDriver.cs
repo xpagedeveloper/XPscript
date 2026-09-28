@@ -239,6 +239,15 @@ public sealed class CompilerDriver
             if (process.ExitCode != 0)
             {
                 var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
+                if (CompilerDiagnosticMode.Debug)
+                {
+                    var numberedSource = string.Join(Environment.NewLine,
+                        generatedSource.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')
+                            .Select((line, index) => $"{index + 1,5}: {line}"));
+                    Console.Error.WriteLine("--- XPScript generated C# (debug compile failure) ---");
+                    Console.Error.WriteLine(numberedSource);
+                    Console.Error.WriteLine("--- end generated C# ---");
+                }
                 throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
             }
 
