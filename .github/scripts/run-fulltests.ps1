@@ -91,6 +91,8 @@ if (Should-Run 'runtime') {
     try { $marker = $zip.GetEntry('docProps/custom.xml'); if ($null -eq $marker) { throw 'XPSpreadsheet workbook marker is missing.' }; $reader = [System.IO.StreamReader]::new($marker.Open()); try { $text = $reader.ReadToEnd() } finally { $reader.Dispose() }; if ($text -notmatch 'XPScriptWorkbookVersion' -or $text -notmatch '>2<') { throw 'XPSpreadsheet workbook marker is invalid.' } } finally { $zip.Dispose() }
   }
   Run-Xps ./samples/native-csv-regression.xps native-csv-regression | Out-Null
+  $csvJson = Run-Xps ./samples/csv-json-roundtrip.xps csv-json-roundtrip
+  if ($csvJson.Output -notmatch 'CSV-JSON-ROUNDTRIP=OK') { throw 'CSV JSON round-trip regression did not complete.' }
   Run-Xps ./samples/native-xml-dom-regression.xps native-xml-dom-regression | Out-Null
   $r = Run-Xps ./samples/xpai-structured-output.xps xpai-structured
   if ($r.Output -notmatch 'XPAI-STRUCTURED-RUNTIME=OK') { throw 'XPAi structured output runtime regression did not complete.' }
