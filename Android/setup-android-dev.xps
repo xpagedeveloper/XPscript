@@ -1,0 +1,91 @@
+' Windows bootstrap for XPScript Android development.
+' Until ShellExecute exists, command output is redirected to a temporary log file.
+
+Sub Main()
+    If Platform() <> "Windows" Then
+        Print "This setup utility currently supports Windows only."
+        Exit Sub
+    End If
+
+    Print "XPScript Android Development Setup"
+    Print "=================================="
+
+    Call RunCommand("where winget")
+    Call RunCommand("winget install --id Microsoft.DotNet.SDK.10 --exact --accept-package-agreements --accept-source-agreements")
+    Call RunCommand("winget install --id Google.AndroidStudio --exact --accept-package-agreements --accept-source-agreements")
+    Call RunCommand("dotnet workload install android")
+    Call RunCommand("dotnet workload list")
+
+    Dim sdk As String
+    sdk = Environ("ANDROID_HOME")
+    If sdk = "" Then sdk = Environ("ANDROID_SDK_ROOT")
+    If sdk = "" Then sdk = Environ("LOCALAPPDATA") & "\Android\Sdk"
+
+    Print "Android SDK candidate: " & sdk
+
+    Dim adb As String
+    adb = sdk & "\platform-tools\adb.exe"
+
+    If Dir(adb) = "" Then
+        Print "[WARN] adb.exe was not found: " & adb
+        Print "Open Android Studio SDK Manager and install Android SDK Platform-Tools."
+        Exit Sub
+    End If
+
+    Print "[OK] adb found."
+    Call RunAdb(adb, "devices")
+    Call RunAdb(adb, "shell getprop ro.product.model")
+    Call RunAdb(adb, "shell getprop ro.build.version.release")
+    Call RunAdb(adb, "shell getprop ro.build.version.sdk")
+    Call RunAdb(adb, "shell getprop ro.product.cpu.abi")
+
+    Print "If the device is unauthorized, unlock it and approve USB debugging."
+End Sub
+
+Sub RunCommand(command As String)
+    Dim logFile As String
+    logFile = Environ("TEMP") & "\xpscript-android-setup.log"
+
+    Print ""
+    Print "> " & command
+    Dim doneFile As String
+    doneFile = Environ("TEMP") & "\\xpscript-android-setup.done"
+
+    If Dir(logFile) <> "" Then Kill logFile
+    If Dir(doneFile) <> "" Then Kill doneFile
+
+    ' cmd.exe stays alive until the child command completes. It writes a marker
+    ' only after stdout/stderr have been redirected to the log.
+    Call Shell("cmd.exe /d /s /c \"" & command & " > \"" & logFile & "\" 2>&1 & echo done > \"" & doneFile & "\"\"")
+
+    Do While Dir(doneFile) = ""
+        Sleep 500
+    Loop
+
+    Call PrintFile(logFile)
+    Kill doneFile
+End Sub
+
+Sub RunAdb(adb As String, arguments As String)
+    Dim command As String
+    command = "\"" & adb & "\" " & arguments
+    Call RunCommand(command)
+End Sub
+
+Sub PrintFile(path As String)
+    Dim f As Integer
+    Dim line As String
+
+    If Dir(path) = "" Then
+        Print "[WARN] No command log was produced."
+        Exit Sub
+    End If
+
+    f = FreeFile
+    Open path For Input As #f Charset "utf-8"
+    Do While Not EOF(f)
+        Line Input #f, line
+        Print line
+    Loop
+    Close #f
+End Sub
