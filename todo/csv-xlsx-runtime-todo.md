@@ -151,9 +151,10 @@ Implement after `todo/image-runtime-todo.md` is complete and merged.
 - [x] XLSX create/save/reopen round-trip tests.
 - [ ] XLSX Unicode, dates, numbers, booleans and formulas tests.
 - [x] XLSX multi-sheet and style round-trip tests.
-- [ ] XLSX malformed/ZIP-bomb/resource-limit negative tests.
+- [x] XLSX malformed/ZIP-bomb/resource-limit negative tests.
 - [x] CSV-to-XLSX and XLSX-to-CSV conversion tests.
+- [ ] Build CSV/XLSX JSON conversion APIs before JSON round-trip tests: CSV rows to/from `XPJsonArray` row objects and worksheet ranges to/from JSON, preserving missing versus empty values where possible.
 - [ ] JSON round-trip tests.
 - [ ] SQL-result and Domino-result export integration tests when those providers are implemented.
 - [ ] Kestrel, CGI and FastCGI upload/download smoke tests.
-- [ ] Add documentation and reusable examples under `docs/` and `examples/`.
+- [x] Add documentation and reusable examples under `docs/` and `examples/`.
