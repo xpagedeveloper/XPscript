@@ -890,6 +890,16 @@ internal sealed class CoreCompatibilityTranspiler
                 continue;
             }
 
+            if (target.EndsWith(".Value", StringComparison.OrdinalIgnoreCase))
+            {
+                // A scalar ByRef parameter is already an LSByRefValue. Passing its
+                // Value through another getter/setter lambda would capture the eventual
+                // CLR ref parameter, which C# rejects (CS1628). Forward the existing
+                // reference wrapper instead.
+                args[i] = root;
+                continue;
+            }
+
             args[i] = $"LSByRefRuntime.Create(() => (object?)({target}), __lsv => {target} __LS_BYREF_ASSIGN__ {ConvertExpression(parameter.Type, "__lsv")})";
         }
         return true;
