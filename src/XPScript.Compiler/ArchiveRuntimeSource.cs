@@ -168,9 +168,9 @@ internal sealed class XPScriptArchive
         if (UseExtendedWriteMode)
         {
             var prefix = name.TrimEnd('/') + "/";
-            var removed = _pendingEntries.RemoveAll(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || x.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
-            if (removed > 0) SaveExtendedArchive();
-            return removed > 0;
+            var removedCount = _pendingEntries.RemoveAll(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || x.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+            if (removedCount > 0) SaveExtendedArchive();
+            return removedCount > 0;
         }
 
         var removed = false;
@@ -197,8 +197,8 @@ internal sealed class XPScriptArchive
             foreach (var item in matches)
             {
                 var suffix = item.Name.Length == oldKey.Length ? "" : item.Name[oldKey.TrimEnd('/').Length..];
-                var renamed = Normalize(newKey.TrimEnd('/') + suffix + (item.IsDirectory && !suffix.EndsWith("/", StringComparison.Ordinal) ? "/" : ""));
-                item.Name = renamed;
+                var renamedEntry = Normalize(newKey.TrimEnd('/') + suffix + (item.IsDirectory && !suffix.EndsWith("/", StringComparison.Ordinal) ? "/" : ""));
+                item.Name = renamedEntry;
             }
             SaveExtendedArchive();
             return true;
