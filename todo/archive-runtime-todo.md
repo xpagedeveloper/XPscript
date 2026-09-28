@@ -179,7 +179,7 @@ archive.Save()
 - [x] `ReadText(entryName)`.
 - [x] `ReadBytes(entryName)`.
 - [x] Define text encoding behavior and sensible defaults.
-- [ ] Allow large entries to use streaming internally so the whole archive does not need to be buffered in memory.
+- [x] Allow large entries to use streaming internally so the whole archive does not need to be buffered in memory.
 
 ## In-memory archive support
 
@@ -207,9 +207,9 @@ Initial target matrix:
 - [x] 7z read/write where the selected SharpCompress version supports writing reliably.
 - [x] TAR read/write.
 - [x] GZip read/write.
-- [ ] BZip2 read/write.
-- [ ] LZip read/write.
-- [ ] Zstandard read/write.
+- [x] BZip2 read support; write support is exposed through TAR.BZip2 rather than a raw single-stream BZip2 writer.
+- [x] LZip read support; write support is exposed through TAR.LZip rather than a raw single-stream LZip writer.
+- [x] Zstandard read support; raw Zstandard writing is not exposed in v1.
 - [x] RAR read/extract only.
 - [x] XZ read-only unless reliable writing support is available at implementation time.
 - [x] ARC, ARJ, ACE, LZW and other SharpCompress-supported legacy formats as read-only where practical.
@@ -302,8 +302,8 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 - [x] Include the required copyright/license notice text.
 - [x] Run `scripts/validate-license-notices.ps1`.
 - [x] Check transitive dependencies before merging.
-- [ ] Check active security advisories and CVEs for the selected package version.
-- [ ] Add archive dependency review to normal dependency-update maintenance.
+- [x] Check active security advisories and CVEs for the selected package version.
+- [x] Add archive dependency review to normal dependency-update maintenance.
 
 ## Windows, Linux and macOS
 
@@ -446,18 +446,18 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Document secure extraction behavior.
 - [x] Document resource limits.
 - [x] Document Byte-array/in-memory usage.
-- [ ] Document browser/WASM limitations.
-- [ ] Document server-side archive handling.
-- [ ] Document Android/iOS usage and storage considerations.
+- [x] Document browser/WASM limitations.
+- [x] Document server-side archive handling.
+- [x] Document Android/iOS usage and storage considerations.
 
 ## Examples
 
-- [ ] Add `archive-create.xps`.
-- [ ] Add `archive-list.xps`.
-- [ ] Add `archive-extract.xps`.
+- [x] Add `archive-create.xps`.
+- [x] Add `archive-list.xps`.
+- [x] Add `archive-extract.xps`.
 - [x] Add `archive-memory.xps`.
-- [ ] Add `archive-rar.xps`.
-- [ ] Add `archive-password.xps` if password support is exposed in v1.
+- [x] Add `archive-rar.xps`.
+- [x] Add `archive-password.xps` if password support is exposed in v1.
 
 ## Suggested implementation milestones
 
