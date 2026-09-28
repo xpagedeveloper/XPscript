@@ -148,13 +148,16 @@ Sub Main()
         If Len(formatBytes) = 0 Then Error 5, "XPImage " & formatName & " encoding failed"
         Set formatCopy = XPImage.FromBytes(formatBytes)
         If formatCopy.Width <> 8 Or formatCopy.Height <> 6 Then Error 5, "XPImage " & formatName & " byte round-trip dimensions failed"
-        Dim formatPath As String
-        formatPath = "xpimage-format-" & CStr(formatIndex) & ".dat"
-        formatCopy.Save(formatPath)
-        Set loadedFormat = XPImage.Load(formatPath)
+        Dim formatSavePath As String
+        Dim formatLoadPath As String
+        formatSavePath = "xpimage-format-" & CStr(formatIndex) & "." & formatName
+        formatLoadPath = "xpimage-format-" & CStr(formatIndex) & ".dat"
+        formatCopy.Save(formatSavePath)
+        Name formatSavePath As formatLoadPath
+        Set loadedFormat = XPImage.Load(formatLoadPath)
         If loadedFormat.Width <> 8 Or loadedFormat.Height <> 6 Then Error 5, "XPImage " & formatName & " file round-trip dimensions failed"
         If LCase(loadedFormat.Format) <> formatName And Not (formatName = "jpeg" And LCase(loadedFormat.Format) = "jpg") Then Error 5, "XPImage " & formatName & " content format detection failed"
-        Kill formatPath
+        Kill formatLoadPath
     Next
 
     Dim metadataImage As XPImage
