@@ -15,6 +15,13 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 
 
 
+## CSV JSON conversion
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `CsvDocument.ToJson` | `csv.ToJson()` | none | Converts a header-based CSV document to an `XPJsonArray` of row objects using header names as JSON property names. | [csv-json-roundtrip.xps](../samples/csv-json-roundtrip.xps) |
+| `CsvDocument.FromJson` | `csv.FromJson(rows)` | `rows`: `XPJsonArray` containing row objects. | Replaces the CSV document from JSON row objects. The first object defines column names and order; missing later properties become empty CSV fields. | [csv-json-roundtrip.xps](../samples/csv-json-roundtrip.xps) |
+
 ## Compiler command-line machine interface
 
 | Member | Syntax | Parameters | Description | Example |
