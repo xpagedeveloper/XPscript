@@ -1,5 +1,7 @@
 # Repository instructions for coding agents
 
+Before starting repository work, review the `knowledge/` directory for relevant project knowledge, rules, conventions, and prior decisions. Apply any relevant guidance found there throughout the task, and keep it consistent with the repository's current implementation and authoritative documentation.
+
 When changing XPscript's user-visible language, built-ins, runtime classes, constructors, object lifecycle, function signatures, filesystem behavior, XPDB/XPAI APIs, or recommended coding idioms, review `skills/xpscript-programming/SKILL.md` in the same change.
 
 If the change affects how an LLM should write XPscript programs, update that skill in the same PR together with the authoritative documentation and executable regression/sample coverage.
