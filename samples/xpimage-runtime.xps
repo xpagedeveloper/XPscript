@@ -138,19 +138,19 @@ Sub Main()
     formatNames(4) = "bmp"
     formatNames(5) = "tiff"
     Dim formatIndex As Integer
+    Dim formatCopy As XPImage
+    Dim loadedFormat As XPImage
     For formatIndex = 0 To 5
         Dim formatName As String
         formatName = formatNames(formatIndex)
         Dim formatBytes As Byte[]
         formatBytes = img.ToBytes(formatName)
         If Len(formatBytes) = 0 Then Error 5, "XPImage " & formatName & " encoding failed"
-        Dim formatCopy As XPImage
         Set formatCopy = XPImage.FromBytes(formatBytes)
         If formatCopy.Width <> 8 Or formatCopy.Height <> 6 Then Error 5, "XPImage " & formatName & " byte round-trip dimensions failed"
         Dim formatPath As String
         formatPath = "xpimage-format-" & CStr(formatIndex) & ".dat"
         formatCopy.Save(formatPath)
-        Dim loadedFormat As XPImage
         Set loadedFormat = XPImage.Load(formatPath)
         If loadedFormat.Width <> 8 Or loadedFormat.Height <> 6 Then Error 5, "XPImage " & formatName & " file round-trip dimensions failed"
         If LCase(loadedFormat.Format) <> formatName And Not (formatName = "jpeg" And LCase(loadedFormat.Format) = "jpg") Then Error 5, "XPImage " & formatName & " content format detection failed"
