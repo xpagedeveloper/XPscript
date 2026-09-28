@@ -1,0 +1,23 @@
+Option Declare
+
+Sub Main()
+    Dim args(4) As String
+    Dim result As Variant
+    Dim expected As String
+
+    expected = "space ""quote"" & | < > ^ % ! åäö 漢字"
+
+    args(0) = "-NoLogo"
+    args(1) = "-NoProfile"
+    args(2) = "-Command"
+    args(3) = "[Console]::Out.Write($args[0])"
+    args(4) = expected
+
+    Set result = ShellExecute("pwsh", args)
+
+    If result.ExitCode <> 0 Then Error 5, "ShellExecute structured argument child failed."
+    If result.Output <> expected Then Error 5, "ShellExecute changed a structured argument."
+    If result.Error <> "" Then Error 5, "ShellExecute structured argument child wrote stderr."
+
+    Print "SHELLEXECUTE-ARGS=OK"
+End Sub
