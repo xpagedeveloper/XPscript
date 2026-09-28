@@ -62,8 +62,14 @@ jobs:
           $fontSource = $fontCandidates | Where-Object { Test-Path $_ -PathType Leaf } | Select-Object -First 1
           if (-not $fontSource) { throw 'XPImage FullTest could not locate its platform test font.' }
           Copy-Item $fontSource ./samples/xpimage-test-font.ttf -Force
-          dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage/xpimage-runtime --runtime=false --debug
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $compileOutput = dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage/xpimage-runtime --runtime=false --debug 2>&1
+          $compileExitCode = $LASTEXITCODE
+          $compileOutput | ForEach-Object { Write-Host $_ }
+          if ($compileExitCode -ne 0) { exit $compileExitCode }
+          $xpimageWarnings = @($compileOutput | Where-Object { [string]$_ -match '(?i)\bwarning\b' })
+          if ($xpimageWarnings.Count -gt 0) {
+            throw "XPImage compiler emitted warning output: $($xpimageWarnings -join [Environment]::NewLine)"
+          }
           $plain = './out/xpimage/xpimage-runtime'
           $win = "$plain.exe"
           if (Test-Path $win -PathType Leaf) {
@@ -355,6 +361,23 @@ jobs:
             }
           } finally {
             if ($null -ne $server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force }
+          }
+
+      - name: Verify XPImage Browser-WASM ServerSide boundary
+        shell: pwsh
+        run: |
+          $browserOutput = dotnet run --project ./tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release 2>&1
+          $browserExitCode = $LASTEXITCODE
+          $browserOutput | ForEach-Object { Write-Host $_ }
+          if ($browserExitCode -ne 0) { exit $browserExitCode }
+          if (($browserOutput -join [Environment]::NewLine) -notmatch 'browser-wasm smoke passed') {
+            throw 'Browser-WASM smoke completion marker missing.'
+          }
+          $xpimageBrowserWarnings = @($browserOutput | Where-Object {
+            [string]$_ -match '(?i)\bwarning\b' -and [string]$_ -match '(?i)XPImage|Magick'
+          })
+          if ($xpimageBrowserWarnings.Count -gt 0) {
+            throw "XPImage Browser-WASM emitted relevant warning output: $($xpimageBrowserWarnings -join [Environment]::NewLine)"
           }
 
       - name: Compile XPImage CLI desktop and web targets
