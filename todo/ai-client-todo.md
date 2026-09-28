@@ -117,8 +117,8 @@ Implement after the current UIForm work is complete and merged.
 - [x] Regression-test custom endpoint URLs and additional headers against a local mock OpenAI-compatible server.
 - [x] Regression-test non-streaming and streaming calls on Windows, Ubuntu and macOS.
 - [x] Add compatibility fixtures that emulate OpenAI-style, Azure/OpenAI-compatible and OpenRouter-style endpoint/header variations without external network calls in CI.
-- [ ] Add local mock MCP server regression tests.
+- [ ] Add local mock MCP server regression tests. Blocked until the AI-client `MCPTool` transport/invocation surface is implemented; the existing `CompilerMcpProtocolProbe` covers the separate compiler MCP server and is not a substitute.
 - [ ] Add RAG isolation tests proving tenant/user filters cannot leak records across scopes.
-- [ ] Add embeddings batching, dimension and malformed-response tests.
+- [ ] Add embeddings batching, dimension and malformed-response tests. Blocked until `EmbeddingsTool` exists in the native runtime/preprocessor; no embeddings client path currently exists for a regression test to exercise.
 - [ ] Add combined MCP + RAG + embeddings tool-composition tests.
 - [x] Add documentation and a reusable example under `docs/` and `samples/`.
