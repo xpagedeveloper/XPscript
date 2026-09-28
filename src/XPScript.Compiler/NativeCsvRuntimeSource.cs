@@ -306,6 +306,48 @@ internal sealed class XPScriptCsvDocument
         return row;
     }
 
+    public XPScriptJsonArray ToJson()
+    {
+        if (!_hasHeaders) throw new XPScriptRuntimeException(5, "XPCsvDocument.ToJson requires HasHeaders = True.");
+        var result = XPScriptNativeJson.CreateArray();
+        foreach (var row in _rows)
+        {
+            var item = XPScriptNativeJson.CreateObject();
+            for (var i = 0; i < _headers.Count; i++) item.Set(_headers[i], row.GetAt(i));
+            result.Add(item);
+        }
+        return result;
+    }
+
+    public void FromJson(object? value)
+    {
+        if (value is ILSObjectReference reference) value = reference.IsNothing ? null : reference.ObjectValue;
+        if (value is not XPScriptJsonArray array)
+            throw new XPScriptRuntimeException(13, "XPCsvDocument.FromJson requires an XPJsonArray of row objects.");
+
+        _headers.Clear();
+        _rows.Clear();
+        _hasHeaders = true;
+        if (array.Count == 0) return;
+
+        if (array.Get(0) is not XPScriptJsonObject first)
+            throw new XPScriptRuntimeException(13, "XPCsvDocument.FromJson requires every array item to be an XPJsonObject.");
+
+        foreach (var property in first.Node)
+            _headers.Add(property.Key);
+        ValidateDuplicateHeaders(_headers);
+
+        for (var rowIndex = 0; rowIndex < array.Count; rowIndex++)
+        {
+            if (array.Get(rowIndex) is not XPScriptJsonObject item)
+                throw new XPScriptRuntimeException(13, "XPCsvDocument.FromJson requires every array item to be an XPJsonObject.");
+            var values = new string[_headers.Count];
+            for (var columnIndex = 0; columnIndex < _headers.Count; columnIndex++)
+                values[columnIndex] = item.Contains(_headers[columnIndex]) ? XPScriptNativeCsv.ScalarText(item.Get(_headers[columnIndex])) : "";
+            _rows.Add(new XPScriptCsvRow(this, values));
+        }
+    }
+
     public void Sort(object? column)
     {
         var index = column is string name ? FindColumn(name) : XPScriptRuntime.CInt(column);
