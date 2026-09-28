@@ -106,7 +106,7 @@ if (Should-Run 'platform') {
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/absolute-windows.zip','10000','2147483647','1000') 'absolute Windows path'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/unc.zip','10000','2147483647','1000') 'UNC path'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/mixed-separator-traversal.zip','10000','2147483647','1000') 'mixed separator traversal'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/corrupt-stream.zip','10000','2147483647','1000') 'corrupt compressed stream'
+  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/corrupt-stream.zip','10000','2147483647','1000','read') 'corrupt compressed stream'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/malformed.zip','10000','2147483647','1000') 'malformed archive'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/symlink-entry.zip','10000','2147483647','1000') 'symbolic link entry'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/max-entries.zip','2','2147483647','1000') 'MaxEntries'
