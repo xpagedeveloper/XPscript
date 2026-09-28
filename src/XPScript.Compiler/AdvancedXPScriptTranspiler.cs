@@ -1089,6 +1089,7 @@ internal static class LSForAllRuntime
     {
         text = text.Replace("<>", "!=", StringComparison.Ordinal);
         text = Regex.Replace(text, @"(?<![<>=!])=(?![=>])", "==");
+        text = text.Replace("__LS_BYREF_ASSIGN__", "=", StringComparison.Ordinal);
         text = Regex.Replace(text, @"\bMe\b", "this", RegexOptions.IgnoreCase);
 
         foreach (var objectVariable in _objectVariables)
