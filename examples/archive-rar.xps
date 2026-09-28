@@ -1,4 +1,4 @@
-Dim archive As New Archive("example.rar")
+Dim archive As New Archive("example.rar", True)
 
 Print "Read only: " & CStr(archive.IsReadOnly)
 ForAll entry In archive.Entries
