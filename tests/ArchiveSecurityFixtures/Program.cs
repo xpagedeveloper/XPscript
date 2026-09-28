@@ -9,6 +9,7 @@ CreateZip(Path.Combine(root, "traversal.zip"), archive => WriteText(archive, "..
 CreateZip(Path.Combine(root, "absolute-unix.zip"), archive => WriteText(archive, "/escape.txt", "escape"));
 CreateZip(Path.Combine(root, "absolute-windows.zip"), archive => WriteText(archive, "C:/escape.txt", "escape"));
 CreateZip(Path.Combine(root, "unc.zip"), archive => WriteText(archive, "//server/share/escape.txt", "escape"));
+CreateZip(Path.Combine(root, "mixed-separator-traversal.zip"), archive => WriteText(archive, @"folder\..\../escape.txt", "escape"));
 CreateZip(Path.Combine(root, "duplicate-names.zip"), archive =>
 {
     WriteText(archive, "duplicate.txt", "first");
@@ -30,6 +31,18 @@ CreateZip(Path.Combine(root, "max-entries.zip"), archive =>
 CreateZip(Path.Combine(root, "max-size.zip"), archive => WriteBytes(archive, "large.bin", new byte[4096]));
 CreateZip(Path.Combine(root, "compression-ratio.zip"), archive => WriteBytes(archive, "compressible.bin", new byte[1024 * 1024]));
 CreateZip(Path.Combine(root, "extraction-symlink.zip"), archive => WriteText(archive, "link/escape.txt", "must-not-escape"));
+
+var corruptPath = Path.Combine(root, "corrupt-stream.zip");
+CreateZip(corruptPath, archive => WriteBytes(archive, "payload.bin", Enumerable.Repeat((byte)0x41, 65536).ToArray()));
+var corruptBytes = File.ReadAllBytes(corruptPath);
+if (corruptBytes.Length > 64)
+{
+    var offset = Math.Min(corruptBytes.Length / 3, corruptBytes.Length - 32);
+    corruptBytes[offset] ^= 0xFF;
+    File.WriteAllBytes(corruptPath, corruptBytes);
+}
+
+File.WriteAllBytes(Path.Combine(root, "malformed.zip"), Encoding.ASCII.GetBytes("not-a-zip-archive"));
 
 CreateTar(Path.Combine(root, "traversal.tar"), writer => WriteTarText(writer, "../escape.txt", "escape"));
 CreateTar(Path.Combine(root, "absolute.tar"), writer => WriteTarText(writer, "/escape.txt", "escape"));
