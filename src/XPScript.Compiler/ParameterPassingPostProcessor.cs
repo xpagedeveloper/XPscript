@@ -49,7 +49,7 @@ internal sealed class ParameterPassingPostProcessor
 
         var name = match.Groups["name"].Value;
         var prefix = match.Groups["prefix"].Value;
-        var returnsVoid = Regex.IsMatch(prefix, @"\bvoid\s+$", RegexOptions.CultureInvariant);
+        var returnsVoid = Regex.IsMatch(prefix.TrimEnd(), @"\bvoid$", RegexOptions.CultureInvariant);
         signatures[name] = new ProcedureSignature(name, byRef, parameterTypes, returnsVoid);
         return match.Groups["indent"].Value + prefix + name + "(" + string.Join(", ", rawParameters.Select(x => x.Trim())) + ")" + match.Groups["tail"].Value;
     }
