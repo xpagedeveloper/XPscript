@@ -35,12 +35,20 @@ CreateZip(Path.Combine(root, "extraction-symlink.zip"), archive => WriteText(arc
 var corruptPath = Path.Combine(root, "corrupt-stream.zip");
 CreateZip(corruptPath, archive => WriteBytes(archive, "payload.bin", Enumerable.Repeat((byte)0x41, 65536).ToArray()));
 var corruptBytes = File.ReadAllBytes(corruptPath);
-if (corruptBytes.Length > 64)
-{
-    var offset = Math.Min(corruptBytes.Length / 3, corruptBytes.Length - 32);
-    corruptBytes[offset] ^= 0xFF;
-    File.WriteAllBytes(corruptPath, corruptBytes);
-}
+// Corrupt the compressed payload deterministically while preserving the local
+// header and central directory so the archive opens but entry reads fail.
+const uint localHeaderSignature = 0x04034b50;
+if (corruptBytes.Length < 30 || BitConverter.ToUInt32(corruptBytes, 0) != localHeaderSignature)
+    throw new InvalidDataException("Unexpected ZIP fixture layout.");
+var fileNameLength = BitConverter.ToUInt16(corruptBytes, 26);
+var extraLength = BitConverter.ToUInt16(corruptBytes, 28);
+var compressedSize = BitConverter.ToUInt32(corruptBytes, 18);
+var payloadOffset = 30 + fileNameLength + extraLength;
+if (compressedSize == 0 || payloadOffset + compressedSize > corruptBytes.Length)
+    throw new InvalidDataException("Unable to locate compressed ZIP payload.");
+var corruptOffset = payloadOffset + (int)(compressedSize / 2);
+corruptBytes[corruptOffset] ^= 0xFF;
+File.WriteAllBytes(corruptPath, corruptBytes);
 
 File.WriteAllBytes(Path.Combine(root, "malformed.zip"), Encoding.ASCII.GetBytes("not-a-zip-archive"));
 
