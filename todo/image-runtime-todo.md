@@ -89,7 +89,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] Sharpen.
 - [x] Opacity.
 - [x] Background replacement for transparent areas.
-- [ ] Investigate additional filters only if supported cleanly by the chosen library.
+- [x] Investigate additional filters only if supported cleanly by the chosen library.
 
 ## Metadata
 
@@ -113,12 +113,7 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 ## AI image integration boundary
 
 - [x] Keep local image processing separate from AI image generation/editing.
-- [ ] Add an optional future `AIImageTool` that can attach to `AIClient` rather than hard-coding AI generation into the image runtime.
-- [ ] Allow AIImageTool to create images from prompts through a configurable OpenAI-compatible or provider-specific endpoint adapter.
-- [ ] Allow AIImageTool to edit supplied source images where the configured provider supports image editing.
-- [ ] Support configurable endpoint, headers, model and provider-specific request properties through the same provider-neutral principles as `AIClient`.
-- [ ] Return generated/edited images as normal XPScript image/Byte-array values so subsequent local image operations can be applied.
-- [ ] Do not require AI dependencies for normal local image processing.
+- [x] Keep AI image generation/editing as separate future work in `todo/ai-image-tool-todo.md`.
 
 ## Web runtime integration
 
@@ -228,9 +223,9 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 ## FullTest verification
 
 - [x] Add a dedicated XPImage FullTest workflow that runs on Windows, Linux and macOS.
-- [ ] FullTest must compile and execute XPImage creation, file/bytes/base64 loading, all supported formats, editing/effects/metadata, resource limits, web output and Browser-WASM `[ServerSide]` behavior.
+- [x] FullTest must compile and execute XPImage creation, file/bytes/base64 loading, all supported formats, editing/effects/metadata, resource limits, web output and Browser-WASM `[ServerSide]` behavior.
 - [x] FullTest must verify an application without XPImage does not acquire Magick.NET and an XPImage application does include the required generated license notices.
-- [ ] FullTest must fail on compiler/runtime warnings relevant to XPImage.
+- [x] FullTest must fail on compiler/runtime warnings relevant to XPImage.
 
 ## Implementation completion criteria
 
@@ -239,4 +234,4 @@ Backend decision: XPImage uses Magick.NET / ImageMagick. The earlier ImageSharp/
 - [x] No Magick.NET implementation types leak into XPScript source syntax or public XPImage API.
 - [x] CLI, desktop, Kestrel, CGI and FastCGI can use the same XPImage object model.
 - [x] Applications that do not use XPImage do not acquire Magick.NET dependencies.
-- [ ] Documentation and reusable examples are added under `docs/` and `examples/`.
+- [x] Documentation and reusable examples are added under `docs/` and `examples/`.
