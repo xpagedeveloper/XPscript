@@ -35,19 +35,19 @@ CreateZip(Path.Combine(root, "extraction-symlink.zip"), archive => WriteText(arc
 var corruptPath = Path.Combine(root, "corrupt-stream.zip");
 CreateZip(corruptPath, archive => WriteBytes(archive, "payload.bin", Enumerable.Repeat((byte)0x41, 65536).ToArray()));
 var corruptBytes = File.ReadAllBytes(corruptPath);
-// Corrupt the compressed payload deterministically while preserving the local
-// header and central directory so the archive opens but entry reads fail.
+// Make the entry metadata claim one extra uncompressed byte. The ZIP remains
+// structurally readable, but a full entry read is shorter than the declared
+// size and must be rejected by the Archive runtime integrity check.
 const uint localHeaderSignature = 0x04034b50;
+const uint centralHeaderSignature = 0x02014b50;
 if (corruptBytes.Length < 30 || BitConverter.ToUInt32(corruptBytes, 0) != localHeaderSignature)
     throw new InvalidDataException("Unexpected ZIP fixture layout.");
-var fileNameLength = BitConverter.ToUInt16(corruptBytes, 26);
-var extraLength = BitConverter.ToUInt16(corruptBytes, 28);
-var compressedSize = BitConverter.ToUInt32(corruptBytes, 18);
-var payloadOffset = 30 + fileNameLength + extraLength;
-if (compressedSize == 0 || payloadOffset + compressedSize > corruptBytes.Length)
-    throw new InvalidDataException("Unable to locate compressed ZIP payload.");
-var corruptOffset = payloadOffset + (int)(compressedSize / 2);
-corruptBytes[corruptOffset] ^= 0xFF;
+var declaredSize = BitConverter.ToUInt32(corruptBytes, 22);
+BitConverter.GetBytes(checked(declaredSize + 1)).CopyTo(corruptBytes, 22);
+var centralOffset = FindSignature(corruptBytes, centralHeaderSignature);
+if (centralOffset < 0 || centralOffset + 28 > corruptBytes.Length)
+    throw new InvalidDataException("Unable to locate ZIP central directory entry.");
+BitConverter.GetBytes(checked(declaredSize + 1)).CopyTo(corruptBytes, centralOffset + 24);
 File.WriteAllBytes(corruptPath, corruptBytes);
 
 File.WriteAllBytes(Path.Combine(root, "malformed.zip"), Encoding.ASCII.GetBytes("not-a-zip-archive"));
@@ -95,6 +95,13 @@ catch (Exception ex)
 }
 
 Console.WriteLine("ARCHIVE-SECURITY-FIXTURES=OK");
+
+static int FindSignature(byte[] data, uint signature)
+{
+    for (var i = 0; i <= data.Length - 4; i++)
+        if (BitConverter.ToUInt32(data, i) == signature) return i;
+    return -1;
+}
 
 static void CreateZip(string path, Action<ZipArchive> build)
 {
