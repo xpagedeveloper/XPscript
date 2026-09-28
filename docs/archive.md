@@ -123,3 +123,22 @@ data = archive.ToBytes()
 ## Platform status
 
 Core ZIP, in-memory ZIP and iterator regression tests are configured for Windows, Linux and macOS. Extended archive regressions currently run in the Linux Archive workflow. Android, iOS and browser/WASM require separate runtime/AOT/trimming validation before they should be considered fully supported.
+
+
+## Server-side archive handling
+
+Filesystem archive operations run through the normal XPScript filesystem boundary. Source paths and extraction targets are resolved by the runtime before archive access, and archive entry names are treated as untrusted input. Extraction rejects absolute paths, traversal, symbolic links and reparse-point escapes. For web applications, keep archive files and extraction directories outside static-file roots unless the extracted content is intentionally public.
+
+For browser applications that need server filesystem access, perform the archive operation through the normal XPScript server-side execution model instead of attempting to expose a client filesystem path.
+
+## Browser/WASM limitations
+
+Browser/WASM archive support is intended to use Byte arrays and in-memory data. Arbitrary local filesystem extraction is not part of the browser API. Listing, reading and creating downloadable archives client-side remain subject to browser memory limits and require explicit browser/WASM validation before they are considered supported.
+
+Do not assume that extended SharpCompress formats are available in a browser build until the package has passed the browser linker and trimming validation for the XPScript target.
+
+## Android and iOS
+
+Use application-sandbox paths supplied by the platform and prefer Byte-array workflows when archives originate from HTTP, MIME or database content. Do not assume desktop filesystem paths are portable to Android or iOS.
+
+The archive runtime has not yet completed Android/iOS target, trimming, AOT and larger-archive memory-pressure validation. Those platforms therefore remain validation targets rather than declared fully supported archive platforms.
