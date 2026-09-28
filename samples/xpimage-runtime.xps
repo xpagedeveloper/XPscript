@@ -149,11 +149,7 @@ Sub Main()
         If formatCopy.Width <> 8 Or formatCopy.Height <> 6 Then Error 5, "XPImage " & formatName & " byte round-trip dimensions failed"
         Dim formatPath As String
         formatPath = "xpimage-format-" & CStr(formatIndex) & ".dat"
-        Dim formatFile As Integer
-        formatFile = FreeFile()
-        Open formatPath For Binary Access Write As #formatFile
-        Put #formatFile, , formatBytes
-        Close #formatFile
+        formatCopy.Save(formatPath)
         Dim loadedFormat As XPImage
         Set loadedFormat = XPImage.Load(formatPath)
         If loadedFormat.Width <> 8 Or loadedFormat.Height <> 6 Then Error 5, "XPImage " & formatName & " file round-trip dimensions failed"
