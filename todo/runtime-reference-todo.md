@@ -218,7 +218,7 @@ File input and interactive input are distinct APIs. `Lock/Unlock` is regression-
 - [ ] dedicated compiler/preprocessor/runtime/temp-build security review
 - [>] compiler-generated `__*` names are reserved and runtime/public type names protected from user type declarations
 - [>] reserved identifier validation runs before source rewrites
-- [ ] verify scope isolation for locals, globals, statics, arrays, lists and ByRef
+- [x] verify scope isolation for locals, globals, statics, arrays, lists and ByRef
 - [ ] verify modules cannot overwrite unrelated module state
 - [x] verify concurrent compiler builds use isolated temp paths
 - [x] prevent output path traversal/unrelated-file overwrite
