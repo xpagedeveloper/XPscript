@@ -363,6 +363,9 @@ jobs:
             if ($null -ne $server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force }
           }
 
+      - name: Install browser WASM workload
+        run: dotnet workload install wasm-tools
+
       - name: Verify XPImage Browser-WASM ServerSide boundary
         shell: pwsh
         run: |
