@@ -18,5 +18,10 @@ Sub Main()
     archive.MaxCompressionRatio = maxRatio
     archive.Open()
 
+    If Application.ArgCount >= 5 And Application.Args(4) = "read" Then
+        Dim payload As Variant
+        payload = archive.ReadBytes("payload.bin")
+    End If
+
     Print "ARCHIVE_SECURITY_REJECT_ZIP_UNEXPECTED_SUCCESS"
 End Sub
