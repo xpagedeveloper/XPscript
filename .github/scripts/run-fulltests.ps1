@@ -105,6 +105,7 @@ if (Should-Run 'platform') {
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive corrupt stream fixture first'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   Compile-Xps ./demo/archive/archive-corrupt-stream-regression.xps archive-corrupt-stream-regression
   Expect-XpsFailure archive-corrupt-stream-regression @('../../out/archive-security-fixtures/corrupt-stream.zip') 'corrupt compressed stream focused regression'
+  Expect-XpsFailure archive-corrupt-stream-regression @('../../out/archive-security-fixtures/incorrect-size-metadata.zip') 'incorrect archive size metadata focused regression'
   # Focused replacement-failure regression: a failed save must leave the original ZIP byte-for-byte unchanged.
   if ($IsWindows) {
     $replacementPath = './out/fulltest/archive-replacement-failure.zip'
@@ -132,6 +133,7 @@ if (Should-Run 'platform') {
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/unc.zip','10000','2147483647','1000') 'UNC path'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/mixed-separator-traversal.zip','10000','2147483647','1000') 'mixed separator traversal'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/corrupt-stream.zip','10000','2147483647','1000','read') 'corrupt compressed stream'
+  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/incorrect-size-metadata.zip','10000','2147483647','1000','read') 'incorrect archive size metadata'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/malformed.zip','10000','2147483647','1000') 'malformed archive'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/symlink-entry.zip','10000','2147483647','1000') 'symbolic link entry'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/max-entries.zip','2','2147483647','1000') 'MaxEntries'
