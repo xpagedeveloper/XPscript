@@ -21,6 +21,10 @@ internal static class DesktopApplicationHost
                     IsBackground = true,
                     Name = "XPScript Desktop UI"
                 };
+
+                if (OperatingSystem.IsWindows())
+                    _uiThread.SetApartmentState(ApartmentState.STA);
+
                 _uiThread.Start();
             }
         }
