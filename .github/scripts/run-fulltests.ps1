@@ -102,6 +102,8 @@ if (Should-Run 'runtime') {
 if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
   # Process execution is a core platform primitive. Keep its smallest regression first.
+  $shellExecuteArgvSmoke = Run-Xps ./samples/shellexecute-argv-smoke.xps shellexecute-argv-smoke
+  if ($shellExecuteArgvSmoke.Output -notmatch 'SHELLEXECUTE-ARGV-SMOKE=OK') { throw 'ShellExecute argv smoke regression did not complete.' }
   $shellExecute = Run-Xps ./samples/shellexecute-basic.xps shellexecute-basic
   if ($shellExecute.Output -notmatch 'SHELLEXECUTE-BASIC=OK') { throw 'ShellExecute basic regression did not complete.' }
   $shellExecuteArgs = Run-Xps ./samples/shellexecute-arguments.xps shellexecute-arguments
