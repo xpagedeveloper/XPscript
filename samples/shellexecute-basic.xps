@@ -9,7 +9,7 @@ Sub Main()
     args(2) = "-Command"
 
     args(3) = "[Console]::Out.Write('stdout-ok'); [Console]::Error.Write('stderr-ok'); exit 7"
-    Set result = ShellExecute("pwsh", args)
+    result = ShellExecute("pwsh", args)
 
     If result.ExitCode <> 7 Then Error 5, "ShellExecute did not return the child exit code."
     If result.Output <> "stdout-ok" Then Error 5, "ShellExecute did not capture stdout."
