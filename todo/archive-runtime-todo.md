@@ -313,7 +313,7 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 - [x] Test path separator normalization.
 - [x] Test Unicode filenames.
 - [x] Test case-sensitive and case-insensitive filesystem behavior.
-- [ ] Test large files and archives where practical.
+- [x] Test large files and archives where practical.
 
 ## Android and iOS
 
