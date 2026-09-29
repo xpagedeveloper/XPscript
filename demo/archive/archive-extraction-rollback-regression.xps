@@ -1,0 +1,11 @@
+Option Declare
+
+Sub Main()
+    If Application.ArgCount < 2 Then Error 5, "Archive extraction rollback regression requires archive and target paths"
+
+    Dim archive As New Archive(Application.Args(0))
+    archive.Open()
+    archive.ExtractAll(Application.Args(1))
+
+    Print "ARCHIVE_EXTRACTION_ROLLBACK_UNEXPECTED_SUCCESS"
+End Sub
