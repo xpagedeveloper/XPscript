@@ -13,9 +13,14 @@ var emptyReferences = Array.CreateInstance(stagedType, 0);
 var project = (string)(method.Invoke(null, new object?[] { "android-arm64", false, emptyReferences, false, false, "AndroidSmoke" })
     ?? throw new Exception("Android project generation returned null."));
 
-foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramework>", "<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>", "<AndroidSupportedAbis>arm64-v8a</AndroidSupportedAbis>", "<AndroidPackageFormat>apk</AndroidPackageFormat>" })
+foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramework>", "<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>", "<RuntimeIdentifier>android-arm64</RuntimeIdentifier>", "<AndroidPackageFormat>apk</AndroidPackageFormat>" })
     if (!project.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android generated project is missing: " + expected);
+
+if (project.Contains("<AndroidSupportedAbis>", StringComparison.Ordinal))
+    throw new Exception("Android generated project still uses obsolete AndroidSupportedAbis.");
+if (project.Contains("<StartupObject>", StringComparison.Ordinal))
+    throw new Exception("Android generated project must not specify StartupObject.");
 
 var hostType = type.Assembly.GetType("XPScript.Compiler.AndroidHostSource", throwOnError: true)!;
 var code = (string)(hostType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
