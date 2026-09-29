@@ -163,7 +163,7 @@ archive.Save()
 - [x] `Rename(entryName, newName)`.
 - [x] Investigate which archive formats support direct modification cleanly through SharpCompress.
 - [x] Where direct in-place modification is not safe or available, rebuild the archive into a temporary stream/file and atomically replace the original.
-- [ ] Ensure failed modifications do not corrupt the original archive.
+- [x] Ensure failed modifications do not corrupt the original archive.
 - [x] Reject modification attempts for read-only archive formats with a clear XPScript runtime error.
 
 ## Extraction
@@ -362,7 +362,7 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Maximum entry size exceeded.
 - [x] Maximum total extracted size exceeded.
 - [x] Maximum compression ratio exceeded.
-- [ ] Save or replacement operation failed without corrupting the original archive.
+- [x] Save or replacement operation failed without corrupting the original archive.
 - [x] Map errors into existing XPScript runtime error conventions.
 
 ## ZIP tests
@@ -404,7 +404,7 @@ Server-side filesystem operations can use the normal server execution model.
 - [ ] Add read/extract tests for every read-only format exposed publicly.
 - [x] Include nested directories and Unicode filenames.
 - [x] Include empty files and empty folders where the format supports them.
-- [ ] Include malformed archive negative tests.
+- [x] Include malformed archive negative tests.
 
 ## Security tests
 
