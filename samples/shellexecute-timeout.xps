@@ -1,0 +1,17 @@
+Option Declare
+
+Sub Main()
+    Dim args(3) As String
+    Dim result As Variant
+
+    args(0) = "-NoLogo"
+    args(1) = "-NoProfile"
+    args(2) = "-Command"
+    args(3) = "Start-Sleep -Seconds 10"
+    result = ShellExecute("pwsh", args, 250)
+
+    If Not result.TimedOut Then Error 5, "ShellExecute timeout was not reported."
+    If result.ExitCode <> -1 Then Error 5, "Timed out ShellExecute must return exit code -1."
+
+    Print "SHELLEXECUTE-TIMEOUT=OK"
+End Sub

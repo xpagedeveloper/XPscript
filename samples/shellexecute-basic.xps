@@ -1,0 +1,20 @@
+Option Declare
+
+Sub Main()
+    Dim args(3) As String
+    Dim result As Variant
+
+    args(0) = "-NoLogo"
+    args(1) = "-NoProfile"
+    args(2) = "-Command"
+
+    args(3) = "[Console]::Out.Write('stdout-ok'); [Console]::Error.Write('stderr-ok'); exit 7"
+    result = ShellExecute("pwsh", args)
+
+    If result.ExitCode <> 7 Then Error 5, "ShellExecute did not return the child exit code."
+    If result.Output <> "stdout-ok" Then Error 5, "ShellExecute did not capture stdout."
+    If result.Error <> "stderr-ok" Then Error 5, "ShellExecute did not capture stderr."
+    If result.TimedOut Then Error 5, "ShellExecute unexpectedly timed out."
+
+    Print "SHELLEXECUTE-BASIC=OK"
+End Sub

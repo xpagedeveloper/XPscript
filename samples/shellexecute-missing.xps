@@ -1,0 +1,13 @@
+Option Declare
+
+Sub Main()
+    Dim args(0) As String
+
+    On Error Resume Next
+    Call ShellExecute("xpscript-shell-executable-that-must-not-exist-7f62b", args)
+
+    If Err = 0 Then Error 5, "ShellExecute unexpectedly started a missing executable."
+    If Err <> 53 Then Error 5, "ShellExecute missing executable must raise error 53."
+
+    Print "SHELLEXECUTE-MISSING=OK"
+End Sub

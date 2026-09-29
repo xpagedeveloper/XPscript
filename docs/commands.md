@@ -147,6 +147,8 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `Sleep` | `Sleep milliseconds` | milliseconds | Suspends execution. | [runtime-sax.xps](../samples/runtime-sax.xps) |
 | `Platform` | `Platform()` | none | Returns the current platform name. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `Shell` | `Shell(command [, windowStyle])` | command, optional style | Starts an external process. | [platform-shell.xps](../samples/platform-shell.xps) |
+| `ShellArgs` | `ShellArgs(executable, arguments [, windowStyle])` | executable, one-dimensional argument array/list, optional style | Starts a process without waiting; structured arguments avoid command-string re-parsing. | [shell-structured-arguments.xps](../samples/shell-structured-arguments.xps) |
+| `ShellExecute` | `ShellExecute(executable, arguments [, timeoutMilliseconds])` | executable, one-dimensional argument array/list, optional timeout; `0` means no timeout | Runs synchronously and returns `XPShellResult` with `ExitCode`, `Output`, `Error` and `TimedOut`. Non-zero child exit codes are returned normally. | [shellexecute-basic.xps](../samples/shellexecute-basic.xps) |
 | `Format` | `Format(value [, format])` | value, format | Formats a value. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
 
 ## Classes and native integration

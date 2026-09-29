@@ -1,0 +1,24 @@
+Option Declare
+
+Sub Main()
+    Dim args(3) As String
+    Dim result As Variant
+    Dim expected As String
+
+    expected = "space ""quote"" value"
+
+    args(0) = "-NoLogo"
+    args(1) = "-NoProfile"
+    args(2) = "-File"
+    args(3) = "samples/shellexecute-argv-helper.ps1"
+
+    ReDim Preserve args(4)
+    args(4) = expected
+
+    result = ShellExecute("pwsh", args)
+
+    If result.ExitCode <> 0 Then Error 5, "ShellExecute structured argument child failed: " & result.Error
+    If result.Output <> expected Then Error 5, "ShellExecute changed a structured argument: " & result.Output
+
+    Print "SHELLEXECUTE-ARGS=OK"
+End Sub
