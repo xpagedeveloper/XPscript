@@ -27,7 +27,22 @@ internal static class DesktopApplicationHost
 
         Started.Wait();
         if (_startupFailure is not null)
-            throw new InvalidOperationException("Unable to initialize the XPScript desktop UI runtime.", _startupFailure);
+            throw new InvalidOperationException(
+                "Unable to initialize the XPScript desktop UI runtime. " +
+                "Startup failure: " + FormatExceptionChain(_startupFailure),
+                _startupFailure);
+    }
+
+    private static string FormatExceptionChain(Exception exception)
+    {
+        var messages = new List<string>();
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            var message = string.IsNullOrWhiteSpace(current.Message) ? "<no message>" : current.Message;
+            messages.Add(current.GetType().FullName + ": " + message);
+        }
+
+        return string.Join(" -> ", messages);
     }
 
     public static void SetProcessKeepAlive(bool keepAlive)
