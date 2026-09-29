@@ -328,9 +328,10 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/desktop/main.xps -o ./out/scaffold-test/desktop/app --runtime=false --debug
           test -f ./out/scaffold-test/desktop/app
           set +e
-          timeout --kill-after=5s 10s "${cli[@]}" run ./out/scaffold-test/desktop/main.xps
+          desktop_output="$(timeout --kill-after=5s 10s "${cli[@]}" run ./out/scaffold-test/desktop/main.xps --debug 2>&1)"
           desktop_status=$?
           set -e
+          printf '%s\n' "$desktop_output"
           if [ "$desktop_status" -ne 0 ] && [ "$desktop_status" -ne 124 ]; then
             exit "$desktop_status"
           fi
