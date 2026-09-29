@@ -9,6 +9,7 @@ internal static class XPCrossPlatformRuntime
 
     public static string Platform()
     {
+        if (OperatingSystem.IsAndroid()) return "Android";
         if (OperatingSystem.IsWindows()) return "Windows";
         if (OperatingSystem.IsLinux()) return "Linux";
         if (OperatingSystem.IsMacOS()) return "MacOS";
