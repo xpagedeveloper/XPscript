@@ -13,7 +13,7 @@ var emptyReferences = Array.CreateInstance(stagedType, 0);
 var project = (string)(method.Invoke(null, new object?[] { "android-arm64", false, emptyReferences, false, false, "AndroidSmoke" })
     ?? throw new Exception("Android project generation returned null."));
 
-foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramework>", "<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>", "<RuntimeIdentifier>android-arm64</RuntimeIdentifier>", "<AndroidPackageFormat>apk</AndroidPackageFormat>" })
+foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramework>", "<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>", "<RuntimeIdentifier>android-arm64</RuntimeIdentifier>", "<AndroidPackageFormat>apk</AndroidPackageFormat>", "<ApplicationId>com.xpscript.debugapp</ApplicationId>" })
     if (!project.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android generated project is missing: " + expected);
 
@@ -25,7 +25,7 @@ if (project.Contains("<StartupObject>", StringComparison.Ordinal))
 var hostType = type.Assembly.GetType("XPScript.Compiler.AndroidHostSource", throwOnError: true)!;
 var code = (string)(hostType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
     ?? throw new Exception("AndroidHostSource.Code was not found."));
-foreach (var expected in new[] { "AndroidEntryActivity", "MainLauncher = true", "Console.AndroidLog", "\"XPScript\"" })
+foreach (var expected in new[] { "AndroidEntryActivity", "MainLauncher = true", "Console.AndroidLog", "\"XPScript\"", "Log.Error", "Program.Main(Array.Empty<string>())" })
     if (!code.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android host is missing: " + expected);
 
