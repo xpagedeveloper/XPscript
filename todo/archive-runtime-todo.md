@@ -172,7 +172,7 @@ archive.Save()
 - [x] `ExtractAll(targetDirectory)`.
 - [x] `ExtractFolder(folderName, targetDirectory)`.
 - [x] Support extracting directly to Byte arrays where appropriate without touching disk.
-- [ ] Ensure extraction is transactional where practical when a failure occurs partway through processing.
+- [x] Ensure extraction is transactional where practical when a failure occurs partway through processing.
 
 ## Reading entries without extraction
 
@@ -422,7 +422,7 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Corrupt compressed stream.
 - [x] Password-protected archive with missing password.
 - [x] Password-protected archive with incorrect password.
-- [ ] Verify failed extraction does not leave unsafe partial files outside controlled locations.
+- [x] Verify failed extraction does not leave unsafe partial files outside controlled locations.
 
 ## Cross-platform CI
 
