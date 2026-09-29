@@ -25,7 +25,7 @@ if (project.Contains("<StartupObject>", StringComparison.Ordinal))
 var hostType = type.Assembly.GetType("XPScript.Compiler.AndroidHostSource", throwOnError: true)!;
 var code = (string)(hostType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
     ?? throw new Exception("AndroidHostSource.Code was not found."));
-foreach (var expected in new[] { "AndroidEntryActivity", "MainLauncher = true", "Console.SetOut", "Console.SetError", "\"XPScript\"" })
+foreach (var expected in new[] { "AndroidEntryActivity", "MainLauncher = true", "Console.AndroidLog", "\"XPScript\"" })
     if (!code.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android host is missing: " + expected);
 
