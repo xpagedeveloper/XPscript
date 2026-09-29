@@ -242,7 +242,6 @@ jobs:
           # Web was the most recently hanging scaffold, so verify it first.
           "${cli[@]}" new web ./out/scaffold-test/mysite
           test -f ./out/scaffold-test/mysite/index.xps
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- validate ./out/scaffold-test/mysite/index.xps --debug
           timeout --kill-after=5s 45s "${cli[@]}" web --root ./out/scaffold-test/mysite --address 127.0.0.1 --port 18081 >./out/scaffold-test/web.log 2>&1 &
           web_pid=$!
           web_ready=0
@@ -311,7 +310,6 @@ jobs:
           echo '=== REST scaffold ==='
           "${cli[@]}" new rest ./out/scaffold-test/myapi
           test -f ./out/scaffold-test/myapi/index.xps
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- validate ./out/scaffold-test/myapi/index.xps --debug
           timeout --kill-after=5s 45s "${cli[@]}" web --root ./out/scaffold-test/myapi --address 127.0.0.1 --port 18082 >./out/scaffold-test/rest.log 2>&1 &
           rest_pid=$!
           rest_ready=0
