@@ -218,6 +218,12 @@ public sealed class CompilerDriver
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
             CompilerSourceDocuments.Stage(sourcePath, includeResult.Map, tempRoot);
+            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+            {
+                var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
+                await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
+                CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
+            }
 
             var psi = new ProcessStartInfo
             {
@@ -333,6 +339,12 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
+            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+            {
+                var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
+                await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
+                CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
+            }
 
             var psi = new ProcessStartInfo
             {
@@ -560,6 +572,12 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
+            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+            {
+                var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
+                await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
+                CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
+            }
 
             var psi = new ProcessStartInfo
             {
