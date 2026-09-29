@@ -1,0 +1,21 @@
+Option Declare
+
+Sub Main()
+    If Application.ArgCount < 2 Then Error 5, "Archive large-file regression requires source and extraction paths"
+
+    Dim sourcePath As String
+    Dim extractionPath As String
+    sourcePath = Application.Args(0)
+    extractionPath = Application.Args(1)
+
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddFile(sourcePath, "large.bin")
+
+    If archive.FileCount <> 1 Then Error 5, "Archive large-file entry count failed"
+    If archive.UncompressedSize < 16777216 Then Error 5, "Archive large-file size metadata failed"
+
+    archive.ExtractAll(extractionPath)
+
+    Print "ARCHIVE_LARGE_FILE=OK"
+End Sub
