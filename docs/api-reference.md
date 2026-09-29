@@ -4,6 +4,42 @@ This is the searchable runtime-object reference for XPScript. Use [commands.md](
 
 Every row contains the member title, accepted syntax, parameters and their purpose, a short behavior description, and a complete `.xps` example that can be copied and compiled. The linked topical pages provide longer explanations and security guidance.
 
+## Process execution
+
+Use `Shell` for compatibility command-string process startup and `ShellArgs` when a process should be started with structured arguments without waiting. Use `ShellExecute` when the caller needs completion, captured output, or the child exit code.
+
+```xpscript
+Dim args(3) As String
+Dim result As Variant
+
+args(0) = "-NoLogo"
+args(1) = "-NoProfile"
+args(2) = "-Command"
+args(3) = "[Console]::Out.Write('hello')"
+
+Set result = ShellExecute("pwsh", args)
+
+Print result.ExitCode
+Print result.Output
+Print result.Error
+Print result.TimedOut
+```
+
+`ShellExecute(executable, arguments [, timeoutMilliseconds])` accepts a one-dimensional array/list of arguments. A String containing a combined argument command line is rejected. This is intentional: callers should keep executable and argument values separate rather than concatenate untrusted values into shell syntax.
+
+The default timeout is `0`, meaning wait indefinitely. A positive timeout is measured in milliseconds. When it expires, XPScript kills the process tree, waits for termination, captures the remaining stdout/stderr, and returns `TimedOut=True` with `ExitCode=-1`. A normal non-zero child exit code is returned in `ExitCode`; it is not converted into an XPScript runtime error. Failure to locate or start the executable remains an XPScript runtime error.
+
+`XPShellResult` exposes:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `ExitCode` | Integer | Child exit code, or `-1` after timeout. |
+| `Output` | String | Captured standard output. |
+| `Error` | String | Captured standard error. |
+| `TimedOut` | Boolean | True when the configured timeout expired. |
+
+Stdout and stderr are drained concurrently to avoid pipe-buffer deadlocks. `ShellExecute` uses the same executable resolution and platform-specific script handling as the existing process APIs on Windows, Linux and macOS. Process execution is not available in browser/WASM environments.
+
 ## Quick navigation
 
 - [Application runtime](#application-runtime)

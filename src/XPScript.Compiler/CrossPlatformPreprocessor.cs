@@ -9,7 +9,7 @@ internal sealed class CrossPlatformPreprocessor
         "Platform", "FileExists", "DirExists", "IsFile", "IsDir", "FileInfo", "FileHash",
         "FileEquals", "Files", "Directories", "CopyFile", "MoveFile", "ReadFile", "ReadLines",
         "ReadBytes", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "Path", "Dir",
-        "StrTemplate", "ShellArgs", "Shell"
+        "StrTemplate", "ShellExecute", "ShellArgs", "Shell"
     ];
 
     public string Transform(string source)
@@ -54,6 +54,8 @@ internal sealed class CrossPlatformPreprocessor
         source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "Dir", "XPCrossPlatformRuntime.Dir");
 
         source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "StrTemplate", "XPCrossPlatformRuntime.StrTemplate");
+
+        source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "ShellExecute", "XPCrossPlatformRuntime.ShellExecute");
 
         source = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(source, "ShellArgs", "XPCrossPlatformRuntime.ShellArgs");
 

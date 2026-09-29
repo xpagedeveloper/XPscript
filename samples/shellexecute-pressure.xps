@@ -1,0 +1,19 @@
+Option Declare
+
+Sub Main()
+    Dim args(3) As String
+    Dim result As Variant
+
+    args(0) = "-NoLogo"
+    args(1) = "-NoProfile"
+    args(2) = "-Command"
+    args(3) = "1..4000 | ForEach-Object { [Console]::Out.WriteLine('OUT-' + $_); [Console]::Error.WriteLine('ERR-' + $_) }"
+    result = ShellExecute("pwsh", args, 30000)
+
+    If result.TimedOut Then Error 5, "ShellExecute pipe pressure test timed out."
+    If result.ExitCode <> 0 Then Error 5, "ShellExecute pipe pressure child failed."
+    If Instr(result.Output, "OUT-4000") = 0 Then Error 5, "ShellExecute lost stdout."
+    If Instr(result.Error, "ERR-4000") = 0 Then Error 5, "ShellExecute lost stderr."
+
+    Print "SHELLEXECUTE-PRESSURE=OK"
+End Sub

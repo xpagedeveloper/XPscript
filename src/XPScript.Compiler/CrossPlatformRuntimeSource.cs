@@ -521,6 +521,65 @@ internal static class XPCrossPlatformRuntime
         }
     }
 
+    public sealed class XPShellResult
+    {
+        public int ExitCode { get; }
+        public string Output { get; }
+        public string Error { get; }
+        public bool TimedOut { get; }
+
+        public XPShellResult(int exitCode, string output, string error, bool timedOut)
+        {
+            ExitCode = exitCode;
+            Output = output;
+            Error = error;
+            TimedOut = timedOut;
+        }
+    }
+
+    public static XPShellResult ShellExecute(object? executable, object? arguments, object? timeoutMilliseconds = null)
+    {
+        var fileName = XPScriptRuntime.CStr(executable).Trim();
+        if (fileName.Length == 0)
+            throw new XPScriptRuntimeException(5, "ShellExecute requires a program name.");
+
+        var structuredArguments = ToStructuredArguments(arguments);
+        var timeout = timeoutMilliseconds is null ? 0 : XPScriptRuntime.CInt(timeoutMilliseconds);
+        if (timeout < 0)
+            throw new XPScriptRuntimeException(5, "ShellExecute timeoutMilliseconds must be zero or greater.");
+
+        try
+        {
+            var start = BuildStartInfo(fileName, structuredArguments, windowStyle: null);
+            start.RedirectStandardOutput = true;
+            start.RedirectStandardError = true;
+            start.CreateNoWindow = true;
+
+            using var process = new System.Diagnostics.Process { StartInfo = start };
+            if (!process.Start())
+                throw new FileNotFoundException("Could not start the requested program.");
+
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+            var completed = timeout == 0 ? process.WaitForExit(-1) : process.WaitForExit(timeout);
+
+            if (!completed)
+            {
+                try { process.Kill(entireProcessTree: true); }
+                catch (InvalidOperationException) { }
+                process.WaitForExit();
+            }
+
+            var output = outputTask.GetAwaiter().GetResult();
+            var error = errorTask.GetAwaiter().GetResult();
+            return new XPShellResult(completed ? process.ExitCode : -1, output, error, timedOut: !completed);
+        }
+        catch (Exception ex) when (ex is not XPScriptRuntimeException)
+        {
+            throw LSExtendedErrorRuntime.Normalize(ex);
+        }
+    }
+
     private static System.Diagnostics.ProcessStartInfo BuildStartInfo(string fileName, IReadOnlyList<string> arguments, object? windowStyle)
     {
         fileName = ResolveRequestedProgram(fileName);
