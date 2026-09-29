@@ -418,7 +418,7 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Excessive entry count.
 - [x] Excessive uncompressed size.
 - [x] Extreme compression ratio.
-- [ ] Incorrect archive size metadata.
+- [x] Incorrect archive size metadata.
 - [x] Corrupt compressed stream.
 - [x] Password-protected archive with missing password.
 - [x] Password-protected archive with incorrect password.
