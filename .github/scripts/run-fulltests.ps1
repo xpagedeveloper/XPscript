@@ -137,6 +137,24 @@ if (Should-Run 'platform') {
       if (Test-Path $replacementPath) { (Get-Item $replacementPath).IsReadOnly = $false }
     }
   }
+  # Focused extraction-commit rollback regression: a failed commit must restore the destination.
+  $rollbackArchive = './out/fulltest/archive-extraction-rollback.zip'
+  $rollbackSource = './out/fulltest/archive-extraction-rollback-source'
+  $rollbackTarget = './out/fulltest/archive-extraction-rollback-target'
+  Remove-Item -Recurse -Force $rollbackSource,$rollbackTarget -ErrorAction SilentlyContinue
+  Remove-Item -Force $rollbackArchive -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force $rollbackSource,$rollbackTarget | Out-Null
+  Set-Content -NoNewline -Path (Join-Path $rollbackSource 'a-new.txt') -Value 'new'
+  Set-Content -NoNewline -Path (Join-Path $rollbackSource 'b-existing.txt') -Value 'replacement'
+  Set-Content -NoNewline -Path (Join-Path $rollbackSource 'z-blocked.txt') -Value 'blocked'
+  Compress-Archive -Path (Join-Path $rollbackSource '*') -DestinationPath $rollbackArchive
+  Set-Content -NoNewline -Path (Join-Path $rollbackTarget 'b-existing.txt') -Value 'original'
+  New-Item -ItemType Directory -Force (Join-Path $rollbackTarget 'z-blocked.txt') | Out-Null
+  Compile-Xps ./demo/archive/archive-extraction-rollback-regression.xps archive-extraction-rollback-regression
+  Expect-XpsFailure archive-extraction-rollback-regression @('../../archive-extraction-rollback.zip','../../archive-extraction-rollback-target') 'archive extraction commit rollback'
+  if (Test-Path (Join-Path $rollbackTarget 'a-new.txt')) { throw 'Failed Archive extraction left a newly committed file behind.' }
+  if ((Get-Content -Raw (Join-Path $rollbackTarget 'b-existing.txt')) -ne 'original') { throw 'Failed Archive extraction did not restore an overwritten file.' }
+  if (-not (Test-Path (Join-Path $rollbackTarget 'z-blocked.txt') -PathType Container)) { throw 'Failed Archive extraction changed the blocking destination directory.' }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj','-c','Release','--','.') $compileTimeoutMilliseconds 'Compiler machine interface probe'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
