@@ -50,6 +50,21 @@ if (centralOffset < 0 || centralOffset + 28 > corruptBytes.Length)
 BitConverter.GetBytes(checked(declaredSize + 1)).CopyTo(corruptBytes, centralOffset + 24);
 File.WriteAllBytes(corruptPath, corruptBytes);
 
+// Separate metadata-integrity fixture. Keep this distinct from corrupt-stream.zip
+// so the declared-size contract has its own focused regression.
+var incorrectSizePath = Path.Combine(root, "incorrect-size-metadata.zip");
+CreateZip(incorrectSizePath, archive => WriteBytes(archive, "payload.bin", Enumerable.Repeat((byte)0x42, 32768).ToArray()));
+var incorrectSizeBytes = File.ReadAllBytes(incorrectSizePath);
+if (incorrectSizeBytes.Length < 30 || BitConverter.ToUInt32(incorrectSizeBytes, 0) != localHeaderSignature)
+    throw new InvalidDataException("Unexpected ZIP metadata fixture layout.");
+var actualDeclaredSize = BitConverter.ToUInt32(incorrectSizeBytes, 22);
+BitConverter.GetBytes(checked(actualDeclaredSize + 17)).CopyTo(incorrectSizeBytes, 22);
+var incorrectCentralOffset = FindSignature(incorrectSizeBytes, centralHeaderSignature);
+if (incorrectCentralOffset < 0 || incorrectCentralOffset + 28 > incorrectSizeBytes.Length)
+    throw new InvalidDataException("Unable to locate ZIP metadata fixture central directory entry.");
+BitConverter.GetBytes(checked(actualDeclaredSize + 17)).CopyTo(incorrectSizeBytes, incorrectCentralOffset + 24);
+File.WriteAllBytes(incorrectSizePath, incorrectSizeBytes);
+
 File.WriteAllBytes(Path.Combine(root, "malformed.zip"), Encoding.ASCII.GetBytes("not-a-zip-archive"));
 
 CreateTar(Path.Combine(root, "traversal.tar"), writer => WriteTarText(writer, "../escape.txt", "escape"));
