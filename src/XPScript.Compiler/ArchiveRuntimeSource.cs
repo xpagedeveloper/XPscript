@@ -337,22 +337,88 @@ internal sealed class XPScriptArchive
 
     private static void CommitStagedExtraction(string staging, string root)
     {
-        System.IO.Directory.CreateDirectory(root);
-        foreach (var directory in System.IO.Directory.EnumerateDirectories(staging, "*", System.IO.SearchOption.AllDirectories))
+        var rootExisted = System.IO.Directory.Exists(root);
+        var rollback = staging.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar) + ".rollback";
+        var createdFiles = new List<string>();
+        var replacedFiles = new List<(string Target, string Backup)>();
+        var createdDirectories = new List<string>();
+        try
         {
-            var relative = System.IO.Path.GetRelativePath(staging, directory);
-            var target = SafePath(root, relative.Replace('\\', '/'));
-            EnsureNoReparseParents(root, target);
-            System.IO.Directory.CreateDirectory(target);
+            if (!rootExisted)
+            {
+                System.IO.Directory.CreateDirectory(root);
+                createdDirectories.Add(root);
+            }
+
+            foreach (var directory in System.IO.Directory.EnumerateDirectories(staging, "*", System.IO.SearchOption.AllDirectories)
+                .OrderBy(x => x.Count(ch => ch == System.IO.Path.DirectorySeparatorChar || ch == System.IO.Path.AltDirectorySeparatorChar)))
+            {
+                var relative = System.IO.Path.GetRelativePath(staging, directory);
+                var target = SafePath(root, relative.Replace('\\', '/'));
+                EnsureNoReparseParents(root, target);
+                if (!System.IO.Directory.Exists(target))
+                {
+                    System.IO.Directory.CreateDirectory(target);
+                    createdDirectories.Add(target);
+                }
+            }
+
+            foreach (var file in System.IO.Directory.EnumerateFiles(staging, "*", System.IO.SearchOption.AllDirectories))
+            {
+                var relative = System.IO.Path.GetRelativePath(staging, file);
+                var target = SafePath(root, relative.Replace('\\', '/'));
+                EnsureNoReparseParents(root, target);
+                var parent = System.IO.Path.GetDirectoryName(target);
+                if (!string.IsNullOrEmpty(parent) && !System.IO.Directory.Exists(parent))
+                {
+                    System.IO.Directory.CreateDirectory(parent);
+                    createdDirectories.Add(parent);
+                }
+
+                if (System.IO.File.Exists(target))
+                {
+                    var backup = System.IO.Path.Combine(rollback, Guid.NewGuid().ToString("N"));
+                    System.IO.Directory.CreateDirectory(rollback);
+                    System.IO.File.Move(target, backup);
+                    replacedFiles.Add((target, backup));
+                }
+                else
+                {
+                    createdFiles.Add(target);
+                }
+
+                System.IO.File.Move(file, target);
+            }
         }
-        foreach (var file in System.IO.Directory.EnumerateFiles(staging, "*", System.IO.SearchOption.AllDirectories))
+        catch
         {
-            var relative = System.IO.Path.GetRelativePath(staging, file);
-            var target = SafePath(root, relative.Replace('\\', '/'));
-            EnsureNoReparseParents(root, target);
-            var parent = System.IO.Path.GetDirectoryName(target);
-            if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
-            System.IO.File.Move(file, target, true);
+            for (var i = createdFiles.Count - 1; i >= 0; i--)
+            {
+                try { if (System.IO.File.Exists(createdFiles[i])) System.IO.File.Delete(createdFiles[i]); } catch { }
+            }
+            for (var i = replacedFiles.Count - 1; i >= 0; i--)
+            {
+                try
+                {
+                    if (System.IO.File.Exists(replacedFiles[i].Target)) System.IO.File.Delete(replacedFiles[i].Target);
+                    if (System.IO.File.Exists(replacedFiles[i].Backup)) System.IO.File.Move(replacedFiles[i].Backup, replacedFiles[i].Target);
+                }
+                catch { }
+            }
+            for (var i = createdDirectories.Count - 1; i >= 0; i--)
+            {
+                try
+                {
+                    if (System.IO.Directory.Exists(createdDirectories[i]) && !System.IO.Directory.EnumerateFileSystemEntries(createdDirectories[i]).Any())
+                        System.IO.Directory.Delete(createdDirectories[i]);
+                }
+                catch { }
+            }
+            throw;
+        }
+        finally
+        {
+            try { if (System.IO.Directory.Exists(rollback)) System.IO.Directory.Delete(rollback, true); } catch { }
         }
     }
 
