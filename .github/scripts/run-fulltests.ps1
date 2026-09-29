@@ -101,6 +101,10 @@ if (Should-Run 'runtime') {
 
 if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
+  # Focused first regression: keep the most recently failing corrupt ZIP behavior at the front of the platform suite.
+  $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive corrupt stream fixture first'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  Compile-Xps ./demo/archive/archive-corrupt-stream-regression.xps archive-corrupt-stream-regression
+  Expect-XpsFailure archive-corrupt-stream-regression @('../../out/archive-security-fixtures/corrupt-stream.zip') 'corrupt compressed stream focused regression'
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj','-c','Release','--','.') $compileTimeoutMilliseconds 'Compiler machine interface probe'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
