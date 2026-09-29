@@ -312,7 +312,7 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 - [x] Run the same public `Archive` API on macOS.
 - [x] Test path separator normalization.
 - [x] Test Unicode filenames.
-- [ ] Test case-sensitive and case-insensitive filesystem behavior.
+- [x] Test case-sensitive and case-insensitive filesystem behavior.
 - [ ] Test large files and archives where practical.
 
 ## Android and iOS
