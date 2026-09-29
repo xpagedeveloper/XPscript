@@ -105,6 +105,22 @@ if (Should-Run 'platform') {
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive corrupt stream fixture first'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   Compile-Xps ./demo/archive/archive-corrupt-stream-regression.xps archive-corrupt-stream-regression
   Expect-XpsFailure archive-corrupt-stream-regression @('../../out/archive-security-fixtures/corrupt-stream.zip') 'corrupt compressed stream focused regression'
+  # Focused replacement-failure regression: a failed save must leave the original ZIP byte-for-byte unchanged.
+  if ($IsWindows) {
+    $replacementPath = './out/fulltest/archive-replacement-failure.zip'
+    if (Test-Path $replacementPath) { Remove-Item -Force $replacementPath }
+    Compress-Archive -Path './README.md' -DestinationPath $replacementPath
+    $replacementHashBefore = (Get-FileHash $replacementPath -Algorithm SHA256).Hash
+    Compile-Xps ./demo/archive/archive-replacement-failure-regression.xps archive-replacement-failure-regression
+    try {
+      (Get-Item $replacementPath).IsReadOnly = $true
+      Expect-XpsFailure archive-replacement-failure-regression @('../../archive-replacement-failure.zip') 'archive replacement failure preserves original'
+      $replacementHashAfter = (Get-FileHash $replacementPath -Algorithm SHA256).Hash
+      if ($replacementHashAfter -ne $replacementHashBefore) { throw 'Failed Archive replacement changed the original archive.' }
+    } finally {
+      if (Test-Path $replacementPath) { (Get-Item $replacementPath).IsReadOnly = $false }
+    }
+  }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj','-c','Release','--','.') $compileTimeoutMilliseconds 'Compiler machine interface probe'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
