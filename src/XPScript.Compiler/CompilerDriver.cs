@@ -571,7 +571,7 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
-            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+            if (runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
             {
                 var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
                 await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
