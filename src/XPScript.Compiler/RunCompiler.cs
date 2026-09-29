@@ -82,16 +82,17 @@ internal static class RunCompiler
         Directory.CreateDirectory(outputRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
 
+        var usesDesktopUi = RunRoslynCompiler.UsesDesktopUi(generatedSource);
         if (RunRoslynCompiler.CanCompile(generatedSource, managedReferences.Managed.Count > 0))
         {
             var assembly = await RunRoslynCompiler.CompileAsync(generatedSource, outputRoot, debug, cancellationToken).ConfigureAwait(false);
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
-            if (RunRoslynCompiler.UsesDesktopUi(generatedSource))
+            if (usesDesktopUi)
                 StageDesktopDependencies(outputRoot);
             return assembly;
         }
 
-        return await CompileWithMsBuildAsync(
+        var runnable = await CompileWithMsBuildAsync(
             sourcePath,
             outputRoot,
             generatedSource,
@@ -99,6 +100,9 @@ internal static class RunCompiler
             nativeDependencies,
             debug,
             cancellationToken).ConfigureAwait(false);
+        if (usesDesktopUi)
+            StageDesktopDependencies(outputRoot);
+        return runnable;
     }
 
     private static async Task<string> CompileWithMsBuildAsync(
