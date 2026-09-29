@@ -164,7 +164,7 @@ if (Should-Run 'platform') {
   [System.IO.File]::WriteAllBytes($largeSource, $largeBytes)
   $largeHashBefore = (Get-FileHash $largeSource -Algorithm SHA256).Hash
   Compile-Xps ./demo/archive/archive-large-file-regression.xps archive-large-file-regression
-  $largeRun = Run-Xps ./demo/archive/archive-large-file-regression.xps archive-large-file-regression @('archive-large-source.bin','archive-large-extract')
+  $largeRun = Run-Xps ./demo/archive/archive-large-file-regression.xps archive-large-file-regression @('../../out/fulltest/archive-large-source.bin','../../out/fulltest/archive-large-extract')
   if ($largeRun.Output -notmatch 'ARCHIVE_LARGE_FILE=OK') { throw 'Archive large-file regression did not complete.' }
   $largeHashAfter = (Get-FileHash (Join-Path $largeExtract 'large.bin') -Algorithm SHA256).Hash
   if ($largeHashAfter -ne $largeHashBefore) { throw 'Archive large-file round-trip changed file contents.' }
