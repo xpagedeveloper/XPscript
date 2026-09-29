@@ -328,7 +328,7 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 
 ## Browser/WASM
 
-- [ ] Verify the selected SharpCompress package can be linked for the XPScript browser/WASM target.
+- [x] Verify the selected SharpCompress package can be linked for the XPScript browser/WASM target.
 - [x] Support archive operations over Byte arrays/in-memory streams.
 - [ ] Support listing entries client-side.
 - [ ] Support reading entries client-side where memory limits permit.
@@ -431,7 +431,7 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Run archive runtime tests on macOS.
 - [ ] Add Android build validation.
 - [ ] Add iOS build validation.
-- [ ] Add browser/WASM build validation.
+- [x] Add browser/WASM build validation.
 - [ ] Add trimming/AOT validation where those publish modes are supported.
 
 ## Documentation
