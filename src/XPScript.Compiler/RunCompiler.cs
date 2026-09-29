@@ -341,6 +341,16 @@ internal static class RunCompiler
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                 CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Desktop UI native runtime dependency");
                 CompilerPathSecurity.HardenTemporaryFile(target);
+
+                // Native libraries are resolved from the application's base directory
+                // by the run fast path. Also flatten the native asset for the current
+                // process RID so DllImport("libSkiaSharp") can find it directly.
+                if (relative.Contains(Path.DirectorySeparatorChar + "native" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    var flatTarget = Path.Combine(outputRoot, Path.GetFileName(source));
+                    CompilerSecureFileCopy.CopyValidatedRegularFile(source, flatTarget, "Desktop UI native runtime dependency");
+                    CompilerPathSecurity.HardenTemporaryFile(flatTarget);
+                }
             }
         }
     }
