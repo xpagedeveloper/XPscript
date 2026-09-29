@@ -242,7 +242,7 @@ jobs:
           # Web was the most recently hanging scaffold, so verify it first.
           "${cli[@]}" new web ./out/scaffold-test/mysite
           test -f ./out/scaffold-test/mysite/index.xps
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/mysite/index.xps -o ./out/scaffold-test/mysite/app --runtime=false
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/mysite/index.xps -o ./out/scaffold-test/mysite/app --runtime=false --debug
           test -f ./out/scaffold-test/mysite/app
           timeout --kill-after=5s 45s "${cli[@]}" web --root ./out/scaffold-test/mysite --address 127.0.0.1 --port 18081 >./out/scaffold-test/web.log 2>&1 &
           web_pid=$!
@@ -271,10 +271,10 @@ jobs:
           mkdir -p ./out/scaffold-test/desktop-file
           "${cli[@]}" new desktop ./out/scaffold-test/desktop-file/main.xps
           test -f ./out/scaffold-test/desktop-file/main.xps
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/desktop-file/main.xps -o ./out/scaffold-test/desktop-file/app --runtime=false
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/desktop-file/main.xps -o ./out/scaffold-test/desktop-file/app --runtime=false --debug
           test -f ./out/scaffold-test/desktop-file/app
 
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/desktop/main.xps -o ./out/scaffold-test/desktop/app --runtime=false
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/desktop/main.xps -o ./out/scaffold-test/desktop/app --runtime=false --debug
           test -f ./out/scaffold-test/desktop/app
           set +e
           timeout --kill-after=5s 10s "${cli[@]}" run ./out/scaffold-test/desktop/main.xps
@@ -291,7 +291,7 @@ jobs:
           grep -q 'Application.ArgCount' ./out/scaffold-test/myapp/main.xps
           grep -q 'Application.Args(i)' ./out/scaffold-test/myapp/main.xps
           grep -q 'Application.ExitCode = 0' ./out/scaffold-test/myapp/main.xps
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/myapp/main.xps -o ./out/scaffold-test/myapp/app --runtime=false
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/myapp/main.xps -o ./out/scaffold-test/myapp/app --runtime=false --debug
           test -f ./out/scaffold-test/myapp/app
           compiled_output="$(./out/scaffold-test/myapp/app first second)"
           printf '%s\n' "$compiled_output"
@@ -312,7 +312,7 @@ jobs:
           echo '=== REST scaffold ==='
           "${cli[@]}" new rest ./out/scaffold-test/myapi
           test -f ./out/scaffold-test/myapi/index.xps
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/myapi/index.xps -o ./out/scaffold-test/myapi/app --runtime=false
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/myapi/index.xps -o ./out/scaffold-test/myapi/app --runtime=false --debug
           test -f ./out/scaffold-test/myapi/app
           timeout --kill-after=5s 45s "${cli[@]}" web --root ./out/scaffold-test/myapi --address 127.0.0.1 --port 18082 >./out/scaffold-test/rest.log 2>&1 &
           rest_pid=$!
