@@ -849,7 +849,7 @@ internal static class Debugger
 
 internal static class Console
 {
-    public static global::System.Action<string, bool>? AndroidLog { get; set; }
+    internal static global::System.Action<string, bool>? AndroidLog { get; set; }
     public static global::System.IO.TextReader In => global::System.Console.In;
     public static global::System.IO.TextWriter Out => global::System.Console.Out;
     public static global::System.IO.TextWriter Error => global::System.Console.Error;
