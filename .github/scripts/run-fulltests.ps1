@@ -101,6 +101,21 @@ if (Should-Run 'runtime') {
 
 if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
+  # Android setup performs real installations when run; compile it only in CI.
+  Compile-Xps ./Android/setup-android-dev.xps android-setup-dev-compile
+  # Process execution is a core platform primitive. Keep its smallest regression first.
+  $shellExecuteMissing = Run-Xps ./samples/shellexecute-missing.xps shellexecute-missing
+  if ($shellExecuteMissing.Output -notmatch 'SHELLEXECUTE-MISSING=OK') { throw 'ShellExecute missing executable regression did not complete.' }
+  $shellExecuteArgvSmoke = Run-Xps ./samples/shellexecute-argv-smoke.xps shellexecute-argv-smoke
+  if ($shellExecuteArgvSmoke.Output -notmatch 'SHELLEXECUTE-ARGV-SMOKE=OK') { throw 'ShellExecute argv smoke regression did not complete.' }
+  $shellExecute = Run-Xps ./samples/shellexecute-basic.xps shellexecute-basic
+  if ($shellExecute.Output -notmatch 'SHELLEXECUTE-BASIC=OK') { throw 'ShellExecute basic regression did not complete.' }
+  $shellExecuteArgs = Run-Xps ./samples/shellexecute-arguments.xps shellexecute-arguments
+  if ($shellExecuteArgs.Output -notmatch 'SHELLEXECUTE-ARGS=OK') { throw 'ShellExecute structured argument regression did not complete.' }
+  $shellExecuteTimeout = Run-Xps ./samples/shellexecute-timeout.xps shellexecute-timeout
+  if ($shellExecuteTimeout.Output -notmatch 'SHELLEXECUTE-TIMEOUT=OK') { throw 'ShellExecute timeout regression did not complete.' }
+  $shellExecutePressure = Run-Xps ./samples/shellexecute-pressure.xps shellexecute-pressure
+  if ($shellExecutePressure.Output -notmatch 'SHELLEXECUTE-PRESSURE=OK') { throw 'ShellExecute stdout/stderr pressure regression did not complete.' }
   # Focused first regression: keep the most recently failing corrupt ZIP behavior at the front of the platform suite.
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive corrupt stream fixture first'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   Compile-Xps ./demo/archive/archive-corrupt-stream-regression.xps archive-corrupt-stream-regression
