@@ -849,6 +849,7 @@ internal static class Debugger
 
 internal static class Console
 {
+    public static global::System.Action<string, bool>? AndroidLog { get; set; }
     public static global::System.IO.TextReader In => global::System.Console.In;
     public static global::System.IO.TextWriter Out => global::System.Console.Out;
     public static global::System.IO.TextWriter Error => global::System.Console.Error;
@@ -858,27 +859,39 @@ internal static class Console
     {
         var text = XPScriptRuntime.PrintText(value);
         if (!XPScriptDebugRuntime.ProgramOutput(text, false, false))
-            global::System.Console.Write(text);
+        {
+            if (global::System.OperatingSystem.IsAndroid() && AndroidLog is not null) AndroidLog(text, false);
+            else global::System.Console.Write(text);
+        }
     }
 
     public static void WriteLine()
     {
         if (!XPScriptDebugRuntime.ProgramOutput("", false, true))
-            global::System.Console.WriteLine();
+        {
+            if (global::System.OperatingSystem.IsAndroid() && AndroidLog is not null) AndroidLog("", false);
+            else global::System.Console.WriteLine();
+        }
     }
 
     public static void WriteLine(object? value)
     {
         var text = XPScriptRuntime.PrintText(value);
         if (!XPScriptDebugRuntime.ProgramOutput(text, false, true))
-            global::System.Console.WriteLine(text);
+        {
+            if (global::System.OperatingSystem.IsAndroid() && AndroidLog is not null) AndroidLog(text, false);
+            else global::System.Console.WriteLine(text);
+        }
     }
 
     public static void WriteError(object? value)
     {
         var text = XPScriptRuntime.PrintText(value);
         if (!XPScriptDebugRuntime.ProgramOutput(text, true, true))
-            global::System.Console.Error.WriteLine(text);
+        {
+            if (global::System.OperatingSystem.IsAndroid() && AndroidLog is not null) AndroidLog(text, true);
+            else global::System.Console.Error.WriteLine(text);
+        }
     }
     public static void Clear() => global::System.Console.Clear();
 
