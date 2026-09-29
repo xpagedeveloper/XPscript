@@ -162,7 +162,7 @@ archive.Save()
 - [x] `Remove(entryName)`.
 - [x] `Rename(entryName, newName)`.
 - [x] Investigate which archive formats support direct modification cleanly through SharpCompress.
-- [ ] Where direct in-place modification is not safe or available, rebuild the archive into a temporary stream/file and atomically replace the original.
+- [x] Where direct in-place modification is not safe or available, rebuild the archive into a temporary stream/file and atomically replace the original.
 - [ ] Ensure failed modifications do not corrupt the original archive.
 - [x] Reject modification attempts for read-only archive formats with a clear XPScript runtime error.
 
