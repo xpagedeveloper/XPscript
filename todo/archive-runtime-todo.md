@@ -412,14 +412,14 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Absolute path archive entry.
 - [x] Windows drive-root path archive entry.
 - [x] UNC path archive entry.
-- [ ] Mixed separator traversal.
+- [x] Mixed separator traversal.
 - [x] Symlink escape attempt.
 - [ ] Reparse-point escape attempt on Windows.
 - [x] Excessive entry count.
 - [x] Excessive uncompressed size.
 - [x] Extreme compression ratio.
 - [ ] Incorrect archive size metadata.
-- [ ] Corrupt compressed stream.
+- [x] Corrupt compressed stream.
 - [x] Password-protected archive with missing password.
 - [x] Password-protected archive with incorrect password.
 - [ ] Verify failed extraction does not leave unsafe partial files outside controlled locations.
