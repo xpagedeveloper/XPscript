@@ -34,7 +34,7 @@ jobs:
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
 
       - name: Build minimal XPScript Android APK
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print --runtime=false --rid android-arm64
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print --runtime=false --rid android-arm64 --debug
 
       - name: Verify debug APK exists
         shell: pwsh
