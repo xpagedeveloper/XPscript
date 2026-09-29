@@ -9,7 +9,7 @@ using Android.Util;
 using System.Text;
 
 [Activity(Label = "XPScript", MainLauncher = true, Exported = true)]
-public sealed class XPScriptMainActivity : Activity
+sealed class AndroidEntryActivity : Activity
 {
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -37,9 +37,9 @@ public sealed class XPScriptMainActivity : Activity
         private readonly StringBuilder _buffer = new();
 
         public AndroidLogWriter(LogPriority priority) => _priority = priority;
-        public override Encoding Encoding => Encoding.UTF8;
+        override Encoding Encoding => Encoding.UTF8;
 
-        public override void Write(char value)
+        override void Write(char value)
         {
             if (value == '\n')
             {
@@ -49,7 +49,7 @@ public sealed class XPScriptMainActivity : Activity
             if (value != '\r') _buffer.Append(value);
         }
 
-        public override void Flush()
+        override void Flush()
         {
             if (_buffer.Length == 0) return;
             Log.WriteLine(_priority, "XPScript", _buffer.ToString());
