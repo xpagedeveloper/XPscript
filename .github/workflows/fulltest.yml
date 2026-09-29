@@ -230,6 +230,18 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify explicit desktop scaffold path first
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf ./out/scaffold-desktop-file-first
+          mkdir -p ./out/scaffold-desktop-file-first
+          cli=(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true --)
+          "${cli[@]}" new desktop ./out/scaffold-desktop-file-first/main.xps
+          test -f ./out/scaffold-desktop-file-first/main.xps
+          test ! -d ./out/scaffold-desktop-file-first/main.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-desktop-file-first/main.xps -o ./out/scaffold-desktop-file-first/app --runtime=false --debug
+          test -f ./out/scaffold-desktop-file-first/app
       - name: Verify web scaffold first
         shell: bash
         run: |
