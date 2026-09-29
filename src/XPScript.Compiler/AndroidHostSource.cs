@@ -37,9 +37,9 @@ sealed class AndroidEntryActivity : Activity
         private readonly StringBuilder _buffer = new();
 
         public AndroidLogWriter(LogPriority priority) => _priority = priority;
-        override Encoding Encoding => Encoding.UTF8;
+        public override Encoding Encoding => Encoding.UTF8;
 
-        override void Write(char value)
+        public override void Write(char value)
         {
             if (value == '\n')
             {
@@ -49,7 +49,7 @@ sealed class AndroidEntryActivity : Activity
             if (value != '\r') _buffer.Append(value);
         }
 
-        override void Flush()
+        public override void Flush()
         {
             if (_buffer.Length == 0) return;
             Log.WriteLine(_priority, "XPScript", _buffer.ToString());
