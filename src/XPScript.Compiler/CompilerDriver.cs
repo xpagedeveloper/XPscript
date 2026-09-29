@@ -17,7 +17,8 @@ public sealed class CompilerDriver
         "win-x64", "win-arm64",
         "linux-x64", "linux-arm64",
         "osx-x64", "osx-arm64",
-        "browser-wasm"
+        "browser-wasm",
+        "android-arm64"
     };
 
     public static IReadOnlyCollection<string> SupportedRuntimes => SupportedRuntimeIdentifiers;
@@ -670,10 +671,20 @@ public sealed class CompilerDriver
             itemGroup.AppendLine("  </ItemGroup>");
         }
 
-        var publishProperties = publishSingleFile
+        var isAndroid = runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase);
+        var publishProperties = publishSingleFile && !isAndroid
             ? $"""
     <PublishSingleFile>true</PublishSingleFile>
     <EnableCompressionInSingleFile>{selfContained.ToString().ToLowerInvariant()}</EnableCompressionInSingleFile>
+"""
+            : string.Empty;
+        var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
+        var androidProperties = isAndroid
+            ? """
+    <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
+    <AndroidSupportedAbis>arm64-v8a</AndroidSupportedAbis>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <ApplicationId>com.xpscript.debugapp</ApplicationId>
 """
             : string.Empty;
 
@@ -682,7 +693,7 @@ public sealed class CompilerDriver
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <StartupObject>Program</StartupObject>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>{targetFramework}</TargetFramework>
     <AssemblyName>{EscapeXml(assemblyName)}</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -694,7 +705,7 @@ public sealed class CompilerDriver
     <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
     <UseAppHost>true</UseAppHost>
-{publishProperties}  </PropertyGroup>
+{androidProperties}{publishProperties}  </PropertyGroup>
 {itemGroup}</Project>
 """;
     }
