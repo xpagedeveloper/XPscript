@@ -37,8 +37,8 @@ The first implementation must stay intentionally small. Do not start with Avalon
 
 - [ ] Add an Android target/host that executes XPScript without Avalonia UI.
 - [ ] Add the smallest Android smoke application as the first test.
-- [ ] Start with `Print "Hello from XPScript on Android"`.
-- [ ] Use a dedicated sample such as `samples/android-debug-print.xps`.
+- [x] Start with `Print "Hello from XPScript on Android"`.
+- [x] Use a dedicated sample `samples/android-debug-print.xps`.
 - [ ] Target ARM64 first for the physical test device.
 - [ ] Package an installable debug APK.
 - [ ] Install/update and launch it through adb.
@@ -50,11 +50,11 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [ ] Add a minimal failure sample that intentionally raises a runtime error and verify the error reaches the debug path.
 - [ ] Include source file and line information in Android runtime diagnostics when available.
 - [ ] Define headless host exit semantics.
-- [ ] Make `Platform()` return `Android`.
+- [x] Make `Platform()` return `Android` when running under the .NET Android runtime.
 - [ ] Verify normal runtime code does not depend on Avalonia.
 - [ ] Add automated compiler/runtime tests that do not need hardware.
 - [ ] Add an optional physical-device integration test.
-- [ ] Add the Android regressions to Platform FullTest where they can run without hardware.
+- [x] Add the initial Android source/compiler regression to Platform FullTest without requiring hardware.
 - [ ] Keep device-required tests separate and explicitly opt-in.
 
 ## Stage 2: CLI Android build, deploy and debug workflow
