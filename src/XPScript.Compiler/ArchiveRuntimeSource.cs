@@ -503,7 +503,7 @@ internal sealed class XPScriptArchive
                 return;
             }
             try { System.IO.File.Replace(temp, destination, null); }
-            catch (Exception ex) when (ex is PlatformNotSupportedException || ex is System.IO.IOException)
+            catch (PlatformNotSupportedException)
             {
                 System.IO.File.Move(temp, destination, true);
             }
