@@ -230,6 +230,26 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify web scaffold first
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf ./out/scaffold-web-first
+          mkdir -p ./out/scaffold-web-first
+          cli=(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true --)
+          "${cli[@]}" new web ./out/scaffold-web-first/site
+          test -f ./out/scaffold-web-first/site/index.xps
+          timeout --kill-after=5s 45s "${cli[@]}" web --root ./out/scaffold-web-first/site --address 127.0.0.1 --port 18080 >./out/scaffold-web-first/web.log 2>&1 &
+          web_pid=$!
+          ready=0
+          for i in {1..30}; do
+            if curl --max-time 2 --fail --silent http://127.0.0.1:18080/ | grep -q 'Hello from XPscript'; then ready=1; break; fi
+            if ! kill -0 "$web_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat ./out/scaffold-web-first/web.log || true; kill "$web_pid" 2>/dev/null || true; wait "$web_pid" 2>/dev/null || true; exit 1; fi
+          kill "$web_pid" 2>/dev/null || true
+          wait "$web_pid" 2>/dev/null || true
       - name: Verify new project scaffolds
         shell: bash
         run: |
