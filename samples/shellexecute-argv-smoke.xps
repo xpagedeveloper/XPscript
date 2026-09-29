@@ -1,0 +1,20 @@
+Option Declare
+
+Sub Main()
+    Dim args(2) As String
+    Dim result As Variant
+
+    args(0) = "-NoProfile"
+    args(1) = "-File"
+    args(2) = "samples/shellexecute-argv-helper.ps1"
+
+    ReDim Preserve args(3)
+    args(3) = "hello world"
+
+    result = ShellExecute("pwsh", args)
+
+    If result.ExitCode <> 0 Then Error 5, "ShellExecute argv smoke child failed."
+    If result.Output <> "hello world" Then Error 5, "ShellExecute argv smoke changed the argument."
+
+    Print "SHELLEXECUTE-ARGV-SMOKE=OK"
+End Sub
