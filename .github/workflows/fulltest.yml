@@ -230,6 +230,59 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify Linux desktop native runtime first
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf ./out/desktop-native-first
+          mkdir -p ./out/desktop-native-first
+          cli=(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true --)
+          "${cli[@]}" new desktop ./out/desktop-native-first/main.xps
+          set +e
+          output="$(timeout --kill-after=5s 10s "${cli[@]}" run ./out/desktop-native-first/main.xps 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          if printf '%s\n' "$output" | grep -q "Unable to load shared library 'libSkiaSharp'"; then
+            echo 'Linux desktop runtime did not stage libSkiaSharp.so.' >&2
+            exit 1
+          fi
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then
+            exit "$status"
+          fi
+      - name: Verify explicit desktop scaffold path first
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf ./out/scaffold-desktop-file-first
+          mkdir -p ./out/scaffold-desktop-file-first
+          cli=(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true --)
+          "${cli[@]}" new desktop ./out/scaffold-desktop-file-first/main.xps
+          test -f ./out/scaffold-desktop-file-first/main.xps
+          test ! -d ./out/scaffold-desktop-file-first/main.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-desktop-file-first/main.xps -o ./out/scaffold-desktop-file-first/app --runtime=false --debug
+          test -f ./out/scaffold-desktop-file-first/app
+      - name: Verify web scaffold first
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf ./out/scaffold-web-first
+          mkdir -p ./out/scaffold-web-first
+          cli=(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true --)
+          "${cli[@]}" new web ./out/scaffold-web-first/site
+          test -f ./out/scaffold-web-first/site/index.xps
+          timeout --kill-after=5s 45s "${cli[@]}" web --root ./out/scaffold-web-first/site --address 127.0.0.1 --port 18080 >./out/scaffold-web-first/web.log 2>&1 &
+          web_pid=$!
+          ready=0
+          for i in {1..30}; do
+            if curl --max-time 2 --fail --silent http://127.0.0.1:18080/ | grep -q 'Hello from XPscript'; then ready=1; break; fi
+            if ! kill -0 "$web_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat ./out/scaffold-web-first/web.log || true; kill "$web_pid" 2>/dev/null || true; wait "$web_pid" 2>/dev/null || true; exit 1; fi
+          kill "$web_pid" 2>/dev/null || true
+          wait "$web_pid" 2>/dev/null || true
       - name: Verify new project scaffolds
         shell: bash
         run: |
@@ -263,12 +316,22 @@ jobs:
           echo '=== Desktop scaffold ==='
           "${cli[@]}" new desktop ./out/scaffold-test/desktop
           test -f ./out/scaffold-test/desktop/main.xps
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/desktop/main.xps -o ./out/scaffold-test/desktop/app --runtime=false
+
+          echo '=== Desktop scaffold to explicit main.xps path ==='
+          rm -rf ./out/scaffold-test/desktop-file
+          mkdir -p ./out/scaffold-test/desktop-file
+          "${cli[@]}" new desktop ./out/scaffold-test/desktop-file/main.xps
+          test -f ./out/scaffold-test/desktop-file/main.xps
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/desktop-file/main.xps -o ./out/scaffold-test/desktop-file/app --runtime=false --debug
+          test -f ./out/scaffold-test/desktop-file/app
+
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/desktop/main.xps -o ./out/scaffold-test/desktop/app --runtime=false --debug
           test -f ./out/scaffold-test/desktop/app
           set +e
-          timeout --kill-after=5s 10s "${cli[@]}" run ./out/scaffold-test/desktop/main.xps
+          desktop_output="$(timeout --kill-after=5s 10s "${cli[@]}" run ./out/scaffold-test/desktop/main.xps --debug 2>&1)"
           desktop_status=$?
           set -e
+          printf '%s\n' "$desktop_output"
           if [ "$desktop_status" -ne 0 ] && [ "$desktop_status" -ne 124 ]; then
             exit "$desktop_status"
           fi
@@ -280,7 +343,7 @@ jobs:
           grep -q 'Application.ArgCount' ./out/scaffold-test/myapp/main.xps
           grep -q 'Application.Args(i)' ./out/scaffold-test/myapp/main.xps
           grep -q 'Application.ExitCode = 0' ./out/scaffold-test/myapp/main.xps
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/myapp/main.xps -o ./out/scaffold-test/myapp/app --runtime=false
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/myapp/main.xps -o ./out/scaffold-test/myapp/app --runtime=false --debug
           test -f ./out/scaffold-test/myapp/app
           compiled_output="$(./out/scaffold-test/myapp/app first second)"
           printf '%s\n' "$compiled_output"

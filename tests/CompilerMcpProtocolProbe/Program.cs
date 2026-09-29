@@ -14,13 +14,21 @@ var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Selec
 foreach(var name in new[]{"xpscript_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP tool: "+name);
 var validation=await CallAsync(new {jsonrpc="2.0",id=3,method="tools/call",@params=new{name="xpscript_validate",arguments=new{source=await File.ReadAllTextAsync(Path.Combine(repo,"samples","null-integer-assignment-error.xps")),filename="agent.xps"}}});
 var result=validation.GetProperty("result");
-if (result.GetProperty("isError").GetBoolean()) throw new Exception("Compiler diagnostics must not be MCP tool-level errors.");
+if (!result.GetProperty("isError").GetBoolean()) throw new Exception("Compiler validation failures must be reported as MCP tool errors.");
 var structured=result.GetProperty("structuredContent");
 if (structured.GetProperty("result").GetString() != "error") throw new Exception("Expected compiler validation error result.");
 var diagnostics=structured.GetProperty("errors").EnumerateArray().ToArray();
 if (diagnostics.Length == 0) throw new Exception("Expected at least one structured compiler diagnostic.");
 if (diagnostics.Any(x=>!x.TryGetProperty("diagnosticCode",out var code) || string.IsNullOrWhiteSpace(code.GetString()))) throw new Exception("MCP validation returned a diagnostic without a stable diagnostic code.");
 if (diagnostics.Any(x=>x.TryGetProperty("file",out var file) && file.GetString()!="agent.xps")) throw new Exception("MCP validation did not preserve the virtual filename.");
+var webValidation=await CallAsync(new {jsonrpc="2.0",id=4,method="tools/call",@params=new{name="xpscript_validate",arguments=new{source="[Anonymous]\n[Get]\nSub Index()\n    Response.Write(\"ok\")\nEnd Sub",filename="web.xps"}}});
+var webResult=webValidation.GetProperty("result");
+if (!webResult.GetProperty("isError").GetBoolean()) throw new Exception("Web source validated as a console application must be an MCP tool error.");
+var webStructured=webResult.GetProperty("structuredContent");
+if (webStructured.GetProperty("result").GetString() != "error") throw new Exception("Expected structured web/console mismatch error.");
+var webDescription=webStructured.GetProperty("errors")[0].GetProperty("description").GetString() ?? "";
+if (!webDescription.Contains("web application", StringComparison.OrdinalIgnoreCase)) throw new Exception("MCP did not preserve the web application compilation diagnostic.");
+
 var tool = list.GetProperty("result").GetProperty("tools").EnumerateArray().Single(x=>x.GetProperty("name").GetString()=="xpscript_validate");
 var properties = tool.GetProperty("inputSchema").GetProperty("properties");
 if (properties.TryGetProperty("debug", out _)) throw new Exception("MCP validate must not expose compiler debug mode.");

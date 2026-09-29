@@ -4,7 +4,7 @@ internal static class XpsScaffolder
     {
         ArgumentNullException.ThrowIfNull(args);
         if (args.Length != 2)
-            throw new ArgumentException("Usage: xpscript new <rest|web|desktop|cli> <directory>. The directory is required; use '.' for the current directory.");
+            throw new ArgumentException("Usage: xpscript new <rest|web|desktop|cli> <directory|file.xps>. The target is required; use '.' for the current directory.");
 
         var kind = args[0].Trim().ToLowerInvariant();
         if (kind is not ("rest" or "web" or "desktop" or "cli"))
@@ -12,24 +12,31 @@ internal static class XpsScaffolder
 
         var suppliedTarget = args[1].Trim();
         if (suppliedTarget.Length == 0)
-            throw new ArgumentException("A target directory is required; use '.' for the current directory.");
+            throw new ArgumentException("A target directory or .xps file is required; use '.' for the current directory.");
 
         var target = Path.GetFullPath(suppliedTarget);
-        if (File.Exists(target))
+        var explicitFile = Path.GetExtension(target).Equals(".xps", StringComparison.OrdinalIgnoreCase);
+        var targetDirectory = explicitFile
+            ? Path.GetDirectoryName(target) ?? Directory.GetCurrentDirectory()
+            : target;
+
+        if (!explicitFile && File.Exists(target))
             throw new IOException("Target path is a file, not a directory: " + target);
+        if (explicitFile && Directory.Exists(target))
+            throw new IOException("Target path is a directory, not a file: " + target);
 
-        Directory.CreateDirectory(target);
+        Directory.CreateDirectory(targetDirectory);
 
-        var (fileName, content, nextCommand) = kind switch
+        var defaultFileName = kind is "rest" or "web" ? "index.xps" : "main.xps";
+        var outputPath = explicitFile ? target : Path.Combine(targetDirectory, defaultFileName);
+        var (content, nextCommand) = kind switch
         {
-            "rest" => ("index.xps", RestTemplate, $"xpscript web {QuoteForDisplay(target)}"),
-            "web" => ("index.xps", WebTemplate, $"xpscript web {QuoteForDisplay(target)}"),
-            "desktop" => ("main.xps", DesktopTemplate, $"xpscript run {QuoteForDisplay(Path.Combine(target, "main.xps"))}"),
-            "cli" => ("main.xps", CliTemplate, $"xpscript run {QuoteForDisplay(Path.Combine(target, "main.xps"))} --Args \"argument1 argument2\""),
+            "rest" => (RestTemplate, $"xpscript web {QuoteForDisplay(targetDirectory)}"),
+            "web" => (WebTemplate, $"xpscript web {QuoteForDisplay(targetDirectory)}"),
+            "desktop" => (DesktopTemplate, $"xpscript run {QuoteForDisplay(outputPath)}"),
+            "cli" => (CliTemplate, $"xpscript run {QuoteForDisplay(outputPath)} --Args \"argument1 argument2\""),
             _ => throw new InvalidOperationException("Unsupported scaffold type.")
         };
-
-        var outputPath = Path.Combine(target, fileName);
         if (File.Exists(outputPath))
             throw new IOException("Refusing to overwrite existing file: " + outputPath);
 
