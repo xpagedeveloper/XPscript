@@ -248,6 +248,9 @@ public sealed class CompilerDriver
                 var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
                 if (CompilerDiagnosticMode.Debug)
                 {
+                    Console.Error.WriteLine("--- dotnet publish diagnostics (debug compile failure) ---");
+                    Console.Error.WriteLine(diagnosticText);
+                    Console.Error.WriteLine("--- end dotnet publish diagnostics ---");
                     var numberedSource = string.Join(Environment.NewLine,
                         generatedSource.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')
                             .Select((line, index) => $"{index + 1,5}: {line}"));
