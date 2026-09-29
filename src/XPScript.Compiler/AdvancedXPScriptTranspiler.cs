@@ -1315,7 +1315,24 @@ internal static class LSForAllRuntime
             if (Regex.IsMatch(line, @"^End\s+Class$", RegexOptions.IgnoreCase)) { inClass = false; continue; }
             if (!inClass && Regex.IsMatch(line, @"^(?:Public\s+|Private\s+)?Sub\s+Initialize\b", RegexOptions.IgnoreCase)) return "Initialize";
         }
+        if (LooksLikeWebApplication(lines))
+            throw new CompilerException("This source looks like a web application and cannot be compiled as a console/desktop application. Compile it with --target webiis, or run it with the XPScript web host.");
+
         throw new CompilerException("No entry point found. Add Sub Main() or Sub Initialize().");
+    }
+
+    private static bool LooksLikeWebApplication(string[] lines)
+    {
+        foreach (var raw in lines)
+        {
+            var line = StripComment(raw).Trim();
+            if (Regex.IsMatch(line, @"^\[(?:Get|Post|Put|Patch|Delete|Head|Options)(?::[^\]]*)?\]$", RegexOptions.IgnoreCase) ||
+                Regex.IsMatch(line, @"^\[RoutePrefix(?::[^\]]*)?\]$", RegexOptions.IgnoreCase) ||
+                Regex.IsMatch(line, @"^\[(?:Anonymous|Authorize)(?::[^\]]*)?\]$", RegexOptions.IgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static string NormalizeVisibility(string value, string defaultValue) => string.IsNullOrWhiteSpace(value) ? defaultValue : value.ToLowerInvariant();
