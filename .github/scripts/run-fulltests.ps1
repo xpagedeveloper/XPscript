@@ -174,6 +174,9 @@ if (Should-Run 'platform') {
   $archiveWriteFocused = Run-Xps ./demo/archive/archive-extended-memory-write.xps archive-extended-memory-write-focused
   if ($archiveWriteFocused.Output -notmatch 'ARCHIVE_EXTENDED_MEMORY_WRITE=OK') { throw 'Archive writable format round-trip regression did not complete.' }
 
+  # Compile the focused read-only format probe early; fixtures are added per supported format.
+  Compile-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression
+
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   foreach ($sample in @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-security-fixtures','archive-case-sensitivity-regression')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
