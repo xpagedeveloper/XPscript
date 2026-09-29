@@ -263,6 +263,13 @@ jobs:
           echo '=== Desktop scaffold ==='
           "${cli[@]}" new desktop ./out/scaffold-test/desktop
           test -f ./out/scaffold-test/desktop/main.xps
+
+          echo '=== Desktop scaffold to explicit main.xps path ==='
+          rm -rf ./out/scaffold-test/desktop-file
+          mkdir -p ./out/scaffold-test/desktop-file
+          "${cli[@]}" new desktop ./out/scaffold-test/desktop-file/main.xps
+          test -f ./out/scaffold-test/desktop-file/main.xps
+
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./out/scaffold-test/desktop/main.xps -o ./out/scaffold-test/desktop/app --runtime=false
           test -f ./out/scaffold-test/desktop/app
           set +e
