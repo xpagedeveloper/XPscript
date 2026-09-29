@@ -6,7 +6,6 @@ internal static class AndroidHostSource
 using Android.App;
 using Android.OS;
 using Android.Util;
-using System.Text;
 
 [Activity(Label = "XPScript", MainLauncher = true, Exported = true)]
 sealed class AndroidEntryActivity : Activity
@@ -14,8 +13,7 @@ sealed class AndroidEntryActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        Console.SetOut(new AndroidLogWriter(LogPriority.Info));
-        Console.SetError(new AndroidLogWriter(LogPriority.Error));
+        Console.AndroidLog = (text, isError) => Log.WriteLine(isError ? LogPriority.Error : LogPriority.Info, "XPScript", text);
         try
         {
             Program.Main(Array.Empty<string>());
@@ -31,31 +29,6 @@ sealed class AndroidEntryActivity : Activity
         }
     }
 
-    private sealed class AndroidLogWriter : TextWriter
-    {
-        private readonly LogPriority _priority;
-        private readonly StringBuilder _buffer = new();
-
-        public AndroidLogWriter(LogPriority priority) => _priority = priority;
-        public override Encoding Encoding => Encoding.UTF8;
-
-        public override void Write(char value)
-        {
-            if (value == '\n')
-            {
-                Flush();
-                return;
-            }
-            if (value != '\r') _buffer.Append(value);
-        }
-
-        public override void Flush()
-        {
-            if (_buffer.Length == 0) return;
-            Log.WriteLine(_priority, "XPScript", _buffer.ToString());
-            _buffer.Clear();
-        }
-    }
 }
 """;
 }
