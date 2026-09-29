@@ -35,24 +35,24 @@ Follow `knowledge/test-failure-feedback-rule.md` for every Android test.
 
 The first implementation must stay intentionally small. Do not start with Avalonia.
 
-- [ ] Add an Android target/host that executes XPScript without Avalonia UI.
+- [x] Add an Android target/host that executes XPScript without Avalonia UI.
 - [ ] Add the smallest Android smoke application as the first test.
 - [x] Start with `Print "Hello from XPScript on Android"`.
 - [x] Use a dedicated sample `samples/android-debug-print.xps`.
-- [ ] Target ARM64 first for the physical test device.
+- [x] Target ARM64 first for the physical test device.
 - [ ] Package an installable debug APK.
 - [ ] Install/update and launch it through adb.
-- [ ] Route XPScript `Print` output to Android logging.
+- [x] Route XPScript `Print` output to Android logging.
 - [ ] Make the output visible through adb/logcat and the development debugger.
-- [ ] Use an unambiguous XPScript log tag.
+- [x] Use an unambiguous XPScript log tag.
 - [ ] Add a second minimal regression that emits multiple lines and values so output ordering and formatting are verified.
-- [ ] Route uncaught XPScript runtime errors to Android logging.
+- [x] Route uncaught XPScript runtime errors to Android logging.
 - [ ] Add a minimal failure sample that intentionally raises a runtime error and verify the error reaches the debug path.
 - [ ] Include source file and line information in Android runtime diagnostics when available.
 - [ ] Define headless host exit semantics.
 - [x] Make `Platform()` return `Android` when running under the .NET Android runtime.
-- [ ] Verify normal runtime code does not depend on Avalonia.
-- [ ] Add automated compiler/runtime tests that do not need hardware.
+- [x] Verify normal runtime code does not depend on Avalonia.
+- [x] Add automated compiler/runtime tests that do not need hardware.
 - [ ] Add an optional physical-device integration test.
 - [x] Add the initial Android source/compiler regression to Platform FullTest without requiring hardware.
 - [ ] Keep device-required tests separate and explicitly opt-in.
