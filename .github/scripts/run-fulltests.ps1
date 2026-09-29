@@ -101,6 +101,8 @@ if (Should-Run 'runtime') {
 
 if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
+  # Keep Android compiler/host generation first while Android support is under active development.
+  $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Android compiler probe'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }; if ($r.Output -notmatch 'ANDROID-COMPILER-PROBE=OK') { throw 'Android compiler probe did not complete.' }
   # Android setup performs real installations when run; compile it only in CI.
   Compile-Xps ./Android/setup-android-dev.xps android-setup-dev-compile
   # Keep the smallest Android source/compiler regression before broader platform coverage.
