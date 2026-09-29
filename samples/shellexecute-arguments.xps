@@ -13,7 +13,7 @@ Sub Main()
     args(3) = "[Console]::Out.Write($args[0])"
     args(4) = expected
 
-    Set result = ShellExecute("pwsh", args)
+    result = ShellExecute("pwsh", args)
 
     If result.ExitCode <> 0 Then Error 5, "ShellExecute structured argument child failed."
     If result.Output <> expected Then Error 5, "ShellExecute changed a structured argument."
