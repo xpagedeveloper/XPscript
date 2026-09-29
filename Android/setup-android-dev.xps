@@ -1,5 +1,5 @@
 ' Windows bootstrap for XPScript Android development.
-' Until ShellExecute exists, command output is redirected to a temporary log file.
+' Uses ShellExecute so command completion, stdout, stderr and exit codes are explicit.
 
 Sub Main()
     If Platform() <> "Windows" Then
@@ -10,11 +10,30 @@ Sub Main()
     Print "XPScript Android Development Setup"
     Print "=================================="
 
-    Call RunCommand("where winget")
-    Call RunCommand("winget install --id Microsoft.DotNet.SDK.10 --exact --accept-package-agreements --accept-source-agreements")
-    Call RunCommand("winget install --id Google.AndroidStudio --exact --accept-package-agreements --accept-source-agreements")
-    Call RunCommand("dotnet workload install android")
-    Call RunCommand("dotnet workload list")
+    If Not RunCommand("where.exe", Array("winget")) Then
+        Print "[ERROR] winget was not found. Install App Installer before continuing."
+        Exit Sub
+    End If
+
+    If Not RunCommand("winget", Array("install", "--id", "Microsoft.DotNet.SDK.10", "--exact", "--accept-package-agreements", "--accept-source-agreements")) Then
+        Print "[ERROR] .NET 10 SDK installation failed."
+        Exit Sub
+    End If
+
+    If Not RunCommand("winget", Array("install", "--id", "Google.AndroidStudio", "--exact", "--accept-package-agreements", "--accept-source-agreements")) Then
+        Print "[ERROR] Android Studio installation failed."
+        Exit Sub
+    End If
+
+    If Not RunCommand("dotnet", Array("workload", "install", "android")) Then
+        Print "[ERROR] .NET Android workload installation failed."
+        Exit Sub
+    End If
+
+    If Not RunCommand("dotnet", Array("workload", "list")) Then
+        Print "[ERROR] Could not verify installed .NET workloads."
+        Exit Sub
+    End If
 
     Dim sdk As String
     sdk = Environ("ANDROID_HOME")
@@ -33,59 +52,44 @@ Sub Main()
     End If
 
     Print "[OK] adb found."
-    Call RunAdb(adb, "devices")
-    Call RunAdb(adb, "shell getprop ro.product.model")
-    Call RunAdb(adb, "shell getprop ro.build.version.release")
-    Call RunAdb(adb, "shell getprop ro.build.version.sdk")
-    Call RunAdb(adb, "shell getprop ro.product.cpu.abi")
+
+    If Not RunCommand(adb, Array("devices")) Then Exit Sub
+    If Not RunCommand(adb, Array("shell", "getprop", "ro.product.model")) Then Exit Sub
+    If Not RunCommand(adb, Array("shell", "getprop", "ro.build.version.release")) Then Exit Sub
+    If Not RunCommand(adb, Array("shell", "getprop", "ro.build.version.sdk")) Then Exit Sub
+    If Not RunCommand(adb, Array("shell", "getprop", "ro.product.cpu.abi")) Then Exit Sub
 
     Print "If the device is unauthorized, unlock it and approve USB debugging."
 End Sub
 
-Sub RunCommand(command As String)
-    Dim logFile As String
-    logFile = Environ("TEMP") & "\xpscript-android-setup.log"
+Function RunCommand(executable As String, arguments As Variant) As Boolean
+    Dim result As Variant
 
     Print ""
-    Print "> " & command
-    Dim doneFile As String
-    doneFile = Environ("TEMP") & "\\xpscript-android-setup.done"
+    Print "> " & executable
 
-    If Dir(logFile) <> "" Then Kill logFile
-    If Dir(doneFile) <> "" Then Kill doneFile
-
-    ' cmd.exe stays alive until the child command completes. It writes a marker
-    ' only after stdout/stderr have been redirected to the log.
-    Call Shell("cmd.exe /d /s /c \"" & command & " > \"" & logFile & "\" 2>&1 & echo done > \"" & doneFile & "\"\"")
-
-    Do While Dir(doneFile) = ""
-        Sleep 500
-    Loop
-
-    Call PrintFile(logFile)
-    Kill doneFile
-End Sub
-
-Sub RunAdb(adb As String, arguments As String)
-    Dim command As String
-    command = "\"" & adb & "\" " & arguments
-    Call RunCommand(command)
-End Sub
-
-Sub PrintFile(path As String)
-    Dim f As Integer
-    Dim line As String
-
-    If Dir(path) = "" Then
-        Print "[WARN] No command log was produced."
-        Exit Sub
+    On Error Resume Next
+    result = ShellExecute(executable, arguments)
+    If Err <> 0 Then
+        Print "[ERROR] Could not start " & executable & ". Runtime error " & CStr(Err) & "."
+        RunCommand = False
+        Exit Function
     End If
 
-    f = FreeFile
-    Open path For Input As #f Charset "utf-8"
-    Do While Not EOF(f)
-        Line Input #f, line
-        Print line
-    Loop
-    Close #f
-End Sub
+    If result.Output <> "" Then Print result.Output
+    If result.Error <> "" Then Print result.Error
+
+    If result.TimedOut Then
+        Print "[ERROR] Command timed out."
+        RunCommand = False
+        Exit Function
+    End If
+
+    If result.ExitCode <> 0 Then
+        Print "[ERROR] Command failed with exit code " & CStr(result.ExitCode) & "."
+        RunCommand = False
+        Exit Function
+    End If
+
+    RunCommand = True
+End Function

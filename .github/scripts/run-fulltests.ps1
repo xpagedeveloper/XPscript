@@ -101,6 +101,8 @@ if (Should-Run 'runtime') {
 
 if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
+  # Android setup performs real installations when run; compile it only in CI.
+  Compile-Xps ./Android/setup-android-dev.xps android-setup-dev-compile
   # Process execution is a core platform primitive. Keep its smallest regression first.
   $shellExecuteMissing = Run-Xps ./samples/shellexecute-missing.xps shellexecute-missing
   if ($shellExecuteMissing.Output -notmatch 'SHELLEXECUTE-MISSING=OK') { throw 'ShellExecute missing executable regression did not complete.' }
