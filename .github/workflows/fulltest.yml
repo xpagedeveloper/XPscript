@@ -230,6 +230,27 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Verify Linux desktop native runtime first
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf ./out/desktop-native-first
+          mkdir -p ./out/desktop-native-first
+          cli=(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true --)
+          "${cli[@]}" new desktop ./out/desktop-native-first/main.xps
+          set +e
+          output="$(timeout --kill-after=5s 10s "${cli[@]}" run ./out/desktop-native-first/main.xps 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          if printf '%s\n' "$output" | grep -q "Unable to load shared library 'libSkiaSharp'"; then
+            echo 'Linux desktop runtime did not stage libSkiaSharp.so.' >&2
+            exit 1
+          fi
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then
+            exit "$status"
+          fi
       - name: Verify explicit desktop scaffold path first
         shell: bash
         run: |
