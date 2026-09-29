@@ -8,7 +8,7 @@ Sub Main()
     args(1) = "-NoProfile"
     args(2) = "-Command"
     args(3) = "1..4000 | ForEach-Object { [Console]::Out.WriteLine('OUT-' + $_); [Console]::Error.WriteLine('ERR-' + $_) }"
-    Set result = ShellExecute("pwsh", args, 30000)
+    result = ShellExecute("pwsh", args, 30000)
 
     If result.TimedOut Then Error 5, "ShellExecute pipe pressure test timed out."
     If result.ExitCode <> 0 Then Error 5, "ShellExecute pipe pressure child failed."
