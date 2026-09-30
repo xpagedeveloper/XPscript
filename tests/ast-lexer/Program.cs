@@ -96,4 +96,23 @@ var binary = new BinaryExpressionSyntax(one, new SyntaxToken(SyntaxKind.PlusToke
 Equal(SyntaxKind.BinaryExpression, binary.Kind, "manual AST binary kind");
 Equal(new TextSpan(0, 5), binary.Span, "manual AST binary span");
 
-Console.WriteLine("AST lexer and syntax-model focused tests passed.");
+var precedenceAst = new ExpressionParser("1 + 2 * 3").ParseExpression();
+Equal(SyntaxKind.BinaryExpression, precedenceAst.Kind, "precedence root kind");
+var precedenceRoot = (BinaryExpressionSyntax)precedenceAst;
+Equal(SyntaxKind.PlusToken, precedenceRoot.OperatorToken.Kind, "precedence root operator");
+Equal(SyntaxKind.StarToken, ((BinaryExpressionSyntax)precedenceRoot.Right).OperatorToken.Kind, "precedence nested operator");
+
+var unaryAst = new ExpressionParser("Not False Or True").ParseExpression();
+Equal(SyntaxKind.BinaryExpression, unaryAst.Kind, "unary/boolean root kind");
+var booleanRoot = (BinaryExpressionSyntax)unaryAst;
+Equal(SyntaxKind.OrKeyword, booleanRoot.OperatorToken.Kind, "boolean root operator");
+Equal(SyntaxKind.UnaryExpression, booleanRoot.Left.Kind, "Not binds before Or");
+Equal(SyntaxKind.NotKeyword, ((UnaryExpressionSyntax)booleanRoot.Left).OperatorToken.Kind, "Not operator");
+
+var parenAst = new ExpressionParser("(1 + 2) * 3").ParseExpression();
+Equal(SyntaxKind.BinaryExpression, parenAst.Kind, "parenthesized root kind");
+var parenRoot = (BinaryExpressionSyntax)parenAst;
+Equal(SyntaxKind.StarToken, parenRoot.OperatorToken.Kind, "parenthesized root operator");
+Equal(SyntaxKind.ParenthesizedExpression, parenRoot.Left.Kind, "parenthesized left kind");
+
+Console.WriteLine("AST lexer, syntax-model and expression-parser focused tests passed.");
