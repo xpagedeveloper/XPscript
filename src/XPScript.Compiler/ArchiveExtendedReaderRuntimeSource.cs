@@ -306,7 +306,8 @@ internal static class XPScriptArchiveExtendedReader
             var optionsType = assembly.GetType("SharpCompress.Readers.ReaderOptions", throwOnError: true)!;
             var options = Activator.CreateInstance(optionsType)!;
             if (!string.IsNullOrEmpty(password)) optionsType.GetProperty("Password")?.SetValue(options, password);
-            optionsType.GetProperty("ExtensionHint")?.SetValue(options, format.ToLowerInvariant());
+            var extensionHint = format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase) ? "bz2" : format.ToLowerInvariant();
+            optionsType.GetProperty("ExtensionHint")?.SetValue(options, extensionHint);
             var factoryType = assembly.GetType("SharpCompress.Readers.ReaderFactory", throwOnError: true)!;
             var method = factoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
                 .FirstOrDefault(m => m.Name == "OpenReader" && m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == typeof(string) && m.GetParameters()[1].ParameterType == optionsType)
