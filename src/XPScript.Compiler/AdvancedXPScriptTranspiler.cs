@@ -1057,6 +1057,8 @@ internal static class LSForAllRuntime
             _runtimeObjectVariables.Add(name);
     }
 
+    internal string TransformExpressionForCompatibilityTest(string expression) => TransformExpression(expression);
+
     private string TransformCondition(string expression) => Regex.Replace(TransformExpression(expression), @"(?<![<>=!])=(?!=)", "==");
 
     private string TransformExpression(string expression)
