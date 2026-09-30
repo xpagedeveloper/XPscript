@@ -23,8 +23,11 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # Keep the smallest Android compiler/host regression first.
-      - name: Run Android compiler probe first
+      # Keep the smallest Android CLI/completion regression first.
+      - name: Run Android CLI probe first
+        run: dotnet run --project ./tests/AndroidCliProbe/AndroidCliProbe.csproj -c Release
+
+      - name: Run Android compiler probe
         run: dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
 
       - name: Install .NET Android workload
