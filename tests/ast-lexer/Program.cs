@@ -217,7 +217,7 @@ Equal(0, callBinder.Diagnostics.Count, "bound RunCommand diagnostics");
 Equal("(!RunCommand(\"where.exe\", Array(\"winget\")))", emitter.Emit(boundRunCommand), "bound RunCommand C# emission");
 var legacyRunCommand = ExpressionCompatibilityProbe.EmitLegacy("Not RunCommand(\"where.exe\", Array(\"winget\"))");
 var astRunCommand = emitter.Emit(boundRunCommand);
-static string CanonicalizeCSharpExpression(string value)
+string CanonicalizeCSharpExpression(string value)
 {
     ExpressionSyntax RemoveRedundantParentheses(ExpressionSyntax expression)
     {
