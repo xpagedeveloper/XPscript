@@ -384,7 +384,7 @@ public sealed class CompilerDriver
             if (File.Exists(managedAssembly))
                 return managedAssembly;
 
-            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, rid, "Generated");
+            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, runOutputDirectory, rid, "Generated");
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no runnable executable was produced for runtime " + rid + ".");
 
