@@ -762,7 +762,12 @@ public sealed class CompilerDriver
                     SearchOption.AllDirectories)
                 .ToArray();
 
-            var signedApk = apkCandidates.SingleOrDefault(path =>
+            var signedApks = apkCandidates
+                .Where(path => Path.GetFileName(path).EndsWith("-Signed.apk", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (signedApks.Length == 1) return signedApks[0];
+
+            var signedApk = signedApks.SingleOrDefault(path =>
                 Path.GetFileName(path).Equals(assemblyName + "-Signed.apk", StringComparison.OrdinalIgnoreCase));
             if (signedApk is not null) return signedApk;
 
