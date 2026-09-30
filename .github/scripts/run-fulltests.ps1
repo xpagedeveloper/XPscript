@@ -74,6 +74,11 @@ if (Should-Run 'notes') {
 
 if (Should-Run 'runtime') {
   Write-Host '=== XP RUNTIME FULLTEST ==='
+  # Keep the smallest regression for managed stack-trace suppression first.
+  Compile-Xps ./samples/runtime-error-stacktrace-regression.xps runtime-error-stacktrace-regression
+  $runtimeError = Invoke-Bounded (Get-XpsExe 'runtime-error-stacktrace-regression') @() $runtimeTimeoutMilliseconds 'runtime error stacktrace regression'
+  if ($runtimeError.ExitCode -eq 0) { throw 'Runtime error stacktrace regression unexpectedly succeeded.' }
+  if ($runtimeError.Output -match ' at Script\.|System\.[A-Za-z].*Exception') { throw 'Runtime error exposed managed C#/.NET stack details without debug.' }
   # Keep the most recently failing regression first so CI surfaces it immediately.
   Write-Host 'FULLTEST_CHECKPOINT=xpspreadsheet-invalid-format-first'
   Compile-Xps ./demo/spreadsheet/xpspreadsheet-invalid-format.xps xpspreadsheet-invalid-format
