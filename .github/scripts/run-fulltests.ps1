@@ -106,6 +106,11 @@ if (Should-Run 'runtime') {
 
 if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
+  # archive-iterator most recently hit the broad suite compile timeout. Run this focused
+  # compile first so that failure is surfaced immediately instead of after the archive suite.
+  Write-Host 'FULLTEST_CHECKPOINT=archive-iterator-compile-first'
+  Compile-Xps ./demo/archive/archive-iterator.xps archive-iterator
+  Write-Host 'FULLTEST_CHECKPOINT=archive-iterator-compile-passed'
   # Keep Android compiler/host generation first while Android support is under active development.
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Android compiler probe'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }; if ($r.Output -notmatch 'ANDROID-COMPILER-PROBE=OK') { throw 'Android compiler probe did not complete.' }
   # Android setup performs real installations by default. Compile it and statically guard
@@ -140,7 +145,10 @@ if (Should-Run 'platform') {
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj','-c','Release','--','.') $compileTimeoutMilliseconds 'Compiler machine interface probe'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  foreach ($sample in @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-security-fixtures')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
+  foreach ($sample in @('archive-zip','archive-memory')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
+  Write-Host 'FULLTEST_RUN=archive-iterator'
+  $archiveIterator = Invoke-Bounded (Get-XpsExe 'archive-iterator') @() $runtimeTimeoutMilliseconds 'run archive-iterator'; if ($archiveIterator.ExitCode -ne 0) { exit $archiveIterator.ExitCode }
+  foreach ($sample in @('archive-edge-cases','archive-security-fixtures')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
   Compile-Xps ./demo/archive/archive-security-reject-zip.xps archive-security-reject-zip
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/traversal.zip','10000','2147483647','1000') 'path traversal'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/absolute-unix.zip','10000','2147483647','1000') 'absolute Unix path'
