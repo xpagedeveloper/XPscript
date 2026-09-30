@@ -62,7 +62,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 
 ## Stage 2: CLI Android build, deploy and debug workflow
 
-- [ ] Add Android device discovery to the CLI.
+- [x] Add Android device discovery to the CLI.
 - [x] Add Android build support.
 - [ ] Add Android run/deploy through adb.
 - [x] Add local Windows emulator discovery/start support for a configured Android Virtual Device (AVD).
