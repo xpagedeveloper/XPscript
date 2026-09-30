@@ -762,14 +762,21 @@ public sealed class CompilerDriver
                     SearchOption.AllDirectories)
                 .ToArray();
 
+            var publishApks = Directory.Exists(publishDirectory)
+                ? Directory.EnumerateFiles(publishDirectory, "*.apk", SearchOption.TopDirectoryOnly).ToArray()
+                : Array.Empty<string>();
+            var publishSignedApks = publishApks
+                .Where(path => Path.GetFileName(path).EndsWith("-Signed.apk", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (publishSignedApks.Length == 1) return publishSignedApks[0];
+
             var signedApks = apkCandidates
                 .Where(path => Path.GetFileName(path).EndsWith("-Signed.apk", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
-            if (signedApks.Length == 1) return signedApks[0];
-
             var signedApk = signedApks.SingleOrDefault(path =>
                 Path.GetFileName(path).Equals(assemblyName + "-Signed.apk", StringComparison.OrdinalIgnoreCase));
             if (signedApk is not null) return signedApk;
+            if (signedApks.Length == 1) return signedApks[0];
 
             var namedApks = apkCandidates
                 .Where(path => Path.GetFileName(path).StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase))
