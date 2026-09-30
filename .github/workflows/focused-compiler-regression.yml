@@ -1,0 +1,42 @@
+name: Focused Compiler Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler.Core/**'
+      - 'samples/is-nothing-unary-not-regression.xps'
+      - '.github/workflows/focused-compiler-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  is-nothing-unary-not:
+    name: Is Nothing unary Not regression
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile focused regression
+        shell: pwsh
+        run: |
+          dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/is-nothing-unary-not-regression.xps -o ./out/focused/is-nothing --runtime=false
+      - name: Run focused regression
+        shell: pwsh
+        run: |
+          $exe = if (Test-Path ./out/focused/is-nothing.exe) { './out/focused/is-nothing.exe' } else { './out/focused/is-nothing' }
+          $output = & $exe 2>&1 | Out-String
+          Write-Host $output
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($output -notmatch 'IS-NOTHING=OK') { throw 'Is Nothing unary Not regression failed.' }
