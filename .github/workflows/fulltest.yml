@@ -1,8 +1,6 @@
 name: FullTest
 
 on:
-  pull_request:
-    branches: [main]
   push:
     branches: [main, openapi-client-v2]
   workflow_dispatch:
