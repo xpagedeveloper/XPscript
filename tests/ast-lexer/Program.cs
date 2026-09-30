@@ -115,4 +115,24 @@ var parenRoot = (BinaryExpressionSyntax)parenAst;
 Equal(SyntaxKind.StarToken, parenRoot.OperatorToken.Kind, "parenthesized root operator");
 Equal(SyntaxKind.ParenthesizedExpression, parenRoot.Left.Kind, "parenthesized left kind");
 
+var runCommandAst = new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression();
+Equal(SyntaxKind.UnaryExpression, runCommandAst.Kind, "Not RunCommand root");
+var notRunCommand = (UnaryExpressionSyntax)runCommandAst;
+Equal(SyntaxKind.NotKeyword, notRunCommand.OperatorToken.Kind, "Not RunCommand operator");
+Equal(SyntaxKind.CallExpression, notRunCommand.Operand.Kind, "Not operand is call");
+var runCommandCall = (CallExpressionSyntax)notRunCommand.Operand;
+Equal("RunCommand", ((NameExpressionSyntax)runCommandCall.Target).IdentifierToken.Text, "RunCommand target");
+Equal(2, runCommandCall.Arguments.Count, "RunCommand argument count");
+Equal(SyntaxKind.CallExpression, runCommandCall.Arguments[1].Kind, "nested Array call");
+var arrayCall = (CallExpressionSyntax)runCommandCall.Arguments[1];
+Equal("Array", ((NameExpressionSyntax)arrayCall.Target).IdentifierToken.Text, "Array target");
+Equal(new TextSpan(0, 45), runCommandAst.Span, "Not RunCommand full span");
+
+var falseComparisonAst = new ExpressionParser("RunCommand(\"where.exe\", Array(\"winget\")) = False").ParseExpression();
+Equal(SyntaxKind.BinaryExpression, falseComparisonAst.Kind, "RunCommand False comparison root");
+var falseComparison = (BinaryExpressionSyntax)falseComparisonAst;
+Equal(SyntaxKind.EqualsToken, falseComparison.OperatorToken.Kind, "RunCommand False comparison operator");
+Equal(SyntaxKind.CallExpression, falseComparison.Left.Kind, "comparison left is call");
+Equal(SyntaxKind.LiteralExpression, falseComparison.Right.Kind, "comparison right is False");
+
 Console.WriteLine("AST lexer, syntax-model and expression-parser focused tests passed.");
