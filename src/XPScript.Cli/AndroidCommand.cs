@@ -90,10 +90,32 @@ internal static class AndroidCommand
         var requestedSerial = ParseOptionalDevice(args, "android logs");
         var adb = ResolveAdb();
         var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
-        var result = await ExecuteAsync(adb, ["-s", serial, "logcat", "-d", "-s", "XPScript:I", "*:S"]);
+        var result = await StreamLogsAsync(adb, serial);
         if (result.ExitCode != 0)
             throw new InvalidOperationException("adb logcat failed on " + serial + ": " + result.Error.Trim());
-        Console.Write(result.Output);
+        return result;
+    }
+
+    private static async Task<int> StreamLogsAsync(string adb, string serial)
+    {
+        var start = new ProcessStartInfo
+        {
+            FileName = adb,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        foreach (var argument in new[] { "-s", serial, "logcat", "-s", "XPScript:I", "*:S" })
+            start.ArgumentList.Add(argument);
+
+        using var process = Process.Start(start) ?? throw new InvalidOperationException("Unable to start adb logcat.");
+        var stderr = process.StandardError.ReadToEndAsync();
+        while (await process.StandardOutput.ReadLineAsync() is { } line)
+            Console.WriteLine(line);
+        await process.WaitForExitAsync();
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException("adb logcat failed on " + serial + ": " + (await stderr).Trim());
         return 0;
     }
 
