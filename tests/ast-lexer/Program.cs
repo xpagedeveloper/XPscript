@@ -1,3 +1,4 @@
+using XPScript.Compiler.Binding;
 using XPScript.Compiler.Syntax;
 
 static void Equal<T>(T expected, T actual, string message)
@@ -175,4 +176,21 @@ Equal(1, missingMemberParser.Diagnostics.Count, "missing member diagnostic count
 Equal("XPS1012", missingMemberParser.Diagnostics[0].Code, "missing member diagnostic code");
 Equal(new TextSpan(8, 0), missingMemberParser.Diagnostics[0].Span, "missing member diagnostic span");
 
-Console.WriteLine("AST lexer, syntax-model and expression-parser focused tests passed.");
+var booleanBinder = new ExpressionBinder();
+var boundBoolean = booleanBinder.Bind(new ExpressionParser("Not False Or True").ParseExpression());
+Equal(BoundNodeKind.BinaryExpression, boundBoolean.Kind, "bound boolean root");
+Equal(typeof(bool), boundBoolean.Type, "bound boolean type");
+Equal(0, booleanBinder.Diagnostics.Count, "bound boolean diagnostics");
+
+var arithmeticBinder = new ExpressionBinder();
+var boundArithmetic = arithmeticBinder.Bind(new ExpressionParser("1 + 2 * 3").ParseExpression());
+Equal(BoundNodeKind.BinaryExpression, boundArithmetic.Kind, "bound arithmetic root");
+Equal(typeof(long), boundArithmetic.Type, "bound arithmetic type");
+Equal(0, arithmeticBinder.Diagnostics.Count, "bound arithmetic diagnostics");
+
+var invalidBinder = new ExpressionBinder();
+invalidBinder.Bind(new ExpressionParser("Not 1").ParseExpression());
+Equal(1, invalidBinder.Diagnostics.Count, "invalid unary diagnostic count");
+Equal("XPS1012", invalidBinder.Diagnostics[0].Code, "invalid unary diagnostic code");
+
+Console.WriteLine("AST lexer, syntax-model, expression-parser and binder focused tests passed.");
