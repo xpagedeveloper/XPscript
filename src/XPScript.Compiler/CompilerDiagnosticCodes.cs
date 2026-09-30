@@ -34,6 +34,7 @@ internal static class CompilerDiagnosticCodes
     public const string CallbackNotFound = "XPS2011";
     public const string CallbackArityMismatch = "XPS2012";
     public const string NativeByRefUnsupported = "XPS2013";
+    public const string FunctionResultNameConflict = "XPS2014";
 
     // XPS3xxx: target/platform and execution-context restrictions.
     public const string TargetApiUnavailable = "XPS3001";

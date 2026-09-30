@@ -1,0 +1,8 @@
+Function RunCommand() As Boolean
+    Dim RunCommand As Variant
+    RunCommand = True
+End Function
+
+Sub Main()
+    Print CStr(RunCommand())
+End Sub

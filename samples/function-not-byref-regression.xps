@@ -1,0 +1,15 @@
+Function Probe(executable As String, arguments As Variant) As Boolean
+    Probe = True
+End Function
+
+Sub Main()
+    If Not Probe("test", Array("arg")) Then
+        Error 5, "Not Boolean function call returned the wrong value"
+    End If
+
+    If Probe("test", Array("arg")) = False Then
+        Error 5, "Boolean function comparison returned the wrong value"
+    End If
+
+    Print "FUNCTION-NOT-BYREF=OK"
+End Sub

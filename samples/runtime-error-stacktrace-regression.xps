@@ -1,0 +1,3 @@
+Sub Main()
+    Error 5, "runtime stacktrace regression"
+End Sub
