@@ -239,7 +239,7 @@ static string CanonicalizeCSharpExpression(string value)
     }
 
     var parsed = SyntaxFactory.ParseExpression(value);
-    return RemoveRedundantParentheses(parsed).NormalizeWhitespace().ToFullString();
+    return RemoveRedundantParentheses(parsed).ToFullString().Replace(" ", string.Empty);
 }
 Equal(CanonicalizeCSharpExpression(legacyRunCommand), CanonicalizeCSharpExpression(astRunCommand), "legacy vs AST RunCommand semantic emission");
 
