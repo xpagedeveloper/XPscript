@@ -261,7 +261,7 @@ public sealed class CompilerDriver
                 throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
             }
 
-            var generatedExecutable = FindPublishedExecutable(publishDir, rid, OutputAssemblyName(outputPath));
+            var generatedExecutable = FindPublishedExecutable(tempRoot, publishDir, rid, OutputAssemblyName(outputPath));
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
 
@@ -743,22 +743,25 @@ public sealed class CompilerDriver
         .Replace("\"", "&quot;", StringComparison.Ordinal)
         .Replace("'", "&apos;", StringComparison.Ordinal);
 
-    private static string? FindPublishedExecutable(string publishDirectory, string rid, string assemblyName)
+    private static string? FindPublishedExecutable(string buildDirectory, string publishDirectory, string rid, string assemblyName)
     {
         if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
         {
-            var signedApk = Directory.EnumerateFiles(
-                    publishDirectory,
-                    assemblyName + "-Signed.apk",
-                    SearchOption.AllDirectories)
-                .SingleOrDefault();
-            if (signedApk is not null) return signedApk;
-
             var apkCandidates = Directory.EnumerateFiles(
-                    publishDirectory,
+                    buildDirectory,
                     "*.apk",
                     SearchOption.AllDirectories)
                 .ToArray();
+
+            var signedApk = apkCandidates.SingleOrDefault(path =>
+                Path.GetFileName(path).Equals(assemblyName + "-Signed.apk", StringComparison.OrdinalIgnoreCase));
+            if (signedApk is not null) return signedApk;
+
+            var namedApks = apkCandidates
+                .Where(path => Path.GetFileName(path).StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (namedApks.Length == 1) return namedApks[0];
+
             return apkCandidates.Length == 1 ? apkCandidates[0] : null;
         }
 

@@ -25,6 +25,26 @@ if (project.Contains("<StartupObject>", StringComparison.Ordinal))
 var hostType = type.Assembly.GetType("XPScript.Compiler.AndroidHostSource", throwOnError: true)!;
 var code = (string)(hostType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
     ?? throw new Exception("AndroidHostSource.Code was not found."));
+var findPublishedExecutable = type.GetMethod("FindPublishedExecutable", BindingFlags.NonPublic | BindingFlags.Static)
+    ?? throw new Exception("FindPublishedExecutable was not found.");
+var apkRoot = Path.Combine(Path.GetTempPath(), "XPScript-AndroidCompilerProbe-" + Guid.NewGuid().ToString("N"));
+var publishDir = Path.Combine(apkRoot, "publish");
+var androidOutputDir = Path.Combine(apkRoot, "bin", "Release", "net10.0-android", "android-arm64");
+Directory.CreateDirectory(publishDir);
+Directory.CreateDirectory(androidOutputDir);
+var expectedApk = Path.Combine(androidOutputDir, "AndroidSmoke-Signed.apk");
+File.WriteAllText(expectedApk, "probe");
+try
+{
+    var foundApk = (string?)findPublishedExecutable.Invoke(null, new object?[] { apkRoot, publishDir, "android-arm64", "AndroidSmoke" });
+    if (!string.Equals(foundApk, expectedApk, StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Android APK discovery did not search the complete build tree.");
+}
+finally
+{
+    Directory.Delete(apkRoot, recursive: true);
+}
+
 foreach (var expected in new[] { "AndroidEntryActivity", "MainLauncher = true", "Console.AndroidLog", "\"XPScript\"", "Log.Error", "Program.Main(Array.Empty<string>())" })
     if (!code.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android host is missing: " + expected);
