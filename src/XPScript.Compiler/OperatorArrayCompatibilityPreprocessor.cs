@@ -179,6 +179,13 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             }
 
             var value = line[valueStart..valueEnd];
+            // "Is Nothing" is handled by the language/compiler and must not be
+            // mistaken for unary Not merely because "Nothing" starts with "Not".
+            if (valueStart > 0 && line.AsSpan(0, valueStart).TrimEnd().EndsWith("Is", StringComparison.OrdinalIgnoreCase))
+            {
+                match = Regex.Match(line, @"\\bNot\\s+(?!Nothing\\b)", valueEnd, RegexOptions.IgnoreCase);
+                continue;
+            }
             var replacement = value.Contains('(', StringComparison.Ordinal)
                 ? $"({value} = False)"
                 : $"LSOperatorArrayRuntime.LogicalNot({value})";
