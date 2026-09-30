@@ -274,6 +274,10 @@ public sealed class CompilerDriver
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
             }
 
+            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase) &&
+                !outputPath.EndsWith(".apk", StringComparison.OrdinalIgnoreCase))
+                outputPath += ".apk";
+
             var licenseNoticePath = Path.Combine(publishDir, ThirdPartyLicenseNoticeGenerator.OutputFileName);
             await File.WriteAllTextAsync(licenseNoticePath, ThirdPartyLicenseNoticeGenerator.Generate(tempRoot, selfContained));
             CompilerPathSecurity.HardenTemporaryFile(licenseNoticePath);
