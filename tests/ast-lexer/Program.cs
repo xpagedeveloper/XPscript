@@ -1,3 +1,4 @@
+using XPScript.Compiler.Emission;
 using XPScript.Compiler.Binding;
 using XPScript.Compiler.Syntax;
 
@@ -193,4 +194,13 @@ invalidBinder.Bind(new ExpressionParser("Not 1").ParseExpression());
 Equal(1, invalidBinder.Diagnostics.Count, "invalid unary diagnostic count");
 Equal("XPS1012", invalidBinder.Diagnostics[0].Code, "invalid unary diagnostic code");
 
-Console.WriteLine("AST lexer, syntax-model, expression-parser and binder focused tests passed.");
+var emitter = new BoundExpressionEmitter();
+Equal("((!false) || true)", emitter.Emit(boundBoolean), "bound boolean C# emission");
+Equal("(1 + (2 * 3))", emitter.Emit(boundArithmetic), "bound arithmetic C# emission");
+
+var comparisonBinder = new ExpressionBinder();
+var boundComparison = comparisonBinder.Bind(new ExpressionParser("1 + 2 = 3").ParseExpression());
+Equal("((1 + 2) == 3)", emitter.Emit(boundComparison), "bound comparison C# emission");
+Equal(0, comparisonBinder.Diagnostics.Count, "bound comparison diagnostics");
+
+Console.WriteLine("AST lexer, syntax-model, expression-parser, binder and emitter focused tests passed.");
