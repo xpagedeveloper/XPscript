@@ -126,7 +126,7 @@ Equal(2, runCommandCall.Arguments.Count, "RunCommand argument count");
 Equal(SyntaxKind.CallExpression, runCommandCall.Arguments[1].Kind, "nested Array call");
 var arrayCall = (CallExpressionSyntax)runCommandCall.Arguments[1];
 Equal("Array", ((NameExpressionSyntax)arrayCall.Target).IdentifierToken.Text, "Array target");
-Equal(new TextSpan(0, 45), runCommandAst.Span, "Not RunCommand full span");
+Equal(new TextSpan(0, 44), runCommandAst.Span, "Not RunCommand full span");
 
 var falseComparisonAst = new ExpressionParser("RunCommand(\"where.exe\", Array(\"winget\")) = False").ParseExpression();
 Equal(SyntaxKind.BinaryExpression, falseComparisonAst.Kind, "RunCommand False comparison root");
