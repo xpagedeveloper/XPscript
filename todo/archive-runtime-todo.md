@@ -401,7 +401,7 @@ Server-side filesystem operations can use the normal server execution model.
 ## Other format tests
 
 - [x] Add round-trip tests for every format supported for writing.
-- [ ] Add read/extract tests for every read-only format exposed publicly.
+- [x] Add read/extract tests for every read-only format exposed publicly.
 - [x] Include nested directories and Unicode filenames.
 - [x] Include empty files and empty folders where the format supports them.
 - [x] Include malformed archive negative tests.
