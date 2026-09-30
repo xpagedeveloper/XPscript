@@ -8,7 +8,7 @@ This TODO is the working checklist for Android support. Keep adding concrete And
 
 1. Get the smallest possible XPScript Android application running on a real device.
 2. Make XPScript output and failures return through the Android debug path.
-3. Add deterministic Android build, deploy, run and log streaming support.
+3. Add deterministic Android build, deploy, run and log streaming support, using an x86_64 emulator as the first repeatable integration target.
 4. Add UIForm rendering through Avalonia on Android.
 5. After the core runtime and UIForm path are stable, investigate and add mobile platform capabilities such as camera, location/GPS and related device APIs.
 
@@ -40,6 +40,9 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Start with `Print "Hello from XPScript on Android"`.
 - [x] Use a dedicated sample `samples/android-debug-print.xps`.
 - [x] Target ARM64 first for the physical test device.
+- [x] Add an `android-x64` target for x86_64 Android emulators.
+- [x] Build both ARM64 device and x64 emulator APKs in Android CI.
+- [ ] Add an x86_64 emulator smoke test that installs, launches and verifies the XPScript log output.
 - [x] Package an installable debug APK.
 - [ ] Install/update and launch it through adb.
 - [x] Route XPScript `Print` output to Android logging.
@@ -62,6 +65,8 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [ ] Add Android device discovery to the CLI.
 - [x] Add Android build support.
 - [ ] Add Android run/deploy through adb.
+- [ ] Add emulator discovery/start support for a configured Android Virtual Device (AVD).
+- [ ] Add deterministic emulator install -> launch -> logcat verification before physical-device integration.
 - [ ] Stream and filter application logs.
 - [ ] Add a deterministic command path for build -> install -> launch -> capture logs.
 - [ ] Surface adb installation failures with useful diagnostics.
