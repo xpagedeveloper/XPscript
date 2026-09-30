@@ -165,17 +165,76 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         });
     }
 
-    private static string RewriteUnaryNot(string line) =>
-        Regex.Replace(line, $@"\bNot\s+(?!Nothing\b)(?<value>{Operand})", m =>
+    private static string RewriteUnaryNot(string line)
+    {
+        var match = Regex.Match(line, @"\\bNot\\s+(?!Nothing\\b)", RegexOptions.IgnoreCase);
+        while (match.Success)
         {
-            var value = m.Groups["value"].Value;
-            // Keep Boolean negation on function calls as a comparison. Calls with
-            // default ByRef arguments can later be lowered to a temporary-scope
-            // expression, and LogicalNot must apply to the returned Boolean value.
-            if (value.Contains('(', StringComparison.Ordinal))
-                return $"({value} = False)";
-            return $"LSOperatorArrayRuntime.LogicalNot({value})";
-        }, RegexOptions.IgnoreCase);
+            var valueStart = match.Index + match.Length;
+            var valueEnd = FindUnaryOperandEnd(line, valueStart);
+            if (valueEnd <= valueStart)
+            {
+                match = match.NextMatch();
+                continue;
+            }
+
+            var value = line[valueStart..valueEnd];
+            var replacement = value.Contains('(', StringComparison.Ordinal)
+                ? $"({value} = False)"
+                : $"LSOperatorArrayRuntime.LogicalNot({value})";
+            line = line[..match.Index] + replacement + line[valueEnd..];
+            match = Regex.Match(line, @"\\bNot\\s+(?!Nothing\\b)", RegexOptions.IgnoreCase);
+        }
+        return line;
+    }
+
+    private static int FindUnaryOperandEnd(string line, int start)
+    {
+        var i = start;
+        while (i < line.Length && char.IsWhiteSpace(line[i])) i++;
+        if (i >= line.Length) return i;
+
+        if (line[i] == '(')
+        {
+            var close = FindMatchingParenthesis(line, i);
+            return close < 0 ? i : close + 1;
+        }
+
+        if (!(char.IsLetter(line[i]) || line[i] == '_'))
+        {
+            while (i < line.Length && !char.IsWhiteSpace(line[i])) i++;
+            return i;
+        }
+
+        i++;
+        while (i < line.Length && (char.IsLetterOrDigit(line[i]) || line[i] == '_' || line[i] == '.')) i++;
+        if (i < line.Length && line[i] == '(')
+        {
+            var close = FindMatchingParenthesis(line, i);
+            if (close >= 0) i = close + 1;
+        }
+        return i;
+    }
+
+    private static int FindMatchingParenthesis(string value, int open)
+    {
+        var depth = 0;
+        var inString = false;
+        for (var i = open; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') depth++;
+            else if (c == ')' && --depth == 0) return i;
+        }
+        return -1;
+    }
 
     private static string RewriteSymbolOperator(string line, char op, string method)
     {
