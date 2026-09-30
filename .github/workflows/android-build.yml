@@ -27,6 +27,9 @@ jobs:
       - name: Run Android compiler probe first
         run: dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
 
+      - name: Compile Android runtime failure regression
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ./samples/android-runtime-error.xps -o ./out/android-runtime-error --runtime=false --rid android-x64 --debug
+
       - name: Install .NET Android workload
         run: dotnet workload install android
 
