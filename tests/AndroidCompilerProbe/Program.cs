@@ -49,4 +49,25 @@ foreach (var expected in new[] { "AndroidEntryActivity", "MainLauncher = true", 
     if (!code.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android host is missing: " + expected);
 
+var findPublished = type.GetMethod("FindPublishedExecutable", BindingFlags.NonPublic | BindingFlags.Static)
+    ?? throw new Exception("FindPublishedExecutable was not found.");
+var artifactRoot = Path.Combine(Path.GetTempPath(), "xpscript-android-probe-" + Guid.NewGuid().ToString("N"));
+var artifactBin = Path.Combine(artifactRoot, "bin");
+var artifactPublish = Path.Combine(artifactRoot, "publish");
+Directory.CreateDirectory(artifactBin);
+Directory.CreateDirectory(artifactPublish);
+try
+{
+    var signedPackage = Path.Combine(artifactBin, "com.xpscript.debugapp-Signed.apk");
+    File.WriteAllText(signedPackage, "probe");
+    File.WriteAllText(Path.Combine(artifactBin, "com.xpscript.debugapp.apk"), "probe");
+    var discovered = (string?)findPublished.Invoke(null, new object?[] { artifactRoot, artifactPublish, "android-arm64", "android-debug-print" });
+    if (!string.Equals(discovered, signedPackage, StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Android APK discovery did not prefer the single signed package.");
+}
+finally
+{
+    Directory.Delete(artifactRoot, recursive: true);
+}
+
 Console.WriteLine("ANDROID-COMPILER-PROBE=OK");
