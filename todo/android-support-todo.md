@@ -44,9 +44,9 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Build both ARM64 device and x64 emulator APKs in Android CI.
 - [x] Add an x86_64 emulator smoke test that installs, launches and verifies the XPScript log output locally on Windows.
 - [x] Package an installable debug APK.
-- [ ] Install/update and launch it through adb. (`xpscript android install` implemented; launch remains.)
+- [x] Install/update and launch it through adb.
 - [x] Route XPScript `Print` output to Android logging.
-- [ ] Make the output visible through adb/logcat and the development debugger.
+- [x] Make the output visible through adb/logcat (`xpscript android logs`); development debugger integration remains future work.
 - [x] Use an unambiguous XPScript log tag.
 - [ ] Add a second minimal regression that emits multiple lines and values so output ordering and formatting are verified.
 - [x] Route uncaught XPScript runtime errors to Android logging.
@@ -70,7 +70,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [ ] Stream and filter application logs.
 - [ ] Add a deterministic command path for build -> install -> launch -> capture logs.
 - [x] Surface adb installation failures with useful diagnostics.
-- [ ] Surface launch failures with useful diagnostics.
+- [x] Surface launch failures with useful diagnostics.
 - [x] Detect missing, unauthorized, offline or ambiguous devices before install/device-required operations.
 - [ ] Define project metadata for Android target and application type.
 - [ ] Keep console/headless and Avalonia UI selection explicit and deterministic.
