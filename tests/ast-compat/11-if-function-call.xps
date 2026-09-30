@@ -1,0 +1,11 @@
+Function IsAnswer(value As Long) As Boolean
+    If value = 42 Then
+        IsAnswer = True
+    Else
+        IsAnswer = False
+    End If
+End Function
+
+Sub Main()
+    If IsAnswer(42) Then Print "CALL_IF_OK"
+End Sub
