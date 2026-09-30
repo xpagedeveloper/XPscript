@@ -1,0 +1,36 @@
+namespace XPScript.Compiler.Syntax;
+
+public enum SyntaxKind
+{
+    BadToken,
+    EndOfFileToken,
+    NewLineToken,
+    IdentifierToken,
+    NumberToken,
+    StringToken,
+    OpenParenToken,
+    CloseParenToken,
+    CommaToken,
+    DotToken,
+    PlusToken,
+    MinusToken,
+    StarToken,
+    SlashToken,
+    AmpersandToken,
+    EqualsToken,
+    LessToken,
+    LessOrEqualsToken,
+    GreaterToken,
+    GreaterOrEqualsToken,
+    LessGreaterToken,
+    NotKeyword,
+    AndKeyword,
+    OrKeyword,
+    TrueKeyword,
+    FalseKeyword,
+    IfKeyword,
+    ThenKeyword,
+    ElseKeyword,
+    ElseIfKeyword,
+    EndKeyword
+}
