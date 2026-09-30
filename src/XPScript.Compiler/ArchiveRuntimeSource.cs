@@ -972,7 +972,7 @@ internal sealed class XPScriptArchive
     {
         private readonly object _reader;
         private readonly System.IO.Stream _source;
-        public List<SingleEntryReaderEntry> Entries { get; } = [];
+        internal List<SingleEntryReaderEntry> Entries { get; } = [];
 
         public SingleEntryReaderArchive(object reader, System.IO.Stream source, string name)
         {
@@ -998,18 +998,18 @@ internal sealed class XPScriptArchive
     {
         private readonly object _entry;
         private readonly object _reader;
-        public string Key { get; }
-        public long Size => GetLongProperty(_entry, "Size");
-        public long CompressedSize => GetLongProperty(_entry, "CompressedSize");
-        public bool IsDirectory => false;
-        public bool IsEncrypted => GetBoolProperty(_entry, "IsEncrypted");
-        public DateTime CreatedTime => DateTime.MinValue;
-        public DateTime LastModifiedTime => DateTime.MinValue;
-        public string Crc => "";
+        internal string Key { get; }
+        internal long Size => GetLongProperty(_entry, "Size");
+        internal long CompressedSize => GetLongProperty(_entry, "CompressedSize");
+        internal bool IsDirectory => false;
+        internal bool IsEncrypted => GetBoolProperty(_entry, "IsEncrypted");
+        internal DateTime CreatedTime => DateTime.MinValue;
+        internal DateTime LastModifiedTime => DateTime.MinValue;
+        internal string Crc => "";
 
         public SingleEntryReaderEntry(string key, object entry, object reader) { Key = key; _entry = entry; _reader = reader; }
 
-        public System.IO.Stream OpenEntryStream()
+        internal System.IO.Stream OpenEntryStream()
         {
             var type = _reader.GetType();
             var method = type.GetMethod("OpenEntryStream", Type.EmptyTypes) ?? throw new MissingMethodException("SharpCompress reader OpenEntryStream() was not found.");
