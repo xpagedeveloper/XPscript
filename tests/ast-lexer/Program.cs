@@ -148,4 +148,17 @@ var ambiguousParenAst = new ExpressionParser("sortedStrings(0)").ParseExpression
 Equal(SyntaxKind.CallExpression, ambiguousParenAst.Kind, "parenthesized postfix syntax remains unresolved");
 Equal("sortedStrings", ((NameExpressionSyntax)((CallExpressionSyntax)ambiguousParenAst).Target).IdentifierToken.Text, "array-or-call target");
 
+var newWithArgsAst = new ExpressionParser("New Person(\"Fredrik\", \"Admin\")").ParseExpression();
+Equal(SyntaxKind.NewExpression, newWithArgsAst.Kind, "New with arguments kind");
+var newWithArgs = (NewExpressionSyntax)newWithArgsAst;
+Equal("Person", newWithArgs.TypeName.Text, "New type name");
+Equal(2, newWithArgs.Arguments.Count, "New argument count");
+Equal(new TextSpan(0, 29), newWithArgs.Span, "New with arguments span");
+
+var newWithoutArgsAst = new ExpressionParser("New XPJsonObject").ParseExpression();
+Equal(SyntaxKind.NewExpression, newWithoutArgsAst.Kind, "New without parentheses kind");
+var newWithoutArgs = (NewExpressionSyntax)newWithoutArgsAst;
+Equal("XPJsonObject", newWithoutArgs.TypeName.Text, "New without parentheses type");
+Equal(0, newWithoutArgs.Arguments.Count, "New without parentheses arguments");
+
 Console.WriteLine("AST lexer, syntax-model and expression-parser focused tests passed.");
