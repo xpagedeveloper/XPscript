@@ -338,6 +338,8 @@ internal static class RunCompiler
         var runtimes = Path.Combine(directory, "runtimes");
         if (Directory.Exists(runtimes))
         {
+            var currentRid = CompilerDriver.CurrentRuntimeIdentifier();
+            var currentNativePrefix = currentRid + Path.DirectorySeparatorChar + "native" + Path.DirectorySeparatorChar;
             foreach (var source in Directory.EnumerateFiles(runtimes, "*", SearchOption.AllDirectories))
             {
                 var relative = Path.GetRelativePath(runtimes, source);
@@ -347,9 +349,10 @@ internal static class RunCompiler
                 CompilerPathSecurity.HardenTemporaryFile(target);
 
                 // Native libraries are resolved from the application's base directory
-                // by the run fast path. Also flatten the native asset for the current
-                // process RID so DllImport("libSkiaSharp") can find it directly.
-                if (relative.Contains(Path.DirectorySeparatorChar + "native" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                // by the run fast path. Flatten only the current process RID. Flattening
+                // every RID causes identically named assets such as libSkiaSharp.so from
+                // linux-x64 and linux-arm64 to collide in the output directory.
+                if (relative.StartsWith(currentNativePrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     var flatTarget = Path.Combine(outputRoot, Path.GetFileName(source));
                     CompilerSecureFileCopy.CopyValidatedRegularFile(source, flatTarget, "Desktop UI native runtime dependency");
