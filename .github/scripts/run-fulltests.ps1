@@ -45,7 +45,12 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
-  # Keep the actively developed scope isolation regression first so CI surfaces failures immediately.
+  # Keep the smallest regression for the latest compiler failure first.
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/function-result-name-conflict-error.xps','-o','./out/fulltest/function-result-name-conflict-error','--runtime=false') $compileTimeoutMilliseconds 'function result name conflict'
+  if ($r.ExitCode -eq 0) { throw 'Function result name conflict unexpectedly compiled.' }
+  if ($r.Output -notmatch 'XPS2014' -or $r.Output -notmatch 'conflicts with the function result name') { throw 'Function result name conflict did not produce XPS2014.' }
+
+  # Keep the actively developed scope isolation regression early so CI surfaces failures immediately.
   $scope = Run-Xps ./samples/scope-isolation.xps scope-isolation
   foreach ($expected in @('LOCAL=40','STATIC=1','STATIC=2','GLOBAL=7','BYREF=4','ARRAY=22:3','LIST=kept:2')) { if ($scope.Output -notmatch [regex]::Escape($expected)) { throw "Scope isolation regression missing: $expected" } }
   Run-Xps ./samples/array-sort-regression.xps array-sort-regression | Out-Null
