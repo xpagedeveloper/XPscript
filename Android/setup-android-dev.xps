@@ -17,54 +17,78 @@ Sub Main()
     Print "XPScript Android Development Setup"
     Print "=================================="
 
+    Dim dotnet10Installed As Boolean
+    Dim androidStudioInstalled As Boolean
+    Dim androidWorkloadReady As Boolean
+    Dim wingetAvailable As Boolean
+
+    dotnet10Installed = DotNet10Installed()
+    androidStudioInstalled = AndroidStudioInstalled()
+    androidWorkloadReady = AndroidWorkloadInstalled()
+
     If verifyOnly Then
         Print "Verification mode: no software will be installed."
-        If RunCommand("dotnet", Array("--version"))=false Then
-            Print "[ERROR] .NET SDK was not found."
+        If dotnet10Installed=false Then
+            Print "[ERROR] .NET 10 SDK was not found."
+            Exit Sub
+        End If
+        If androidStudioInstalled=false Then
+            Print "[WARN] Android Studio was not found in the standard installation locations or winget."
+        End If
+        If androidWorkloadReady=false Then
+            Print "[ERROR] .NET Android workload was not found."
             Exit Sub
         End If
     Else
         Print "[CHECK] Checking whether .NET 10 SDK is already installed..."
-        If RunCommand("dotnet", Array("--version"))=true Then
-            Print "[OK] A .NET SDK is already installed. Skipping .NET SDK winget installation."
+        If dotnet10Installed Then
+            Print "[OK] .NET 10 SDK is already installed."
         Else
-            Print "[INFO] .NET SDK was not found. It will be installed."
+            Print "[INFO] .NET 10 SDK was not found and must be installed."
         End If
 
-        If RunCommand("where.exe", Array("winget"))=false Then
-            Print "[ERROR] winget was not found. Install App Installer before continuing."
-            Exit Sub
+        Print "[CHECK] Checking whether Android Studio is already installed..."
+        If androidStudioInstalled Then
+            Print "[OK] Android Studio is already installed."
+        Else
+            Print "[INFO] Android Studio was not found and must be installed."
         End If
 
-        If RunCommand("dotnet", Array("--version"))=false Then
+        If dotnet10Installed=false Or androidStudioInstalled=false Then
+            Print "[CHECK] One or more components require winget. Checking winget..."
+            wingetAvailable = WingetAvailable()
+            If wingetAvailable=false Then
+                Print "[ERROR] winget is required to install missing components. Install App Installer before continuing."
+                Exit Sub
+            End If
+        End If
+
+        If dotnet10Installed=false Then
             Print ""
             Print "[INSTALL] Installing .NET 10 SDK with winget."
             Print "[INSTALL] winget may download packages and can take several minutes."
-            Print "[INSTALL] Waiting for winget to finish..."
             If RunWinget(Array("install", "--id", "Microsoft.DotNet.SDK.10", "--exact", "--accept-package-agreements", "--accept-source-agreements"))=false Then
                 Print "[ERROR] .NET 10 SDK installation failed."
                 Exit Sub
             End If
             Print "[OK] .NET 10 SDK winget command completed."
         End If
-        Print ""
-        Print "[CHECK] Checking whether Android Studio is already installed..."
-        If WingetPackageInstalled("Google.AndroidStudio")=true Then
-            Print "[OK] Android Studio is already installed. Skipping installation."
-        Else
-            Print "[INSTALL] Android Studio was not found. Installing with winget."
+
+        If androidStudioInstalled=false Then
+            Print ""
+            Print "[INSTALL] Installing Android Studio with winget."
             Print "[INSTALL] This is a large package and may take several minutes."
-            Print "[INSTALL] Waiting for winget to finish..."
             If RunWinget(Array("install", "--id", "Google.AndroidStudio", "--exact", "--accept-package-agreements", "--accept-source-agreements"))=false Then
                 Print "[ERROR] Android Studio installation failed."
                 Exit Sub
             End If
             Print "[OK] Android Studio winget command completed."
         End If
+
         Print ""
         Print "[CHECK] Checking whether the .NET Android workload is already installed..."
-        If AndroidWorkloadInstalled()=true Then
-            Print "[OK] .NET Android workload is already installed. Skipping installation."
+        If androidWorkloadReady Then
+            Print "[OK] .NET Android workload is already installed."
         Else
             Print "[INSTALL] Android workload was not found. Installing it now."
             Print "[INSTALL] This may download Android/.NET components and can take several minutes."
@@ -118,6 +142,60 @@ Sub Main()
     Print "[OK] Android device checks completed."
     Print "If the device is unauthorized, unlock it and approve USB debugging."
 End Sub
+
+Function DotNet10Installed() As Boolean
+    Dim checkResult As Variant
+    On Error Resume Next
+    checkResult = ShellExecute("dotnet", Array("--list-sdks"))
+    If Err <> 0 Then
+        DotNet10Installed = False
+        Exit Function
+    End If
+    If checkResult.ExitCode = 0 And InStr(checkResult.Output, "10.") > 0 Then
+        DotNet10Installed = True
+    Else
+        DotNet10Installed = False
+    End If
+End Function
+
+Function WingetAvailable() As Boolean
+    Dim checkResult As Variant
+    On Error Resume Next
+    checkResult = ShellExecute("where.exe", Array("winget"))
+    If Err <> 0 Then
+        WingetAvailable = False
+        Exit Function
+    End If
+    If checkResult.ExitCode = 0 Then
+        WingetAvailable = True
+    Else
+        WingetAvailable = False
+    End If
+End Function
+
+Function AndroidStudioInstalled() As Boolean
+    Dim studioPath As String
+    studioPath = Environ("ProgramFiles") & "\Android\Android Studio"
+    If IsDir(studioPath) Then
+        AndroidStudioInstalled = True
+        Exit Function
+    End If
+
+    studioPath = Environ("LOCALAPPDATA") & "\Programs\Android\Android Studio"
+    If IsDir(studioPath) Then
+        AndroidStudioInstalled = True
+        Exit Function
+    End If
+
+    If WingetAvailable() Then
+        If WingetPackageInstalled("Google.AndroidStudio") Then
+            AndroidStudioInstalled = True
+            Exit Function
+        End If
+    End If
+
+    AndroidStudioInstalled = False
+End Function
 
 Function RunCommand(executable As String, arguments As Variant) As Boolean
     Dim commandResult As Variant
