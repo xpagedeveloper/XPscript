@@ -4,15 +4,17 @@ public sealed class ExpressionParser
 {
     private readonly SyntaxToken[] _tokens;
     private int _position;
+    private readonly List<SyntaxDiagnostic> _diagnostics = [];
 
     public ExpressionParser(string text)
     {
         var lexer = new Lexer(text);
         _tokens = lexer.Lex().Where(t => t.Kind != SyntaxKind.NewLineToken).ToArray();
-        Diagnostics = lexer.Diagnostics;
+        foreach (var diagnostic in lexer.Diagnostics)
+            _diagnostics.Add(new SyntaxDiagnostic(diagnostic.Code, diagnostic.Message, diagnostic.Span));
     }
 
-    public IReadOnlyList<LexerDiagnostic> Diagnostics { get; }
+    public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
     public ExpressionSyntax ParseExpression() => ParseBinaryExpression();
 
@@ -123,7 +125,13 @@ public sealed class ExpressionParser
     {
         if (Current.Kind == kind)
             return NextToken();
-        return new SyntaxToken(kind, string.Empty, null, new TextSpan(Current.Span.Start, 0));
+
+        var span = new TextSpan(Current.Span.Start, 0);
+        _diagnostics.Add(new SyntaxDiagnostic(
+            "XPS1012",
+            $"Expected {kind} but found {Current.Kind}.",
+            span));
+        return new SyntaxToken(kind, string.Empty, null, span);
     }
 
     private SyntaxToken Current => Peek(0);
