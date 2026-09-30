@@ -183,9 +183,8 @@ if (Should-Run 'platform') {
   Set-Content -NoNewline -Path (Join-Path $readOnlyFixtureRoot 'payload.txt') -Value 'archive-read-only-format'
   if (Get-Command 'bzip2' -ErrorAction SilentlyContinue) {
     $bzip2Fixture = Join-Path $readOnlyFixtureRoot 'payload.txt.bz2'
-    $bzip2Bytes = & bzip2 -c (Join-Path $readOnlyFixtureRoot 'payload.txt')
-    if ($LASTEXITCODE -ne 0) { throw 'Unable to create BZip2 Archive read-only fixture.' }
-    [System.IO.File]::WriteAllBytes($bzip2Fixture, $bzip2Bytes)
+    $bzip2Process = Invoke-Bounded 'bzip2' @('-k','-f',(Resolve-Path (Join-Path $readOnlyFixtureRoot 'payload.txt')).Path) $runtimeTimeoutMilliseconds 'create BZip2 Archive read-only fixture'
+    if ($bzip2Process.ExitCode -ne 0 -or -not (Test-Path $bzip2Fixture -PathType Leaf)) { throw 'Unable to create BZip2 Archive read-only fixture.' }
     $bzip2Extract = Join-Path $readOnlyFixtureRoot 'bzip2-extracted.txt'
     $readOnlyRun = Run-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression @("../../out/fulltest/archive-read-only-fixtures/payload.txt.bz2","../../out/fulltest/archive-read-only-fixtures/bzip2-extracted.txt")
     if ($readOnlyRun.Output -notmatch 'ARCHIVE_READ_ONLY_FORMAT=OK') { throw 'Archive BZip2 read-only regression did not complete.' }
