@@ -2,14 +2,17 @@ using XPScript.Compiler.Syntax;
 
 namespace XPScript.Compiler.Binding;
 
-public sealed class ExpressionBinder
+public sealed class ExpressionBinder(SymbolTable? symbols = null)
 {
+    private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
     public BoundExpression Bind(ExpressionSyntax syntax) => syntax switch
     {
         LiteralExpressionSyntax literal => BindLiteral(literal),
+        NameExpressionSyntax name => BindName(name),
+        CallExpressionSyntax call => BindCall(call),
         UnaryExpressionSyntax unary => BindUnary(unary),
         BinaryExpressionSyntax binary => BindBinary(binary),
         _ => Error(syntax, $"Binding is not implemented for {syntax.Kind}.")
@@ -26,6 +29,34 @@ public sealed class ExpressionBinder
         if (syntax.LiteralToken.Kind == SyntaxKind.StringToken)
             return new BoundLiteralExpression(syntax.Value, typeof(string));
         return Error(syntax, "Unsupported literal.");
+    }
+
+    private BoundExpression BindName(NameExpressionSyntax syntax)
+    {
+        var name = syntax.IdentifierToken.Text;
+        if (_symbols.TryLookup(name, out var symbol) && symbol is VariableSymbol variable)
+            return new BoundNameExpression(variable);
+        return Error(syntax, $"Undefined variable '{name}'.");
+    }
+
+    private BoundExpression BindCall(CallExpressionSyntax syntax)
+    {
+        if (syntax.Target is not NameExpressionSyntax nameSyntax)
+            return Error(syntax, "Only direct function calls are supported by the initial binder.");
+
+        var name = nameSyntax.IdentifierToken.Text;
+        if (!_symbols.TryLookup(name, out var symbol) || symbol is not FunctionSymbol function)
+            return Error(syntax, $"Undefined function '{name}'.");
+
+        var arguments = syntax.Arguments.Select(Bind).ToArray();
+        if (arguments.Length != function.ParameterTypes.Count)
+            return Error(syntax, $"Function '{name}' expects {function.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
+
+        for (var i = 0; i < arguments.Length; i++)
+            if (arguments[i].Type != function.ParameterTypes[i])
+                return Error(syntax.Arguments[i], $"Argument {i + 1} to '{name}' must be {function.ParameterTypes[i].Name}, not {arguments[i].Type.Name}.");
+
+        return new BoundCallExpression(function, arguments);
     }
 
     private BoundExpression BindUnary(UnaryExpressionSyntax syntax)
