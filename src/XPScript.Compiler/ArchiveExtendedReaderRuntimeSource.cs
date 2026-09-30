@@ -239,6 +239,14 @@ internal static class XPScriptArchiveExtendedReader
 {
     public static List<XPScriptArchiveEntry> Snapshots(string path, string format, string password, int maxEntries, long maxExtractSize, double maxCompressionRatio)
     {
+        if (IsRawBZip2(format))
+        {
+            using var input = OpenBZip2Stream(path);
+            var size = CopyLimited(input, System.IO.Stream.Null, -1, maxExtractSize);
+            var entry = new ReaderEntryProxy(FallbackEntryName(path), size, new System.IO.FileInfo(path).Length, null, System.IO.File.GetLastWriteTimeUtc(path), false, false, 0, null);
+            Validate(entry, maxExtractSize, maxCompressionRatio);
+            return [XPScriptArchiveEntry.FromExtended(entry)];
+        }
         using var reader = Open(path, format, password);
         var result = new List<XPScriptArchiveEntry>();
         long total = 0;
@@ -257,6 +265,15 @@ internal static class XPScriptArchiveExtendedReader
 
     public static byte[] ReadEntry(string path, string format, string password, string wanted, long maxExtractSize, double maxCompressionRatio)
     {
+        if (IsRawBZip2(format))
+        {
+            var key = FallbackEntryName(path);
+            if (!key.Equals(wanted, StringComparison.OrdinalIgnoreCase)) throw new XPScriptRuntimeException(53, "Archive entry was not found.");
+            using var input = OpenBZip2Stream(path);
+            using var output = new System.IO.MemoryStream();
+            CopyLimited(input, output, -1, maxExtractSize);
+            return output.ToArray();
+        }
         using var reader = Open(path, format, password);
         while (MoveNext(reader.Value))
         {
@@ -274,6 +291,19 @@ internal static class XPScriptArchiveExtendedReader
 
     public static void ExtractAll(string path, string format, string password, string root, int maxEntries, long maxExtractSize, double maxCompressionRatio)
     {
+        if (IsRawBZip2(format))
+        {
+            if (maxEntries < 1) throw new XPScriptRuntimeException(5, "Archive exceeds MaxEntries.");
+            var key = FallbackEntryName(path);
+            var target = SafePath(root, key);
+            EnsureNoReparseParents(root, target);
+            var parent = System.IO.Path.GetDirectoryName(target);
+            if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+            using var input = OpenBZip2Stream(path);
+            using var output = new System.IO.FileStream(target, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None);
+            CopyLimited(input, output, -1, maxExtractSize);
+            return;
+        }
         using var reader = Open(path, format, password);
         var count = 0;
         long totalWritten = 0;
@@ -303,8 +333,7 @@ internal static class XPScriptArchiveExtendedReader
         try
         {
             var assembly = System.Reflection.Assembly.Load("SharpCompress");
-            if (format.Equals("BZ2", StringComparison.OrdinalIgnoreCase) || format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase)) return OpenBZip2(path, assembly);
-            var optionsType = assembly.GetType("SharpCompress.Readers.ReaderOptions", throwOnError: true)!;
+                        var optionsType = assembly.GetType("SharpCompress.Readers.ReaderOptions", throwOnError: true)!;
             var options = Activator.CreateInstance(optionsType)!;
             if (!string.IsNullOrEmpty(password)) optionsType.GetProperty("Password")?.SetValue(options, password);
             var extensionHint = (format.Equals("BZ2", StringComparison.OrdinalIgnoreCase) || format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase)) ? "bz2" : format.ToLowerInvariant();
@@ -326,17 +355,30 @@ internal static class XPScriptArchiveExtendedReader
         }
     }
 
-    private static ReaderHandle OpenBZip2(string path, System.Reflection.Assembly assembly)
+    private static bool IsRawBZip2(string format) =>
+        format.Equals("BZ2", StringComparison.OrdinalIgnoreCase) || format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase);
+
+    private static System.IO.Stream OpenBZip2Stream(string path)
     {
-        var optionsType = assembly.GetType("SharpCompress.Readers.ReaderOptions", throwOnError: true)!;
-        var options = Activator.CreateInstance(optionsType)!;
-        optionsType.GetProperty("ExtensionHint")?.SetValue(options, "bz2");
-        var factoryType = assembly.GetType("SharpCompress.Readers.ReaderFactory", throwOnError: true)!;
-        var method = factoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-            .First(m => m.Name == "OpenReader" && m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == typeof(System.IO.Stream));
-        var stream = System.IO.File.OpenRead(path);
-        try { return new ReaderHandle(method.Invoke(null, [stream, options])!, stream); }
-        catch { stream.Dispose(); throw; }
+        var source = System.IO.File.OpenRead(path);
+        try
+        {
+            var assembly = System.Reflection.Assembly.Load("SharpCompress");
+            var type = assembly.GetType("SharpCompress.Compressors.BZip2.BZip2Stream", throwOnError: true)!;
+            var mode = System.IO.Compression.CompressionMode.Decompress;
+            var create = type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                .FirstOrDefault(m => m.Name == "Create" && m.GetParameters().Length == 4);
+            if (create is not null)
+                return (System.IO.Stream)(create.Invoke(null, [source, mode, true, false]) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open BZip2 stream."));
+            var ctor = type.GetConstructor([typeof(System.IO.Stream), typeof(System.IO.Compression.CompressionMode), typeof(bool)])
+                ?? throw new MissingMethodException("SharpCompress BZip2Stream decompression API was not found.");
+            return (System.IO.Stream)ctor.Invoke([source, mode, true]);
+        }
+        catch
+        {
+            source.Dispose();
+            throw;
+        }
     }
 
     private static bool MoveNext(object reader) => Convert.ToBoolean(reader.GetType().GetMethod("MoveToNextEntry", Type.EmptyTypes)?.Invoke(reader, null) ?? false, System.Globalization.CultureInfo.InvariantCulture);
