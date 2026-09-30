@@ -240,7 +240,7 @@ jobs:
           cli=(dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true --)
           "${cli[@]}" new desktop ./out/desktop-native-first/main.xps
           set +e
-          output="$(timeout --kill-after=5s 30s "${cli[@]}" run ./out/desktop-native-first/main.xps --debug 2>&1)"
+          output="$(timeout --kill-after=5s 30s xvfb-run -a "${cli[@]}" run ./out/desktop-native-first/main.xps --debug 2>&1)"
           status=$?
           set -e
           printf '%s\n' "$output"
