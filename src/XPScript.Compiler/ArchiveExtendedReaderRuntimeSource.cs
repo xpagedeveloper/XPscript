@@ -364,15 +364,21 @@ internal static class XPScriptArchiveExtendedReader
         try
         {
             var assembly = System.Reflection.Assembly.Load("SharpCompress");
-            var type = assembly.GetType("SharpCompress.Compressors.BZip2.BZip2Stream", throwOnError: true)!;
-            var mode = System.IO.Compression.CompressionMode.Decompress;
-            var create = type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-                .FirstOrDefault(m => m.Name == "Create" && m.GetParameters().Length == 4);
-            if (create is not null)
-                return (System.IO.Stream)(create.Invoke(null, [source, mode, true, false]) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open BZip2 stream."));
-            var ctor = type.GetConstructor([typeof(System.IO.Stream), typeof(System.IO.Compression.CompressionMode), typeof(bool)])
-                ?? throw new MissingMethodException("SharpCompress BZip2Stream decompression API was not found.");
-            return (System.IO.Stream)ctor.Invoke([source, mode, true]);
+            var registryType = assembly.GetType("SharpCompress.Compressors.CompressionProviderRegistry", throwOnError: true)!;
+            var registry = registryType.GetProperty("Default", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null)
+                ?? throw new MissingMemberException("SharpCompress CompressionProviderRegistry.Default was not found.");
+            var compressionType = assembly.GetType("SharpCompress.Common.CompressionType", throwOnError: true)!;
+            var bzip2 = Enum.Parse(compressionType, "BZip2", ignoreCase: true);
+            var method = registryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                .FirstOrDefault(m => m.Name == "CreateDecompressStream" && m.GetParameters().Length >= 2 && m.GetParameters()[0].ParameterType == compressionType && m.GetParameters()[1].ParameterType == typeof(System.IO.Stream))
+                ?? throw new MissingMethodException("SharpCompress CompressionProviderRegistry.CreateDecompressStream was not found.");
+            var parameters = method.GetParameters();
+            var args = new object?[parameters.Length];
+            args[0] = bzip2;
+            args[1] = source;
+            for (var i = 2; i < parameters.Length; i++)
+                args[i] = parameters[i].HasDefaultValue ? parameters[i].DefaultValue : null;
+            return (System.IO.Stream)(method.Invoke(registry, args) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open BZip2 stream."));
         }
         catch
         {
