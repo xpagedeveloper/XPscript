@@ -61,4 +61,26 @@ Equal(string.Join(",", regressionKinds), string.Join(",", regressionTokens.Selec
 foreach (var token in regressionTokens.Where(t => t.Kind != SyntaxKind.EndOfFileToken))
     Equal(token.Text, regression.Substring(token.Span.Start, token.Span.Length), $"source span for {token.Kind}");
 
+var commentLexer = new Lexer("Print \"it's fine\" ' trailing comment\nnext");
+var commentTokens = commentLexer.Lex().ToArray();
+Equal(SyntaxKind.IdentifierToken, commentTokens[0].Kind, "comment prefix identifier");
+Equal("it's fine", (string)commentTokens[1].Value!, "apostrophe inside string");
+Equal(SyntaxKind.NewLineToken, commentTokens[2].Kind, "comment preserves newline");
+Equal("next", commentTokens[3].Text, "token after comment");
+Equal(0, commentLexer.Diagnostics.Count, "valid comment diagnostics");
+
+var badLexer = new Lexer("@");
+var badTokens = badLexer.Lex().ToArray();
+Equal(SyntaxKind.BadToken, badTokens[0].Kind, "bad token kind");
+Equal(1, badLexer.Diagnostics.Count, "bad token diagnostic count");
+Equal("XPS1012", badLexer.Diagnostics[0].Code, "bad token diagnostic code");
+Equal(new TextSpan(0, 1), badLexer.Diagnostics[0].Span, "bad token diagnostic span");
+
+var unterminatedLexer = new Lexer("\"unterminated");
+var unterminatedTokens = unterminatedLexer.Lex().ToArray();
+Equal(SyntaxKind.StringToken, unterminatedTokens[0].Kind, "unterminated string token kind");
+Equal(1, unterminatedLexer.Diagnostics.Count, "unterminated diagnostic count");
+Equal("XPS1006", unterminatedLexer.Diagnostics[0].Code, "unterminated diagnostic code");
+Equal(new TextSpan(0, 13), unterminatedLexer.Diagnostics[0].Span, "unterminated diagnostic span");
+
 Console.WriteLine("AST lexer focused tests passed.");
