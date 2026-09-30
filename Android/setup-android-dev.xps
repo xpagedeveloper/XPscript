@@ -62,7 +62,7 @@ Sub Main()
     Print "If the device is unauthorized, unlock it and approve USB debugging."
 End Sub
 
-Function RunCommand(executable As String, arguments As Variant) As Boolean
+Function RunCommand(ByVal executable As String, ByVal arguments As Variant) As Boolean
     Dim commandResult As Variant
 
     Print ""
