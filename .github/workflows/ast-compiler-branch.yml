@@ -30,6 +30,9 @@ jobs:
       - name: Run deterministic AST compatibility tests first
         shell: pwsh
         run: ./tests/ast-compat/run-ast-compat.ps1
+      - name: Compile repository sample and demo scripts
+        shell: pwsh
+        run: ./tests/ast-compat/run-repository-sweep.ps1
       - name: Run language tests
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite language
