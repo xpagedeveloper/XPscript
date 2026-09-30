@@ -28,7 +28,7 @@ public sealed class ExpressionParser
         }
         else
         {
-            left = ParsePrimaryExpression();
+            left = ParsePostfixExpression();
         }
 
         while (true)
@@ -43,6 +43,32 @@ public sealed class ExpressionParser
         }
 
         return left;
+    }
+
+    private ExpressionSyntax ParsePostfixExpression()
+    {
+        var expression = ParsePrimaryExpression();
+        while (Current.Kind == SyntaxKind.OpenParenToken)
+        {
+            var open = NextToken();
+            var arguments = new List<ExpressionSyntax>();
+            var commas = new List<SyntaxToken>();
+
+            if (Current.Kind != SyntaxKind.CloseParenToken)
+            {
+                while (true)
+                {
+                    arguments.Add(ParseExpression());
+                    if (Current.Kind != SyntaxKind.CommaToken)
+                        break;
+                    commas.Add(NextToken());
+                }
+            }
+
+            var close = Match(SyntaxKind.CloseParenToken);
+            expression = new CallExpressionSyntax(expression, open, arguments, commas, close);
+        }
+        return expression;
     }
 
     private ExpressionSyntax ParsePrimaryExpression()
