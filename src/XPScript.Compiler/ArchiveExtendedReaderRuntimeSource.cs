@@ -303,11 +303,11 @@ internal static class XPScriptArchiveExtendedReader
         try
         {
             var assembly = System.Reflection.Assembly.Load("SharpCompress");
-            if (format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase)) return OpenBZip2(path, assembly);
+            if (format.Equals("BZ2", StringComparison.OrdinalIgnoreCase) || format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase)) return OpenBZip2(path, assembly);
             var optionsType = assembly.GetType("SharpCompress.Readers.ReaderOptions", throwOnError: true)!;
             var options = Activator.CreateInstance(optionsType)!;
             if (!string.IsNullOrEmpty(password)) optionsType.GetProperty("Password")?.SetValue(options, password);
-            var extensionHint = format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase) ? "bz2" : format.ToLowerInvariant();
+            var extensionHint = (format.Equals("BZ2", StringComparison.OrdinalIgnoreCase) || format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase)) ? "bz2" : format.ToLowerInvariant();
             optionsType.GetProperty("ExtensionHint")?.SetValue(options, extensionHint);
             var factoryType = assembly.GetType("SharpCompress.Readers.ReaderFactory", throwOnError: true)!;
             var method = factoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
