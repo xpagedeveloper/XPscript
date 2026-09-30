@@ -83,4 +83,17 @@ Equal(1, unterminatedLexer.Diagnostics.Count, "unterminated diagnostic count");
 Equal("XPS1006", unterminatedLexer.Diagnostics[0].Code, "unterminated diagnostic code");
 Equal(new TextSpan(0, 13), unterminatedLexer.Diagnostics[0].Span, "unterminated diagnostic span");
 
-Console.WriteLine("AST lexer focused tests passed.");
+var notToken = new SyntaxToken(SyntaxKind.NotKeyword, "Not", null, new TextSpan(0, 3));
+var runCommandToken = new SyntaxToken(SyntaxKind.IdentifierToken, "RunCommand", null, new TextSpan(4, 10));
+ExpressionSyntax manualAst = new UnaryExpressionSyntax(notToken, new NameExpressionSyntax(runCommandToken));
+Equal(SyntaxKind.UnaryExpression, manualAst.Kind, "manual AST unary kind");
+Equal(new TextSpan(0, 14), manualAst.Span, "manual AST composed span");
+Equal(SyntaxKind.NameExpression, ((UnaryExpressionSyntax)manualAst).Operand.Kind, "manual AST operand kind");
+
+var one = new LiteralExpressionSyntax(new SyntaxToken(SyntaxKind.NumberToken, "1", 1L, new TextSpan(0, 1)));
+var two = new LiteralExpressionSyntax(new SyntaxToken(SyntaxKind.NumberToken, "2", 2L, new TextSpan(4, 1)));
+var binary = new BinaryExpressionSyntax(one, new SyntaxToken(SyntaxKind.PlusToken, "+", null, new TextSpan(2, 1)), two);
+Equal(SyntaxKind.BinaryExpression, binary.Kind, "manual AST binary kind");
+Equal(new TextSpan(0, 5), binary.Span, "manual AST binary span");
+
+Console.WriteLine("AST lexer and syntax-model focused tests passed.");
