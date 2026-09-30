@@ -303,6 +303,7 @@ internal static class XPScriptArchiveExtendedReader
         try
         {
             var assembly = System.Reflection.Assembly.Load("SharpCompress");
+            if (format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase)) return OpenBZip2(path, assembly);
             var optionsType = assembly.GetType("SharpCompress.Readers.ReaderOptions", throwOnError: true)!;
             var options = Activator.CreateInstance(optionsType)!;
             if (!string.IsNullOrEmpty(password)) optionsType.GetProperty("Password")?.SetValue(options, password);
@@ -325,7 +326,7 @@ internal static class XPScriptArchiveExtendedReader
         }
     }
 
-    private static bool MoveNext(object reader) => Convert.ToBoolean(reader.GetType().GetMethod("MoveToNextEntry", Type.EmptyTypes)?.Invoke(reader, null) ?? false, System.Globalization.CultureInfo.InvariantCulture);
+    private static ReaderHandle OpenBZip2(string path, System.Reflection.Assembly assembly)\n    {\n        var optionsType = assembly.GetType("SharpCompress.Readers.ReaderOptions", throwOnError: true)!;\n        var options = Activator.CreateInstance(optionsType)!;\n        optionsType.GetProperty("ExtensionHint")?.SetValue(options, "bz2");\n        var factoryType = assembly.GetType("SharpCompress.Readers.ReaderFactory", throwOnError: true)!;\n        var method = factoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)\n            .First(m => m.Name == "OpenReader" && m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == typeof(System.IO.Stream));\n        var stream = System.IO.File.OpenRead(path);\n        try { return new ReaderHandle(method.Invoke(null, [stream, options])!, stream); }\n        catch { stream.Dispose(); throw; }\n    }\n\n    private static bool MoveNext(object reader) => Convert.ToBoolean(reader.GetType().GetMethod("MoveToNextEntry", Type.EmptyTypes)?.Invoke(reader, null) ?? false, System.Globalization.CultureInfo.InvariantCulture);
 
     private static object CurrentEntry(object reader) => reader.GetType().GetProperty("Entry")?.GetValue(reader) ?? throw new XPScriptRuntimeException(5, "SharpCompress reader entry is unavailable.");
 
@@ -480,10 +481,10 @@ internal static class XPScriptArchiveExtendedReader
     private sealed class ReaderHandle : IDisposable
     {
         public object Value { get; }
-        public ReaderHandle(object value) => Value = value;
+        private readonly IDisposable? _owned;\n        public ReaderHandle(object value, IDisposable? owned = null) { Value = value; _owned = owned; }
         public void Dispose()
         {
-            if (Value is IDisposable disposable) disposable.Dispose();
+            if (Value is IDisposable disposable) disposable.Dispose();\n            _owned?.Dispose();
         }
     }
 }
