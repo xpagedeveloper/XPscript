@@ -8,7 +8,11 @@ Sub Main()
     End If
 
     Dim verifyOnly As Boolean
-    verifyOnly = Command() = "--verify" Or Command() = "verify"
+    If Command() = "--verify" Or Command() = "verify" Then
+        verifyOnly = True
+    Else
+        verifyOnly = False
+    End If
 
     Print "XPScript Android Development Setup"
     Print "=================================="
