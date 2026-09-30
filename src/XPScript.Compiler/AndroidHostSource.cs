@@ -17,10 +17,12 @@ sealed class AndroidEntryActivity : Activity
         try
         {
             Program.Main(Array.Empty<string>());
+            Log.Info("XPScript", "XPSCRIPT-EXIT=0");
         }
         catch (Exception exception)
         {
             Log.Error("XPScript", exception.ToString());
+            Log.Error("XPScript", "XPSCRIPT-EXIT=1");
             throw;
         }
         finally
