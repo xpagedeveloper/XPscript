@@ -365,59 +365,11 @@ internal static class XPScriptArchiveExtendedReader
         {
             var assembly = System.Reflection.Assembly.Load("SharpCompress");
             var streamType = assembly.GetType("SharpCompress.Compressors.BZip2.BZip2Stream", throwOnError: true)!;
-            var modeType = assembly.GetType("SharpCompress.Compressors.CompressionMode", throwOnError: false);
-            if (modeType is not null)
-            {
-                var names = Enum.GetNames(modeType);
-                var decompressName = names.FirstOrDefault(n => n.Equals("Decompress", StringComparison.OrdinalIgnoreCase))
-                    ?? names.FirstOrDefault(n => n.Equals("Decompressing", StringComparison.OrdinalIgnoreCase))
-                    ?? throw new MissingMemberException("SharpCompress BZip2 decompression mode was not found.");
-                var decompress = Enum.Parse(modeType, decompressName, ignoreCase: true);
-                var ctor = streamType.GetConstructors()
-                    .Where(c =>
-                    {
-                        var p = c.GetParameters();
-                        return p.Length >= 2 && p[0].ParameterType == typeof(System.IO.Stream) && p[1].ParameterType == modeType;
-                    })
-                    .OrderBy(c => c.GetParameters().Length)
-                    .FirstOrDefault();
-                if (ctor is not null)
-                {
-                    var p = ctor.GetParameters();
-                    var args = new object?[p.Length];
-                    args[0] = source;
-                    args[1] = decompress;
-                    for (var i = 2; i < p.Length; i++)
-                        args[i] = p[i].HasDefaultValue ? p[i].DefaultValue : (p[i].ParameterType == typeof(bool) ? false : null);
-                    var stream = (System.IO.Stream)ctor.Invoke(args);
-                    if (!stream.CanRead || stream.CanWrite)
-                    {
-                        stream.Dispose();
-                        throw new NotSupportedException("SharpCompress BZip2 constructor did not create a read-only decompression stream.");
-                    }
-                    return stream;
-                }
-            }
-
-            var factory = streamType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-                .FirstOrDefault(m =>
-                {
-                    if (!typeof(System.IO.Stream).IsAssignableFrom(m.ReturnType)) return false;
-                    var p = m.GetParameters();
-                    return p.Length >= 1 && p[0].ParameterType == typeof(System.IO.Stream)
-                        && (m.Name.Contains("Decompress", StringComparison.OrdinalIgnoreCase) || m.Name.Contains("Create", StringComparison.OrdinalIgnoreCase));
-                });
-            if (factory is not null)
-            {
-                var p = factory.GetParameters();
-                var args = new object?[p.Length];
-                args[0] = source;
-                for (var i = 1; i < p.Length; i++)
-                    args[i] = p[i].ParameterType == typeof(bool) ? true : (p[i].HasDefaultValue ? p[i].DefaultValue : null);
-                return (System.IO.Stream)(factory.Invoke(null, args) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open BZip2 stream."));
-            }
-
-            throw new MissingMethodException("SharpCompress BZip2 decompression stream API was not found.");
+            var modeType = assembly.GetType("SharpCompress.Compressors.CompressionMode", throwOnError: true)!;
+            var decompress = Enum.Parse(modeType, "Decompress", ignoreCase: true);
+            var ctor = streamType.GetConstructor(new[] { typeof(System.IO.Stream), modeType, typeof(bool) })
+                ?? throw new MissingMethodException("SharpCompress BZip2Stream(Stream, CompressionMode, bool) was not found.");
+            return (System.IO.Stream)ctor.Invoke(new object?[] { source, decompress, false });
         }
         catch
         {
