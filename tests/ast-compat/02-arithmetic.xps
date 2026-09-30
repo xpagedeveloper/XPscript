@@ -1,0 +1,4 @@
+Sub Main()
+    Print 2 + 3 * 4
+    Print (2 + 3) * 4
+End Sub
