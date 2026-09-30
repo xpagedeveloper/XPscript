@@ -81,6 +81,30 @@ public sealed class ExpressionParser
 
     private ExpressionSyntax ParsePrimaryExpression()
     {
+        if (Current.Kind == SyntaxKind.NewKeyword)
+        {
+            var newKeyword = NextToken();
+            var typeName = Match(SyntaxKind.IdentifierToken);
+            if (Current.Kind != SyntaxKind.OpenParenToken)
+                return new NewExpressionSyntax(newKeyword, typeName, null, [], [], null);
+
+            var open = NextToken();
+            var arguments = new List<ExpressionSyntax>();
+            var commas = new List<SyntaxToken>();
+            if (Current.Kind != SyntaxKind.CloseParenToken)
+            {
+                while (true)
+                {
+                    arguments.Add(ParseExpression());
+                    if (Current.Kind != SyntaxKind.CommaToken)
+                        break;
+                    commas.Add(NextToken());
+                }
+            }
+            var close = Match(SyntaxKind.CloseParenToken);
+            return new NewExpressionSyntax(newKeyword, typeName, open, arguments, commas, close);
+        }
+
         if (Current.Kind == SyntaxKind.OpenParenToken)
         {
             var open = NextToken();
