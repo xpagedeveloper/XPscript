@@ -215,8 +215,41 @@ Equal(0, callBinder.Diagnostics.Count, "bound RunCommand diagnostics");
 Equal("(!RunCommand(\"where.exe\", Array(\"winget\")))", emitter.Emit(boundRunCommand), "bound RunCommand C# emission");
 var legacyRunCommand = ExpressionCompatibilityProbe.EmitLegacy("Not RunCommand(\"where.exe\", Array(\"winget\"))");
 var astRunCommand = emitter.Emit(boundRunCommand);
-static string NormalizeExpression(string value) => new(value.Where(ch => !char.IsWhiteSpace(ch) && ch is not '(' && ch is not ')').ToArray());
-Equal(NormalizeExpression(legacyRunCommand), NormalizeExpression(astRunCommand), "legacy vs AST RunCommand semantic emission");
+static string NormalizeExpression(string value) => new(value.Where(ch => !char.IsWhiteSpace(ch)).ToArray());
+static string StripSingleOuterParentheses(string value)
+{
+    var normalized = NormalizeExpression(value);
+    while (normalized.Length >= 2 && normalized[0] == '(' && normalized[^1] == ')')
+    {
+        var depth = 0;
+        var enclosesWholeExpression = true;
+        for (var i = 0; i < normalized.Length; i++)
+        {
+            if (normalized[i] == '(') depth++;
+            else if (normalized[i] == ')') depth--;
+            if (depth == 0 && i < normalized.Length - 1) { enclosesWholeExpression = false; break; }
+        }
+        if (!enclosesWholeExpression) break;
+        normalized = normalized[1..^1];
+    }
+    return normalized;
+}
+Equal(StripSingleOuterParentheses(legacyRunCommand), StripSingleOuterParentheses(astRunCommand), "legacy vs AST RunCommand semantic emission");
+
+void EqualLegacyAst(string source, string label)
+{
+    var binder = new ExpressionBinder(callSymbols);
+    var bound = binder.Bind(new ExpressionParser(source).ParseExpression());
+    Equal(0, binder.Diagnostics.Count, label + " AST diagnostics");
+    var legacy = ExpressionCompatibilityProbe.EmitLegacy(source);
+    var ast = emitter.Emit(bound);
+    Equal(StripSingleOuterParentheses(legacy), StripSingleOuterParentheses(ast), label + " legacy vs AST emission");
+}
+
+EqualLegacyAst("Not False Or True", "boolean precedence");
+EqualLegacyAst("1 + 2 * 3", "arithmetic precedence");
+EqualLegacyAst("1 + 2 = 3", "comparison precedence");
+EqualLegacyAst("True And False Or True", "boolean associativity");
 
 var badCallBinder = new ExpressionBinder(callSymbols);
 badCallBinder.Bind(new ExpressionParser("RunCommand(\"where.exe\")").ParseExpression());
