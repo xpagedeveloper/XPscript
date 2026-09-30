@@ -1,8 +1,9 @@
 using System.Reflection;
 using XPScript.Compiler;
 
-if (!CompilerDriver.SupportedRuntimes.Contains("android-arm64", StringComparer.OrdinalIgnoreCase))
-    throw new Exception("android-arm64 is not a supported compiler target.");
+foreach (var runtime in new[] { "android-arm64", "android-x64" })
+    if (!CompilerDriver.SupportedRuntimes.Contains(runtime, StringComparer.OrdinalIgnoreCase))
+        throw new Exception(runtime + " is not a supported compiler target.");
 
 var type = typeof(CompilerDriver);
 var method = type.GetMethod("BuildGeneratedProject", BindingFlags.NonPublic | BindingFlags.Static)
@@ -16,6 +17,12 @@ var project = (string)(method.Invoke(null, new object?[] { "android-arm64", fals
 foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramework>", "<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>", "<RuntimeIdentifier>android-arm64</RuntimeIdentifier>", "<AndroidPackageFormat>apk</AndroidPackageFormat>", "<ApplicationId>com.xpscript.debugapp</ApplicationId>" })
     if (!project.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android generated project is missing: " + expected);
+
+var emulatorProject = (string)(method.Invoke(null, new object?[] { "android-x64", false, emptyReferences, false, false, "AndroidEmulatorSmoke" })
+    ?? throw new Exception("Android emulator project generation returned null."));
+if (!emulatorProject.Contains("<TargetFramework>net10.0-android</TargetFramework>", StringComparison.Ordinal) ||
+    !emulatorProject.Contains("<RuntimeIdentifier>android-x64</RuntimeIdentifier>", StringComparison.Ordinal))
+    throw new Exception("Android x64 emulator project generation is incorrect.");
 
 if (project.Contains("<AndroidSupportedAbis>", StringComparison.Ordinal))
     throw new Exception("Android generated project still uses obsolete AndroidSupportedAbis.");
