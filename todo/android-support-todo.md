@@ -28,7 +28,7 @@ Follow `knowledge/test-failure-feedback-rule.md` for every Android test.
 - [ ] Verify Platform Tools and adb.
 - [ ] Detect an attached device and report model, Android version, API level and ABI.
 - [x] Use `ShellExecute` for setup process execution and capture stdout, stderr, exit code and timeout state.
-- [ ] Add a small environment verification mode that performs no installs and only checks toolchain readiness.
+- [x] Add a small environment verification mode that performs no installs and only checks toolchain readiness.
 - [ ] Document the exact physical-device prerequisites for USB debugging and authorization.
 
 ## Stage 1: minimal Android runtime and debug path
