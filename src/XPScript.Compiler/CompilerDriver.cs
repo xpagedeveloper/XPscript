@@ -18,7 +18,7 @@ public sealed class CompilerDriver
         "linux-x64", "linux-arm64",
         "osx-x64", "osx-arm64",
         "browser-wasm",
-        "android-arm64"
+        "android-arm64", "android-x64"
     };
 
     public static IReadOnlyCollection<string> SupportedRuntimes => SupportedRuntimeIdentifiers;
@@ -217,7 +217,7 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
-            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+            if (IsAndroidRuntime(rid))
             {
                 var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
                 await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
@@ -264,7 +264,7 @@ public sealed class CompilerDriver
             var generatedExecutable = FindPublishedExecutable(tempRoot, publishDir, rid, OutputAssemblyName(outputPath));
             if (generatedExecutable is null)
             {
-                if (CompilerDiagnosticMode.Debug && rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+                if (CompilerDiagnosticMode.Debug && IsAndroidRuntime(rid))
                 {
                     Console.Error.WriteLine("--- Android publish artifacts (debug compile failure) ---");
                     foreach (var artifact in Directory.EnumerateFiles(tempRoot, "*", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
@@ -274,7 +274,7 @@ public sealed class CompilerDriver
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
             }
 
-            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase) &&
+            if (IsAndroidRuntime(rid) &&
                 !outputPath.EndsWith(".apk", StringComparison.OrdinalIgnoreCase))
                 outputPath += ".apk";
 
@@ -354,7 +354,7 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
-            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+            if (IsAndroidRuntime(rid))
             {
                 var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
                 await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
@@ -587,7 +587,7 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
-            if (runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+            if (IsAndroidRuntime(runtimeIdentifier))
             {
                 var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
                 await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
@@ -705,7 +705,7 @@ public sealed class CompilerDriver
             itemGroup.AppendLine("  </ItemGroup>");
         }
 
-        var isAndroid = runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase);
+        var isAndroid = IsAndroidRuntime(runtimeIdentifier);
         var publishProperties = publishSingleFile && !isAndroid
             ? $"""
     <PublishSingleFile>true</PublishSingleFile>
@@ -743,6 +743,10 @@ public sealed class CompilerDriver
 """;
     }
 
+    private static bool IsAndroidRuntime(string runtimeIdentifier) =>
+        runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase) ||
+        runtimeIdentifier.Equals("android-x64", StringComparison.OrdinalIgnoreCase);
+
     private static string OutputAssemblyName(string outputPath)
     {
         var name = Path.GetFileNameWithoutExtension(outputPath);
@@ -758,7 +762,7 @@ public sealed class CompilerDriver
 
     private static string? FindPublishedExecutable(string buildDirectory, string publishDirectory, string rid, string assemblyName)
     {
-        if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+        if (IsAndroidRuntime(rid))
         {
             var apkCandidates = Directory.EnumerateFiles(
                     buildDirectory,
