@@ -368,7 +368,11 @@ internal static class XPScriptArchiveExtendedReader
             var modeType = assembly.GetType("SharpCompress.Compressors.CompressionMode", throwOnError: false);
             if (modeType is not null)
             {
-                var decompress = Enum.Parse(modeType, "Decompress", ignoreCase: true);
+                var names = Enum.GetNames(modeType);
+                var decompressName = names.FirstOrDefault(n => n.Equals("Decompress", StringComparison.OrdinalIgnoreCase))
+                    ?? names.FirstOrDefault(n => n.Equals("Decompressing", StringComparison.OrdinalIgnoreCase))
+                    ?? throw new MissingMemberException("SharpCompress BZip2 decompression mode was not found.");
+                var decompress = Enum.Parse(modeType, decompressName, ignoreCase: true);
                 var ctor = streamType.GetConstructors()
                     .Where(c =>
                     {
@@ -385,7 +389,13 @@ internal static class XPScriptArchiveExtendedReader
                     args[1] = decompress;
                     for (var i = 2; i < p.Length; i++)
                         args[i] = p[i].HasDefaultValue ? p[i].DefaultValue : (p[i].ParameterType == typeof(bool) ? false : null);
-                    return (System.IO.Stream)ctor.Invoke(args);
+                    var stream = (System.IO.Stream)ctor.Invoke(args);
+                    if (!stream.CanRead || stream.CanWrite)
+                    {
+                        stream.Dispose();
+                        throw new NotSupportedException("SharpCompress BZip2 constructor did not create a read-only decompression stream.");
+                    }
+                    return stream;
                 }
             }
 
