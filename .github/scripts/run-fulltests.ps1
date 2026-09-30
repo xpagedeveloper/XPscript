@@ -117,8 +117,10 @@ if (Should-Run 'platform') {
   if ($androidSetupSource -match 'Dir\(adb\)\s*=\s*""') { throw 'Android setup must not use Dir(path)="" for adb existence checks.' }
   if ($androidSetupSource -notmatch 'IsDir\(sdk\)=false') { throw 'Android setup must verify the SDK directory with IsDir(path)=false.' }
   if ($androidSetupSource -notmatch 'IsFile\(adb\)=false') { throw 'Android setup must verify adb as a file with IsFile(path)=false.' }
-  if ($androidSetupSource -notmatch 'WingetPackageInstalled\("Google\.AndroidStudio"\)=true') { throw 'Android setup must skip Android Studio when already installed.' }
-  if ($androidSetupSource -notmatch 'AndroidWorkloadInstalled\(\)=true') { throw 'Android setup must skip an already installed Android workload.' }
+  if ($androidSetupSource -notmatch 'ShellExecute\("dotnet", Array\("--list-sdks"\)\)') { throw 'Android setup must verify .NET 10 from the installed SDK list.' }
+  if ($androidSetupSource -notmatch 'If androidWorkloadReady Then') { throw 'Android setup must skip an already installed Android workload.' }
+  if ($androidSetupSource -notmatch 'If dotnet10Installed=false Or androidStudioInstalled=false Then') { throw 'Android setup must require winget only when an installable component is missing.' }
+  if ($androidSetupSource -notmatch 'Environ\("ProgramFiles"\).*Android.*Android Studio') { throw 'Android setup must detect Android Studio outside winget.' }
   Write-Host 'ANDROID-SETUP-VERIFY-PROBE=OK'
   # Keep the smallest Android source/compiler regression before broader platform coverage.
   Compile-Xps ./samples/android-debug-print.xps android-debug-print-compile
