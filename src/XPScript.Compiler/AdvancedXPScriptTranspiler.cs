@@ -777,6 +777,7 @@ internal static class LSForAllRuntime
         if (list.Success)
         {
             var name = list.Groups[1].Value; var type = MapType(list.Groups[2].Value);
+            EnsureLocalDoesNotShadowFunctionResult(name);
             _listVariables[name] = type; Write(sb, $"LSList<{type}> {name} = new();"); return true;
         }
 
@@ -784,6 +785,7 @@ internal static class LSForAllRuntime
         if (newObject.Success)
         {
             var name = newObject.Groups[1].Value; var className = newObject.Groups[2].Value;
+            EnsureLocalDoesNotShadowFunctionResult(name);
             EnsureClassType(className); _objectVariables[name] = className; _variableTypes[name] = $"LSRef<{className}>";
             Write(sb, $"LSRef<{className}> {name} = LSRef<{className}>.Create(new {className}({TransformArgumentList(newObject.Groups[3].Value)}));"); return true;
         }
@@ -791,7 +793,19 @@ internal static class LSForAllRuntime
         var dim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*(?:\[\])?))?$", RegexOptions.IgnoreCase);
         if (!dim.Success) return false;
         var variable = dim.Groups[1].Value; var xpscriptType = string.IsNullOrWhiteSpace(dim.Groups[2].Value) ? "Variant" : dim.Groups[2].Value;
+        EnsureLocalDoesNotShadowFunctionResult(variable);
         var mapped = MapType(xpscriptType); RegisterVariable(variable, xpscriptType, false); Write(sb, $"{mapped} {variable} = {DefaultValue(mapped)};"); return true;
+    }
+
+    private void EnsureLocalDoesNotShadowFunctionResult(string name)
+    {
+        if (_procedureKind == ProcedureKind.Function &&
+            _currentProcedure is not null &&
+            name.Equals(_currentProcedure, StringComparison.OrdinalIgnoreCase))
+            throw new CompilerException(
+                $"Local variable '{name}' conflicts with the function result name. Assign to '{_currentProcedure}' to return a value, or use a different local variable name.",
+                CompilerDiagnosticCodes.FunctionResultNameConflict,
+                "declaration");
     }
 
     private bool TryEmitSingleLineIf(StringBuilder sb, string line)
