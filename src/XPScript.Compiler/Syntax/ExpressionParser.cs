@@ -48,8 +48,16 @@ public sealed class ExpressionParser
     private ExpressionSyntax ParsePostfixExpression()
     {
         var expression = ParsePrimaryExpression();
-        while (Current.Kind == SyntaxKind.OpenParenToken)
+        while (Current.Kind is SyntaxKind.OpenParenToken or SyntaxKind.DotToken)
         {
+            if (Current.Kind == SyntaxKind.DotToken)
+            {
+                var dot = NextToken();
+                var name = Match(SyntaxKind.IdentifierToken);
+                expression = new MemberAccessExpressionSyntax(expression, dot, name);
+                continue;
+            }
+
             var open = NextToken();
             var arguments = new List<ExpressionSyntax>();
             var commas = new List<SyntaxToken>();
