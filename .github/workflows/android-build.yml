@@ -23,9 +23,12 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # Keep the smallest Android CLI/completion regression first.
+      # Keep the smallest Android regressions first.
       - name: Run Android CLI probe first
         run: dotnet run --project ./tests/AndroidCliProbe/AndroidCliProbe.csproj -c Release
+
+      - name: Run Android setup probe
+        run: dotnet run --project ./tests/AndroidSetupProbe/AndroidSetupProbe.csproj -c Release
 
       - name: Run Android compiler probe
         run: dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
