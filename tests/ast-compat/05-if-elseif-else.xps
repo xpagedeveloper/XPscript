@@ -1,0 +1,11 @@
+Sub Main()
+    Dim x As Integer
+    x = 2
+    If x = 1 Then
+        Print "ONE"
+    ElseIf x = 2 Then
+        Print "TWO"
+    Else
+        Print "OTHER"
+    End If
+End Sub
