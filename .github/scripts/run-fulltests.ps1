@@ -45,6 +45,10 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  # Keep the smallest regression for the latest runtime/compiler interaction first.
+  $functionNotByVal = Run-Xps ./samples/function-not-byval-regression.xps function-not-byval-regression
+  if ($functionNotByVal.Output -notmatch 'FUNCTION-NOT-BYVAL=OK') { throw 'Boolean ByVal function under Not regression failed.' }
+
   # Keep the smallest regression for the latest compiler failure first.
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/function-result-name-conflict-error.xps','-o','./out/fulltest/function-result-name-conflict-error','--runtime=false') $compileTimeoutMilliseconds 'function result name conflict'
   if ($r.ExitCode -eq 0) { throw 'Function result name conflict unexpectedly compiled.' }
