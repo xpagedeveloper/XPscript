@@ -174,16 +174,21 @@ Function WingetPackageInstalled(packageId As String) As Boolean
 End Function
 
 Function RunWinget(arguments As Variant) As Boolean
-    Dim commandArgs As Variant
+    Dim commandArgs() As Variant
     Dim index As Integer
+    Dim targetIndex As Integer
 
     Print "[INFO] winget is an App Execution Alias on some Windows installations."
     Print "[INFO] Running winget through cmd.exe so the Windows alias is resolved correctly."
 
-    commandArgs = Array("/d", "/s", "/c", "winget")
+    ReDim commandArgs(0 To UBound(arguments) + 4)
+    commandArgs(0) = "/d"
+    commandArgs(1) = "/s"
+    commandArgs(2) = "/c"
+    commandArgs(3) = "winget"
     For index = 0 To UBound(arguments)
-        ReDim Preserve commandArgs(UBound(commandArgs) + 1)
-        commandArgs(UBound(commandArgs)) = arguments(index)
+        targetIndex = index + 4
+        commandArgs(targetIndex) = arguments(index)
     Next index
 
     If RunCommand("cmd.exe", commandArgs)=true Then
