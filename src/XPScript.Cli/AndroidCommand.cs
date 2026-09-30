@@ -16,8 +16,45 @@ internal static class AndroidCommand
         {
             "devices" => await DevicesAsync(),
             "install" => await InstallAsync(args[1..]),
+            "launch" => await LaunchAsync(args[1..]),
+            "logs" => await LogsAsync(args[1..]),
             _ => throw new ArgumentException("Unknown android command: " + args[0])
         };
+    }
+
+    private static async Task<int> LaunchAsync(string[] args)
+    {
+        var requestedSerial = ParseOptionalDevice(args, "android launch");
+        var adb = ResolveAdb();
+        var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
+        var result = await ExecuteAsync(adb, ["-s", serial, "shell", "monkey", "-p", "com.xpscript.debugapp", "-c", "android.intent.category.LAUNCHER", "1"]);
+        if (result.ExitCode != 0 || result.Output.Contains("No activities found", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (result.Error + Environment.NewLine + result.Output).Trim());
+        Console.WriteLine("Launched com.xpscript.debugapp on " + serial + ".");
+        return 0;
+    }
+
+    private static async Task<int> LogsAsync(string[] args)
+    {
+        var requestedSerial = ParseOptionalDevice(args, "android logs");
+        var adb = ResolveAdb();
+        var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
+        var result = await ExecuteAsync(adb, ["-s", serial, "logcat", "-d", "-s", "XPScript:I", "*:S"]);
+        if (result.ExitCode != 0)
+            throw new InvalidOperationException("adb logcat failed on " + serial + ": " + result.Error.Trim());
+        Console.Write(result.Output);
+        return 0;
+    }
+
+    private static string? ParseOptionalDevice(string[] args, string command)
+    {
+        string? requestedSerial = null;
+        for (var i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--device" && i + 1 < args.Length) requestedSerial = args[++i];
+            else throw new ArgumentException("Unknown " + command + " argument: " + args[i]);
+        }
+        return requestedSerial;
     }
 
     private static async Task<int> InstallAsync(string[] args)
@@ -162,10 +199,14 @@ internal static class AndroidCommand
 Usage:
   xpscript android devices
   xpscript android install <app.apk> [--device SERIAL]
+  xpscript android launch [--device SERIAL]
+  xpscript android logs [--device SERIAL]
 
 Commands:
   devices  List Android devices/emulators visible to adb, including unauthorized/offline state.
   install  Install or update an APK on exactly one ready device/emulator.
+  launch   Launch the XPScript Android debug application.
+  logs     Print XPScript-tagged Android log output.
 """);
     }
 }
