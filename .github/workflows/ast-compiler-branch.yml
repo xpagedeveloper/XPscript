@@ -27,6 +27,8 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Run focused AST lexer tests first
+        run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
       - name: Run deterministic AST compatibility tests first
         shell: pwsh
         run: ./tests/ast-compat/run-ast-compat.ps1
