@@ -745,6 +745,23 @@ public sealed class CompilerDriver
 
     private static string? FindPublishedExecutable(string publishDirectory, string rid, string assemblyName)
     {
+        if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+        {
+            var signedApk = Directory.EnumerateFiles(
+                    publishDirectory,
+                    assemblyName + "-Signed.apk",
+                    SearchOption.AllDirectories)
+                .SingleOrDefault();
+            if (signedApk is not null) return signedApk;
+
+            var apkCandidates = Directory.EnumerateFiles(
+                    publishDirectory,
+                    "*.apk",
+                    SearchOption.AllDirectories)
+                .ToArray();
+            return apkCandidates.Length == 1 ? apkCandidates[0] : null;
+        }
+
         var expectedName = rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase)
             ? assemblyName + ".exe"
             : assemblyName;
