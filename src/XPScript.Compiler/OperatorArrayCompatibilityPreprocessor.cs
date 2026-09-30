@@ -167,7 +167,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
 
     private static string RewriteUnaryNot(string line)
     {
-        var match = Regex.Match(line, @"\\bNot\\b(?!hing\\b)\\s+", RegexOptions.IgnoreCase);
+        var match = Regex.Match(line, @"\bNot\b(?!hing\b)\s+", RegexOptions.IgnoreCase);
         while (match.Success)
         {
             var valueStart = match.Index + match.Length;
@@ -184,13 +184,13 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             // rewritten later by RewriteIsOperator; wrapping only <expr> here
             // would produce malformed generated code such as LogicalNot(x) Is Nothing.
             var suffix = line[valueEnd..];
-            if (Regex.IsMatch(suffix, @"^\\s+Is\\s+Nothing\\b", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(suffix, @"^\s+Is\s+Nothing\b", RegexOptions.IgnoreCase))
             {
-                var isNothingLength = Regex.Match(suffix, @"^\\s+Is\\s+Nothing\\b", RegexOptions.IgnoreCase).Length;
+                var isNothingLength = Regex.Match(suffix, @"^\s+Is\s+Nothing\b", RegexOptions.IgnoreCase).Length;
                 var full = line[valueStart..(valueEnd + isNothingLength)];
                 var isNothingReplacement = $"!({full[0..].Replace(" Is Nothing", " is null", StringComparison.OrdinalIgnoreCase)})";
                 line = line[..match.Index] + isNothingReplacement + line[(valueEnd + isNothingLength)..];
-                match = Regex.Match(line, @"\\bNot\\b(?!hing\\b)\\s+", RegexOptions.IgnoreCase);
+                match = Regex.Match(line, @"\bNot\b(?!hing\b)\s+", RegexOptions.IgnoreCase);
                 continue;
             }
 
@@ -198,7 +198,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
                 ? $"({value} = False)"
                 : $"LSOperatorArrayRuntime.LogicalNot({value})";
             line = line[..match.Index] + replacement + line[valueEnd..];
-            match = Regex.Match(line, @"\\bNot\\b(?!hing\\b)\\s+", RegexOptions.IgnoreCase);
+            match = Regex.Match(line, @"\bNot\b(?!hing\b)\s+", RegexOptions.IgnoreCase);
         }
         return line;
     }
