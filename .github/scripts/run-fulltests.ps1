@@ -103,8 +103,13 @@ if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
   # Keep Android compiler/host generation first while Android support is under active development.
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Android compiler probe'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }; if ($r.Output -notmatch 'ANDROID-COMPILER-PROBE=OK') { throw 'Android compiler probe did not complete.' }
-  # Android setup performs real installations when run; compile it only in CI.
+  # Android setup performs real installations by default. Compile it and statically guard
+  # the no-install verification branch so CI catches accidental installation in --verify mode.
   Compile-Xps ./Android/setup-android-dev.xps android-setup-dev-compile
+  $androidSetupSource = Get-Content ./Android/setup-android-dev.xps -Raw
+  if ($androidSetupSource -notmatch 'verifyOnly = Command\(\) = "--verify"') { throw 'Android setup verification mode is missing.' }
+  if ($androidSetupSource -notmatch 'If verifyOnly Then[\s\S]*?Else[\s\S]*?winget') { throw 'Android setup verification mode does not guard installation commands.' }
+  Write-Host 'ANDROID-SETUP-VERIFY-PROBE=OK'
   # Keep the smallest Android source/compiler regression before broader platform coverage.
   Compile-Xps ./samples/android-debug-print.xps android-debug-print-compile
   # Process execution is a core platform primitive. Keep its smallest regression first.
