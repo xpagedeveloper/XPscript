@@ -179,13 +179,21 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             }
 
             var value = line[valueStart..valueEnd];
-            // "Is Nothing" is handled by the language/compiler and must not be
-            // mistaken for unary Not merely because "Nothing" starts with "Not".
-            if (valueStart > 0 && line.AsSpan(0, valueStart).TrimEnd().EndsWith("Is", StringComparison.OrdinalIgnoreCase))
+
+            // Preserve the language-level "Not <expr> Is Nothing" form. "Is" is
+            // rewritten later by RewriteIsOperator; wrapping only <expr> here
+            // would produce malformed generated code such as LogicalNot(x) Is Nothing.
+            var suffix = line[valueEnd..];
+            if (Regex.IsMatch(suffix, @"^\\s+Is\\s+Nothing\\b", RegexOptions.IgnoreCase))
             {
-                match = new Regex(@"\\bNot\\b(?!hing\\b)\\s+", RegexOptions.IgnoreCase).Match(line, valueEnd);
+                var isNothingLength = Regex.Match(suffix, @"^\\s+Is\\s+Nothing\\b", RegexOptions.IgnoreCase).Length;
+                var full = line[valueStart..(valueEnd + isNothingLength)];
+                var replacement = $"!({full[0..].Replace(" Is Nothing", " is null", StringComparison.OrdinalIgnoreCase)})";
+                line = line[..match.Index] + replacement + line[(valueEnd + isNothingLength)..];
+                match = Regex.Match(line, @"\\bNot\\b(?!hing\\b)\\s+", RegexOptions.IgnoreCase);
                 continue;
             }
+
             var replacement = value.Contains('(', StringComparison.Ordinal)
                 ? $"({value} = False)"
                 : $"LSOperatorArrayRuntime.LogicalNot({value})";
