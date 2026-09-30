@@ -18,8 +18,59 @@ internal static class AndroidCommand
             "install" => await InstallAsync(args[1..]),
             "launch" => await LaunchAsync(args[1..]),
             "logs" => await LogsAsync(args[1..]),
+            "run" => await RunScriptAsync(args[1..]),
             _ => throw new ArgumentException("Unknown android command: " + args[0])
         };
+    }
+
+    private static async Task<int> RunScriptAsync(string[] args)
+    {
+        if (args.Length == 0) throw new ArgumentException("android run requires an .xps source file.");
+        var source = Path.GetFullPath(args[0]);
+        if (!File.Exists(source)) throw new FileNotFoundException("XPScript source file was not found.", source);
+
+        string? requestedSerial = null;
+        for (var i = 1; i < args.Length; i++)
+        {
+            if (args[i] == "--device" && i + 1 < args.Length) requestedSerial = args[++i];
+            else throw new ArgumentException("Unknown android run argument: " + args[i]);
+        }
+
+        var adb = ResolveAdb();
+        var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
+        var abiResult = await ExecuteAsync(adb, ["-s", serial, "shell", "getprop", "ro.product.cpu.abi"]);
+        if (abiResult.ExitCode != 0) throw new InvalidOperationException("Unable to detect Android device ABI: " + abiResult.Error.Trim());
+        var abi = abiResult.Output.Trim().ToLowerInvariant();
+        var rid = abi switch
+        {
+            "arm64-v8a" => "android-arm64",
+            "x86_64" => "android-x64",
+            _ => throw new InvalidOperationException("Unsupported Android ABI '" + abi + "'. Supported ABIs are arm64-v8a and x86_64.")
+        };
+
+        var outputDirectory = Path.Combine(Path.GetTempPath(), "xpscript-android");
+        Directory.CreateDirectory(outputDirectory);
+        var apk = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(source) + "-" + rid + ".apk");
+        Console.WriteLine("Building " + rid + " APK...");
+        var compileResult = await XPScript.Compiler.XPScriptCompilerCommandLine.CompileAsync(
+            [source, "-o", apk, "--rid", rid, "--runtime=false"]);
+        if (compileResult != 0) return compileResult;
+        if (!File.Exists(apk)) throw new InvalidOperationException("Android compilation completed without producing the expected APK: " + apk);
+
+        var install = await ExecuteAsync(adb, ["-s", serial, "install", "-r", apk]);
+        if (install.ExitCode != 0 || !install.Output.Contains("Success", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("adb install failed for " + serial + ": " + (install.Error + Environment.NewLine + install.Output).Trim());
+
+        await ExecuteAsync(adb, ["-s", serial, "logcat", "-c"]);
+        var launch = await ExecuteAsync(adb, ["-s", serial, "shell", "monkey", "-p", "com.xpscript.debugapp", "-c", "android.intent.category.LAUNCHER", "1"]);
+        if (launch.ExitCode != 0 || launch.Output.Contains("No activities found", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (launch.Error + Environment.NewLine + launch.Output).Trim());
+
+        await Task.Delay(1000);
+        var logs = await ExecuteAsync(adb, ["-s", serial, "logcat", "-d", "-s", "XPScript:I", "*:S"]);
+        if (logs.ExitCode != 0) throw new InvalidOperationException("adb logcat failed on " + serial + ": " + logs.Error.Trim());
+        Console.Write(logs.Output);
+        return 0;
     }
 
     private static async Task<int> LaunchAsync(string[] args)
@@ -201,12 +252,14 @@ Usage:
   xpscript android install <app.apk> [--device SERIAL]
   xpscript android launch [--device SERIAL]
   xpscript android logs [--device SERIAL]
+  xpscript android run <source.xps> [--device SERIAL]
 
 Commands:
   devices  List Android devices/emulators visible to adb, including unauthorized/offline state.
   install  Install or update an APK on exactly one ready device/emulator.
   launch   Launch the XPScript Android debug application.
   logs     Print XPScript-tagged Android log output.
+  run      Detect device ABI, build, install, launch and print XPScript Android logs.
 """);
     }
 }
