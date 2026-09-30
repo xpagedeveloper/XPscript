@@ -167,7 +167,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
 
     private static string RewriteUnaryNot(string line)
     {
-        var match = Regex.Match(line, @"\\bNot\\s+(?!Nothing\\b)", RegexOptions.IgnoreCase);
+        var match = Regex.Match(line, @"\\bNot\\b(?!hing\\b)\\s+", RegexOptions.IgnoreCase);
         while (match.Success)
         {
             var valueStart = match.Index + match.Length;
@@ -183,14 +183,14 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             // mistaken for unary Not merely because "Nothing" starts with "Not".
             if (valueStart > 0 && line.AsSpan(0, valueStart).TrimEnd().EndsWith("Is", StringComparison.OrdinalIgnoreCase))
             {
-                match = new Regex(@"\\bNot\\s+(?!Nothing\\b)", RegexOptions.IgnoreCase).Match(line, valueEnd);
+                match = new Regex(@"\\bNot\\b(?!hing\\b)\\s+", RegexOptions.IgnoreCase).Match(line, valueEnd);
                 continue;
             }
             var replacement = value.Contains('(', StringComparison.Ordinal)
                 ? $"({value} = False)"
                 : $"LSOperatorArrayRuntime.LogicalNot({value})";
             line = line[..match.Index] + replacement + line[valueEnd..];
-            match = Regex.Match(line, @"\\bNot\\s+(?!Nothing\\b)", RegexOptions.IgnoreCase);
+            match = Regex.Match(line, @"\\bNot\\b(?!hing\\b)\\s+", RegexOptions.IgnoreCase);
         }
         return line;
     }
