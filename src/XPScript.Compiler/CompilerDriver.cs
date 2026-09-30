@@ -263,7 +263,16 @@ public sealed class CompilerDriver
 
             var generatedExecutable = FindPublishedExecutable(tempRoot, publishDir, rid, OutputAssemblyName(outputPath));
             if (generatedExecutable is null)
+            {
+                if (CompilerDiagnosticMode.Debug && rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.Error.WriteLine("--- Android publish artifacts (debug compile failure) ---");
+                    foreach (var artifact in Directory.EnumerateFiles(tempRoot, "*", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+                        Console.Error.WriteLine(Path.GetRelativePath(tempRoot, artifact));
+                    Console.Error.WriteLine("--- end Android publish artifacts ---");
+                }
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
+            }
 
             var licenseNoticePath = Path.Combine(publishDir, ThirdPartyLicenseNoticeGenerator.OutputFileName);
             await File.WriteAllTextAsync(licenseNoticePath, ThirdPartyLicenseNoticeGenerator.Generate(tempRoot, selfContained));
