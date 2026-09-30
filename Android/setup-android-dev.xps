@@ -7,27 +7,35 @@ Sub Main()
         Exit Sub
     End If
 
-    Print "XPScript Android Development Setup"
+    Dim verifyOnly As Boolean\n    verifyOnly = Command() = "--verify" Or Command() = "verify"\n\n    Print "XPScript Android Development Setup"
     Print "=================================="
 
-    If Not RunCommand("where.exe", Array("winget")) Then
-        Print "[ERROR] winget was not found. Install App Installer before continuing."
-        Exit Sub
-    End If
+    If verifyOnly Then
+        Print "Verification mode: no software will be installed."
+        If Not RunCommand("dotnet", Array("--version")) Then
+            Print "[ERROR] .NET SDK was not found."
+            Exit Sub
+        End If
+    Else
+        If Not RunCommand("where.exe", Array("winget")) Then
+            Print "[ERROR] winget was not found. Install App Installer before continuing."
+            Exit Sub
+        End If
 
-    If Not RunCommand("winget", Array("install", "--id", "Microsoft.DotNet.SDK.10", "--exact", "--accept-package-agreements", "--accept-source-agreements")) Then
-        Print "[ERROR] .NET 10 SDK installation failed."
-        Exit Sub
-    End If
+        If Not RunCommand("winget", Array("install", "--id", "Microsoft.DotNet.SDK.10", "--exact", "--accept-package-agreements", "--accept-source-agreements")) Then
+            Print "[ERROR] .NET 10 SDK installation failed."
+            Exit Sub
+        End If
 
-    If Not RunCommand("winget", Array("install", "--id", "Google.AndroidStudio", "--exact", "--accept-package-agreements", "--accept-source-agreements")) Then
-        Print "[ERROR] Android Studio installation failed."
-        Exit Sub
-    End If
+        If Not RunCommand("winget", Array("install", "--id", "Google.AndroidStudio", "--exact", "--accept-package-agreements", "--accept-source-agreements")) Then
+            Print "[ERROR] Android Studio installation failed."
+            Exit Sub
+        End If
 
-    If Not RunCommand("dotnet", Array("workload", "install", "android")) Then
-        Print "[ERROR] .NET Android workload installation failed."
-        Exit Sub
+        If Not RunCommand("dotnet", Array("workload", "install", "android")) Then
+            Print "[ERROR] .NET Android workload installation failed."
+            Exit Sub
+        End If
     End If
 
     If Not RunCommand("dotnet", Array("workload", "list")) Then
