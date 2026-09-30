@@ -1,0 +1,3 @@
+Sub Main()
+    Print "AST_PRINT_OK"
+End Sub
