@@ -158,6 +158,14 @@ internal static class Program
         {
             Script.{{entryPoint}}();
         }
+        catch (Exception ex)
+        {
+            if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_RUNTIME_DEBUG"), "1", StringComparison.Ordinal))
+                Console.Error.WriteLine(ex.ToString());
+            else
+                Console.Error.WriteLine("error: " + ex.Message);
+            Environment.ExitCode = 1;
+        }
         finally
         {
             XPScriptDebugRuntime.Complete();
