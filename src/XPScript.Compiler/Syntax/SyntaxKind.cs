@@ -36,5 +36,6 @@ public enum SyntaxKind
     LiteralExpression,
     NameExpression,
     UnaryExpression,
-    BinaryExpression
+    BinaryExpression,
+    ParenthesizedExpression
 }
