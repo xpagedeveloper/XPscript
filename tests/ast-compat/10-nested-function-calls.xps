@@ -1,0 +1,11 @@
+Function AddNumbers(a As Long, b As Long) As Long
+    AddNumbers = a + b
+End Function
+
+Function DoubleValue(value As Long) As Long
+    DoubleValue = value * 2
+End Function
+
+Sub Main()
+    Print DoubleValue(AddNumbers(10, 11))
+End Sub
