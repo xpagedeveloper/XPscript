@@ -67,7 +67,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [ ] Add Android run/deploy through adb.
 - [x] Add local Windows emulator discovery/start support for a configured Android Virtual Device (AVD).
 - [x] Add deterministic local Windows emulator install -> launch -> logcat verification before physical-device integration.
-- [ ] Stream and filter application logs.
+- [x] Stream and filter application logs.
 - [ ] Add a deterministic command path for build -> install -> launch -> capture logs.
 - [x] Surface adb installation failures with useful diagnostics.
 - [x] Surface launch failures with useful diagnostics.
