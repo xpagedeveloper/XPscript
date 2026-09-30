@@ -203,4 +203,18 @@ var boundComparison = comparisonBinder.Bind(new ExpressionParser("1 + 2 = 3").Pa
 Equal("((1 + 2) == 3)", emitter.Emit(boundComparison), "bound comparison C# emission");
 Equal(0, comparisonBinder.Diagnostics.Count, "bound comparison diagnostics");
 
+var callSymbols = new SymbolTable();
+callSymbols.Declare(new FunctionSymbol("Array", typeof(string[]), [typeof(string)]));
+callSymbols.Declare(new FunctionSymbol("RunCommand", typeof(bool), [typeof(string), typeof(string[])]));
+var callBinder = new ExpressionBinder(callSymbols);
+var boundRunCommand = callBinder.Bind(new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression());
+Equal(BoundNodeKind.UnaryExpression, boundRunCommand.Kind, "bound RunCommand root");
+Equal(typeof(bool), boundRunCommand.Type, "bound RunCommand result type");
+Equal(0, callBinder.Diagnostics.Count, "bound RunCommand diagnostics");
+Equal("(!RunCommand(\"where.exe\", Array(\"winget\")))", emitter.Emit(boundRunCommand), "bound RunCommand C# emission");
+
+var badCallBinder = new ExpressionBinder(callSymbols);
+badCallBinder.Bind(new ExpressionParser("RunCommand(\"where.exe\")").ParseExpression());
+Equal(1, badCallBinder.Diagnostics.Count, "RunCommand arity diagnostic count");
+
 Console.WriteLine("AST lexer, syntax-model, expression-parser, binder and emitter focused tests passed.");
