@@ -58,12 +58,14 @@ Directory.CreateDirectory(artifactBin);
 Directory.CreateDirectory(artifactPublish);
 try
 {
-    var signedPackage = Path.Combine(artifactBin, "com.xpscript.debugapp-Signed.apk");
+    var signedPackage = Path.Combine(artifactPublish, "com.xpscript.debugapp-Signed.apk");
     File.WriteAllText(signedPackage, "probe");
-    File.WriteAllText(Path.Combine(artifactBin, "com.xpscript.debugapp.apk"), "probe");
+    File.WriteAllText(Path.Combine(artifactPublish, "com.xpscript.debugapp.apk"), "probe");
+    File.WriteAllText(Path.Combine(artifactBin, "com.xpscript.debugapp-Signed.apk"), "probe");
+    File.WriteAllText(Path.Combine(artifactBin, "other-Signed.apk"), "probe");
     var discovered = (string?)findPublished.Invoke(null, new object?[] { artifactRoot, artifactPublish, "android-arm64", "android-debug-print" });
     if (!string.Equals(discovered, signedPackage, StringComparison.OrdinalIgnoreCase))
-        throw new Exception("Android APK discovery did not prefer the single signed package.");
+        throw new Exception("Android APK discovery did not prefer the signed package from the publish directory.");
 }
 finally
 {
