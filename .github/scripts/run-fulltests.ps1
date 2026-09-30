@@ -131,6 +131,8 @@ if (Should-Run 'platform') {
   Compile-Xps ./samples/android-debug-print.xps android-debug-print-compile
   # Verify Android Print ordering/value formatting at compile time without requiring a device.
   Compile-Xps ./samples/android-debug-output-regression.xps android-debug-output-regression
+  # Compile the intentional Android runtime-failure sample early; device log verification remains opt-in.
+  Compile-Xps ./samples/android-runtime-error.xps android-runtime-error-compile
   # Process execution is a core platform primitive. Keep its smallest regression first.
   $shellExecuteMissing = Run-Xps ./samples/shellexecute-missing.xps shellexecute-missing
   if ($shellExecuteMissing.Output -notmatch 'SHELLEXECUTE-MISSING=OK') { throw 'ShellExecute missing executable regression did not complete.' }
