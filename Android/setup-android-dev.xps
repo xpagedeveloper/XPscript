@@ -182,7 +182,8 @@ Function RunWinget(arguments As Variant) As Boolean
 
     commandArgs = Array("/d", "/s", "/c", "winget")
     For index = 0 To UBound(arguments)
-        Call commandArgs.Add(arguments(index))
+        ReDim Preserve commandArgs(UBound(commandArgs) + 1)
+        commandArgs(UBound(commandArgs)) = arguments(index)
     Next index
 
     If RunCommand("cmd.exe", commandArgs)=true Then
