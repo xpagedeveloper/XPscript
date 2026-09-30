@@ -7,38 +7,57 @@ Sub Main()
         Exit Sub
     End If
 
-    Dim verifyOnly As Boolean\n    verifyOnly = Command() = "--verify" Or Command() = "verify"\n\n    Print "XPScript Android Development Setup"
+    Dim verifyOnly As Boolean
+    verifyOnly = Command() = "--verify" Or Command() = "verify"
+
+    Print "XPScript Android Development Setup"
     Print "=================================="
 
     If verifyOnly Then
         Print "Verification mode: no software will be installed."
-        If Not RunCommand("dotnet", Array("--version")) Then
+        If RunCommand("dotnet", Array("--version"))=false Then
             Print "[ERROR] .NET SDK was not found."
             Exit Sub
         End If
     Else
-        If Not RunCommand("where.exe", Array("winget")) Then
+        If RunCommand("where.exe", Array("winget"))=false Then
             Print "[ERROR] winget was not found. Install App Installer before continuing."
             Exit Sub
         End If
 
-        If Not RunCommand("winget", Array("install", "--id", "Microsoft.DotNet.SDK.10", "--exact", "--accept-package-agreements", "--accept-source-agreements")) Then
+        Print ""
+        Print "[INSTALL] Installing or updating .NET 10 SDK with winget."
+        Print "[INSTALL] winget may download packages and can take several minutes."
+        Print "[INSTALL] Waiting for winget to finish..."
+        If RunCommand("winget", Array("install", "--id", "Microsoft.DotNet.SDK.10", "--exact", "--accept-package-agreements", "--accept-source-agreements"))=false Then
             Print "[ERROR] .NET 10 SDK installation failed."
             Exit Sub
         End If
 
-        If Not RunCommand("winget", Array("install", "--id", "Google.AndroidStudio", "--exact", "--accept-package-agreements", "--accept-source-agreements")) Then
+        Print "[OK] .NET 10 SDK winget command completed."
+        Print ""
+        Print "[INSTALL] Installing or updating Android Studio with winget."
+        Print "[INSTALL] This is a large package and may take several minutes."
+        Print "[INSTALL] Waiting for winget to finish..."
+        If RunCommand("winget", Array("install", "--id", "Google.AndroidStudio", "--exact", "--accept-package-agreements", "--accept-source-agreements"))=false Then
             Print "[ERROR] Android Studio installation failed."
             Exit Sub
         End If
 
-        If Not RunCommand("dotnet", Array("workload", "install", "android")) Then
+        Print "[OK] Android Studio winget command completed."
+        Print ""
+        Print "[INSTALL] Installing the .NET Android workload."
+        Print "[INSTALL] This may download Android/.NET components and can take several minutes."
+        If RunCommand("dotnet", Array("workload", "install", "android"))=false Then
             Print "[ERROR] .NET Android workload installation failed."
             Exit Sub
         End If
     End If
 
-    If Not RunCommand("dotnet", Array("workload", "list")) Then
+    Print "[OK] Installation commands completed."
+    Print ""
+    Print "[VERIFY] Checking installed .NET workloads..."
+    If RunCommand("dotnet", Array("workload", "list"))=false Then
         Print "[ERROR] Could not verify installed .NET workloads."
         Exit Sub
     End If
@@ -48,7 +67,7 @@ Sub Main()
     If sdk = "" Then sdk = Environ("ANDROID_SDK_ROOT")
     If sdk = "" Then sdk = Environ("LOCALAPPDATA") & "\Android\Sdk"
 
-    Print "Android SDK candidate: " & sdk
+    Print "[VERIFY] Android SDK candidate: " & sdk
 
     Dim adb As String
     adb = sdk & "\platform-tools\adb.exe"
@@ -60,13 +79,15 @@ Sub Main()
     End If
 
     Print "[OK] adb found."
+    Print "[VERIFY] Checking attached Android devices and device properties..."
 
-    If Not RunCommand(adb, Array("devices")) Then Exit Sub
-    If Not RunCommand(adb, Array("shell", "getprop", "ro.product.model")) Then Exit Sub
-    If Not RunCommand(adb, Array("shell", "getprop", "ro.build.version.release")) Then Exit Sub
-    If Not RunCommand(adb, Array("shell", "getprop", "ro.build.version.sdk")) Then Exit Sub
-    If Not RunCommand(adb, Array("shell", "getprop", "ro.product.cpu.abi")) Then Exit Sub
+    If RunCommand(adb, Array("devices"))=false Then Exit Sub
+    If RunCommand(adb, Array("shell", "getprop", "ro.product.model"))=false Then Exit Sub
+    If RunCommand(adb, Array("shell", "getprop", "ro.build.version.release"))=false Then Exit Sub
+    If RunCommand(adb, Array("shell", "getprop", "ro.build.version.sdk"))=false Then Exit Sub
+    If RunCommand(adb, Array("shell", "getprop", "ro.product.cpu.abi"))=false Then Exit Sub
 
+    Print "[OK] Android device checks completed."
     Print "If the device is unauthorized, unlock it and approve USB debugging."
 End Sub
 
@@ -75,6 +96,7 @@ Function RunCommand(executable As String, arguments As Variant) As Boolean
 
     Print ""
     Print "> " & executable
+    Print "[RUN] Starting command and waiting for it to complete..."
 
     On Error Resume Next
     commandResult = ShellExecute(executable, arguments)
@@ -99,5 +121,6 @@ Function RunCommand(executable As String, arguments As Variant) As Boolean
         Exit Function
     End If
 
+    Print "[OK] Command completed with exit code 0."
     RunCommand = True
 End Function
