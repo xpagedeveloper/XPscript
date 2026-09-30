@@ -62,31 +62,31 @@ Sub Main()
     Print "If the device is unauthorized, unlock it and approve USB debugging."
 End Sub
 
-Function RunCommand(ByVal executable As String, ByVal arguments As Variant) As Boolean
-    Dim commandResult As Variant
+Function RunCommand(executable As String, arguments As Variant) As Boolean
+    Dim result As Variant
 
     Print ""
     Print "> " & executable
 
     On Error Resume Next
-    commandResult = ShellExecute(executable, arguments)
+    result = ShellExecute(executable, arguments)
     If Err <> 0 Then
         Print "[ERROR] Could not start " & executable & ". Runtime error " & CStr(Err) & "."
         RunCommand = False
         Exit Function
     End If
 
-    If commandResult.Output <> "" Then Print commandResult.Output
-    If commandResult.Error <> "" Then Print commandResult.Error
+    If result.Output <> "" Then Print result.Output
+    If result.Error <> "" Then Print result.Error
 
-    If commandResult.TimedOut Then
+    If result.TimedOut Then
         Print "[ERROR] Command timed out."
         RunCommand = False
         Exit Function
     End If
 
-    If commandResult.ExitCode <> 0 Then
-        Print "[ERROR] Command failed with exit code " & CStr(commandResult.ExitCode) & "."
+    If result.ExitCode <> 0 Then
+        Print "[ERROR] Command failed with exit code " & CStr(result.ExitCode) & "."
         RunCommand = False
         Exit Function
     End If
