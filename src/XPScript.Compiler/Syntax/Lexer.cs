@@ -151,6 +151,7 @@ public sealed class Lexer
         "ELSE" => SyntaxKind.ElseKeyword,
         "ELSEIF" => SyntaxKind.ElseIfKeyword,
         "END" => SyntaxKind.EndKeyword,
+        "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
 }
