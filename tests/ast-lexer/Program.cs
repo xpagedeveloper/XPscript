@@ -1,4 +1,4 @@
-using Microsoft.CodeAnalysis.CSharp;
+using CSharpSyntaxFactory = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using XPScript.Compiler;
 using XPScript.Compiler.Emission;
@@ -238,7 +238,7 @@ string CanonicalizeCSharpExpression(string value)
         };
     }
 
-    var parsed = SyntaxFactory.ParseExpression(value);
+    var parsed = CSharpSyntaxFactory.ParseExpression(value);
     return RemoveRedundantParentheses(parsed).ToFullString().Replace(" ", string.Empty);
 }
 Equal(CanonicalizeCSharpExpression(legacyRunCommand), CanonicalizeCSharpExpression(astRunCommand), "legacy vs AST RunCommand semantic emission");
