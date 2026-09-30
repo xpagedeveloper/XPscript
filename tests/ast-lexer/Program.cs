@@ -1,3 +1,5 @@
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using XPScript.Compiler;
 using XPScript.Compiler.Emission;
 using XPScript.Compiler.Binding;
@@ -215,26 +217,31 @@ Equal(0, callBinder.Diagnostics.Count, "bound RunCommand diagnostics");
 Equal("(!RunCommand(\"where.exe\", Array(\"winget\")))", emitter.Emit(boundRunCommand), "bound RunCommand C# emission");
 var legacyRunCommand = ExpressionCompatibilityProbe.EmitLegacy("Not RunCommand(\"where.exe\", Array(\"winget\"))");
 var astRunCommand = emitter.Emit(boundRunCommand);
-static string NormalizeExpression(string value) => new(value.Where(ch => !char.IsWhiteSpace(ch)).ToArray());
-static string StripSingleOuterParentheses(string value)
+static string CanonicalizeCSharpExpression(string value)
 {
-    var normalized = NormalizeExpression(value);
-    while (normalized.Length >= 2 && normalized[0] == '(' && normalized[^1] == ')')
+    ExpressionSyntax RemoveRedundantParentheses(ExpressionSyntax expression)
     {
-        var depth = 0;
-        var enclosesWholeExpression = true;
-        for (var i = 0; i < normalized.Length; i++)
+        while (expression is ParenthesizedExpressionSyntax parenthesized)
+            expression = parenthesized.Expression;
+        return expression switch
         {
-            if (normalized[i] == '(') depth++;
-            else if (normalized[i] == ')') depth--;
-            if (depth == 0 && i < normalized.Length - 1) { enclosesWholeExpression = false; break; }
-        }
-        if (!enclosesWholeExpression) break;
-        normalized = normalized[1..^1];
+            PrefixUnaryExpressionSyntax unary => unary.WithOperand(RemoveRedundantParentheses(unary.Operand)),
+            BinaryExpressionSyntax binary => binary
+                .WithLeft(RemoveRedundantParentheses(binary.Left))
+                .WithRight(RemoveRedundantParentheses(binary.Right)),
+            InvocationExpressionSyntax invocation => invocation
+                .WithExpression(RemoveRedundantParentheses(invocation.Expression))
+                .WithArgumentList(invocation.ArgumentList.WithArguments(
+                    new SeparatedSyntaxList<ArgumentSyntax>().AddRange(
+                        invocation.ArgumentList.Arguments.Select(a => a.WithExpression(RemoveRedundantParentheses(a.Expression)))))),
+            _ => expression
+        };
     }
-    return normalized;
+
+    var parsed = SyntaxFactory.ParseExpression(value);
+    return RemoveRedundantParentheses(parsed).NormalizeWhitespace().ToFullString();
 }
-Equal(StripSingleOuterParentheses(legacyRunCommand), StripSingleOuterParentheses(astRunCommand), "legacy vs AST RunCommand semantic emission");
+Equal(CanonicalizeCSharpExpression(legacyRunCommand), CanonicalizeCSharpExpression(astRunCommand), "legacy vs AST RunCommand semantic emission");
 
 void EqualLegacyAst(string source, string label)
 {
@@ -243,7 +250,7 @@ void EqualLegacyAst(string source, string label)
     Equal(0, binder.Diagnostics.Count, label + " AST diagnostics");
     var legacy = ExpressionCompatibilityProbe.EmitLegacy(source);
     var ast = emitter.Emit(bound);
-    Equal(StripSingleOuterParentheses(legacy), StripSingleOuterParentheses(ast), label + " legacy vs AST emission");
+    Equal(CanonicalizeCSharpExpression(legacy), CanonicalizeCSharpExpression(ast), label + " legacy vs AST emission");
 }
 
 EqualLegacyAst("Not False Or True", "boolean precedence");
