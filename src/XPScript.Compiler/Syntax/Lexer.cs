@@ -6,6 +6,9 @@ public sealed class Lexer
 {
     private readonly string _text;
     private int _position;
+    private readonly List<LexerDiagnostic> _diagnostics = [];
+
+    public IReadOnlyList<LexerDiagnostic> Diagnostics => _diagnostics;
 
     public Lexer(string text) => _text = text ?? string.Empty;
 
@@ -23,8 +26,17 @@ public sealed class Lexer
 
     public SyntaxToken NextToken()
     {
-        while (Current is ' ' or '\t')
-            _position++;
+        while (true)
+        {
+            while (Current is ' ' or '\t')
+                _position++;
+
+            if (Current != '\'')
+                break;
+
+            while (_position < _text.Length && Current is not '\r' and not '\n')
+                _position++;
+        }
 
         var start = _position;
 
@@ -71,6 +83,8 @@ public sealed class Lexer
                 _position++;
             }
             var text = _text[start.._position];
+            if (text.Length == 0 || text[^1] != '"')
+                _diagnostics.Add(new LexerDiagnostic("XPS1006", "Unterminated string literal.", new TextSpan(start, text.Length)));
             return new SyntaxToken(SyntaxKind.StringToken, text, value.ToString(), new TextSpan(start, text.Length));
         }
 
@@ -101,13 +115,20 @@ public sealed class Lexer
             '<' => Token(SyntaxKind.LessToken, start, 1),
             '>' when Current == '=' => ConsumeSecond(SyntaxKind.GreaterOrEqualsToken, start),
             '>' => Token(SyntaxKind.GreaterToken, start, 1),
-            _ => Token(SyntaxKind.BadToken, start, 1)
+            _ => BadToken(start)
         };
     }
 
     private char Current => _position < _text.Length ? _text[_position] : '\0';
     private char Peek(int offset) => _position + offset < _text.Length ? _text[_position + offset] : '\0';
     private char CurrentAt(int position) => position < _text.Length ? _text[position] : '\0';
+
+    private SyntaxToken BadToken(int start)
+    {
+        var token = Token(SyntaxKind.BadToken, start, 1);
+        _diagnostics.Add(new LexerDiagnostic("XPS1012", $"Invalid character '{token.Text}'.", token.Span));
+        return token;
+    }
 
     private SyntaxToken ConsumeSecond(SyntaxKind kind, int start)
     {
