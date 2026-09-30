@@ -66,11 +66,32 @@ internal static class AndroidCommand
         if (launch.ExitCode != 0 || launch.Output.Contains("No activities found", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (launch.Error + Environment.NewLine + launch.Output).Trim());
 
-        await Task.Delay(1000);
-        var logs = await ExecuteAsync(adb, ["-s", serial, "logcat", "-d", "-s", "XPScript:I", "*:S"]);
-        if (logs.ExitCode != 0) throw new InvalidOperationException("adb logcat failed on " + serial + ": " + logs.Error.Trim());
-        Console.Write(logs.Output);
-        return 0;
+        return await WaitForCompletionAsync(adb, serial, TimeSpan.FromSeconds(30));
+    }
+
+    private static async Task<int> WaitForCompletionAsync(string adb, string serial, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        string lastOutput = string.Empty;
+        while (DateTime.UtcNow < deadline)
+        {
+            var logs = await ExecuteAsync(adb, ["-s", serial, "logcat", "-d", "-s", "XPScript:I", "*:S"]);
+            if (logs.ExitCode != 0) throw new InvalidOperationException("adb logcat failed on " + serial + ": " + logs.Error.Trim());
+            lastOutput = logs.Output;
+            if (lastOutput.Contains("XPSCRIPT-EXIT=0", StringComparison.Ordinal))
+            {
+                Console.Write(lastOutput);
+                return 0;
+            }
+            if (lastOutput.Contains("XPSCRIPT-EXIT=1", StringComparison.Ordinal))
+            {
+                Console.Write(lastOutput);
+                return 1;
+            }
+            await Task.Delay(250);
+        }
+        if (!string.IsNullOrEmpty(lastOutput)) Console.Write(lastOutput);
+        throw new TimeoutException("Android application did not report XPSCRIPT-EXIT within " + timeout.TotalSeconds + " seconds on " + serial + ".");
     }
 
     private static async Task<int> LaunchAsync(string[] args)
@@ -222,6 +243,14 @@ internal static class AndroidCommand
 
     private static string ResolveAdb()
     {
+        var overridePath = Environment.GetEnvironmentVariable("XPSCRIPT_ADB");
+        if (!string.IsNullOrWhiteSpace(overridePath))
+        {
+            var fullOverride = Path.GetFullPath(overridePath);
+            if (!File.Exists(fullOverride)) throw new InvalidOperationException("XPSCRIPT_ADB does not identify an adb executable: " + fullOverride);
+            return fullOverride;
+        }
+
         var executable = OperatingSystem.IsWindows() ? "adb.exe" : "adb";
         var pathValue = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
         foreach (var directory in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
