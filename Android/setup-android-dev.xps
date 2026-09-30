@@ -63,30 +63,30 @@ Sub Main()
 End Sub
 
 Function RunCommand(executable As String, arguments As Variant) As Boolean
-    Dim result As Variant
+    Dim commandResult As Variant
 
     Print ""
     Print "> " & executable
 
     On Error Resume Next
-    result = ShellExecute(executable, arguments)
+    commandResult = ShellExecute(executable, arguments)
     If Err <> 0 Then
         Print "[ERROR] Could not start " & executable & ". Runtime error " & CStr(Err) & "."
         RunCommand = False
         Exit Function
     End If
 
-    If result.Output <> "" Then Print result.Output
-    If result.Error <> "" Then Print result.Error
+    If commandResult.Output <> "" Then Print commandResult.Output
+    If commandResult.Error <> "" Then Print commandResult.Error
 
-    If result.TimedOut Then
+    If commandResult.TimedOut Then
         Print "[ERROR] Command timed out."
         RunCommand = False
         Exit Function
     End If
 
-    If result.ExitCode <> 0 Then
-        Print "[ERROR] Command failed with exit code " & CStr(result.ExitCode) & "."
+    If commandResult.ExitCode <> 0 Then
+        Print "[ERROR] Command failed with exit code " & CStr(commandResult.ExitCode) & "."
         RunCommand = False
         Exit Function
     End If
