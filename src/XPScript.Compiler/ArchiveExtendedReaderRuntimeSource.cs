@@ -382,7 +382,7 @@ internal static class XPScriptArchiveExtendedReader
                     args[0] = source;
                     args[1] = decompress;
                     for (var i = 2; i < p.Length; i++)
-                        args[i] = p[i].ParameterType == typeof(bool) ? true : (p[i].HasDefaultValue ? p[i].DefaultValue : null);
+                        args[i] = p[i].HasDefaultValue ? p[i].DefaultValue : (p[i].ParameterType == typeof(bool) ? false : null);
                     return (System.IO.Stream)ctor.Invoke(args);
                 }
             }
