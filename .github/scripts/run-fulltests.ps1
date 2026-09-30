@@ -174,8 +174,24 @@ if (Should-Run 'platform') {
   $archiveWriteFocused = Run-Xps ./demo/archive/archive-extended-memory-write.xps archive-extended-memory-write-focused
   if ($archiveWriteFocused.Output -notmatch 'ARCHIVE_EXTENDED_MEMORY_WRITE=OK') { throw 'Archive writable format round-trip regression did not complete.' }
 
-  # Compile the focused read-only format probe early; fixtures are added per supported format.
+  # Compile the focused read-only format probe early and run it against a deterministic
+  # read-only fixture produced by the platform tools available in CI.
   Compile-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression
+  $readOnlyFixtureRoot = './out/fulltest/archive-read-only-fixtures'
+  Remove-Item -Recurse -Force $readOnlyFixtureRoot -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force $readOnlyFixtureRoot | Out-Null
+  Set-Content -NoNewline -Path (Join-Path $readOnlyFixtureRoot 'payload.txt') -Value 'archive-read-only-format'
+  if (Get-Command 'bzip2' -ErrorAction SilentlyContinue) {
+    $bzip2Fixture = Join-Path $readOnlyFixtureRoot 'payload.txt.bz2'
+    $bzip2Bytes = & bzip2 -c (Join-Path $readOnlyFixtureRoot 'payload.txt')
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to create BZip2 Archive read-only fixture.' }
+    [System.IO.File]::WriteAllBytes($bzip2Fixture, $bzip2Bytes)
+    $bzip2Extract = Join-Path $readOnlyFixtureRoot 'bzip2-extracted.txt'
+    $readOnlyRun = Run-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression @("../../out/fulltest/archive-read-only-fixtures/payload.txt.bz2","../../out/fulltest/archive-read-only-fixtures/bzip2-extracted.txt")
+    if ($readOnlyRun.Output -notmatch 'ARCHIVE_READ_ONLY_FORMAT=OK') { throw 'Archive BZip2 read-only regression did not complete.' }
+    if ((Get-Content -Raw $bzip2Extract) -ne 'archive-read-only-format') { throw 'Archive BZip2 extraction payload mismatch.' }
+  }
+
 
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
