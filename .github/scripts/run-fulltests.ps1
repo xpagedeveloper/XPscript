@@ -45,6 +45,11 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  # Dim Preserve is invalid XPscript syntax. Keep this focused negative compile regression first.
+  $dimPreserve = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/invalid-dim-preserve.xps','-o','./out/fulltest/invalid-dim-preserve','--runtime=false') $compileTimeoutMilliseconds 'invalid Dim Preserve compile'
+  if ($dimPreserve.ExitCode -eq 0) { throw 'Dim Preserve unexpectedly compiled successfully.' }
+  if ($dimPreserve.Output -notmatch 'Unsupported statement: Dim Preserve') { throw 'Dim Preserve did not produce the expected compiler diagnostic.' }
+  Write-Host 'INVALID-DIM-PRESERVE=OK'
   # Keep the actively developed scope isolation regression first so CI surfaces failures immediately.
   $scope = Run-Xps ./samples/scope-isolation.xps scope-isolation
   foreach ($expected in @('LOCAL=40','STATIC=1','STATIC=2','GLOBAL=7','BYREF=4','ARRAY=22:3','LIST=kept:2')) { if ($scope.Output -notmatch [regex]::Escape($expected)) { throw "Scope isolation regression missing: $expected" } }
