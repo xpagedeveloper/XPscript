@@ -15,8 +15,61 @@ internal static class AndroidCommand
         return args[0].ToLowerInvariant() switch
         {
             "devices" => await DevicesAsync(),
+            "install" => await InstallAsync(args[1..]),
             _ => throw new ArgumentException("Unknown android command: " + args[0])
         };
+    }
+
+    private static async Task<int> InstallAsync(string[] args)
+    {
+        if (args.Length == 0) throw new ArgumentException("android install requires an APK path.");
+        var apk = Path.GetFullPath(args[0]);
+        if (!File.Exists(apk)) throw new FileNotFoundException("Android APK was not found.", apk);
+
+        string? requestedSerial = null;
+        for (var i = 1; i < args.Length; i++)
+        {
+            if (args[i] == "--device" && i + 1 < args.Length) requestedSerial = args[++i];
+            else throw new ArgumentException("Unknown android install argument: " + args[i]);
+        }
+
+        var adb = ResolveAdb();
+        var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
+        var result = await ExecuteAsync(adb, ["-s", serial, "install", "-r", apk]);
+        if (result.ExitCode != 0 || !result.Output.Contains("Success", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("adb install failed for " + serial + ": " + (result.Error + Environment.NewLine + result.Output).Trim());
+
+        Console.WriteLine("Installed " + Path.GetFileName(apk) + " on " + serial + ".");
+        return 0;
+    }
+
+    private static async Task<string> RequireReadyDeviceAsync(string adb, string? requestedSerial)
+    {
+        var result = await ExecuteAsync(adb, ["devices"]);
+        if (result.ExitCode != 0) throw new InvalidOperationException("adb devices failed: " + result.Error.Trim());
+        var devices = result.Output.Replace("\r\n", "\n").Split('\n').Skip(1)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Select(ParseDevice).ToArray();
+
+        if (requestedSerial is not null)
+        {
+            var selected = devices.FirstOrDefault(device => device.Serial.Equals(requestedSerial, StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrEmpty(selected.Serial)) throw new InvalidOperationException("Android device '" + requestedSerial + "' was not found.");
+            if (!selected.State.Equals("device", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Android device '" + requestedSerial + "' is " + selected.State + ".");
+            return selected.Serial;
+        }
+
+        var ready = devices.Where(device => device.State.Equals("device", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (ready.Length == 0)
+        {
+            var blocked = devices.FirstOrDefault(device => device.State is "unauthorized" or "offline");
+            if (!string.IsNullOrEmpty(blocked.Serial)) throw new InvalidOperationException("Android device '" + blocked.Serial + "' is " + blocked.State + ".");
+            throw new InvalidOperationException("No ready Android device or emulator was detected.");
+        }
+        if (ready.Length > 1)
+            throw new InvalidOperationException("Multiple Android devices/emulators are ready. Select one with --device SERIAL.");
+        return ready[0].Serial;
     }
 
     private static async Task<int> DevicesAsync()
@@ -108,9 +161,11 @@ internal static class AndroidCommand
         Console.WriteLine("""
 Usage:
   xpscript android devices
+  xpscript android install <app.apk> [--device SERIAL]
 
 Commands:
   devices  List Android devices/emulators visible to adb, including unauthorized/offline state.
+  install  Install or update an APK on exactly one ready device/emulator.
 """);
     }
 }
