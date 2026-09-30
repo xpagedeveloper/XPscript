@@ -101,6 +101,8 @@ if (Should-Run 'runtime') {
 
 if (Should-Run 'archive') {
   Write-Host '=== ARCHIVE FOCUSED TEST ==='
+  # Keep compressed TAR regression first here: it is the current focused Archive failure.
+  Run-Xps ./demo/archive/archive-compressed-tar.xps archive-compressed-tar | Out-Null
   Compile-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression
   $readOnlyFixtureRoot = './out/fulltest/archive-read-only-fixtures'
   Remove-Item -Recurse -Force $readOnlyFixtureRoot -ErrorAction SilentlyContinue
