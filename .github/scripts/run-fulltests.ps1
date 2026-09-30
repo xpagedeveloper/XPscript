@@ -109,6 +109,11 @@ if (Should-Run 'platform') {
   $androidSetupSource = Get-Content ./Android/setup-android-dev.xps -Raw
   if ($androidSetupSource -notmatch 'verifyOnly = Command\(\) = "--verify"') { throw 'Android setup verification mode is missing.' }
   if ($androidSetupSource -notmatch 'If verifyOnly Then[\s\S]*?Else[\s\S]*?winget') { throw 'Android setup verification mode does not guard installation commands.' }
+  if ($androidSetupSource -match 'Dir\(adb\)\s*=\s*""') { throw 'Android setup must not use Dir(path)="" for adb existence checks.' }
+  if ($androidSetupSource -notmatch 'IsDir\(sdk\)=false') { throw 'Android setup must verify the SDK directory with IsDir(path)=false.' }
+  if ($androidSetupSource -notmatch 'IsFile\(adb\)=false') { throw 'Android setup must verify adb as a file with IsFile(path)=false.' }
+  if ($androidSetupSource -notmatch 'WingetPackageInstalled\("Google\.AndroidStudio"\)=true') { throw 'Android setup must skip Android Studio when already installed.' }
+  if ($androidSetupSource -notmatch 'AndroidWorkloadInstalled\(\)=true') { throw 'Android setup must skip an already installed Android workload.' }
   Write-Host 'ANDROID-SETUP-VERIFY-PROBE=OK'
   # Keep the smallest Android source/compiler regression before broader platform coverage.
   Compile-Xps ./samples/android-debug-print.xps android-debug-print-compile
