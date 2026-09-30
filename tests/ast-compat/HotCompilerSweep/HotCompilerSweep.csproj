@@ -6,6 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/XPScript.Compiler.Core/XPScript.Compiler.Core.csproj" />
+    <ProjectReference Include="../../../src/XPScript.Compiler.Core/XPScript.Compiler.Core.csproj" />
   </ItemGroup>
 </Project>
