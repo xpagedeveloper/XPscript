@@ -40,7 +40,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Start with `Print "Hello from XPScript on Android"`.
 - [x] Use a dedicated sample `samples/android-debug-print.xps`.
 - [x] Target ARM64 first for the physical test device.
-- [ ] Package an installable debug APK.
+- [x] Package an installable debug APK.
 - [ ] Install/update and launch it through adb.
 - [x] Route XPScript `Print` output to Android logging.
 - [ ] Make the output visible through adb/logcat and the development debugger.
@@ -60,7 +60,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 ## Stage 2: CLI Android build, deploy and debug workflow
 
 - [ ] Add Android device discovery to the CLI.
-- [ ] Add Android build support.
+- [x] Add Android build support.
 - [ ] Add Android run/deploy through adb.
 - [ ] Stream and filter application logs.
 - [ ] Add a deterministic command path for build -> install -> launch -> capture logs.
