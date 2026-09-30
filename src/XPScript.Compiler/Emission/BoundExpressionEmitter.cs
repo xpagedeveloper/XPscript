@@ -10,7 +10,7 @@ public sealed class BoundExpressionEmitter
     {
         BoundLiteralExpression literal => EmitLiteral(literal),
         BoundNameExpression name => name.Symbol.Name,
-        BoundCallExpression call => $"{call.Function.Name}({string.Join(\", \", call.Arguments.Select(Emit))})",
+        BoundCallExpression call => $"{call.Function.Name}({string.Join(", ", call.Arguments.Select(Emit))})",
         BoundUnaryExpression unary => $"({EmitUnaryOperator(unary.OperatorKind)}{Emit(unary.Operand)})",
         BoundBinaryExpression binary => $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind)} {Emit(binary.Right)})",
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
