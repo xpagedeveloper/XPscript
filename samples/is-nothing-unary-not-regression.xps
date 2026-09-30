@@ -1,0 +1,9 @@
+Sub Main()
+    Dim access As NotesDatabaseAccess
+
+    If access Is Nothing Then
+        Print "IS-NOTHING=OK"
+    Else
+        Error 5, "Is Nothing was rewritten incorrectly"
+    End If
+End Sub

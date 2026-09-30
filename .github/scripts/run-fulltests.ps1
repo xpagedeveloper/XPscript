@@ -45,7 +45,20 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
-  # Keep the actively developed scope isolation regression first so CI surfaces failures immediately.
+  # Keep the smallest regression for the latest compiler failure first.
+  $isNothing = Run-Xps ./samples/is-nothing-unary-not-regression.xps is-nothing-unary-not-regression
+  if ($isNothing.Output -notmatch 'IS-NOTHING=OK') { throw 'Is Nothing unary-Not rewrite regression failed.' }
+
+  # Keep the smallest regression for the latest runtime/compiler interaction first.
+  $functionNotByRef = Run-Xps ./samples/function-not-byref-regression.xps function-not-byref-regression
+  if ($functionNotByRef.Output -notmatch 'FUNCTION-NOT-BYREF=OK') { throw 'Boolean default-ByRef function under Not regression failed.' }
+
+  # Keep the smallest regression for the latest compiler failure first.
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/function-result-name-conflict-error.xps','-o','./out/fulltest/function-result-name-conflict-error','--runtime=false') $compileTimeoutMilliseconds 'function result name conflict'
+  if ($r.ExitCode -eq 0) { throw 'Function result name conflict unexpectedly compiled.' }
+  if ($r.Output -notmatch 'XPS2014' -or $r.Output -notmatch 'conflicts with the function result name') { throw 'Function result name conflict did not produce XPS2014.' }
+
+  # Keep the actively developed scope isolation regression early so CI surfaces failures immediately.
   $scope = Run-Xps ./samples/scope-isolation.xps scope-isolation
   foreach ($expected in @('LOCAL=40','STATIC=1','STATIC=2','GLOBAL=7','BYREF=4','ARRAY=22:3','LIST=kept:2')) { if ($scope.Output -notmatch [regex]::Escape($expected)) { throw "Scope isolation regression missing: $expected" } }
   Run-Xps ./samples/array-sort-regression.xps array-sort-regression | Out-Null
@@ -65,6 +78,11 @@ if (Should-Run 'notes') {
 
 if (Should-Run 'runtime') {
   Write-Host '=== XP RUNTIME FULLTEST ==='
+  # Keep the smallest regression for managed stack-trace suppression first.
+  Compile-Xps ./samples/runtime-error-stacktrace-regression.xps runtime-error-stacktrace-regression
+  $runtimeError = Invoke-Bounded (Get-XpsExe 'runtime-error-stacktrace-regression') @() $runtimeTimeoutMilliseconds 'runtime error stacktrace regression'
+  if ($runtimeError.ExitCode -eq 0) { throw 'Runtime error stacktrace regression unexpectedly succeeded.' }
+  if ($runtimeError.Output -match ' at Script\.|System\.[A-Za-z].*Exception') { throw 'Runtime error exposed managed C#/.NET stack details without debug.' }
   # Keep the most recently failing regression first so CI surfaces it immediately.
   Write-Host 'FULLTEST_CHECKPOINT=xpspreadsheet-invalid-format-first'
   Compile-Xps ./demo/spreadsheet/xpspreadsheet-invalid-format.xps xpspreadsheet-invalid-format

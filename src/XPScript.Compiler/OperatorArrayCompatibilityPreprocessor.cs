@@ -165,8 +165,99 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         });
     }
 
-    private static string RewriteUnaryNot(string line) =>
-        Regex.Replace(line, $@"\bNot\s+(?!Nothing\b)(?<value>{Operand})", m => $"LSOperatorArrayRuntime.LogicalNot({m.Groups["value"].Value})", RegexOptions.IgnoreCase);
+    private static string RewriteUnaryNot(string line)
+    {
+        var match = Regex.Match(line, @"\bNot\b(?!hing\b)\s+", RegexOptions.IgnoreCase);
+        while (match.Success)
+        {
+            // Do not reinterpret the C# pattern "is not ..." emitted by earlier
+            // compatibility rewrites as the XPScript unary Not operator.
+            if (line.AsSpan(0, match.Index).TrimEnd().EndsWith("is", StringComparison.OrdinalIgnoreCase))
+            {
+                match = new Regex(@"\bNot\b(?!hing\b)\s+", RegexOptions.IgnoreCase).Match(line, match.Index + match.Length);
+                continue;
+            }
+
+            var valueStart = match.Index + match.Length;
+            var valueEnd = FindUnaryOperandEnd(line, valueStart);
+            if (valueEnd <= valueStart)
+            {
+                match = match.NextMatch();
+                continue;
+            }
+
+            var value = line[valueStart..valueEnd];
+
+            // Preserve the language-level "Not <expr> Is Nothing" form. "Is" is
+            // rewritten later by RewriteIsOperator; wrapping only <expr> here
+            // would produce malformed generated code such as LogicalNot(x) Is Nothing.
+            var suffix = line[valueEnd..];
+            if (Regex.IsMatch(suffix, @"^\s+Is\s+Nothing\b", RegexOptions.IgnoreCase))
+            {
+                var isNothingLength = Regex.Match(suffix, @"^\s+Is\s+Nothing\b", RegexOptions.IgnoreCase).Length;
+                var full = line[valueStart..(valueEnd + isNothingLength)];
+                var isNothingReplacement = $"!({full[0..].Replace(" Is Nothing", " is null", StringComparison.OrdinalIgnoreCase)})";
+                line = line[..match.Index] + isNothingReplacement + line[(valueEnd + isNothingLength)..];
+                match = Regex.Match(line, @"\bNot\b(?!hing\b)\s+", RegexOptions.IgnoreCase);
+                continue;
+            }
+
+            var replacement = value.Contains('(', StringComparison.Ordinal)
+                ? $"({value} = False)"
+                : $"LSOperatorArrayRuntime.LogicalNot({value})";
+            line = line[..match.Index] + replacement + line[valueEnd..];
+            match = Regex.Match(line, @"\bNot\b(?!hing\b)\s+", RegexOptions.IgnoreCase);
+        }
+        return line;
+    }
+
+    private static int FindUnaryOperandEnd(string line, int start)
+    {
+        var i = start;
+        while (i < line.Length && char.IsWhiteSpace(line[i])) i++;
+        if (i >= line.Length) return i;
+
+        if (line[i] == '(')
+        {
+            var close = FindMatchingParenthesis(line, i);
+            return close < 0 ? i : close + 1;
+        }
+
+        if (!(char.IsLetter(line[i]) || line[i] == '_'))
+        {
+            while (i < line.Length && !char.IsWhiteSpace(line[i])) i++;
+            return i;
+        }
+
+        i++;
+        while (i < line.Length && (char.IsLetterOrDigit(line[i]) || line[i] == '_' || line[i] == '.')) i++;
+        if (i < line.Length && line[i] == '(')
+        {
+            var close = FindMatchingParenthesis(line, i);
+            if (close >= 0) i = close + 1;
+        }
+        return i;
+    }
+
+    private static int FindMatchingParenthesis(string value, int open)
+    {
+        var depth = 0;
+        var inString = false;
+        for (var i = open; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (c == '"')
+            {
+                if (inString && i + 1 < value.Length && value[i + 1] == '"') { i++; continue; }
+                inString = !inString;
+                continue;
+            }
+            if (inString) continue;
+            if (c == '(') depth++;
+            else if (c == ')' && --depth == 0) return i;
+        }
+        return -1;
+    }
 
     private static string RewriteSymbolOperator(string line, char op, string method)
     {
