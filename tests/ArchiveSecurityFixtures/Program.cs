@@ -101,6 +101,13 @@ try
     if (Directory.Exists(directoryLink) || File.Exists(directoryLink)) Directory.Delete(directoryLink, recursive: false);
     if (File.Exists(readyMarker)) File.Delete(readyMarker);
     Directory.CreateSymbolicLink(directoryLink, Path.GetFullPath(outsideRoot));
+    if (OperatingSystem.IsWindows())
+    {
+        var attributes = File.GetAttributes(directoryLink);
+        if ((attributes & FileAttributes.ReparsePoint) == 0)
+            throw new InvalidOperationException("Windows extraction link was not created as a reparse point.");
+        Console.WriteLine("ARCHIVE-SECURITY-WINDOWS-REPARSE=OK");
+    }
     File.WriteAllText(readyMarker, "ready", Encoding.UTF8);
 }
 catch (Exception ex)
