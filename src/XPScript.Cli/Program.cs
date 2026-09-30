@@ -525,6 +525,7 @@ Usage:
   xpscript android install <app.apk> [--device SERIAL]
   xpscript android launch [--device SERIAL]
   xpscript android logs [--device SERIAL]
+  xpscript android run <source.xps> [--device SERIAL]
   xpscript web <directory> [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
                 [--health] [--metrics] [--operational-allow CIDR ...] [--sessions]
