@@ -183,7 +183,7 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             // mistaken for unary Not merely because "Nothing" starts with "Not".
             if (valueStart > 0 && line.AsSpan(0, valueStart).TrimEnd().EndsWith("Is", StringComparison.OrdinalIgnoreCase))
             {
-                match = Regex.Match(line, @"\\bNot\\s+(?!Nothing\\b)", valueEnd, RegexOptions.IgnoreCase);
+                match = new Regex(@"\\bNot\\s+(?!Nothing\\b)", RegexOptions.IgnoreCase).Match(line, valueEnd);
                 continue;
             }
             var replacement = value.Contains('(', StringComparison.Ordinal)
