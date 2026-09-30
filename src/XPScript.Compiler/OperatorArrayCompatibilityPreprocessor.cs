@@ -166,7 +166,16 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
     }
 
     private static string RewriteUnaryNot(string line) =>
-        Regex.Replace(line, $@"\bNot\s+(?!Nothing\b)(?<value>{Operand})", m => $"LSOperatorArrayRuntime.LogicalNot({m.Groups["value"].Value})", RegexOptions.IgnoreCase);
+        Regex.Replace(line, $@"\bNot\s+(?!Nothing\b)(?<value>{Operand})", m =>
+        {
+            var value = m.Groups["value"].Value;
+            // Keep Boolean negation on function calls as a comparison. Calls with
+            // default ByRef arguments can later be lowered to a temporary-scope
+            // expression, and LogicalNot must apply to the returned Boolean value.
+            if (value.Contains('(', StringComparison.Ordinal))
+                return $"({value} = False)";
+            return $"LSOperatorArrayRuntime.LogicalNot({value})";
+        }, RegexOptions.IgnoreCase);
 
     private static string RewriteSymbolOperator(string line, char op, string method)
     {
