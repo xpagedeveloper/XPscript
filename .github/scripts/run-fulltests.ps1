@@ -107,7 +107,7 @@ if (Should-Run 'platform') {
   # the no-install verification branch so CI catches accidental installation in --verify mode.
   Compile-Xps ./Android/setup-android-dev.xps android-setup-dev-compile
   $androidSetupSource = Get-Content ./Android/setup-android-dev.xps -Raw
-  if ($androidSetupSource -notmatch 'verifyOnly = Command\(\) = "--verify"') { throw 'Android setup verification mode is missing.' }
+  if ($androidSetupSource -notmatch 'If Command\(\) = "--verify" Or Command\(\) = "verify" Then[\s\S]*?verifyOnly = True[\s\S]*?Else[\s\S]*?verifyOnly = False[\s\S]*?End If') { throw 'Android setup verification mode must use explicit boolean assignment.' }
   if ($androidSetupSource -notmatch 'If verifyOnly Then[\s\S]*?Else[\s\S]*?winget') { throw 'Android setup verification mode does not guard installation commands.' }
   if ($androidSetupSource -match 'Dir\(adb\)\s*=\s*""') { throw 'Android setup must not use Dir(path)="" for adb existence checks.' }
   if ($androidSetupSource -notmatch 'IsDir\(sdk\)=false') { throw 'Android setup must verify the SDK directory with IsDir(path)=false.' }
