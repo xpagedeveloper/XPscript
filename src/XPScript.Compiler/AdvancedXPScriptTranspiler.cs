@@ -735,6 +735,9 @@ internal static class LSForAllRuntime
             return [new() { Name = "foundToken", Value = "End ForAll" }, new() { Name = "expectedConstruct", Value = "matching ForAll statement" }];
         if (message.Equals("Unexpected block terminator.", StringComparison.Ordinal))
             return [new() { Name = "foundToken", Value = line }, new() { Name = "expectedConstruct", Value = "matching block opener" }];
+        var functionResultConflict = Regex.Match(message, @"^Local variable '([A-Za-z_]\w*)' conflicts with the function result name\.", RegexOptions.CultureInvariant);
+        if (functionResultConflict.Success)
+            return [new() { Name = "symbol", Value = functionResultConflict.Groups[1].Value }];
         return null;
     }
 
