@@ -135,4 +135,17 @@ Equal(SyntaxKind.EqualsToken, falseComparison.OperatorToken.Kind, "RunCommand Fa
 Equal(SyntaxKind.CallExpression, falseComparison.Left.Kind, "comparison left is call");
 Equal(SyntaxKind.LiteralExpression, falseComparison.Right.Kind, "comparison right is False");
 
+var memberAst = new ExpressionParser("service.GetItem(1).Name").ParseExpression();
+Equal(SyntaxKind.MemberAccessExpression, memberAst.Kind, "member chain root");
+var memberRoot = (MemberAccessExpressionSyntax)memberAst;
+Equal("Name", memberRoot.NameToken.Text, "member chain final name");
+Equal(SyntaxKind.CallExpression, memberRoot.Expression.Kind, "member chain call before final member");
+var memberCall = (CallExpressionSyntax)memberRoot.Expression;
+Equal(SyntaxKind.MemberAccessExpression, memberCall.Target.Kind, "member call target");
+Equal("GetItem", ((MemberAccessExpressionSyntax)memberCall.Target).NameToken.Text, "member call name");
+
+var ambiguousParenAst = new ExpressionParser("sortedStrings(0)").ParseExpression();
+Equal(SyntaxKind.CallExpression, ambiguousParenAst.Kind, "parenthesized postfix syntax remains unresolved");
+Equal("sortedStrings", ((NameExpressionSyntax)((CallExpressionSyntax)ambiguousParenAst).Target).IdentifierToken.Text, "array-or-call target");
+
 Console.WriteLine("AST lexer, syntax-model and expression-parser focused tests passed.");
