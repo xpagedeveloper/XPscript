@@ -42,13 +42,13 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Target ARM64 first for the physical test device.
 - [x] Add an `android-x64` target for x86_64 Android emulators.
 - [x] Build both ARM64 device and x64 emulator APKs in Android CI.
-- [x] Add an x86_64 emulator smoke test that installs, launches and verifies the XPScript log output locally on Windows.
+- [ ] Add an x86_64 emulator smoke test that installs, launches and verifies the XPScript log output locally on Windows. (Harness implemented; local Windows verification pending.)
 - [x] Package an installable debug APK.
 - [x] Install/update and launch it through adb.
 - [x] Route XPScript `Print` output to Android logging.
 - [x] Make the output visible through adb/logcat (`xpscript android logs`); development debugger integration remains future work.
 - [x] Use an unambiguous XPScript log tag.
-- [x] Add a second minimal regression that emits multiple lines and values so output ordering and formatting are verified.
+- [ ] Add a second minimal regression that emits multiple lines and values so output ordering and formatting are verified. (Sample/compiler regression added; emulator/device output verification pending.)
 - [x] Route uncaught XPScript runtime errors to Android logging.
 - [ ] Add a minimal failure sample that intentionally raises a runtime error and verify the error reaches the debug path.
 - [ ] Include source file and line information in Android runtime diagnostics when available.
@@ -65,8 +65,8 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Add Android device discovery to the CLI.
 - [x] Add Android build support.
 - [ ] Add Android run/deploy through adb.
-- [x] Add local Windows emulator discovery/start support for a configured Android Virtual Device (AVD).
-- [x] Add deterministic local Windows emulator install -> launch -> logcat verification before physical-device integration.
+- [ ] Add local Windows emulator discovery/start support for a configured Android Virtual Device (AVD). (PowerShell harness implemented; local Windows verification pending.)
+- [ ] Add deterministic local Windows emulator install -> launch -> logcat verification before physical-device integration. (PowerShell harness implemented; local Windows verification pending.)
 - [x] Stream and filter application logs.
 - [ ] Add a deterministic command path for build -> install -> launch -> capture logs.
 - [x] Surface adb installation failures with useful diagnostics.
