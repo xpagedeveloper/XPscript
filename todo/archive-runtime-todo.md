@@ -414,7 +414,7 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] UNC path archive entry.
 - [x] Mixed separator traversal.
 - [x] Symlink escape attempt.
-- [ ] Reparse-point escape attempt on Windows.
+- [x] Reparse-point escape attempt on Windows.
 - [x] Excessive entry count.
 - [x] Excessive uncompressed size.
 - [x] Extreme compression ratio.
