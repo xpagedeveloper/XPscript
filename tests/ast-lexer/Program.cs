@@ -1,3 +1,4 @@
+using XPScript.Compiler;
 using XPScript.Compiler.Emission;
 using XPScript.Compiler.Binding;
 using XPScript.Compiler.Syntax;
@@ -212,6 +213,10 @@ Equal(BoundNodeKind.UnaryExpression, boundRunCommand.Kind, "bound RunCommand roo
 Equal(typeof(bool), boundRunCommand.Type, "bound RunCommand result type");
 Equal(0, callBinder.Diagnostics.Count, "bound RunCommand diagnostics");
 Equal("(!RunCommand(\"where.exe\", Array(\"winget\")))", emitter.Emit(boundRunCommand), "bound RunCommand C# emission");
+var legacyRunCommand = ExpressionCompatibilityProbe.EmitLegacy("Not RunCommand(\"where.exe\", Array(\"winget\"))");
+var astRunCommand = emitter.Emit(boundRunCommand);
+static string NormalizeExpression(string value) => new(value.Where(ch => !char.IsWhiteSpace(ch) && ch is not '(' && ch is not ')').ToArray());
+Equal(NormalizeExpression(legacyRunCommand), NormalizeExpression(astRunCommand), "legacy vs AST RunCommand semantic emission");
 
 var badCallBinder = new ExpressionBinder(callSymbols);
 badCallBinder.Bind(new ExpressionParser("RunCommand(\"where.exe\")").ParseExpression());
