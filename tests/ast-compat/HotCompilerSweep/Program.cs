@@ -8,12 +8,31 @@ string[] negativePatterns = ["-error.xps", "-invalid.xps", "-ambiguous.xps", "-d
 static bool IsNegative(string path, string[] patterns) =>
     patterns.Any(pattern => Path.GetFileName(path).EndsWith(pattern, StringComparison.OrdinalIgnoreCase));
 
-var files = new[] { Path.Combine(root, "samples"), Path.Combine(root, "demo") }
-    .Where(Directory.Exists)
-    .SelectMany(directory => Directory.EnumerateFiles(directory, "*.xps", SearchOption.AllDirectories))
-    .Distinct(StringComparer.OrdinalIgnoreCase)
-    .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-    .ToArray();
+var fullSweep = args.Any(arg => string.Equals(arg, "--full", StringComparison.OrdinalIgnoreCase));
+string[] representativeRelativePaths =
+[
+    "samples/hello.xps",
+    "samples/core-language.xps",
+    "samples/if-layouts.xps",
+    "samples/functions.xps",
+    "samples/escaped-quotes.xps",
+    "samples/language-extensions.xps",
+    "demo/console/hello.xps"
+];
+
+var files = fullSweep
+    ? new[] { Path.Combine(root, "samples"), Path.Combine(root, "demo") }
+        .Where(Directory.Exists)
+        .SelectMany(directory => Directory.EnumerateFiles(directory, "*.xps", SearchOption.AllDirectories))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+        .ToArray()
+    : representativeRelativePaths
+        .Select(relative => Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)))
+        .Where(File.Exists)
+        .ToArray();
+
+Console.WriteLine($"AST_REPOSITORY_MODE={(fullSweep ? "full" : "representative")}");
 var positive = files.Where(path => !IsNegative(path, negativePatterns)).ToArray();
 var negative = files.Where(path => IsNegative(path, negativePatterns)).ToArray();
 
