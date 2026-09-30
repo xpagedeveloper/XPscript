@@ -7,6 +7,7 @@ on:
       - 'src/XPScript.Compiler/**'
       - 'src/XPScript.Compiler.Core/**'
       - 'samples/is-nothing-unary-not-regression.xps'
+      - 'samples/function-not-byref-regression.xps'
       - '.github/workflows/focused-compiler-regression.yml'
   workflow_dispatch:
 
@@ -42,3 +43,32 @@ jobs:
           Write-Host $output
           if ($process.ExitCode -ne 0) { exit $process.ExitCode }
           if ($output -notmatch 'IS-NOTHING=OK') { throw 'Is Nothing unary Not regression failed.' }
+
+  function-not-byref:
+    name: Boolean function Not regression
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile focused regression
+        shell: pwsh
+        run: dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/function-not-byref-regression.xps -o ./out/focused/function-not --runtime=false
+      - name: Run focused regression
+        shell: pwsh
+        run: |
+          $exe = if (Test-Path ./out/focused/function-not.exe) { './out/focused/function-not.exe' } else { './out/focused/function-not' }
+          $stdout = Join-Path $env:RUNNER_TEMP 'function-not-output.txt'
+          $stderr = Join-Path $env:RUNNER_TEMP 'function-not-error.txt'
+          $process = Start-Process -FilePath $exe -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $output = (Get-Content $stdout -Raw) + (Get-Content $stderr -Raw)
+          Write-Host $output
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
+          if ($output -notmatch 'FUNCTION-NOT-BYREF=OK') { throw 'Boolean function Not regression failed.' }
