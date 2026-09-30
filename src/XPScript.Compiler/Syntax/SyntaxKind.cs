@@ -32,5 +32,9 @@ public enum SyntaxKind
     ThenKeyword,
     ElseKeyword,
     ElseIfKeyword,
-    EndKeyword
+    EndKeyword,
+    LiteralExpression,
+    NameExpression,
+    UnaryExpression,
+    BinaryExpression
 }
