@@ -1,0 +1,7 @@
+Function AddNumbers(a As Long, b As Long) As Long
+    AddNumbers = a + b
+End Function
+
+Sub Main()
+    Print AddNumbers(20, 22)
+End Sub
