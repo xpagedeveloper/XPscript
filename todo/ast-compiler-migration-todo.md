@@ -1,0 +1,301 @@
+# XPscript AST Compiler Migration TODO
+
+## Goal
+
+Investigate and incrementally introduce a real XPscript compiler front-end based on tokens, a syntax tree, semantic binding and structured code generation.
+
+The migration must preserve existing XPscript behavior and runtime compatibility. Do not replace the current compiler in one large change.
+
+Target architecture:
+
+```text
+XPscript source
+  -> source preprocessing
+  -> lexer
+  -> tokens
+  -> parser
+  -> XPscript syntax tree (AST)
+  -> semantic analysis / binder
+  -> bound tree
+  -> diagnostics
+  -> C# emitter
+  -> Roslyn
+  -> .NET output
+```
+
+The existing runtime libraries, packaging, source mapping, web/desktop/mobile targets and Roslyn backend should be reused where practical.
+
+## Current architecture investigation
+
+- [ ] Document the complete current compiler pipeline from source input to generated assembly.
+- [ ] Map all source preprocessors that run before `AdvancedXPScriptTranspiler`.
+- [ ] Inventory parsing responsibilities currently implemented by `AdvancedXPScriptTranspiler`.
+- [ ] Inventory regex-based syntax recognition and string rewriting in the compiler.
+- [ ] Identify places where parsing, semantic analysis and C# emission are currently mixed.
+- [ ] Identify syntax validation currently delegated to generated C# / Roslyn.
+- [ ] Identify type and symbol validation currently delegated to generated C# / Roslyn.
+- [ ] Map existing source-map behavior and requirements.
+- [ ] Map compiler diagnostics and machine/MCP diagnostic contracts that must remain compatible.
+- [ ] Inventory compiler tests by language feature and compiler phase.
+- [ ] Document syntax that is intentionally compatible with LotusScript/VB-like semantics.
+- [ ] Produce a migration-risk list before replacing any production parsing path.
+
+## Migration rules
+
+- [ ] Keep the current compiler operational while the AST implementation is introduced.
+- [ ] Add focused tests before migrating each syntax feature.
+- [ ] When a test fails, follow the repository test rule: create or move a small focused reproducer so it runs before the larger test.
+- [ ] Never mark a syntax feature migrated until old and new paths have been compared against representative fixtures.
+- [ ] Preserve public compiler diagnostics where compatibility is required.
+- [ ] Keep normal compiler and machine/MCP compiler behavior synchronized.
+- [ ] Do not remove legacy parsing code until its replacement has dedicated tests and integration coverage.
+- [ ] Prefer small commits organized by compiler phase or language feature.
+
+## Phase 1: Syntax model
+
+- [ ] Define a common `SyntaxNode` base abstraction.
+- [ ] Define source spans on every syntax node.
+- [ ] Define `CompilationUnitSyntax`.
+- [ ] Define declaration node hierarchy.
+- [ ] Define statement node hierarchy.
+- [ ] Define expression node hierarchy.
+- [ ] Define type syntax nodes.
+- [ ] Define parameter and argument syntax nodes.
+- [ ] Decide how comments/trivia are represented.
+- [ ] Decide whether malformed/incomplete syntax is retained using missing tokens/error nodes.
+- [ ] Add syntax-tree debug/dump output for tests and diagnostics.
+
+Initial expression nodes should cover at least:
+
+- [ ] LiteralExpressionSyntax
+- [ ] NameExpressionSyntax
+- [ ] UnaryExpressionSyntax
+- [ ] BinaryExpressionSyntax
+- [ ] ParenthesizedExpressionSyntax
+- [ ] CallExpressionSyntax
+- [ ] MemberAccessExpressionSyntax
+- [ ] IndexExpressionSyntax
+- [ ] NewExpressionSyntax
+- [ ] ArrayExpressionSyntax
+
+Initial statement nodes should cover at least:
+
+- [ ] AssignmentStatementSyntax
+- [ ] Expression/CallStatementSyntax
+- [ ] DimStatementSyntax
+- [ ] SetStatementSyntax
+- [ ] IfStatementSyntax
+- [ ] ForStatementSyntax
+- [ ] ForAllStatementSyntax
+- [ ] WhileStatementSyntax
+- [ ] DoStatementSyntax
+- [ ] SelectStatementSyntax
+- [ ] Return/Exit statements
+
+Initial declaration nodes should cover at least:
+
+- [ ] SubDeclarationSyntax
+- [ ] FunctionDeclarationSyntax
+- [ ] ClassDeclarationSyntax
+- [ ] FieldDeclarationSyntax
+- [ ] PropertyDeclarationSyntax
+- [ ] Constructor/Destructor declarations
+
+## Phase 2: Lexer
+
+- [ ] Define `SyntaxKind` / token kinds.
+- [ ] Implement identifiers and keywords.
+- [ ] Implement numeric literals.
+- [ ] Implement string literals and XPscript escaping rules.
+- [ ] Implement punctuation.
+- [ ] Implement operators.
+- [ ] Implement newline handling.
+- [ ] Implement comments.
+- [ ] Preserve exact source spans.
+- [ ] Produce structured lexical diagnostics.
+- [ ] Add focused lexer tests for every token family.
+- [ ] Add malformed-token tests.
+- [ ] Add regression fixtures for quotes and comments.
+
+## Phase 3: Expression parser first
+
+Expressions are the first migration target because the current transpiler performs substantial textual expression rewriting and expression precedence directly affects correctness.
+
+- [ ] Implement precedence-based expression parsing.
+- [ ] Define precedence and associativity for every XPscript operator.
+- [ ] Implement unary `Not`, unary plus and unary minus.
+- [ ] Implement arithmetic operators.
+- [ ] Implement comparison operators.
+- [ ] Implement boolean operators.
+- [ ] Implement parentheses.
+- [ ] Implement calls.
+- [ ] Implement member access.
+- [ ] Implement indexing.
+- [ ] Implement array expressions.
+- [ ] Implement `New`.
+- [ ] Implement zero-argument runtime function syntax.
+- [ ] Test nested calls and member access.
+- [ ] Test mixed unary/binary precedence.
+- [ ] Add focused regression for `If Not RunCommand(...) Then`.
+- [ ] Add equivalent regression for `If RunCommand(...) = False Then`.
+- [ ] Verify both produce the intended boolean semantics.
+- [ ] Compare expression output against the legacy transpiler on existing fixtures.
+
+## Phase 4: Statement parser
+
+- [ ] Parse variable declarations.
+- [ ] Parse assignments and `Set`.
+- [ ] Parse single-line and block `If`.
+- [ ] Parse `ElseIf` and `Else`.
+- [ ] Parse loops.
+- [ ] Parse `Select Case`.
+- [ ] Parse calls used as statements.
+- [ ] Parse error-handling statements.
+- [ ] Parse event-related statements.
+- [ ] Parse file/runtime-specific statements that currently have compiler rewrites.
+- [ ] Add recovery at statement boundaries so one syntax error does not destroy the remaining tree.
+- [ ] Add focused tests per statement family.
+
+## Phase 5: Declarations and program structure
+
+- [ ] Parse Subs and Functions.
+- [ ] Parse parameters including ByRef/ByVal semantics.
+- [ ] Parse return types.
+- [ ] Parse Classes and inheritance syntax.
+- [ ] Parse fields.
+- [ ] Parse properties.
+- [ ] Parse constructors and destructors.
+- [ ] Parse visibility modifiers.
+- [ ] Parse application-level declarations.
+- [ ] Parse target-specific entry points.
+- [ ] Validate block terminators structurally rather than with transpiler state.
+
+## Phase 6: Symbols and semantic binder
+
+- [ ] Define symbol base model.
+- [ ] Define variable/local symbols.
+- [ ] Define parameter symbols.
+- [ ] Define procedure symbols.
+- [ ] Define class/type symbols.
+- [ ] Define property/field symbols.
+- [ ] Integrate compiler-owned runtime/public symbol catalog.
+- [ ] Implement lexical scopes.
+- [ ] Implement name lookup.
+- [ ] Implement duplicate declaration diagnostics.
+- [ ] Implement unknown symbol diagnostics.
+- [ ] Implement member lookup.
+- [ ] Implement overload/call binding where required.
+- [ ] Implement ByRef/ByVal validation.
+- [ ] Implement assignment compatibility.
+- [ ] Implement return-type validation.
+
+## Phase 7: Bound tree and types
+
+- [ ] Define `BoundNode` hierarchy separate from syntax.
+- [ ] Bind literals to XPscript types.
+- [ ] Bind names to symbols.
+- [ ] Bind unary operators.
+- [ ] Bind binary operators.
+- [ ] Bind calls.
+- [ ] Bind member access.
+- [ ] Bind assignments.
+- [ ] Bind control flow.
+- [ ] Define conversion rules.
+- [ ] Define Variant/dynamic semantics explicitly.
+- [ ] Define Object semantics explicitly.
+- [ ] Define Null/Empty behavior needed by XPscript.
+- [ ] Define array/list typing behavior.
+- [ ] Move applicable type diagnostics from Roslyn-derived failures into XPscript semantic diagnostics.
+
+## Phase 8: C# emitter
+
+- [ ] Implement C# generation from bound nodes.
+- [ ] Keep emitter free of XPscript parsing logic.
+- [ ] Reuse existing runtime APIs rather than reimplementing runtime behavior.
+- [ ] Preserve generated source mapping.
+- [ ] Preserve target-specific generated code requirements.
+- [ ] Preserve generated runtime integration.
+- [ ] Keep Roslyn as the .NET backend and final generated-C# validator.
+- [ ] Add snapshot/golden tests for generated C# where useful.
+
+## Phase 9: Diagnostics and tooling
+
+- [ ] Attach source span and source file to all parser diagnostics.
+- [ ] Attach source span and source file to semantic diagnostics.
+- [ ] Map new diagnostics into existing `CompileDiagnostic`.
+- [ ] Preserve stable XPS diagnostic codes where applicable.
+- [ ] Add new codes only with documented categories and tests.
+- [ ] Update compiler machine interface together with normal compiler diagnostics.
+- [ ] Update MCP compiler output together with normal compiler diagnostics.
+- [ ] Expose syntax-tree information internally in a form suitable for future IDE tooling.
+- [ ] Investigate parser APIs for completion, hover, go-to-definition and rename.
+- [ ] Investigate incremental parsing only after the non-incremental AST is stable.
+
+## Phase 10: Compatibility harness
+
+- [ ] Build a corpus of existing XPscript samples and test programs.
+- [ ] Run each compatible source through legacy and AST compiler paths.
+- [ ] Compare compile success/failure.
+- [ ] Compare diagnostic locations and categories.
+- [ ] Compare observable runtime output.
+- [ ] Compare generated target behavior for console.
+- [ ] Compare web target behavior.
+- [ ] Compare desktop/Avalonia behavior.
+- [ ] Compare Android/mobile behavior as support matures.
+- [ ] Add explicit compatibility fixtures for LotusScript-like edge cases.
+- [ ] Record intentional behavior changes instead of silently changing semantics.
+
+## Phase 11: Incremental rollout
+
+- [ ] Add an internal/experimental switch for AST compilation.
+- [ ] Migrate expressions first.
+- [ ] Migrate simple statements.
+- [ ] Migrate control-flow statements.
+- [ ] Migrate procedures.
+- [ ] Migrate classes/properties.
+- [ ] Migrate remaining special compiler constructs.
+- [ ] Run focused tests after every migrated feature.
+- [ ] Run compiler subsystem suites before broader full tests.
+- [ ] Make AST path the default only after compatibility gates pass.
+- [ ] Keep temporary legacy fallback only where explicitly documented.
+- [ ] Remove legacy parser/transpiler paths after all supported syntax is migrated.
+- [ ] Remove obsolete regex/string rewriting after replacement coverage exists.
+
+## Investigation questions
+
+- [ ] Should the lexer/parser be handwritten or use a parser-generator library?
+- [ ] If considering a dependency, evaluate maintenance, license, performance, diagnostics, recovery and incremental parsing support.
+- [ ] Should syntax nodes be immutable?
+- [ ] Should tokens be first-class syntax nodes similar to Roslyn?
+- [ ] How much trivia must be retained for future formatting/refactoring?
+- [ ] Which current preprocessors belong before parsing, and which should become syntax/semantic features?
+- [ ] Which existing transformations should become lowering passes over the bound tree?
+- [ ] Which XPscript semantics differ from C# and therefore must never be delegated to Roslyn?
+- [ ] Can generated C# source maps become simpler when every XPscript node has a source span?
+- [ ] What compiler APIs should be public/internal to support a future language server?
+- [ ] What performance baseline must the AST compiler meet or beat?
+
+## Initial proof of concept acceptance criteria
+
+The first AST proof of concept is complete when:
+
+- [ ] A lexer can tokenize a representative XPscript expression with exact spans.
+- [ ] An expression parser produces a deterministic syntax tree.
+- [ ] Operator precedence is covered by focused tests.
+- [ ] `Not RunCommand(...)` is represented as a unary expression over the call result.
+- [ ] `RunCommand(...) = False` is represented as a comparison expression.
+- [ ] Both forms can be bound to boolean semantics without relying on C# parsing to determine XPscript meaning.
+- [ ] The proof of concept can emit valid C# for those expressions.
+- [ ] Existing production compilation remains unchanged unless the experimental path is explicitly selected.
+
+## Definition of done for full migration
+
+- [ ] All supported XPscript syntax is represented by the XPscript syntax tree.
+- [ ] Parsing no longer depends on line-by-line regex/string transformation.
+- [ ] Semantic analysis operates on XPscript syntax/bound nodes.
+- [ ] C# generation operates from the bound representation.
+- [ ] Roslyn is used as the C#/.NET backend, not as the primary XPscript parser/type checker.
+- [ ] Existing supported runtime behavior passes compatibility tests.
+- [ ] Normal compiler and machine/MCP interfaces report consistent diagnostics.
+- [ ] Legacy parser/transpiler implementation is removed or reduced to explicitly justified compatibility code.
+- [ ] Compiler architecture and extension guidance are documented.
