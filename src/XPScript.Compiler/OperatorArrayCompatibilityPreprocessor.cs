@@ -188,8 +188,8 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
             {
                 var isNothingLength = Regex.Match(suffix, @"^\\s+Is\\s+Nothing\\b", RegexOptions.IgnoreCase).Length;
                 var full = line[valueStart..(valueEnd + isNothingLength)];
-                var replacement = $"!({full[0..].Replace(" Is Nothing", " is null", StringComparison.OrdinalIgnoreCase)})";
-                line = line[..match.Index] + replacement + line[(valueEnd + isNothingLength)..];
+                var isNothingReplacement = $"!({full[0..].Replace(" Is Nothing", " is null", StringComparison.OrdinalIgnoreCase)})";
+                line = line[..match.Index] + isNothingReplacement + line[(valueEnd + isNothingLength)..];
                 match = Regex.Match(line, @"\\bNot\\b(?!hing\\b)\\s+", RegexOptions.IgnoreCase);
                 continue;
             }
