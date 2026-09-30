@@ -48,6 +48,9 @@ The existing runtime libraries, packaging, source mapping, web/desktop/mobile ta
 - [ ] Never mark a syntax feature migrated until old and new paths have been compared against representative fixtures.
 - [ ] Preserve public compiler diagnostics where compatibility is required.
 - [ ] Keep normal compiler and machine/MCP compiler behavior synchronized.
+- [ ] CLI compilation and MCP/AI machine compilation must consume the same lexer, parser, AST, semantic binder and bound tree; do not create a second language implementation for machine compilation.
+- [ ] Every migrated syntax/semantic feature must be verified through both normal compilation and MCP/AI machine compilation when that feature is exposed through the machine interface.
+- [ ] Any AST diagnostic change must be verified in both human-readable compiler output and the structured machine/MCP diagnostic contract.
 - [ ] Do not remove legacy parsing code until its replacement has dedicated tests and integration coverage.
 - [ ] Prefer small commits organized by compiler phase or language feature.
 
@@ -227,6 +230,7 @@ Expressions are the first migration target because the current transpiler perfor
 - [ ] Add new codes only with documented categories and tests.
 - [ ] Update compiler machine interface together with normal compiler diagnostics.
 - [ ] Update MCP compiler output together with normal compiler diagnostics.
+- [ ] Add paired diagnostic tests that feed the same invalid XPscript source through CLI compilation and MCP/AI machine compilation and verify equivalent diagnostic code, source span and meaning.
 - [ ] Expose syntax-tree information internally in a form suitable for future IDE tooling.
 - [ ] Investigate parser APIs for completion, hover, go-to-definition and rename.
 - [ ] Investigate incremental parsing only after the non-incremental AST is stable.
@@ -237,6 +241,9 @@ Expressions are the first migration target because the current transpiler perfor
 - [ ] Run each compatible source through legacy and AST compiler paths.
 - [ ] Compare compile success/failure.
 - [ ] Compare diagnostic locations and categories.
+- [ ] Run representative corpus cases through the MCP/AI machine compiler as well as the normal compiler.
+- [ ] Compare CLI and machine/MCP compile success/failure for the same source.
+- [ ] Compare CLI and machine/MCP structured diagnostics for the same source.
 - [ ] Compare observable runtime output.
 - [ ] Compare generated target behavior for console.
 - [ ] Compare web target behavior.
@@ -287,6 +294,7 @@ The first AST proof of concept is complete when:
 - [ ] Both forms can be bound to boolean semantics without relying on C# parsing to determine XPscript meaning.
 - [ ] The proof of concept can emit valid C# for those expressions.
 - [ ] Existing production compilation remains unchanged unless the experimental path is explicitly selected.
+- [ ] The proof of concept demonstrates that both CLI compilation and MCP/AI machine compilation can call the same AST front-end without duplicating parsing or semantic logic.
 
 ## Definition of done for full migration
 
@@ -296,6 +304,6 @@ The first AST proof of concept is complete when:
 - [ ] C# generation operates from the bound representation.
 - [ ] Roslyn is used as the C#/.NET backend, not as the primary XPscript parser/type checker.
 - [ ] Existing supported runtime behavior passes compatibility tests.
-- [ ] Normal compiler and machine/MCP interfaces report consistent diagnostics.
+- [ ] Normal compiler and machine/MCP interfaces use the same AST/binder implementation and report consistent diagnostics.
 - [ ] Legacy parser/transpiler implementation is removed or reduced to explicitly justified compatibility code.
 - [ ] Compiler architecture and extension guidance are documented.
