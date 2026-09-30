@@ -237,7 +237,7 @@ string CanonicalizeCSharpExpression(string value)
             CSharpInvocationExpressionSyntax invocation => invocation
                 .WithExpression(RemoveRedundantParentheses(invocation.Expression))
                 .WithArgumentList(invocation.ArgumentList.WithArguments(
-                    Microsoft.CodeAnalysis.SyntaxFactory.SeparatedList(
+                    CSharpSyntaxFactory.SeparatedList(
                         invocation.ArgumentList.Arguments.Select(a => a.WithExpression(RemoveRedundantParentheses(a.Expression)))))),
             _ => expression
         };
