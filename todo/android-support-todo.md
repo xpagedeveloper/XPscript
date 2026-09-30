@@ -52,10 +52,11 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Route uncaught XPScript runtime errors to Android logging.
 - [ ] Add a minimal failure sample that intentionally raises a runtime error and verify the error reaches the debug path.
 - [ ] Include source file and line information in Android runtime diagnostics when available.
-- [ ] Define headless host exit semantics.
+- [x] Define headless host exit semantics with `XPSCRIPT-EXIT=0` for success and `XPSCRIPT-EXIT=1` for uncaught runtime failure.
 - [x] Make `Platform()` return `Android` when running under the .NET Android runtime.
 - [x] Verify normal runtime code does not depend on Avalonia.
 - [x] Add automated compiler/runtime tests that do not need hardware.
+- [x] Run a focused Android CLI/completion regression before the broader Android build checks.
 - [ ] Add an optional physical-device integration test.
 - [x] Add the initial Android source/compiler regression to Platform FullTest without requiring hardware.
 - [ ] Keep device-required tests separate and explicitly opt-in.
