@@ -45,6 +45,10 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  # Keep the smallest regression for the latest compiler failure first.
+  $isNothing = Run-Xps ./samples/is-nothing-unary-not-regression.xps is-nothing-unary-not-regression
+  if ($isNothing.Output -notmatch 'IS-NOTHING=OK') { throw 'Is Nothing unary-Not rewrite regression failed.' }
+
   # Keep the smallest regression for the latest runtime/compiler interaction first.
   $functionNotByRef = Run-Xps ./samples/function-not-byref-regression.xps function-not-byref-regression
   if ($functionNotByRef.Output -notmatch 'FUNCTION-NOT-BYREF=OK') { throw 'Boolean default-ByRef function under Not regression failed.' }
