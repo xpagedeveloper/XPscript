@@ -1,6 +1,6 @@
 Sub Main()
-    Dim value As Variant
-    value = Nothing
+    Dim value As Object
+    Set value = Nothing
 
     If value Is Nothing Then
         Print "IS-NOTHING=OK"
