@@ -36,7 +36,7 @@ Follow `knowledge/test-failure-feedback-rule.md` for every Android test.
 The first implementation must stay intentionally small. Do not start with Avalonia.
 
 - [x] Add an Android target/host that executes XPScript without Avalonia UI.
-- [ ] Add the smallest Android smoke application as the first test.
+- [x] Add the smallest Android smoke application as the first test.
 - [x] Start with `Print "Hello from XPScript on Android"`.
 - [x] Use a dedicated sample `samples/android-debug-print.xps`.
 - [x] Target ARM64 first for the physical test device.
@@ -48,7 +48,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Route XPScript `Print` output to Android logging.
 - [x] Make the output visible through adb/logcat (`xpscript android logs`); development debugger integration remains future work.
 - [x] Use an unambiguous XPScript log tag.
-- [ ] Add a second minimal regression that emits multiple lines and values so output ordering and formatting are verified.
+- [x] Add a second minimal regression that emits multiple lines and values so output ordering and formatting are verified.
 - [x] Route uncaught XPScript runtime errors to Android logging.
 - [ ] Add a minimal failure sample that intentionally raises a runtime error and verify the error reaches the debug path.
 - [ ] Include source file and line information in Android runtime diagnostics when available.
