@@ -36,7 +36,9 @@ jobs:
         shell: pwsh
         run: |
           $exe = if (Test-Path ./out/focused/is-nothing.exe) { './out/focused/is-nothing.exe' } else { './out/focused/is-nothing' }
-          $output = & $exe 2>&1 | Out-String
+          $outputFile = Join-Path $env:RUNNER_TEMP 'is-nothing-output.txt'
+          $process = Start-Process -FilePath $exe -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outputFile -RedirectStandardError (Join-Path $env:RUNNER_TEMP 'is-nothing-error.txt')
+          $output = (Get-Content $outputFile -Raw) + (Get-Content (Join-Path $env:RUNNER_TEMP 'is-nothing-error.txt') -Raw)
           Write-Host $output
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
           if ($output -notmatch 'IS-NOTHING=OK') { throw 'Is Nothing unary Not regression failed.' }
