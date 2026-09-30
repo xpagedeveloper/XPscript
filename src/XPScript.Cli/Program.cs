@@ -32,6 +32,7 @@ try
         "new" => XpsScaffolder.Run(args[1..]),
         "openapi" => XPScript.Cli.XpsOpenApiCommand.Run(args[1..]),
         "service" => await XPScript.Cli.ServiceCommand.RunAsync(args[1..]),
+        "android" => await XPScript.Cli.AndroidCommand.RunAsync(args[1..]),
         "web" => await RunWebAsync(args[1..]),
         "fastcgi" => await RunFastCgiAsync(args[1..]),
         _ => Fail("Unknown command: " + args[0])
@@ -520,6 +521,7 @@ Usage:
   xpscript new <rest|web|desktop|cli> <directory>
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
   xpscript service install <compiled-service> --name NAME --display-name "DISPLAY NAME" [--start auto|manual|disabled]
+  xpscript android devices
   xpscript web <directory> [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
                 [--health] [--metrics] [--operational-allow CIDR ...] [--sessions]
@@ -537,6 +539,7 @@ Command model:
   new      Create a REST, web, desktop or CLI starter in a required target directory. Use . for the current directory.
   openapi  Generate XPScript REST server source from OpenAPI 3.0/3.1 YAML or JSON.
   service  Install compiled XPScript services using the native service manager.
+  android  Discover and deploy to Android devices and emulators.
   web      Run the standalone Kestrel runtime.
   fastcgi  Run the FastCGI web runtime.
 
@@ -566,6 +569,7 @@ Examples:
   xpscript run hello.xps --info
   xpscript run hello.xps --Args "first second"
   xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto
+  xpscript android devices
   xpscript web ./site
   xpscript web --config ./production.cfg
   xpscript web --root ./site --sessions
