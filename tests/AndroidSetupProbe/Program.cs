@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 
 var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 var setup = File.ReadAllText(Path.Combine(root, "Android", "setup-android-dev.xps"));
+var emulator = File.ReadAllText(Path.Combine(root, "Android", "test-emulator.ps1"));
 
 foreach (var expected in new[]
 {
@@ -25,6 +26,23 @@ foreach (var expected in new[]
 {
     if (!setup.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android setup regression is missing: " + expected);
+}
+
+foreach (var expected in new[]
+{
+    "Resolve-AndroidTool \"adb\"",
+    "Resolve-AndroidTool \"emulator\"",
+    "-list-avds",
+    "Multiple AVDs found",
+    "sys.boot_completed",
+    "adb install failed",
+    "com.xpscript.debugapp",
+    "Hello from XPScript on Android",
+    "Expected XPScript Android log output was not observed"
+})
+{
+    if (!emulator.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android emulator harness regression is missing: " + expected);
 }
 
 var functionNames = Regex.Matches(setup, @"(?im)^\s*Function\s+(\w+)\s*\(")
