@@ -370,11 +370,13 @@ internal static class XPScriptArchiveExtendedReader
             {
                 var decompress = Enum.Parse(modeType, "Decompress", ignoreCase: true);
                 var ctor = streamType.GetConstructors()
-                    .FirstOrDefault(c =>
+                    .Where(c =>
                     {
                         var p = c.GetParameters();
                         return p.Length >= 2 && p[0].ParameterType == typeof(System.IO.Stream) && p[1].ParameterType == modeType;
-                    });
+                    })
+                    .OrderBy(c => c.GetParameters().Length)
+                    .FirstOrDefault();
                 if (ctor is not null)
                 {
                     var p = ctor.GetParameters();
