@@ -20,37 +20,55 @@ Sub Main()
             Exit Sub
         End If
     Else
+        Print "[CHECK] Checking whether .NET 10 SDK is already installed..."
+        If RunCommand("dotnet", Array("--version"))=true Then
+            Print "[OK] A .NET SDK is already installed. Skipping .NET SDK winget installation."
+        Else
+            Print "[INFO] .NET SDK was not found. It will be installed."
+        End If
+
         If RunCommand("where.exe", Array("winget"))=false Then
             Print "[ERROR] winget was not found. Install App Installer before continuing."
             Exit Sub
         End If
 
-        Print ""
-        Print "[INSTALL] Installing or updating .NET 10 SDK with winget."
-        Print "[INSTALL] winget may download packages and can take several minutes."
-        Print "[INSTALL] Waiting for winget to finish..."
-        If RunCommand("winget", Array("install", "--id", "Microsoft.DotNet.SDK.10", "--exact", "--accept-package-agreements", "--accept-source-agreements"))=false Then
-            Print "[ERROR] .NET 10 SDK installation failed."
-            Exit Sub
+        If RunCommand("dotnet", Array("--version"))=false Then
+            Print ""
+            Print "[INSTALL] Installing .NET 10 SDK with winget."
+            Print "[INSTALL] winget may download packages and can take several minutes."
+            Print "[INSTALL] Waiting for winget to finish..."
+            If RunCommand("winget", Array("install", "--id", "Microsoft.DotNet.SDK.10", "--exact", "--accept-package-agreements", "--accept-source-agreements"))=false Then
+                Print "[ERROR] .NET 10 SDK installation failed."
+                Exit Sub
+            End If
+            Print "[OK] .NET 10 SDK winget command completed."
         End If
-
-        Print "[OK] .NET 10 SDK winget command completed."
         Print ""
-        Print "[INSTALL] Installing or updating Android Studio with winget."
-        Print "[INSTALL] This is a large package and may take several minutes."
-        Print "[INSTALL] Waiting for winget to finish..."
-        If RunCommand("winget", Array("install", "--id", "Google.AndroidStudio", "--exact", "--accept-package-agreements", "--accept-source-agreements"))=false Then
-            Print "[ERROR] Android Studio installation failed."
-            Exit Sub
+        Print "[CHECK] Checking whether Android Studio is already installed..."
+        If WingetPackageInstalled("Google.AndroidStudio")=true Then
+            Print "[OK] Android Studio is already installed. Skipping installation."
+        Else
+            Print "[INSTALL] Android Studio was not found. Installing with winget."
+            Print "[INSTALL] This is a large package and may take several minutes."
+            Print "[INSTALL] Waiting for winget to finish..."
+            If RunCommand("winget", Array("install", "--id", "Google.AndroidStudio", "--exact", "--accept-package-agreements", "--accept-source-agreements"))=false Then
+                Print "[ERROR] Android Studio installation failed."
+                Exit Sub
+            End If
+            Print "[OK] Android Studio winget command completed."
         End If
-
-        Print "[OK] Android Studio winget command completed."
         Print ""
-        Print "[INSTALL] Installing the .NET Android workload."
-        Print "[INSTALL] This may download Android/.NET components and can take several minutes."
-        If RunCommand("dotnet", Array("workload", "install", "android"))=false Then
-            Print "[ERROR] .NET Android workload installation failed."
-            Exit Sub
+        Print "[CHECK] Checking whether the .NET Android workload is already installed..."
+        If AndroidWorkloadInstalled()=true Then
+            Print "[OK] .NET Android workload is already installed. Skipping installation."
+        Else
+            Print "[INSTALL] Android workload was not found. Installing it now."
+            Print "[INSTALL] This may download Android/.NET components and can take several minutes."
+            If RunCommand("dotnet", Array("workload", "install", "android"))=false Then
+                Print "[ERROR] .NET Android workload installation failed."
+                Exit Sub
+            End If
+            Print "[OK] .NET Android workload installation completed."
         End If
     End If
 
@@ -68,11 +86,17 @@ Sub Main()
     If sdk = "" Then sdk = Environ("LOCALAPPDATA") & "\Android\Sdk"
 
     Print "[VERIFY] Android SDK candidate: " & sdk
+    If IsDir(sdk)=false Then
+        Print "[WARN] Android SDK directory was not found: " & sdk
+        Print "Open Android Studio SDK Manager and install an Android SDK."
+        Exit Sub
+    End If
+    Print "[OK] Android SDK directory found."
 
     Dim adb As String
     adb = sdk & "\platform-tools\adb.exe"
 
-    If Dir(adb) = "" Then
+    If IsFile(adb)=false Then
         Print "[WARN] adb.exe was not found: " & adb
         Print "Open Android Studio SDK Manager and install Android SDK Platform-Tools."
         Exit Sub
@@ -123,4 +147,27 @@ Function RunCommand(executable As String, arguments As Variant) As Boolean
 
     Print "[OK] Command completed with exit code 0."
     RunCommand = True
+End Function
+
+
+Function WingetPackageInstalled(packageId As String) As Boolean
+    Dim checkResult As Variant
+    On Error Resume Next
+    checkResult = ShellExecute("winget", Array("list", "--id", packageId, "--exact", "--accept-source-agreements"))
+    If Err <> 0 Then
+        WingetPackageInstalled = False
+        Exit Function
+    End If
+    WingetPackageInstalled = checkResult.ExitCode = 0 And InStr(checkResult.Output, packageId) > 0
+End Function
+
+Function AndroidWorkloadInstalled() As Boolean
+    Dim checkResult As Variant
+    On Error Resume Next
+    checkResult = ShellExecute("dotnet", Array("workload", "list"))
+    If Err <> 0 Then
+        AndroidWorkloadInstalled = False
+        Exit Function
+    End If
+    AndroidWorkloadInstalled = checkResult.ExitCode = 0 And InStr(checkResult.Output, "android") > 0
 End Function
