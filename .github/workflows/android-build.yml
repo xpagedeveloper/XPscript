@@ -36,11 +36,14 @@ jobs:
       - name: Build minimal XPScript Android APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print --runtime=false --rid android-arm64 --debug
 
-      - name: Verify debug APK exists
+      - name: Build x64 emulator APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print-emulator --runtime=false --rid android-x64 --debug
+
+      - name: Verify debug APKs exist
         shell: pwsh
         run: |
           $apks = @(Get-ChildItem ./out -Recurse -Filter *.apk -File)
-          if ($apks.Count -eq 0) {
-            throw 'Android compiler did not produce an APK.'
+          if ($apks.Count -lt 2) {
+            throw 'Android compiler did not produce both ARM64 device and x64 emulator APKs.'
           }
           $apks | ForEach-Object { Write-Host "ANDROID_APK=$($_.FullName)" }
