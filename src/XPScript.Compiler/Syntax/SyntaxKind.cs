@@ -33,11 +33,13 @@ public enum SyntaxKind
     ElseKeyword,
     ElseIfKeyword,
     EndKeyword,
+    NewKeyword,
     LiteralExpression,
     NameExpression,
     UnaryExpression,
     BinaryExpression,
     ParenthesizedExpression,
     CallExpression,
-    MemberAccessExpression
+    MemberAccessExpression,
+    NewExpression
 }
