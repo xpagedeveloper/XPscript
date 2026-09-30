@@ -785,7 +785,17 @@ internal sealed class XPScriptArchive
             var method = factoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
                 .FirstOrDefault(m => m.Name == "OpenArchive" && m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == typeof(string) && m.GetParameters()[1].ParameterType == optionsType)
                 ?? throw new MissingMethodException("SharpCompress ArchiveFactory.OpenArchive(string, ReaderOptions) was not found.");
-            var archive = method.Invoke(null, [_path!, options]) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open the archive.");
+            object archive;
+            try
+            {
+                archive = method.Invoke(null, [_path!, options]) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open the archive.");
+            }
+            catch (System.Reflection.TargetInvocationException) when (Format.Equals("BZ2", StringComparison.OrdinalIgnoreCase) || Format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase))
+            {
+                // Raw BZip2 is a compressed stream rather than a multi-entry archive.
+                // Wrap it as a synthetic single-entry archive so the public Archive read/extract surface remains consistent.
+                return OpenExtendedCompressedStreamArchive(assembly, optionsType, options, "BZip2");
+            }
             return new ExtendedArchiveHandle(archive);
         }
         catch (System.Reflection.TargetInvocationException ex)
@@ -795,6 +805,25 @@ internal sealed class XPScriptArchive
         catch (Exception ex) when (ex is not XPScriptRuntimeException)
         {
             throw new XPScriptRuntimeException(5, "Unable to load SharpCompress extended archive support: " + ex.Message);
+        }
+    }
+
+    private ExtendedArchiveHandle OpenExtendedCompressedStreamArchive(System.Reflection.Assembly assembly, Type optionsType, object options, string formatName)
+    {
+        var factoryType = assembly.GetType("SharpCompress.Readers.ReaderFactory", throwOnError: true)!;
+        var open = factoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .FirstOrDefault(m => m.Name == "OpenReader" && m.GetParameters().Length == 2 && typeof(System.IO.Stream).IsAssignableFrom(m.GetParameters()[0].ParameterType) && m.GetParameters()[1].ParameterType == optionsType)
+            ?? throw new MissingMethodException("SharpCompress ReaderFactory.OpenReader(Stream, ReaderOptions) was not found.");
+        var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read);
+        try
+        {
+            var reader = open.Invoke(null, [stream, options]) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open the " + formatName + " stream.");
+            return new ExtendedArchiveHandle(new SingleEntryReaderArchive(reader, stream, System.IO.Path.GetFileNameWithoutExtension(_path!)));
+        }
+        catch
+        {
+            stream.Dispose();
+            throw;
         }
     }
 
@@ -936,6 +965,55 @@ internal sealed class XPScriptArchive
             Bytes = bytes;
             Modified = modified;
             IsDirectory = isDirectory;
+        }
+    }
+
+    private sealed class SingleEntryReaderArchive : IDisposable
+    {
+        private readonly object _reader;
+        private readonly System.IO.Stream _source;
+        public List<SingleEntryReaderEntry> Entries { get; } = [];
+
+        public SingleEntryReaderArchive(object reader, System.IO.Stream source, string name)
+        {
+            _reader = reader;
+            _source = source;
+            var type = reader.GetType();
+            var move = type.GetMethod("MoveToNextEntry", Type.EmptyTypes) ?? throw new MissingMethodException("SharpCompress reader MoveToNextEntry() was not found.");
+            if (Convert.ToBoolean(move.Invoke(reader, null), System.Globalization.CultureInfo.InvariantCulture))
+            {
+                var entry = type.GetProperty("Entry")?.GetValue(reader) ?? throw new XPScriptRuntimeException(5, "SharpCompress compressed stream entry is unavailable.");
+                Entries.Add(new SingleEntryReaderEntry(name, entry, reader));
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_reader is IDisposable disposable) disposable.Dispose();
+            _source.Dispose();
+        }
+    }
+
+    private sealed class SingleEntryReaderEntry
+    {
+        private readonly object _entry;
+        private readonly object _reader;
+        public string Key { get; }
+        public long Size => GetLongProperty(_entry, "Size");
+        public long CompressedSize => GetLongProperty(_entry, "CompressedSize");
+        public bool IsDirectory => false;
+        public bool IsEncrypted => GetBoolProperty(_entry, "IsEncrypted");
+        public DateTime CreatedTime => DateTime.MinValue;
+        public DateTime LastModifiedTime => DateTime.MinValue;
+        public string Crc => "";
+
+        public SingleEntryReaderEntry(string key, object entry, object reader) { Key = key; _entry = entry; _reader = reader; }
+
+        public System.IO.Stream OpenEntryStream()
+        {
+            var type = _reader.GetType();
+            var method = type.GetMethod("OpenEntryStream", Type.EmptyTypes) ?? throw new MissingMethodException("SharpCompress reader OpenEntryStream() was not found.");
+            return (System.IO.Stream)(method.Invoke(_reader, null) ?? throw new XPScriptRuntimeException(5, "SharpCompress compressed entry stream is unavailable."));
         }
     }
 
