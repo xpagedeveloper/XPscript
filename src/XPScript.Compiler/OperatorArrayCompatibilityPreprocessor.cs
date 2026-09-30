@@ -170,6 +170,14 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         var match = Regex.Match(line, @"\bNot\b(?!hing\b)\s+", RegexOptions.IgnoreCase);
         while (match.Success)
         {
+            // Do not reinterpret the C# pattern "is not ..." emitted by earlier
+            // compatibility rewrites as the XPScript unary Not operator.
+            if (line.AsSpan(0, match.Index).TrimEnd().EndsWith("is", StringComparison.OrdinalIgnoreCase))
+            {
+                match = new Regex(@"\bNot\b(?!hing\b)\s+", RegexOptions.IgnoreCase).Match(line, match.Index + match.Length);
+                continue;
+            }
+
             var valueStart = match.Index + match.Length;
             var valueEnd = FindUnaryOperandEnd(line, valueStart);
             if (valueEnd <= valueStart)
