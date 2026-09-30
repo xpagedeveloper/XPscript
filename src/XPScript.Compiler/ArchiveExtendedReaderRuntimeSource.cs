@@ -367,9 +367,22 @@ internal static class XPScriptArchiveExtendedReader
             var streamType = assembly.GetType("SharpCompress.Compressors.BZip2.BZip2Stream", throwOnError: true)!;
             var modeType = assembly.GetType("SharpCompress.Compressors.CompressionMode", throwOnError: true)!;
             var decompress = Enum.Parse(modeType, "Decompress", ignoreCase: true);
-            var ctor = streamType.GetConstructor(new[] { typeof(System.IO.Stream), modeType, typeof(bool) })
-                ?? throw new MissingMethodException("SharpCompress BZip2Stream(Stream, CompressionMode, bool) was not found.");
-            return (System.IO.Stream)ctor.Invoke(new object?[] { source, decompress, false });
+            var create = streamType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                .FirstOrDefault(m =>
+                {
+                    if (m.Name != "Create") return false;
+                    var p = m.GetParameters();
+                    return p.Length >= 3 && p[0].ParameterType == typeof(System.IO.Stream) && p[1].ParameterType == modeType && p[2].ParameterType == typeof(bool);
+                })
+                ?? throw new MissingMethodException("SharpCompress BZip2Stream.Create(Stream, CompressionMode, bool, ...) was not found.");
+            var parameters = create.GetParameters();
+            var args = new object?[parameters.Length];
+            args[0] = source;
+            args[1] = decompress;
+            args[2] = false;
+            for (var i = 3; i < parameters.Length; i++)
+                args[i] = parameters[i].HasDefaultValue ? parameters[i].DefaultValue : false;
+            return (System.IO.Stream)(create.Invoke(null, args) ?? throw new InvalidOperationException("SharpCompress failed to create the BZip2 decompression stream."));
         }
         catch
         {
