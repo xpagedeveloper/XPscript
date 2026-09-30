@@ -24,7 +24,41 @@ internal sealed class ParameterPassingPostProcessor
         foreach (var signature in signatures.Values.OrderByDescending(x => x.Name.Length))
             generated = RewriteCalls(generated, signature);
 
+        generated = RewriteLogicalNotTemporaryByRefCalls(generated);
         return generated + "\n\n" + ByRefCallRuntimeSource + "\n";
+    }
+
+    private static string RewriteLogicalNotTemporaryByRefCalls(string generated)
+    {
+        const string prefix = "LSOperatorArrayRuntime.LogicalNot(";
+        var output = new StringBuilder(generated.Length);
+        var i = 0;
+        while (i < generated.Length)
+        {
+            var start = generated.IndexOf(prefix, i, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                output.Append(generated, i, generated.Length - i);
+                break;
+            }
+
+            output.Append(generated, i, start - i);
+            var open = start + prefix.Length - 1;
+            var close = FindMatchingParen(generated, open);
+            if (close < 0)
+            {
+                output.Append(generated, start, generated.Length - start);
+                break;
+            }
+
+            var value = generated[(open + 1)..close];
+            if (value.StartsWith("XPScriptByRefCallRuntime.Invoke(", StringComparison.Ordinal))
+                output.Append("!(").Append(value).Append(')');
+            else
+                output.Append(generated, start, close - start + 1);
+            i = close + 1;
+        }
+        return output.ToString();
     }
 
     private static string RewriteDeclaration(Match match, IDictionary<string, ProcedureSignature> signatures)
