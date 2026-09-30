@@ -161,4 +161,18 @@ var newWithoutArgs = (NewExpressionSyntax)newWithoutArgsAst;
 Equal("XPJsonObject", newWithoutArgs.TypeName.Text, "New without parentheses type");
 Equal(0, newWithoutArgs.Arguments.Count, "New without parentheses arguments");
 
+var missingParenParser = new ExpressionParser("RunCommand(\"where.exe\"");
+var missingParenAst = missingParenParser.ParseExpression();
+Equal(SyntaxKind.CallExpression, missingParenAst.Kind, "missing close paren still produces call");
+Equal(1, missingParenParser.Diagnostics.Count, "missing close paren diagnostic count");
+Equal("XPS1012", missingParenParser.Diagnostics[0].Code, "missing close paren diagnostic code");
+Equal(new TextSpan(22, 0), missingParenParser.Diagnostics[0].Span, "missing close paren diagnostic span");
+
+var missingMemberParser = new ExpressionParser("service.");
+var missingMemberAst = missingMemberParser.ParseExpression();
+Equal(SyntaxKind.MemberAccessExpression, missingMemberAst.Kind, "missing member still produces member access");
+Equal(1, missingMemberParser.Diagnostics.Count, "missing member diagnostic count");
+Equal("XPS1012", missingMemberParser.Diagnostics[0].Code, "missing member diagnostic code");
+Equal(new TextSpan(8, 0), missingMemberParser.Diagnostics[0].Span, "missing member diagnostic span");
+
 Console.WriteLine("AST lexer, syntax-model and expression-parser focused tests passed.");
