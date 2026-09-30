@@ -72,4 +72,8 @@ finally
     Directory.Delete(artifactRoot, recursive: true);
 }
 
+var compilerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerDriver.cs"));
+if (!compilerSource.Contains("outputPath += \".apk\";", StringComparison.Ordinal))
+    throw new Exception("Android compiler output is not normalized to an .apk path.");
+
 Console.WriteLine("ANDROID-COMPILER-PROBE=OK");
