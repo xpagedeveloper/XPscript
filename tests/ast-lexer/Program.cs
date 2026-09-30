@@ -153,7 +153,7 @@ Equal(SyntaxKind.NewExpression, newWithArgsAst.Kind, "New with arguments kind");
 var newWithArgs = (NewExpressionSyntax)newWithArgsAst;
 Equal("Person", newWithArgs.TypeName.Text, "New type name");
 Equal(2, newWithArgs.Arguments.Count, "New argument count");
-Equal(new TextSpan(0, 29), newWithArgs.Span, "New with arguments span");
+Equal(new TextSpan(0, 30), newWithArgs.Span, "New with arguments span");
 
 var newWithoutArgsAst = new ExpressionParser("New XPJsonObject").ParseExpression();
 Equal(SyntaxKind.NewExpression, newWithoutArgsAst.Kind, "New without parentheses kind");
