@@ -1,5 +1,10 @@
 using CSharpSyntaxFactory = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+using CSharpArgumentSyntax = Microsoft.CodeAnalysis.CSharp.Syntax.ArgumentSyntax;
+using CSharpBinaryExpressionSyntax = Microsoft.CodeAnalysis.CSharp.Syntax.BinaryExpressionSyntax;
+using CSharpExpressionSyntax = Microsoft.CodeAnalysis.CSharp.Syntax.ExpressionSyntax;
+using CSharpInvocationExpressionSyntax = Microsoft.CodeAnalysis.CSharp.Syntax.InvocationExpressionSyntax;
+using CSharpParenthesizedExpressionSyntax = Microsoft.CodeAnalysis.CSharp.Syntax.ParenthesizedExpressionSyntax;
+using CSharpPrefixUnaryExpressionSyntax = Microsoft.CodeAnalysis.CSharp.Syntax.PrefixUnaryExpressionSyntax;
 using XPScript.Compiler;
 using XPScript.Compiler.Emission;
 using XPScript.Compiler.Binding;
@@ -219,20 +224,20 @@ var legacyRunCommand = ExpressionCompatibilityProbe.EmitLegacy("Not RunCommand(\
 var astRunCommand = emitter.Emit(boundRunCommand);
 string CanonicalizeCSharpExpression(string value)
 {
-    ExpressionSyntax RemoveRedundantParentheses(ExpressionSyntax expression)
+    CSharpExpressionSyntax RemoveRedundantParentheses(CSharpExpressionSyntax expression)
     {
-        while (expression is ParenthesizedExpressionSyntax parenthesized)
+        while (expression is CSharpParenthesizedExpressionSyntax parenthesized)
             expression = parenthesized.Expression;
         return expression switch
         {
-            PrefixUnaryExpressionSyntax unary => unary.WithOperand(RemoveRedundantParentheses(unary.Operand)),
-            BinaryExpressionSyntax binary => binary
+            CSharpPrefixUnaryExpressionSyntax unary => unary.WithOperand(RemoveRedundantParentheses(unary.Operand)),
+            CSharpBinaryExpressionSyntax binary => binary
                 .WithLeft(RemoveRedundantParentheses(binary.Left))
                 .WithRight(RemoveRedundantParentheses(binary.Right)),
-            InvocationExpressionSyntax invocation => invocation
+            CSharpInvocationExpressionSyntax invocation => invocation
                 .WithExpression(RemoveRedundantParentheses(invocation.Expression))
                 .WithArgumentList(invocation.ArgumentList.WithArguments(
-                    new SeparatedSyntaxList<ArgumentSyntax>().AddRange(
+                    Microsoft.CodeAnalysis.SeparatedSyntaxList<CSharpArgumentSyntax>().AddRange(
                         invocation.ArgumentList.Arguments.Select(a => a.WithExpression(RemoveRedundantParentheses(a.Expression)))))),
             _ => expression
         };
