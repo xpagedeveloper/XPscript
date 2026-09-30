@@ -11,7 +11,11 @@ $tests = @(
     @{ Name = "if-block"; File = "04-if-block.xps"; Expected = @("BLOCK_TRUE") },
     @{ Name = "if-elseif-else"; File = "05-if-elseif-else.xps"; Expected = @("TWO") },
     @{ Name = "if-boolean"; File = "06-if-boolean.xps"; Expected = @("BOOLEAN_OK") },
-    @{ Name = "if-nested"; File = "07-if-nested.xps"; Expected = @("NESTED_OK") }
+    @{ Name = "if-nested"; File = "07-if-nested.xps"; Expected = @("NESTED_OK") },
+    @{ Name = "function-return"; File = "08-function-return.xps"; Expected = @("42") },
+    @{ Name = "function-parameters"; File = "09-function-parameters.xps"; Expected = @("42") },
+    @{ Name = "nested-function-calls"; File = "10-nested-function-calls.xps"; Expected = @("42") },
+    @{ Name = "if-function-call"; File = "11-if-function-call.xps"; Expected = @("CALL_IF_OK") }
 )
 
 New-Item -ItemType Directory -Force -Path $outRoot | Out-Null
