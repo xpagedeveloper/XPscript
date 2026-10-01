@@ -135,6 +135,10 @@ var compilerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..
 if (!compilerSource.Contains("outputPath += \".apk\";", StringComparison.Ordinal))
     throw new Exception("Android compiler output is not normalized to an .apk path.");
 
+var buildEnvironmentSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerBuildEnvironment.cs"));
+if (!buildEnvironmentSource.Contains("&& !usesAndroidUi", StringComparison.Ordinal))
+    throw new Exception("Android UIForm builds must not inherit desktop Avalonia package references.");
+
 
 foreach (var expected in new[]
 {
