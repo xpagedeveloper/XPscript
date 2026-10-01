@@ -154,6 +154,12 @@ public static class AndroidFormHost
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
                 editors[name] = editor;
                 panel.Children.Add(editor);
+
+                var validationError = field.TryGetProperty("validationError", out var validationValue) ? validationValue.GetString() ?? string.Empty : string.Empty;
+                if (validationError.Length == 0 && field.TryGetProperty("schemaValidationError", out var schemaValidationValue))
+                    validationError = schemaValidationValue.GetString() ?? string.Empty;
+                if (validationError.Length > 0)
+                    panel.Children.Add(new TextBlock { Text = validationError });
             }
 
             var actions = new StackPanel
