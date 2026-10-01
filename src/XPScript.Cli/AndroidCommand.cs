@@ -212,6 +212,64 @@ internal static class AndroidCommand
 
     private static async Task<string> RequireReadyDeviceAsync(string adb, string deviceMode, string? requestedSerial, string? requestedAvd)
     {
+        if (deviceMode == "emulator")
+        {
+            var emulator = ResolveAndroidTool("emulator");
+            var avdResult = await ExecuteAsync(emulator, ["-list-avds"]);
+            if (avdResult.ExitCode != 0)
+                throw new InvalidOperationException("Unable to list Android AVDs: " + avdResult.Error.Trim());
+
+            var avds = avdResult.Output.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (avds.Length == 0)
+                throw new InvalidOperationException("No Android Virtual Device is configured.");
+
+            var avd = requestedAvd;
+            if (string.IsNullOrWhiteSpace(avd))
+            {
+                if (avds.Length > 1)
+                    throw new InvalidOperationException("Multiple AVDs are configured. Select one with --avd NAME.");
+                avd = avds[0];
+            }
+            if (!avds.Contains(avd, StringComparer.Ordinal))
+                throw new InvalidOperationException("Android AVD '" + avd + "' was not found.");
+
+            var current = await ExecuteAsync(adb, ["devices"]);
+            var running = current.Output.Replace("\r\n", "\n").Split('\n')
+                .Skip(1).Where(line => !string.IsNullOrWhiteSpace(line)).Select(ParseDevice)
+                .FirstOrDefault(device => device.State.Equals("device", StringComparison.OrdinalIgnoreCase)
+                    && device.Serial.StartsWith("emulator-", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(running.Serial))
+                return running.Serial;
+
+            Console.WriteLine("Starting Android emulator '" + avd + "'...");
+            var start = new ProcessStartInfo { FileName = emulator, UseShellExecute = false, CreateNoWindow = true };
+            start.ArgumentList.Add("-avd");
+            start.ArgumentList.Add(avd);
+            start.ArgumentList.Add("-no-boot-anim");
+            _ = Process.Start(start) ?? throw new InvalidOperationException("Unable to start Android emulator '" + avd + "'.");
+
+            var deadline = DateTime.UtcNow.AddMinutes(3);
+            while (DateTime.UtcNow < deadline)
+            {
+                var devicesResult = await ExecuteAsync(adb, ["devices"]);
+                if (devicesResult.ExitCode == 0)
+                {
+                    var candidate = devicesResult.Output.Replace("\r\n", "\n").Split('\n')
+                        .Skip(1).Where(line => !string.IsNullOrWhiteSpace(line)).Select(ParseDevice)
+                        .FirstOrDefault(device => device.State.Equals("device", StringComparison.OrdinalIgnoreCase)
+                            && device.Serial.StartsWith("emulator-", StringComparison.OrdinalIgnoreCase));
+                    if (!string.IsNullOrEmpty(candidate.Serial))
+                    {
+                        var boot = await ExecuteAsync(adb, ["-s", candidate.Serial, "shell", "getprop", "sys.boot_completed"]);
+                        if (boot.ExitCode == 0 && boot.Output.Trim() == "1")
+                            return candidate.Serial;
+                    }
+                }
+                await Task.Delay(1000);
+            }
+            throw new TimeoutException("Android emulator '" + avd + "' did not finish booting within 180 seconds.");
+        }
+
         var result = await ExecuteAsync(adb, ["devices"]);
         if (result.ExitCode != 0) throw new InvalidOperationException("adb devices failed: " + result.Error.Trim());
         var devices = result.Output.Replace("\r\n", "\n").Split('\n').Skip(1)
@@ -275,6 +333,28 @@ internal static class AndroidCommand
         if (fields.Length < 2)
             return (line.Trim(), "unknown", string.Empty);
         return (fields[0], fields[1], string.Join(' ', fields.Skip(2)));
+    }
+
+    private static string ResolveAndroidTool(string name)
+    {
+        var executable = OperatingSystem.IsWindows() ? name + ".exe" : name;
+        var pathValue = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        foreach (var directory in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var candidate = Path.Combine(directory.Trim('"'), executable);
+            if (File.Exists(candidate)) return candidate;
+        }
+        foreach (var root in new[]
+        {
+            Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT"),
+            Environment.GetEnvironmentVariable("ANDROID_HOME"),
+            OperatingSystem.IsWindows() ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Android", "Sdk") : null
+        }.Where(value => !string.IsNullOrWhiteSpace(value)))
+        {
+            var candidate = Path.Combine(root!, "emulator", executable);
+            if (File.Exists(candidate)) return candidate;
+        }
+        throw new InvalidOperationException(name + " was not found. Install Android SDK tools or set ANDROID_SDK_ROOT/ANDROID_HOME.");
     }
 
     private static string ResolveAdb()
