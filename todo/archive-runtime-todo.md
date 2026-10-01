@@ -329,12 +329,13 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 ## Browser/WASM
 
 - [x] Verify the selected SharpCompress package can be linked for the XPScript browser/WASM target.
-- [x] Support archive operations over Byte arrays/in-memory streams.
-- [ ] Support listing entries client-side.
-- [ ] Support reading entries client-side where memory limits permit.
-- [ ] Support creating ZIP output in memory for browser downloads where practical.
-- [ ] Do not expose arbitrary local filesystem extraction in browser/WASM.
-- [ ] Use existing XPScript server-side `[]` execution for filesystem archive operations that require server access.
+- [x] Support archive operations over Byte arrays/in-memory streams on the server side.
+- [x] Keep `Archive` server-side only for browser/WASM applications.
+- [x] Reject `Archive` use in browser-side procedures, class methods and module-level browser state with the normal execution-context diagnostic.
+- [x] Keep SharpCompress and the archive runtime out of the client WASM bundle.
+- [x] Allow server-side archive output to be returned as Byte arrays/downloads where appropriate.
+- [x] Do not expose arbitrary local filesystem extraction in browser/WASM.
+- [x] Use existing XPScript `[ServerSide]` execution for archive operations that require server access.
 
 Example model:
 
@@ -485,7 +486,7 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Complete Byte-array and stream-oriented workflows.
 - [ ] Validate Android.
 - [ ] Validate iOS and AOT.
-- [ ] Validate browser/WASM.
+- [x] Validate browser/WASM.
 - [ ] Add browser download integration where appropriate.
 - [ ] Complete cross-platform documentation.
 
