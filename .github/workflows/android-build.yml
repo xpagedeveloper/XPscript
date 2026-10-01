@@ -76,6 +76,39 @@ jobs:
       - name: Build x64 emulator APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print-emulator --runtime=false --platform android-x64 --debug
 
+      - name: Reproduce Android UIForm project directly first
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe="$RUNNER_TEMP/android-uiform-direct"
+          rm -rf "$probe"
+          mkdir -p "$probe"
+          cp ./src/XPScript.UI.Android/*.cs "$probe/"
+          cat > "$probe/Direct.csproj" <<'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net10.0-android</TargetFramework>
+              <AssemblyName>android-uiform-direct</AssemblyName>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <Nullable>enable</Nullable>
+              <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+              <RuntimeIdentifier>android-x64</RuntimeIdentifier>
+              <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
+              <AndroidPackageFormat>apk</AndroidPackageFormat>
+              <ApplicationId>com.xpscript.debugapp</ApplicationId>
+              <ApplicationVersion>1</ApplicationVersion>
+              <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="Avalonia" Version="12.0.3" />
+              <PackageReference Include="Avalonia.Android" Version="12.0.3" />
+              <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
+            </ItemGroup>
+          </Project>
+          EOF
+          dotnet publish "$probe/Direct.csproj" -c Release -r android-x64 -o "$probe/publish"
+
       - name: Build minimal Android UIForm APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-minimal.xps -o ./out/android-uiform-minimal --runtime=false --platform android-x64 --debug
 
