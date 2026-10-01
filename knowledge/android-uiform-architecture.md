@@ -77,3 +77,8 @@ The initial Android host now lives in `src/XPScript.UI.Android/`.
 - `MainView` is deliberately code-only and contains only the initial host verification surface.
 
 This follows the Avalonia 12 Android initialization model. The host is intentionally separate from the XPScript compiler runtime. The next bridge step will connect the existing `XPScriptUIForm` model to an Android-specific adapter.
+
+
+## Initial Android UIForm bridge
+
+The compiler bridge resolves `XPScript.UI.Android.AndroidFormHost` when the generated application runs on Android. The Android host uses the current `MainView` rather than a desktop `Window`, because Android uses `IActivityApplicationLifetime` and a single view surface. The first bridge supports text fields, text areas, checkboxes and OK/Cancel submission. It is intentionally smaller than the desktop control matrix.
