@@ -38,6 +38,8 @@ public enum SyntaxKind
     SetKeyword,
     DimKeyword,
     AsKeyword,
+    WhileKeyword,
+    WendKeyword,
     NewKeyword,
     LiteralExpression,
     NameExpression,
@@ -53,5 +55,6 @@ public enum SyntaxKind
     AssignmentStatement,
     SetStatement,
     DimStatement,
+    WhileStatement,
     ElseIfClause,
 }
