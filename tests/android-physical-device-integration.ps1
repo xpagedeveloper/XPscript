@@ -2,10 +2,15 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Serial,
     [string]$Platform = "android-arm64",
-    [string]$XPScript = "xpscript"
+    [string]$XPScript = ".\publish\xpscript\win-x64\xpscript.exe"
 )
 
 $ErrorActionPreference = "Stop"
+
+$XPScript = [System.IO.Path]::GetFullPath($XPScript)
+if (-not (Test-Path -LiteralPath $XPScript -PathType Leaf)) {
+    throw "XPScript CLI was not found at $XPScript. Build/publish the CLI or pass -XPScript <path>."
+}
 
 if ([string]::IsNullOrWhiteSpace($Serial)) {
     throw "A physical Android device serial is required."
