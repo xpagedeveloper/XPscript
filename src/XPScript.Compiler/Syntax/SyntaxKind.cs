@@ -12,6 +12,8 @@ public enum SyntaxKind
     CloseParenToken,
     CommaToken,
     DotToken,
+    OpenBracketToken,
+    CloseBracketToken,
     PlusToken,
     MinusToken,
     StarToken,
@@ -41,5 +43,6 @@ public enum SyntaxKind
     ParenthesizedExpression,
     CallExpression,
     MemberAccessExpression,
+    IndexExpression,
     NewExpression
 }
