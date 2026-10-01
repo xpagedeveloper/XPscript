@@ -48,6 +48,8 @@ public sealed class StatementParser
             return ParseForAllStatement();
         if (Current.Kind == SyntaxKind.DoKeyword)
             return ParseDoStatement();
+        if (Current.Kind == SyntaxKind.SelectKeyword)
+            return ParseSelectStatement();
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
@@ -167,6 +169,142 @@ public sealed class StatementParser
         }
 
         return statements;
+    }
+
+    private StatementSyntax ParseSelectStatement()
+    {
+        var selectKeyword = NextToken();
+        var caseKeyword = Match(SyntaxKind.CaseKeyword);
+        var expression = ParseExpressionUntilLineEnd();
+        ConsumeRequiredNewLine("Select Case");
+
+        var cases = new List<CaseClauseSyntax>();
+        while (Current.Kind != SyntaxKind.EndOfFileToken)
+        {
+            if (Current.Kind == SyntaxKind.EndKeyword
+                && PeekKind(1) == SyntaxKind.SelectKeyword)
+                break;
+
+            if (Current.Kind == SyntaxKind.NewLineToken)
+            {
+                NextToken();
+                continue;
+            }
+
+            if (Current.Kind != SyntaxKind.CaseKeyword)
+            {
+                _diagnostics.Add(new SyntaxDiagnostic(
+                    "XPS1012",
+                    $"Expected CaseKeyword in Select statement but found {Current.Kind}.",
+                    Current.Span));
+                ParseExpressionUntilLineEnd();
+                if (Current.Kind == SyntaxKind.NewLineToken)
+                    NextToken();
+                continue;
+            }
+
+            cases.Add(ParseCaseClause());
+        }
+
+        var endKeyword = Match(SyntaxKind.EndKeyword);
+        var endSelectKeyword = Match(SyntaxKind.SelectKeyword);
+        return new SelectStatementSyntax(
+            selectKeyword,
+            caseKeyword,
+            expression,
+            cases,
+            endKeyword,
+            endSelectKeyword);
+    }
+
+    private CaseClauseSyntax ParseCaseClause()
+    {
+        var caseKeyword = NextToken();
+
+        SelectCaseKind caseKind;
+        SyntaxToken? isKeyword = null;
+        SyntaxToken? operatorToken = null;
+        ExpressionSyntax? lowerExpression = null;
+        SyntaxToken? toKeyword = null;
+        ExpressionSyntax? upperExpression = null;
+        SyntaxToken? elseKeyword = null;
+
+        if (Current.Kind == SyntaxKind.ElseKeyword)
+        {
+            caseKind = SelectCaseKind.Else;
+            elseKeyword = NextToken();
+        }
+        else if (Current.Kind == SyntaxKind.IsKeyword)
+        {
+            caseKind = SelectCaseKind.Relational;
+            isKeyword = NextToken();
+            operatorToken = Current.Kind is SyntaxKind.EqualsToken
+                or SyntaxKind.LessToken
+                or SyntaxKind.LessOrEqualsToken
+                or SyntaxKind.GreaterToken
+                or SyntaxKind.GreaterOrEqualsToken
+                or SyntaxKind.LessGreaterToken
+                    ? NextToken()
+                    : Match(SyntaxKind.EqualsToken);
+
+            var lineEnd = FindLineEndIndex(_position);
+            lowerExpression = ParseExpressionRange(_position, lineEnd, _tokens[lineEnd].Span.Start);
+            _position = lineEnd;
+        }
+        else
+        {
+            var toIndex = FindTokenOnCurrentLine(SyntaxKind.ToKeyword);
+            var lineEnd = FindLineEndIndex(_position);
+            if (toIndex >= 0)
+            {
+                caseKind = SelectCaseKind.Range;
+                lowerExpression = ParseExpressionRange(_position, toIndex, _tokens[toIndex].Span.Start);
+                _position = toIndex;
+                toKeyword = NextToken();
+                lineEnd = FindLineEndIndex(_position);
+                upperExpression = ParseExpressionRange(_position, lineEnd, _tokens[lineEnd].Span.Start);
+                _position = lineEnd;
+            }
+            else
+            {
+                caseKind = SelectCaseKind.Value;
+                lowerExpression = ParseExpressionRange(_position, lineEnd, _tokens[lineEnd].Span.Start);
+                _position = lineEnd;
+            }
+        }
+
+        ConsumeRequiredNewLine("Case");
+
+        var statements = new List<StatementSyntax>();
+        while (Current.Kind != SyntaxKind.EndOfFileToken)
+        {
+            if (Current.Kind == SyntaxKind.CaseKeyword)
+                break;
+            if (Current.Kind == SyntaxKind.EndKeyword
+                && PeekKind(1) == SyntaxKind.SelectKeyword)
+                break;
+
+            if (Current.Kind == SyntaxKind.NewLineToken)
+            {
+                NextToken();
+                continue;
+            }
+
+            statements.Add(ParseCurrentStatement());
+            if (Current.Kind == SyntaxKind.NewLineToken)
+                NextToken();
+        }
+
+        return new CaseClauseSyntax(
+            caseKeyword,
+            caseKind,
+            isKeyword,
+            operatorToken,
+            lowerExpression,
+            toKeyword,
+            upperExpression,
+            elseKeyword,
+            statements);
     }
 
     private StatementSyntax ParseDoStatement()
