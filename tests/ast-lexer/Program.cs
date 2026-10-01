@@ -10,7 +10,7 @@ using XPScript.Compiler.Emission;
 using XPScript.Compiler.Binding;
 using XPScript.Compiler.Syntax;
 
-sealed class TestPerson;
+sealed class TestPerson { }
 
 static void Equal<T>(T expected, T actual, string message)
 {
