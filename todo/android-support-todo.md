@@ -192,3 +192,7 @@ Investigate these individually. Do not add them merely because Android exposes t
 - [ ] Verify trimming/AOT compatibility for the supported Android runtime path.
 - [ ] Verify dependency license and security checks cover Android-specific packages.
 - [ ] Document supported Android versions, API levels and ABIs based on tested evidence.
+
+## CLI platform selection
+
+- [x] Reuse the existing `--platform` option for Android target RID selection instead of introducing an Android-specific `--rid` option.
