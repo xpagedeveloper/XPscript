@@ -346,7 +346,8 @@ End Sub
             System.Text.Encoding.UTF8.GetBytes(archiveSource + "\0" + compilerIdentity + "\0" + "4")));
         var procedureId = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(sourceHash + "\0" + "DOWNLOADARCHIVE"))).ToLowerInvariant()[..32];
-        var archiveSession = new SmokeSession();\n        var archiveServer = archiveServer;
+        var archiveSession = new SmokeSession();
+        var archiveServer = Server(root);
         var archiveHeaders = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["X-XPS-WASM-Bridge"] = new[] { "1" },
