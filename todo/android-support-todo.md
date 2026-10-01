@@ -65,18 +65,18 @@ The first implementation must stay intentionally small. Do not start with Avalon
 
 - [x] Add Android device discovery to the CLI.
 - [x] Add Android build support.
-- [ ] Add Android run/deploy through adb.
+- [x] Add Android run/deploy through adb.
 - [ ] Add local Windows emulator discovery/start support for a configured Android Virtual Device (AVD). (PowerShell harness implemented; local Windows verification pending.)
 - [ ] Add deterministic local Windows emulator install -> launch -> logcat verification before physical-device integration. (PowerShell harness implemented; local Windows verification pending.)
 - [x] Stream and filter application logs.
-- [ ] Add a deterministic command path for build -> install -> launch -> capture logs.
+- [x] Add a deterministic command path for build -> install -> launch -> capture logs.
 - [x] Surface adb installation failures with useful diagnostics.
 - [x] Surface launch failures with useful diagnostics.
 - [x] Detect missing, unauthorized, offline or ambiguous devices before install/device-required operations.
 - [x] Define project metadata for Android target and application type.
 - [x] Keep console/headless and Avalonia UI selection explicit and deterministic.
-- [ ] Add an Android app template to `xpscript new` when the runtime path is stable.
-- [ ] Compile generated Android templates in automated `xpscript new android` regression coverage.
+- [x] Add an Android app template to `xpscript new` when the runtime path is stable.
+- [x] Compile generated Android templates in automated `xpscript new android` regression coverage.
 
 ## Stage 3: UIForm on Android with Avalonia
 
