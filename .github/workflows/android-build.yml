@@ -33,6 +33,9 @@ jobs:
       - name: Run Android project metadata probe
         run: dotnet run --project ./tests/AndroidProjectMetadataProbe/AndroidProjectMetadataProbe.csproj -c Release
 
+      - name: Run Android scaffold probe
+        run: dotnet run --project ./tests/AndroidScaffoldProbe/AndroidScaffoldProbe.csproj -c Release
+
       - name: Run Android compiler probe
         run: dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
 
