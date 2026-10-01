@@ -140,6 +140,17 @@ public sealed class ExpressionParser
         if (Current.Kind is SyntaxKind.NumberToken or SyntaxKind.StringToken or SyntaxKind.TrueKeyword or SyntaxKind.FalseKeyword)
             return new LiteralExpressionSyntax(NextToken());
 
+        // Error is contextual: it starts an Error statement, but Error() remains a valid expression call.
+        if (Current.Kind == SyntaxKind.ErrorKeyword)
+        {
+            var errorKeyword = NextToken();
+            return new NameExpressionSyntax(new SyntaxToken(
+                SyntaxKind.IdentifierToken,
+                errorKeyword.Text,
+                errorKeyword.Value,
+                errorKeyword.Span));
+        }
+
         return new NameExpressionSyntax(Match(SyntaxKind.IdentifierToken));
     }
 
