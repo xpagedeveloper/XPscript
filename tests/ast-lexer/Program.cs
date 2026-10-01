@@ -276,6 +276,7 @@ Equal("items[1]", emitter.Emit(boundIndex), "bound index C# emission");
 
 var memberSymbols = new SymbolTable();
 memberSymbols.Declare(new VariableSymbol("text", typeof(string)));
+memberSymbols.Declare(new PropertySymbol("String.Length", typeof(long)));
 memberSymbols.Declare(new FunctionSymbol("String.Substring", typeof(string), [typeof(long)]));
 var memberBinder = new ExpressionBinder(memberSymbols);
 var boundMemberCall = memberBinder.Bind(new ExpressionParser("text.Substring(1)").ParseExpression());
@@ -283,6 +284,13 @@ Equal(BoundNodeKind.CallExpression, boundMemberCall.Kind, "bound member call roo
 Equal(typeof(string), boundMemberCall.Type, "bound member call result type");
 Equal(0, memberBinder.Diagnostics.Count, "bound member call diagnostics");
 Equal("text.Substring(1)", emitter.Emit(boundMemberCall), "bound member call C# emission");
+
+var propertyBinder = new ExpressionBinder(memberSymbols);
+var boundProperty = propertyBinder.Bind(new ExpressionParser("text.Length").ParseExpression());
+Equal(BoundNodeKind.MemberAccessExpression, boundProperty.Kind, "bound property access root");
+Equal(typeof(long), boundProperty.Type, "bound property access type");
+Equal(0, propertyBinder.Diagnostics.Count, "bound property access diagnostics");
+Equal("text.Length", emitter.Emit(boundProperty), "bound property access C# emission");
 
 var zeroArgBinder = new ExpressionBinder(callSymbols);
 var boundZeroArg = zeroArgBinder.Bind(new ExpressionParser("Error()").ParseExpression());
