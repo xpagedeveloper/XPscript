@@ -18,6 +18,11 @@ static void Equal<T>(T expected, T actual, string message)
 
 static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
+// Keep the most recently failing regression first so CI fails fast on this area.
+var errorCallRegression = new ExpressionParser("Error()").ParseExpression();
+Equal(SyntaxKind.CallExpression, errorCallRegression.Kind, "Error() remains an expression call after Error statement keyword support");
+
+
 var keywords = Lex("not AND Or true FALSE if THEN else elseif END name");
 var expectedKeywords = new[]
 {
