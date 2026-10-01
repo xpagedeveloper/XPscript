@@ -42,7 +42,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Target ARM64 first for the physical test device.
 - [x] Add an `android-x64` target for x86_64 Android emulators.
 - [x] Build both ARM64 device and x64 emulator APKs in Android CI.
-- [ ] Add an x86_64 emulator smoke test that installs, launches and verifies the XPScript log output locally on Windows. (Harness implemented; local Windows verification pending.)
+- [x] Add an x86_64 emulator smoke test that installs, launches and verifies the XPScript log output locally on Windows. (Verified on Windows with Pixel_5 API 30 and android-x64.)
 - [x] Package an installable debug APK.
 - [x] Install/update and launch it through adb.
 - [x] Route XPScript `Print` output to Android logging.
@@ -66,8 +66,8 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Add Android device discovery to the CLI.
 - [x] Add Android build support.
 - [x] Add Android run/deploy through adb.
-- [ ] Add local Windows emulator discovery/start support for a configured Android Virtual Device (AVD). (PowerShell harness implemented; local Windows verification pending.)
-- [ ] Add deterministic local Windows emulator install -> launch -> logcat verification before physical-device integration. (PowerShell harness implemented; local Windows verification pending.)
+- [x] Add local Windows emulator discovery/start support for a configured Android Virtual Device (AVD). (Verified on Windows with Pixel_5 API 30.)
+- [x] Add deterministic local Windows emulator install -> launch -> logcat verification before physical-device integration. (Verified end-to-end on Windows with android-x64.)
 - [x] Stream and filter application logs.
 - [x] Add a deterministic command path for build -> install -> launch -> capture logs.
 - [x] Surface adb installation failures with useful diagnostics.
