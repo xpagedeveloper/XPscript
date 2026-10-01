@@ -345,15 +345,15 @@ End Sub
             System.Text.Encoding.UTF8.GetBytes(archiveSource + "\0" + compilerIdentity + "\0" + "4")));
         var procedureId = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(sourceHash + "\0" + "DOWNLOADARCHIVE"))).ToLowerInvariant()[..32];
-        var response = new XpsWebResponse();
+        var archiveDownloadResponse = new XpsWebResponse();
         await archiveUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
             BridgePostRequest("/server-archive.xps/__xpscript_bridge", new Dictionary<string, IReadOnlyList<string>>(), procedureId),
-            response, Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), new SmokeSession()));
-        if (response.StatusCode != 200)
-            throw new Exception($"Archive browser download returned HTTP {response.StatusCode}.");
-        if (!string.Equals(response.ContentType, "application/json; charset=utf-8", StringComparison.OrdinalIgnoreCase))
+            archiveDownloadResponse, Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), new SmokeSession()));
+        if (archiveDownloadResponse.StatusCode != 200)
+            throw new Exception($"Archive browser download returned HTTP {archiveDownloadResponse.StatusCode}.");
+        if (!string.Equals(archiveDownloadResponse.ContentType, "application/json; charset=utf-8", StringComparison.OrdinalIgnoreCase))
             throw new Exception("Archive browser download bridge did not return a JSON envelope.");
-        using var downloadDocument = System.Text.Json.JsonDocument.Parse(response.Body);
+        using var downloadDocument = System.Text.Json.JsonDocument.Parse(archiveDownloadResponse.Body);
         var download = downloadDocument.RootElement.GetProperty("download");
         if (!download.GetProperty("contentType").GetString()!.Equals("application/zip", StringComparison.OrdinalIgnoreCase))
             throw new Exception("Archive browser download did not preserve application/zip.");
