@@ -140,6 +140,8 @@ if (!buildEnvironmentSource.Contains("&& !usesAndroidUi", StringComparison.Ordin
     throw new Exception("Android UIForm builds must not inherit desktop Avalonia package references.");
 if (!buildEnvironmentSource.Contains("var writeDirectoryProps = !usesAndroidUi;", StringComparison.Ordinal))
     throw new Exception("Android UIForm builds must not duplicate generated project metadata through Directory.Build.props.");
+if (!buildEnvironmentSource.Contains("var isolateNuGetPackages = !IsAndroidUiFormPublish(startInfo, root);", StringComparison.Ordinal))
+    throw new Exception("Android UIForm publish must use the standard NuGet package cache used by the known-good direct Avalonia Android publish.");
 
 
 foreach (var expected in new[]
