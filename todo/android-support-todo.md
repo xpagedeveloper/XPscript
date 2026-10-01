@@ -78,6 +78,8 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Add an Android app template to `xpscript new` when the runtime path is stable.
 - [x] Compile generated Android templates in automated `xpscript new android` regression coverage.
 
+- [ ] Add shared `Application.Debug` runtime support. `--appdebug` enables it, and `--debug` mirrors into it without the reverse dependency. Route output through the platform debug console.
+
 ## Stage 3: UIForm on Android with Avalonia
 
 Reuse the existing shared UIForm model. Android should add a platform backend, not fork the XPScript UI API.
