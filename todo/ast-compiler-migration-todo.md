@@ -256,6 +256,24 @@ Expressions are the first migration target because the current transpiler perfor
 - [ ] Add explicit compatibility fixtures for LotusScript-like edge cases.
 - [ ] Record intentional behavior changes instead of silently changing semantics.
 
+## Post-migration performance investigation
+
+Only start this after the full AST front-end, binder, bound tree, diagnostics, emitter integration and compatibility verification are working reliably.
+
+- [ ] Benchmark compile time before and after the AST production path is enabled.
+- [ ] Measure where compile time is spent across preprocessing, lexing, parsing, binding, C# generation and Roslyn.
+- [ ] Investigate caching the parsed AST per source file.
+- [ ] Investigate caching the bound tree / semantic result per source file.
+- [ ] Define cache invalidation for changed files, referenced symbols, imports/includes and compiler options.
+- [ ] Regenerate generated C# only for files or units whose syntax or bound semantics changed.
+- [ ] Investigate compiling only changed generated units instead of rebuilding all generated C# when the backend architecture allows it.
+- [ ] Preserve correct cross-file symbol binding when only a subset of files changes.
+- [ ] Add correctness tests that compare clean builds with incremental/cache-enabled builds.
+- [ ] Add performance benchmarks for edit-compile cycles in small and large XPscript projects.
+- [ ] Evaluate whether persistent AST + bound-tree caching materially improves edit-compile latency before making it the default.
+
+Target outcome: unchanged files should be able to reuse their AST and bound semantic state so that edit-compile cycles only redo the work invalidated by the user's changes, while producing results identical to a clean build.
+
 ## Phase 11: Incremental rollout
 
 - [ ] Add an internal/experimental switch for AST compilation.
