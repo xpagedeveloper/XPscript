@@ -487,8 +487,8 @@ Server-side filesystem operations can use the normal server execution model.
 - [ ] Validate Android.
 - [ ] Validate iOS and AOT.
 - [x] Validate browser/WASM.
-- [ ] Add browser download integration where appropriate.
-- [ ] Complete cross-platform documentation.
+- [x] Add browser download integration where appropriate.
+- [x] Complete cross-platform documentation.
 
 ## Architectural rule
 
