@@ -55,16 +55,16 @@ jobs:
         run: dotnet build ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release
 
       - name: Compile Android runtime failure regression
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-runtime-error.xps -o ./out/android-runtime-error --runtime=false --rid android-x64 --debug
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-runtime-error.xps -o ./out/android-runtime-error --runtime=false --platform android-x64 --debug
 
       - name: Build minimal XPScript Android APK
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print --runtime=false --rid android-arm64 --debug
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print --runtime=false --platform android-arm64 --debug
 
       - name: Build x64 emulator APK
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print-emulator --runtime=false --rid android-x64 --debug
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print-emulator --runtime=false --platform android-x64 --debug
 
       - name: Build minimal Android UIForm APK
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-minimal.xps -o ./out/android-uiform-minimal --runtime=false --rid android-x64 --debug
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-minimal.xps -o ./out/android-uiform-minimal --runtime=false --platform android-x64 --debug
 
       - name: Verify debug APKs exist
         shell: bash
