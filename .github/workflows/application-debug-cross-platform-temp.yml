@@ -30,7 +30,12 @@ jobs:
       - name: Verify disabled and enabled runtime behavior
         shell: pwsh
         run: |
-          $exe = if ($IsWindows) { './out/application-debug-temp.exe' } else { './out/application-debug-temp' }
+          $outputBase = (Resolve-Path './out/application-debug-temp').Path
+          $exe = if ($IsWindows) {
+            $windowsExe = Get-ChildItem -Path (Split-Path $outputBase -Parent) -File | Where-Object { $_.BaseName -eq (Split-Path $outputBase -Leaf) -and $_.Extension -eq '.exe' } | Select-Object -First 1
+            if ($windowsExe) { $windowsExe.FullName } else { $outputBase }
+          } else { $outputBase }
+          Write-Host "Runtime probe executable: $exe"
           $disabledOut = Join-Path $env:RUNNER_TEMP 'disabled-out.txt'
           $disabledErr = Join-Path $env:RUNNER_TEMP 'disabled-err.txt'
           $disabled = Start-Process -FilePath $exe -NoNewWindow -Wait -PassThru -RedirectStandardOutput $disabledOut -RedirectStandardError $disabledErr
