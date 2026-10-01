@@ -174,7 +174,11 @@ public sealed class ExpressionParser
         SyntaxKind.OutputKeyword or
         SyntaxKind.AppendKeyword or
         SyntaxKind.BinaryKeyword or
-        SyntaxKind.RandomKeyword;
+        SyntaxKind.RandomKeyword or
+        SyntaxKind.PrintKeyword or
+        SyntaxKind.WriteKeyword or
+        SyntaxKind.LineKeyword or
+        SyntaxKind.SeekKeyword;
 
     private SyntaxToken Match(SyntaxKind kind)
     {
