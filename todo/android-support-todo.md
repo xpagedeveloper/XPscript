@@ -57,7 +57,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Verify normal runtime code does not depend on Avalonia.
 - [x] Add automated compiler/runtime tests that do not need hardware.
 - [x] Run a focused Android CLI/completion regression before the broader Android build checks.
-- [ ] Add an optional physical-device integration test.
+- [x] Add an optional physical-device integration test. (`tests/android-physical-device-integration.ps1`, opt-in and requires an explicit device serial.)
 - [x] Add the initial Android source/compiler regression to Platform FullTest without requiring hardware.
 - [ ] Keep device-required tests separate and explicitly opt-in.
 
