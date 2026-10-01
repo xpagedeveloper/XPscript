@@ -42,6 +42,7 @@ Console.WriteLine("ANDROID-CLI-PROBE=OK");
 
 
 var androidCommand = File.ReadAllText(Path.Combine(root, "src", "XPScript.Cli", "AndroidCommand.cs"));
+var compilerDriver = File.ReadAllText(Path.Combine(root, "src", "XPScript.Compiler", "CompilerDriver.cs"));
 foreach (var expected in new[]
 {
     "--device auto|emulator|physical",
@@ -93,7 +94,7 @@ foreach (var expected in new[]
 {
     "var debug = false;",
     "args[i] == \"--debug\"",
-    "debug ? new[] { \"--debug\" }",
+    "compilerArgs.Add(\"--debug\");",
     "[--debug]"
 })
 {
@@ -105,7 +106,7 @@ foreach (var expected in new[]
 foreach (var expected in new[]
 {
     "ParseGeneratedCompilerDiagnostics",
-    "CompilerDiagnosticCodes.GeneratedCodeCompilationFailed",
+    "CompilerDiagnosticCodes.CompilationFailed",
     "generatedDiagnostics",
     "Generated code failed to compile."
 })
