@@ -54,6 +54,9 @@ jobs:
       - name: Build Avalonia Android dependency layer
         run: dotnet build ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release
 
+      - name: Build Avalonia Android x64 dependency probe first
+        run: dotnet build ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release -r android-x64
+
       - name: Compile Android runtime failure regression
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-runtime-error.xps -o ./out/android-runtime-error --runtime=false --platform android-x64 --debug
 
