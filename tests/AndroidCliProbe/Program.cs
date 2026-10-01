@@ -49,3 +49,18 @@ foreach (var expected in new[]
     if (!androidCommand.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android device selection regression is missing: " + expected);
 }
+
+
+foreach (var expected in new[]
+{
+    "ResolveAndroidTool(\"emulator\")",
+    "emulator -list-avds",
+    "Multiple AVDs are configured",
+    "Starting Android emulator",
+    "sys.boot_completed",
+    "did not finish booting within 180 seconds"
+})
+{
+    if (!androidCommand.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android emulator selection regression is missing: " + expected);
+}
