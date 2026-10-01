@@ -156,7 +156,7 @@ Expressions are the first migration target because the current transpiler perfor
 - [ ] Parse `ElseIf` and `Else`.
 - [ ] Parse loops.
 - [ ] Parse `Select Case`.
-- [ ] Parse calls used as statements.
+- [x] Parse calls used as statements.
 - [ ] Parse error-handling statements.
 - [ ] Parse event-related statements.
 - [ ] Parse file/runtime-specific statements that currently have compiler rewrites.
