@@ -10,4 +10,5 @@ public sealed class BoundIndexedPropertyExpression(
     public IReadOnlyList<BoundExpression> Arguments { get; } = arguments;
     public override BoundNodeKind Kind => BoundNodeKind.IndexedPropertyExpression;
     public override Type Type => Property.ReturnType;
+    public override XpTypeSymbol SemanticType => Property.SemanticReturnType ?? XpTypeSymbol.FromClr(Property.ReturnType);
 }
