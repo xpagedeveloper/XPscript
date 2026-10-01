@@ -206,6 +206,8 @@ public sealed class CompilerDriver
             var publishDir = Path.Combine(tempRoot, "publish");
             var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
 
+            var usesAndroidUIForm = IsAndroidRuntime(rid) &&
+                generatedSource.Contains("class XPScriptUIForm", StringComparison.Ordinal);
             var csproj = BuildGeneratedProject(
                 rid,
                 selfContained,
@@ -213,14 +215,16 @@ public sealed class CompilerDriver
                 publishSingleFile: CompilePublishLayoutContext.IsConfigured ? CompilePublishLayoutContext.SingleFile : true,
                 usesMimeKit: generatedSource.Contains("MimeKit.", StringComparison.Ordinal),
                 assemblyName: OutputAssemblyName(outputPath));
+            if (usesAndroidUIForm)
+                csproj = AddAndroidUIFormDependencies(csproj);
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
             if (IsAndroidRuntime(rid))
             {
-                var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
-                await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
+                var androidHostPath = Path.Combine(tempRoot, usesAndroidUIForm ? "AndroidUIHost.cs" : "AndroidHost.cs");
+                await File.WriteAllTextAsync(androidHostPath, usesAndroidUIForm ? AndroidUIHostSource.Code : AndroidHostSource.Code);
                 CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
             }
 
@@ -334,6 +338,8 @@ public sealed class CompilerDriver
             var programPath = Path.Combine(tempRoot, "Program.cs");
             var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
 
+            var usesAndroidUIForm = IsAndroidRuntime(rid) &&
+                generatedSource.Contains("class XPScriptUIForm", StringComparison.Ordinal);
             var csproj = BuildGeneratedProject(
                 rid,
                 selfContained: false,
@@ -347,8 +353,8 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(programPath);
             if (IsAndroidRuntime(rid))
             {
-                var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
-                await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
+                var androidHostPath = Path.Combine(tempRoot, usesAndroidUIForm ? "AndroidUIHost.cs" : "AndroidHost.cs");
+                await File.WriteAllTextAsync(androidHostPath, usesAndroidUIForm ? AndroidUIHostSource.Code : AndroidHostSource.Code);
                 CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
             }
 
@@ -569,6 +575,8 @@ public sealed class CompilerDriver
             var projectPath = Path.Combine(tempRoot, "Generated.csproj");
             var programPath = Path.Combine(tempRoot, "Program.cs");
             var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
+            var usesAndroidUIForm = IsAndroidRuntime(rid) &&
+                generatedSource.Contains("class XPScriptUIForm", StringComparison.Ordinal);
             var csproj = BuildGeneratedProject(
                 runtimeIdentifier,
                 selfContained: false,
@@ -735,6 +743,18 @@ public sealed class CompilerDriver
 {androidProperties}{publishProperties}  </PropertyGroup>
 {itemGroup}</Project>
 """;
+    }
+
+    private static string AddAndroidUIFormDependencies(string project)
+    {
+        const string packages = """
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Android" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
+  </ItemGroup>
+""";
+        return project.Replace("</Project>", packages + "</Project>", StringComparison.Ordinal);
     }
 
     private static bool IsAndroidRuntime(string runtimeIdentifier) =>
