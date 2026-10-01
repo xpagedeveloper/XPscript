@@ -172,7 +172,8 @@ internal static class CompilerBuildEnvironment
         if (usesMySql) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MySqlDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         if (usesSupabaseDb) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + SupabaseDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         string? escapedAssembly = null;
-        if (usesUiForm || usesUiListView || usesDesktopDialog)
+        var usesAndroidUi = runtimeIdentifier.StartsWith("android-", StringComparison.OrdinalIgnoreCase) && usesUiForm;
+        if ((usesUiForm || usesUiListView || usesDesktopDialog) && !usesAndroidUi)
         {
             var desktopAssembly = typeof(XPScript.UI.Desktop.DesktopFormHost).Assembly.Location;
             if (string.IsNullOrWhiteSpace(desktopAssembly) || !File.Exists(desktopAssembly)) throw new CompilerException("Desktop UI runtime assembly is unavailable for UI compilation.");
