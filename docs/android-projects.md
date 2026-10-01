@@ -32,4 +32,15 @@ Unsupported application types fail before device deployment. A future Avalonia/U
 xpscript android run main.xps
 ```
 
-The command validates project metadata before selecting a device, detects the device ABI, compiles the matching Android APK, installs it, launches it and captures XPScript-tagged log output.
+The command validates project metadata before selecting a device, detects the device ABI, compiles the matching Android APK and uses the existing --platform option for the target RID. --rid is not a separate Android option. The command then installs the APK, launches it and captures XPScript-tagged log output.
+
+## Platform selection
+
+Use the existing compiler --platform option for Android targets:
+
+```text
+xpscript android run main.xps --platform android-arm64
+xpscript android run main.xps --platform android-x64
+```
+
+If --platform is omitted, android run detects the target platform from the selected device ABI. An explicit platform must match the device ABI.
