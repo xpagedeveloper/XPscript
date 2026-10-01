@@ -82,8 +82,13 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
     {
         var receiver = Bind(syntax.Expression);
         var key = receiver.Type.Name + "." + syntax.NameToken.Text;
-        if (_symbols.TryLookup(key, out var symbol) && symbol is FunctionSymbol function)
-            return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType);
+        if (_symbols.TryLookup(key, out var symbol))
+        {
+            if (symbol is PropertySymbol property)
+                return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, property.PropertyType);
+            if (symbol is FunctionSymbol function)
+                return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType);
+        }
         return Error(syntax, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.Type.Name}'.");
     }
 
