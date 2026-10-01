@@ -348,6 +348,15 @@ EqualLegacyAst("\"XP\" & \"Script\"", "string concatenation");
 EqualLegacyAst("1 + 2 = 3", "comparison precedence");
 EqualLegacyAst("True And False Or True", "boolean associativity");
 
+var malformedExpressionParser = new ExpressionParser("1 2");
+malformedExpressionParser.ParseExpression();
+Equal(1, malformedExpressionParser.Diagnostics.Count, "trailing expression token diagnostic count");
+Equal("XPS1012", malformedExpressionParser.Diagnostics[0].Code, "trailing expression token diagnostic code");
+
+var nestedCallParser = new ExpressionParser("RunCommand(\"where.exe\", Array(\"winget\"))");
+nestedCallParser.ParseExpression();
+Equal(0, nestedCallParser.Diagnostics.Count, "nested call parser diagnostics");
+
 var badCallBinder = new ExpressionBinder(callSymbols);
 badCallBinder.Bind(new ExpressionParser("RunCommand(\"where.exe\")").ParseExpression());
 Equal(1, badCallBinder.Diagnostics.Count, "RunCommand arity diagnostic count");
