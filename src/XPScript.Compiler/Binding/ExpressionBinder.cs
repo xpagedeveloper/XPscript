@@ -173,8 +173,13 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         if (arguments.Length != property.ParameterTypes.Count)
             return Error(syntax, $"Indexed property '{property.Name}' expects {property.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
         for (var i = 0; i < arguments.Length; i++)
+        {
             if (arguments[i].Type != property.ParameterTypes[i])
-                return Error(syntax.Arguments[i], $"Argument {i + 1} to '{property.Name}' must be {property.ParameterTypes[i].Name}, not {arguments[i].Type.Name}.");
+                return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch, $"Argument {i + 1} to '{property.Name}' must be {property.ParameterTypes[i].Name}, not {arguments[i].Type.Name}.");
+            if (property.SemanticParameterTypes is not null &&
+                !string.Equals(property.SemanticParameterTypes[i].Name, arguments[i].SemanticType.Name, StringComparison.OrdinalIgnoreCase))
+                return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch, $"Argument {i + 1} to '{property.Name}' must be {property.SemanticParameterTypes[i].Name}, not {arguments[i].SemanticType.Name}.");
+        }
         return new BoundIndexedPropertyExpression(receiver, property, arguments);
     }
 
