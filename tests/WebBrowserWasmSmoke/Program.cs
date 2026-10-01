@@ -320,6 +320,7 @@ End Sub
     await File.WriteAllTextAsync(serverArchivePath, """
 [Platform:browser-wasm]
 
+[Anonymous]
 [ServerSide]
 Sub DownloadArchive()
     Dim archive As New Archive()
@@ -372,7 +373,7 @@ End Sub
             BridgePostRequest("/server-archive.xps/__xpscript_bridge", archiveHeaders, procedureId),
             archiveDownloadResponse, archiveServer, new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession));
         if (archiveDownloadResponse.StatusCode != 200)
-            throw new Exception($"Archive browser download returned HTTP {archiveDownloadResponse.StatusCode}.");
+            throw new Exception($"Archive browser download returned HTTP {archiveDownloadResponse.StatusCode}, body '{archiveDownloadResponse.Body}'.");
         if (!string.Equals(archiveDownloadResponse.ContentType, "application/json; charset=utf-8", StringComparison.OrdinalIgnoreCase))
             throw new Exception("Archive browser download bridge did not return a JSON envelope.");
         using var downloadDocument = System.Text.Json.JsonDocument.Parse(archiveDownloadResponse.Body);
