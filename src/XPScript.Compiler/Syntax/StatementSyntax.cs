@@ -1,0 +1,5 @@
+namespace XPScript.Compiler.Syntax;
+
+public abstract class StatementSyntax : SyntaxNode
+{
+}
