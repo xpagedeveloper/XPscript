@@ -59,6 +59,23 @@ foreach (var expected in new[]
 
 foreach (var expected in new[]
 {
+    "ValidateAndroidBuildEnvironment",
+    "AndroidCompileApiLevel = \"36\"",
+    "platforms",
+    "android.jar",
+    "build-tools",
+    "aapt2",
+    "Android SDK platform API ",
+    "Android SDK Build Tools are required"
+})
+{
+    if (!androidCommand.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android SDK preflight regression is missing: " + expected);
+}
+
+
+foreach (var expected in new[]
+{
     "ResolveAndroidTool(\"emulator\")",
     "-list-avds",
     "Multiple AVDs are configured",
