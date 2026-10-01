@@ -194,7 +194,7 @@ internal static class CompilerBuildEnvironment
         if (usesMsSql) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.SqlClient\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Microsoft.Data.SqlClient", ApplicationDependencyCatalog.MicrosoftDataSqlClientVersion)}\" />\n";
         if (usesMySql) itemEntries += $"    <PackageReference Include=\"MySqlConnector\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("MySqlConnector", ApplicationDependencyCatalog.MySqlConnectorVersion)}\" />\n";
         if (usesSupabaseDb) itemEntries += $"    <PackageReference Include=\"Npgsql\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Npgsql", ApplicationDependencyCatalog.NpgsqlVersion)}\" />\n";
-        if (usesExtendedArchive) itemEntries += "    <PackageReference Include=\"SharpCompress\" Version=\"0.50.4\" />\n";
+        if (usesExtendedArchive) itemEntries += $"    <PackageReference Include=\"SharpCompress\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("SharpCompress", ApplicationDependencyCatalog.SharpCompressVersion)}\" />\n";
         if (usesImage) itemEntries += $"    <PackageReference Include=\"Magick.NET-Q16-AnyCPU\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Magick.NET-Q16-AnyCPU", ApplicationDependencyCatalog.MagickNetVersion)}\" />\n";
         var itemGroup = $"  <ItemGroup>\n{itemEntries}  </ItemGroup>\n";
 

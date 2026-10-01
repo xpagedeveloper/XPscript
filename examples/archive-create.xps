@@ -1,0 +1,6 @@
+Dim archive As New Archive("example.zip")
+archive.Create("zip")
+archive.AddText("hello.txt", "Hello from XPScript")
+archive.Save()
+
+Print "Created " & archive.Path

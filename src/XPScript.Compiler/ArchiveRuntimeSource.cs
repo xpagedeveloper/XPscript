@@ -70,8 +70,19 @@ internal sealed class XPScriptArchive
             _pendingEntries.Clear();
             var parent = System.IO.Path.GetDirectoryName(_path!);
             if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
-            using var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Create, System.IO.FileAccess.ReadWrite, System.IO.FileShare.None);
-            using var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, false);
+            var temp = _path! + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                using (var stream = new System.IO.FileStream(temp, System.IO.FileMode.CreateNew, System.IO.FileAccess.ReadWrite, System.IO.FileShare.None))
+                using (var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, false)) { }
+                ReplaceArchiveFile(temp, _path!);
+            }
+            catch (Exception ex)
+            {
+                try { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); } catch { }
+                if (ex is XPScriptRuntimeException) throw;
+                throw new XPScriptRuntimeException(5, "Archive creation failed without replacing the original archive: " + ex.Message);
+            }
             return;
         }
 
@@ -157,15 +168,19 @@ internal sealed class XPScriptArchive
         if (UseExtendedWriteMode)
         {
             var prefix = name.TrimEnd('/') + "/";
-            var removed = _pendingEntries.RemoveAll(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || x.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
-            if (removed > 0) SaveExtendedArchive();
-            return removed > 0;
+            var removedCount = _pendingEntries.RemoveAll(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) || x.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+            if (removedCount > 0) SaveExtendedArchive();
+            return removedCount > 0;
         }
 
-        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
-        var matches = archive.Entries.Where(x => x.FullName.Equals(name, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(name.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
-        foreach (var entry in matches) entry.Delete();
-        return matches.Count > 0;
+        var removed = false;
+        MutateZip(archive =>
+        {
+            var matches = archive.Entries.Where(x => x.FullName.Equals(name, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(name.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
+            foreach (var entry in matches) entry.Delete();
+            removed = matches.Count > 0;
+        });
+        return removed;
     }
 
     public bool Rename(object? entryName, object? newName)
@@ -182,31 +197,35 @@ internal sealed class XPScriptArchive
             foreach (var item in matches)
             {
                 var suffix = item.Name.Length == oldKey.Length ? "" : item.Name[oldKey.TrimEnd('/').Length..];
-                var renamed = Normalize(newKey.TrimEnd('/') + suffix + (item.IsDirectory && !suffix.EndsWith("/", StringComparison.Ordinal) ? "/" : ""));
-                item.Name = renamed;
+                var renamedEntry = Normalize(newKey.TrimEnd('/') + suffix + (item.IsDirectory && !suffix.EndsWith("/", StringComparison.Ordinal) ? "/" : ""));
+                item.Name = renamedEntry;
             }
             SaveExtendedArchive();
             return true;
         }
 
-        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
-        var entries = archive.Entries.Where(x => x.FullName.Equals(oldKey, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(oldKey.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
-        if (entries.Count == 0) return false;
-        foreach (var entry in entries)
+        var renamed = false;
+        MutateZip(archive =>
         {
-            var suffix = entry.FullName.Length == oldKey.Length ? "" : entry.FullName[oldKey.TrimEnd('/').Length..];
-            var targetName = Normalize(newKey.TrimEnd('/') + suffix + (entry.FullName.EndsWith("/", StringComparison.Ordinal) && !suffix.EndsWith("/", StringComparison.Ordinal) ? "/" : ""));
-            var replacement = archive.CreateEntry(targetName, ResolveCompressionLevel());
-            replacement.LastWriteTime = entry.LastWriteTime;
-            if (!entry.FullName.EndsWith("/", StringComparison.Ordinal))
+            var entries = archive.Entries.Where(x => x.FullName.Equals(oldKey, StringComparison.OrdinalIgnoreCase) || x.FullName.StartsWith(oldKey.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)).ToList();
+            if (entries.Count == 0) return;
+            foreach (var entry in entries)
             {
-                using var input = entry.Open();
-                using var output = replacement.Open();
-                input.CopyTo(output);
+                var suffix = entry.FullName.Length == oldKey.Length ? "" : entry.FullName[oldKey.TrimEnd('/').Length..];
+                var targetName = Normalize(newKey.TrimEnd('/') + suffix + (entry.FullName.EndsWith("/", StringComparison.Ordinal) && !suffix.EndsWith("/", StringComparison.Ordinal) ? "/" : ""));
+                var replacement = archive.CreateEntry(targetName, ResolveCompressionLevel());
+                replacement.LastWriteTime = entry.LastWriteTime;
+                if (!entry.FullName.EndsWith("/", StringComparison.Ordinal))
+                {
+                    using var input = entry.Open();
+                    using var output = replacement.Open();
+                    input.CopyTo(output);
+                }
             }
-        }
-        foreach (var entry in entries) entry.Delete();
-        return true;
+            foreach (var entry in entries) entry.Delete();
+            renamed = true;
+        });
+        return renamed;
     }
 
     public bool Contains(object? entryName)
@@ -278,13 +297,24 @@ internal sealed class XPScriptArchive
     public void ExtractAll(object? targetDirectory)
     {
         var root = XPScriptFileSystemRuntime.ResolvePath(targetDirectory);
-        System.IO.Directory.CreateDirectory(root);
-        if (UseExtendedBackend)
+        var parent = System.IO.Path.GetDirectoryName(root);
+        if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+        var staging = root.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar) + ".xps-extract-" + Guid.NewGuid().ToString("N");
+        try
         {
-            ExtractAllExtended(root);
-            return;
+            System.IO.Directory.CreateDirectory(staging);
+            if (UseExtendedBackend) ExtractAllExtended(staging);
+            else ExtractAllZip(staging);
+            CommitStagedExtraction(staging, root);
         }
+        finally
+        {
+            try { if (System.IO.Directory.Exists(staging)) System.IO.Directory.Delete(staging, true); } catch { }
+        }
+    }
 
+    private void ExtractAllZip(string root)
+    {
         using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Read);
         ValidateZip(archive.Entries);
         foreach (var entry in archive.Entries)
@@ -302,6 +332,93 @@ internal sealed class XPScriptArchive
             using var input = entry.Open();
             using var output = new System.IO.FileStream(target, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None);
             CopyLimited(input, output, entry.Length);
+        }
+    }
+
+    private static void CommitStagedExtraction(string staging, string root)
+    {
+        var rootExisted = System.IO.Directory.Exists(root);
+        var rollback = staging.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar) + ".rollback";
+        var createdFiles = new List<string>();
+        var replacedFiles = new List<(string Target, string Backup)>();
+        var createdDirectories = new List<string>();
+        try
+        {
+            if (!rootExisted)
+            {
+                System.IO.Directory.CreateDirectory(root);
+                createdDirectories.Add(root);
+            }
+
+            foreach (var directory in System.IO.Directory.EnumerateDirectories(staging, "*", System.IO.SearchOption.AllDirectories)
+                .OrderBy(x => x.Count(ch => ch == System.IO.Path.DirectorySeparatorChar || ch == System.IO.Path.AltDirectorySeparatorChar)))
+            {
+                var relative = System.IO.Path.GetRelativePath(staging, directory);
+                var target = SafePath(root, relative.Replace('\\', '/'));
+                EnsureNoReparseParents(root, target);
+                if (!System.IO.Directory.Exists(target))
+                {
+                    System.IO.Directory.CreateDirectory(target);
+                    createdDirectories.Add(target);
+                }
+            }
+
+            foreach (var file in System.IO.Directory.EnumerateFiles(staging, "*", System.IO.SearchOption.AllDirectories))
+            {
+                var relative = System.IO.Path.GetRelativePath(staging, file);
+                var target = SafePath(root, relative.Replace('\\', '/'));
+                EnsureNoReparseParents(root, target);
+                var parent = System.IO.Path.GetDirectoryName(target);
+                if (!string.IsNullOrEmpty(parent) && !System.IO.Directory.Exists(parent))
+                {
+                    System.IO.Directory.CreateDirectory(parent);
+                    createdDirectories.Add(parent);
+                }
+
+                if (System.IO.File.Exists(target))
+                {
+                    var backup = System.IO.Path.Combine(rollback, Guid.NewGuid().ToString("N"));
+                    System.IO.Directory.CreateDirectory(rollback);
+                    System.IO.File.Move(target, backup);
+                    replacedFiles.Add((target, backup));
+                }
+                else
+                {
+                    createdFiles.Add(target);
+                }
+
+                System.IO.File.Move(file, target);
+            }
+        }
+        catch
+        {
+            for (var i = createdFiles.Count - 1; i >= 0; i--)
+            {
+                try { if (System.IO.File.Exists(createdFiles[i])) System.IO.File.Delete(createdFiles[i]); } catch { }
+            }
+            for (var i = replacedFiles.Count - 1; i >= 0; i--)
+            {
+                try
+                {
+                    if (System.IO.File.Exists(replacedFiles[i].Target)) System.IO.File.Delete(replacedFiles[i].Target);
+                    if (System.IO.File.Exists(replacedFiles[i].Backup)) System.IO.File.Move(replacedFiles[i].Backup, replacedFiles[i].Target);
+                }
+                catch { }
+            }
+            for (var i = createdDirectories.Count - 1; i >= 0; i--)
+            {
+                try
+                {
+                    if (System.IO.Directory.Exists(createdDirectories[i]) && !System.IO.Directory.EnumerateFileSystemEntries(createdDirectories[i]).Any())
+                        System.IO.Directory.Delete(createdDirectories[i]);
+                }
+                catch { }
+            }
+            throw;
+        }
+        finally
+        {
+            try { if (System.IO.Directory.Exists(rollback)) System.IO.Directory.Delete(rollback, true); } catch { }
         }
     }
 
@@ -326,12 +443,14 @@ internal sealed class XPScriptArchive
         }
 
         if (!System.IO.File.Exists(_path!)) Create("zip");
-        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
-        archive.GetEntry(name)?.Delete();
-        var entry = archive.CreateEntry(name, ResolveCompressionLevel());
-        entry.LastWriteTime = new DateTimeOffset(modified.ToUniversalTime());
-        using var output = entry.Open();
-        output.Write(bytes, 0, bytes.Length);
+        MutateZip(archive =>
+        {
+            archive.GetEntry(name)?.Delete();
+            var entry = archive.CreateEntry(name, ResolveCompressionLevel());
+            entry.LastWriteTime = new DateTimeOffset(modified.ToUniversalTime());
+            using var output = entry.Open();
+            output.Write(bytes, 0, bytes.Length);
+        });
     }
 
     private void AddDirectoryEntry(string name)
@@ -346,8 +465,10 @@ internal sealed class XPScriptArchive
         }
 
         if (!System.IO.File.Exists(_path!)) Create("zip");
-        using var archive = OpenZip(System.IO.Compression.ZipArchiveMode.Update);
-        if (archive.GetEntry(name) is null) archive.CreateEntry(name, System.IO.Compression.CompressionLevel.NoCompression);
+        MutateZip(archive =>
+        {
+            if (archive.GetEntry(name) is null) archive.CreateEntry(name, System.IO.Compression.CompressionLevel.NoCompression);
+        });
     }
 
     private void UpsertPending(PendingArchiveEntry entry)
@@ -417,6 +538,48 @@ internal sealed class XPScriptArchive
         catch { stream.Dispose(); throw; }
     }
 
+    private void MutateZip(System.Action<System.IO.Compression.ZipArchive> mutation)
+    {
+        EnsurePath();
+        if (!System.IO.File.Exists(_path!)) throw new XPScriptRuntimeException(53, "Archive file was not found.");
+        var temp = _path! + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            System.IO.File.Copy(_path!, temp, false);
+            using (var stream = new System.IO.FileStream(temp, System.IO.FileMode.Open, System.IO.FileAccess.ReadWrite, System.IO.FileShare.None))
+            using (var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Update, false))
+                mutation(archive);
+            ReplaceArchiveFile(temp, _path!);
+        }
+        catch (Exception ex)
+        {
+            try { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); } catch { }
+            if (ex is XPScriptRuntimeException) throw;
+            throw new XPScriptRuntimeException(5, "Archive save or replacement failed without replacing the original archive: " + ex.Message);
+        }
+    }
+
+    private static void ReplaceArchiveFile(string temp, string destination)
+    {
+        try
+        {
+            if (!System.IO.File.Exists(destination))
+            {
+                System.IO.File.Move(temp, destination);
+                return;
+            }
+            try { System.IO.File.Replace(temp, destination, null); }
+            catch (PlatformNotSupportedException)
+            {
+                System.IO.File.Move(temp, destination, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new XPScriptRuntimeException(5, "Archive replacement failed; the original archive was left unchanged: " + ex.Message);
+        }
+    }
+
     private void EnsurePath()
     {
         if (string.IsNullOrWhiteSpace(_path)) throw new XPScriptRuntimeException(5, "Archive requires a file path.");
@@ -461,6 +624,7 @@ internal sealed class XPScriptArchive
         var format = NormalizeExtendedWriteFormat(Format);
         var parent = System.IO.Path.GetDirectoryName(_path!);
         if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+        var temp = _path! + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
         try
         {
@@ -490,7 +654,7 @@ internal sealed class XPScriptArchive
                 .FirstOrDefault(m => m.Name == "OpenWriter" && m.GetParameters().Length == 3 && m.GetParameters()[0].ParameterType == typeof(System.IO.Stream))
                 ?? throw new MissingMethodException("SharpCompress WriterFactory.OpenWriter(Stream, ArchiveType, IWriterOptions) was not found.");
 
-            using var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None);
+            using var stream = new System.IO.FileStream(temp, System.IO.FileMode.CreateNew, System.IO.FileAccess.Write, System.IO.FileShare.None);
             var writer = openWriter.Invoke(null, [stream, archiveType, options])
                 ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to create the archive writer.");
             try
@@ -518,13 +682,18 @@ internal sealed class XPScriptArchive
             {
                 if (writer is IDisposable disposable) disposable.Dispose();
             }
+            stream.Dispose();
+            ReplaceArchiveFile(temp, _path!);
         }
         catch (System.Reflection.TargetInvocationException ex)
         {
+            try { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); } catch { }
             throw new XPScriptRuntimeException(5, "Unable to write extended archive: " + (ex.InnerException?.Message ?? ex.Message));
         }
-        catch (Exception ex) when (ex is not XPScriptRuntimeException)
+        catch (Exception ex)
         {
+            try { if (System.IO.File.Exists(temp)) System.IO.File.Delete(temp); } catch { }
+            if (ex is XPScriptRuntimeException) throw;
             throw new XPScriptRuntimeException(5, "Unable to write extended archive: " + ex.Message);
         }
     }
@@ -616,7 +785,17 @@ internal sealed class XPScriptArchive
             var method = factoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
                 .FirstOrDefault(m => m.Name == "OpenArchive" && m.GetParameters().Length == 2 && m.GetParameters()[0].ParameterType == typeof(string) && m.GetParameters()[1].ParameterType == optionsType)
                 ?? throw new MissingMethodException("SharpCompress ArchiveFactory.OpenArchive(string, ReaderOptions) was not found.");
-            var archive = method.Invoke(null, [_path!, options]) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open the archive.");
+            object archive;
+            try
+            {
+                archive = method.Invoke(null, [_path!, options]) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open the archive.");
+            }
+            catch (System.Reflection.TargetInvocationException) when (Format.Equals("BZ2", StringComparison.OrdinalIgnoreCase) || Format.Equals("BZIP2", StringComparison.OrdinalIgnoreCase))
+            {
+                // Raw BZip2 is a compressed stream rather than a multi-entry archive.
+                // Wrap it as a synthetic single-entry archive so the public Archive read/extract surface remains consistent.
+                return OpenExtendedCompressedStreamArchive(assembly, optionsType, options, "BZip2");
+            }
             return new ExtendedArchiveHandle(archive);
         }
         catch (System.Reflection.TargetInvocationException ex)
@@ -626,6 +805,25 @@ internal sealed class XPScriptArchive
         catch (Exception ex) when (ex is not XPScriptRuntimeException)
         {
             throw new XPScriptRuntimeException(5, "Unable to load SharpCompress extended archive support: " + ex.Message);
+        }
+    }
+
+    private ExtendedArchiveHandle OpenExtendedCompressedStreamArchive(System.Reflection.Assembly assembly, Type optionsType, object options, string formatName)
+    {
+        var factoryType = assembly.GetType("SharpCompress.Readers.ReaderFactory", throwOnError: true)!;
+        var open = factoryType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .FirstOrDefault(m => m.Name == "OpenReader" && m.GetParameters().Length == 2 && typeof(System.IO.Stream).IsAssignableFrom(m.GetParameters()[0].ParameterType) && m.GetParameters()[1].ParameterType == optionsType)
+            ?? throw new MissingMethodException("SharpCompress ReaderFactory.OpenReader(Stream, ReaderOptions) was not found.");
+        var stream = new System.IO.FileStream(_path!, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read);
+        try
+        {
+            var reader = open.Invoke(null, [stream, options]) ?? throw new XPScriptRuntimeException(5, "SharpCompress failed to open the " + formatName + " stream.");
+            return new ExtendedArchiveHandle(new SingleEntryReaderArchive(reader, stream, System.IO.Path.GetFileNameWithoutExtension(_path!)));
+        }
+        catch
+        {
+            stream.Dispose();
+            throw;
         }
     }
 
@@ -664,6 +862,8 @@ internal sealed class XPScriptArchive
         }
         if (declaredSize >= 0 && written > declaredSize + 1024 * 1024)
             throw new XPScriptRuntimeException(5, "Archive entry expanded beyond its declared size.");
+        if (declaredSize >= 0 && written != declaredSize)
+            throw new XPScriptRuntimeException(5, "Archive entry data is truncated or does not match its declared size.");
         return written;
     }
 
@@ -765,6 +965,55 @@ internal sealed class XPScriptArchive
             Bytes = bytes;
             Modified = modified;
             IsDirectory = isDirectory;
+        }
+    }
+
+    private sealed class SingleEntryReaderArchive : IDisposable
+    {
+        private readonly object _reader;
+        private readonly System.IO.Stream _source;
+        internal List<SingleEntryReaderEntry> Entries { get; } = [];
+
+        public SingleEntryReaderArchive(object reader, System.IO.Stream source, string name)
+        {
+            _reader = reader;
+            _source = source;
+            var type = reader.GetType();
+            var move = type.GetMethod("MoveToNextEntry", Type.EmptyTypes) ?? throw new MissingMethodException("SharpCompress reader MoveToNextEntry() was not found.");
+            if (Convert.ToBoolean(move.Invoke(reader, null), System.Globalization.CultureInfo.InvariantCulture))
+            {
+                var entry = type.GetProperty("Entry")?.GetValue(reader) ?? throw new XPScriptRuntimeException(5, "SharpCompress compressed stream entry is unavailable.");
+                Entries.Add(new SingleEntryReaderEntry(name, entry, reader));
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_reader is IDisposable disposable) disposable.Dispose();
+            _source.Dispose();
+        }
+    }
+
+    private sealed class SingleEntryReaderEntry
+    {
+        private readonly object _entry;
+        private readonly object _reader;
+        internal string Key { get; }
+        internal long Size => GetLongProperty(_entry, "Size");
+        internal long CompressedSize => GetLongProperty(_entry, "CompressedSize");
+        internal bool IsDirectory => false;
+        internal bool IsEncrypted => GetBoolProperty(_entry, "IsEncrypted");
+        internal DateTime CreatedTime => DateTime.MinValue;
+        internal DateTime LastModifiedTime => DateTime.MinValue;
+        internal string Crc => "";
+
+        public SingleEntryReaderEntry(string key, object entry, object reader) { Key = key; _entry = entry; _reader = reader; }
+
+        internal System.IO.Stream OpenEntryStream()
+        {
+            var type = _reader.GetType();
+            var method = type.GetMethod("OpenEntryStream", Type.EmptyTypes) ?? throw new MissingMethodException("SharpCompress reader OpenEntryStream() was not found.");
+            return (System.IO.Stream)(method.Invoke(_reader, null) ?? throw new XPScriptRuntimeException(5, "SharpCompress compressed entry stream is unavailable."));
         }
     }
 

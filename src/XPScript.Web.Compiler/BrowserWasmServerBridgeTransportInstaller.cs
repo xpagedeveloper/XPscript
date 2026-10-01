@@ -201,10 +201,50 @@ globalThis.__xpscriptWasmBridgeRequest = function(method, relativeUrl, headersJs
             headers[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
         }
 
+        let responseBody = xhr.responseText || '';
+        if (xhr.status >= 200 && xhr.status <= 299 && responseBody) {
+            try {
+                const bridgePayload = JSON.parse(responseBody);
+                const download = bridgePayload && bridgePayload.download;
+                if (download && typeof download.base64 === 'string') {
+                    const binary = atob(download.base64);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    const disposition = String(download.contentDisposition || '');
+                    const encodedName = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+                    const plainName = /filename="([^"]+)"/i.exec(disposition);
+                    let fileName = 'download';
+                    if (encodedName) {
+                        try { fileName = decodeURIComponent(encodedName[1]); } catch { fileName = encodedName[1]; }
+                    } else if (plainName) {
+                        fileName = plainName[1];
+                    }
+                    const blob = new Blob([bytes], { type: String(download.contentType || 'application/octet-stream') });
+                    const objectUrl = URL.createObjectURL(blob);
+                    try {
+                        const anchor = document.createElement('a');
+                        anchor.href = objectUrl;
+                        anchor.download = fileName;
+                        anchor.rel = 'noopener';
+                        anchor.style.display = 'none';
+                        document.body.appendChild(anchor);
+                        anchor.click();
+                        anchor.remove();
+                    } finally {
+                        URL.revokeObjectURL(objectUrl);
+                    }
+                    delete bridgePayload.download;
+                    responseBody = JSON.stringify(bridgePayload);
+                }
+            } catch {
+                // Normal non-JSON bridge errors are handled by the managed transport.
+            }
+        }
+
         return JSON.stringify({
             status: xhr.status,
             statusText: xhr.statusText || '',
-            body: xhr.responseText || '',
+            body: responseBody,
             contentType: xhr.getResponseHeader('Content-Type') || '',
             headers
         });

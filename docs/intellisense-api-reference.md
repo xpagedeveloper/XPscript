@@ -15,6 +15,12 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 
 
 
+## Archive browser download
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `MemoryArchive.SendToBrowser` | `archive.SendToBrowser(downloadName)` | `downloadName`: filename presented to the browser. | Sends an in-memory archive from server-side web code to the browser as a download while keeping archive processing out of the client WebAssembly bundle. | [archive-memory.xps](../demo/archive/archive-memory.xps) |
+
 ## CSV JSON conversion
 
 | Member | Syntax | Parameters | Description | Example |

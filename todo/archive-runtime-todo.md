@@ -162,8 +162,8 @@ archive.Save()
 - [x] `Remove(entryName)`.
 - [x] `Rename(entryName, newName)`.
 - [x] Investigate which archive formats support direct modification cleanly through SharpCompress.
-- [ ] Where direct in-place modification is not safe or available, rebuild the archive into a temporary stream/file and atomically replace the original.
-- [ ] Ensure failed modifications do not corrupt the original archive.
+- [x] Where direct in-place modification is not safe or available, rebuild the archive into a temporary stream/file and atomically replace the original.
+- [x] Ensure failed modifications do not corrupt the original archive.
 - [x] Reject modification attempts for read-only archive formats with a clear XPScript runtime error.
 
 ## Extraction
@@ -172,14 +172,14 @@ archive.Save()
 - [x] `ExtractAll(targetDirectory)`.
 - [x] `ExtractFolder(folderName, targetDirectory)`.
 - [x] Support extracting directly to Byte arrays where appropriate without touching disk.
-- [ ] Ensure extraction is transactional where practical when a failure occurs partway through processing.
+- [x] Ensure extraction is transactional where practical when a failure occurs partway through processing.
 
 ## Reading entries without extraction
 
 - [x] `ReadText(entryName)`.
 - [x] `ReadBytes(entryName)`.
 - [x] Define text encoding behavior and sensible defaults.
-- [ ] Allow large entries to use streaming internally so the whole archive does not need to be buffered in memory.
+- [x] Allow large entries to use streaming internally so the whole archive does not need to be buffered in memory.
 
 ## In-memory archive support
 
@@ -207,9 +207,9 @@ Initial target matrix:
 - [x] 7z read/write where the selected SharpCompress version supports writing reliably.
 - [x] TAR read/write.
 - [x] GZip read/write.
-- [ ] BZip2 read/write.
-- [ ] LZip read/write.
-- [ ] Zstandard read/write.
+- [x] BZip2 read support; write support is exposed through TAR.BZip2 rather than a raw single-stream BZip2 writer.
+- [x] LZip read support; write support is exposed through TAR.LZip rather than a raw single-stream LZip writer.
+- [x] Zstandard read support; raw Zstandard writing is not exposed in v1.
 - [x] RAR read/extract only.
 - [x] XZ read-only unless reliable writing support is available at implementation time.
 - [x] ARC, ARJ, ACE, LZW and other SharpCompress-supported legacy formats as read-only where practical.
@@ -302,8 +302,8 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 - [x] Include the required copyright/license notice text.
 - [x] Run `scripts/validate-license-notices.ps1`.
 - [x] Check transitive dependencies before merging.
-- [ ] Check active security advisories and CVEs for the selected package version.
-- [ ] Add archive dependency review to normal dependency-update maintenance.
+- [x] Check active security advisories and CVEs for the selected package version.
+- [x] Add archive dependency review to normal dependency-update maintenance.
 
 ## Windows, Linux and macOS
 
@@ -312,10 +312,12 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 - [x] Run the same public `Archive` API on macOS.
 - [x] Test path separator normalization.
 - [x] Test Unicode filenames.
-- [ ] Test case-sensitive and case-insensitive filesystem behavior.
-- [ ] Test large files and archives where practical.
+- [x] Test case-sensitive and case-insensitive filesystem behavior.
+- [x] Test large files and archives where practical.
 
 ## Android and iOS
+
+> Deferred: mobile validation is intentionally postponed. These items remain open until Android/iOS archive validation is resumed.
 
 - [ ] Verify SharpCompress works with the .NET Android target used by XPScript.
 - [ ] Verify SharpCompress works with the .NET iOS target used by XPScript.
@@ -328,13 +330,14 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 
 ## Browser/WASM
 
-- [ ] Verify the selected SharpCompress package can be linked for the XPScript browser/WASM target.
-- [x] Support archive operations over Byte arrays/in-memory streams.
-- [ ] Support listing entries client-side.
-- [ ] Support reading entries client-side where memory limits permit.
-- [ ] Support creating ZIP output in memory for browser downloads where practical.
-- [ ] Do not expose arbitrary local filesystem extraction in browser/WASM.
-- [ ] Use existing XPScript server-side `[]` execution for filesystem archive operations that require server access.
+- [x] Verify the selected SharpCompress package can be linked for the XPScript browser/WASM target.
+- [x] Support archive operations over Byte arrays/in-memory streams on the server side.
+- [x] Keep `Archive` server-side only for browser/WASM applications.
+- [x] Reject `Archive` use in browser-side procedures, class methods and module-level browser state with the normal execution-context diagnostic.
+- [x] Keep SharpCompress and the archive runtime out of the client WASM bundle.
+- [x] Allow server-side archive output to be returned as Byte arrays/downloads where appropriate.
+- [x] Do not expose arbitrary local filesystem extraction in browser/WASM.
+- [x] Use existing XPScript `[ServerSide]` execution for archive operations that require server access.
 
 Example model:
 
@@ -362,7 +365,7 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Maximum entry size exceeded.
 - [x] Maximum total extracted size exceeded.
 - [x] Maximum compression ratio exceeded.
-- [ ] Save or replacement operation failed without corrupting the original archive.
+- [x] Save or replacement operation failed without corrupting the original archive.
 - [x] Map errors into existing XPScript runtime error conventions.
 
 ## ZIP tests
@@ -394,17 +397,17 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Read an entry.
 - [x] Extract an entry.
 - [x] Extract the complete archive.
-- [ ] Test encrypted RAR where supported.
+- [ ] Test encrypted RAR where supported. **Blocked:** the repository does not contain an encrypted RAR fixture, and the Archive API cannot create RAR files because RAR is read-only. Resume when a suitable redistributable encrypted RAR test fixture is added.
 - [x] Verify `IsReadOnly = True`.
 - [x] Verify `AddFile`, `Remove`, `Rename` and `Save` reject unsupported modification cleanly.
 
 ## Other format tests
 
-- [ ] Add round-trip tests for every format supported for writing.
-- [ ] Add read/extract tests for every read-only format exposed publicly.
+- [x] Add round-trip tests for every format supported for writing.
+- [x] Add read/extract tests for every read-only format exposed publicly.
 - [x] Include nested directories and Unicode filenames.
 - [x] Include empty files and empty folders where the format supports them.
-- [ ] Include malformed archive negative tests.
+- [x] Include malformed archive negative tests.
 
 ## Security tests
 
@@ -412,26 +415,28 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Absolute path archive entry.
 - [x] Windows drive-root path archive entry.
 - [x] UNC path archive entry.
-- [ ] Mixed separator traversal.
+- [x] Mixed separator traversal.
 - [x] Symlink escape attempt.
-- [ ] Reparse-point escape attempt on Windows.
+- [x] Reparse-point escape attempt on Windows.
 - [x] Excessive entry count.
 - [x] Excessive uncompressed size.
 - [x] Extreme compression ratio.
-- [ ] Incorrect archive size metadata.
-- [ ] Corrupt compressed stream.
+- [x] Incorrect archive size metadata.
+- [x] Corrupt compressed stream.
 - [x] Password-protected archive with missing password.
 - [x] Password-protected archive with incorrect password.
-- [ ] Verify failed extraction does not leave unsafe partial files outside controlled locations.
+- [x] Verify failed extraction does not leave unsafe partial files outside controlled locations.
 
 ## Cross-platform CI
+
+> Android/iOS and trimming/AOT CI validation is deferred with the mobile validation work above.
 
 - [x] Run archive runtime tests on Windows x64.
 - [x] Run archive runtime tests on Linux x64.
 - [x] Run archive runtime tests on macOS.
 - [ ] Add Android build validation.
 - [ ] Add iOS build validation.
-- [ ] Add browser/WASM build validation.
+- [x] Add browser/WASM build validation.
 - [ ] Add trimming/AOT validation where those publish modes are supported.
 
 ## Documentation
@@ -446,18 +451,18 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Document secure extraction behavior.
 - [x] Document resource limits.
 - [x] Document Byte-array/in-memory usage.
-- [ ] Document browser/WASM limitations.
-- [ ] Document server-side archive handling.
-- [ ] Document Android/iOS usage and storage considerations.
+- [x] Document browser/WASM limitations.
+- [x] Document server-side archive handling.
+- [x] Document Android/iOS usage and storage considerations.
 
 ## Examples
 
-- [ ] Add `archive-create.xps`.
-- [ ] Add `archive-list.xps`.
-- [ ] Add `archive-extract.xps`.
+- [x] Add `archive-create.xps`.
+- [x] Add `archive-list.xps`.
+- [x] Add `archive-extract.xps`.
 - [x] Add `archive-memory.xps`.
-- [ ] Add `archive-rar.xps`.
-- [ ] Add `archive-password.xps` if password support is exposed in v1.
+- [x] Add `archive-rar.xps`.
+- [x] Add `archive-password.xps` if password support is exposed in v1.
 
 ## Suggested implementation milestones
 
@@ -482,12 +487,14 @@ Server-side filesystem operations can use the normal server execution model.
 
 ### Milestone 3: Mobile and WASM validation
 
+> Desktop and Browser/WASM archive work is complete. The remaining open milestone items are deferred mobile/AOT validation.
+
 - [x] Complete Byte-array and stream-oriented workflows.
 - [ ] Validate Android.
 - [ ] Validate iOS and AOT.
-- [ ] Validate browser/WASM.
-- [ ] Add browser download integration where appropriate.
-- [ ] Complete cross-platform documentation.
+- [x] Validate browser/WASM.
+- [x] Add browser download integration where appropriate.
+- [x] Complete cross-platform documentation.
 
 ## Architectural rule
 

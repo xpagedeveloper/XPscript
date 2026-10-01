@@ -34,6 +34,10 @@ internal static class BrowserWasmServerSideMetadata
         @"\bXPImage\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex ArchiveRuntimeType = new(
+        @"\bArchive\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private sealed class AnnotatedProcedureSet : IReadOnlySet<string>
     {
         private readonly IReadOnlyDictionary<string, BrowserWasmServerSideOptions> _options;
@@ -172,6 +176,7 @@ internal static class BrowserWasmServerSideMetadata
         var annotatedProcedures = result.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
         ValidateNotesBoundary(lines, annotatedProcedures);
         ValidateXPImageBoundary(lines, annotatedProcedures);
+        ValidateArchiveBoundary(lines, annotatedProcedures);
         return result;
     }
 
@@ -294,6 +299,38 @@ internal static class BrowserWasmServerSideMetadata
             throw ServerSideRequired(
                 currentProcedure,
                 $"browser-wasm procedure '{currentProcedure}' uses XPImage but is not marked [ServerSide]. XPImage and Magick.NET execute on the web server, never in the client WebAssembly runtime.");
+    }
+
+    private static void ValidateArchiveBoundary(string[] lines, IReadOnlySet<string> annotatedProcedures)
+    {
+        string? currentProcedure = null;
+        var classDepth = 0;
+        foreach (var line in lines)
+        {
+            var clean = StripComment(line).Trim();
+            if (clean.Length == 0) continue;
+            if (ClassHeader.IsMatch(clean)) { classDepth++; continue; }
+            if (clean.Equals("End Class", StringComparison.OrdinalIgnoreCase)) { classDepth = Math.Max(0, classDepth - 1); continue; }
+            var header = ProcedureHeader.Match(clean);
+            if (header.Success)
+            {
+                currentProcedure = header.Groups[2].Value;
+                if (ArchiveRuntimeType.IsMatch(BlankStringLiterals(clean))) ValidateArchiveUse(classDepth, currentProcedure, annotatedProcedures);
+                continue;
+            }
+            if (Regex.IsMatch(clean, @"^End\s+(?:Sub|Function)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)) { currentProcedure = null; continue; }
+            if (ArchiveRuntimeType.IsMatch(BlankStringLiterals(clean))) ValidateArchiveUse(classDepth, currentProcedure, annotatedProcedures);
+        }
+    }
+
+    private static void ValidateArchiveUse(int classDepth, string? currentProcedure, IReadOnlySet<string> annotatedProcedures)
+    {
+        if (classDepth != 0)
+            throw ServerSideRequired(currentProcedure ?? "Archive", "browser-wasm Archive access is not supported inside class methods. Move archive work to a module Sub or Function marked [ServerSide].", "ClassMethod");
+        if (currentProcedure is null)
+            throw ServerSideRequired("Archive", "browser-wasm Archive objects cannot be module-level state. Create and use Archive inside a module Sub or Function marked [ServerSide].", "Module");
+        if (!annotatedProcedures.Contains(currentProcedure))
+            throw ServerSideRequired(currentProcedure, $"browser-wasm procedure '{currentProcedure}' uses Archive but is not marked [ServerSide]. Archive and SharpCompress execute on the web server, never in the client WebAssembly runtime.");
     }
 
     private static void ValidateNotesBoundary(string[] lines, IReadOnlySet<string> annotatedProcedures)

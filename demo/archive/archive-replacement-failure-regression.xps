@@ -1,0 +1,14 @@
+Option Declare
+
+Sub Main()
+    If Application.ArgCount < 1 Then Error 5, "Archive replacement failure regression requires archive path"
+
+    Dim archivePath As String
+    archivePath = Application.Args(0)
+
+    Dim archive As New Archive(archivePath)
+    archive.Open()
+    archive.AddText("must-not-be-added.txt", "replacement should fail")
+
+    Print "ARCHIVE_REPLACEMENT_FAILURE_UNEXPECTED_SUCCESS"
+End Sub

@@ -129,6 +129,8 @@ internal static class XpsBrowserWasmServerBridgeHost
         {
             state.Touch();
             var result = Invoke(state, procedure, request.Arguments, context);
+            if (TryWriteDownloadEnvelope(context))
+                return true;
             WriteJson(context, 200, new JsonObject { ["result"] = NormalizeResult(state.Assembly, result) });
         }
         catch (OperationCanceledException) when (context.Request.CancellationToken.IsCancellationRequested)
@@ -296,6 +298,28 @@ internal static class XpsBrowserWasmServerBridgeHost
         {
             if (Sessions.TryRemove(pair.Key, out var removed)) removed.Dispose();
         }
+    }
+
+    private static bool TryWriteDownloadEnvelope(XpsWebContext context)
+    {
+        if (!context.Response.Headers.TryGetValue("Content-Disposition", out var dispositions) ||
+            !dispositions.Any(value => value.StartsWith("attachment;", StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        var contentType = context.Response.ContentType ?? "application/octet-stream";
+        var disposition = dispositions.First(value => value.StartsWith("attachment;", StringComparison.OrdinalIgnoreCase));
+        var base64 = Convert.ToBase64String(context.Response.Body.Span);
+        WriteJson(context, 200, new JsonObject
+        {
+            ["result"] = null,
+            ["download"] = new JsonObject
+            {
+                ["base64"] = base64,
+                ["contentType"] = contentType,
+                ["contentDisposition"] = disposition
+            }
+        });
+        return true;
     }
 
     private static void WriteJson(XpsWebContext context, int statusCode, JsonObject value)
