@@ -379,6 +379,21 @@ semanticTypeSymbols.Declare(new VariableSymbol("typedBox", typeof(object), boxSe
 semanticTypeSymbols.Declare(new PropertySymbol("Person.Name", typeof(string)));
 semanticTypeSymbols.Declare(new PropertySymbol("Box.Value", typeof(string)));
 
+semanticTypeSymbols.Declare(new FunctionSymbol("Handle", typeof(string), [typeof(object)], null, [personSemanticType]));
+semanticTypeSymbols.Declare(new FunctionSymbol("Handle", typeof(string), [typeof(object)], null, [boxSemanticType]));
+
+var semanticPersonOverloadBinder = new ExpressionBinder(semanticTypeSymbols);
+var boundSemanticPersonOverload = semanticPersonOverloadBinder.Bind(new ExpressionParser("Handle(typedPerson)").ParseExpression());
+Equal(BoundNodeKind.CallExpression, boundSemanticPersonOverload.Kind, "semantic Person overload root");
+Equal(0, semanticPersonOverloadBinder.Diagnostics.Count, "semantic Person overload diagnostics");
+Equal("Person", ((BoundCallExpression)boundSemanticPersonOverload).Function.SemanticParameterTypes![0].Name, "selected semantic Person overload");
+
+var semanticBoxOverloadBinder = new ExpressionBinder(semanticTypeSymbols);
+var boundSemanticBoxOverload = semanticBoxOverloadBinder.Bind(new ExpressionParser("Handle(typedBox)").ParseExpression());
+Equal(BoundNodeKind.CallExpression, boundSemanticBoxOverload.Kind, "semantic Box overload root");
+Equal(0, semanticBoxOverloadBinder.Diagnostics.Count, "semantic Box overload diagnostics");
+Equal("Box", ((BoundCallExpression)boundSemanticBoxOverload).Function.SemanticParameterTypes![0].Name, "selected semantic Box overload");
+
 var typedPersonBinder = new ExpressionBinder(semanticTypeSymbols);
 var boundTypedPersonName = typedPersonBinder.Bind(new ExpressionParser("typedPerson.Name").ParseExpression());
 Equal(BoundNodeKind.MemberAccessExpression, boundTypedPersonName.Kind, "semantic Person member root");
