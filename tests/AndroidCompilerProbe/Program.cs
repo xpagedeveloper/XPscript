@@ -102,4 +102,17 @@ if (!runtimeDiagnosticsSource.Contains("#if ANDROID", StringComparison.Ordinal) 
     !runtimeDiagnosticsSource.Contains("Environment.ExitCode = 1;", StringComparison.Ordinal))
     throw new Exception("Android runtime diagnostics regression is missing.");
 
+var outputRegressionSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-debug-output-regression.xps"));
+foreach (var expected in new[]
+{
+    "Print \"ANDROID-LINE=first\"",
+    "Print \"ANDROID-VALUE=\" & 42",
+    "Print \"ANDROID-BOOL=\" & True",
+    "Print \"ANDROID-LINE=last\""
+})
+{
+    if (!outputRegressionSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android multi-line output regression sample is incomplete: " + expected);
+}
+
 Console.WriteLine("ANDROID-COMPILER-PROBE=OK");
