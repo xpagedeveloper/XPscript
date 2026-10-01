@@ -50,7 +50,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Use an unambiguous XPScript log tag.
 - [ ] Add a second minimal regression that emits multiple lines and values so output ordering and formatting are verified. (Sample/compiler regression added; emulator/device output verification pending.)
 - [x] Route uncaught XPScript runtime errors to Android logging.
-- [ ] Add a minimal failure sample that intentionally raises a runtime error and verify the error reaches the debug path.
+- [x] Add a minimal failure sample that intentionally raises a runtime error and verify the error reaches the debug path. (Verified on Windows with Pixel_5 API 30 and android-x64. `BEFORE-RUNTIME-ERROR` and `XPSCRIPT-EXIT=1` were observed.)
 - [ ] Include source file and line information in Android runtime diagnostics when available.
 - [x] Define headless host exit semantics with `XPSCRIPT-EXIT=0` for success and `XPSCRIPT-EXIT=1` for uncaught runtime failure.
 - [x] Make `Platform()` return `Android` when running under the .NET Android runtime.
