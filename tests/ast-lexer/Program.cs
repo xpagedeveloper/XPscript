@@ -289,6 +289,14 @@ overloadMissingBinder.Bind(new ExpressionParser("ConvertValue(True)").ParseExpre
 Equal(1, overloadMissingBinder.Diagnostics.Count, "no matching overload diagnostic count");
 Equal("XPS2004", overloadMissingBinder.Diagnostics[0].Code, "no matching overload diagnostic code");
 
+var ambiguousOverloadSymbols = new SymbolTable();
+ambiguousOverloadSymbols.Declare(new FunctionSymbol("ConvertValue", typeof(string), [typeof(long)]));
+ambiguousOverloadSymbols.Declare(new FunctionSymbol("ConvertValue", typeof(string), [typeof(long)]));
+var ambiguousOverloadBinder = new ExpressionBinder(ambiguousOverloadSymbols);
+ambiguousOverloadBinder.Bind(new ExpressionParser("ConvertValue(1)").ParseExpression());
+Equal(1, ambiguousOverloadBinder.Diagnostics.Count, "ambiguous overload diagnostic count");
+Equal("XPS2005", ambiguousOverloadBinder.Diagnostics[0].Code, "ambiguous overload diagnostic code");
+
 var callSymbols = new SymbolTable();
 callSymbols.Declare(new FunctionSymbol("Array", typeof(string[]), [typeof(string)]));
 callSymbols.Declare(new FunctionSymbol("RunCommand", typeof(bool), [typeof(string), typeof(string[])]));
@@ -335,6 +343,13 @@ var memberMissingOverloadBinder = new ExpressionBinder(memberSymbols);
 memberMissingOverloadBinder.Bind(new ExpressionParser("person.ConvertValue(True)").ParseExpression());
 Equal(1, memberMissingOverloadBinder.Diagnostics.Count, "member no matching overload diagnostic count");
 Equal("XPS2004", memberMissingOverloadBinder.Diagnostics[0].Code, "member no matching overload diagnostic code");
+
+memberSymbols.Declare(new FunctionSymbol("Object.Ambiguous", typeof(string), [typeof(long)]));
+memberSymbols.Declare(new FunctionSymbol("Object.Ambiguous", typeof(string), [typeof(long)]));
+var ambiguousMemberOverloadBinder = new ExpressionBinder(memberSymbols);
+ambiguousMemberOverloadBinder.Bind(new ExpressionParser("person.Ambiguous(1)").ParseExpression());
+Equal(1, ambiguousMemberOverloadBinder.Diagnostics.Count, "ambiguous member overload diagnostic count");
+Equal("XPS2005", ambiguousMemberOverloadBinder.Diagnostics[0].Code, "ambiguous member overload diagnostic code");
 
 var propertyBinder = new ExpressionBinder(memberSymbols);
 var boundProperty = propertyBinder.Bind(new ExpressionParser("person.Name").ParseExpression());
