@@ -72,7 +72,7 @@ public static class CompilerMcpServer
 
     private static object[] Tools() =>
     [
-        Tool("xpscript_validate", "Validate XPScript source without executing it.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string", description="Simple virtual .xps filename." }, runtimeIdentifier=new { type="string" } }, required=new[]{"source"} }),
+        Tool("xpscript_validate", "Validate XPScript source without executing it.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string", description="Simple virtual .xps filename." }, runtimeIdentifier=new { type="string" }, debug=new { type="boolean", description="Include debug diagnostics while preserving source-mapped XPScript locations." } }, required=new[]{"source"} }),
         Tool("xpscript_symbols", "Search the public XPScript symbol catalog.", new { type="object", properties=new { search=new { type="string" } } }),
         Tool("xpscript_describe", "Describe an exact public XPScript symbol.", new { type="object", properties=new { name=new { type="string" } }, required=new[]{"name"} }),
         Tool("xpscript_explain", "Explain a stable XPScript diagnostic code.", new { type="object", properties=new { diagnosticCode=new { type="string" } }, required=new[]{"diagnosticCode"} })
@@ -106,12 +106,14 @@ public static class CompilerMcpServer
         if (!Path.GetFileName(filename).Equals(filename, StringComparison.Ordinal) || !Path.GetExtension(filename).Equals(".xps", StringComparison.OrdinalIgnoreCase))
             throw new McpException(-32602, "filename must be a simple .xps filename without a directory path.");
         var rid = GetOptionalString(arguments, "runtimeIdentifier") ?? CompilerDriver.CurrentRuntimeIdentifier();
+        var debug = GetOptionalBoolean(arguments, "debug");
         var root = Path.Combine(Path.GetTempPath(), "XPScript", "mcp", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
         {
             var path = Path.Combine(root, filename);
             await File.WriteAllTextAsync(path, source).ConfigureAwait(false);
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             var result = await compiler.ValidateWithResultAsync(path, rid).ConfigureAwait(false);
             result.Source = new CompileSource { EntryPoint = filename };
             foreach (var diagnostic in result.Errors) if (!string.IsNullOrWhiteSpace(diagnostic.File)) diagnostic.File = filename;
@@ -122,6 +124,7 @@ public static class CompilerMcpServer
 
     private static string GetRequiredString(JsonElement arguments, string name) => GetOptionalString(arguments, name) ?? throw new McpException(-32602, $"Missing required argument: {name}");
     private static string? GetOptionalString(JsonElement arguments, string name) => arguments.ValueKind == JsonValueKind.Object && arguments.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+    private static bool GetOptionalBoolean(JsonElement arguments, string name) => arguments.ValueKind == JsonValueKind.Object && arguments.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False && value.GetBoolean();
 
     private static void WriteResponse(JsonElement id, object result) => Console.WriteLine(JsonSerializer.Serialize(new { jsonrpc="2.0", id, result }, JsonOptions));
     private static void WriteError(JsonElement? id, int code, string message) => Console.WriteLine(JsonSerializer.Serialize(new { jsonrpc="2.0", id, error=new { code, message } }, JsonOptions));
