@@ -171,6 +171,7 @@ public sealed class Lexer
         "ELSE" => SyntaxKind.ElseKeyword,
         "ELSEIF" => SyntaxKind.ElseIfKeyword,
         "END" => SyntaxKind.EndKeyword,
+        "SET" => SyntaxKind.SetKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
