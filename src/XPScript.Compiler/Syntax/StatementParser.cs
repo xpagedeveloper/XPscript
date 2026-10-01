@@ -46,6 +46,8 @@ public sealed class StatementParser
             return ParseForStatement();
         if (Current.Kind == SyntaxKind.ForAllKeyword)
             return ParseForAllStatement();
+        if (Current.Kind == SyntaxKind.DoKeyword)
+            return ParseDoStatement();
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
@@ -165,6 +167,55 @@ public sealed class StatementParser
         }
 
         return statements;
+    }
+
+    private StatementSyntax ParseDoStatement()
+    {
+        var doKeyword = NextToken();
+
+        SyntaxToken? conditionKeyword = null;
+        ExpressionSyntax? condition = null;
+        var isPostTest = false;
+
+        if (Current.Kind is SyntaxKind.WhileKeyword or SyntaxKind.UntilKeyword)
+        {
+            conditionKeyword = NextToken();
+            condition = ParseExpressionUntilLineEnd();
+        }
+
+        ConsumeRequiredNewLine("Do");
+
+        var statements = new List<StatementSyntax>();
+        while (Current.Kind is not SyntaxKind.LoopKeyword and not SyntaxKind.EndOfFileToken)
+        {
+            if (Current.Kind == SyntaxKind.NewLineToken)
+            {
+                NextToken();
+                continue;
+            }
+
+            statements.Add(ParseCurrentStatement());
+            if (Current.Kind == SyntaxKind.NewLineToken)
+                NextToken();
+        }
+
+        var loopKeyword = Match(SyntaxKind.LoopKeyword);
+
+        if (conditionKeyword is null
+            && Current.Kind is SyntaxKind.WhileKeyword or SyntaxKind.UntilKeyword)
+        {
+            conditionKeyword = NextToken();
+            condition = ParseExpressionUntilLineEnd();
+            isPostTest = true;
+        }
+
+        return new DoStatementSyntax(
+            doKeyword,
+            conditionKeyword,
+            condition,
+            isPostTest,
+            statements,
+            loopKeyword);
     }
 
     private StatementSyntax ParseForAllStatement()
