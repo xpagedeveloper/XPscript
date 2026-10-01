@@ -46,7 +46,7 @@ public static class AndroidFormHost
 
                 Control editor = type switch
                 {
-                    "CheckBox" => new CheckBox(),
+                    "CheckBox" => new Avalonia.Controls.CheckBox(),
                     "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120 },
                     _ => new TextBox()
                 };
@@ -61,19 +61,19 @@ public static class AndroidFormHost
 
             var actions = new StackPanel
             {
-                Orientation = Orientation.Horizontal,
+                Orientation = Avalonia.Layout.Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Spacing = 12
             };
 
-            var cancel = new Button { Content = "Cancel", MinWidth = 100 };
-            var ok = new Button { Content = "OK", MinWidth = 100 };
+            var cancel = new Avalonia.Controls.Button { Content = "Cancel", MinWidth = 100 };
+            var ok = new Avalonia.Controls.Button { Content = "OK", MinWidth = 100 };
             actions.Children.Add(cancel);
             actions.Children.Add(ok);
             panel.Children.Add(actions);
 
             var form = new ScrollViewer { Content = panel };
-            MainView.Current.ShowForm(form);
+            MainView.Current!.ShowForm(form);
 
             cancel.Click += (_, _) =>
             {
@@ -120,14 +120,14 @@ public static class AndroidFormHost
     {
         var text = value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : value.ToString();
         if (editor is TextBox textBox) textBox.Text = text;
-        else if (editor is CheckBox checkBox) checkBox.IsChecked = value.ValueKind == JsonValueKind.True || text.Equals("true", StringComparison.OrdinalIgnoreCase);
+        else if (editor is Avalonia.Controls.CheckBox checkBox) checkBox.IsChecked = value.ValueKind == JsonValueKind.True || text.Equals("true", StringComparison.OrdinalIgnoreCase);
     }
 
     private static object? GetEditorValue(Control editor)
         => editor switch
         {
             TextBox textBox => textBox.Text ?? string.Empty,
-            CheckBox checkBox => checkBox.IsChecked == true,
+            Avalonia.Controls.CheckBox checkBox => checkBox.IsChecked == true,
             _ => null
         };
 }
