@@ -83,4 +83,16 @@ var compilerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..
 if (!compilerSource.Contains("outputPath += \".apk\";", StringComparison.Ordinal))
     throw new Exception("Android compiler output is not normalized to an .apk path.");
 
+
+foreach (var expected in new[]
+{
+    "Environment.ExitCode = 0;",
+    "if (Environment.ExitCode == 0)",
+    "XPSCRIPT-EXIT=" + Environment.ExitCode
+})
+{
+    if (!androidHost.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android host exit-code regression is missing: " + expected);
+}
+
 Console.WriteLine("ANDROID-COMPILER-PROBE=OK");
