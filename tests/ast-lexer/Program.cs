@@ -214,6 +214,14 @@ Equal(0, comparisonBinder.Diagnostics.Count, "bound comparison diagnostics");
 var callSymbols = new SymbolTable();
 callSymbols.Declare(new FunctionSymbol("Array", typeof(string[]), [typeof(string)]));
 callSymbols.Declare(new FunctionSymbol("RunCommand", typeof(bool), [typeof(string), typeof(string[])]));
+var arraySymbols = new SymbolTable();
+var arrayBinder = new ExpressionBinder(arraySymbols);
+var boundArray = arrayBinder.Bind(new ExpressionParser("Array(1, \"two\", True)").ParseExpression());
+Equal(BoundNodeKind.ArrayExpression, boundArray.Kind, "bound array root");
+Equal(typeof(object[]), boundArray.Type, "bound array result type");
+Equal(0, arrayBinder.Diagnostics.Count, "bound array diagnostics");
+Equal("new object[] { 1, \"two\", true }", emitter.Emit(boundArray), "bound array C# emission");
+
 var indexSymbols = new SymbolTable();
 indexSymbols.Declare(new VariableSymbol("items", typeof(string[])));
 var indexBinder = new ExpressionBinder(indexSymbols);
