@@ -97,9 +97,9 @@ foreach (var expected in new[]
 
 var runtimeDiagnosticsSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "AdvancedXPScriptTranspiler.cs");
 var runtimeDiagnosticsSource = File.ReadAllText(runtimeDiagnosticsSourcePath);
-if (!runtimeDiagnosticsSource.Contains("var runtimeSource = XPSourceLineRuntime.CurrentSource;", StringComparison.Ordinal) ||
-    !runtimeDiagnosticsSource.Contains("var runtimeLine = XPSourceLineRuntime.Current;", StringComparison.Ordinal) ||
-    !runtimeDiagnosticsSource.Contains("Console.Error.WriteLine(\"at \" + runtimeSource + \":", StringComparison.Ordinal))
-    throw new Exception("Android runtime source-location diagnostic regression is missing.");
+if (!runtimeDiagnosticsSource.Contains("#if ANDROID", StringComparison.Ordinal) ||
+    !runtimeDiagnosticsSource.Contains("Console.WriteLine(\"at \" + runtimeSource + \":", StringComparison.Ordinal) ||
+    !runtimeDiagnosticsSource.Contains("System.Environment.ExitCode = 1;", StringComparison.Ordinal))
+    throw new Exception("Android runtime diagnostics regression is missing.");
 
 Console.WriteLine("ANDROID-COMPILER-PROBE=OK");
