@@ -324,6 +324,13 @@ Equal(typeof(object), boundIndexedPropertyAccess.Type, "bound indexed property t
 Equal(0, indexedPropertyAccessBinder.Diagnostics.Count, "bound indexed property diagnostics");
 Equal("store.Item(1)", emitter.Emit(boundIndexedPropertyAccess), "bound indexed property C# emission");
 
+var chainedIndexedPropertyBinder = new ExpressionBinder(indexedSymbols);
+var boundChainedIndexedProperty = chainedIndexedPropertyBinder.Bind(new ExpressionParser("store.Item(1).Name").ParseExpression());
+Equal(BoundNodeKind.MemberAccessExpression, boundChainedIndexedProperty.Kind, "bound indexed property member root");
+Equal(typeof(string), boundChainedIndexedProperty.Type, "bound indexed property member type");
+Equal(0, chainedIndexedPropertyBinder.Diagnostics.Count, "bound indexed property member diagnostics");
+Equal("store.Item(1).Name", emitter.Emit(boundChainedIndexedProperty), "bound indexed property member C# emission");
+
 var indexedPropertyBinder = new ExpressionBinder(indexedSymbols);
 var boundIndexedProperty = indexedPropertyBinder.Bind(new ExpressionParser("people[1].Name").ParseExpression());
 Equal(BoundNodeKind.MemberAccessExpression, boundIndexedProperty.Kind, "bound indexed object property root");
