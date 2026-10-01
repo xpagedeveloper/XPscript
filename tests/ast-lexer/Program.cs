@@ -311,17 +311,17 @@ Equal(0, methodBinder.Diagnostics.Count, "bound XPScript member function diagnos
 Equal("person.Describe()", emitter.Emit(boundMethod), "bound XPScript member function C# emission");
 
 var indexedSymbols = new SymbolTable();
-indexedSymbols.Declare(new VariableSymbol("people", typeof(object[])));
+indexedSymbols.Declare(new VariableSymbol("store", typeof(object)));
 indexedSymbols.Declare(new PropertySymbol("Object.Name", typeof(string)));
 indexedSymbols.Declare(new FunctionSymbol("Object.Describe", typeof(string), []));
 
 indexedSymbols.Declare(new IndexedPropertySymbol("Object.Item", typeof(object), [typeof(long)]));
 var indexedPropertyAccessBinder = new ExpressionBinder(indexedSymbols);
-var boundIndexedPropertyAccess = indexedPropertyAccessBinder.Bind(new ExpressionParser("people.Item(1)").ParseExpression());
+var boundIndexedPropertyAccess = indexedPropertyAccessBinder.Bind(new ExpressionParser("store.Item(1)").ParseExpression());
 Equal(BoundNodeKind.IndexedPropertyExpression, boundIndexedPropertyAccess.Kind, "bound indexed property root");
 Equal(typeof(object), boundIndexedPropertyAccess.Type, "bound indexed property type");
 Equal(0, indexedPropertyAccessBinder.Diagnostics.Count, "bound indexed property diagnostics");
-Equal("people.Item(1)", emitter.Emit(boundIndexedPropertyAccess), "bound indexed property C# emission");
+Equal("store.Item(1)", emitter.Emit(boundIndexedPropertyAccess), "bound indexed property C# emission");
 
 var indexedPropertyBinder = new ExpressionBinder(indexedSymbols);
 var boundIndexedProperty = indexedPropertyBinder.Bind(new ExpressionParser("people[1].Name").ParseExpression());
