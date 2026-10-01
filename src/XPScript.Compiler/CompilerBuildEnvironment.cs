@@ -21,7 +21,8 @@ internal static class CompilerBuildEnvironment
         var appData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Roaming"));
         var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
         _ = CreatePrivateDirectory(appData, "NuGet");
-        var nugetPackages = CreatePrivateDirectory(cacheRoot, "nuget-packages");
+        var isolateNuGetPackages = !IsAndroidUiFormPublish(startInfo, root);
+        var nugetPackages = isolateNuGetPackages ? CreatePrivateDirectory(cacheRoot, "nuget-packages") : null;
         var nugetHttpCache = CreatePrivateDirectory(cacheRoot, "nuget-http-cache");
         var nugetPluginsCache = CreatePrivateDirectory(cacheRoot, "nuget-plugins-cache");
         ConfigureGeneratedDependencies(startInfo, root);
@@ -37,7 +38,8 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["TMP"] = processTemp;
         startInfo.Environment["TMPDIR"] = processTemp;
         startInfo.Environment["DOTNET_CLI_HOME"] = cliHome;
-        startInfo.Environment["NUGET_PACKAGES"] = nugetPackages;
+        if (nugetPackages is not null) startInfo.Environment["NUGET_PACKAGES"] = nugetPackages;
+        else startInfo.Environment.Remove("NUGET_PACKAGES");
         startInfo.Environment["NUGET_HTTP_CACHE_PATH"] = nugetHttpCache;
         startInfo.Environment["NUGET_PLUGINS_CACHE_PATH"] = nugetPluginsCache;
         startInfo.Environment["USERPROFILE"] = profile;
@@ -53,6 +55,14 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment.Remove("MSBuildSDKsPath");
         startInfo.Environment.Remove("MSBUILDSDKSPATH");
         startInfo.Environment.Remove("MSBUILD_EXE_PATH");
+    }
+
+    private static bool IsAndroidUiFormPublish(ProcessStartInfo startInfo, string root)
+    {
+        if (startInfo.ArgumentList.Count == 0 || !string.Equals(startInfo.ArgumentList[0], "publish", StringComparison.OrdinalIgnoreCase)) return false;
+        if (!ReadRuntimeIdentifier(startInfo).StartsWith("android-", StringComparison.OrdinalIgnoreCase)) return false;
+        var generatedSource = Path.Combine(root, "Program.cs");
+        return File.Exists(generatedSource) && File.ReadAllText(generatedSource).Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
     }
 
     private static bool IsTransientRunBuild(ProcessStartInfo startInfo) =>
