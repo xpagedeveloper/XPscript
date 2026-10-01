@@ -50,13 +50,22 @@ public sealed class ExpressionParser
     private ExpressionSyntax ParsePostfixExpression()
     {
         var expression = ParsePrimaryExpression();
-        while (Current.Kind is SyntaxKind.OpenParenToken or SyntaxKind.DotToken)
+        while (Current.Kind is SyntaxKind.OpenParenToken or SyntaxKind.DotToken or SyntaxKind.OpenBracketToken)
         {
             if (Current.Kind == SyntaxKind.DotToken)
             {
                 var dot = NextToken();
                 var name = Match(SyntaxKind.IdentifierToken);
                 expression = new MemberAccessExpressionSyntax(expression, dot, name);
+                continue;
+            }
+
+            if (Current.Kind == SyntaxKind.OpenBracketToken)
+            {
+                var openBracket = NextToken();
+                var index = ParseExpression();
+                var closeBracket = Match(SyntaxKind.CloseBracketToken);
+                expression = new IndexExpressionSyntax(expression, openBracket, index, closeBracket);
                 continue;
             }
 
