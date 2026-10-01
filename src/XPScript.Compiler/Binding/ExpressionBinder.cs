@@ -14,6 +14,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         NameExpressionSyntax name => BindName(name),
         CallExpressionSyntax call => BindCall(call),
         MemberAccessExpressionSyntax member => BindMemberAccess(member),
+        IndexExpressionSyntax index => BindIndex(index),
         UnaryExpressionSyntax unary => BindUnary(unary),
         BinaryExpressionSyntax binary => BindBinary(binary),
         _ => Error(syntax, $"Binding is not implemented for {syntax.Kind}.")
@@ -38,6 +39,17 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         if (_symbols.TryLookup(name, out var symbol) && symbol is VariableSymbol variable)
             return new BoundNameExpression(variable);
         return Error(syntax, $"Undefined variable '{name}'.");
+    }
+
+    private BoundExpression BindIndex(IndexExpressionSyntax syntax)
+    {
+        var expression = Bind(syntax.Expression);
+        var index = Bind(syntax.Index);
+        if (index.Type != typeof(long))
+            return Error(syntax.Index, "Array index must be an integer.");
+        if (expression.Type.IsArray)
+            return new BoundIndexExpression(expression, index, expression.Type.GetElementType()!);
+        return Error(syntax, $"Indexing is not defined for {expression.Type.Name}.");
     }
 
     private BoundExpression BindMemberAccess(MemberAccessExpressionSyntax syntax)
