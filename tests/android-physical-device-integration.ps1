@@ -2,14 +2,25 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Serial,
     [string]$Platform = "android-arm64",
-    [string]$XPScript = ".\publish\xpscript\win-x64\xpscript.exe"
+    [string]$XPScript
 )
 
 $ErrorActionPreference = "Stop"
 
+if ([string]::IsNullOrWhiteSpace($XPScript)) {
+    $xpscriptDirectory = [Environment]::GetEnvironmentVariable("XPScript")
+    if (-not [string]::IsNullOrWhiteSpace($xpscriptDirectory)) {
+        $XPScript = Join-Path $xpscriptDirectory "xpscript.exe"
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($XPScript)) {
+    $XPScript = Join-Path $PSScriptRoot "..\publish\xpscript\win-x64\xpscript.exe"
+}
+
 $XPScript = [System.IO.Path]::GetFullPath($XPScript)
 if (-not (Test-Path -LiteralPath $XPScript -PathType Leaf)) {
-    throw "XPScript CLI was not found at $XPScript. Build/publish the CLI or pass -XPScript <path>."
+    throw "XPScript CLI was not found at $XPScript. Set XPScript to the directory containing xpscript.exe, or pass -XPScript <path>."
 }
 
 if ([string]::IsNullOrWhiteSpace($Serial)) {
