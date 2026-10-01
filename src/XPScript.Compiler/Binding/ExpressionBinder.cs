@@ -64,7 +64,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         if (constructor is null)
             return Error(syntax, $"No matching constructor for '{typeName}'.");
 
-        return new BoundNewExpression(type, arguments);
+        return new BoundNewExpression(type, arguments, typeEntry.SemanticType ?? new XpTypeSymbol(typeEntry.Name, type));
     }
 
     private BoundExpression BindIndex(IndexExpressionSyntax syntax)
@@ -74,22 +74,26 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         if (index.Type != typeof(long))
             return Error(syntax.Index, "Array index must be an integer.");
         if (expression.Type.IsArray)
-            return new BoundIndexExpression(expression, index, expression.Type.GetElementType()!);
-        return Error(syntax, $"Indexing is not defined for {expression.Type.Name}.");
+            return new BoundIndexExpression(
+                expression,
+                index,
+                expression.Type.GetElementType()!,
+                expression.SemanticType.ElementType);
+        return Error(syntax, $"Indexing is not defined for {expression.SemanticType.Name}.");
     }
 
     private BoundExpression BindMemberAccess(MemberAccessExpressionSyntax syntax)
     {
         var receiver = Bind(syntax.Expression);
-        var key = receiver.Type.Name + "." + syntax.NameToken.Text;
+        var key = receiver.SemanticType.Name + "." + syntax.NameToken.Text;
         if (_symbols.TryLookup(key, out var symbol))
         {
             if (symbol is PropertySymbol property)
-                return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, property.PropertyType);
+                return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, property.PropertyType, property.SemanticType);
             if (symbol is FunctionSymbol function)
-                return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType);
+                return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType, function.SemanticReturnType);
         }
-        return Error(syntax, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.Type.Name}'.");
+        return Error(syntax, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.SemanticType.Name}'.");
     }
 
     private BoundExpression BindCall(CallExpressionSyntax syntax)
@@ -105,13 +109,13 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         {
             var receiver = Bind(memberSyntax.Expression);
             name = memberSyntax.NameToken.Text;
-            if (!_symbols.TryLookup(receiver.Type.Name + "." + name, out var memberSymbol))
-                return Error(syntax, $"Undefined member '{name}' on '{receiver.Type.Name}'.");
+            if (!_symbols.TryLookup(receiver.SemanticType.Name + "." + name, out var memberSymbol))
+                return Error(syntax, $"Undefined member '{name}' on '{receiver.SemanticType.Name}'.");
             if (memberSymbol is IndexedPropertySymbol indexedProperty)
                 return BindIndexedProperty(syntax, receiver, indexedProperty);
             if (memberSymbol is not FunctionSymbol memberFunction)
-                return Error(syntax, $"Member '{name}' on '{receiver.Type.Name}' is not callable.");
-            target = new BoundMemberAccessExpression(receiver, name, memberFunction.ReturnType);
+                return Error(syntax, $"Member '{name}' on '{receiver.SemanticType.Name}' is not callable.");
+            target = new BoundMemberAccessExpression(receiver, name, memberFunction.ReturnType, memberFunction.SemanticReturnType);
             return BindCallTarget(syntax, target, memberFunction);
         }
         else
