@@ -46,9 +46,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
     private BoundExpression BindNew(NewExpressionSyntax syntax)
     {
         var typeName = syntax.TypeName.Text;
-        var type = Type.GetType(typeName, throwOnError: false, ignoreCase: true);
-        if (type is null)
+        if (!_symbols.TryLookup(typeName, out var typeSymbol) || typeSymbol is not TypeSymbol typeEntry)
             return Error(syntax, $"Undefined type '{typeName}'.");
+        var type = typeEntry.Type;
 
         var arguments = syntax.Arguments.Select(Bind).ToArray();
         var constructors = type.GetConstructors();
