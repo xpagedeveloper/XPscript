@@ -316,8 +316,8 @@ End Sub
             throw new Exception("XPImage missing [ServerSide] diagnostic was not structured as XPS3002.");
     }
 
-    var archivePath = Path.Combine(root, "server-archive.xps");
-    await File.WriteAllTextAsync(archivePath, """
+    var serverArchivePath = Path.Combine(root, "server-archive.xps");
+    await File.WriteAllTextAsync(serverArchivePath, """
 [Platform:browser-wasm]
 
 [ServerSide]
@@ -332,7 +332,7 @@ Sub Main()
     Print ArchiveOnServer()
 End Sub
 """);
-    await using (var archiveUnit = await compiler.CompileAsync(archivePath, root))
+    await using (var archiveUnit = await compiler.CompileAsync(serverArchivePath, root))
     {
         if (!archiveUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
             throw new Exception("[ServerSide] Archive browser-WASM compile did not produce the WASM route.");
@@ -599,7 +599,7 @@ Sub Main()
     extendedBytes = extended.ToBytes()
 End Sub
 """);
-    await using (var archiveUnit = await compiler.CompileAsync(archivePath, root))
+    await using (var archiveUnit = await compiler.CompileAsync(serverArchivePath, root))
     {
         if (!archiveUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
             throw new Exception("Archive browser-WASM compile did not produce the WASM route.");
