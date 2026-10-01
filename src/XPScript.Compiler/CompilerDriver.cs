@@ -253,6 +253,14 @@ public sealed class CompilerDriver
 
             if (process.ExitCode != 0)
             {
+                if (CompilerDiagnosticMode.Debug && usesAndroidUIForm)
+                {
+                    Console.Error.WriteLine("--- Generated Android UIForm project ---");
+                    Console.Error.WriteLine(csproj);
+                    Console.Error.WriteLine("--- Generated Android UIForm restore graph ---");
+                    await DumpPackageGraphAsync(projectPath, tempRoot);
+                    Console.Error.WriteLine("--- end generated Android UIForm diagnostics ---");
+                }
                 var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
                 var generatedDiagnostics = ParseGeneratedCompilerDiagnostics(stdout + Environment.NewLine + stderr, sourcePath, tempRoot);
                 throw new CompilerException(
@@ -557,6 +565,30 @@ public sealed class CompilerDriver
 
     private static string ResolveProjectLocalPath(string sourceDirectory, string declaredPath, string kind) =>
         CompilerPathSecurity.ResolveProjectLocalFile(sourceDirectory, declaredPath, kind);
+
+    private static async Task DumpPackageGraphAsync(string projectPath, string workingDirectory)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WorkingDirectory = workingDirectory
+        };
+        psi.ArgumentList.Add("list");
+        psi.ArgumentList.Add(projectPath);
+        psi.ArgumentList.Add("package");
+        psi.ArgumentList.Add("--include-transitive");
+        using var process = Process.Start(psi);
+        if (process is null) return;
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        Console.Error.WriteLine(await stdoutTask);
+        Console.Error.WriteLine(await stderrTask);
+    }
 
     private static string NormalizeRuntimeIdentifier(string value)
     {
