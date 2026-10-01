@@ -86,9 +86,9 @@ if (!compilerSource.Contains("outputPath += \".apk\";", StringComparison.Ordinal
 
 foreach (var expected in new[]
 {
-    "Environment.ExitCode = 0;",
-    "if (Environment.ExitCode == 0)",
-    "\"XPSCRIPT-EXIT=\" + Environment.ExitCode"
+    "System.Environment.ExitCode = 0;",
+    "if (System.Environment.ExitCode == 0)",
+    "\"XPSCRIPT-EXIT=\" + System.Environment.ExitCode"
 })
 {
     if (!code.Contains(expected, StringComparison.Ordinal))
