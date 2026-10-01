@@ -156,7 +156,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         if (op is SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.StarToken or SyntaxKind.SlashToken &&
             left.Type == right.Type && (left.Type == typeof(long) || left.Type == typeof(double)))
             return new BoundBinaryExpression(left, op, right, left.Type);
-        if (op is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken)
+        if (op == SyntaxKind.AmpersandToken && left.Type == typeof(string) && right.Type == typeof(string))
+            return new BoundBinaryExpression(left, op, right, typeof(string));
+        if (op is SyntaxKind.LessToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterToken or SyntaxKind.GreaterOrEqualsToken &&
+            left.Type == right.Type && (left.Type == typeof(long) || left.Type == typeof(double)))
+            return new BoundBinaryExpression(left, op, right, typeof(bool));
+        if (op is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken && left.Type == right.Type)
             return new BoundBinaryExpression(left, op, right, typeof(bool));
 
         return Error(syntax, $"Binary operator {syntax.OperatorToken.Text} is not defined for {left.Type.Name} and {right.Type.Name}.");
