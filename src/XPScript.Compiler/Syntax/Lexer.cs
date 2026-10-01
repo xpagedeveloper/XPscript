@@ -174,6 +174,8 @@ public sealed class Lexer
         "SET" => SyntaxKind.SetKeyword,
         "DIM" => SyntaxKind.DimKeyword,
         "AS" => SyntaxKind.AsKeyword,
+        "WHILE" => SyntaxKind.WhileKeyword,
+        "WEND" => SyntaxKind.WendKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
