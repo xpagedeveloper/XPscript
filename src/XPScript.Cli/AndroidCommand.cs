@@ -29,6 +29,9 @@ internal static class AndroidCommand
         var source = Path.GetFullPath(args[0]);
         if (!File.Exists(source)) throw new FileNotFoundException("XPScript source file was not found.", source);
 
+        var project = AndroidProjectMetadata.LoadForSource(source);
+        Console.WriteLine("Android project: target=" + project.Target + ", applicationType=" + project.ApplicationType);
+
         string? requestedSerial = null;
         for (var i = 1; i < args.Length; i++)
         {
