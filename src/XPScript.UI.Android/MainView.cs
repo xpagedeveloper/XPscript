@@ -1,16 +1,21 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.Media;
 
 namespace XPScript.UI.Android;
 
-internal sealed class MainView : UserControl
+public sealed class MainView : UserControl
 {
+    internal static MainView? Current { get; private set; }
+
+    private readonly ContentControl _contentHost = new();
+
     public MainView()
     {
-        Content = new StackPanel
+        Current = this;
+        _contentHost.Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(24),
+            Margin = new Thickness(24),
             Spacing = 16,
             VerticalAlignment = VerticalAlignment.Center,
             Children =
@@ -28,5 +33,31 @@ internal sealed class MainView : UserControl
                 }
             }
         };
+        Content = _contentHost;
     }
+
+    internal void ShowForm(Control form)
+        => _contentHost.Content = form;
+
+    internal void RestoreHome()
+        => _contentHost.Content = new StackPanel
+        {
+            Margin = new Thickness(24),
+            Spacing = 16,
+            VerticalAlignment = VerticalAlignment.Center,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = "XPScript Android UIForm host",
+                    FontSize = 24,
+                    HorizontalAlignment = HorizontalAlignment.Center
+                },
+                new TextBlock
+                {
+                    Text = "Avalonia Android host is running.",
+                    HorizontalAlignment = HorizontalAlignment.Center
+                }
+            }
+        };
 }
