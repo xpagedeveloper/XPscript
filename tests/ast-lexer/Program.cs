@@ -354,6 +354,24 @@ Equal("typedBox.Value", emitter.Emit(boundTypedBoxValue), "semantic Box member C
 var wrongTypedMemberBinder = new ExpressionBinder(semanticTypeSymbols);
 wrongTypedMemberBinder.Bind(new ExpressionParser("typedPerson.Value").ParseExpression());
 Equal(1, wrongTypedMemberBinder.Diagnostics.Count, "semantic type isolation diagnostics");
+Equal("XPS2009", wrongTypedMemberBinder.Diagnostics[0].Code, "unknown property diagnostic code");
+Equal(new TextSpan(12, 5), wrongTypedMemberBinder.Diagnostics[0].Span, "unknown property member span");
+
+var missingMethodBinder = new ExpressionBinder(semanticTypeSymbols);
+missingMethodBinder.Bind(new ExpressionParser("typedPerson.Missing()").ParseExpression());
+Equal(1, missingMethodBinder.Diagnostics.Count, "unknown method diagnostic count");
+Equal("XPS2009", missingMethodBinder.Diagnostics[0].Code, "unknown method diagnostic code");
+Equal(new TextSpan(12, 7), missingMethodBinder.Diagnostics[0].Span, "unknown method member span");
+
+const string positionedSource = "Print \"first\"\nPrint \"second\"\n    typedPerson.Value";
+var positionedExpressionOffset = positionedSource.IndexOf("typedPerson", StringComparison.Ordinal);
+var positionedBinder = new ExpressionBinder(semanticTypeSymbols);
+positionedBinder.Bind(new ExpressionParser("typedPerson.Value", positionedExpressionOffset).ParseExpression());
+Equal(1, positionedBinder.Diagnostics.Count, "absolute member diagnostic count");
+Equal(new TextSpan(positionedExpressionOffset + 12, 5), positionedBinder.Diagnostics[0].Span, "absolute member diagnostic span");
+var positionedLocation = SourceTextMap.GetPosition(positionedSource, positionedBinder.Diagnostics[0].Span.Start);
+Equal(3, positionedLocation.Line, "absolute member diagnostic line");
+Equal(17, positionedLocation.Column, "absolute member diagnostic column");
 
 semanticTypeSymbols.Declare(new VariableSymbol("typedStore", typeof(object), XpTypeSymbol.User("IndexedObjectStore")));
 semanticTypeSymbols.Declare(new IndexedPropertySymbol("IndexedObjectStore.Item", typeof(object), [typeof(long)], boxSemanticType));
