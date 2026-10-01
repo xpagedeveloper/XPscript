@@ -1,0 +1,9 @@
+Dim archive As New Archive("example.zip")
+
+ForAll entry In archive.Entries
+    If entry.IsFolder Then
+        Print "[DIR] " & entry.FullName
+    Else
+        Print entry.FullName & " " & CStr(entry.Size)
+    End If
+End ForAll

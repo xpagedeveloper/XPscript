@@ -122,4 +122,38 @@ data = archive.ToBytes()
 
 ## Platform status
 
-Core ZIP, in-memory ZIP and iterator regression tests are configured for Windows, Linux and macOS. Extended archive regressions currently run in the Linux Archive workflow. Android, iOS and browser/WASM require separate runtime/AOT/trimming validation before they should be considered fully supported.
+Core ZIP, in-memory ZIP and iterator regression tests are configured for Windows, Linux and macOS. Extended archive regressions run in the Archive test coverage. In browser/WASM applications, Archive is a server-side-only API and is validated through the normal [ServerSide] boundary. Android and iOS still require separate runtime/AOT/trimming validation.
+
+
+## Server-side archive handling
+
+Filesystem archive operations run through the normal XPScript filesystem boundary. Source paths and extraction targets are resolved by the runtime before archive access, and archive entry names are treated as untrusted input. Extraction rejects absolute paths, traversal, symbolic links and reparse-point escapes. For web applications, keep archive files and extraction directories outside static-file roots unless the extracted content is intentionally public.
+
+For browser applications that need server filesystem access, perform the archive operation through the normal XPScript server-side execution model instead of attempting to expose a client filesystem path.
+
+## Browser/WASM
+
+`Archive` is server-side only in a `[Platform:browser-wasm]` application. Create and use Archive objects inside module-level `[ServerSide]` Functions or Subs. Archive use in browser-side procedures, class methods or module-level browser state is rejected with the normal execution-context diagnostic.
+
+SharpCompress and the archive runtime stay in the server companion and are never packaged into the client WebAssembly bundle. Server-side archive code may use filesystem paths or in-memory Byte arrays. An in-memory archive can be returned as a browser download with `SendToBrowser(downloadName)`:
+
+```xpscript
+[Anonymous]
+[ServerSide]
+Sub DownloadArchive()
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddText("payload.txt", "server")
+    Call archive.SendToBrowser("archive.zip")
+End Sub
+```
+
+The Browser-WASM bridge transports the server response and creates the browser download without moving SharpCompress or archive processing into WebAssembly. Apply the normal route authorization attributes to the server-side procedure; `[Anonymous]` above is only appropriate when the download is intentionally public.
+
+Arbitrary client filesystem extraction, client-side archive listing and client-side archive creation are intentionally not part of the Browser-WASM Archive API.
+
+## Android and iOS
+
+Use application-sandbox paths supplied by the platform and prefer Byte-array workflows when archives originate from HTTP, MIME or database content. Do not assume desktop filesystem paths are portable to Android or iOS.
+
+The archive runtime has not yet completed Android/iOS target, trimming, AOT and larger-archive memory-pressure validation. Those platforms therefore remain validation targets rather than declared fully supported archive platforms.

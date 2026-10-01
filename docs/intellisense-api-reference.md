@@ -15,6 +15,12 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 
 
 
+## Archive browser download
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `MemoryArchive.SendToBrowser` | `archive.SendToBrowser(downloadName)` | `downloadName`: filename presented to the browser. | Sends an in-memory archive from server-side web code to the browser as a download while keeping archive processing out of the client WebAssembly bundle. | [archive-memory.xps](../demo/archive/archive-memory.xps) |
+
 ## CSV JSON conversion
 
 | Member | Syntax | Parameters | Description | Example |
@@ -194,6 +200,29 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `ApplicationCryptoRuntime.NeedsUpgrade` | `Application.Crypto.NeedsUpgrade(value)` | `value`: encrypted envelope. | Returns whether the envelope uses an older supported format, cipher or password work factor. | [application-crypto.xps](../samples/application-crypto.xps) |
 | `ApplicationCryptoRuntime.ReEncrypt` | `Application.Crypto.ReEncrypt(value, oldPassword, newPassword [, context])` | `value`: password-based envelope; old and new passwords; optional authenticated `context`. | Decrypts a password-based value and creates a new envelope with the current default profile. | [application-crypto.xps](../samples/application-crypto.xps) |
 
+
+## Application debug output
+
+| Member | Syntax | Parameters | Behavior | Example |
+|---|---|---|---|---|
+| `Application.Debug.Enabled` | `Application.Debug.Enabled` | none | Returns whether application debug output is enabled. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `Application.Debug.Print` | `Application.Debug.Print(value)` | Value to print. | Writes a DEBUG line to the platform debug console. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `Application.Debug.Write` | `Application.Debug.Write(value)` | Value to write. | Writes DEBUG text without a newline. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `Application.Debug.Info` | `Application.Debug.Info(value)` | Value to write. | Writes an INFO line. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `Application.Debug.Warning` | `Application.Debug.Warning(value)` | Value to write. | Writes a WARN line. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `Application.Debug.Error` | `Application.Debug.Error(value)` | Value to write. | Writes an ERROR line. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+
+## Generated application debug runtime declarations
+
+| Member | Syntax | Parameters | Behavior | Example |
+|---|---|---|---|---|
+| `ApplicationDebugRuntime` | `Application.Debug` | none | Application debug namespace emitted into generated programs. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `ApplicationDebugRuntime.Enabled` | `Application.Debug.Enabled` | none | Reports whether application debug output is enabled. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `ApplicationDebugRuntime.Print` | `Application.Debug.Print(value)` | Value. | Writes a DEBUG line. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `ApplicationDebugRuntime.Write` | `Application.Debug.Write(value)` | Value. | Writes DEBUG text without a newline. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `ApplicationDebugRuntime.Info` | `Application.Debug.Info(value)` | Value. | Writes INFO. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `ApplicationDebugRuntime.Warning` | `Application.Debug.Warning(value)` | Value. | Writes WARN. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
+| `ApplicationDebugRuntime.Error` | `Application.Debug.Error(value)` | Value. | Writes ERROR. | [application-debug-runtime.xps](../samples/application-debug-runtime.xps) |
 
 ## Application structured web logging
 

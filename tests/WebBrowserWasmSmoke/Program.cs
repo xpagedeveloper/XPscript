@@ -316,6 +316,111 @@ End Sub
             throw new Exception("XPImage missing [ServerSide] diagnostic was not structured as XPS3002.");
     }
 
+    var serverArchivePath = Path.Combine(root, "server-archive.xps");
+    await File.WriteAllTextAsync(serverArchivePath, """
+[Platform:browser-wasm]
+
+[Anonymous]
+[ServerSide]
+Sub DownloadArchive()
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddText("payload.txt", "server")
+    Dim data As Variant
+    data = archive.ToBytes()
+    Call archive.SendToBrowser("server.zip")
+End Sub
+
+Sub Main()
+    DownloadArchive()
+End Sub
+""");
+    await using (var archiveUnit = await compiler.CompileAsync(serverArchivePath, root))
+    {
+        if (!archiveUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
+            throw new Exception("[ServerSide] Archive browser-WASM compile did not produce the WASM route.");
+
+        var archiveSource = await File.ReadAllTextAsync(serverArchivePath);
+        var compilerIdentity = typeof(XpsWebCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var sourceHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(archiveSource + "\0" + compilerIdentity + "\0" + "4")));
+        var procedureId = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(sourceHash + "\0" + "DOWNLOADARCHIVE"))).ToLowerInvariant()[..32];
+        var archiveSession = new SmokeSession();
+        var archiveServer = Server(root);
+        var archiveHeaders = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["X-XPS-WASM-Bridge"] = new[] { "1" },
+            ["Sec-Fetch-Site"] = new[] { "same-origin" },
+            ["Origin"] = new[] { "http://localhost" }
+        };
+        var archiveCapabilityResponse = new XpsWebResponse();
+        await archiveUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
+            BridgeRequest("/server-archive.xps/__xpscript_bridge/capability", archiveHeaders),
+            archiveCapabilityResponse, archiveServer, new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession));
+        if (archiveCapabilityResponse.StatusCode != 200)
+            throw new Exception($"Archive browser download could not acquire a bridge capability: HTTP {archiveCapabilityResponse.StatusCode}.");
+        using var archiveCapabilityDocument = System.Text.Json.JsonDocument.Parse(archiveCapabilityResponse.Body);
+        var archiveCapability = archiveCapabilityDocument.RootElement.GetProperty("capability").GetString()
+            ?? throw new Exception("Archive browser download received an empty bridge capability.");
+        archiveHeaders["X-XPS-WASM-Capability"] = new[] { archiveCapability };
+        var archiveCsrfContext = new XpsWebContext(
+            BridgeRequest("/server-archive.xps/__xpscript_bridge", archiveHeaders),
+            new XpsWebResponse(), archiveServer, new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession);
+        archiveHeaders[XpsWebSecurity.CsrfHeaderName] = new[] { XpsWebSecurity.IssueCsrfToken(archiveCsrfContext) };
+
+        var archiveDownloadResponse = new XpsWebResponse();
+        await archiveUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
+            BridgePostRequest("/server-archive.xps/__xpscript_bridge", archiveHeaders, procedureId),
+            archiveDownloadResponse, archiveServer, new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession));
+        if (archiveDownloadResponse.StatusCode != 200)
+            throw new Exception($"Archive browser download returned HTTP {archiveDownloadResponse.StatusCode}, body '{archiveDownloadResponse.Body}'.");
+        if (!string.Equals(archiveDownloadResponse.ContentType, "application/json; charset=utf-8", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Archive browser download bridge did not return a JSON envelope.");
+        using var downloadDocument = System.Text.Json.JsonDocument.Parse(archiveDownloadResponse.Body);
+        var download = downloadDocument.RootElement.GetProperty("download");
+        if (!download.GetProperty("contentType").GetString()!.Equals("application/zip", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Archive browser download did not preserve application/zip.");
+        if (!download.GetProperty("contentDisposition").GetString()!.Contains("server.zip", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Archive browser download did not preserve the download filename.");
+        var archiveBytes = Convert.FromBase64String(download.GetProperty("base64").GetString()!);
+        if (archiveBytes.Length == 0)
+            throw new Exception("Archive browser download returned an empty archive.");
+        var browserModulePath = Directory.EnumerateFiles(Path.Combine(root, ".xpscript-cache", "wasm-bridge"), "xpscript-browser.js", SearchOption.AllDirectories)
+            .FirstOrDefault();
+        if (browserModulePath is null)
+            throw new Exception("Archive browser download did not produce the browser bridge module.");
+        var browserModuleText = await File.ReadAllTextAsync(browserModulePath);
+        foreach (var marker in new[] { "download.base64", "new Blob([bytes]", "anchor.download = fileName" })
+            if (!browserModuleText.Contains(marker, StringComparison.Ordinal))
+                throw new Exception($"Archive browser download bridge is missing '{marker}'.");
+    }
+
+    var unsafeArchivePath = Path.Combine(root, "unsafe-archive.xps");
+    await File.WriteAllTextAsync(unsafeArchivePath, """
+[Platform:browser-wasm]
+
+Function ArchiveInBrowser() As Long
+    Dim archive As New Archive()
+    archive.Create("zip")
+    ArchiveInBrowser = Len(archive.ToBytes())
+End Function
+
+Sub Main()
+    Print ArchiveInBrowser()
+End Sub
+""");
+    try
+    {
+        await using var ignored = await compiler.CompileAsync(unsafeArchivePath, root);
+        throw new Exception("Unannotated Archive browser-WASM code compiled without [ServerSide].");
+    }
+    catch (XpsWebCompilationException ex) when (ex.Message.Contains("not marked [ServerSide]", StringComparison.OrdinalIgnoreCase))
+    {
+        if (ex.DiagnosticCode != "XPS3002" || ex.Category != "execution-context")
+            throw new Exception("Archive missing [ServerSide] diagnostic was not structured as XPS3002.");
+    }
+
     var cryptoPath = Path.Combine(root, "server-crypto.xps");
     await File.WriteAllTextAsync(cryptoPath, """
 [Platform:browser-wasm]

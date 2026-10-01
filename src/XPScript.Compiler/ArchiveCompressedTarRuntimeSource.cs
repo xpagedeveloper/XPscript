@@ -166,12 +166,21 @@ internal sealed class XPScriptExtendedArchiveV3
         return true;
     }
 
-    public bool Contains(object? entryName) => _inner.Contains(entryName);
+    public bool Contains(object? entryName) => _compressedTarMode
+        ? _entries.Any(x => x.Name.Equals(Normalize(XPScriptRuntime.CStr(entryName)), StringComparison.OrdinalIgnoreCase))
+        : _inner.Contains(entryName);
     public XPScriptArchiveEntry? GetEntry(object? entryName) => _inner.GetEntry(entryName);
     public LSArray Files() => _inner.Files();
     public LSArray Folders() => _inner.Folders();
     public LSArray Find(object? pattern) => _inner.Find(pattern);
-    public string ReadText(object? entryName) => _inner.ReadText(entryName);
+    public string ReadText(object? entryName)
+    {
+        if (!_compressedTarMode) return _inner.ReadText(entryName);
+        var name = Normalize(XPScriptRuntime.CStr(entryName));
+        var entry = _entries.FirstOrDefault(x => !x.IsDirectory && x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            ?? throw new XPScriptRuntimeException(53, "Archive entry was not found.");
+        return System.Text.Encoding.UTF8.GetString(entry.Bytes ?? []);
+    }
     public LSArray ReadBytes(object? entryName) => _inner.ReadBytes(entryName);
     public void Extract(object? entryName, object? targetPath) => _inner.Extract(entryName, targetPath);
     public void ExtractFolder(object? folderName, object? targetDirectory) => _inner.ExtractFolder(folderName, targetDirectory);

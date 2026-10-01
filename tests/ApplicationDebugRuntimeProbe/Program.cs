@@ -28,11 +28,11 @@ foreach (var expected in new[]
     "--appdebug",
     "--debug",
     "Android.Util.Log",
-    "AllocConsole",
+    "AllocConsole"
 })
 {
     if (!generated.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Application.Debug runtime is missing: " + expected);
 }
 
-Console.WriteLine("APPLICATION_DEBUG_RUNTIME_OK");
+Console.WriteLine("APPLICATION-DEBUG-RUNTIME=OK");

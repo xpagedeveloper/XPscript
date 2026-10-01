@@ -1,0 +1,15 @@
+Option Declare
+
+Sub Main()
+    If Application.ArgCount < 2 Then Error 5, "Archive read-only format regression requires an archive path and extraction target"
+
+    Dim archive As New Archive(Application.Args(0), True)
+    archive.Open()
+    If archive.FileCount < 1 Then Error 5, "Read-only Archive fixture contains no files"
+    If Not archive.Contains("payload.txt") Then Error 5, "Read-only Archive fixture is missing payload.txt"
+    If archive.ReadText("payload.txt") <> "archive-read-only-format" Then Error 5, "Read-only Archive payload mismatch"
+
+    archive.Extract("payload.txt", Application.Args(1))
+
+    Print "ARCHIVE_READ_ONLY_FORMAT=OK"
+End Sub

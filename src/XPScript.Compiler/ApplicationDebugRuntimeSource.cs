@@ -22,41 +22,57 @@ internal static class XPScriptApplicationDebugRuntime
                 return true;
         }
 
-        return string.Equals(
-            global::System.Environment.GetEnvironmentVariable("XPSCRIPT_APPDEBUG"),
-            "1",
-            global::System.StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(
-                global::System.Environment.GetEnvironmentVariable("XPSCRIPT_APPDEBUG"),
-                "true",
-                global::System.StringComparison.OrdinalIgnoreCase);
+        var environment = global::System.Environment.GetEnvironmentVariable("XPSCRIPT_APPDEBUG");
+        return string.Equals(environment, "1", global::System.StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(environment, "true", global::System.StringComparison.OrdinalIgnoreCase);
     }
 
     private static void Write(string level, string text, bool newLine)
     {
         if (!IsEnabled()) return;
+
         var line = "XPScript: " + level + ": " + (text ?? string.Empty);
         if (TryAndroidLog(level, line)) return;
-        if (global::System.OperatingSystem.IsWindows() && !Environment.UserInteractive)
+
+        if (global::System.OperatingSystem.IsWindows() && !global::System.Environment.UserInteractive)
             TryAllocateWindowsConsole();
-        if (newLine) global::System.Console.WriteLine(line);
-        else global::System.Console.Write(line);
+
+        if (newLine)
+            global::System.Console.WriteLine(line);
+        else
+            global::System.Console.Write(line);
     }
 
     private static bool TryAndroidLog(string level, string line)
     {
         var logType = global::System.Type.GetType("Android.Util.Log, Mono.Android", throwOnError: false);
         if (logType is null) return false;
+
         var methodName = level switch
         {
             "ERROR" => "Error",
             "WARN" => "Warn",
             _ => "Info"
         };
-        var method = logType.GetMethod(methodName, global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.Static, null, [typeof(string), typeof(string)], null);
+
+        var method = logType.GetMethod(
+            methodName,
+            global::System.Reflection.BindingFlags.Public | global::System.Reflection.BindingFlags.Static,
+            null,
+            new[] { typeof(string), typeof(string) },
+            null);
+
         if (method is null) return false;
-        try { method.Invoke(null, ["XPScript", line]); return true; }
-        catch { return false; }
+
+        try
+        {
+            method.Invoke(null, new object?[] { "XPScript", line });
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static void TryAllocateWindowsConsole()

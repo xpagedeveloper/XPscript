@@ -1,0 +1,13 @@
+Option Declare
+
+Sub Main()
+    If Application.ArgCount < 1 Then Error 5, "Corrupt ZIP regression requires archive path"
+
+    Dim archive As New Archive(Application.Args(0))
+    archive.Open()
+
+    Dim payload As Variant
+    payload = archive.ReadBytes("payload.bin")
+
+    Print "ARCHIVE_CORRUPT_STREAM_UNEXPECTED_SUCCESS"
+End Sub
