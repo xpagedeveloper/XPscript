@@ -317,6 +317,8 @@ usesArchive = generatedSource.Contains("XPScriptArchive")
 
 ## Android and iOS
 
+> Deferred: mobile validation is intentionally postponed. These items remain open until Android/iOS archive validation is resumed.
+
 - [ ] Verify SharpCompress works with the .NET Android target used by XPScript.
 - [ ] Verify SharpCompress works with the .NET iOS target used by XPScript.
 - [ ] Test trimming.
@@ -395,7 +397,7 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Read an entry.
 - [x] Extract an entry.
 - [x] Extract the complete archive.
-- [ ] Test encrypted RAR where supported.
+- [ ] Test encrypted RAR where supported. **Blocked:** the repository does not contain an encrypted RAR fixture, and the Archive API cannot create RAR files because RAR is read-only. Resume when a suitable redistributable encrypted RAR test fixture is added.
 - [x] Verify `IsReadOnly = True`.
 - [x] Verify `AddFile`, `Remove`, `Rename` and `Save` reject unsupported modification cleanly.
 
@@ -426,6 +428,8 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Verify failed extraction does not leave unsafe partial files outside controlled locations.
 
 ## Cross-platform CI
+
+> Android/iOS and trimming/AOT CI validation is deferred with the mobile validation work above.
 
 - [x] Run archive runtime tests on Windows x64.
 - [x] Run archive runtime tests on Linux x64.
@@ -482,6 +486,8 @@ Server-side filesystem operations can use the normal server execution model.
 - [x] Add format-specific tests.
 
 ### Milestone 3: Mobile and WASM validation
+
+> Desktop and Browser/WASM archive work is complete. The remaining open milestone items are deferred mobile/AOT validation.
 
 - [x] Complete Byte-array and stream-oriented workflows.
 - [ ] Validate Android.
