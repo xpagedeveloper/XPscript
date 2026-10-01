@@ -214,6 +214,16 @@ Equal(0, comparisonBinder.Diagnostics.Count, "bound comparison diagnostics");
 var callSymbols = new SymbolTable();
 callSymbols.Declare(new FunctionSymbol("Array", typeof(string[]), [typeof(string)]));
 callSymbols.Declare(new FunctionSymbol("RunCommand", typeof(bool), [typeof(string), typeof(string[])]));
+var memberSymbols = new SymbolTable();
+memberSymbols.Declare(new VariableSymbol("text", typeof(string)));
+memberSymbols.Declare(new FunctionSymbol("String.Substring", typeof(string), [typeof(long)]));
+var memberBinder = new ExpressionBinder(memberSymbols);
+var boundMemberCall = memberBinder.Bind(new ExpressionParser("text.Substring(1)").ParseExpression());
+Equal(BoundNodeKind.CallExpression, boundMemberCall.Kind, "bound member call root");
+Equal(typeof(string), boundMemberCall.Type, "bound member call result type");
+Equal(0, memberBinder.Diagnostics.Count, "bound member call diagnostics");
+Equal("text.Substring(1)", emitter.Emit(boundMemberCall), "bound member call C# emission");
+
 var callBinder = new ExpressionBinder(callSymbols);
 var boundRunCommand = callBinder.Bind(new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression());
 Equal(BoundNodeKind.UnaryExpression, boundRunCommand.Kind, "bound RunCommand root");
