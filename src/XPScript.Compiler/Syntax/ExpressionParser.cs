@@ -6,9 +6,9 @@ public sealed class ExpressionParser
     private int _position;
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
 
-    public ExpressionParser(string text)
+    public ExpressionParser(string text, int baseOffset = 0)
     {
-        var lexer = new Lexer(text);
+        var lexer = new Lexer(text, baseOffset);
         _tokens = lexer.Lex().Where(t => t.Kind != SyntaxKind.NewLineToken).ToArray();
         foreach (var diagnostic in lexer.Diagnostics)
             _diagnostics.Add(new SyntaxDiagnostic(diagnostic.Code, diagnostic.Message, diagnostic.Span));
