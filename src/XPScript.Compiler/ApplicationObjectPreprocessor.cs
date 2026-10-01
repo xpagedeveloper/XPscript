@@ -90,7 +90,7 @@ internal sealed class ApplicationObjectPreprocessor
         source = Regex.Replace(source, @"\bApplication\.TempFolder\b", "XPScriptApplicationRuntime.TempPath", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.Path\b", "XPScriptApplicationRuntime.Path", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.FileName\b", "XPScriptApplicationRuntime.FileName", RegexOptions.IgnoreCase);
-        source = Regex.Replace(source, @"\bApplication\.IsDebugging\b", "XPScriptDebugRuntime.IsEnabled", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bApplication\.Debug\.Enabled\b", "XPScriptApplicationDebugRuntime.Enabled", RegexOptions.IgnoreCase);\n        source = Regex.Replace(source, @"\bApplication\.Debug\.Print\s*\((.*)\)", "XPScriptApplicationDebugRuntime.Print($1)", RegexOptions.IgnoreCase);\n        source = Regex.Replace(source, @"\bApplication\.Debug\.Write\s*\((.*)\)", "XPScriptApplicationDebugRuntime.Write($1)", RegexOptions.IgnoreCase);\n        source = Regex.Replace(source, @"\bApplication\.Debug\.Info\s*\((.*)\)", "XPScriptApplicationDebugRuntime.Info($1)", RegexOptions.IgnoreCase);\n        source = Regex.Replace(source, @"\bApplication\.Debug\.Warning\s*\((.*)\)", "XPScriptApplicationDebugRuntime.Warning($1)", RegexOptions.IgnoreCase);\n        source = Regex.Replace(source, @"\bApplication\.Debug\.Error\s*\((.*)\)", "XPScriptApplicationDebugRuntime.Error($1)", RegexOptions.IgnoreCase);\n        source = Regex.Replace(source, @"\bApplication\.IsDebugging\b", "XPScriptDebugRuntime.IsEnabled", RegexOptions.IgnoreCase);
         return source;
     }
 
