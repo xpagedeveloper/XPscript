@@ -41,15 +41,14 @@ internal static class XpsScaffolder
         if (File.Exists(outputPath))
             throw new IOException("Refusing to overwrite existing file: " + outputPath);
 
+        var androidConfigPath = kind == "android" ? Path.Combine(targetDirectory, "xpscript.json") : null;
+        if (androidConfigPath is not null && File.Exists(androidConfigPath))
+            throw new IOException("Refusing to overwrite existing file: " + androidConfigPath);
+
         File.WriteAllText(outputPath, content);
 
-        if (kind == "android")
-        {
-            var configPath = Path.Combine(targetDirectory, "xpscript.json");
-            if (File.Exists(configPath))
-                throw new IOException("Refusing to overwrite existing file: " + configPath);
-            File.WriteAllText(configPath, AndroidProjectConfig);
-        }
+        if (androidConfigPath is not null)
+            File.WriteAllText(androidConfigPath, AndroidProjectConfig);
 
         Console.WriteLine($"Created {kind} scaffold: {outputPath}");
         Console.WriteLine();
