@@ -316,6 +316,26 @@ Equal("text.Substring(1)", emitter.Emit(boundMemberCall), "bound member call C# 
 memberSymbols.Declare(new PropertySymbol("Object.Name", typeof(string)));
 memberSymbols.Declare(new FunctionSymbol("Object.Describe", typeof(string), []));
 
+memberSymbols.Declare(new FunctionSymbol("Object.ConvertValue", typeof(string), [typeof(long)]));
+memberSymbols.Declare(new FunctionSymbol("Object.ConvertValue", typeof(string), [typeof(string)]));
+
+var memberLongOverloadBinder = new ExpressionBinder(memberSymbols);
+var boundMemberLongOverload = memberLongOverloadBinder.Bind(new ExpressionParser("person.ConvertValue(1)").ParseExpression());
+Equal(BoundNodeKind.CallExpression, boundMemberLongOverload.Kind, "bound member long overload root");
+Equal(0, memberLongOverloadBinder.Diagnostics.Count, "bound member long overload diagnostics");
+Equal(typeof(long), ((BoundCallExpression)boundMemberLongOverload).Function.ParameterTypes[0], "selected member long overload");
+
+var memberStringOverloadBinder = new ExpressionBinder(memberSymbols);
+var boundMemberStringOverload = memberStringOverloadBinder.Bind(new ExpressionParser("person.ConvertValue(\"one\")").ParseExpression());
+Equal(BoundNodeKind.CallExpression, boundMemberStringOverload.Kind, "bound member string overload root");
+Equal(0, memberStringOverloadBinder.Diagnostics.Count, "bound member string overload diagnostics");
+Equal(typeof(string), ((BoundCallExpression)boundMemberStringOverload).Function.ParameterTypes[0], "selected member string overload");
+
+var memberMissingOverloadBinder = new ExpressionBinder(memberSymbols);
+memberMissingOverloadBinder.Bind(new ExpressionParser("person.ConvertValue(True)").ParseExpression());
+Equal(1, memberMissingOverloadBinder.Diagnostics.Count, "member no matching overload diagnostic count");
+Equal("XPS2004", memberMissingOverloadBinder.Diagnostics[0].Code, "member no matching overload diagnostic code");
+
 var propertyBinder = new ExpressionBinder(memberSymbols);
 var boundProperty = propertyBinder.Bind(new ExpressionParser("person.Name").ParseExpression());
 Equal(BoundNodeKind.MemberAccessExpression, boundProperty.Kind, "bound XPScript property access root");
