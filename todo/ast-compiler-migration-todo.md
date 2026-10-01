@@ -51,6 +51,10 @@ The existing runtime libraries, packaging, source mapping, web/desktop/mobile ta
 - [ ] CLI compilation and MCP/AI machine compilation must consume the same lexer, parser, AST, semantic binder and bound tree; do not create a second language implementation for machine compilation.
 - [ ] Every migrated syntax/semantic feature must be verified through both normal compilation and MCP/AI machine compilation when that feature is exposed through the machine interface.
 - [ ] Any AST diagnostic change must be verified in both human-readable compiler output and the structured machine/MCP diagnostic contract.
+- [ ] Every AST diagnostic must preserve the original XPscript source file, absolute source span, 1-based line and column.
+- [ ] Unknown variables, functions, properties and methods must be reported by the XPscript semantic binder before Roslyn when the symbol/type information is available.
+- [ ] Diagnostic parity is a release gate across normal CLI compilation and MCP/AI machine compilation.
+- [ ] Diagnostic parity must be verified both with debug diagnostics disabled and enabled; debug mode may add generated-code/debug details but must not change the XPscript diagnostic code, meaning, source file, line, column or source span.
 - [ ] Do not remove legacy parsing code until its replacement has dedicated tests and integration coverage.
 - [ ] Prefer small commits organized by compiler phase or language feature.
 
