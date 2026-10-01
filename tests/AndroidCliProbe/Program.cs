@@ -106,7 +106,7 @@ foreach (var expected in new[]
 foreach (var expected in new[]
 {
     "ParseGeneratedCompilerDiagnostics",
-    "CompilerDiagnosticCodes.CompilationFailed",
+    "new CompilerException(",
     "generatedDiagnostics",
     "Generated code failed to compile."
 })
