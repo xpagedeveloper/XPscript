@@ -78,7 +78,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Add an Android app template to `xpscript new` when the runtime path is stable.
 - [x] Compile generated Android templates in automated `xpscript new android` regression coverage.
 
-- [ ] Add shared `Application.Debug` runtime support. `--appdebug` enables it, and `--debug` mirrors into it without the reverse dependency. Route output through the platform debug console.
+- [ ] Add shared `Application.Debug` runtime support. `--appdebug` enables it, and `--debug` mirrors into it without the reverse dependency. Route output through the platform debug console. Compiler/runtime surface and focused regression probe are now implemented. Android launch-argument routing remains to be integrated with the Android launcher.
 
 ## Stage 3: UIForm on Android with Avalonia
 
