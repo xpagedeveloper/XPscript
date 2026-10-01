@@ -30,7 +30,7 @@ XPscript also uses the following open source NuGet packages. The versions below 
 
 The following packages are distributed under the MIT License:
 
-- [Avalonia](https://github.com/AvaloniaUI/Avalonia), including `Avalonia.Desktop`, `Avalonia.FreeDesktop`, `Avalonia.FreeDesktop.AtSpi`, `Avalonia.HarfBuzz`, `Avalonia.Native`, `Avalonia.Remote.Protocol`, `Avalonia.Skia`, `Avalonia.Themes.Fluent`, `Avalonia.Win32`, and `Avalonia.X11` (`12.0.3`)
+- [Avalonia](https://github.com/AvaloniaUI/Avalonia), including `Avalonia.Android`, `Avalonia.Desktop`, `Avalonia.FreeDesktop`, `Avalonia.FreeDesktop.AtSpi`, `Avalonia.HarfBuzz`, `Avalonia.Native`, `Avalonia.Remote.Protocol`, `Avalonia.Skia`, `Avalonia.Themes.Fluent`, `Avalonia.Win32`, and `Avalonia.X11` (`12.0.3`)
 - [Avalonia.Controls.WebView](https://github.com/AvaloniaUI/Avalonia.Controls.WebView) (`12.0.1`)
 - [BouncyCastle.Cryptography](https://github.com/bcgit/bc-csharp) (`2.6.2`)
 - [HarfBuzzSharp](https://github.com/mono/SkiaSharp), including its platform native asset packages (`8.3.1.3`)
