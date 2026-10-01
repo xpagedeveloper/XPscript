@@ -164,6 +164,30 @@ Equal(SyntaxKind.LiteralExpression, blockIfSyntax.Condition.Kind, "block If cond
 Equal(SyntaxKind.LiteralExpression, blockIfSyntax.ElseIfClauses[0].Condition.Kind, "block ElseIf condition kind");
 Equal(new TextSpan(0, blockIfSource.Length), blockIfSyntax.Span, "block If full span");
 
+var onEventCallParser = new StatementParser("On Event SAX_StartElement From parser Call SAXStartElement");
+var onEventCall = (OnEventStatementSyntax)onEventCallParser.ParseStatement();
+Equal(0, onEventCallParser.Diagnostics.Count, "On Event Call diagnostics");
+Equal("SAX_StartElement", onEventCall.EventName.Text, "On Event event name");
+Equal(SyntaxKind.NameExpression, onEventCall.SourceExpression.Kind, "On Event source expression");
+Equal(SyntaxKind.CallKeyword, onEventCall.ActionKeyword.Kind, "On Event Call action");
+Equal("SAXStartElement", onEventCall.HandlerToken!.Text, "On Event Call handler");
+
+var onEventMemberSourceParser = new StatementParser("On Event Changed From holder.Parser Call HandleChanged");
+var onEventMemberSource = (OnEventStatementSyntax)onEventMemberSourceParser.ParseStatement();
+Equal(0, onEventMemberSourceParser.Diagnostics.Count, "On Event member source diagnostics");
+Equal(SyntaxKind.MemberAccessExpression, onEventMemberSource.SourceExpression.Kind, "On Event member source expression");
+
+var onEventRemoveParser = new StatementParser("On Event SAX_Characters From parser Remove SAXCharacters");
+var onEventRemove = (OnEventStatementSyntax)onEventRemoveParser.ParseStatement();
+Equal(0, onEventRemoveParser.Diagnostics.Count, "On Event Remove diagnostics");
+Equal(SyntaxKind.RemoveKeyword, onEventRemove.ActionKeyword.Kind, "On Event Remove action");
+Equal("SAXCharacters", onEventRemove.HandlerToken!.Text, "On Event Remove handler");
+
+var onEventRemoveAllParser = new StatementParser("On Event SAX_Characters From parser Remove");
+var onEventRemoveAll = (OnEventStatementSyntax)onEventRemoveAllParser.ParseStatement();
+Equal(0, onEventRemoveAllParser.Diagnostics.Count, "On Event Remove-all diagnostics");
+Equal(false, onEventRemoveAll.HandlerToken is not null, "On Event Remove-all has no handler");
+
 var onErrorGotoParser = new StatementParser("On Error GoTo ErrorHandler");
 var onErrorGoto = (OnErrorStatementSyntax)onErrorGotoParser.ParseStatement();
 Equal(0, onErrorGotoParser.Diagnostics.Count, "On Error GoTo diagnostics");
