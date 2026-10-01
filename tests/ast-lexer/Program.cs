@@ -169,6 +169,38 @@ Equal(SyntaxKind.MemberAccessExpression, fileKeywordMemberRegression.Kind, "file
 var fileKeywordCallRegression = new ExpressionParser("Open()").ParseExpression();
 Equal(SyntaxKind.CallExpression, fileKeywordCallRegression.Kind, "Open remains a valid expression call");
 
+var fileIoKeywordRegression = new ExpressionParser("obj.Print").ParseExpression();
+Equal(SyntaxKind.MemberAccessExpression, fileIoKeywordRegression.Kind, "file I/O keywords remain valid member names");
+var printCallRegression = new ExpressionParser("Print()").ParseExpression();
+Equal(SyntaxKind.CallExpression, printCallRegression.Kind, "Print remains a valid expression call");
+
+var printFileParser = new StatementParser("Print fileNo, value, \"text\"");
+var printFile = (FileOutputStatementSyntax)printFileParser.ParseStatement();
+Equal(0, printFileParser.Diagnostics.Count, "Print file diagnostics");
+Equal(SyntaxKind.PrintKeyword, printFile.Keyword.Kind, "Print file keyword");
+Equal(2, printFile.Values.Count, "Print file value count");
+
+var writeFileParser = new StatementParser("Write 1, value");
+var writeFile = (FileOutputStatementSyntax)writeFileParser.ParseStatement();
+Equal(0, writeFileParser.Diagnostics.Count, "Write file diagnostics");
+Equal(SyntaxKind.WriteKeyword, writeFile.Keyword.Kind, "Write file keyword");
+
+var inputFileParser = new StatementParser("Input fileNo, first, second");
+var inputFile = (FileInputStatementSyntax)inputFileParser.ParseStatement();
+Equal(0, inputFileParser.Diagnostics.Count, "Input file diagnostics");
+Equal(2, inputFile.Targets.Count, "Input target count");
+
+var lineInputParser = new StatementParser("Line Input fileNo, line");
+var lineInput = (FileInputStatementSyntax)lineInputParser.ParseStatement();
+Equal(0, lineInputParser.Diagnostics.Count, "Line Input diagnostics");
+Equal(SyntaxKind.LineKeyword, lineInput.LineKeyword!.Kind, "Line Input keyword");
+Equal(1, lineInput.Targets.Count, "Line Input target count");
+
+var seekFileParser = new StatementParser("Seek fileNo, 42");
+var seekFile = (SeekStatementSyntax)seekFileParser.ParseStatement();
+Equal(0, seekFileParser.Diagnostics.Count, "Seek diagnostics");
+Equal(SyntaxKind.LiteralExpression, seekFile.Position.Kind, "Seek position expression");
+
 var openInputParser = new StatementParser("Open fileName For Input As fileNo");
 var openInput = (OpenStatementSyntax)openInputParser.ParseStatement();
 Equal(0, openInputParser.Diagnostics.Count, "Open Input diagnostics");
