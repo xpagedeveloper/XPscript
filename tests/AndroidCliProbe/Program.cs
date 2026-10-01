@@ -126,3 +126,14 @@ foreach (var expected in new[]
     if (!runtimeErrorSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android runtime error sample regression is missing: " + expected);
 }
+
+foreach (var expected in new[]
+{
+    "INSTALL_FAILED_UPDATE_INCOMPATIBLE",
+    "uninstall",
+    "com.xpscript.debugapp"
+})
+{
+    if (!androidCommand.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android debug APK signature replacement regression is missing: " + expected);
+}
