@@ -60,6 +60,13 @@ jobs:
       - name: Publish Avalonia Android x64 dependency probe first
         run: dotnet publish ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release -r android-x64 --no-restore
 
+      - name: Compare Avalonia Android restore graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet list ./src/XPScript.UI.Android/XPScript.UI.Android.csproj package --include-transitive > /tmp/avalonia-packages.txt
+          cat /tmp/avalonia-packages.txt
+
       - name: Compile Android runtime failure regression
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-runtime-error.xps -o ./out/android-runtime-error --runtime=false --platform android-x64 --debug
 
