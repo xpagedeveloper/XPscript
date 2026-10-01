@@ -105,13 +105,13 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         {
             var receiver = Bind(memberSyntax.Expression);
             name = memberSyntax.NameToken.Text;
-            target = BindMemberAccess(memberSyntax);
             if (!_symbols.TryLookup(receiver.Type.Name + "." + name, out var memberSymbol))
                 return Error(syntax, $"Undefined member '{name}' on '{receiver.Type.Name}'.");
             if (memberSymbol is IndexedPropertySymbol indexedProperty)
                 return BindIndexedProperty(syntax, receiver, indexedProperty);
             if (memberSymbol is not FunctionSymbol memberFunction)
                 return Error(syntax, $"Member '{name}' on '{receiver.Type.Name}' is not callable.");
+            target = new BoundMemberAccessExpression(receiver, name, memberFunction.ReturnType);
             return BindCallTarget(syntax, target, memberFunction);
         }
         else
