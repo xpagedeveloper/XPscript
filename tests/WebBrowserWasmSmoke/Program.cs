@@ -345,7 +345,7 @@ End Sub
             System.Text.Encoding.UTF8.GetBytes(archiveSource + "\0" + compilerIdentity + "\0" + "4")));
         var procedureId = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(sourceHash + "\0" + "DOWNLOADARCHIVE"))).ToLowerInvariant()[..32];
-        var archiveSession = new SmokeSession();
+        var archiveSession = new SmokeSession();\n        var archiveServer = archiveServer;
         var archiveHeaders = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["X-XPS-WASM-Bridge"] = new[] { "1" },
@@ -355,7 +355,7 @@ End Sub
         var archiveCapabilityResponse = new XpsWebResponse();
         await archiveUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
             BridgeRequest("/server-archive.xps/__xpscript_bridge/capability", archiveHeaders),
-            archiveCapabilityResponse, Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession));
+            archiveCapabilityResponse, archiveServer, new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession));
         if (archiveCapabilityResponse.StatusCode != 200)
             throw new Exception($"Archive browser download could not acquire a bridge capability: HTTP {archiveCapabilityResponse.StatusCode}.");
         using var archiveCapabilityDocument = System.Text.Json.JsonDocument.Parse(archiveCapabilityResponse.Body);
@@ -364,13 +364,13 @@ End Sub
         archiveHeaders["X-XPS-WASM-Capability"] = new[] { archiveCapability };
         var archiveCsrfContext = new XpsWebContext(
             BridgeRequest("/server-archive.xps/__xpscript_bridge", archiveHeaders),
-            new XpsWebResponse(), Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession);
+            new XpsWebResponse(), archiveServer, new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession);
         archiveHeaders[XpsWebSecurity.CsrfHeaderName] = new[] { XpsWebSecurity.IssueCsrfToken(archiveCsrfContext) };
 
         var archiveDownloadResponse = new XpsWebResponse();
         await archiveUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
             BridgePostRequest("/server-archive.xps/__xpscript_bridge", archiveHeaders, procedureId),
-            archiveDownloadResponse, Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession));
+            archiveDownloadResponse, archiveServer, new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession));
         if (archiveDownloadResponse.StatusCode != 200)
             throw new Exception($"Archive browser download returned HTTP {archiveDownloadResponse.StatusCode}.");
         if (!string.Equals(archiveDownloadResponse.ContentType, "application/json; charset=utf-8", StringComparison.OrdinalIgnoreCase))
