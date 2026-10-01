@@ -159,6 +159,14 @@ Equal(SyntaxKind.LiteralExpression, blockIfSyntax.Condition.Kind, "block If cond
 Equal(SyntaxKind.LiteralExpression, blockIfSyntax.ElseIfClauses[0].Condition.Kind, "block ElseIf condition kind");
 Equal(new TextSpan(0, blockIfSource.Length), blockIfSyntax.Span, "block If full span");
 
+var callStatementParser = new StatementParser("Call Sleep(1)");
+var callStatement = callStatementParser.ParseStatement();
+Equal(SyntaxKind.CallStatement, callStatement.Kind, "Call statement kind");
+Equal(0, callStatementParser.Diagnostics.Count, "Call statement diagnostics");
+var callStatementSyntax = (CallStatementSyntax)callStatement;
+Equal(SyntaxKind.CallExpression, callStatementSyntax.Expression.Kind, "Call statement expression kind");
+Equal(new TextSpan(0, 13), callStatementSyntax.Span, "Call statement full span");
+
 var assignmentParser = new StatementParser("count = 1 + 2");
 var assignmentStatement = assignmentParser.ParseStatement();
 Equal(SyntaxKind.AssignmentStatement, assignmentStatement.Kind, "assignment statement kind");
