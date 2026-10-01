@@ -7,4 +7,5 @@ public sealed class BoundCallExpression(BoundExpression? target, FunctionSymbol 
     public IReadOnlyList<BoundExpression> Arguments { get; } = arguments;
     public override BoundNodeKind Kind => BoundNodeKind.CallExpression;
     public override Type Type => Function.ReturnType;
+    public override XpTypeSymbol SemanticType => Function.SemanticReturnType ?? XpTypeSymbol.FromClr(Function.ReturnType);
 }
