@@ -47,4 +47,5 @@ public enum SyntaxKind
     NewExpression,
     ExpressionStatement,
     IfStatement,
+    ElseIfClause,
 }
