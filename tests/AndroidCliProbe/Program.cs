@@ -83,3 +83,16 @@ foreach (var expected in new[]
     if (!androidCommand.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android --debug regression is missing: " + expected);
 }
+
+
+foreach (var expected in new[]
+{
+    "ParseGeneratedCompilerDiagnostics",
+    "CompilerDiagnosticCodes.GeneratedCodeCompilationFailed",
+    "generatedDiagnostics",
+    "Generated code failed to compile."
+})
+{
+    if (!compilerDriver.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Generated Android compiler diagnostic regression is missing: " + expected);
+}
