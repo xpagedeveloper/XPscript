@@ -212,6 +212,13 @@ Equal(typeof(System.Text.StringBuilder), boundNew.Type, "bound New result type")
 Equal(0, newBinder.Diagnostics.Count, "bound New diagnostics");
 Equal("new StringBuilder()", emitter.Emit(boundNew), "bound New C# emission");
 
+var newWithArgsBinder = new ExpressionBinder(newSymbols);
+var boundNewWithArgs = newWithArgsBinder.Bind(new ExpressionParser("New StringBuilder(\"hello\")").ParseExpression());
+Equal(BoundNodeKind.NewExpression, boundNewWithArgs.Kind, "bound New with args root");
+Equal(typeof(System.Text.StringBuilder), boundNewWithArgs.Type, "bound New with args result type");
+Equal(0, newWithArgsBinder.Diagnostics.Count, "bound New with args diagnostics");
+Equal("new StringBuilder(\"hello\")", emitter.Emit(boundNewWithArgs), "bound New with args C# emission");
+
 
 Equal("((!false) || true)", emitter.Emit(boundBoolean), "bound boolean C# emission");
 Equal("(1 + (2 * 3))", emitter.Emit(boundArithmetic), "bound arithmetic C# emission");
