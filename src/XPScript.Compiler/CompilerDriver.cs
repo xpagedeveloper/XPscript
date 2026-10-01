@@ -753,7 +753,6 @@ public sealed class CompilerDriver
 
         const string packages = """
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.0.3" />
     <PackageReference Include="Avalonia.Android" Version="12.0.3" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
   </ItemGroup>
