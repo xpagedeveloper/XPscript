@@ -57,6 +57,7 @@ public enum SyntaxKind
     GoToKeyword,
     ResumeKeyword,
     NextKeyword,
+    NewKeyword,
     LiteralExpression,
     NameExpression,
     UnaryExpression,
