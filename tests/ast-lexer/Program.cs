@@ -331,6 +331,11 @@ Equal(typeof(string), boundIndexedMethod.Type, "bound indexed object method type
 Equal(0, indexedMethodBinder.Diagnostics.Count, "bound indexed object method diagnostics");
 Equal("people[1].Describe()", emitter.Emit(boundIndexedMethod), "bound indexed object method C# emission");
 
+var indexedChainBinder = new ExpressionBinder(indexedSymbols);
+var boundIndexedChain = indexedChainBinder.Bind(new ExpressionParser("people[1].Name").ParseExpression());
+Equal(typeof(string), boundIndexedChain.Type, "indexed member chain retains final member type");
+Equal(0, indexedChainBinder.Diagnostics.Count, "indexed member chain diagnostics");
+
 var zeroArgBinder = new ExpressionBinder(callSymbols);
 var boundZeroArg = zeroArgBinder.Bind(new ExpressionParser("Error()").ParseExpression());
 Equal(BoundNodeKind.CallExpression, boundZeroArg.Kind, "bound zero-argument call root");
