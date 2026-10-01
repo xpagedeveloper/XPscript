@@ -88,10 +88,10 @@ foreach (var expected in new[]
 {
     "Environment.ExitCode = 0;",
     "if (Environment.ExitCode == 0)",
-    "XPSCRIPT-EXIT=" + Environment.ExitCode
+    "\"XPSCRIPT-EXIT=\" + Environment.ExitCode"
 })
 {
-    if (!androidHost.Contains(expected, StringComparison.Ordinal))
+    if (!code.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android host exit-code regression is missing: " + expected);
 }
 
