@@ -56,10 +56,21 @@ public sealed class Lexer
         {
             while (char.IsDigit(Current))
                 _position++;
+
+            var isDecimal = false;
+            if (Current == '.' && char.IsDigit(Peek(1)))
+            {
+                isDecimal = true;
+                _position++;
+                while (char.IsDigit(Current))
+                    _position++;
+            }
+
             var text = _text[start.._position];
-            return new SyntaxToken(SyntaxKind.NumberToken, text,
-                long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : null,
-                new TextSpan(start, text.Length));
+            object? value = isDecimal
+                ? double.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var doubleValue) ? doubleValue : null
+                : long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var longValue) ? longValue : null;
+            return new SyntaxToken(SyntaxKind.NumberToken, text, value, new TextSpan(start, text.Length));
         }
 
         if (Current == '"')
