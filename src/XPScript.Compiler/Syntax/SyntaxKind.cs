@@ -44,5 +44,6 @@ public enum SyntaxKind
     CallExpression,
     MemberAccessExpression,
     IndexExpression,
-    NewExpression
+    NewExpression,
+    ArrayExpression
 }
