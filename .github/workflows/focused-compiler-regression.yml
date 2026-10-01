@@ -8,6 +8,7 @@ on:
       - 'src/XPScript.Compiler.Core/**'
       - 'samples/is-nothing-unary-not-regression.xps'
       - 'samples/function-not-byref-regression.xps'
+      - 'tests/ApplicationDebugRuntimeProbe/**'
       - '.github/workflows/focused-compiler-regression.yml'
   workflow_dispatch:
 
@@ -84,3 +85,17 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Run machine interface probe
         run: dotnet run --project ./tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release -- .
+
+
+  application-debug-runtime:
+    name: Application.Debug runtime regression
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run Application.Debug probe
+        shell: pwsh
+        run: dotnet run --project ./tests/ApplicationDebugRuntimeProbe/ApplicationDebugRuntimeProbe.csproj -c Release -- .
