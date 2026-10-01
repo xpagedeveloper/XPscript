@@ -236,6 +236,18 @@ Equal(0, forWithoutStepParser.Diagnostics.Count, "For without Step diagnostics")
 Equal(false, forWithoutStep.StepExpression is not null, "For without Step has no Step expression");
 Equal(false, forWithoutStep.NextIdentifierToken is not null, "For bare Next has no identifier");
 
+const string forAllSource = "ForAll value In numbers\ncount = count + 1\nEnd ForAll";
+var forAllParser = new StatementParser(forAllSource);
+var forAllStatement = forAllParser.ParseStatement();
+Equal(SyntaxKind.ForAllStatement, forAllStatement.Kind, "ForAll statement kind");
+Equal(0, forAllParser.Diagnostics.Count, "ForAll diagnostics");
+var forAllSyntax = (ForAllStatementSyntax)forAllStatement;
+Equal("value", forAllSyntax.IdentifierToken.Text, "ForAll identifier");
+Equal(SyntaxKind.NameExpression, forAllSyntax.CollectionExpression.Kind, "ForAll collection expression kind");
+Equal(1, forAllSyntax.Statements.Count, "ForAll body statement count");
+Equal(SyntaxKind.AssignmentStatement, forAllSyntax.Statements[0].Kind, "ForAll body assignment kind");
+Equal(new TextSpan(0, forAllSource.Length), forAllSyntax.Span, "ForAll full span");
+
 var runCommandAst = new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression();
 Equal(SyntaxKind.UnaryExpression, runCommandAst.Kind, "Not RunCommand root");
 var notRunCommand = (UnaryExpressionSyntax)runCommandAst;
