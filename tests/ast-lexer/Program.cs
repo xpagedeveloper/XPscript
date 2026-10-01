@@ -202,6 +202,16 @@ invalidBinder.Bind(new ExpressionParser("Not 1").ParseExpression());
 Equal(1, invalidBinder.Diagnostics.Count, "invalid unary diagnostic count");
 Equal("XPS1012", invalidBinder.Diagnostics[0].Code, "invalid unary diagnostic code");
 
+var newSymbols = new SymbolTable();
+newSymbols.Declare(new TypeSymbol("StringBuilder", typeof(System.Text.StringBuilder)));
+newSymbols.Declare(new FunctionSymbol("StringBuilder", typeof(System.Text.StringBuilder), []));
+var newBinder = new ExpressionBinder(newSymbols);
+var boundNew = newBinder.Bind(new ExpressionParser("New StringBuilder").ParseExpression());
+Equal(BoundNodeKind.NewExpression, boundNew.Kind, "bound New root");
+Equal(typeof(System.Text.StringBuilder), boundNew.Type, "bound New result type");
+Equal(0, newBinder.Diagnostics.Count, "bound New diagnostics");
+Equal("new StringBuilder()", emitter.Emit(boundNew), "bound New C# emission");
+
 var emitter = new BoundExpressionEmitter();
 Equal("((!false) || true)", emitter.Emit(boundBoolean), "bound boolean C# emission");
 Equal("(1 + (2 * 3))", emitter.Emit(boundArithmetic), "bound arithmetic C# emission");
