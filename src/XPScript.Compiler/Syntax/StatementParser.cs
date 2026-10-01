@@ -38,6 +38,8 @@ public sealed class StatementParser
             return ParseIfStatement();
         if (Current.Kind == SyntaxKind.SetKeyword)
             return ParseSetStatement();
+        if (Current.Kind == SyntaxKind.DimKeyword)
+            return ParseDimStatement();
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
@@ -157,6 +159,44 @@ public sealed class StatementParser
         }
 
         return statements;
+    }
+
+    private StatementSyntax ParseDimStatement()
+    {
+        var dimKeyword = NextToken();
+        var identifier = Match(SyntaxKind.IdentifierToken);
+
+        SyntaxToken? asKeyword = null;
+        SyntaxToken? typeName = null;
+        if (Current.Kind == SyntaxKind.AsKeyword)
+        {
+            asKeyword = NextToken();
+            typeName = Match(SyntaxKind.IdentifierToken);
+        }
+
+        SyntaxToken? equalsToken = null;
+        ExpressionSyntax? initializer = null;
+        if (Current.Kind == SyntaxKind.EqualsToken)
+        {
+            equalsToken = NextToken();
+            initializer = ParseExpressionUntilLineEnd();
+        }
+
+        if (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(
+                "XPS1012",
+                $"Unexpected token {Current.Kind} in Dim statement.",
+                Current.Span));
+        }
+
+        return new DimStatementSyntax(
+            dimKeyword,
+            identifier,
+            asKeyword,
+            typeName,
+            equalsToken,
+            initializer);
     }
 
     private StatementSyntax ParseAssignmentStatement(int equalsIndex)
