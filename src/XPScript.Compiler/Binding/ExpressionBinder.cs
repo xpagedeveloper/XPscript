@@ -18,6 +18,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         NewExpressionSyntax @new => BindNew(@new),
         UnaryExpressionSyntax unary => BindUnary(unary),
         BinaryExpressionSyntax binary => BindBinary(binary),
+        ParenthesizedExpressionSyntax parenthesized => Bind(parenthesized.Expression),
         _ => Error(syntax, $"Binding is not implemented for {syntax.Kind}.")
     };
 
