@@ -249,10 +249,10 @@ Equal(typeof(string), boundConcat.Type, "bound concat type");
 Equal(0, concatBinder.Diagnostics.Count, "bound concat diagnostics");
 Equal("(\"XP\" + \"Script\")", emitter.Emit(boundConcat), "bound concat C# emission");
 
-var comparisonBinder = new ExpressionBinder();
-var boundComparison = comparisonBinder.Bind(new ExpressionParser("1 + 2 = 3").ParseExpression());
-Equal("((1 + 2) == 3)", emitter.Emit(boundComparison), "bound comparison C# emission");
-Equal(0, comparisonBinder.Diagnostics.Count, "bound comparison diagnostics");
+var equalityBinder = new ExpressionBinder();
+var boundEquality = equalityBinder.Bind(new ExpressionParser("1 + 2 = 3").ParseExpression());
+Equal("((1 + 2) == 3)", emitter.Emit(boundEquality), "bound equality C# emission");
+Equal(0, equalityBinder.Diagnostics.Count, "bound equality diagnostics");
 
 var callSymbols = new SymbolTable();
 callSymbols.Declare(new FunctionSymbol("Array", typeof(string[]), [typeof(string)]));
