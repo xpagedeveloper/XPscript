@@ -316,6 +316,53 @@ End Sub
             throw new Exception("XPImage missing [ServerSide] diagnostic was not structured as XPS3002.");
     }
 
+    var archivePath = Path.Combine(root, "server-archive.xps");
+    await File.WriteAllTextAsync(archivePath, """
+[Platform:browser-wasm]
+
+[ServerSide]
+Function ArchiveOnServer() As Long
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddText("payload.txt", "server")
+    ArchiveOnServer = Len(archive.ToBytes())
+End Function
+
+Sub Main()
+    Print ArchiveOnServer()
+End Sub
+""");
+    await using (var archiveUnit = await compiler.CompileAsync(archivePath, root))
+    {
+        if (!archiveUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
+            throw new Exception("[ServerSide] Archive browser-WASM compile did not produce the WASM route.");
+    }
+
+    var unsafeArchivePath = Path.Combine(root, "unsafe-archive.xps");
+    await File.WriteAllTextAsync(unsafeArchivePath, """
+[Platform:browser-wasm]
+
+Function ArchiveInBrowser() As Long
+    Dim archive As New Archive()
+    archive.Create("zip")
+    ArchiveInBrowser = Len(archive.ToBytes())
+End Function
+
+Sub Main()
+    Print ArchiveInBrowser()
+End Sub
+""");
+    try
+    {
+        await using var ignored = await compiler.CompileAsync(unsafeArchivePath, root);
+        throw new Exception("Unannotated Archive browser-WASM code compiled without [ServerSide].");
+    }
+    catch (XpsWebCompilationException ex) when (ex.Message.Contains("not marked [ServerSide]", StringComparison.OrdinalIgnoreCase))
+    {
+        if (ex.DiagnosticCode != "XPS3002" || ex.Category != "execution-context")
+            throw new Exception("Archive missing [ServerSide] diagnostic was not structured as XPS3002.");
+    }
+
     var cryptoPath = Path.Combine(root, "server-crypto.xps");
     await File.WriteAllTextAsync(cryptoPath, """
 [Platform:browser-wasm]
