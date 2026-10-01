@@ -32,17 +32,28 @@ internal static class AndroidCommand
         var project = AndroidProjectMetadata.LoadForSource(source);
         Console.WriteLine("Android project: target=" + project.Target + ", applicationType=" + project.ApplicationType);
 
+        string deviceMode = "auto";
         string? requestedSerial = null;
+        string? requestedAvd = null;
         string? requestedPlatform = null;
         for (var i = 1; i < args.Length; i++)
         {
-            if (args[i] == "--device" && i + 1 < args.Length) requestedSerial = args[++i];
+            if (args[i] == "--device" && i + 1 < args.Length) deviceMode = args[++i].ToLowerInvariant();
+            else if (args[i] == "--serial" && i + 1 < args.Length) requestedSerial = args[++i];
+            else if (args[i] == "--avd" && i + 1 < args.Length) requestedAvd = args[++i];
             else if (args[i] == "--platform" && i + 1 < args.Length) requestedPlatform = args[++i].ToLowerInvariant();
             else throw new ArgumentException("Unknown android run argument: " + args[i]);
         }
 
+        if (deviceMode is not ("auto" or "emulator" or "physical"))
+            throw new ArgumentException("Invalid --device value '" + deviceMode + "'. Use auto, emulator or physical.");
+        if (requestedAvd is not null && deviceMode != "emulator")
+            throw new ArgumentException("--avd can only be used with --device emulator.");
+        if (requestedSerial is not null && deviceMode == "emulator")
+            throw new ArgumentException("--serial cannot be combined with --device emulator.");
+
         var adb = ResolveAdb();
-        var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
+        var serial = await RequireReadyDeviceAsync(adb, deviceMode, requestedSerial, requestedAvd);
         var abiResult = await ExecuteAsync(adb, ["-s", serial, "shell", "getprop", "ro.product.cpu.abi"]);
         if (abiResult.ExitCode != 0) throw new InvalidOperationException("Unable to detect Android device ABI: " + abiResult.Error.Trim());
         var abi = abiResult.Output.Trim().ToLowerInvariant();
@@ -184,7 +195,7 @@ internal static class AndroidCommand
         return 0;
     }
 
-    private static async Task<string> RequireReadyDeviceAsync(string adb, string? requestedSerial)
+    private static async Task<string> RequireReadyDeviceAsync(string adb, string deviceMode, string? requestedSerial, string? requestedAvd)
     {
         var result = await ExecuteAsync(adb, ["devices"]);
         if (result.ExitCode != 0) throw new InvalidOperationException("adb devices failed: " + result.Error.Trim());
@@ -209,7 +220,7 @@ internal static class AndroidCommand
             throw new InvalidOperationException("No ready Android device or emulator was detected.");
         }
         if (ready.Length > 1)
-            throw new InvalidOperationException("Multiple Android devices/emulators are ready. Select one with --device SERIAL.");
+            throw new InvalidOperationException("Multiple Android targets are ready. Select one with --serial SERIAL.");
         return ready[0].Serial;
     }
 
@@ -313,14 +324,17 @@ Usage:
   xpscript android install <app.apk> [--device SERIAL]
   xpscript android launch [--device SERIAL]
   xpscript android logs [--device SERIAL]
-  xpscript android run <source.xps> [--platform RID] [--device SERIAL]
+  xpscript android run <source.xps> [--platform RID] [--device auto|emulator|physical] [--serial SERIAL] [--avd NAME]
 
 Commands:
   devices  List Android devices/emulators visible to adb, including unauthorized/offline state.
   install  Install or update an APK on exactly one ready device/emulator.
   launch   Launch the XPScript Android debug application.
   logs     Print XPScript-tagged Android log output.
-  run      Detect device ABI, build, install, launch and print XPScript Android logs.
+  run      Select a target, detect its ABI, build, install, launch and print XPScript Android logs.
+           --device selects auto, emulator or physical.
+           --serial selects one exact adb target.
+           --avd names an emulator AVD when --device emulator is used.
 """);
     }
 }
