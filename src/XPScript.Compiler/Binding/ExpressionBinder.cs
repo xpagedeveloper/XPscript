@@ -15,7 +15,6 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         CallExpressionSyntax call => BindCall(call),
         MemberAccessExpressionSyntax member => BindMemberAccess(member),
         IndexExpressionSyntax index => BindIndex(index),
-        ArrayExpressionSyntax array => BindArray(array),
         NewExpressionSyntax @new => BindNew(@new),
         UnaryExpressionSyntax unary => BindUnary(unary),
         BinaryExpressionSyntax binary => BindBinary(binary),
@@ -65,12 +64,6 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             return Error(syntax, $"No matching constructor for '{typeName}'.");
 
         return new BoundNewExpression(type, arguments);
-    }
-
-    private BoundExpression BindArray(ArrayExpressionSyntax syntax)
-    {
-        var elements = syntax.Elements.Select(Bind).ToArray();
-        return new BoundArrayExpression(elements, typeof(object[]));
     }
 
     private BoundExpression BindIndex(IndexExpressionSyntax syntax)
