@@ -1,0 +1,5 @@
+Sub Main()
+    Print "BEFORE-RUNTIME-ERROR"
+    Error 7001, "Android runtime error regression"
+    Print "AFTER-RUNTIME-ERROR"
+End Sub
