@@ -188,6 +188,7 @@ public sealed class Lexer
         "SELECT" => SyntaxKind.SelectKeyword,
         "CASE" => SyntaxKind.CaseKeyword,
         "IS" => SyntaxKind.IsKeyword,
+        "CALL" => SyntaxKind.CallKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
