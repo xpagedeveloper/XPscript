@@ -95,4 +95,9 @@ foreach (var expected in new[]
         throw new Exception("Android host exit-code regression is missing: " + expected);
 }
 
+if (!code.Contains("var runtimeSource = XPSourceLineRuntime.CurrentSource;", StringComparison.Ordinal) ||
+    !code.Contains("var runtimeLine = XPSourceLineRuntime.Current;", StringComparison.Ordinal) ||
+    !code.Contains("Console.Error.WriteLine(\"at \" + runtimeSource", StringComparison.Ordinal))
+    throw new Exception("Android runtime source-location diagnostic regression is missing.");
+
 Console.WriteLine("ANDROID-COMPILER-PROBE=OK");
