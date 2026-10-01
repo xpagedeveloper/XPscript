@@ -28,9 +28,15 @@ foreach (var expected in new[]
         throw new Exception("Android CLI regression is missing: " + expected);
 }
 
-var fixedDelay = "await Task.Delay(1000);";
-if (source.Contains(fixedDelay, StringComparison.Ordinal))
-    throw new Exception("Android run still relies on the old fixed one-second completion delay.");
+var waitMethodStart = source.IndexOf("private static async Task<int> WaitForCompletionAsync", StringComparison.Ordinal);
+if (waitMethodStart < 0)
+    throw new Exception("Android completion wait method is missing.");
+var waitMethodEnd = source.IndexOf("private static async Task<int> LaunchAsync", waitMethodStart, StringComparison.Ordinal);
+if (waitMethodEnd < 0)
+    throw new Exception("Android completion wait method boundary is missing.");
+var waitMethod = source[waitMethodStart..waitMethodEnd];
+if (waitMethod.Contains("await Task.Delay(1000);", StringComparison.Ordinal))
+    throw new Exception("Android completion wait still relies on the old fixed one-second delay.");
 
 Console.WriteLine("ANDROID-CLI-PROBE=OK");
 
