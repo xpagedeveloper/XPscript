@@ -90,7 +90,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Connect the existing XPScript UIForm runtime to the generated Android application. The compiler now detects UIForm usage, generates the Avalonia Android host, packages the synchronized Avalonia Android dependencies, and CI successfully publishes the generated minimal Android UIForm APK.
 - [x] Render a minimal UIForm containing a text field, label and button. The generated Avalonia Android host renders field labels as `TextBlock`, text fields as `TextBox`, and an action row with OK/Cancel buttons; `AndroidCompilerProbe` guards this contract and Android CI successfully publishes the generated UIForm APK.
 - [x] Verify UIForm actions execute XPScript handlers on Android. Android UIForm requests now include configured buttons; the Avalonia Android host renders them, submits current field state as `button:<name>`, and dispatches through the shared `DispatchRegisteredEvent` handler path. Guarded by `AndroidCompilerProbe` and verified by the Android Build workflow.
-- [ ] Verify bound `XPJsonObject` / `XPJsonDocument` data updates correctly.
+- [x] Verify bound `XPJsonObject` / `XPJsonDocument` data updates correctly. Android submits the current field-state JSON through the shared `DispatchRegisteredEvent` path, which applies values through `ApplySubmittedStateJson` / `ApplySubmittedValue` / `ApplySubmittedValues` to the bound UIForm data model. Guarded by `AndroidCompilerProbe` and verified by the Android Build workflow.
 - [ ] Verify validation behavior.
 - [ ] Verify focus and software keyboard behavior.
 - [ ] Verify touch input.
