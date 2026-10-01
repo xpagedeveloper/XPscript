@@ -23,6 +23,11 @@ var addAndroidUiDependencies = type.GetMethod("AddAndroidUIFormDependencies", Bi
     ?? throw new Exception("AddAndroidUIFormDependencies was not found.");
 var uiProject = (string)(addAndroidUiDependencies.Invoke(null, new object?[] { project })
     ?? throw new Exception("Android UIForm project dependency generation returned null."));
+if (!uiProject.Contains("<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>", StringComparison.Ordinal))
+    throw new Exception("Android UIForm generated project must disable CopyLocalLockFileAssemblies to avoid duplicate AndroidX bindings.");
+if (uiProject.Contains("<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>", StringComparison.Ordinal))
+    throw new Exception("Android UIForm generated project still enables CopyLocalLockFileAssemblies.");
+
 foreach (var expected in new[]
 {
     "<PackageReference Include=\"Avalonia\" Version=\"12.0.3\" />",
