@@ -13,6 +13,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         LiteralExpressionSyntax literal => BindLiteral(literal),
         NameExpressionSyntax name => BindName(name),
         CallExpressionSyntax call => BindCall(call),
+        MemberAccessExpressionSyntax member => BindMemberAccess(member),
         UnaryExpressionSyntax unary => BindUnary(unary),
         BinaryExpressionSyntax binary => BindBinary(binary),
         _ => Error(syntax, $"Binding is not implemented for {syntax.Kind}.")
@@ -39,15 +40,45 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         return Error(syntax, $"Undefined variable '{name}'.");
     }
 
+    private BoundExpression BindMemberAccess(MemberAccessExpressionSyntax syntax)
+    {
+        var receiver = Bind(syntax.Expression);
+        var key = receiver.Type.Name + "." + syntax.NameToken.Text;
+        if (_symbols.TryLookup(key, out var symbol) && symbol is FunctionSymbol function)
+            return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType);
+        return Error(syntax, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.Type.Name}'.");
+    }
+
     private BoundExpression BindCall(CallExpressionSyntax syntax)
     {
-        if (syntax.Target is not NameExpressionSyntax nameSyntax)
-            return Error(syntax, "Only direct function calls are supported by the initial binder.");
+        BoundExpression target;
+        string name;
+        if (syntax.Target is NameExpressionSyntax nameSyntax)
+        {
+            target = Bind(nameSyntax);
+            name = nameSyntax.IdentifierToken.Text;
+        }
+        else if (syntax.Target is MemberAccessExpressionSyntax memberSyntax)
+        {
+            var receiver = Bind(memberSyntax.Expression);
+            name = memberSyntax.NameToken.Text;
+            target = BindMemberAccess(memberSyntax);
+            if (!_symbols.TryLookup(receiver.Type.Name + "." + name, out var memberSymbol) || memberSymbol is not FunctionSymbol memberFunction)
+                return Error(syntax, $"Undefined function '{name}' on '{receiver.Type.Name}'.");
+            return BindCallTarget(syntax, target, memberFunction);
+        }
+        else
+        {
+            return Error(syntax, "Unsupported call target.");
+        }
 
-        var name = nameSyntax.IdentifierToken.Text;
         if (!_symbols.TryLookup(name, out var symbol) || symbol is not FunctionSymbol function)
             return Error(syntax, $"Undefined function '{name}'.");
+        return BindCallTarget(syntax, target, function);
+    }
 
+    private BoundExpression BindCallTarget(CallExpressionSyntax syntax, BoundExpression target, FunctionSymbol function)
+    {
         var arguments = syntax.Arguments.Select(Bind).ToArray();
         if (arguments.Length != function.ParameterTypes.Count)
             return Error(syntax, $"Function '{name}' expects {function.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
@@ -56,7 +87,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             if (arguments[i].Type != function.ParameterTypes[i])
                 return Error(syntax.Arguments[i], $"Argument {i + 1} to '{name}' must be {function.ParameterTypes[i].Name}, not {arguments[i].Type.Name}.");
 
-        return new BoundCallExpression(function, arguments);
+        return new BoundCallExpression(target, function, arguments);
     }
 
     private BoundExpression BindUnary(UnaryExpressionSyntax syntax)
