@@ -77,6 +77,24 @@ foreach (var expected in new[]
         throw new Exception("Android generated UIForm host is missing: " + expected);
 }
 
+var desktopRuntimeSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs");
+var desktopRuntimeSource = File.ReadAllText(desktopRuntimeSourcePath);
+if (!desktopRuntimeSource.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal))
+    throw new Exception("Android UIForm requests must include the shared UIForm button model.");
+
+var eventDispatcherSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormEventDispatcherPostProcessor.cs");
+var eventDispatcherSource = File.ReadAllText(eventDispatcherSourcePath);
+foreach (var expected in new[]
+{
+    "ApplySubmittedStateJson(submittedValue);",
+    "ApplySubmittedValue(field, submitted);",
+    "ApplySubmittedValues(field, submittedValues);"
+})
+{
+    if (!eventDispatcherSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android UIForm submitted data is not routed through the shared bound-data update path: " + expected);
+}
+
 var emulatorProject = (string)(method.Invoke(null, new object?[] { "android-x64", false, emptyReferences, false, false, "AndroidEmulatorSmoke" })
     ?? throw new Exception("Android emulator project generation returned null."));
 if (!emulatorProject.Contains("<TargetFramework>net10.0-android</TargetFramework>", StringComparison.Ordinal) ||
