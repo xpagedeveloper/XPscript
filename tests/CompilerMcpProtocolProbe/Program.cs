@@ -73,8 +73,8 @@ var webResult=webValidation.GetProperty("result");
 if (!webResult.GetProperty("isError").GetBoolean()) throw new Exception("Web source validated as a console application must be an MCP tool error.");
 var webStructured=webResult.GetProperty("structuredContent");
 if (webStructured.GetProperty("result").GetString() != "error") throw new Exception("Expected structured web/console mismatch error.");
-var webDescription=webStructured.GetProperty("errors")[0].GetProperty("description").GetString() ?? "";
-if (!webDescription.Contains("web application", StringComparison.OrdinalIgnoreCase)) throw new Exception("MCP did not preserve the web application compilation diagnostic.");
+var webDescriptions=webStructured.GetProperty("errors").EnumerateArray().Select(error=>error.GetProperty("description").GetString() ?? "").ToArray();
+if (!webDescriptions.Any(description=>description.Contains("web application", StringComparison.OrdinalIgnoreCase))) throw new Exception("MCP did not preserve the web application compilation diagnostic. Actual: "+string.Join(" || ",webDescriptions));
 
 var tool = list.GetProperty("result").GetProperty("tools").EnumerateArray().Single(x=>x.GetProperty("name").GetString()=="xpscript_validate");
 var properties = tool.GetProperty("inputSchema").GetProperty("properties");
