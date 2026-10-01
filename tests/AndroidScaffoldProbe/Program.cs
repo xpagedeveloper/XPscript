@@ -1,16 +1,14 @@
-using System.Reflection;
-
 var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 var scaffoldSource = File.ReadAllText(Path.Combine(root, "src", "XPScript.Cli", "XpsScaffolder.cs"));
 
 foreach (var expected in new[]
 {
-    ""android"",
+    "\"android\"",
     "AndroidTemplate",
     "AndroidProjectConfig",
     "xpscript android run",
-    ""target": "android"",
-    ""applicationType": "headless""
+    "\"target\": \"android\"",
+    "\"applicationType\": \"headless\""
 })
 {
     if (!scaffoldSource.Contains(expected, StringComparison.Ordinal))
