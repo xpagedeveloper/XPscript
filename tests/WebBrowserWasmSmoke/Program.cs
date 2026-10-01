@@ -362,6 +362,10 @@ End Sub
         var archiveCapability = archiveCapabilityDocument.RootElement.GetProperty("capability").GetString()
             ?? throw new Exception("Archive browser download received an empty bridge capability.");
         archiveHeaders["X-XPS-WASM-Capability"] = new[] { archiveCapability };
+        var archiveCsrfContext = new XpsWebContext(
+            BridgeRequest("/server-archive.xps/__xpscript_bridge", archiveHeaders),
+            new XpsWebResponse(), Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), archiveSession);
+        archiveHeaders[XpsWebSecurity.CsrfHeaderName] = new[] { XpsWebSecurity.IssueCsrfToken(archiveCsrfContext) };
 
         var archiveDownloadResponse = new XpsWebResponse();
         await archiveUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
