@@ -48,7 +48,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Route XPScript `Print` output to Android logging.
 - [x] Make the output visible through adb/logcat (`xpscript android logs`); development debugger integration remains future work.
 - [x] Use an unambiguous XPScript log tag.
-- [ ] Add a second minimal regression that emits multiple lines and values so output ordering and formatting are verified. (Sample/compiler regression added; emulator/device output verification pending.)
+- [x] Add a second minimal regression that emits multiple lines and values so output ordering and formatting are verified. (Verified locally on a physical Android ARM64 device with ordered `ANDROID-LINE`, `ANDROID-VALUE`, `ANDROID-BOOL`, `ANDROID-LINE` output and `XPSCRIPT-EXIT=0`.)
 - [x] Route uncaught XPScript runtime errors to Android logging.
 - [x] Add a minimal failure sample that intentionally raises a runtime error and verify the error reaches the debug path. (Verified on Windows with Pixel_5 API 30 and android-x64. `BEFORE-RUNTIME-ERROR` and `XPSCRIPT-EXIT=1` were observed.)
 - [x] Include source file and line information in Android runtime diagnostics when available. (Verified on Windows with Pixel_5 API 30: `at android-debug-runtime-error.xps:3` reached Android logcat.)
