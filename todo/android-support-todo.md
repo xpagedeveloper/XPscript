@@ -92,7 +92,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Verify UIForm actions execute XPScript handlers on Android. Android UIForm requests now include configured buttons; the Avalonia Android host renders them, submits current field state as `button:<name>`, and dispatches through the shared `DispatchRegisteredEvent` handler path. Guarded by `AndroidCompilerProbe` and verified by the Android Build workflow.
 - [x] Verify bound `XPJsonObject` / `XPJsonDocument` data updates correctly. Android submits the current field-state JSON through the shared `DispatchRegisteredEvent` path, which applies values through `ApplySubmittedStateJson` / `ApplySubmittedValue` / `ApplySubmittedValues` to the bound UIForm data model. Guarded by `AndroidCompilerProbe` and verified by the Android Build workflow.
 - [x] Verify validation behavior.
-- [ ] Verify focus and software keyboard behavior.
+- [x] Verify focus and software keyboard behavior.
 - [ ] Verify touch input.
 - [ ] Verify application lifecycle: start, pause, resume and stop.
 - [ ] Verify orientation changes.
