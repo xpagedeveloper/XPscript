@@ -106,8 +106,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             var receiver = Bind(memberSyntax.Expression);
             name = memberSyntax.NameToken.Text;
             target = BindMemberAccess(memberSyntax);
-            if (!_symbols.TryLookup(receiver.Type.Name + "." + name, out var memberSymbol) || memberSymbol is not FunctionSymbol memberFunction)
-                return Error(syntax, $"Undefined function '{name}' on '{receiver.Type.Name}'.");
+            if (!_symbols.TryLookup(receiver.Type.Name + "." + name, out var memberSymbol))
+                return Error(syntax, $"Undefined member '{name}' on '{receiver.Type.Name}'.");
+            if (memberSymbol is IndexedPropertySymbol indexedProperty)
+                return BindIndexedProperty(syntax, receiver, indexedProperty);
+            if (memberSymbol is not FunctionSymbol memberFunction)
+                return Error(syntax, $"Member '{name}' on '{receiver.Type.Name}' is not callable.");
             return BindCallTarget(syntax, target, memberFunction);
         }
         else
@@ -118,6 +122,18 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         if (!_symbols.TryLookup(name, out var symbol) || symbol is not FunctionSymbol function)
             return Error(syntax, $"Undefined function '{name}'.");
         return BindCallTarget(syntax, target, function);
+    }
+
+
+    private BoundExpression BindIndexedProperty(CallExpressionSyntax syntax, BoundExpression receiver, IndexedPropertySymbol property)
+    {
+        var arguments = syntax.Arguments.Select(Bind).ToArray();
+        if (arguments.Length != property.ParameterTypes.Count)
+            return Error(syntax, $"Indexed property '{property.Name}' expects {property.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
+        for (var i = 0; i < arguments.Length; i++)
+            if (arguments[i].Type != property.ParameterTypes[i])
+                return Error(syntax.Arguments[i], $"Argument {i + 1} to '{property.Name}' must be {property.ParameterTypes[i].Name}, not {arguments[i].Type.Name}.");
+        return new BoundIndexedPropertyExpression(receiver, property, arguments);
     }
 
     private BoundExpression BindCallTarget(CallExpressionSyntax syntax, BoundExpression? target, FunctionSymbol function)
