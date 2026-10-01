@@ -16,12 +16,12 @@ sealed class AndroidEntryActivity : Activity
         Console.AndroidLog = (text, isError) => Log.WriteLine(isError ? LogPriority.Error : LogPriority.Info, "XPScript", text);
         try
         {
-            Environment.ExitCode = 0;
+            System.Environment.ExitCode = 0;
             Program.Main(Array.Empty<string>());
-            if (Environment.ExitCode == 0)
+            if (System.Environment.ExitCode == 0)
                 Log.Info("XPScript", "XPSCRIPT-EXIT=0");
             else
-                Log.Error("XPScript", "XPSCRIPT-EXIT=" + Environment.ExitCode);
+                Log.Error("XPScript", "XPSCRIPT-EXIT=" + System.Environment.ExitCode);
         }
         catch (Exception exception)
         {
