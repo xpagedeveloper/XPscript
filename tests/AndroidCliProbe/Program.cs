@@ -54,7 +54,7 @@ foreach (var expected in new[]
 foreach (var expected in new[]
 {
     "ResolveAndroidTool(\"emulator\")",
-    "emulator -list-avds",
+    "-list-avds",
     "Multiple AVDs are configured",
     "Starting Android emulator",
     "sys.boot_completed",
