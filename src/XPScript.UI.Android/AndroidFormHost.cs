@@ -13,6 +13,8 @@ public static class AndroidFormHost
     public static string ShowDialog(string requestJson, Func<string, string, string>? eventCallback)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestJson);
+        if (MainView.Current is null)
+            throw new InvalidOperationException("XPScript Android UIForm host is not initialized.");
 
         var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -30,6 +32,9 @@ public static class AndroidFormHost
                 Margin = new Thickness(24)
             };
 
+            if (request.TryGetProperty("title", out var title))
+                panel.Children.Add(new TextBlock { Text = title.GetString() ?? "XPScript", FontSize = 24 });
+
             foreach (var field in fields)
             {
                 var name = field.GetProperty("name").GetString() ?? string.Empty;
@@ -42,7 +47,7 @@ public static class AndroidFormHost
                 Control editor = type switch
                 {
                     "CheckBox" => new CheckBox(),
-                    "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 100 },
+                    "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120 },
                     _ => new TextBox()
                 };
 
@@ -67,18 +72,13 @@ public static class AndroidFormHost
             actions.Children.Add(ok);
             panel.Children.Add(actions);
 
-            var window = new Window
-            {
-                Title = request.TryGetProperty("title", out var title) ? title.GetString() ?? "XPScript" : "XPScript",
-                Content = panel,
-                Width = request.TryGetProperty("width", out var width) && width.ValueKind == JsonValueKind.Number ? width.GetDouble() : 420,
-                Height = request.TryGetProperty("height", out var height) && height.ValueKind == JsonValueKind.Number ? height.GetDouble() : 640
-            };
+            var form = new ScrollViewer { Content = panel };
+            MainView.Current.ShowForm(form);
 
             cancel.Click += (_, _) =>
             {
+                MainView.Current?.RestoreHome();
                 completion.TrySetResult(JsonSerializer.Serialize(new { result = "Cancel", values = new { } }));
-                window.Close();
             };
 
             ok.Click += (_, _) =>
@@ -87,12 +87,14 @@ public static class AndroidFormHost
                 foreach (var pair in editors)
                     values[pair.Key] = GetEditorValue(pair.Value);
 
+                var submittedValues = JsonSerializer.Serialize(values);
                 var result = JsonSerializer.Serialize(new { result = "OK", values });
+
                 if (eventCallback is not null)
                 {
                     try
                     {
-                        var callbackResult = eventCallback("button:OK", result);
+                        var callbackResult = eventCallback("button:OK", submittedValues);
                         if (!string.IsNullOrWhiteSpace(callbackResult))
                             result = callbackResult;
                     }
@@ -101,12 +103,9 @@ public static class AndroidFormHost
                     }
                 }
 
+                MainView.Current?.RestoreHome();
                 completion.TrySetResult(result);
-                window.Close();
             };
-
-            window.Closed += (_, _) => completion.TrySetResult(JsonSerializer.Serialize(new { result = "Cancel", values = new { } }));
-            window.Show();
         }
 
         if (Dispatcher.UIThread.CheckAccess())
