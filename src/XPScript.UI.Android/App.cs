@@ -4,7 +4,7 @@ using Avalonia.Themes.Fluent;
 
 namespace XPScript.UI.Android;
 
-public sealed class App : Application
+public sealed class App : Avalonia.Application
 {
     public override void OnFrameworkInitializationCompleted()
     {
