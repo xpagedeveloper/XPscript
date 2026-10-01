@@ -246,19 +246,12 @@ public sealed class CompilerDriver
             if (process.ExitCode != 0)
             {
                 var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
-                if (CompilerDiagnosticMode.Debug)
-                {
-                    Console.Error.WriteLine("--- dotnet publish diagnostics (debug compile failure) ---");
-                    Console.Error.WriteLine(diagnosticText);
-                    Console.Error.WriteLine("--- end dotnet publish diagnostics ---");
-                    var numberedSource = string.Join(Environment.NewLine,
-                        generatedSource.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')
-                            .Select((line, index) => $"{index + 1,5}: {line}"));
-                    Console.Error.WriteLine("--- XPScript generated C# (debug compile failure) ---");
-                    Console.Error.WriteLine(numberedSource);
-                    Console.Error.WriteLine("--- end generated C# ---");
-                }
-                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
+                var generatedDiagnostics = ParseGeneratedCompilerDiagnostics(stdout + Environment.NewLine + stderr, sourcePath, tempRoot);
+                throw new CompilerException(
+                    "Generated code failed to compile.",
+                    CompilerDiagnosticCodes.GeneratedCodeCompilationFailed,
+                    "compiler",
+                    generatedDiagnostics);
             }
 
             var generatedExecutable = FindPublishedExecutable(tempRoot, publishDir, rid, OutputAssemblyName(outputPath));
@@ -383,7 +376,12 @@ public sealed class CompilerDriver
             if (process.ExitCode != 0)
             {
                 var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
-                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
+                var generatedDiagnostics = ParseGeneratedCompilerDiagnostics(stdout + Environment.NewLine + stderr, sourcePath, tempRoot);
+                throw new CompilerException(
+                    "Generated code failed to compile.",
+                    CompilerDiagnosticCodes.GeneratedCodeCompilationFailed,
+                    "compiler",
+                    generatedDiagnostics);
             }
 
             StageRunNativeDependencies(sourcePath, runOutputDirectory, nativeDependencies, managedReferences.Native);
@@ -831,6 +829,40 @@ public sealed class CompilerDriver
         if (value.Length <= MaximumBuildDiagnosticChars) return value;
         return value[..MaximumBuildDiagnosticChars] + Environment.NewLine +
                "[compiler output truncated after " + MaximumBuildDiagnosticChars + " characters]";
+    }
+
+    private static IReadOnlyList<CompileDiagnostic> ParseGeneratedCompilerDiagnostics(string text, string sourcePath, string tempRoot)
+    {
+        var diagnostics = new List<CompileDiagnostic>();
+        var pattern = new System.Text.RegularExpressions.Regex(
+            @"^(?<file>.*)\((?<line>\d+),(?<column>\d+)\):\s*(?<severity>error|warning)\s+(?<code>[A-Z]+\d+)\s*:\s*(?<message>.*)$",
+            System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        foreach (System.Text.RegularExpressions.Match match in pattern.Matches(text))
+        {
+            var file = match.Groups["file"].Value.Trim();
+            var line = int.TryParse(match.Groups["line"].Value, out var parsedLine) ? parsedLine : 0;
+            var column = int.TryParse(match.Groups["column"].Value, out var parsedColumn) ? parsedColumn : 0;
+            var severity = match.Groups["severity"].Value.Equals("error", StringComparison.OrdinalIgnoreCase) ? "error" : "warning";
+            var code = match.Groups["code"].Value;
+            var message = match.Groups["message"].Value.Trim();
+
+            if (!string.IsNullOrWhiteSpace(tempRoot) && file.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
+                file = Path.GetRelativePath(tempRoot, file);
+
+            diagnostics.Add(new CompileDiagnostic
+            {
+                File = Path.GetFileName(file),
+                Line = line,
+                Position = column,
+                Description = message,
+                DiagnosticCode = code,
+                Severity = severity,
+                SourceCode = CompilerDiagnosticMode.Debug ? "Generated C#" : ""
+            });
+        }
+
+        return diagnostics;
     }
 
     private static string SanitizeBuildDiagnostics(string text, string tempRoot, string sourcePath)
