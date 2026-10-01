@@ -109,14 +109,18 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         {
             var receiver = Bind(memberSyntax.Expression);
             name = memberSyntax.NameToken.Text;
-            if (!_symbols.TryLookup(receiver.SemanticType.Name + "." + name, out var memberSymbol))
+            var memberKey = receiver.SemanticType.Name + "." + name;
+            var memberSymbols = _symbols.LookupAll(memberKey);
+            if (memberSymbols.Count == 0)
                 return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{name}' on '{receiver.SemanticType.Name}'.");
-            if (memberSymbol is IndexedPropertySymbol indexedProperty)
+            var indexedProperty = memberSymbols.OfType<IndexedPropertySymbol>().LastOrDefault();
+            if (indexedProperty is not null)
                 return BindIndexedProperty(syntax, receiver, indexedProperty);
-            if (memberSymbol is not FunctionSymbol memberFunction)
+            var memberFunctions = memberSymbols.OfType<FunctionSymbol>().ToArray();
+            if (memberFunctions.Length == 0)
                 return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Member '{name}' on '{receiver.SemanticType.Name}' is not callable.");
-            target = new BoundMemberAccessExpression(receiver, name, memberFunction.ReturnType, memberFunction.SemanticReturnType);
-            return BindCallTarget(syntax, target, memberFunction);
+            target = new BoundMemberAccessExpression(receiver, name, memberFunctions[0].ReturnType, memberFunctions[0].SemanticReturnType);
+            return BindOverloadSet(syntax, target, memberKey, memberFunctions);
         }
         else
         {
