@@ -45,14 +45,14 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         var name = syntax.IdentifierToken.Text;
         if (_symbols.TryLookup(name, out var symbol) && symbol is VariableSymbol variable)
             return new BoundNameExpression(variable);
-        return Error(syntax, $"Undefined variable '{name}'.");
+        return Error(syntax.IdentifierToken, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined variable '{name}'.");
     }
 
     private BoundExpression BindNew(NewExpressionSyntax syntax)
     {
         var typeName = syntax.TypeName.Text;
         if (!_symbols.TryLookup(typeName, out var typeSymbol) || typeSymbol is not TypeSymbol typeEntry)
-            return Error(syntax, $"Undefined type '{typeName}'.");
+            return Error(syntax.TypeName, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined type '{typeName}'.");
         var type = typeEntry.Type;
 
         var arguments = syntax.Arguments.Select(Bind).ToArray();
@@ -93,7 +93,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             if (symbol is FunctionSymbol function)
                 return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType, function.SemanticReturnType);
         }
-        return Error(syntax, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.SemanticType.Name}'.");
+        return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.SemanticType.Name}'.");
     }
 
     private BoundExpression BindCall(CallExpressionSyntax syntax)
@@ -110,11 +110,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             var receiver = Bind(memberSyntax.Expression);
             name = memberSyntax.NameToken.Text;
             if (!_symbols.TryLookup(receiver.SemanticType.Name + "." + name, out var memberSymbol))
-                return Error(syntax, $"Undefined member '{name}' on '{receiver.SemanticType.Name}'.");
+                return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{name}' on '{receiver.SemanticType.Name}'.");
             if (memberSymbol is IndexedPropertySymbol indexedProperty)
                 return BindIndexedProperty(syntax, receiver, indexedProperty);
             if (memberSymbol is not FunctionSymbol memberFunction)
-                return Error(syntax, $"Member '{name}' on '{receiver.SemanticType.Name}' is not callable.");
+                return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Member '{name}' on '{receiver.SemanticType.Name}' is not callable.");
             target = new BoundMemberAccessExpression(receiver, name, memberFunction.ReturnType, memberFunction.SemanticReturnType);
             return BindCallTarget(syntax, target, memberFunction);
         }
@@ -124,7 +124,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         }
 
         if (!_symbols.TryLookup(name, out var symbol) || symbol is not FunctionSymbol function)
-            return Error(syntax, $"Undefined function '{name}'.");
+            return Error(nameSyntax.IdentifierToken, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined function '{name}'.");
         return BindCallTarget(syntax, target, function);
     }
 
@@ -186,9 +186,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         return Error(syntax, $"Binary operator {syntax.OperatorToken.Text} is not defined for {left.Type.Name} and {right.Type.Name}.");
     }
 
-    private BoundExpression Error(SyntaxNode syntax, string message)
+    private BoundExpression Error(SyntaxNode syntax, string message) =>
+        Error(syntax, CompilerDiagnosticCodes.InvalidSyntax, message);
+
+    private BoundExpression Error(SyntaxNode syntax, string code, string message)
     {
-        _diagnostics.Add(new SyntaxDiagnostic("XPS1012", message, syntax.Span));
+        _diagnostics.Add(new SyntaxDiagnostic(code, message, syntax.Span));
         return new BoundLiteralExpression(null, typeof(object));
     }
 }
