@@ -180,6 +180,8 @@ public sealed class Lexer
         "TO" => SyntaxKind.ToKeyword,
         "STEP" => SyntaxKind.StepKeyword,
         "NEXT" => SyntaxKind.NextKeyword,
+        "FORALL" => SyntaxKind.ForAllKeyword,
+        "IN" => SyntaxKind.InKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
