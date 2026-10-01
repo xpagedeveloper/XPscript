@@ -8,6 +8,7 @@ public enum BoundNodeKind
     MemberAccessExpression,
     IndexExpression,
     ArrayExpression,
+    NewExpression,
     UnaryExpression,
     BinaryExpression
 }
