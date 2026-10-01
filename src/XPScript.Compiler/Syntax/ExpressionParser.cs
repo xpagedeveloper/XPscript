@@ -68,7 +68,7 @@ public sealed class ExpressionParser
             if (Current.Kind == SyntaxKind.DotToken)
             {
                 var dot = NextToken();
-                var name = Match(SyntaxKind.IdentifierToken);
+                var name = MatchIdentifier();
                 expression = new MemberAccessExpressionSyntax(expression, dot, name);
                 continue;
             }
@@ -140,19 +140,41 @@ public sealed class ExpressionParser
         if (Current.Kind is SyntaxKind.NumberToken or SyntaxKind.StringToken or SyntaxKind.TrueKeyword or SyntaxKind.FalseKeyword)
             return new LiteralExpressionSyntax(NextToken());
 
-        // Error is contextual: it starts an Error statement, but Error() remains a valid expression call.
-        if (Current.Kind == SyntaxKind.ErrorKeyword)
+        // Statement keywords remain contextual where expressions allow identifiers.
+        if (IsContextualIdentifier(Current.Kind))
         {
-            var errorKeyword = NextToken();
-            return new NameExpressionSyntax(new SyntaxToken(
-                SyntaxKind.IdentifierToken,
-                errorKeyword.Text,
-                errorKeyword.Value,
-                errorKeyword.Span));
+            return new NameExpressionSyntax(MatchIdentifier());
         }
 
         return new NameExpressionSyntax(Match(SyntaxKind.IdentifierToken));
     }
+
+    private SyntaxToken MatchIdentifier()
+    {
+        if (Current.Kind == SyntaxKind.IdentifierToken)
+            return NextToken();
+
+        if (IsContextualIdentifier(Current.Kind))
+        {
+            var token = NextToken();
+            return new SyntaxToken(SyntaxKind.IdentifierToken, token.Text, token.Value, token.Span);
+        }
+
+        return Match(SyntaxKind.IdentifierToken);
+    }
+
+    private static bool IsContextualIdentifier(SyntaxKind kind) => kind is
+        SyntaxKind.ErrorKeyword or
+        SyntaxKind.EventKeyword or
+        SyntaxKind.FromKeyword or
+        SyntaxKind.RemoveKeyword or
+        SyntaxKind.OpenKeyword or
+        SyntaxKind.CloseKeyword or
+        SyntaxKind.InputKeyword or
+        SyntaxKind.OutputKeyword or
+        SyntaxKind.AppendKeyword or
+        SyntaxKind.BinaryKeyword or
+        SyntaxKind.RandomKeyword;
 
     private SyntaxToken Match(SyntaxKind kind)
     {
