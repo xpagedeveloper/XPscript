@@ -139,7 +139,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         var arguments = syntax.Arguments.Select(Bind).ToArray();
         var candidates = functions
             .Where(function => function.ParameterTypes.Count == arguments.Length)
-            .Where(function => function.ParameterTypes.SequenceEqual(arguments.Select(argument => argument.Type)))
+            .Where(function => ParametersMatch(function, arguments))
             .ToArray();
 
         if (candidates.Length == 0)
@@ -148,6 +148,23 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             return Error(syntax, CompilerDiagnosticCodes.AmbiguousOverload, $"Call to function '{name}' is ambiguous.");
 
         return new BoundCallExpression(target, candidates[0], arguments);
+    }
+
+    private static bool ParametersMatch(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
+    {
+        if (!function.ParameterTypes.SequenceEqual(arguments.Select(argument => argument.Type)))
+            return false;
+
+        if (function.SemanticParameterTypes is null)
+            return true;
+        if (function.SemanticParameterTypes.Count != arguments.Count)
+            return false;
+
+        for (var i = 0; i < arguments.Count; i++)
+            if (!string.Equals(function.SemanticParameterTypes[i].Name, arguments[i].SemanticType.Name, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+        return true;
     }
 
     private BoundExpression BindIndexedProperty(CallExpressionSyntax syntax, BoundExpression receiver, IndexedPropertySymbol property)
