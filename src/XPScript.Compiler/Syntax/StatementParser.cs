@@ -44,6 +44,8 @@ public sealed class StatementParser
             return ParseWhileStatement();
         if (Current.Kind == SyntaxKind.ForKeyword)
             return ParseForStatement();
+        if (Current.Kind == SyntaxKind.ForAllKeyword)
+            return ParseForAllStatement();
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
@@ -163,6 +165,50 @@ public sealed class StatementParser
         }
 
         return statements;
+    }
+
+    private StatementSyntax ParseForAllStatement()
+    {
+        var forAllKeyword = NextToken();
+        var identifier = Match(SyntaxKind.IdentifierToken);
+        var inKeyword = Match(SyntaxKind.InKeyword);
+
+        var lineEnd = FindLineEndIndex(_position);
+        var collectionExpression = ParseExpressionRange(
+            _position,
+            lineEnd,
+            _tokens[lineEnd].Span.Start);
+        _position = lineEnd;
+        ConsumeRequiredNewLine("ForAll");
+
+        var statements = new List<StatementSyntax>();
+        while (Current.Kind != SyntaxKind.EndOfFileToken)
+        {
+            if (Current.Kind == SyntaxKind.EndKeyword
+                && PeekKind(1) == SyntaxKind.ForAllKeyword)
+                break;
+
+            if (Current.Kind == SyntaxKind.NewLineToken)
+            {
+                NextToken();
+                continue;
+            }
+
+            statements.Add(ParseCurrentStatement());
+            if (Current.Kind == SyntaxKind.NewLineToken)
+                NextToken();
+        }
+
+        var endKeyword = Match(SyntaxKind.EndKeyword);
+        var endForAllKeyword = Match(SyntaxKind.ForAllKeyword);
+        return new ForAllStatementSyntax(
+            forAllKeyword,
+            identifier,
+            inKeyword,
+            collectionExpression,
+            statements,
+            endKeyword,
+            endForAllKeyword);
     }
 
     private StatementSyntax ParseForStatement()
@@ -519,6 +565,12 @@ public sealed class StatementParser
     }
 
     private SyntaxToken Current => _tokens[Math.Min(_position, _tokens.Length - 1)];
+
+    private SyntaxKind PeekKind(int offset)
+    {
+        var index = Math.Min(_position + offset, _tokens.Length - 1);
+        return _tokens[index].Kind;
+    }
 
     private SyntaxToken NextToken()
     {
