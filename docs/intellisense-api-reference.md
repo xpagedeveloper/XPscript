@@ -273,3 +273,10 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `XPImage.Quality` | `image.Quality` | none | Returns current quality value. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
 | `XPImage.Orientation` | `image.Orientation` | none | Returns orientation name. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
 | `XPImage.PixelCount` | `image.PixelCount` | none | Returns Width multiplied by Height. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |
+
+
+## UIForm generated runtime declaration
+
+| Member | Syntax | Parameters | Behavior | Example |
+|---|---|---|---|---|
+| `UIForm` | `New UIForm(title)` | Form title. | Creates the shared UIForm runtime object used by supported platform UI hosts. | [android-uiform-minimal.xps](../samples/android-uiform-minimal.xps) |
