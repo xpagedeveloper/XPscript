@@ -176,6 +176,10 @@ public sealed class Lexer
         "AS" => SyntaxKind.AsKeyword,
         "WHILE" => SyntaxKind.WhileKeyword,
         "WEND" => SyntaxKind.WendKeyword,
+        "FOR" => SyntaxKind.ForKeyword,
+        "TO" => SyntaxKind.ToKeyword,
+        "STEP" => SyntaxKind.StepKeyword,
+        "NEXT" => SyntaxKind.NextKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
