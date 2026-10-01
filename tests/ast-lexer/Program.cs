@@ -214,6 +214,15 @@ Equal(0, comparisonBinder.Diagnostics.Count, "bound comparison diagnostics");
 var callSymbols = new SymbolTable();
 callSymbols.Declare(new FunctionSymbol("Array", typeof(string[]), [typeof(string)]));
 callSymbols.Declare(new FunctionSymbol("RunCommand", typeof(bool), [typeof(string), typeof(string[])]));
+var indexSymbols = new SymbolTable();
+indexSymbols.Declare(new VariableSymbol("items", typeof(string[])));
+var indexBinder = new ExpressionBinder(indexSymbols);
+var boundIndex = indexBinder.Bind(new ExpressionParser("items[1]").ParseExpression());
+Equal(BoundNodeKind.IndexExpression, boundIndex.Kind, "bound index root");
+Equal(typeof(string), boundIndex.Type, "bound index result type");
+Equal(0, indexBinder.Diagnostics.Count, "bound index diagnostics");
+Equal("items[1]", emitter.Emit(boundIndex), "bound index C# emission");
+
 var memberSymbols = new SymbolTable();
 memberSymbols.Declare(new VariableSymbol("text", typeof(string)));
 memberSymbols.Declare(new FunctionSymbol("String.Substring", typeof(string), [typeof(long)]));
