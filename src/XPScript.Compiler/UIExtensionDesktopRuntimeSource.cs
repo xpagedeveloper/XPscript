@@ -6,11 +6,37 @@ internal static class UIExtensionDesktopRuntimeSource
 internal static class XPScriptUIDesktopAdapter
 {
     private const string HostTypeName = "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop";
+    private const string AndroidHostTypeName = "XPScript.UI.Android.AndroidFormHost, XPScript.UI.Android";
     private static bool IsBrowserHost => HostTypeName.Contains("XPScript.UI.Browser", StringComparison.Ordinal);
     private static string LifecycleHostTypeName => IsBrowserHost
         ? "XPScript.UI.Browser.BrowserFormLifecycleHost, XPScript.UI.Browser"
         : "XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop";
-    private static Type? HostType => Type.GetType(HostTypeName, throwOnError: false, ignoreCase: false);
+    private static Type? HostType => ResolveHostType();
+
+    private static Type? ResolveHostType()
+    {
+        var names = global::System.OperatingSystem.IsAndroid()
+            ? new[] { AndroidHostTypeName, HostTypeName }
+            : new[] { HostTypeName };
+
+        foreach (var name in names)
+        {
+            var direct = Type.GetType(name, throwOnError: false, ignoreCase: false);
+            if (direct is not null) return direct;
+        }
+
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            foreach (var name in names)
+            {
+                var typeName = name.Split(',', 2)[0].Trim();
+                var candidate = assembly.GetType(typeName, throwOnError: false, ignoreCase: false);
+                if (candidate is not null) return candidate;
+            }
+        }
+
+        return null;
+    }
     private static Type? LifecycleHostType => Type.GetType(LifecycleHostTypeName, throwOnError: false, ignoreCase: false);
 
     private static System.Reflection.MethodInfo? ResolveShowDialog(Type type) =>
