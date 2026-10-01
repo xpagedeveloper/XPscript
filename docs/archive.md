@@ -135,7 +135,20 @@ For browser applications that need server filesystem access, perform the archive
 
 `Archive` is server-side only in a `[Platform:browser-wasm]` application. Create and use Archive objects inside module-level `[ServerSide]` Functions or Subs. Archive use in browser-side procedures, class methods or module-level browser state is rejected with the normal execution-context diagnostic.
 
-SharpCompress and the archive runtime stay in the server companion and are never packaged into the client WebAssembly bundle. Server-side archive code may use filesystem paths or in-memory Byte arrays and can return archive data to the browser for downloads where appropriate.
+SharpCompress and the archive runtime stay in the server companion and are never packaged into the client WebAssembly bundle. Server-side archive code may use filesystem paths or in-memory Byte arrays. An in-memory archive can be returned as a browser download with `SendToBrowser(downloadName)`:
+
+```xpscript
+[Anonymous]
+[ServerSide]
+Sub DownloadArchive()
+    Dim archive As New Archive()
+    archive.Create("zip")
+    archive.AddText("payload.txt", "server")
+    Call archive.SendToBrowser("archive.zip")
+End Sub
+```
+
+The Browser-WASM bridge transports the server response and creates the browser download without moving SharpCompress or archive processing into WebAssembly. Apply the normal route authorization attributes to the server-side procedure; `[Anonymous]` above is only appropriate when the download is intentionally public.
 
 Arbitrary client filesystem extraction, client-side archive listing and client-side archive creation are intentionally not part of the Browser-WASM Archive API.
 
