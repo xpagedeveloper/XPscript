@@ -249,7 +249,7 @@ public sealed class CompilerDriver
                 var generatedDiagnostics = ParseGeneratedCompilerDiagnostics(stdout + Environment.NewLine + stderr, sourcePath, tempRoot);
                 throw new CompilerException(
                     "Generated code failed to compile.",
-                    CompilerDiagnosticCodes.GeneratedCodeCompilationFailed,
+                    CompilerDiagnosticCodes.CompilationFailed,
                     "compiler",
                     generatedDiagnostics);
             }
@@ -379,7 +379,7 @@ public sealed class CompilerDriver
                 var generatedDiagnostics = ParseGeneratedCompilerDiagnostics(stdout + Environment.NewLine + stderr, sourcePath, tempRoot);
                 throw new CompilerException(
                     "Generated code failed to compile.",
-                    CompilerDiagnosticCodes.GeneratedCodeCompilationFailed,
+                    CompilerDiagnosticCodes.CompilationFailed,
                     "compiler",
                     generatedDiagnostics);
             }
