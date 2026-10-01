@@ -347,6 +347,8 @@ public sealed class CompilerDriver
                 publishSingleFile: false,
                 usesMimeKit: generatedSource.Contains("MimeKit.", StringComparison.Ordinal),
                 assemblyName: "Generated");
+            if (usesAndroidUIForm)
+                csproj = AddAndroidUIFormDependencies(csproj);
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
@@ -575,8 +577,6 @@ public sealed class CompilerDriver
             var projectPath = Path.Combine(tempRoot, "Generated.csproj");
             var programPath = Path.Combine(tempRoot, "Program.cs");
             var stagedManagedReferences = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
-            var usesAndroidUIForm = IsAndroidRuntime(rid) &&
-                generatedSource.Contains("class XPScriptUIForm", StringComparison.Ordinal);
             var csproj = BuildGeneratedProject(
                 runtimeIdentifier,
                 selfContained: false,
