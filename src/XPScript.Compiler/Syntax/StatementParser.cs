@@ -40,6 +40,8 @@ public sealed class StatementParser
             return ParseSetStatement();
         if (Current.Kind == SyntaxKind.DimKeyword)
             return ParseDimStatement();
+        if (Current.Kind == SyntaxKind.WhileKeyword)
+            return ParseWhileStatement();
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
@@ -159,6 +161,30 @@ public sealed class StatementParser
         }
 
         return statements;
+    }
+
+    private StatementSyntax ParseWhileStatement()
+    {
+        var whileKeyword = NextToken();
+        var condition = ParseExpressionUntilLineEnd();
+        ConsumeRequiredNewLine("While");
+
+        var statements = new List<StatementSyntax>();
+        while (Current.Kind is not SyntaxKind.WendKeyword and not SyntaxKind.EndOfFileToken)
+        {
+            if (Current.Kind == SyntaxKind.NewLineToken)
+            {
+                NextToken();
+                continue;
+            }
+
+            statements.Add(ParseCurrentStatement());
+            if (Current.Kind == SyntaxKind.NewLineToken)
+                NextToken();
+        }
+
+        var wendKeyword = Match(SyntaxKind.WendKeyword);
+        return new WhileStatementSyntax(whileKeyword, condition, statements, wendKeyword);
     }
 
     private StatementSyntax ParseDimStatement()
