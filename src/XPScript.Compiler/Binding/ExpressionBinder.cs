@@ -81,11 +81,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
     {
         var arguments = syntax.Arguments.Select(Bind).ToArray();
         if (arguments.Length != function.ParameterTypes.Count)
-            return Error(syntax, $"Function '{name}' expects {function.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
+            return Error(syntax, $"Function '{function.Name}' expects {function.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
 
         for (var i = 0; i < arguments.Length; i++)
             if (arguments[i].Type != function.ParameterTypes[i])
-                return Error(syntax.Arguments[i], $"Argument {i + 1} to '{name}' must be {function.ParameterTypes[i].Name}, not {arguments[i].Type.Name}.");
+                return Error(syntax.Arguments[i], $"Argument {i + 1} to '{function.Name}' must be {function.ParameterTypes[i].Name}, not {arguments[i].Type.Name}.");
 
         return new BoundCallExpression(target, function, arguments);
     }
