@@ -5,12 +5,17 @@ namespace XPScript.Compiler.Syntax;
 public sealed class Lexer
 {
     private readonly string _text;
+    private readonly int _baseOffset;
     private int _position;
     private readonly List<LexerDiagnostic> _diagnostics = [];
 
     public IReadOnlyList<LexerDiagnostic> Diagnostics => _diagnostics;
 
-    public Lexer(string text) => _text = text ?? string.Empty;
+    public Lexer(string text, int baseOffset = 0)
+    {
+        _text = text ?? string.Empty;
+        _baseOffset = baseOffset;
+    }
 
     public IReadOnlyList<SyntaxToken> Lex()
     {
@@ -70,7 +75,7 @@ public sealed class Lexer
             object? value = isDecimal
                 ? double.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var doubleValue) ? doubleValue : null
                 : long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var longValue) ? longValue : null;
-            return new SyntaxToken(SyntaxKind.NumberToken, text, value, new TextSpan(start, text.Length));
+            return new SyntaxToken(SyntaxKind.NumberToken, text, value, Span(start, text.Length));
         }
 
         if (Current == '"')
@@ -95,8 +100,8 @@ public sealed class Lexer
             }
             var text = _text[start.._position];
             if (text.Length == 0 || text[^1] != '"')
-                _diagnostics.Add(new LexerDiagnostic("XPS1006", "Unterminated string literal.", new TextSpan(start, text.Length)));
-            return new SyntaxToken(SyntaxKind.StringToken, text, value.ToString(), new TextSpan(start, text.Length));
+                _diagnostics.Add(new LexerDiagnostic("XPS1006", "Unterminated string literal.", Span(start, text.Length)));
+            return new SyntaxToken(SyntaxKind.StringToken, text, value.ToString(), Span(start, text.Length));
         }
 
         if (char.IsLetter(Current) || Current == '_')
@@ -105,7 +110,7 @@ public sealed class Lexer
             while (char.IsLetterOrDigit(Current) || Current == '_')
                 _position++;
             var text = _text[start.._position];
-            return new SyntaxToken(KeywordKind(text), text, null, new TextSpan(start, text.Length));
+            return new SyntaxToken(KeywordKind(text), text, null, Span(start, text.Length));
         }
 
         _position++;
@@ -149,8 +154,10 @@ public sealed class Lexer
         return Token(kind, start, 2);
     }
 
+    private TextSpan Span(int start, int length) => new(_baseOffset + start, length);
+
     private SyntaxToken Token(SyntaxKind kind, int start, int length) =>
-        new(kind, _text.Substring(start, length), null, new TextSpan(start, length));
+        new(kind, _text.Substring(start, length), null, Span(start, length));
 
     private static SyntaxKind KeywordKind(string text) => text.ToUpperInvariant() switch
     {
