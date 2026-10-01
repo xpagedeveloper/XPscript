@@ -112,7 +112,7 @@ public sealed class ExpressionParser
             {
                 while (true)
                 {
-                    arguments.Add(ParseExpression());
+                    arguments.Add(ParseBinaryExpression());
                     if (Current.Kind != SyntaxKind.CommaToken)
                         break;
                     commas.Add(NextToken());
@@ -125,7 +125,7 @@ public sealed class ExpressionParser
         if (Current.Kind == SyntaxKind.OpenParenToken)
         {
             var open = NextToken();
-            var expression = ParseExpression();
+            var expression = ParseBinaryExpression();
             var close = Match(SyntaxKind.CloseParenToken);
             return new ParenthesizedExpressionSyntax(open, expression, close);
         }
