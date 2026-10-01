@@ -429,6 +429,20 @@ Equal(3, positionedLocation.Line, "absolute member diagnostic line");
 Equal(17, positionedLocation.Column, "absolute member diagnostic column");
 
 semanticTypeSymbols.Declare(new VariableSymbol("typedStore", typeof(object), XpTypeSymbol.User("IndexedObjectStore")));
+semanticTypeSymbols.Declare(new VariableSymbol("typedKey", typeof(object), personSemanticType));
+semanticTypeSymbols.Declare(new IndexedPropertySymbol("IndexedObjectStore.ByOwner", typeof(object), [typeof(object)], boxSemanticType, [personSemanticType]));
+var semanticIndexedParameterBinder = new ExpressionBinder(semanticTypeSymbols);
+var boundSemanticIndexedParameter = semanticIndexedParameterBinder.Bind(new ExpressionParser("typedStore.ByOwner(typedKey).Value").ParseExpression());
+Equal(BoundNodeKind.MemberAccessExpression, boundSemanticIndexedParameter.Kind, "semantic indexed parameter member root");
+Equal(0, semanticIndexedParameterBinder.Diagnostics.Count, "semantic indexed parameter diagnostics");
+Equal("typedStore.ByOwner(typedKey).Value", emitter.Emit(boundSemanticIndexedParameter), "semantic indexed parameter C# emission");
+
+semanticTypeSymbols.Declare(new VariableSymbol("typedWrongKey", typeof(object), boxSemanticType));
+var semanticIndexedWrongParameterBinder = new ExpressionBinder(semanticTypeSymbols);
+semanticIndexedWrongParameterBinder.Bind(new ExpressionParser("typedStore.ByOwner(typedWrongKey)").ParseExpression());
+Equal(1, semanticIndexedWrongParameterBinder.Diagnostics.Count, "semantic indexed wrong parameter diagnostic count");
+Equal("XPS2003", semanticIndexedWrongParameterBinder.Diagnostics[0].Code, "semantic indexed wrong parameter diagnostic code");
+
 semanticTypeSymbols.Declare(new IndexedPropertySymbol("IndexedObjectStore.Item", typeof(object), [typeof(long)], boxSemanticType));
 var typedIndexedPropertyBinder = new ExpressionBinder(semanticTypeSymbols);
 var boundTypedIndexedPropertyMember = typedIndexedPropertyBinder.Bind(new ExpressionParser("typedStore.Item(1).Value").ParseExpression());
