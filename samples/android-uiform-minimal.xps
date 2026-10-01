@@ -1,0 +1,12 @@
+[Platform:android-x64]
+
+Sub Main()
+    Dim data As New XPJsonObject
+    Dim form As New UIForm("Android UIForm")
+    Dim result As String
+
+    Call form.BindData(data)
+    Call form.AddTextField("name", "Name")
+    result = form.ShowDialog()
+    Print "ANDROID-UIFORM-RESULT=" & result
+End Sub
