@@ -12,6 +12,7 @@ public sealed class BoundExpressionEmitter
         BoundNameExpression name => name.Symbol.Name,
         BoundMemberAccessExpression member => $"{Emit(member.Receiver)}.{member.Name}",
         BoundIndexExpression index => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
+        BoundArrayExpression array => $"new object[] {{ {string.Join(", ", array.Elements.Select(Emit))} }}",
         BoundCallExpression call => $"{(call.Target is null ? call.Function.Name : Emit(call.Target))}({string.Join(", ", call.Arguments.Select(Emit))})",
         BoundUnaryExpression unary => $"({EmitUnaryOperator(unary.OperatorKind)}{Emit(unary.Operand)})",
         BoundBinaryExpression binary => $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind)} {Emit(binary.Right)})",
