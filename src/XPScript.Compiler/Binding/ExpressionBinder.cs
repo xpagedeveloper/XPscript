@@ -51,7 +51,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
 
     private BoundExpression BindCall(CallExpressionSyntax syntax)
     {
-        BoundExpression target;
+        BoundExpression? target;
         string name;
         if (syntax.Target is NameExpressionSyntax nameSyntax)
         {
