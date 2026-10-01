@@ -45,4 +45,6 @@ public enum SyntaxKind
     MemberAccessExpression,
     IndexExpression,
     NewExpression,
+    ExpressionStatement,
+    IfStatement,
 }
