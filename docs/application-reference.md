@@ -127,6 +127,23 @@ All four state proxies expose the same member set below.
 `Application.Args`, `ArgCount`, `CommandLine`, `ExecutablePath`, `ExecutableFileName`, `ExecutableDirectory`, `TempPath`, `TempFolder`, `Path` and `FileName` are read-only. Assignments to them are rejected by the compiler. `Application.ExitCode` is writable and defaults to `0`. `Application.Id`, `Title`, `Icon`, `Executable.Icon`, `Executable.FileDescription`, `Executable.Product`, `Executable.Company`, `Executable.Version`, `Executable.Copyright`, `Width` and `Height` are intentionally writable metadata properties.
 
 
+## Application.Debug
+
+Application.Debug is intended for developer diagnostics during application execution. It is enabled when the process starts with `--appdebug` or `--debug`. `--debug` also enables the compiler's internal diagnostics, while `--appdebug` does not enable those internal diagnostics.
+
+| Member | Syntax | Behavior |
+|---|---|---|
+| `Application.Debug.Enabled` | `Application.Debug.Enabled` | Returns true when application debug output is enabled. |
+| `Application.Debug.Print` | `Application.Debug.Print(value)` | Writes a newline-terminated DEBUG message. |
+| `Application.Debug.Write` | `Application.Debug.Write(value)` | Writes DEBUG text without adding a newline. |
+| `Application.Debug.Info` | `Application.Debug.Info(value)` | Writes an INFO message. |
+| `Application.Debug.Warning` | `Application.Debug.Warning(value)` | Writes a WARN message. |
+| `Application.Debug.Error` | `Application.Debug.Error(value)` | Writes an ERROR message. |
+
+The runtime routes output to the platform debug console when available. Android uses logcat with the `XPScript` tag. Windows can allocate a console for a non-interactive GUI process. Other desktop platforms use the process console when available.
+
+`Application.Debug` is separate from `Application.Log`. It is not intended to replace application logging.
+
 ## Application.Log and Application.Audit
 
 These APIs are available during web requests. The host always writes access, security and error logs. Application attributes cannot override runtime fields or contain secret-bearing names. See [mandatory web logging](web-logging.md).
