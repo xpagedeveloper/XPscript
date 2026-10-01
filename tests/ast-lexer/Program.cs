@@ -284,7 +284,7 @@ Equal("items[1]", emitter.Emit(boundIndex), "bound index C# emission");
 
 var memberSymbols = new SymbolTable();
 memberSymbols.Declare(new VariableSymbol("text", typeof(string)));
-memberSymbols.Declare(new VariableSymbol("person", typeof(TestPerson)));
+memberSymbols.Declare(new VariableSymbol("person", typeof(object)));
 memberSymbols.Declare(new FunctionSymbol("String.Substring", typeof(string), [typeof(long)]));
 var memberBinder = new ExpressionBinder(memberSymbols);
 var boundMemberCall = memberBinder.Bind(new ExpressionParser("text.Substring(1)").ParseExpression());
