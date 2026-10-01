@@ -14,6 +14,13 @@ public sealed class ExpressionParser
             _diagnostics.Add(new SyntaxDiagnostic(diagnostic.Code, diagnostic.Message, diagnostic.Span));
     }
 
+    internal ExpressionParser(IEnumerable<SyntaxToken> tokens)
+    {
+        _tokens = tokens.Where(t => t.Kind != SyntaxKind.NewLineToken).ToArray();
+        if (_tokens.Length == 0 || _tokens[^1].Kind != SyntaxKind.EndOfFileToken)
+            throw new ArgumentException("Expression token sequence must end with EndOfFileToken.", nameof(tokens));
+    }
+
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
     public ExpressionSyntax ParseExpression()
