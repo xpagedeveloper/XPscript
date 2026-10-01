@@ -18,9 +18,7 @@ public sealed class StatementParser
 
     public StatementSyntax ParseStatement()
     {
-        var statement = Current.Kind == SyntaxKind.IfKeyword
-            ? ParseIfStatement()
-            : ParseExpressionStatement();
+        var statement = ParseCurrentStatement();
 
         if (Current.Kind == SyntaxKind.NewLineToken)
             NextToken();
@@ -33,6 +31,11 @@ public sealed class StatementParser
 
         return statement;
     }
+
+    private StatementSyntax ParseCurrentStatement() =>
+        Current.Kind == SyntaxKind.IfKeyword
+            ? ParseIfStatement()
+            : ParseExpressionStatement();
 
     private StatementSyntax ParseIfStatement()
     {
@@ -50,9 +53,116 @@ public sealed class StatementParser
         var condition = ParseExpressionRange(_position, thenIndex, _tokens[thenIndex].Span.Start);
         _position = thenIndex;
         var thenKeyword = NextToken();
-        var thenStatement = ParseExpressionStatement();
 
-        return new IfStatementSyntax(ifKeyword, condition, thenKeyword, thenStatement);
+        if (Current.Kind != SyntaxKind.NewLineToken)
+            return new IfStatementSyntax(ifKeyword, condition, thenKeyword, ParseExpressionStatement());
+
+        NextToken();
+
+        var thenStatements = ParseBranchStatements();
+        var elseIfClauses = new List<ElseIfClauseSyntax>();
+        while (Current.Kind == SyntaxKind.ElseIfKeyword)
+            elseIfClauses.Add(ParseElseIfClause());
+
+        var elseStatements = new List<StatementSyntax>();
+        if (Current.Kind == SyntaxKind.ElseKeyword)
+        {
+            NextToken();
+            ConsumeRequiredNewLine("Else");
+            elseStatements.AddRange(ParseBranchStatements());
+        }
+
+        SyntaxToken? endKeyword = null;
+        SyntaxToken? endIfKeyword = null;
+        if (Current.Kind == SyntaxKind.EndKeyword)
+        {
+            endKeyword = NextToken();
+            endIfKeyword = Match(SyntaxKind.IfKeyword);
+        }
+        else
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(
+                "XPS1012",
+                "Expected 'End If' to close block If statement.",
+                new TextSpan(Current.Span.Start, 0)));
+        }
+
+        return new IfStatementSyntax(
+            ifKeyword,
+            condition,
+            thenKeyword,
+            thenStatements,
+            elseIfClauses,
+            elseStatements,
+            endKeyword,
+            endIfKeyword);
+    }
+
+    private ElseIfClauseSyntax ParseElseIfClause()
+    {
+        var elseIfKeyword = NextToken();
+        var thenIndex = FindThenIndex();
+        if (thenIndex < 0)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(
+                "XPS1012",
+                "Expected ThenKeyword in ElseIf clause.",
+                new TextSpan(Current.Span.Start, 0)));
+            var missingThen = new SyntaxToken(
+                SyntaxKind.ThenKeyword,
+                string.Empty,
+                null,
+                new TextSpan(Current.Span.Start, 0));
+            return new ElseIfClauseSyntax(
+                elseIfKeyword,
+                ParseExpressionUntilLineEnd(),
+                missingThen,
+                []);
+        }
+
+        var condition = ParseExpressionRange(_position, thenIndex, _tokens[thenIndex].Span.Start);
+        _position = thenIndex;
+        var thenKeyword = NextToken();
+        ConsumeRequiredNewLine("ElseIf");
+        var statements = ParseBranchStatements();
+
+        return new ElseIfClauseSyntax(elseIfKeyword, condition, thenKeyword, statements);
+    }
+
+    private List<StatementSyntax> ParseBranchStatements()
+    {
+        var statements = new List<StatementSyntax>();
+        while (Current.Kind is not SyntaxKind.ElseIfKeyword
+               and not SyntaxKind.ElseKeyword
+               and not SyntaxKind.EndKeyword
+               and not SyntaxKind.EndOfFileToken)
+        {
+            if (Current.Kind == SyntaxKind.NewLineToken)
+            {
+                NextToken();
+                continue;
+            }
+
+            statements.Add(ParseCurrentStatement());
+            if (Current.Kind == SyntaxKind.NewLineToken)
+                NextToken();
+        }
+
+        return statements;
+    }
+
+    private void ConsumeRequiredNewLine(string context)
+    {
+        if (Current.Kind == SyntaxKind.NewLineToken)
+        {
+            NextToken();
+            return;
+        }
+
+        _diagnostics.Add(new SyntaxDiagnostic(
+            "XPS1012",
+            $"Expected newline after {context}.",
+            new TextSpan(Current.Span.Start, 0)));
     }
 
     private StatementSyntax ParseExpressionStatement() =>
@@ -109,6 +219,19 @@ public sealed class StatementParser
         }
 
         return -1;
+    }
+
+    private SyntaxToken Match(SyntaxKind kind)
+    {
+        if (Current.Kind == kind)
+            return NextToken();
+
+        var span = new TextSpan(Current.Span.Start, 0);
+        _diagnostics.Add(new SyntaxDiagnostic(
+            "XPS1012",
+            $"Expected {kind} but found {Current.Kind}.",
+            span));
+        return new SyntaxToken(kind, string.Empty, null, span);
     }
 
     private SyntaxToken Current => _tokens[Math.Min(_position, _tokens.Length - 1)];
