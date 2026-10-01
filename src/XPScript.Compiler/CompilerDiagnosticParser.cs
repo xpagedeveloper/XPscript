@@ -67,7 +67,7 @@ internal static class CompilerDiagnosticParser
             new CompileDiagnostic
             {
                 File = DiagnosticFileName(sourcePath),
-                Description = debug
+                Description = debug || !ContainsGeneratedCodeDiagnostics(message)
                     ? FirstDiagnosticLine(message)
                     : "Compilation failed. Use --debug to show generated C# diagnostics.",
                 DiagnosticCode = string.IsNullOrWhiteSpace(diagnosticCode) ? CompilerDiagnosticCodes.CompilationFailed : diagnosticCode,
@@ -394,6 +394,11 @@ internal static class CompilerDiagnosticParser
         }
         catch { return ""; }
     }
+
+    private static bool ContainsGeneratedCodeDiagnostics(string message) =>
+        message.Contains(GeneratedMarker, StringComparison.Ordinal) ||
+        Regex.IsMatch(message, @"(?:^|[\\/])?Program\.cs\(\d+,\d+\):\s*(?:error|warning)\s+CS\d+:", RegexOptions.IgnoreCase | RegexOptions.Multiline) ||
+        message.Contains("Generated code failed to compile.", StringComparison.Ordinal);
 
     private static string FirstDiagnosticLine(string message) =>
         message.Split('\n', StringSplitOptions.RemoveEmptyEntries)
