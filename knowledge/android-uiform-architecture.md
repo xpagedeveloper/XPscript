@@ -65,3 +65,15 @@ Verify the bridge and lifecycle before adding WebView, lists, media, advanced ac
 Compiler and bridge tests should run without Android hardware.
 
 Android UI tests should remain device/emulator integration tests and should be explicitly opt-in when hardware is required.
+
+
+## Minimal Avalonia Android host
+
+The initial Android host now lives in `src/XPScript.UI.Android/`.
+
+- `AndroidApp` derives from `AvaloniaAndroidApplication<App>` and is registered with `[Application]`.
+- `MainActivity` derives from the non-generic `AvaloniaMainActivity` required by Avalonia 12.
+- `App` uses `IActivityApplicationLifetime.MainViewFactory` so Android activity recreation creates a fresh view.
+- `MainView` is deliberately code-only and contains only the initial host verification surface.
+
+This follows the Avalonia 12 Android initialization model. The host is intentionally separate from the XPScript compiler runtime. The next bridge step will connect the existing `XPScriptUIForm` model to an Android-specific adapter.
