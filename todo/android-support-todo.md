@@ -93,7 +93,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Verify bound `XPJsonObject` / `XPJsonDocument` data updates correctly. Android submits the current field-state JSON through the shared `DispatchRegisteredEvent` path, which applies values through `ApplySubmittedStateJson` / `ApplySubmittedValue` / `ApplySubmittedValues` to the bound UIForm data model. Guarded by `AndroidCompilerProbe` and verified by the Android Build workflow.
 - [x] Verify validation behavior.
 - [x] Verify focus and software keyboard behavior.
-- [ ] Verify touch input.
+- [x] Verify touch input.
 - [ ] Verify application lifecycle: start, pause, resume and stop.
 - [ ] Verify orientation changes.
 - [ ] Verify form sizing/layout for typical phone dimensions.
