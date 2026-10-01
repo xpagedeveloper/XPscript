@@ -198,6 +198,7 @@ internal static class CompilerBuildEnvironment
         if (usesExtendedArchive) itemEntries += $"    <PackageReference Include=\"SharpCompress\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("SharpCompress", ApplicationDependencyCatalog.SharpCompressVersion)}\" />\n";
         if (usesImage) itemEntries += $"    <PackageReference Include=\"Magick.NET-Q16-AnyCPU\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Magick.NET-Q16-AnyCPU", ApplicationDependencyCatalog.MagickNetVersion)}\" />\n";
         var itemGroup = $"  <ItemGroup>\n{itemEntries}  </ItemGroup>\n";
+        var writeDirectoryProps = !usesAndroidUi;
 
         var projectPath = Path.Combine(root, "Generated.csproj");
         if (File.Exists(projectPath))
@@ -211,9 +212,12 @@ internal static class CompilerBuildEnvironment
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
         }
 
-        var propsPath = Path.Combine(root, "Directory.Build.props");
-        File.WriteAllText(propsPath, $"<Project>\n{propertyGroup}{itemGroup}</Project>\n");
-        CompilerPathSecurity.HardenTemporaryFile(propsPath);
+        if (writeDirectoryProps)
+        {
+            var propsPath = Path.Combine(root, "Directory.Build.props");
+            File.WriteAllText(propsPath, $"<Project>\n{propertyGroup}{itemGroup}</Project>\n");
+            CompilerPathSecurity.HardenTemporaryFile(propsPath);
+        }
     }
 
     private static string? ReadBuildMarker(string generatedSource, string marker)
