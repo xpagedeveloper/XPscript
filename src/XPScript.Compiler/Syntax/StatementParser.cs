@@ -42,6 +42,8 @@ public sealed class StatementParser
             return ParseDimStatement();
         if (Current.Kind == SyntaxKind.WhileKeyword)
             return ParseWhileStatement();
+        if (Current.Kind == SyntaxKind.ForKeyword)
+            return ParseForStatement();
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
@@ -161,6 +163,97 @@ public sealed class StatementParser
         }
 
         return statements;
+    }
+
+    private StatementSyntax ParseForStatement()
+    {
+        var forKeyword = NextToken();
+        var identifier = Match(SyntaxKind.IdentifierToken);
+        var equalsToken = Match(SyntaxKind.EqualsToken);
+
+        var toIndex = FindTokenOnCurrentLine(SyntaxKind.ToKeyword);
+        ExpressionSyntax fromExpression;
+        if (toIndex < 0)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(
+                "XPS1012",
+                "Expected ToKeyword in For statement.",
+                new TextSpan(Current.Span.Start, 0)));
+            fromExpression = ParseExpressionUntilLineEnd();
+            var missingTo = new SyntaxToken(SyntaxKind.ToKeyword, string.Empty, null, new TextSpan(fromExpression.Span.End, 0));
+            return new ForStatementSyntax(
+                forKeyword, identifier, equalsToken, fromExpression, missingTo,
+                new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, string.Empty, null, new TextSpan(fromExpression.Span.End, 0))),
+                null, null, [], Match(SyntaxKind.NextKeyword), null);
+        }
+
+        fromExpression = ParseExpressionRange(_position, toIndex, _tokens[toIndex].Span.Start);
+        _position = toIndex;
+        var toKeyword = NextToken();
+
+        var stepIndex = FindTokenOnCurrentLine(SyntaxKind.StepKeyword);
+        var lineEnd = FindLineEndIndex(_position);
+        ExpressionSyntax toExpression;
+        SyntaxToken? stepKeyword = null;
+        ExpressionSyntax? stepExpression = null;
+
+        if (stepIndex >= 0)
+        {
+            toExpression = ParseExpressionRange(_position, stepIndex, _tokens[stepIndex].Span.Start);
+            _position = stepIndex;
+            stepKeyword = NextToken();
+            lineEnd = FindLineEndIndex(_position);
+            stepExpression = ParseExpressionRange(_position, lineEnd, _tokens[lineEnd].Span.Start);
+            _position = lineEnd;
+        }
+        else
+        {
+            toExpression = ParseExpressionRange(_position, lineEnd, _tokens[lineEnd].Span.Start);
+            _position = lineEnd;
+        }
+
+        ConsumeRequiredNewLine("For");
+
+        var statements = new List<StatementSyntax>();
+        while (Current.Kind is not SyntaxKind.NextKeyword and not SyntaxKind.EndOfFileToken)
+        {
+            if (Current.Kind == SyntaxKind.NewLineToken)
+            {
+                NextToken();
+                continue;
+            }
+
+            statements.Add(ParseCurrentStatement());
+            if (Current.Kind == SyntaxKind.NewLineToken)
+                NextToken();
+        }
+
+        var nextKeyword = Match(SyntaxKind.NextKeyword);
+        SyntaxToken? nextIdentifier = null;
+        if (Current.Kind == SyntaxKind.IdentifierToken)
+            nextIdentifier = NextToken();
+
+        if (nextIdentifier is not null
+            && !string.Equals(nextIdentifier.Text, identifier.Text, StringComparison.OrdinalIgnoreCase))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(
+                "XPS1012",
+                $"Next identifier '{nextIdentifier.Text}' does not match For identifier '{identifier.Text}'.",
+                nextIdentifier.Span));
+        }
+
+        return new ForStatementSyntax(
+            forKeyword,
+            identifier,
+            equalsToken,
+            fromExpression,
+            toKeyword,
+            toExpression,
+            stepKeyword,
+            stepExpression,
+            statements,
+            nextKeyword,
+            nextIdentifier);
     }
 
     private StatementSyntax ParseWhileStatement()
@@ -376,6 +469,27 @@ public sealed class StatementParser
         var expression = parser.ParseExpression();
         _diagnostics.AddRange(parser.Diagnostics);
         return expression;
+    }
+
+    private int FindTokenOnCurrentLine(SyntaxKind kind)
+    {
+        for (var i = _position; i < _tokens.Length; i++)
+        {
+            if (_tokens[i].Kind is SyntaxKind.NewLineToken or SyntaxKind.EndOfFileToken)
+                return -1;
+            if (_tokens[i].Kind == kind)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private int FindLineEndIndex(int start)
+    {
+        var i = start;
+        while (_tokens[i].Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
+            i++;
+        return i;
     }
 
     private int FindThenIndex()
