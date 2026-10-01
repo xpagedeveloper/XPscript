@@ -75,8 +75,9 @@ internal static class AndroidCommand
         Directory.CreateDirectory(outputDirectory);
         var apk = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(source) + "-" + platform + ".apk");
         Console.WriteLine("Building " + platform + " APK...");
-        var compileResult = await XPScript.Compiler.XPScriptCompilerCommandLine.CompileAsync(
-            [source, "-o", apk, "--platform", platform, "--runtime=false", ...(debug ? new[] { "--debug" } : Array.Empty<string>())]);
+        var compilerArgs = new List<string> { source, "-o", apk, "--platform", platform, "--runtime=false" };
+        if (debug) compilerArgs.Add("--debug");
+        var compileResult = await XPScript.Compiler.XPScriptCompilerCommandLine.CompileAsync(compilerArgs.ToArray());
         if (compileResult != 0) return compileResult;
         if (!File.Exists(apk)) throw new InvalidOperationException("Android compilation completed without producing the expected APK: " + apk);
 
