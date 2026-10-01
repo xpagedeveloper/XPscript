@@ -51,6 +51,9 @@ jobs:
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
 
+      - name: Build Avalonia Android dependency layer
+        run: dotnet build ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release
+
       - name: Compile Android runtime failure regression
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-runtime-error.xps -o ./out/android-runtime-error --runtime=false --rid android-x64 --debug
 
