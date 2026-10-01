@@ -33,6 +33,11 @@ Equal(SyntaxKind.NumberToken, number.Kind, "number kind");
 Equal(12345L, (long)number.Value!, "number value");
 Equal(new TextSpan(0, 5), number.Span, "number span");
 
+var decimalNumber = Lex("10.5")[0];
+Equal(SyntaxKind.NumberToken, decimalNumber.Kind, "decimal number kind");
+Equal(10.5d, (double)decimalNumber.Value!, "decimal number value");
+Equal(new TextSpan(0, 4), decimalNumber.Span, "decimal number span");
+
 var str = Lex("\"hello \"\"XP\"\"\"")[0];
 Equal(SyntaxKind.StringToken, str.Kind, "string kind");
 Equal("hello \"XP\"", (string)str.Value!, "escaped string value");
@@ -197,6 +202,12 @@ Equal(BoundNodeKind.BinaryExpression, boundArithmetic.Kind, "bound arithmetic ro
 Equal(typeof(long), boundArithmetic.Type, "bound arithmetic type");
 Equal(0, arithmeticBinder.Diagnostics.Count, "bound arithmetic diagnostics");
 
+var decimalBinder = new ExpressionBinder();
+var boundDecimal = decimalBinder.Bind(new ExpressionParser("10.5 + 2.25").ParseExpression());
+Equal(BoundNodeKind.BinaryExpression, boundDecimal.Kind, "bound decimal arithmetic root");
+Equal(typeof(double), boundDecimal.Type, "bound decimal arithmetic type");
+Equal(0, decimalBinder.Diagnostics.Count, "bound decimal arithmetic diagnostics");
+
 var invalidBinder = new ExpressionBinder();
 invalidBinder.Bind(new ExpressionParser("Not 1").ParseExpression());
 Equal(1, invalidBinder.Diagnostics.Count, "invalid unary diagnostic count");
@@ -222,6 +233,7 @@ Equal("new StringBuilder(\"hello\")", emitter.Emit(boundNewWithArgs), "bound New
 
 Equal("((!false) || true)", emitter.Emit(boundBoolean), "bound boolean C# emission");
 Equal("(1 + (2 * 3))", emitter.Emit(boundArithmetic), "bound arithmetic C# emission");
+Equal("(10.5 + 2.25)", emitter.Emit(boundDecimal), "bound decimal C# emission");
 
 var comparisonBinder = new ExpressionBinder();
 var boundComparison = comparisonBinder.Bind(new ExpressionParser("1 + 2 = 3").ParseExpression());
@@ -301,6 +313,7 @@ void EqualLegacyAst(string source, string label)
 
 EqualLegacyAst("Not False Or True", "boolean precedence");
 EqualLegacyAst("1 + 2 * 3", "arithmetic precedence");
+EqualLegacyAst("10.5 + 2.25", "decimal arithmetic");
 EqualLegacyAst("1 + 2 = 3", "comparison precedence");
 EqualLegacyAst("True And False Or True", "boolean associativity");
 
