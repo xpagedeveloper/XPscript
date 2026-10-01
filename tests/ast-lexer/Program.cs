@@ -312,6 +312,7 @@ Equal("person.Describe()", emitter.Emit(boundMethod), "bound XPScript member fun
 
 var indexedSymbols = new SymbolTable();
 indexedSymbols.Declare(new VariableSymbol("store", typeof(object)));
+indexedSymbols.Declare(new VariableSymbol("people", typeof(object[])));
 indexedSymbols.Declare(new PropertySymbol("Object.Name", typeof(string)));
 indexedSymbols.Declare(new FunctionSymbol("Object.Describe", typeof(string), []));
 
