@@ -73,8 +73,8 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Surface adb installation failures with useful diagnostics.
 - [x] Surface launch failures with useful diagnostics.
 - [x] Detect missing, unauthorized, offline or ambiguous devices before install/device-required operations.
-- [ ] Define project metadata for Android target and application type.
-- [ ] Keep console/headless and Avalonia UI selection explicit and deterministic.
+- [x] Define project metadata for Android target and application type.
+- [x] Keep console/headless and Avalonia UI selection explicit and deterministic.
 - [ ] Add an Android app template to `xpscript create` when the runtime path is stable.
 - [ ] Compile generated Android templates in automated create-template regression coverage.
 
