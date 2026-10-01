@@ -52,6 +52,12 @@ public sealed class StatementParser
             return ParseSelectStatement();
         if (Current.Kind == SyntaxKind.CallKeyword)
             return ParseCallStatement();
+        if (Current.Kind == SyntaxKind.OnKeyword)
+            return ParseOnErrorStatement();
+        if (Current.Kind == SyntaxKind.ResumeKeyword)
+            return ParseResumeStatement();
+        if (Current.Kind == SyntaxKind.ErrorKeyword)
+            return ParseErrorStatement();
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
@@ -663,6 +669,49 @@ public sealed class StatementParser
             "XPS1012",
             $"Expected newline after {context}.",
             new TextSpan(Current.Span.Start, 0)));
+    }
+
+    private StatementSyntax ParseOnErrorStatement()
+    {
+        var onKeyword = NextToken();
+        var errorKeyword = Match(SyntaxKind.ErrorKeyword);
+        if (Current.Kind == SyntaxKind.GoToKeyword)
+        {
+            var goToKeyword = NextToken();
+            SyntaxToken target;
+            if (Current.Kind is SyntaxKind.IdentifierToken or SyntaxKind.NumberToken)
+                target = NextToken();
+            else
+                target = Match(SyntaxKind.IdentifierToken);
+            return new OnErrorStatementSyntax(onKeyword, errorKeyword, goToKeyword, target);
+        }
+
+        var resumeKeyword = Match(SyntaxKind.ResumeKeyword);
+        var nextKeyword = Match(SyntaxKind.NextKeyword);
+        return new OnErrorStatementSyntax(onKeyword, errorKeyword, resumeKeyword, nextKeyword);
+    }
+
+    private StatementSyntax ParseResumeStatement()
+    {
+        var resumeKeyword = NextToken();
+        SyntaxToken? target = null;
+        if (Current.Kind is SyntaxKind.NextKeyword or SyntaxKind.IdentifierToken)
+            target = NextToken();
+        return new ResumeStatementSyntax(resumeKeyword, target);
+    }
+
+    private StatementSyntax ParseErrorStatement()
+    {
+        var errorKeyword = NextToken();
+        var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
+        if (commaIndex < 0)
+            return new ErrorStatementSyntax(errorKeyword, ParseExpressionUntilLineEnd(), null, null);
+
+        var numberExpression = ParseExpressionRange(_position, commaIndex, _tokens[commaIndex].Span.Start);
+        _position = commaIndex;
+        var commaToken = NextToken();
+        var descriptionExpression = ParseExpressionUntilLineEnd();
+        return new ErrorStatementSyntax(errorKeyword, numberExpression, commaToken, descriptionExpression);
     }
 
     private StatementSyntax ParseCallStatement()
