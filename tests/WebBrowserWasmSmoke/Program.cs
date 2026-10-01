@@ -351,14 +351,25 @@ End Sub
             response, Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), new SmokeSession()));
         if (response.StatusCode != 200)
             throw new Exception($"Archive browser download returned HTTP {response.StatusCode}.");
-        if (!response.Headers.TryGetValue("Content-Disposition", out var disposition) ||
-            !disposition.Any(value => value.Contains("attachment", StringComparison.OrdinalIgnoreCase) &&
-                                      value.Contains("server.zip", StringComparison.OrdinalIgnoreCase)))
-            throw new Exception("Archive browser download did not set attachment Content-Disposition.");
-        if (!string.Equals(response.ContentType, "application/zip", StringComparison.OrdinalIgnoreCase))
-            throw new Exception("Archive browser download did not use application/zip.");
-        if (response.Body.Length == 0)
-            throw new Exception("Archive browser download returned an empty body.");
+        if (!string.Equals(response.ContentType, "application/json; charset=utf-8", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Archive browser download bridge did not return a JSON envelope.");
+        using var downloadDocument = System.Text.Json.JsonDocument.Parse(response.Body);
+        var download = downloadDocument.RootElement.GetProperty("download");
+        if (!download.GetProperty("contentType").GetString()!.Equals("application/zip", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Archive browser download did not preserve application/zip.");
+        if (!download.GetProperty("contentDisposition").GetString()!.Contains("server.zip", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Archive browser download did not preserve the download filename.");
+        var archiveBytes = Convert.FromBase64String(download.GetProperty("base64").GetString()!);
+        if (archiveBytes.Length == 0)
+            throw new Exception("Archive browser download returned an empty archive.");
+        var browserModulePath = Directory.EnumerateFiles(Path.Combine(root, ".xpscript-cache", "wasm-bridge"), "xpscript-browser.js", SearchOption.AllDirectories)
+            .FirstOrDefault();
+        if (browserModulePath is null)
+            throw new Exception("Archive browser download did not produce the browser bridge module.");
+        var browserModuleText = await File.ReadAllTextAsync(browserModulePath);
+        foreach (var marker in new[] { "download.base64", "new Blob([bytes]", "anchor.download = fileName" })
+            if (!browserModuleText.Contains(marker, StringComparison.Ordinal))
+                throw new Exception($"Archive browser download bridge is missing '{marker}'.");
     }
 
     var unsafeArchivePath = Path.Combine(root, "unsafe-archive.xps");
