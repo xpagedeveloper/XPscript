@@ -185,6 +185,9 @@ public sealed class Lexer
         "DO" => SyntaxKind.DoKeyword,
         "LOOP" => SyntaxKind.LoopKeyword,
         "UNTIL" => SyntaxKind.UntilKeyword,
+        "SELECT" => SyntaxKind.SelectKeyword,
+        "CASE" => SyntaxKind.CaseKeyword,
+        "IS" => SyntaxKind.IsKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
