@@ -159,6 +159,29 @@ Equal(SyntaxKind.LiteralExpression, blockIfSyntax.Condition.Kind, "block If cond
 Equal(SyntaxKind.LiteralExpression, blockIfSyntax.ElseIfClauses[0].Condition.Kind, "block ElseIf condition kind");
 Equal(new TextSpan(0, blockIfSource.Length), blockIfSyntax.Span, "block If full span");
 
+var assignmentParser = new StatementParser("count = 1 + 2");
+var assignmentStatement = assignmentParser.ParseStatement();
+Equal(SyntaxKind.AssignmentStatement, assignmentStatement.Kind, "assignment statement kind");
+Equal(0, assignmentParser.Diagnostics.Count, "assignment diagnostics");
+var assignmentSyntax = (AssignmentStatementSyntax)assignmentStatement;
+Equal(SyntaxKind.NameExpression, assignmentSyntax.Target.Kind, "assignment target kind");
+Equal(SyntaxKind.BinaryExpression, assignmentSyntax.Expression.Kind, "assignment value kind");
+Equal(new TextSpan(0, 13), assignmentSyntax.Span, "assignment full span");
+
+var memberAssignmentParser = new StatementParser("person.Name = \"Fredrik\"");
+var memberAssignment = memberAssignmentParser.ParseStatement();
+Equal(SyntaxKind.AssignmentStatement, memberAssignment.Kind, "member assignment statement kind");
+Equal(SyntaxKind.MemberAccessExpression, ((AssignmentStatementSyntax)memberAssignment).Target.Kind, "member assignment target kind");
+Equal(0, memberAssignmentParser.Diagnostics.Count, "member assignment diagnostics");
+
+var setStatementParser = new StatementParser("Set person = New Person");
+var setStatement = setStatementParser.ParseStatement();
+Equal(SyntaxKind.SetStatement, setStatement.Kind, "Set statement kind");
+Equal(0, setStatementParser.Diagnostics.Count, "Set statement diagnostics");
+var setSyntax = (SetStatementSyntax)setStatement;
+Equal(SyntaxKind.NameExpression, setSyntax.Target.Kind, "Set target kind");
+Equal(SyntaxKind.NewExpression, setSyntax.Expression.Kind, "Set value kind");
+
 var runCommandAst = new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression();
 Equal(SyntaxKind.UnaryExpression, runCommandAst.Kind, "Not RunCommand root");
 var notRunCommand = (UnaryExpressionSyntax)runCommandAst;
