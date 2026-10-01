@@ -123,11 +123,28 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             return Error(syntax, "Unsupported call target.");
         }
 
-        if (!_symbols.TryLookup(name, out var symbol) || symbol is not FunctionSymbol function)
+        var functions = _symbols.LookupAll(name).OfType<FunctionSymbol>().ToArray();
+        if (functions.Length == 0)
             return Error(nameSyntax.IdentifierToken, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined function '{name}'.");
-        return BindCallTarget(syntax, target, function);
+        return BindOverloadSet(syntax, target, name, functions);
     }
 
+
+    private BoundExpression BindOverloadSet(CallExpressionSyntax syntax, BoundExpression? target, string name, IReadOnlyList<FunctionSymbol> functions)
+    {
+        var arguments = syntax.Arguments.Select(Bind).ToArray();
+        var candidates = functions
+            .Where(function => function.ParameterTypes.Count == arguments.Length)
+            .Where(function => function.ParameterTypes.SequenceEqual(arguments.Select(argument => argument.Type)))
+            .ToArray();
+
+        if (candidates.Length == 0)
+            return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching overload for function '{name}'.");
+        if (candidates.Length > 1)
+            return Error(syntax, CompilerDiagnosticCodes.AmbiguousOverload, $"Call to function '{name}' is ambiguous.");
+
+        return new BoundCallExpression(target, candidates[0], arguments);
+    }
 
     private BoundExpression BindIndexedProperty(CallExpressionSyntax syntax, BoundExpression receiver, IndexedPropertySymbol property)
     {
