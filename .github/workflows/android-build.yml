@@ -63,13 +63,16 @@ jobs:
       - name: Build x64 emulator APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print-emulator --runtime=false --rid android-x64 --debug
 
+      - name: Build minimal Android UIForm APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-minimal.xps -o ./out/android-uiform-minimal --runtime=false --rid android-x64 --debug
+
       - name: Verify debug APKs exist
         shell: bash
         run: |
           set -euo pipefail
           mapfile -t apks < <(find ./out -type f -name '*.apk' -print)
-          if [ "${#apks[@]}" -lt 2 ]; then
-            echo 'Android compiler did not produce both ARM64 device and x64 emulator APKs.' >&2
+          if [ "${#apks[@]}" -lt 3 ]; then
+            echo 'Android compiler did not produce the ARM64 headless, x64 headless and x64 UIForm APKs.' >&2
             exit 1
           fi
           printf 'ANDROID_APK=%s\n' "${apks[@]}"
