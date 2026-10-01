@@ -331,6 +331,39 @@ Equal(typeof(string), boundChainedIndexedProperty.Type, "bound indexed property 
 Equal(0, chainedIndexedPropertyBinder.Diagnostics.Count, "bound indexed property member diagnostics");
 Equal("store.Item(1).Name", emitter.Emit(boundChainedIndexedProperty), "bound indexed property member C# emission");
 
+var personSemanticType = XpTypeSymbol.User("Person");
+var boxSemanticType = XpTypeSymbol.User("Box");
+var semanticTypeSymbols = new SymbolTable();
+semanticTypeSymbols.Declare(new VariableSymbol("typedPerson", typeof(object), personSemanticType));
+semanticTypeSymbols.Declare(new VariableSymbol("typedBox", typeof(object), boxSemanticType));
+semanticTypeSymbols.Declare(new PropertySymbol("Person.Name", typeof(string)));
+semanticTypeSymbols.Declare(new PropertySymbol("Box.Value", typeof(string)));
+
+var typedPersonBinder = new ExpressionBinder(semanticTypeSymbols);
+var boundTypedPersonName = typedPersonBinder.Bind(new ExpressionParser("typedPerson.Name").ParseExpression());
+Equal(BoundNodeKind.MemberAccessExpression, boundTypedPersonName.Kind, "semantic Person member root");
+Equal(0, typedPersonBinder.Diagnostics.Count, "semantic Person member diagnostics");
+Equal("typedPerson.Name", emitter.Emit(boundTypedPersonName), "semantic Person member C# emission");
+
+var typedBoxBinder = new ExpressionBinder(semanticTypeSymbols);
+var boundTypedBoxValue = typedBoxBinder.Bind(new ExpressionParser("typedBox.Value").ParseExpression());
+Equal(BoundNodeKind.MemberAccessExpression, boundTypedBoxValue.Kind, "semantic Box member root");
+Equal(0, typedBoxBinder.Diagnostics.Count, "semantic Box member diagnostics");
+Equal("typedBox.Value", emitter.Emit(boundTypedBoxValue), "semantic Box member C# emission");
+
+var wrongTypedMemberBinder = new ExpressionBinder(semanticTypeSymbols);
+wrongTypedMemberBinder.Bind(new ExpressionParser("typedPerson.Value").ParseExpression());
+Equal(1, wrongTypedMemberBinder.Diagnostics.Count, "semantic type isolation diagnostics");
+
+semanticTypeSymbols.Declare(new VariableSymbol("typedStore", typeof(object), XpTypeSymbol.User("IndexedObjectStore")));
+semanticTypeSymbols.Declare(new IndexedPropertySymbol("IndexedObjectStore.Item", typeof(object), [typeof(long)], boxSemanticType));
+var typedIndexedPropertyBinder = new ExpressionBinder(semanticTypeSymbols);
+var boundTypedIndexedPropertyMember = typedIndexedPropertyBinder.Bind(new ExpressionParser("typedStore.Item(1).Value").ParseExpression());
+Equal(BoundNodeKind.MemberAccessExpression, boundTypedIndexedPropertyMember.Kind, "semantic indexed property member root");
+Equal(typeof(string), boundTypedIndexedPropertyMember.Type, "semantic indexed property member type");
+Equal(0, typedIndexedPropertyBinder.Diagnostics.Count, "semantic indexed property member diagnostics");
+Equal("typedStore.Item(1).Value", emitter.Emit(boundTypedIndexedPropertyMember), "semantic indexed property member C# emission");
+
 var indexedPropertyBinder = new ExpressionBinder(indexedSymbols);
 var boundIndexedProperty = indexedPropertyBinder.Bind(new ExpressionParser("people[1].Name").ParseExpression());
 Equal(BoundNodeKind.MemberAccessExpression, boundIndexedProperty.Kind, "bound indexed object property root");
