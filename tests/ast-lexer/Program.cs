@@ -264,6 +264,7 @@ Equal(0, equalityBinder.Diagnostics.Count, "bound equality diagnostics");
 var callSymbols = new SymbolTable();
 callSymbols.Declare(new FunctionSymbol("Array", typeof(string[]), [typeof(string)]));
 callSymbols.Declare(new FunctionSymbol("RunCommand", typeof(bool), [typeof(string), typeof(string[])]));
+callSymbols.Declare(new FunctionSymbol("Error", typeof(string), []));
 var indexSymbols = new SymbolTable();
 indexSymbols.Declare(new VariableSymbol("items", typeof(string[])));
 var indexBinder = new ExpressionBinder(indexSymbols);
@@ -282,6 +283,13 @@ Equal(BoundNodeKind.CallExpression, boundMemberCall.Kind, "bound member call roo
 Equal(typeof(string), boundMemberCall.Type, "bound member call result type");
 Equal(0, memberBinder.Diagnostics.Count, "bound member call diagnostics");
 Equal("text.Substring(1)", emitter.Emit(boundMemberCall), "bound member call C# emission");
+
+var zeroArgBinder = new ExpressionBinder(callSymbols);
+var boundZeroArg = zeroArgBinder.Bind(new ExpressionParser("Error()").ParseExpression());
+Equal(BoundNodeKind.CallExpression, boundZeroArg.Kind, "bound zero-argument call root");
+Equal(typeof(string), boundZeroArg.Type, "bound zero-argument call type");
+Equal(0, zeroArgBinder.Diagnostics.Count, "bound zero-argument call diagnostics");
+Equal("Error()", emitter.Emit(boundZeroArg), "bound zero-argument call C# emission");
 
 var callBinder = new ExpressionBinder(callSymbols);
 var boundRunCommand = callBinder.Bind(new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression());
