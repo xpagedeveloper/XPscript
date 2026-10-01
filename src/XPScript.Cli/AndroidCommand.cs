@@ -36,12 +36,14 @@ internal static class AndroidCommand
         string? requestedSerial = null;
         string? requestedAvd = null;
         string? requestedPlatform = null;
+        var debug = false;
         for (var i = 1; i < args.Length; i++)
         {
             if (args[i] == "--device" && i + 1 < args.Length) deviceMode = args[++i].ToLowerInvariant();
             else if (args[i] == "--serial" && i + 1 < args.Length) requestedSerial = args[++i];
             else if (args[i] == "--avd" && i + 1 < args.Length) requestedAvd = args[++i];
             else if (args[i] == "--platform" && i + 1 < args.Length) requestedPlatform = args[++i].ToLowerInvariant();
+            else if (args[i] == "--debug") debug = true;
             else throw new ArgumentException("Unknown android run argument: " + args[i]);
         }
 
@@ -74,7 +76,7 @@ internal static class AndroidCommand
         var apk = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(source) + "-" + platform + ".apk");
         Console.WriteLine("Building " + platform + " APK...");
         var compileResult = await XPScript.Compiler.XPScriptCompilerCommandLine.CompileAsync(
-            [source, "-o", apk, "--platform", platform, "--runtime=false"]);
+            [source, "-o", apk, "--platform", platform, "--runtime=false", ...(debug ? new[] { "--debug" } : Array.Empty<string>())]);
         if (compileResult != 0) return compileResult;
         if (!File.Exists(apk)) throw new InvalidOperationException("Android compilation completed without producing the expected APK: " + apk);
 
@@ -401,7 +403,7 @@ Usage:
   xpscript android install <app.apk> [--device SERIAL]
   xpscript android launch [--device SERIAL]
   xpscript android logs [--device SERIAL]
-  xpscript android run <source.xps> [--platform RID] [--device auto|emulator|physical] [--serial SERIAL] [--avd NAME]
+  xpscript android run <source.xps> [--platform RID] [--device auto|emulator|physical] [--serial SERIAL] [--avd NAME] [--debug]
 
 Commands:
   devices  List Android devices/emulators visible to adb, including unauthorized/offline state.
