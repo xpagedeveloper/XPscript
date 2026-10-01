@@ -321,21 +321,44 @@ End Sub
 [Platform:browser-wasm]
 
 [ServerSide]
-Function ArchiveOnServer() As Long
+Sub DownloadArchive()
     Dim archive As New Archive()
     archive.Create("zip")
     archive.AddText("payload.txt", "server")
-    ArchiveOnServer = Len(archive.ToBytes())
-End Function
+    Dim data As Variant
+    data = archive.ToBytes()
+    Response.SendFile(data, "server.zip", "application/zip", False)
+End Sub
 
 Sub Main()
-    Print ArchiveOnServer()
+    DownloadArchive()
 End Sub
 """);
     await using (var archiveUnit = await compiler.CompileAsync(serverArchivePath, root))
     {
         if (!archiveUnit.Routes.ContainsKey(XpsWebPathResolver.BrowserWasmAssetRoute))
             throw new Exception("[ServerSide] Archive browser-WASM compile did not produce the WASM route.");
+
+        var archiveSource = await File.ReadAllTextAsync(serverArchivePath);
+        var compilerIdentity = typeof(XpsWebCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var sourceHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(archiveSource + "\0" + compilerIdentity + "\0" + "4")));
+        var procedureId = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(sourceHash + "\0" + "DOWNLOADARCHIVE"))).ToLowerInvariant()[..32];
+        var response = new XpsWebResponse();
+        await archiveUnit.InvokeAsync(XpsWebPathResolver.BrowserWasmAssetRoute, new XpsWebContext(
+            BridgePostRequest("/server-archive.xps/__xpscript_bridge", new Dictionary<string, IReadOnlyList<string>>(), procedureId),
+            response, Server(root), new XpsWebPrincipal(false), new SmokeApplicationState(), new SmokeSession()));
+        if (response.StatusCode != 200)
+            throw new Exception($"Archive browser download returned HTTP {response.StatusCode}.");
+        if (!response.Headers.TryGetValue("Content-Disposition", out var disposition) ||
+            !disposition.Any(value => value.Contains("attachment", StringComparison.OrdinalIgnoreCase) &&
+                                      value.Contains("server.zip", StringComparison.OrdinalIgnoreCase)))
+            throw new Exception("Archive browser download did not set attachment Content-Disposition.");
+        if (!string.Equals(response.ContentType, "application/zip", StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Archive browser download did not use application/zip.");
+        if (response.Body.Length == 0)
+            throw new Exception("Archive browser download returned an empty body.");
     }
 
     var unsafeArchivePath = Path.Combine(root, "unsafe-archive.xps");
