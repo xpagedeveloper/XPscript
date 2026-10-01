@@ -87,7 +87,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Review the current Avalonia desktop host boundaries and identify the smallest reusable shared UI layer. Documented in `knowledge/android-uiform-architecture.md`: `XPScriptUIForm` remains platform-neutral, while Android gets a separate adapter and host.
 - [x] Add Avalonia Android dependencies as a synchronized compatibility group with the existing Avalonia dependency policy. Added `src/XPScript.UI.Android` using Avalonia/Avalonia.Android/Avalonia.Themes.Fluent 12.0.3, matching the existing desktop Avalonia core/theme versions. CI builds the dependency layer after installing the Android workload.
 - [x] Create the minimal Avalonia Android host. Added an Avalonia 12 Android activity/application host and a single-view `MainView` host surface.
-- [ ] Connect the existing XPScript UIForm runtime to the generated Android application. The initial `XPScript.UI.Android.AndroidFormHost` implementation exists as the host prototype, but the compiler's generated Android project still needs to package the Android UI host and Avalonia Android dependencies when UIForm is used.
+- [x] Connect the existing XPScript UIForm runtime to the generated Android application. The compiler now detects UIForm usage, generates the Avalonia Android host, packages the synchronized Avalonia Android dependencies, and CI successfully publishes the generated minimal Android UIForm APK.
 - [ ] Render a minimal UIForm containing a text field, label and button.
 - [ ] Verify UIForm actions execute XPScript handlers on Android.
 - [ ] Verify bound `XPJsonObject` / `XPJsonDocument` data updates correctly.
@@ -101,7 +101,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [ ] Keep non-UI XPScript runtime code independent from Avalonia.
 - [ ] Build and run a debug APK on Android 11 / API 30.
 - [ ] Add Android UIForm regression samples.
-- [ ] Add non-device compiler/packaging regression coverage for Android UIForm.
+- [x] Add non-device compiler/packaging regression coverage for Android UIForm. `AndroidCompilerProbe` guards the generated host/project contract and Android CI publishes both a focused direct Avalonia Android project and the compiler-generated minimal UIForm APK.
 - [ ] Document debug APK deployment.
 - [ ] Plan signed APK/AAB publishing separately.
 
