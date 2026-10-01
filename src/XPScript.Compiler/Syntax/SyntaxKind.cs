@@ -36,6 +36,8 @@ public enum SyntaxKind
     ElseIfKeyword,
     EndKeyword,
     SetKeyword,
+    DimKeyword,
+    AsKeyword,
     NewKeyword,
     LiteralExpression,
     NameExpression,
@@ -50,5 +52,6 @@ public enum SyntaxKind
     IfStatement,
     AssignmentStatement,
     SetStatement,
+    DimStatement,
     ElseIfClause,
 }
