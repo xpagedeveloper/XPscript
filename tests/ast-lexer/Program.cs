@@ -204,6 +204,17 @@ Equal("Integer", initializedDimStatement.TypeNameToken!.Text, "initialized Dim t
 Equal(SyntaxKind.BinaryExpression, initializedDimStatement.Initializer!.Kind, "initialized Dim expression kind");
 Equal(new TextSpan(0, 28), initializedDimStatement.Span, "initialized Dim full span");
 
+const string whileSource = "While True\ncount = count + 1\nWend";
+var whileParser = new StatementParser(whileSource);
+var whileStatement = whileParser.ParseStatement();
+Equal(SyntaxKind.WhileStatement, whileStatement.Kind, "While statement kind");
+Equal(0, whileParser.Diagnostics.Count, "While diagnostics");
+var whileSyntax = (WhileStatementSyntax)whileStatement;
+Equal(SyntaxKind.LiteralExpression, whileSyntax.Condition.Kind, "While condition kind");
+Equal(1, whileSyntax.Statements.Count, "While body statement count");
+Equal(SyntaxKind.AssignmentStatement, whileSyntax.Statements[0].Kind, "While body assignment kind");
+Equal(new TextSpan(0, whileSource.Length), whileSyntax.Span, "While full span");
+
 var runCommandAst = new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression();
 Equal(SyntaxKind.UnaryExpression, runCommandAst.Kind, "Not RunCommand root");
 var notRunCommand = (UnaryExpressionSyntax)runCommandAst;
