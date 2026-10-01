@@ -269,6 +269,26 @@ var boundEquality = equalityBinder.Bind(new ExpressionParser("1 + 2 = 3").ParseE
 Equal("((1 + 2) == 3)", emitter.Emit(boundEquality), "bound equality C# emission");
 Equal(0, equalityBinder.Diagnostics.Count, "bound equality diagnostics");
 
+var overloadSymbols = new SymbolTable();
+overloadSymbols.Declare(new FunctionSymbol("ConvertValue", typeof(string), [typeof(long)]));
+overloadSymbols.Declare(new FunctionSymbol("ConvertValue", typeof(string), [typeof(string)]));
+var overloadLongBinder = new ExpressionBinder(overloadSymbols);
+var boundLongOverload = overloadLongBinder.Bind(new ExpressionParser("ConvertValue(1)").ParseExpression());
+Equal(BoundNodeKind.CallExpression, boundLongOverload.Kind, "bound long overload root");
+Equal(0, overloadLongBinder.Diagnostics.Count, "bound long overload diagnostics");
+Equal(typeof(long), ((BoundCallExpression)boundLongOverload).Function.ParameterTypes[0], "selected long overload");
+
+var overloadStringBinder = new ExpressionBinder(overloadSymbols);
+var boundStringOverload = overloadStringBinder.Bind(new ExpressionParser("ConvertValue(\"one\")").ParseExpression());
+Equal(BoundNodeKind.CallExpression, boundStringOverload.Kind, "bound string overload root");
+Equal(0, overloadStringBinder.Diagnostics.Count, "bound string overload diagnostics");
+Equal(typeof(string), ((BoundCallExpression)boundStringOverload).Function.ParameterTypes[0], "selected string overload");
+
+var overloadMissingBinder = new ExpressionBinder(overloadSymbols);
+overloadMissingBinder.Bind(new ExpressionParser("ConvertValue(True)").ParseExpression());
+Equal(1, overloadMissingBinder.Diagnostics.Count, "no matching overload diagnostic count");
+Equal("XPS2004", overloadMissingBinder.Diagnostics[0].Code, "no matching overload diagnostic code");
+
 var callSymbols = new SymbolTable();
 callSymbols.Declare(new FunctionSymbol("Array", typeof(string[]), [typeof(string)]));
 callSymbols.Declare(new FunctionSymbol("RunCommand", typeof(bool), [typeof(string), typeof(string[])]));
