@@ -32,10 +32,18 @@ public sealed class StatementParser
         return statement;
     }
 
-    private StatementSyntax ParseCurrentStatement() =>
-        Current.Kind == SyntaxKind.IfKeyword
-            ? ParseIfStatement()
+    private StatementSyntax ParseCurrentStatement()
+    {
+        if (Current.Kind == SyntaxKind.IfKeyword)
+            return ParseIfStatement();
+        if (Current.Kind == SyntaxKind.SetKeyword)
+            return ParseSetStatement();
+
+        var equalsIndex = FindTopLevelEqualsIndex(_position);
+        return equalsIndex >= 0
+            ? ParseAssignmentStatement(equalsIndex)
             : ParseExpressionStatement();
+    }
 
     private StatementSyntax ParseIfStatement()
     {
@@ -149,6 +157,102 @@ public sealed class StatementParser
         }
 
         return statements;
+    }
+
+    private StatementSyntax ParseAssignmentStatement(int equalsIndex)
+    {
+        var target = ParseExpressionRange(_position, equalsIndex, _tokens[equalsIndex].Span.Start);
+        _position = equalsIndex;
+        var equalsToken = NextToken();
+        var expression = ParseExpressionUntilLineEnd();
+
+        if (target.Kind is not SyntaxKind.NameExpression
+            and not SyntaxKind.MemberAccessExpression
+            and not SyntaxKind.IndexExpression)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(
+                "XPS1012",
+                "Invalid assignment target.",
+                target.Span));
+        }
+
+        return new AssignmentStatementSyntax(target, equalsToken, expression);
+    }
+
+    private StatementSyntax ParseSetStatement()
+    {
+        var setKeyword = NextToken();
+        var equalsIndex = FindTopLevelEqualsIndex(_position);
+        if (equalsIndex < 0)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(
+                "XPS1012",
+                "Expected '=' in Set statement.",
+                new TextSpan(Current.Span.Start, 0)));
+            var target = ParseExpressionUntilLineEnd();
+            var missingEquals = new SyntaxToken(
+                SyntaxKind.EqualsToken,
+                string.Empty,
+                null,
+                new TextSpan(target.Span.End, 0));
+            var missingExpression = new NameExpressionSyntax(new SyntaxToken(
+                SyntaxKind.IdentifierToken,
+                string.Empty,
+                null,
+                new TextSpan(target.Span.End, 0)));
+            return new SetStatementSyntax(setKeyword, target, missingEquals, missingExpression);
+        }
+
+        var targetExpression = ParseExpressionRange(_position, equalsIndex, _tokens[equalsIndex].Span.Start);
+        _position = equalsIndex;
+        var equalsToken = NextToken();
+        var expression = ParseExpressionUntilLineEnd();
+
+        if (targetExpression.Kind is not SyntaxKind.NameExpression
+            and not SyntaxKind.MemberAccessExpression
+            and not SyntaxKind.IndexExpression)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(
+                "XPS1012",
+                "Invalid Set target.",
+                targetExpression.Span));
+        }
+
+        return new SetStatementSyntax(setKeyword, targetExpression, equalsToken, expression);
+    }
+
+    private int FindTopLevelEqualsIndex(int start)
+    {
+        var parenDepth = 0;
+        var bracketDepth = 0;
+
+        for (var i = start; i < _tokens.Length; i++)
+        {
+            switch (_tokens[i].Kind)
+            {
+                case SyntaxKind.NewLineToken:
+                case SyntaxKind.EndOfFileToken:
+                    return -1;
+                case SyntaxKind.OpenParenToken:
+                    parenDepth++;
+                    break;
+                case SyntaxKind.CloseParenToken:
+                    if (parenDepth > 0)
+                        parenDepth--;
+                    break;
+                case SyntaxKind.OpenBracketToken:
+                    bracketDepth++;
+                    break;
+                case SyntaxKind.CloseBracketToken:
+                    if (bracketDepth > 0)
+                        bracketDepth--;
+                    break;
+                case SyntaxKind.EqualsToken when parenDepth == 0 && bracketDepth == 0:
+                    return i;
+            }
+        }
+
+        return -1;
     }
 
     private void ConsumeRequiredNewLine(string context)
