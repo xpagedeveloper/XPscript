@@ -215,6 +215,27 @@ Equal(1, whileSyntax.Statements.Count, "While body statement count");
 Equal(SyntaxKind.AssignmentStatement, whileSyntax.Statements[0].Kind, "While body assignment kind");
 Equal(new TextSpan(0, whileSource.Length), whileSyntax.Span, "While full span");
 
+const string forSource = "For i = 1 To 5 Step 2\ntotal = total + i\nNext i";
+var forParser = new StatementParser(forSource);
+var forStatement = forParser.ParseStatement();
+Equal(SyntaxKind.ForStatement, forStatement.Kind, "For statement kind");
+Equal(0, forParser.Diagnostics.Count, "For diagnostics");
+var forSyntax = (ForStatementSyntax)forStatement;
+Equal("i", forSyntax.IdentifierToken.Text, "For identifier");
+Equal(SyntaxKind.LiteralExpression, forSyntax.FromExpression.Kind, "For from expression kind");
+Equal(SyntaxKind.LiteralExpression, forSyntax.ToExpression.Kind, "For to expression kind");
+Equal(SyntaxKind.LiteralExpression, forSyntax.StepExpression!.Kind, "For Step expression kind");
+Equal(1, forSyntax.Statements.Count, "For body statement count");
+Equal("i", forSyntax.NextIdentifierToken!.Text, "For Next identifier");
+Equal(new TextSpan(0, forSource.Length), forSyntax.Span, "For full span");
+
+const string forWithoutStepSource = "For i = 1 To 5\ni = i + 1\nNext";
+var forWithoutStepParser = new StatementParser(forWithoutStepSource);
+var forWithoutStep = (ForStatementSyntax)forWithoutStepParser.ParseStatement();
+Equal(0, forWithoutStepParser.Diagnostics.Count, "For without Step diagnostics");
+Equal(false, forWithoutStep.StepExpression is not null, "For without Step has no Step expression");
+Equal(false, forWithoutStep.NextIdentifierToken is not null, "For bare Next has no identifier");
+
 var runCommandAst = new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression();
 Equal(SyntaxKind.UnaryExpression, runCommandAst.Kind, "Not RunCommand root");
 var notRunCommand = (UnaryExpressionSyntax)runCommandAst;
