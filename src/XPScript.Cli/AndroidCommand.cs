@@ -33,9 +33,11 @@ internal static class AndroidCommand
         Console.WriteLine("Android project: target=" + project.Target + ", applicationType=" + project.ApplicationType);
 
         string? requestedSerial = null;
+        string? requestedPlatform = null;
         for (var i = 1; i < args.Length; i++)
         {
             if (args[i] == "--device" && i + 1 < args.Length) requestedSerial = args[++i];
+            else if (args[i] == "--platform" && i + 1 < args.Length) requestedPlatform = args[++i].ToLowerInvariant();
             else throw new ArgumentException("Unknown android run argument: " + args[i]);
         }
 
@@ -44,19 +46,24 @@ internal static class AndroidCommand
         var abiResult = await ExecuteAsync(adb, ["-s", serial, "shell", "getprop", "ro.product.cpu.abi"]);
         if (abiResult.ExitCode != 0) throw new InvalidOperationException("Unable to detect Android device ABI: " + abiResult.Error.Trim());
         var abi = abiResult.Output.Trim().ToLowerInvariant();
-        var rid = abi switch
+        var detectedPlatform = abi switch
         {
             "arm64-v8a" => "android-arm64",
             "x86_64" => "android-x64",
             _ => throw new InvalidOperationException("Unsupported Android ABI '" + abi + "'. Supported ABIs are arm64-v8a and x86_64.")
         };
+        var platform = requestedPlatform ?? detectedPlatform;
+        if (platform is not ("android-arm64" or "android-x64"))
+            throw new ArgumentException("Unsupported Android --platform '" + platform + "'. Supported platforms are android-arm64 and android-x64.");
+        if (requestedPlatform is not null && requestedPlatform != detectedPlatform)
+            throw new InvalidOperationException("Android --platform '" + requestedPlatform + "' does not match device ABI '" + abi + "' (" + detectedPlatform + ").");
 
         var outputDirectory = Path.Combine(Path.GetTempPath(), "xpscript-android");
         Directory.CreateDirectory(outputDirectory);
-        var apk = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(source) + "-" + rid + ".apk");
-        Console.WriteLine("Building " + rid + " APK...");
+        var apk = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(source) + "-" + platform + ".apk");
+        Console.WriteLine("Building " + platform + " APK...");
         var compileResult = await XPScript.Compiler.XPScriptCompilerCommandLine.CompileAsync(
-            [source, "-o", apk, "--rid", rid, "--runtime=false"]);
+            [source, "-o", apk, "--platform", platform, "--runtime=false"]);
         if (compileResult != 0) return compileResult;
         if (!File.Exists(apk)) throw new InvalidOperationException("Android compilation completed without producing the expected APK: " + apk);
 
@@ -306,7 +313,7 @@ Usage:
   xpscript android install <app.apk> [--device SERIAL]
   xpscript android launch [--device SERIAL]
   xpscript android logs [--device SERIAL]
-  xpscript android run <source.xps> [--device SERIAL]
+  xpscript android run <source.xps> [--platform RID] [--device SERIAL]
 
 Commands:
   devices  List Android devices/emulators visible to adb, including unauthorized/offline state.
