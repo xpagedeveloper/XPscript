@@ -12,7 +12,7 @@ foreach (var expected in new[]
     "WaitForCompletionAsync",
     "TimeSpan.FromSeconds(30)",
     "Task.Delay(250)",
-    "Multiple Android devices/emulators are ready",
+    "Multiple Android targets are ready. Select one with --serial SERIAL.",
     "State is \"unauthorized\" or \"offline\"",
     "State.Equals(\"unauthorized\"",
     "State.Equals(\"offline\"",
