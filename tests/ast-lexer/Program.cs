@@ -284,7 +284,7 @@ Equal("items[1]", emitter.Emit(boundIndex), "bound index C# emission");
 
 var memberSymbols = new SymbolTable();
 memberSymbols.Declare(new VariableSymbol("text", typeof(string)));
-memberSymbols.Declare(new PropertySymbol("String.Length", typeof(long)));
+memberSymbols.Declare(new TypeSymbol("Person", typeof(object)));
 memberSymbols.Declare(new FunctionSymbol("String.Substring", typeof(string), [typeof(long)]));
 var memberBinder = new ExpressionBinder(memberSymbols);
 var boundMemberCall = memberBinder.Bind(new ExpressionParser("text.Substring(1)").ParseExpression());
@@ -293,12 +293,22 @@ Equal(typeof(string), boundMemberCall.Type, "bound member call result type");
 Equal(0, memberBinder.Diagnostics.Count, "bound member call diagnostics");
 Equal("text.Substring(1)", emitter.Emit(boundMemberCall), "bound member call C# emission");
 
+memberSymbols.Declare(new PropertySymbol("Person.Name", typeof(string)));
+memberSymbols.Declare(new FunctionSymbol("Person.Describe", typeof(string), []));
+
 var propertyBinder = new ExpressionBinder(memberSymbols);
-var boundProperty = propertyBinder.Bind(new ExpressionParser("text.Length").ParseExpression());
-Equal(BoundNodeKind.MemberAccessExpression, boundProperty.Kind, "bound property access root");
-Equal(typeof(long), boundProperty.Type, "bound property access type");
-Equal(0, propertyBinder.Diagnostics.Count, "bound property access diagnostics");
-Equal("text.Length", emitter.Emit(boundProperty), "bound property access C# emission");
+var boundProperty = propertyBinder.Bind(new ExpressionParser("person.Name").ParseExpression());
+Equal(BoundNodeKind.MemberAccessExpression, boundProperty.Kind, "bound XPScript property access root");
+Equal(typeof(string), boundProperty.Type, "bound XPScript property access type");
+Equal(0, propertyBinder.Diagnostics.Count, "bound XPScript property access diagnostics");
+Equal("person.Name", emitter.Emit(boundProperty), "bound XPScript property access C# emission");
+
+var methodBinder = new ExpressionBinder(memberSymbols);
+var boundMethod = methodBinder.Bind(new ExpressionParser("person.Describe()").ParseExpression());
+Equal(BoundNodeKind.CallExpression, boundMethod.Kind, "bound XPScript member function root");
+Equal(typeof(string), boundMethod.Type, "bound XPScript member function type");
+Equal(0, methodBinder.Diagnostics.Count, "bound XPScript member function diagnostics");
+Equal("person.Describe()", emitter.Emit(boundMethod), "bound XPScript member function C# emission");
 
 var zeroArgBinder = new ExpressionBinder(callSymbols);
 var boundZeroArg = zeroArgBinder.Bind(new ExpressionParser("Error()").ParseExpression());
