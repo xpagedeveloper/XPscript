@@ -114,3 +114,15 @@ foreach (var expected in new[]
     if (!compilerDriver.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Generated Android compiler diagnostic regression is missing: " + expected);
 }
+
+var runtimeErrorSample = File.ReadAllText(Path.Combine(root, "samples", "android-debug-runtime-error.xps"));
+foreach (var expected in new[]
+{
+    "BEFORE-RUNTIME-ERROR",
+    "Error 7001, \"Android runtime error regression\"",
+    "AFTER-RUNTIME-ERROR"
+})
+{
+    if (!runtimeErrorSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android runtime error sample regression is missing: " + expected);
+}
