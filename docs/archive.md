@@ -122,7 +122,7 @@ data = archive.ToBytes()
 
 ## Platform status
 
-Core ZIP, in-memory ZIP and iterator regression tests are configured for Windows, Linux and macOS. Extended archive regressions currently run in the Linux Archive workflow. Android, iOS and browser/WASM require separate runtime/AOT/trimming validation before they should be considered fully supported.
+Core ZIP, in-memory ZIP and iterator regression tests are configured for Windows, Linux and macOS. Extended archive regressions run in the Archive test coverage. In browser/WASM applications, Archive is a server-side-only API and is validated through the normal [ServerSide] boundary. Android and iOS still require separate runtime/AOT/trimming validation.
 
 
 ## Server-side archive handling
@@ -131,11 +131,13 @@ Filesystem archive operations run through the normal XPScript filesystem boundar
 
 For browser applications that need server filesystem access, perform the archive operation through the normal XPScript server-side execution model instead of attempting to expose a client filesystem path.
 
-## Browser/WASM limitations
+## Browser/WASM
 
-Browser/WASM archive support is intended to use Byte arrays and in-memory data. Arbitrary local filesystem extraction is not part of the browser API. Listing, reading and creating downloadable archives client-side remain subject to browser memory limits and require explicit browser/WASM validation before they are considered supported.
+`Archive` is server-side only in a `[Platform:browser-wasm]` application. Create and use Archive objects inside module-level `[ServerSide]` Functions or Subs. Archive use in browser-side procedures, class methods or module-level browser state is rejected with the normal execution-context diagnostic.
 
-Do not assume that extended SharpCompress formats are available in a browser build until the package has passed the browser linker and trimming validation for the XPScript target.
+SharpCompress and the archive runtime stay in the server companion and are never packaged into the client WebAssembly bundle. Server-side archive code may use filesystem paths or in-memory Byte arrays and can return archive data to the browser for downloads where appropriate.
+
+Arbitrary client filesystem extraction, client-side archive listing and client-side archive creation are intentionally not part of the Browser-WASM Archive API.
 
 ## Android and iOS
 
