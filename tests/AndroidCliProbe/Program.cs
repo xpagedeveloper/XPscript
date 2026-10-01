@@ -33,3 +33,19 @@ if (source.Contains(fixedDelay, StringComparison.Ordinal))
     throw new Exception("Android run still relies on the old fixed one-second completion delay.");
 
 Console.WriteLine("ANDROID-CLI-PROBE=OK");
+
+
+var androidCommand = File.ReadAllText(Path.Combine(root, "src", "XPScript.Cli", "AndroidCommand.cs"));
+foreach (var expected in new[]
+{
+    "--device auto|emulator|physical",
+    "--serial SERIAL",
+    "--avd NAME",
+    "Invalid --device value",
+    "--avd can only be used with --device emulator",
+    "--serial cannot be combined with --device emulator"
+})
+{
+    if (!androidCommand.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android device selection regression is missing: " + expected);
+}
