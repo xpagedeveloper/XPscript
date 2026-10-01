@@ -95,11 +95,11 @@ foreach (var expected in new[]
         throw new Exception("Android host exit-code regression is missing: " + expected);
 }
 
-var androidHostSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "AndroidHostSource.cs");
-var androidHostSource = File.ReadAllText(androidHostSourcePath);
-if (!androidHostSource.Contains("var runtimeSource = XPSourceLineRuntime.CurrentSource;", StringComparison.Ordinal) ||
-    !androidHostSource.Contains("var runtimeLine = XPSourceLineRuntime.Current;", StringComparison.Ordinal) ||
-    !androidHostSource.Contains("Console.Error.WriteLine(\"at \" + runtimeSource + \":", StringComparison.Ordinal))
+var runtimeDiagnosticsSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "AdvancedXPScriptTranspiler.cs");
+var runtimeDiagnosticsSource = File.ReadAllText(runtimeDiagnosticsSourcePath);
+if (!runtimeDiagnosticsSource.Contains("var runtimeSource = XPSourceLineRuntime.CurrentSource;", StringComparison.Ordinal) ||
+    !runtimeDiagnosticsSource.Contains("var runtimeLine = XPSourceLineRuntime.Current;", StringComparison.Ordinal) ||
+    !runtimeDiagnosticsSource.Contains("Console.Error.WriteLine(\"at \" + runtimeSource + \":", StringComparison.Ordinal))
     throw new Exception("Android runtime source-location diagnostic regression is missing.");
 
 Console.WriteLine("ANDROID-COMPILER-PROBE=OK");
