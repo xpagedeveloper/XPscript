@@ -52,6 +52,8 @@ public sealed class StatementParser
             return ParseSelectStatement();
         if (Current.Kind == SyntaxKind.CallKeyword)
             return ParseCallStatement();
+        if (Current.Kind == SyntaxKind.OnKeyword && PeekKind(1) == SyntaxKind.EventKeyword)
+            return ParseOnEventStatement();
         if (Current.Kind == SyntaxKind.OnKeyword)
             return ParseOnErrorStatement();
         if (Current.Kind == SyntaxKind.ResumeKeyword)
@@ -313,6 +315,47 @@ public sealed class StatementParser
             upperExpression,
             elseKeyword,
             statements);
+    }
+
+    private StatementSyntax ParseOnEventStatement()
+    {
+        var onKeyword = NextToken();
+        var eventKeyword = Match(SyntaxKind.EventKeyword);
+        var eventName = Match(SyntaxKind.IdentifierToken);
+        var fromKeyword = Match(SyntaxKind.FromKeyword);
+
+        var actionIndex = FindTokenOnCurrentLine(SyntaxKind.CallKeyword);
+        var removeIndex = FindTokenOnCurrentLine(SyntaxKind.RemoveKeyword);
+        if (actionIndex < 0 || (removeIndex >= 0 && removeIndex < actionIndex))
+            actionIndex = removeIndex;
+
+        if (actionIndex < 0)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(
+                "XPS1012",
+                "Expected CallKeyword or RemoveKeyword in On Event statement.",
+                new TextSpan(Current.Span.Start, 0)));
+            var source = ParseExpressionUntilLineEnd();
+            var missingAction = new SyntaxToken(
+                SyntaxKind.CallKeyword, string.Empty, null, new TextSpan(source.Span.End, 0));
+            return new OnEventStatementSyntax(
+                onKeyword, eventKeyword, eventName, fromKeyword, source, missingAction, null);
+        }
+
+        var sourceExpression = ParseExpressionRange(
+            _position, actionIndex, _tokens[actionIndex].Span.Start);
+        _position = actionIndex;
+        var actionKeyword = NextToken();
+
+        SyntaxToken? handlerToken = null;
+        if (actionKeyword.Kind == SyntaxKind.CallKeyword)
+            handlerToken = Match(SyntaxKind.IdentifierToken);
+        else if (Current.Kind == SyntaxKind.IdentifierToken)
+            handlerToken = NextToken();
+
+        return new OnEventStatementSyntax(
+            onKeyword, eventKeyword, eventName, fromKeyword,
+            sourceExpression, actionKeyword, handlerToken);
     }
 
     private StatementSyntax ParseDoStatement()
