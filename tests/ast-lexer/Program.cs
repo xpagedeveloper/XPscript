@@ -146,6 +146,19 @@ Equal(SyntaxKind.IfStatement, comparisonIf.Kind, "comparison If statement kind")
 Equal(0, comparisonIfParser.Diagnostics.Count, "comparison If diagnostics");
 Equal(SyntaxKind.BinaryExpression, ((IfStatementSyntax)comparisonIf).Condition.Kind, "comparison If condition kind");
 
+const string blockIfSource = "If True Then\nPrint(\"yes\")\nElseIf False Then\nPrint(\"elseif\")\nElse\nPrint(\"no\")\nEnd If";
+var blockIfParser = new StatementParser(blockIfSource);
+var blockIf = blockIfParser.ParseStatement();
+Equal(SyntaxKind.IfStatement, blockIf.Kind, "block If statement kind");
+Equal(0, blockIfParser.Diagnostics.Count, "block If diagnostics");
+var blockIfSyntax = (IfStatementSyntax)blockIf;
+Equal(1, blockIfSyntax.ThenStatements.Count, "block If then statement count");
+Equal(1, blockIfSyntax.ElseIfClauses.Count, "block If ElseIf count");
+Equal(1, blockIfSyntax.ElseStatements.Count, "block If else statement count");
+Equal(SyntaxKind.LiteralExpression, blockIfSyntax.Condition.Kind, "block If condition kind");
+Equal(SyntaxKind.LiteralExpression, blockIfSyntax.ElseIfClauses[0].Condition.Kind, "block ElseIf condition kind");
+Equal(new TextSpan(0, blockIfSource.Length), blockIfSyntax.Span, "block If full span");
+
 var runCommandAst = new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression();
 Equal(SyntaxKind.UnaryExpression, runCommandAst.Kind, "Not RunCommand root");
 var notRunCommand = (UnaryExpressionSyntax)runCommandAst;
