@@ -55,7 +55,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         string name;
         if (syntax.Target is NameExpressionSyntax nameSyntax)
         {
-            target = Bind(nameSyntax);
+            target = null;
             name = nameSyntax.IdentifierToken.Text;
         }
         else if (syntax.Target is MemberAccessExpressionSyntax memberSyntax)
@@ -77,7 +77,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         return BindCallTarget(syntax, target, function);
     }
 
-    private BoundExpression BindCallTarget(CallExpressionSyntax syntax, BoundExpression target, FunctionSymbol function)
+    private BoundExpression BindCallTarget(CallExpressionSyntax syntax, BoundExpression? target, FunctionSymbol function)
     {
         var arguments = syntax.Arguments.Select(Bind).ToArray();
         if (arguments.Length != function.ParameterTypes.Count)
