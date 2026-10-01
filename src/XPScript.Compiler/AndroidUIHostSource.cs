@@ -195,6 +195,12 @@ public static class AndroidFormHost
             panel.Children.Add(actions);
             MainView.Current!.ShowForm(new ScrollViewer { Content = panel });
 
+            var initialFocus = request.TryGetProperty("initialFocus", out var initialFocusValue) ? initialFocusValue.GetString() ?? string.Empty : string.Empty;
+            if (initialFocus.Length > 0 && editors.TryGetValue(initialFocus, out var initialEditor) && initialEditor.IsEnabled && initialEditor.Focusable)
+                initialEditor.Focus();
+            else
+                editors.Values.FirstOrDefault(editor => editor.IsVisible && editor.IsEnabled && editor.Focusable && editor.IsTabStop)?.Focus();
+
             cancel.Click += (_, _) =>
             {
                 MainView.Current?.RestoreHome();
