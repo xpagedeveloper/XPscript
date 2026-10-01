@@ -71,6 +71,8 @@ internal static class AndroidCommand
         if (requestedPlatform is not null && requestedPlatform != detectedPlatform)
             throw new InvalidOperationException("Android --platform '" + requestedPlatform + "' does not match device ABI '" + abi + "' (" + detectedPlatform + ").");
 
+        ValidateAndroidBuildEnvironment(deviceMode == "emulator");
+
         var outputDirectory = Path.Combine(Path.GetTempPath(), "xpscript-android");
         Directory.CreateDirectory(outputDirectory);
         var apk = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(source) + "-" + platform + ".apk");
@@ -318,6 +320,57 @@ internal static class AndroidCommand
         if (fields.Length < 2)
             return (line.Trim(), "unknown", string.Empty);
         return (fields[0], fields[1], string.Join(' ', fields.Skip(2)));
+    }
+
+    private const string AndroidCompileApiLevel = "36";
+
+    private static void ValidateAndroidBuildEnvironment(bool emulatorRequired)
+    {
+        _ = ResolveAdb();
+        if (emulatorRequired)
+            _ = ResolveAndroidTool("emulator");
+
+        var sdkRoot = ResolveAndroidSdkRoot();
+        var platformJar = Path.Combine(sdkRoot, "platforms", "android-" + AndroidCompileApiLevel, "android.jar");
+        if (!File.Exists(platformJar))
+        {
+            throw new InvalidOperationException(
+                "Android SDK platform API " + AndroidCompileApiLevel + " is required to compile Android applications, " +
+                "but android.jar was not found at '" + platformJar + "'. " +
+                "Install Android SDK Platform " + AndroidCompileApiLevel + " or configure ANDROID_SDK_ROOT/ANDROID_HOME to the SDK containing it.");
+        }
+
+        var buildToolsRoot = Path.Combine(sdkRoot, "build-tools");
+        var hasBuildTools = Directory.Exists(buildToolsRoot) &&
+            Directory.EnumerateDirectories(buildToolsRoot).Any(directory =>
+                File.Exists(Path.Combine(directory, OperatingSystem.IsWindows() ? "aapt2.exe" : "aapt2")));
+        if (!hasBuildTools)
+        {
+            throw new InvalidOperationException(
+                "Android SDK Build Tools are required to compile Android applications, but no usable build-tools installation was found under '" +
+                buildToolsRoot + "'. Install Android SDK Build Tools and retry.");
+        }
+    }
+
+    private static string ResolveAndroidSdkRoot()
+    {
+        foreach (var value in new[]
+        {
+            Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT"),
+            Environment.GetEnvironmentVariable("ANDROID_HOME"),
+            OperatingSystem.IsWindows()
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Android", "Sdk")
+                : null
+        }.Where(value => !string.IsNullOrWhiteSpace(value)))
+        {
+            var root = Path.GetFullPath(value!);
+            if (Directory.Exists(Path.Combine(root, "platforms")) ||
+                Directory.Exists(Path.Combine(root, "build-tools")))
+                return root;
+        }
+
+        throw new InvalidOperationException(
+            "Android SDK was not found. Set ANDROID_SDK_ROOT or ANDROID_HOME to the Android SDK root.");
     }
 
     private static string ResolveAndroidTool(string name)
