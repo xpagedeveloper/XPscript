@@ -18,6 +18,41 @@ foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramew
     if (!project.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android generated project is missing: " + expected);
 
+
+var addAndroidUiDependencies = type.GetMethod("AddAndroidUIFormDependencies", BindingFlags.NonPublic | BindingFlags.Static)
+    ?? throw new Exception("AddAndroidUIFormDependencies was not found.");
+var uiProject = (string)(addAndroidUiDependencies.Invoke(null, new object?[] { project })
+    ?? throw new Exception("Android UIForm project dependency generation returned null."));
+foreach (var expected in new[]
+{
+    "<PackageReference Include=\"Avalonia\" Version=\"12.0.3\" />",
+    "<PackageReference Include=\"Avalonia.Android\" Version=\"12.0.3\" />",
+    "<PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"12.0.3\" />"
+})
+{
+    if (!uiProject.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android UIForm generated project is missing: " + expected);
+}
+
+var uiHostType = type.Assembly.GetType("XPScript.Compiler.AndroidUIHostSource", throwOnError: true)!;
+var uiHostCode = (string)(uiHostType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
+    ?? throw new Exception("AndroidUIHostSource.Code was not found."));
+foreach (var expected in new[]
+{
+    "AvaloniaMainActivity",
+    "AvaloniaAndroidApplication<App>",
+    "AndroidFormHost",
+    "MainView.Current",
+    "Program.Main(Array.Empty<string>())",
+    "Console.AndroidLog",
+    "XPSCRIPT-EXIT=0",
+    "XPSCRIPT-EXIT=1"
+})
+{
+    if (!uiHostCode.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android generated UIForm host is missing: " + expected);
+}
+
 var emulatorProject = (string)(method.Invoke(null, new object?[] { "android-x64", false, emptyReferences, false, false, "AndroidEmulatorSmoke" })
     ?? throw new Exception("Android emulator project generation returned null."));
 if (!emulatorProject.Contains("<TargetFramework>net10.0-android</TargetFramework>", StringComparison.Ordinal) ||
