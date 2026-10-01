@@ -46,6 +46,9 @@ public enum SyntaxKind
     NextKeyword,
     ForAllKeyword,
     InKeyword,
+    DoKeyword,
+    LoopKeyword,
+    UntilKeyword,
     NewKeyword,
     LiteralExpression,
     NameExpression,
@@ -64,5 +67,6 @@ public enum SyntaxKind
     WhileStatement,
     ForStatement,
     ForAllStatement,
+    DoStatement,
     ElseIfClause,
 }
