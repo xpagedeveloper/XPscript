@@ -164,6 +164,36 @@ Equal(SyntaxKind.LiteralExpression, blockIfSyntax.Condition.Kind, "block If cond
 Equal(SyntaxKind.LiteralExpression, blockIfSyntax.ElseIfClauses[0].Condition.Kind, "block ElseIf condition kind");
 Equal(new TextSpan(0, blockIfSource.Length), blockIfSyntax.Span, "block If full span");
 
+var openInputParser = new StatementParser("Open fileName For Input As fileNo");
+var openInput = (OpenStatementSyntax)openInputParser.ParseStatement();
+Equal(0, openInputParser.Diagnostics.Count, "Open Input diagnostics");
+Equal(SyntaxKind.NameExpression, openInput.PathExpression.Kind, "Open path expression");
+Equal(SyntaxKind.InputKeyword, openInput.ModeKeyword.Kind, "Open Input mode");
+Equal(SyntaxKind.NameExpression, openInput.FileNumberExpression.Kind, "Open file number expression");
+
+var openOutputParser = new StatementParser("Open \"output.txt\" For Output As 1");
+var openOutput = (OpenStatementSyntax)openOutputParser.ParseStatement();
+Equal(0, openOutputParser.Diagnostics.Count, "Open Output diagnostics");
+Equal(SyntaxKind.OutputKeyword, openOutput.ModeKeyword.Kind, "Open Output mode");
+Equal(SyntaxKind.LiteralExpression, openOutput.PathExpression.Kind, "Open literal path");
+
+var openBinaryParser = new StatementParser("Open fileName For Binary As fileNo");
+var openBinary = (OpenStatementSyntax)openBinaryParser.ParseStatement();
+Equal(SyntaxKind.BinaryKeyword, openBinary.ModeKeyword.Kind, "Open Binary mode");
+Equal(0, openBinaryParser.Diagnostics.Count, "Open Binary diagnostics");
+
+var closeAllParser = new StatementParser("Close");
+var closeAll = (CloseStatementSyntax)closeAllParser.ParseStatement();
+Equal(0, closeAllParser.Diagnostics.Count, "bare Close diagnostics");
+Equal(0, closeAll.FileNumbers.Count, "bare Close file count");
+
+var closeFilesParser = new StatementParser("Close 1, fileNo");
+var closeFiles = (CloseStatementSyntax)closeFilesParser.ParseStatement();
+Equal(0, closeFilesParser.Diagnostics.Count, "Close files diagnostics");
+Equal(2, closeFiles.FileNumbers.Count, "Close files count");
+Equal(SyntaxKind.LiteralExpression, closeFiles.FileNumbers[0].Kind, "Close literal file number");
+Equal(SyntaxKind.NameExpression, closeFiles.FileNumbers[1].Kind, "Close named file number");
+
 var onEventCallParser = new StatementParser("On Event SAX_StartElement From parser Call SAXStartElement");
 var onEventCall = (OnEventStatementSyntax)onEventCallParser.ParseStatement();
 Equal(0, onEventCallParser.Diagnostics.Count, "On Event Call diagnostics");
