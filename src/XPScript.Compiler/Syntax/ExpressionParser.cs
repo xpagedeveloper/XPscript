@@ -92,28 +92,6 @@ public sealed class ExpressionParser
 
     private ExpressionSyntax ParsePrimaryExpression()
     {
-        if (Current.Kind == SyntaxKind.IdentifierToken &&
-            string.Equals(Current.Text, "Array", StringComparison.OrdinalIgnoreCase) &&
-            Peek(1).Kind == SyntaxKind.OpenParenToken)
-        {
-            var arrayToken = NextToken();
-            var open = NextToken();
-            var elements = new List<ExpressionSyntax>();
-            var commas = new List<SyntaxToken>();
-            if (Current.Kind != SyntaxKind.CloseParenToken)
-            {
-                while (true)
-                {
-                    elements.Add(ParseExpression());
-                    if (Current.Kind != SyntaxKind.CommaToken)
-                        break;
-                    commas.Add(NextToken());
-                }
-            }
-            var close = Match(SyntaxKind.CloseParenToken);
-            return new ArrayExpressionSyntax(arrayToken, open, elements, commas, close);
-        }
-
         if (Current.Kind == SyntaxKind.NewKeyword)
         {
             var newKeyword = NextToken();
