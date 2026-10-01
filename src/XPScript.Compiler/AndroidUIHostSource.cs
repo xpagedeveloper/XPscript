@@ -35,6 +35,29 @@ public sealed class App : Avalonia.Application
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
 public sealed class MainActivity : AvaloniaMainActivity
 {
+    protected override void OnStart()
+    {
+        base.OnStart();
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=start");
+    }
+
+    protected override void OnResume()
+    {
+        base.OnResume();
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=resume");
+    }
+
+    protected override void OnPause()
+    {
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=pause");
+        base.OnPause();
+    }
+
+    protected override void OnStop()
+    {
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=stop");
+        base.OnStop();
+    }
 }
 
 [Application]
