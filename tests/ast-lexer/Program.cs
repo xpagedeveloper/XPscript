@@ -10,6 +10,8 @@ using XPScript.Compiler.Emission;
 using XPScript.Compiler.Binding;
 using XPScript.Compiler.Syntax;
 
+sealed class TestPerson;
+
 static void Equal<T>(T expected, T actual, string message)
 {
     if (!EqualityComparer<T>.Default.Equals(expected, actual))
@@ -284,7 +286,7 @@ Equal("items[1]", emitter.Emit(boundIndex), "bound index C# emission");
 
 var memberSymbols = new SymbolTable();
 memberSymbols.Declare(new VariableSymbol("text", typeof(string)));
-memberSymbols.Declare(new TypeSymbol("Person", typeof(object)));
+memberSymbols.Declare(new VariableSymbol("person", typeof(TestPerson)));
 memberSymbols.Declare(new FunctionSymbol("String.Substring", typeof(string), [typeof(long)]));
 var memberBinder = new ExpressionBinder(memberSymbols);
 var boundMemberCall = memberBinder.Bind(new ExpressionParser("text.Substring(1)").ParseExpression());
@@ -293,8 +295,8 @@ Equal(typeof(string), boundMemberCall.Type, "bound member call result type");
 Equal(0, memberBinder.Diagnostics.Count, "bound member call diagnostics");
 Equal("text.Substring(1)", emitter.Emit(boundMemberCall), "bound member call C# emission");
 
-memberSymbols.Declare(new PropertySymbol("Person.Name", typeof(string)));
-memberSymbols.Declare(new FunctionSymbol("Person.Describe", typeof(string), []));
+memberSymbols.Declare(new PropertySymbol("TestPerson.Name", typeof(string)));
+memberSymbols.Declare(new FunctionSymbol("TestPerson.Describe", typeof(string), []));
 
 var propertyBinder = new ExpressionBinder(memberSymbols);
 var boundProperty = propertyBinder.Bind(new ExpressionParser("person.Name").ParseExpression());
