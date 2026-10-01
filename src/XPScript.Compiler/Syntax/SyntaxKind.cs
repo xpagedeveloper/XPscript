@@ -45,5 +45,4 @@ public enum SyntaxKind
     MemberAccessExpression,
     IndexExpression,
     NewExpression,
-    ArrayExpression
 }
