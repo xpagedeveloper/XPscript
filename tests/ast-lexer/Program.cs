@@ -312,6 +312,25 @@ Equal(typeof(string), boundMethod.Type, "bound XPScript member function type");
 Equal(0, methodBinder.Diagnostics.Count, "bound XPScript member function diagnostics");
 Equal("person.Describe()", emitter.Emit(boundMethod), "bound XPScript member function C# emission");
 
+var indexedSymbols = new SymbolTable();
+indexedSymbols.Declare(new VariableSymbol("people", typeof(TestPerson[])));
+indexedSymbols.Declare(new PropertySymbol("TestPerson.Name", typeof(string)));
+indexedSymbols.Declare(new FunctionSymbol("TestPerson.Describe", typeof(string), []));
+
+var indexedPropertyBinder = new ExpressionBinder(indexedSymbols);
+var boundIndexedProperty = indexedPropertyBinder.Bind(new ExpressionParser("people[1].Name").ParseExpression());
+Equal(BoundNodeKind.MemberAccessExpression, boundIndexedProperty.Kind, "bound indexed object property root");
+Equal(typeof(string), boundIndexedProperty.Type, "bound indexed object property type");
+Equal(0, indexedPropertyBinder.Diagnostics.Count, "bound indexed object property diagnostics");
+Equal("people[1].Name", emitter.Emit(boundIndexedProperty), "bound indexed object property C# emission");
+
+var indexedMethodBinder = new ExpressionBinder(indexedSymbols);
+var boundIndexedMethod = indexedMethodBinder.Bind(new ExpressionParser("people[1].Describe()").ParseExpression());
+Equal(BoundNodeKind.CallExpression, boundIndexedMethod.Kind, "bound indexed object method root");
+Equal(typeof(string), boundIndexedMethod.Type, "bound indexed object method type");
+Equal(0, indexedMethodBinder.Diagnostics.Count, "bound indexed object method diagnostics");
+Equal("people[1].Describe()", emitter.Emit(boundIndexedMethod), "bound indexed object method C# emission");
+
 var zeroArgBinder = new ExpressionBinder(callSymbols);
 var boundZeroArg = zeroArgBinder.Bind(new ExpressionParser("Error()").ParseExpression());
 Equal(BoundNodeKind.CallExpression, boundZeroArg.Kind, "bound zero-argument call root");
