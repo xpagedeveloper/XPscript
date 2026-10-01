@@ -282,6 +282,21 @@ Equal(0, loopUntilParser.Diagnostics.Count, "Loop Until diagnostics");
 Equal(SyntaxKind.UntilKeyword, loopUntilSyntax.ConditionKeyword!.Kind, "Loop Until condition keyword");
 Equal(true, loopUntilSyntax.IsPostTest, "Loop Until is post-test");
 
+const string selectSource = "Select Case value\nCase 1\nPrint(\"one\")\nCase 2 To 10\nPrint(\"range\")\nCase Is > 10\nPrint(\"high\")\nCase Else\nPrint(\"other\")\nEnd Select";
+var selectParser = new StatementParser(selectSource);
+var selectStatement = selectParser.ParseStatement();
+Equal(SyntaxKind.SelectStatement, selectStatement.Kind, "Select statement kind");
+Equal(0, selectParser.Diagnostics.Count, "Select diagnostics");
+var selectSyntax = (SelectStatementSyntax)selectStatement;
+Equal(SyntaxKind.NameExpression, selectSyntax.Expression.Kind, "Select expression kind");
+Equal(4, selectSyntax.Cases.Count, "Select case count");
+Equal(SelectCaseKind.Value, selectSyntax.Cases[0].CaseKind, "Select value case kind");
+Equal(SelectCaseKind.Range, selectSyntax.Cases[1].CaseKind, "Select range case kind");
+Equal(SelectCaseKind.Relational, selectSyntax.Cases[2].CaseKind, "Select relational case kind");
+Equal(SelectCaseKind.Else, selectSyntax.Cases[3].CaseKind, "Select else case kind");
+Equal(1, selectSyntax.Cases[0].Statements.Count, "Select case body count");
+Equal(new TextSpan(0, selectSource.Length), selectSyntax.Span, "Select full span");
+
 var runCommandAst = new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression();
 Equal(SyntaxKind.UnaryExpression, runCommandAst.Kind, "Not RunCommand root");
 var notRunCommand = (UnaryExpressionSyntax)runCommandAst;
