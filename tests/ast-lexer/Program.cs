@@ -130,6 +130,22 @@ var parenRoot = (BinaryExpressionSyntax)parenAst;
 Equal(SyntaxKind.StarToken, parenRoot.OperatorToken.Kind, "parenthesized root operator");
 Equal(SyntaxKind.ParenthesizedExpression, parenRoot.Left.Kind, "parenthesized left kind");
 
+var singleLineIfParser = new StatementParser("If Not RunCommand(\"where.exe\", Array(\"winget\")) Then Print(\"missing\")");
+var singleLineIf = singleLineIfParser.ParseStatement();
+Equal(SyntaxKind.IfStatement, singleLineIf.Kind, "single-line If statement kind");
+Equal(0, singleLineIfParser.Diagnostics.Count, "single-line If diagnostics");
+var singleLineIfSyntax = (IfStatementSyntax)singleLineIf;
+Equal(SyntaxKind.UnaryExpression, singleLineIfSyntax.Condition.Kind, "single-line If Not condition kind");
+Equal(new TextSpan(3, 44), singleLineIfSyntax.Condition.Span, "single-line If condition span");
+Equal(SyntaxKind.ExpressionStatement, singleLineIfSyntax.ThenStatement.Kind, "single-line If body kind");
+Equal(new TextSpan(53, 16), singleLineIfSyntax.ThenStatement.Span, "single-line If body span");
+
+var comparisonIfParser = new StatementParser("If RunCommand(\"where.exe\", Array(\"winget\")) = False Then Print(\"missing\")");
+var comparisonIf = comparisonIfParser.ParseStatement();
+Equal(SyntaxKind.IfStatement, comparisonIf.Kind, "comparison If statement kind");
+Equal(0, comparisonIfParser.Diagnostics.Count, "comparison If diagnostics");
+Equal(SyntaxKind.BinaryExpression, ((IfStatementSyntax)comparisonIf).Condition.Kind, "comparison If condition kind");
+
 var runCommandAst = new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression();
 Equal(SyntaxKind.UnaryExpression, runCommandAst.Kind, "Not RunCommand root");
 var notRunCommand = (UnaryExpressionSyntax)runCommandAst;
