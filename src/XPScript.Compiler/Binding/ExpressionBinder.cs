@@ -16,6 +16,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         MemberAccessExpressionSyntax member => BindMemberAccess(member),
         IndexExpressionSyntax index => BindIndex(index),
         ArrayExpressionSyntax array => BindArray(array),
+        NewExpressionSyntax @new => BindNew(@new),
         UnaryExpressionSyntax unary => BindUnary(unary),
         BinaryExpressionSyntax binary => BindBinary(binary),
         _ => Error(syntax, $"Binding is not implemented for {syntax.Kind}.")
@@ -40,6 +41,25 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         if (_symbols.TryLookup(name, out var symbol) && symbol is VariableSymbol variable)
             return new BoundNameExpression(variable);
         return Error(syntax, $"Undefined variable '{name}'.");
+    }
+
+    private BoundExpression BindNew(NewExpressionSyntax syntax)
+    {
+        var typeName = syntax.TypeName.Text;
+        var type = Type.GetType(typeName, throwOnError: false, ignoreCase: true);
+        if (type is null)
+            return Error(syntax, $"Undefined type '{typeName}'.");
+
+        var arguments = syntax.Arguments.Select(Bind).ToArray();
+        var constructors = type.GetConstructors();
+        var constructor = constructors.FirstOrDefault(c =>
+            c.GetParameters().Length == arguments.Length &&
+            c.GetParameters().Select(p => p.ParameterType).SequenceEqual(arguments.Select(a => a.Type)));
+
+        if (constructor is null)
+            return Error(syntax, $"No matching constructor for '{typeName}'.");
+
+        return new BoundNewExpression(type, arguments);
     }
 
     private BoundExpression BindArray(ArrayExpressionSyntax syntax)
