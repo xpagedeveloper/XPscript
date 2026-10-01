@@ -159,6 +159,44 @@ Equal(SyntaxKind.LiteralExpression, blockIfSyntax.Condition.Kind, "block If cond
 Equal(SyntaxKind.LiteralExpression, blockIfSyntax.ElseIfClauses[0].Condition.Kind, "block ElseIf condition kind");
 Equal(new TextSpan(0, blockIfSource.Length), blockIfSyntax.Span, "block If full span");
 
+var onErrorGotoParser = new StatementParser("On Error GoTo ErrorHandler");
+var onErrorGoto = (OnErrorStatementSyntax)onErrorGotoParser.ParseStatement();
+Equal(0, onErrorGotoParser.Diagnostics.Count, "On Error GoTo diagnostics");
+Equal(SyntaxKind.GoToKeyword, onErrorGoto.ActionKeyword.Kind, "On Error GoTo action");
+Equal("ErrorHandler", onErrorGoto.TargetToken!.Text, "On Error GoTo target");
+
+var onErrorResumeNextParser = new StatementParser("On Error Resume Next");
+var onErrorResumeNext = (OnErrorStatementSyntax)onErrorResumeNextParser.ParseStatement();
+Equal(0, onErrorResumeNextParser.Diagnostics.Count, "On Error Resume Next diagnostics");
+Equal(SyntaxKind.ResumeKeyword, onErrorResumeNext.ActionKeyword.Kind, "On Error Resume action");
+Equal(SyntaxKind.NextKeyword, onErrorResumeNext.TargetToken!.Kind, "On Error Resume Next target");
+
+var onErrorDisableParser = new StatementParser("On Error GoTo 0");
+var onErrorDisable = (OnErrorStatementSyntax)onErrorDisableParser.ParseStatement();
+Equal(0, onErrorDisableParser.Diagnostics.Count, "On Error GoTo 0 diagnostics");
+Equal("0", onErrorDisable.TargetToken!.Text, "On Error GoTo 0 target");
+
+var resumeParser = new StatementParser("Resume");
+var resume = (ResumeStatementSyntax)resumeParser.ParseStatement();
+Equal(0, resumeParser.Diagnostics.Count, "Resume diagnostics");
+Equal(false, resume.TargetToken is not null, "bare Resume target");
+
+var resumeNextParser = new StatementParser("Resume Next");
+var resumeNext = (ResumeStatementSyntax)resumeNextParser.ParseStatement();
+Equal(SyntaxKind.NextKeyword, resumeNext.TargetToken!.Kind, "Resume Next target");
+Equal(0, resumeNextParser.Diagnostics.Count, "Resume Next diagnostics");
+
+var resumeLabelParser = new StatementParser("Resume RetryLabel");
+var resumeLabel = (ResumeStatementSyntax)resumeLabelParser.ParseStatement();
+Equal("RetryLabel", resumeLabel.TargetToken!.Text, "Resume label target");
+Equal(0, resumeLabelParser.Diagnostics.Count, "Resume label diagnostics");
+
+var errorStatementParser = new StatementParser("Error 123, \"expected-error\"");
+var errorStatement = (ErrorStatementSyntax)errorStatementParser.ParseStatement();
+Equal(0, errorStatementParser.Diagnostics.Count, "Error statement diagnostics");
+Equal(SyntaxKind.LiteralExpression, errorStatement.NumberExpression.Kind, "Error number expression");
+Equal(SyntaxKind.LiteralExpression, errorStatement.DescriptionExpression!.Kind, "Error description expression");
+
 var callStatementParser = new StatementParser("Call Sleep(1)");
 var callStatement = callStatementParser.ParseStatement();
 Equal(SyntaxKind.CallStatement, callStatement.Kind, "Call statement kind");
