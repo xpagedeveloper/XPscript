@@ -49,6 +49,9 @@ public enum SyntaxKind
     DoKeyword,
     LoopKeyword,
     UntilKeyword,
+    SelectKeyword,
+    CaseKeyword,
+    IsKeyword,
     NewKeyword,
     LiteralExpression,
     NameExpression,
@@ -68,5 +71,7 @@ public enum SyntaxKind
     ForStatement,
     ForAllStatement,
     DoStatement,
+    SelectStatement,
+    CaseClause,
     ElseIfClause,
 }
