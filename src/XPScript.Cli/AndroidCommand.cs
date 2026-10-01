@@ -84,6 +84,14 @@ internal static class AndroidCommand
         if (!File.Exists(apk)) throw new InvalidOperationException("Android compilation completed without producing the expected APK: " + apk);
 
         var install = await ExecuteAsync(adb, ["-s", serial, "install", "-r", apk]);
+        if (install.ExitCode != 0 &&
+            (install.Error + Environment.NewLine + install.Output).Contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE", StringComparison.OrdinalIgnoreCase))
+        {
+            var uninstall = await ExecuteAsync(adb, ["-s", serial, "uninstall", "com.xpscript.debugapp"]);
+            if (uninstall.ExitCode == 0)
+                install = await ExecuteAsync(adb, ["-s", serial, "install", "-r", apk]);
+        }
+
         if (install.ExitCode != 0 || !install.Output.Contains("Success", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("adb install failed for " + serial + ": " + (install.Error + Environment.NewLine + install.Output).Trim());
 
