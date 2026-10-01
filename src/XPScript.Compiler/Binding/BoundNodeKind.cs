@@ -6,6 +6,7 @@ public enum BoundNodeKind
     NameExpression,
     CallExpression,
     MemberAccessExpression,
+    IndexExpression,
     UnaryExpression,
     BinaryExpression
 }
