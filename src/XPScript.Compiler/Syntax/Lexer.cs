@@ -182,6 +182,9 @@ public sealed class Lexer
         "NEXT" => SyntaxKind.NextKeyword,
         "FORALL" => SyntaxKind.ForAllKeyword,
         "IN" => SyntaxKind.InKeyword,
+        "DO" => SyntaxKind.DoKeyword,
+        "LOOP" => SyntaxKind.LoopKeyword,
+        "UNTIL" => SyntaxKind.UntilKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
