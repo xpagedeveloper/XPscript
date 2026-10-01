@@ -187,11 +187,17 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
     }
 
     private BoundExpression Error(SyntaxNode syntax, string message) =>
-        Error(syntax, CompilerDiagnosticCodes.InvalidSyntax, message);
+        Error(syntax.Span, CompilerDiagnosticCodes.InvalidSyntax, message);
 
-    private BoundExpression Error(SyntaxNode syntax, string code, string message)
+    private BoundExpression Error(SyntaxNode syntax, string code, string message) =>
+        Error(syntax.Span, code, message);
+
+    private BoundExpression Error(SyntaxToken token, string code, string message) =>
+        Error(token.Span, code, message);
+
+    private BoundExpression Error(TextSpan span, string code, string message)
     {
-        _diagnostics.Add(new SyntaxDiagnostic(code, message, syntax.Span));
+        _diagnostics.Add(new SyntaxDiagnostic(code, message, span));
         return new BoundLiteralExpression(null, typeof(object));
     }
 }
