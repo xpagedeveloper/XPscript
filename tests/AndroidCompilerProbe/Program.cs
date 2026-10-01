@@ -27,6 +27,9 @@ if (!uiProject.Contains("<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAs
     throw new Exception("Android UIForm generated project must disable CopyLocalLockFileAssemblies to avoid duplicate AndroidX bindings.");
 if (uiProject.Contains("<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>", StringComparison.Ordinal))
     throw new Exception("Android UIForm generated project still enables CopyLocalLockFileAssemblies.");
+if (uiProject.Contains("<PackageReference Include=\"Avalonia\" ", StringComparison.Ordinal))
+    throw new Exception("Android UIForm generated project must use Avalonia.Android as the root Avalonia dependency.");
+
 if (uiProject.Contains("<SelfContained>", StringComparison.Ordinal))
     throw new Exception("Android UIForm generated project must not override Avalonia Android SelfContained behavior.");
 if (uiProject.Contains("<UseAppHost>", StringComparison.Ordinal))
@@ -34,7 +37,6 @@ if (uiProject.Contains("<UseAppHost>", StringComparison.Ordinal))
 
 foreach (var expected in new[]
 {
-    "<PackageReference Include=\"Avalonia\" Version=\"12.0.3\" />",
     "<PackageReference Include=\"Avalonia.Android\" Version=\"12.0.3\" />",
     "<PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"12.0.3\" />"
 })
