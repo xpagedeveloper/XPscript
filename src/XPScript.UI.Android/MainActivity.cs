@@ -1,5 +1,6 @@
 using Android.App;
 using Android.Content.PM;
+using Android.Util;
 using Avalonia.Android;
 
 namespace XPScript.UI.Android;
@@ -10,6 +11,29 @@ namespace XPScript.UI.Android;
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
 public sealed class MainActivity : AvaloniaMainActivity
 {
+    protected override void OnStart()
+    {
+        base.OnStart();
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=start");
+    }
+
+    protected override void OnResume()
+    {
+        base.OnResume();
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=resume");
+    }
+
+    protected override void OnPause()
+    {
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=pause");
+        base.OnPause();
+    }
+
+    protected override void OnStop()
+    {
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=stop");
+        base.OnStop();
+    }
 }
 
 [Application]
