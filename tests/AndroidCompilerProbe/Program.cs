@@ -50,6 +50,12 @@ var uiHostCode = (string)(uiHostType.GetField("Code", BindingFlags.Public | Bind
     ?? throw new Exception("AndroidUIHostSource.Code was not found."));
 foreach (var expected in new[]
 {
+    "public sealed class App : Avalonia.Application",
+    "public class AndroidApp : AvaloniaAndroidApplication<App>",
+    "global::Android.Runtime.JniHandleOwnership",
+    "new Avalonia.Controls.CheckBox()",
+    "Avalonia.Layout.Orientation.Horizontal",
+    "new Avalonia.Controls.Button",
     "AvaloniaMainActivity",
     "AvaloniaAndroidApplication<App>",
     "AndroidFormHost",
