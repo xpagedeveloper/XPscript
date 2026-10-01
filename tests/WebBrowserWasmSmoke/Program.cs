@@ -327,7 +327,7 @@ Sub DownloadArchive()
     archive.AddText("payload.txt", "server")
     Dim data As Variant
     data = archive.ToBytes()
-    Response.SendFile(data, "server.zip", "application/zip", False)
+    Call archive.SendToBrowser("server.zip")
 End Sub
 
 Sub Main()
