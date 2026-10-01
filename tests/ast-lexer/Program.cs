@@ -312,8 +312,8 @@ Equal("person.Describe()", emitter.Emit(boundMethod), "bound XPScript member fun
 
 var indexedSymbols = new SymbolTable();
 indexedSymbols.Declare(new VariableSymbol("people", typeof(object[])));
-indexedSymbols.Declare(new PropertySymbol("TestPerson.Name", typeof(string)));
-indexedSymbols.Declare(new FunctionSymbol("TestPerson.Describe", typeof(string), []));
+indexedSymbols.Declare(new PropertySymbol("Object.Name", typeof(string)));
+indexedSymbols.Declare(new FunctionSymbol("Object.Describe", typeof(string), []));
 
 var indexedPropertyBinder = new ExpressionBinder(indexedSymbols);
 var boundIndexedProperty = indexedPropertyBinder.Bind(new ExpressionParser("people[1].Name").ParseExpression());
