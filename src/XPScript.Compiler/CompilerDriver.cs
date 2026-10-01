@@ -237,7 +237,11 @@ public sealed class CompilerDriver
             psi.ArgumentList.Add("publish"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(publishDir); psi.ArgumentList.Add("--nologo");
             psi.ArgumentList.Add("-r"); psi.ArgumentList.Add(rid);
-            psi.ArgumentList.Add("--self-contained"); psi.ArgumentList.Add(selfContained ? "true" : "false");
+            if (!usesAndroidUIForm)
+            {
+                psi.ArgumentList.Add("--self-contained");
+                psi.ArgumentList.Add(selfContained ? "true" : "false");
+            }
             CompilerBuildEnvironment.Configure(psi, tempRoot);
 
             using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start dotnet publish.");
