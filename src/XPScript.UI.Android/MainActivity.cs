@@ -13,11 +13,11 @@ public sealed class MainActivity : AvaloniaMainActivity
 }
 
 [Application]
-public sealed class AndroidApp : AvaloniaAndroidApplication<App>
+public class AndroidApp : AvaloniaAndroidApplication<App>
 {
     protected AndroidApp(
         nint javaReference,
-        Android.Runtime.JniHandleOwnership transfer)
+        global::Android.Runtime.JniHandleOwnership transfer)
         : base(javaReference, transfer)
     {
     }
