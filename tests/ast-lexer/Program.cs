@@ -248,6 +248,40 @@ Equal(1, forAllSyntax.Statements.Count, "ForAll body statement count");
 Equal(SyntaxKind.AssignmentStatement, forAllSyntax.Statements[0].Kind, "ForAll body assignment kind");
 Equal(new TextSpan(0, forAllSource.Length), forAllSyntax.Span, "ForAll full span");
 
+const string doWhileSource = "Do While True\ncount = count + 1\nLoop";
+var doWhileParser = new StatementParser(doWhileSource);
+var doWhileStatement = doWhileParser.ParseStatement();
+Equal(SyntaxKind.DoStatement, doWhileStatement.Kind, "Do While statement kind");
+Equal(0, doWhileParser.Diagnostics.Count, "Do While diagnostics");
+var doWhileSyntax = (DoStatementSyntax)doWhileStatement;
+Equal(SyntaxKind.WhileKeyword, doWhileSyntax.ConditionKeyword!.Kind, "Do While condition keyword");
+Equal(false, doWhileSyntax.IsPostTest, "Do While is pre-test");
+Equal(SyntaxKind.LiteralExpression, doWhileSyntax.Condition!.Kind, "Do While condition kind");
+Equal(1, doWhileSyntax.Statements.Count, "Do While body statement count");
+Equal(new TextSpan(0, doWhileSource.Length), doWhileSyntax.Span, "Do While full span");
+
+const string doUntilSource = "Do Until False\ncount = count + 1\nLoop";
+var doUntilParser = new StatementParser(doUntilSource);
+var doUntilSyntax = (DoStatementSyntax)doUntilParser.ParseStatement();
+Equal(0, doUntilParser.Diagnostics.Count, "Do Until diagnostics");
+Equal(SyntaxKind.UntilKeyword, doUntilSyntax.ConditionKeyword!.Kind, "Do Until condition keyword");
+Equal(false, doUntilSyntax.IsPostTest, "Do Until is pre-test");
+
+const string loopWhileSource = "Do\ncount = count + 1\nLoop While True";
+var loopWhileParser = new StatementParser(loopWhileSource);
+var loopWhileSyntax = (DoStatementSyntax)loopWhileParser.ParseStatement();
+Equal(0, loopWhileParser.Diagnostics.Count, "Loop While diagnostics");
+Equal(SyntaxKind.WhileKeyword, loopWhileSyntax.ConditionKeyword!.Kind, "Loop While condition keyword");
+Equal(true, loopWhileSyntax.IsPostTest, "Loop While is post-test");
+Equal(SyntaxKind.LiteralExpression, loopWhileSyntax.Condition!.Kind, "Loop While condition kind");
+
+const string loopUntilSource = "Do\ncount = count + 1\nLoop Until False";
+var loopUntilParser = new StatementParser(loopUntilSource);
+var loopUntilSyntax = (DoStatementSyntax)loopUntilParser.ParseStatement();
+Equal(0, loopUntilParser.Diagnostics.Count, "Loop Until diagnostics");
+Equal(SyntaxKind.UntilKeyword, loopUntilSyntax.ConditionKeyword!.Kind, "Loop Until condition keyword");
+Equal(true, loopUntilSyntax.IsPostTest, "Loop Until is post-test");
+
 var runCommandAst = new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression();
 Equal(SyntaxKind.UnaryExpression, runCommandAst.Kind, "Not RunCommand root");
 var notRunCommand = (UnaryExpressionSyntax)runCommandAst;
