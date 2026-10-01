@@ -164,6 +164,11 @@ Equal(SyntaxKind.LiteralExpression, blockIfSyntax.Condition.Kind, "block If cond
 Equal(SyntaxKind.LiteralExpression, blockIfSyntax.ElseIfClauses[0].Condition.Kind, "block ElseIf condition kind");
 Equal(new TextSpan(0, blockIfSource.Length), blockIfSyntax.Span, "block If full span");
 
+var fileKeywordMemberRegression = new ExpressionParser("obj.Open").ParseExpression();
+Equal(SyntaxKind.MemberAccessExpression, fileKeywordMemberRegression.Kind, "file statement keywords remain valid member names");
+var fileKeywordCallRegression = new ExpressionParser("Open()").ParseExpression();
+Equal(SyntaxKind.CallExpression, fileKeywordCallRegression.Kind, "Open remains a valid expression call");
+
 var openInputParser = new StatementParser("Open fileName For Input As fileNo");
 var openInput = (OpenStatementSyntax)openInputParser.ParseStatement();
 Equal(0, openInputParser.Diagnostics.Count, "Open Input diagnostics");
