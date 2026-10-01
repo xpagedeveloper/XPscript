@@ -164,6 +164,12 @@ internal static class Program
                 Console.Error.WriteLine(ex.ToString());
             else
                 Console.Error.WriteLine("error: " + ex.Message);
+
+            var runtimeSource = XPSourceLineRuntime.CurrentSource;
+            var runtimeLine = XPSourceLineRuntime.Current;
+            if (!string.IsNullOrWhiteSpace(runtimeSource) && runtimeLine > 0)
+                Console.Error.WriteLine("at " + runtimeSource + ":" + runtimeLine.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
             Environment.ExitCode = 1;
         }
         finally
