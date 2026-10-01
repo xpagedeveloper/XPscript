@@ -748,6 +748,8 @@ public sealed class CompilerDriver
     private static string AddAndroidUIFormDependencies(string project)
     {
         project = project.Replace("<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>", "<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>", StringComparison.Ordinal);
+        project = project.Replace("    <SelfContained>false</SelfContained>" + Environment.NewLine, string.Empty, StringComparison.Ordinal);
+        project = project.Replace("    <UseAppHost>true</UseAppHost>" + Environment.NewLine, string.Empty, StringComparison.Ordinal);
 
         const string packages = """
   <ItemGroup>
