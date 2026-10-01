@@ -75,8 +75,8 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Detect missing, unauthorized, offline or ambiguous devices before install/device-required operations.
 - [x] Define project metadata for Android target and application type.
 - [x] Keep console/headless and Avalonia UI selection explicit and deterministic.
-- [ ] Add an Android app template to `xpscript create` when the runtime path is stable.
-- [ ] Compile generated Android templates in automated create-template regression coverage.
+- [x] Add an Android app template to `xpscript new` when the runtime path is stable.
+- [x] Compile generated Android templates in automated `xpscript new android` regression coverage.
 
 ## Stage 3: UIForm on Android with Avalonia
 
