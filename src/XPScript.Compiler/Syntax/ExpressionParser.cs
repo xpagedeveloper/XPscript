@@ -16,7 +16,13 @@ public sealed class ExpressionParser
 
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
-    public ExpressionSyntax ParseExpression() => ParseBinaryExpression();
+    public ExpressionSyntax ParseExpression()
+    {
+        var expression = ParseBinaryExpression();
+        if (Current.Kind != SyntaxKind.EndOfFileToken)
+            _diagnostics.Add(new SyntaxDiagnostic("XPS1012", $"Unexpected token {Current.Kind} after expression.", Current.Span));
+        return expression;
+    }
 
     private ExpressionSyntax ParseBinaryExpression(int parentPrecedence = 0)
     {
@@ -63,7 +69,7 @@ public sealed class ExpressionParser
             if (Current.Kind == SyntaxKind.OpenBracketToken)
             {
                 var openBracket = NextToken();
-                var index = ParseExpression();
+                var index = ParseBinaryExpression();
                 var closeBracket = Match(SyntaxKind.CloseBracketToken);
                 expression = new IndexExpressionSyntax(expression, openBracket, index, closeBracket);
                 continue;
@@ -77,7 +83,7 @@ public sealed class ExpressionParser
             {
                 while (true)
                 {
-                    arguments.Add(ParseExpression());
+                    arguments.Add(ParseBinaryExpression());
                     if (Current.Kind != SyntaxKind.CommaToken)
                         break;
                     commas.Add(NextToken());
