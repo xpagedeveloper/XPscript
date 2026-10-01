@@ -182,6 +182,28 @@ var setSyntax = (SetStatementSyntax)setStatement;
 Equal(SyntaxKind.NameExpression, setSyntax.Target.Kind, "Set target kind");
 Equal(SyntaxKind.NewExpression, setSyntax.Expression.Kind, "Set value kind");
 
+var dimParser = new StatementParser("Dim count");
+var dimStatement = dimParser.ParseStatement();
+Equal(SyntaxKind.DimStatement, dimStatement.Kind, "Dim statement kind");
+Equal(0, dimParser.Diagnostics.Count, "Dim diagnostics");
+var dimSyntax = (DimStatementSyntax)dimStatement;
+Equal("count", dimSyntax.IdentifierToken.Text, "Dim identifier");
+Equal(false, dimSyntax.AsKeyword is not null, "Dim without type has no As");
+Equal(false, dimSyntax.Initializer is not null, "Dim without initializer");
+
+var typedDimParser = new StatementParser("Dim name As String");
+var typedDimStatement = (DimStatementSyntax)typedDimParser.ParseStatement();
+Equal(0, typedDimParser.Diagnostics.Count, "typed Dim diagnostics");
+Equal("String", typedDimStatement.TypeNameToken!.Text, "typed Dim type name");
+Equal(new TextSpan(0, 18), typedDimStatement.Span, "typed Dim full span");
+
+var initializedDimParser = new StatementParser("Dim total As Integer = 1 + 2");
+var initializedDimStatement = (DimStatementSyntax)initializedDimParser.ParseStatement();
+Equal(0, initializedDimParser.Diagnostics.Count, "initialized Dim diagnostics");
+Equal("Integer", initializedDimStatement.TypeNameToken!.Text, "initialized Dim type");
+Equal(SyntaxKind.BinaryExpression, initializedDimStatement.Initializer!.Kind, "initialized Dim expression kind");
+Equal(new TextSpan(0, 28), initializedDimStatement.Span, "initialized Dim full span");
+
 var runCommandAst = new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression();
 Equal(SyntaxKind.UnaryExpression, runCommandAst.Kind, "Not RunCommand root");
 var notRunCommand = (UnaryExpressionSyntax)runCommandAst;
