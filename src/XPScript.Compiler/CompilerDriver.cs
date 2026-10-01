@@ -747,6 +747,8 @@ public sealed class CompilerDriver
 
     private static string AddAndroidUIFormDependencies(string project)
     {
+        project = project.Replace("<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>", "<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>", StringComparison.Ordinal);
+
         const string packages = """
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.3" />
