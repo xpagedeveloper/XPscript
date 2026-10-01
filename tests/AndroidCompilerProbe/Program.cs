@@ -27,6 +27,10 @@ if (!uiProject.Contains("<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAs
     throw new Exception("Android UIForm generated project must disable CopyLocalLockFileAssemblies to avoid duplicate AndroidX bindings.");
 if (uiProject.Contains("<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>", StringComparison.Ordinal))
     throw new Exception("Android UIForm generated project still enables CopyLocalLockFileAssemblies.");
+if (uiProject.Contains("<SelfContained>", StringComparison.Ordinal))
+    throw new Exception("Android UIForm generated project must not override Avalonia Android SelfContained behavior.");
+if (uiProject.Contains("<UseAppHost>", StringComparison.Ordinal))
+    throw new Exception("Android UIForm generated project must not enable desktop app-host generation.");
 
 foreach (var expected in new[]
 {
