@@ -1,0 +1,52 @@
+name: Temporary Application.Debug Cross Platform
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  application-debug-cross-platform:
+    name: Application.Debug runtime (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Compile runtime probe
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ./tests/ApplicationDebugCrossPlatformTemp/application-debug-runtime.xps --runtime=false -o ./out/application-debug-temp
+          if ($LASTEXITCODE -ne 0) { throw "Compilation failed." }
+      - name: Verify disabled and enabled runtime behavior
+        shell: pwsh
+        run: |
+          $exe = if ($IsWindows) { './out/application-debug-temp.exe' } else { './out/application-debug-temp' }
+          $disabledOut = Join-Path $env:RUNNER_TEMP 'disabled-out.txt'
+          $disabledErr = Join-Path $env:RUNNER_TEMP 'disabled-err.txt'
+          $disabled = Start-Process -FilePath $exe -NoNewWindow -Wait -PassThru -RedirectStandardOutput $disabledOut -RedirectStandardError $disabledErr
+          $disabledText = (Get-Content $disabledOut -Raw) + (Get-Content $disabledErr -Raw)
+          Write-Host $disabledText
+          if ($disabled.ExitCode -ne 0) { throw "Disabled run failed." }
+          if ($disabledText -notmatch 'APP-RUNNING' -or $disabledText -notmatch 'APP-COMPLETE') { throw "Disabled run did not complete." }
+          if ($disabledText -match 'XPScript: (DEBUG|INFO|WARN|ERROR):') { throw "Debug output was emitted while disabled." }
+
+          $enabledOut = Join-Path $env:RUNNER_TEMP 'enabled-out.txt'
+          $enabledErr = Join-Path $env:RUNNER_TEMP 'enabled-err.txt'
+          $enabled = Start-Process -FilePath $exe -ArgumentList '--appdebug' -NoNewWindow -Wait -PassThru -RedirectStandardOutput $enabledOut -RedirectStandardError $enabledErr
+          $enabledText = (Get-Content $enabledOut -Raw) + (Get-Content $enabledErr -Raw)
+          Write-Host $enabledText
+          if ($enabled.ExitCode -ne 0) { throw "Enabled run failed." }
+          if ($enabledText -notmatch 'APP-COMPLETE') { throw "Enabled run did not complete." }
+          foreach ($expected in @('XPScript: DEBUG: print','XPScript: DEBUG: write','XPScript: INFO: info','XPScript: WARN: warning','XPScript: ERROR: error')) {
+            if ($enabledText -notmatch [regex]::Escape($expected)) { throw "Missing enabled debug output: $expected" }
+          }
