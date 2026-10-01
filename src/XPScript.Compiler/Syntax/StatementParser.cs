@@ -52,6 +52,10 @@ public sealed class StatementParser
             return ParseSelectStatement();
         if (Current.Kind == SyntaxKind.CallKeyword)
             return ParseCallStatement();
+        if (Current.Kind == SyntaxKind.OpenKeyword)
+            return ParseOpenStatement();
+        if (Current.Kind == SyntaxKind.CloseKeyword)
+            return ParseCloseStatement();
         if (Current.Kind == SyntaxKind.OnKeyword && PeekKind(1) == SyntaxKind.EventKeyword)
             return ParseOnEventStatement();
         if (Current.Kind == SyntaxKind.OnKeyword)
@@ -755,6 +759,43 @@ public sealed class StatementParser
         var commaToken = NextToken();
         var descriptionExpression = ParseExpressionUntilLineEnd();
         return new ErrorStatementSyntax(errorKeyword, numberExpression, commaToken, descriptionExpression);
+    }
+
+    private StatementSyntax ParseOpenStatement()
+    {
+        var openKeyword = NextToken();
+        var forIndex = FindTokenOnCurrentLine(SyntaxKind.ForKeyword);
+        if (forIndex < 0)
+            return new OpenStatementSyntax(openKeyword, ParseExpressionUntilLineEnd(),
+                Match(SyntaxKind.ForKeyword), Match(SyntaxKind.InputKeyword),
+                Match(SyntaxKind.AsKeyword), ParseExpressionUntilLineEnd());
+
+        var path = ParseExpressionRange(_position, forIndex, _tokens[forIndex].Span.Start);
+        _position = forIndex;
+        var forKeyword = NextToken();
+        var modeKeyword = Current.Kind is SyntaxKind.InputKeyword or SyntaxKind.OutputKeyword
+            or SyntaxKind.AppendKeyword or SyntaxKind.BinaryKeyword or SyntaxKind.RandomKeyword
+            ? NextToken()
+            : Match(SyntaxKind.InputKeyword);
+        var asKeyword = Match(SyntaxKind.AsKeyword);
+        var fileNumber = ParseExpressionUntilLineEnd();
+        return new OpenStatementSyntax(openKeyword, path, forKeyword, modeKeyword, asKeyword, fileNumber);
+    }
+
+    private StatementSyntax ParseCloseStatement()
+    {
+        var closeKeyword = NextToken();
+        var fileNumbers = new List<ExpressionSyntax>();
+        while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
+        {
+            var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
+            var end = commaIndex >= 0 ? commaIndex : FindLineEndIndex(_position);
+            fileNumbers.Add(ParseExpressionRange(_position, end, _tokens[end].Span.Start));
+            _position = end;
+            if (Current.Kind == SyntaxKind.CommaToken)
+                NextToken();
+        }
+        return new CloseStatementSyntax(closeKeyword, fileNumbers);
     }
 
     private StatementSyntax ParseCallStatement()
