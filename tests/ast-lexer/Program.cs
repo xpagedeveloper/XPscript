@@ -236,6 +236,20 @@ Equal("(1 + (2 * 3))", emitter.Emit(boundArithmetic), "bound arithmetic C# emiss
 Equal("(10.5 + 2.25)", emitter.Emit(boundDecimal), "bound decimal C# emission");
 
 var comparisonBinder = new ExpressionBinder();
+var boundComparison = comparisonBinder.Bind(new ExpressionParser("10.5 >= 2.25").ParseExpression());
+Equal(BoundNodeKind.BinaryExpression, boundComparison.Kind, "bound comparison root");
+Equal(typeof(bool), boundComparison.Type, "bound comparison type");
+Equal(0, comparisonBinder.Diagnostics.Count, "bound comparison diagnostics");
+Equal("(10.5 >= 2.25)", emitter.Emit(boundComparison), "bound comparison C# emission");
+
+var concatBinder = new ExpressionBinder();
+var boundConcat = concatBinder.Bind(new ExpressionParser("\"XP\" & \"Script\"").ParseExpression());
+Equal(BoundNodeKind.BinaryExpression, boundConcat.Kind, "bound concat root");
+Equal(typeof(string), boundConcat.Type, "bound concat type");
+Equal(0, concatBinder.Diagnostics.Count, "bound concat diagnostics");
+Equal("(\"XP\" + \"Script\")", emitter.Emit(boundConcat), "bound concat C# emission");
+
+var comparisonBinder = new ExpressionBinder();
 var boundComparison = comparisonBinder.Bind(new ExpressionParser("1 + 2 = 3").ParseExpression());
 Equal("((1 + 2) == 3)", emitter.Emit(boundComparison), "bound comparison C# emission");
 Equal(0, comparisonBinder.Diagnostics.Count, "bound comparison diagnostics");
@@ -314,6 +328,8 @@ void EqualLegacyAst(string source, string label)
 EqualLegacyAst("Not False Or True", "boolean precedence");
 EqualLegacyAst("1 + 2 * 3", "arithmetic precedence");
 EqualLegacyAst("10.5 + 2.25", "decimal arithmetic");
+EqualLegacyAst("10.5 >= 2.25", "numeric comparison");
+EqualLegacyAst("\"XP\" & \"Script\"", "string concatenation");
 EqualLegacyAst("1 + 2 = 3", "comparison precedence");
 EqualLegacyAst("True And False Or True", "boolean associativity");
 
