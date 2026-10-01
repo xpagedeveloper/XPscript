@@ -1137,6 +1137,9 @@ internal static class LSForAllRuntime
             }
         }
 
+        // XPscript uses '&' for concatenation. Convert it before lowering logical And
+        // so the generated C# '&&' operator is never rewritten to '++'.
+        text = text.Replace("&", "+", StringComparison.Ordinal);
         text = Regex.Replace(text, @"\bAnd\b", "&&", RegexOptions.IgnoreCase);
         text = Regex.Replace(text, @"\bOr\b", "||", RegexOptions.IgnoreCase);
         text = Regex.Replace(text, @"\bNot\b", "!", RegexOptions.IgnoreCase);
@@ -1144,7 +1147,6 @@ internal static class LSForAllRuntime
         text = Regex.Replace(text, @"\bTrue\b", "true", RegexOptions.IgnoreCase);
         text = Regex.Replace(text, @"\bFalse\b", "false", RegexOptions.IgnoreCase);
         text = Regex.Replace(text, @"\bNothing\b", "null", RegexOptions.IgnoreCase);
-        text = text.Replace("&", "+", StringComparison.Ordinal);
 
         foreach (var fn in RuntimeFunctions)
         {
