@@ -7,8 +7,8 @@ internal static class XpsScaffolder
             throw new ArgumentException("Usage: xpscript new <rest|web|desktop|cli> <directory|file.xps>. The target is required; use '.' for the current directory.");
 
         var kind = args[0].Trim().ToLowerInvariant();
-        if (kind is not ("rest" or "web" or "desktop" or "cli"))
-            throw new ArgumentException("Project type must be rest, web, desktop or cli.");
+        if (kind is not ("rest" or "web" or "desktop" or "cli" or "android"))
+            throw new ArgumentException("Project type must be rest, web, desktop, cli or android.");
 
         var suppliedTarget = args[1].Trim();
         if (suppliedTarget.Length == 0)
@@ -35,12 +35,21 @@ internal static class XpsScaffolder
             "web" => (WebTemplate, $"xpscript web {QuoteForDisplay(targetDirectory)}"),
             "desktop" => (DesktopTemplate, $"xpscript run {QuoteForDisplay(outputPath)}"),
             "cli" => (CliTemplate, $"xpscript run {QuoteForDisplay(outputPath)} --Args \"argument1 argument2\""),
+            "android" => (AndroidTemplate, $"xpscript android run {QuoteForDisplay(outputPath)}"),
             _ => throw new InvalidOperationException("Unsupported scaffold type.")
         };
         if (File.Exists(outputPath))
             throw new IOException("Refusing to overwrite existing file: " + outputPath);
 
         File.WriteAllText(outputPath, content);
+
+        if (kind == "android")
+        {
+            var configPath = Path.Combine(targetDirectory, "xpscript.json");
+            if (File.Exists(configPath))
+                throw new IOException("Refusing to overwrite existing file: " + configPath);
+            File.WriteAllText(configPath, AndroidProjectConfig);
+        }
 
         Console.WriteLine($"Created {kind} scaffold: {outputPath}");
         Console.WriteLine();
@@ -88,6 +97,20 @@ Sub Main()
 
     Application.ExitCode = 0
 End Sub
+""";
+
+    private const string AndroidTemplate = """
+Sub Main()
+    Print "Hello from XPScript on Android"
+    Application.ExitCode = 0
+End Sub
+""";
+
+    private const string AndroidProjectConfig = """
+{
+  "target": "android",
+  "applicationType": "headless"
+}
 """;
 
     private const string DesktopTemplate = """
