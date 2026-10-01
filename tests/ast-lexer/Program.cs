@@ -235,6 +235,13 @@ Equal("((!false) || true)", emitter.Emit(boundBoolean), "bound boolean C# emissi
 Equal("(1 + (2 * 3))", emitter.Emit(boundArithmetic), "bound arithmetic C# emission");
 Equal("(10.5 + 2.25)", emitter.Emit(boundDecimal), "bound decimal C# emission");
 
+var parenthesizedBinder = new ExpressionBinder();
+var boundParenthesized = parenthesizedBinder.Bind(new ExpressionParser("(1 + 2) * 3").ParseExpression());
+Equal(BoundNodeKind.BinaryExpression, boundParenthesized.Kind, "bound parenthesized arithmetic root");
+Equal(typeof(long), boundParenthesized.Type, "bound parenthesized arithmetic type");
+Equal(0, parenthesizedBinder.Diagnostics.Count, "bound parenthesized arithmetic diagnostics");
+Equal("((1 + 2) * 3)", emitter.Emit(boundParenthesized), "bound parenthesized arithmetic C# emission");
+
 var comparisonBinder = new ExpressionBinder();
 var boundComparison = comparisonBinder.Bind(new ExpressionParser("10.5 >= 2.25").ParseExpression());
 Equal(BoundNodeKind.BinaryExpression, boundComparison.Kind, "bound comparison root");
