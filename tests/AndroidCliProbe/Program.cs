@@ -70,3 +70,16 @@ foreach (var expected in new[]
     if (!androidCommand.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android emulator selection regression is missing: " + expected);
 }
+
+
+foreach (var expected in new[]
+{
+    "var debug = false;",
+    "args[i] == \"--debug\"",
+    "debug ? new[] { \"--debug\" }",
+    "[--debug]"
+})
+{
+    if (!androidCommand.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android --debug regression is missing: " + expected);
+}
