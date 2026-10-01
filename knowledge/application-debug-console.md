@@ -6,7 +6,11 @@ XPScript should distinguish the compiler's internal `--debug` option from applic
 
 Use `--appdebug` for application debug output.
 
-`--debug` remains the internal compiler/CLI diagnostic switch and must not be overloaded for application behavior.
+`--debug` remains the internal compiler/CLI diagnostic switch, but it also enables application debug output as a one-way compatibility mirror.
+
+The effective application debug state is enabled when either `--appdebug` or `--debug` is present.
+
+`--debug` must not be enabled by `Application.Debug` or by `--appdebug`.
 
 ## XPScript API
 
