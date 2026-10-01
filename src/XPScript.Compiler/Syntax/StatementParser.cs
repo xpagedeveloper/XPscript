@@ -50,6 +50,8 @@ public sealed class StatementParser
             return ParseDoStatement();
         if (Current.Kind == SyntaxKind.SelectKeyword)
             return ParseSelectStatement();
+        if (Current.Kind == SyntaxKind.CallKeyword)
+            return ParseCallStatement();
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
@@ -661,6 +663,13 @@ public sealed class StatementParser
             "XPS1012",
             $"Expected newline after {context}.",
             new TextSpan(Current.Span.Start, 0)));
+    }
+
+    private StatementSyntax ParseCallStatement()
+    {
+        var callKeyword = NextToken();
+        var expression = ParseExpressionUntilLineEnd();
+        return new CallStatementSyntax(callKeyword, expression);
     }
 
     private StatementSyntax ParseExpressionStatement() =>
