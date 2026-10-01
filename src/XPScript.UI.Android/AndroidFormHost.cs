@@ -66,6 +66,26 @@ public static class AndroidFormHost
                 Spacing = 12
             };
 
+            if (request.TryGetProperty("buttons", out var buttonArray) && buttonArray.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var buttonValue in buttonArray.EnumerateArray())
+                {
+                    if (buttonValue.TryGetProperty("visible", out var visible) && visible.ValueKind == JsonValueKind.False)
+                        continue;
+                    var buttonName = buttonValue.GetProperty("name").GetString() ?? string.Empty;
+                    var buttonLabel = buttonValue.TryGetProperty("label", out var buttonLabelValue) ? buttonLabelValue.GetString() ?? buttonName : buttonName;
+                    var actionButton = new Avalonia.Controls.Button { Content = buttonLabel, MinWidth = 100 };
+                    actionButton.IsEnabled = !buttonValue.TryGetProperty("enabled", out var buttonEnabled) || buttonEnabled.ValueKind != JsonValueKind.False;
+                    actionButton.Click += (_, _) =>
+                    {
+                        if (eventCallback is null) return;
+                        var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
+                        eventCallback("button:" + buttonName, submittedValues);
+                    };
+                    actions.Children.Add(actionButton);
+                }
+            }
+
             var cancel = new Avalonia.Controls.Button { Content = "Cancel", MinWidth = 100 };
             var ok = new Avalonia.Controls.Button { Content = "OK", MinWidth = 100 };
             actions.Children.Add(cancel);
