@@ -107,6 +107,10 @@ internal static class XPScriptUIDesktopAdapter
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
                 minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, options = field.Options,
                 webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground
+            }).ToArray(),
+            buttons = form.Buttons.Select(button => new
+            {
+                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style
             }).ToArray()
         };
 
