@@ -3,6 +3,9 @@ var source = File.ReadAllText(Path.Combine(root, "src", "XPScript.Cli", "Android
 
 foreach (var expected in new[]
 {
+    "--platform",
+    "android-arm64",
+    "android-x64",
     "XPSCRIPT_ADB",
     "XPSCRIPT-EXIT=0",
     "XPSCRIPT-EXIT=1",
