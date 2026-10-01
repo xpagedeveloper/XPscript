@@ -85,7 +85,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 Reuse the existing shared UIForm model. Android should add a platform backend, not fork the XPScript UI API.
 
 - [x] Review the current Avalonia desktop host boundaries and identify the smallest reusable shared UI layer. Documented in `knowledge/android-uiform-architecture.md`: `XPScriptUIForm` remains platform-neutral, while Android gets a separate adapter and host.
-- [ ] Add Avalonia Android dependencies as a synchronized compatibility group with the existing Avalonia dependency policy.
+- [x] Add Avalonia Android dependencies as a synchronized compatibility group with the existing Avalonia dependency policy. Added `src/XPScript.UI.Android` using Avalonia/Avalonia.Android/Avalonia.Themes.Fluent 12.0.3, matching the existing desktop Avalonia core/theme versions. CI builds the dependency layer after installing the Android workload.
 - [ ] Create the minimal Avalonia Android host.
 - [ ] Connect the existing XPScript UIForm runtime to the Android Avalonia host.
 - [ ] Render a minimal UIForm containing a text field, label and button.
