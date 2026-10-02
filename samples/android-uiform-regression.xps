@@ -1,5 +1,3 @@
-# Android UIForm regression sample
-
 Sub Main()
     Dim data As New XPJsonObject
     Dim form As New UIForm("Android UIForm Regression")
