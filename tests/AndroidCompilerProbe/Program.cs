@@ -69,6 +69,7 @@ foreach (var expected in new[]
     "var validationErrors = new Dictionary<string, TextBlock>",
     "validationErrors[name] = validationBlock;",
     "validationBlock.IsVisible = validationError.Length > 0;",
+    "if (validationError.Length == 0 && field.TryGetProperty(\"value\"",
     "UIForm button '\" + buttonName + \"' callback failed:",
     "catch (Exception exception)",
     "actions.Children.Add(actionButton);",
@@ -135,6 +136,8 @@ foreach (var expected in new[]
     "ApplySubmittedStateJson(submittedValue);",
     "catch (XPScriptRuntimeException)",
     "return SerializeActionState();",
+    "if (!IsDataValid)",
+    "field.ValidationError = exception.Message;",
     "ApplySubmittedValue(field, submitted);",
     "ApplySubmittedValues(field, submittedValues);"
 })
