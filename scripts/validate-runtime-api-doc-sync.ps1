@@ -46,7 +46,7 @@ function Get-ChangedDeclarationKeys {
                 $lineNumber = $newLine
                 $newLine++
 
-                $classMatch = [regex]::Match($text, '\bclass\s+XPScript([A-Za-z_][A-Za-z0-9_]*)\b')
+                $classMatch = [regex]::Match($text, '^\s*(?:(?:public|internal|private|protected|static|sealed|abstract|partial)\s+)*class\s+XPScript([A-Za-z_][A-Za-z0-9_]*)\b')
                 if ($classMatch.Success) {
                     $className = $classMatch.Groups[1].Value
                     if ($className -in @('Transpiler', 'JsonSchemaTypeGenerator')) { continue }
@@ -67,7 +67,7 @@ function Get-ChangedDeclarationKeys {
 
                 $owner = $null
                 for ($i = [Math]::Min($lineNumber - 1, $lines.Count - 1); $i -ge 0; $i--) {
-                    $ownerMatch = [regex]::Match($lines[$i], '\bclass\s+XPScript([A-Za-z_][A-Za-z0-9_]*)\b')
+                    $ownerMatch = [regex]::Match($lines[$i], '^\s*(?:(?:public|internal|private|protected|static|sealed|abstract|partial)\s+)*class\s+XPScript([A-Za-z_][A-Za-z0-9_]*)\b')
                     if ($ownerMatch.Success) {
                         $owner = $ownerMatch.Groups[1].Value
                         break
@@ -90,7 +90,7 @@ function Get-ChangedDeclarationKeys {
         # those false positives from the changed-key set below.
         $baseOwner = $null
         foreach ($baseLine in $baseText) {
-            $ownerMatch = [regex]::Match($baseLine, '\bclass\s+XPScript([A-Za-z_][A-Za-z0-9_]*)\b')
+            $ownerMatch = [regex]::Match($baseLine, '^\s*(?:(?:public|internal|private|protected|static|sealed|abstract|partial)\s+)*class\s+XPScript([A-Za-z_][A-Za-z0-9_]*)\b')
             if ($ownerMatch.Success) {
                 $baseOwner = $ownerMatch.Groups[1].Value
                 if ($baseOwner -notin @('Transpiler', 'NativeJson', 'JsonSchemaTypeGenerator')) {
