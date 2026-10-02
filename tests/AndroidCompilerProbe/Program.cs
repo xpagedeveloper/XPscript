@@ -59,7 +59,7 @@ foreach (var expected in new[]
     "new Avalonia.Controls.CheckBox()",
     "Avalonia.Layout.Orientation.Horizontal",
     "new Avalonia.Controls.Button",
-    "panel.Children.Add(new TextBlock { Text = label });",
+    "fieldContainer.Children.Add(new TextBlock { Text = label });",
     "Control editor = type switch",
     "actions.Children.Add(ok);",
     "request.TryGetProperty(\"buttons\"",
