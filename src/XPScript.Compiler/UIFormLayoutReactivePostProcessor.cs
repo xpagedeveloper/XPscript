@@ -200,6 +200,18 @@ internal sealed class XPScriptUIForm
             "        if (_title.Length > 0) html.Append(\"<h1>\").Append(System.Net.WebUtility.HtmlEncode(_title)).Append(\"</h1>\");\n",
             """
         if (_title.Length > 0) html.Append("<h1 class=\"xpscript-uiform-title h3 mb-4\">").Append(System.Net.WebUtility.HtmlEncode(_title)).Append("</h1>");
+        if (_tabs.Count > 0)
+        {
+            html.Append("<div class=\"xpscript-uiform-tabs nav nav-tabs mb-3\" role=\"tablist\">");
+            foreach (var tab in _tabs)
+            {
+                var active = tab.Name.Equals(_activeTab, StringComparison.OrdinalIgnoreCase);
+                html.Append("<button type=\"button\" class=\"nav-link").Append(active ? " active" : "").Append("\" data-xps-tab=\"")
+                    .Append(System.Net.WebUtility.HtmlEncode(tab.Name)).Append("\" onclick=\"xpsUIFormTab(this)\">")
+                    .Append(System.Net.WebUtility.HtmlEncode(tab.Label)).Append("</button>");
+            }
+            html.Append("</div>");
+        }
         html.Append("<div class=\"xpscript-uiform-grid\" style=\"display:grid;grid-template-columns:repeat(")
             .Append(_gridColumns).Append(",minmax(0,1fr));gap:12px\">");
 """);
@@ -208,10 +220,16 @@ internal sealed class XPScriptUIForm
             "            html.Append(\"<div class=\\\"xpscript-uiform-field\\\"><label for=\\\"xps_\").Append(name).Append(\"\\\">\").Append(label).Append(\"</label>\");\n",
             """
             html.Append("<div class=\"xpscript-uiform-field\"");
+            if (field.TabName.Length > 0)
+            {
+                html.Append(" data-xps-tab-panel=\"").Append(System.Net.WebUtility.HtmlEncode(field.TabName)).Append("\"");
+                if (!field.TabName.Equals(_activeTab, StringComparison.OrdinalIgnoreCase))
+                    html.Append(" style=\"display:none");
+            }
             if (field.RegionId.Length > 0)
                 html.Append(" id=\"xps_region_").Append(System.Net.WebUtility.HtmlEncode(field.RegionId)).Append("\"");
             if (field.LayoutColumn > 0)
-                html.Append(" style=\"grid-column:").Append(field.LayoutColumn).Append(" / span ").Append(field.ColumnSpan)
+                html.Append(field.TabName.Length > 0 && !field.TabName.Equals(_activeTab, StringComparison.OrdinalIgnoreCase) ? ";" : " style=\"").Append("grid-column:").Append(field.LayoutColumn).Append(" / span ").Append(field.ColumnSpan)
                     .Append(";grid-row:").Append(field.LayoutRow).Append(" / span ").Append(field.RowSpan).Append("\"");
             html.Append("><label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
 """);
@@ -220,6 +238,8 @@ internal sealed class XPScriptUIForm
             "        html.Append(\"<button type=\\\"submit\\\" name=\\\"__xps_uiform_submit\\\" value=\\\"1\\\">OK</button></form>\");\n",
             """
         html.Append("</div>");
+        if (_tabs.Count > 0)
+            html.Append("<script>function xpsUIFormTab(b){var n=b.getAttribute('data-xps-tab');document.querySelectorAll('[data-xps-tab]').forEach(function(x){x.classList.toggle('active',x===b)});document.querySelectorAll('[data-xps-tab-panel]').forEach(function(x){x.style.display=x.getAttribute('data-xps-tab-panel')===n?'':'none'})}</script>");
         html.Append("<button style=\"grid-column:1/-1\" type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
 """);
 
