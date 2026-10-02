@@ -1064,6 +1064,18 @@ malformedExpressionParser.ParseExpression();
 Equal(1, malformedExpressionParser.Diagnostics.Count, "trailing expression token diagnostic count");
 Equal("XPS1012", malformedExpressionParser.Diagnostics[0].Code, "trailing expression token diagnostic code");
 
+var arrayExpressionParser = new ExpressionParser("Array(1, \"two\", True)");
+var arrayExpression = (ArrayExpressionSyntax)arrayExpressionParser.ParseExpression();
+Equal(SyntaxKind.ArrayExpression, arrayExpression.Kind, "array expression kind");
+Equal(3, arrayExpression.Elements.Count, "array expression element count");
+Equal(2, arrayExpression.CommaTokens.Count, "array expression comma count");
+Equal(0, arrayExpressionParser.Diagnostics.Count, "array expression diagnostics");
+
+var emptyArrayExpressionParser = new ExpressionParser("Array()");
+var emptyArrayExpression = (ArrayExpressionSyntax)emptyArrayExpressionParser.ParseExpression();
+Equal(0, emptyArrayExpression.Elements.Count, "empty array expression element count");
+Equal(0, emptyArrayExpressionParser.Diagnostics.Count, "empty array expression diagnostics");
+
 var nestedCallParser = new ExpressionParser("RunCommand(\"where.exe\", Array(\"winget\"))");
 nestedCallParser.ParseExpression();
 Equal(0, nestedCallParser.Diagnostics.Count, "nested call parser diagnostics");
