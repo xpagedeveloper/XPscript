@@ -15,6 +15,7 @@ using Avalonia.Android;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 
@@ -203,13 +204,11 @@ public static class AndroidFormHost
                 editors[name] = editor;
                 panel.Children.Add(editor);
 
-                var validationError = field.TryGetProperty("validationError", out var validationValue) ? validationValue.GetString() ?? string.Empty : string.Empty;
-                if (validationError.Length == 0 && field.TryGetProperty("schemaValidationError", out var schemaValidationValue))
-                    validationError = schemaValidationValue.GetString() ?? string.Empty;
                 var validationBlock = new TextBlock
                 {
-                    Text = validationError,
-                    IsVisible = validationError.Length > 0
+                    Text = string.Empty,
+                    IsVisible = false,
+                    Foreground = Brushes.Red
                 };
                 validationErrors[name] = validationBlock;
                 panel.Children.Add(validationBlock);
