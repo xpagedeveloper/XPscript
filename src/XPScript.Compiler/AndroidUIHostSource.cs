@@ -426,7 +426,7 @@ public static class AndroidFormHost
         var panel = new StackPanel { Spacing = 6 };
         var groupName = Guid.NewGuid().ToString("N");
         foreach (var option in options)
-            panel.Children.Add(new RadioButton { Content = option, Tag = option, GroupName = groupName });
+            panel.Children.Add(new Avalonia.Controls.RadioButton { Content = option, Tag = option, GroupName = groupName });
         return panel;
     }
 
@@ -489,7 +489,7 @@ public static class AndroidFormHost
             slider.Value = number;
         else if (editor is StackPanel radioPanel)
         {
-            foreach (var radio in radioPanel.Children.OfType<RadioButton>())
+            foreach (var radio in radioPanel.Children.OfType<Avalonia.Controls.RadioButton>())
                 radio.IsChecked = string.Equals(Convert.ToString(radio.Tag, System.Globalization.CultureInfo.InvariantCulture), text, StringComparison.Ordinal);
         }
     }
