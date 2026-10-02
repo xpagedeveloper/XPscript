@@ -145,7 +145,8 @@ public sealed class CompilerDriver
             ValidateNativeDependencies(sourcePath, nativeDependencies);
             ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
-            var transpiler = new XPScriptTranspiler();
+            CompilerProgressContext.Report(20, "Transpiling XPScript");
+        var transpiler = new XPScriptTranspiler();
             sourceContext = ExpandedSourceContext.Begin(expandedSource, sourcePath, includeResult.Map);
             var generatedSource = transpiler.Transpile(expandedSource, sourcePath, rid);
             await ValidateGeneratedCodeAsync(sourcePath, rid, generatedSource, managedReferences);
@@ -181,7 +182,9 @@ public sealed class CompilerDriver
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
     {
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
+        CompilerProgressContext.Report(5, "Reading source");
         var originalSource = await File.ReadAllTextAsync(sourcePath);
+        CompilerProgressContext.Report(10, "Preprocessing source");
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
         var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
         var source = managedReferences.Source;
@@ -195,6 +198,7 @@ public sealed class CompilerDriver
         using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
             generatedSource = transpiler.Transpile(source, sourcePath, rid);
 
+        CompilerProgressContext.Report(30, "Generating project");
         var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
@@ -244,6 +248,7 @@ public sealed class CompilerDriver
             }
             CompilerBuildEnvironment.Configure(psi, tempRoot);
 
+            CompilerProgressContext.Report(40, "Publishing application");
             using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start dotnet publish.");
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
             var stderrTask = process.StandardError.ReadToEndAsync();
@@ -251,6 +256,7 @@ public sealed class CompilerDriver
             var stdout = await stdoutTask; var stderr = await stderrTask;
             ApplicationSecurityAudit.Report(stdout + Environment.NewLine + stderr);
 
+            CompilerProgressContext.Report(85, "Finalizing publish");
             if (process.ExitCode != 0)
             {
                 if (CompilerDiagnosticMode.Debug && usesAndroidUIForm)
@@ -268,6 +274,7 @@ public sealed class CompilerDriver
                     generatedDiagnostics);
             }
 
+            CompilerProgressContext.Report(90, "Locating output artifact");
             var generatedExecutable = FindPublishedExecutable(tempRoot, publishDir, rid, OutputAssemblyName(outputPath));
             if (generatedExecutable is null)
             {
@@ -285,6 +292,7 @@ public sealed class CompilerDriver
                 !outputPath.EndsWith(".apk", StringComparison.OrdinalIgnoreCase))
                 outputPath += ".apk";
 
+            CompilerProgressContext.Report(95, "Publishing output");
             var licenseNoticePath = Path.Combine(publishDir, ThirdPartyLicenseNoticeGenerator.OutputFileName);
             await File.WriteAllTextAsync(licenseNoticePath, ThirdPartyLicenseNoticeGenerator.Generate(tempRoot, selfContained));
             CompilerPathSecurity.HardenTemporaryFile(licenseNoticePath);
