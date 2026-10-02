@@ -29,7 +29,9 @@ public static class AndroidFormHost
             var panel = new StackPanel
             {
                 Spacing = 12,
-                Margin = new Thickness(24)
+                Margin = new Thickness(16),
+                MaxWidth = 720,
+                HorizontalAlignment = HorizontalAlignment.Stretch
             };
 
             if (request.TryGetProperty("title", out var title))
@@ -65,11 +67,10 @@ public static class AndroidFormHost
                     panel.Children.Add(new TextBlock { Text = validationError });
             }
 
-            var actions = new StackPanel
+            var actions = new WrapPanel
             {
                 Orientation = Avalonia.Layout.Orientation.Horizontal,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Spacing = 12
+                HorizontalAlignment = HorizontalAlignment.Right
             };
 
             if (request.TryGetProperty("buttons", out var buttonArray) && buttonArray.ValueKind == JsonValueKind.Array)
