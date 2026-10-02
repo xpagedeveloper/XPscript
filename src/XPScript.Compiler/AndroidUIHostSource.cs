@@ -30,6 +30,7 @@ public sealed class App : Avalonia.Application
 
 [Activity(
     Label = "XPScript",
+    Theme = "@style/Theme.AppCompat.DayNight.NoActionBar",
     MainLauncher = true,
     Exported = true,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
