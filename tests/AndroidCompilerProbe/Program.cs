@@ -75,6 +75,7 @@ foreach (var expected in new[]
     "var bootImage = request.TryGetProperty(\"bootImage\"",
     "private static Control HomeContent() => new Grid();",
     "CornerRadius = new CornerRadius(cornerRadius)",
+    "CornerRadius = new CornerRadius(fieldCornerRadius)",
     "validationBlock.IsVisible = validationError.Length > 0;",
     "if (validationError.Length == 0 && field.TryGetProperty(\"value\"",
     "UIForm button '\" + buttonName + \"' callback failed:",
