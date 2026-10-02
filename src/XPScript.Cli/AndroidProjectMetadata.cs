@@ -2,12 +2,11 @@ using System.Text.Json;
 
 namespace XPScript.Cli;
 
-internal sealed record AndroidProjectMetadata(string Target, string ApplicationType, string ApplicationTitle)
+internal sealed record AndroidProjectMetadata(string Target, string ApplicationType)
 {
     public const string DefaultTarget = "android";
     public const string DefaultApplicationType = "headless";
     public const string UiApplicationType = "ui";
-    public const string DefaultApplicationTitle = "XPScript";
 
     public static AndroidProjectMetadata LoadForSource(string sourcePath)
     {
@@ -18,8 +17,7 @@ internal sealed record AndroidProjectMetadata(string Target, string ApplicationT
         if (!File.Exists(configPath))
             return new AndroidProjectMetadata(
                 DefaultTarget,
-                UsesUIForm(sourcePath) ? UiApplicationType : DefaultApplicationType,
-                DefaultApplicationTitle);
+                UsesUIForm(sourcePath) ? UiApplicationType : DefaultApplicationType);
 
         try
         {
@@ -34,7 +32,6 @@ internal sealed record AndroidProjectMetadata(string Target, string ApplicationT
             var target = ReadString(root, "target") ?? DefaultTarget;
             var applicationType = ReadString(root, "applicationType") ??
                 (UsesUIForm(sourcePath) ? UiApplicationType : DefaultApplicationType);
-            var applicationTitle = ReadString(root, "applicationTitle") ?? DefaultApplicationTitle;
 
             target = target.Trim().ToLowerInvariant();
             applicationType = applicationType.Trim().ToLowerInvariant();
@@ -46,7 +43,7 @@ internal sealed record AndroidProjectMetadata(string Target, string ApplicationT
                     "Android applicationType '" + applicationType +
                     "' is not supported. Supported applicationTypes: headless, ui.");
 
-            return new AndroidProjectMetadata(target, applicationType, applicationTitle.Trim());
+            return new AndroidProjectMetadata(target, applicationType);
         }
         catch (JsonException ex)
         {
