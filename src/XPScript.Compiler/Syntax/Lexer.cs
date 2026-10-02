@@ -218,6 +218,7 @@ public sealed class Lexer
         "ME" => SyntaxKind.MeKeyword,
         "PROPERTY" => SyntaxKind.PropertyKeyword,
         "GET" => SyntaxKind.GetKeyword,
+        "LET" => SyntaxKind.LetKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
