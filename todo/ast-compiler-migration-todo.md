@@ -42,10 +42,10 @@ The existing runtime libraries, packaging, source mapping, web/desktop/mobile ta
 
 ## Migration rules
 
-- [ ] Keep the current compiler operational while the AST implementation is introduced.
-- [ ] Add focused tests before migrating each syntax feature.
-- [ ] When a test fails, follow the repository test rule: create or move a small focused reproducer so it runs before the larger test.
-- [ ] Never mark a syntax feature migrated until old and new paths have been compared against representative fixtures.
+- [x] Keep the current compiler operational while the AST implementation is introduced.
+- [x] Add focused tests before migrating each syntax feature.
+- [x] When a test fails, follow the repository test rule: create or move a small focused reproducer so it runs before the larger test.
+- [x] Never mark a syntax feature migrated until old and new paths have been compared against representative fixtures.
 - [ ] Preserve public compiler diagnostics where compatibility is required.
 - [ ] Keep normal compiler and machine/MCP compiler behavior synchronized.
 - [ ] CLI compilation and MCP/AI machine compilation must consume the same lexer, parser, AST, semantic binder and bound tree; do not create a second language implementation for machine compilation.
@@ -55,8 +55,8 @@ The existing runtime libraries, packaging, source mapping, web/desktop/mobile ta
 - [ ] Unknown variables, functions, properties and methods must be reported by the XPscript semantic binder before Roslyn when the symbol/type information is available.
 - [ ] Diagnostic parity is a release gate across normal CLI compilation and MCP/AI machine compilation.
 - [ ] Diagnostic parity must be verified both with debug diagnostics disabled and enabled; debug mode may add generated-code/debug details but must not change the XPscript diagnostic code, meaning, source file, line, column or source span.
-- [ ] Do not remove legacy parsing code until its replacement has dedicated tests and integration coverage.
-- [ ] Prefer small commits organized by compiler phase or language feature.
+- [x] Do not remove legacy parsing code until its replacement has dedicated tests and integration coverage.
+- [x] Prefer small commits organized by compiler phase or language feature.
 
 ## Phase 1: Syntax model
 
