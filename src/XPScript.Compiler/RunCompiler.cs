@@ -67,17 +67,21 @@ internal static class RunCompiler
         if (!CompilerDriver.SupportedRuntimes.Contains(rid, StringComparer.OrdinalIgnoreCase))
             throw new CompilerException("Unsupported runtime identifier '" + runtimeIdentifier + "'.", CompilerDiagnosticCodes.RuntimeIdentifierUnsupported, "configuration");
 
+        CompilerProgressContext.Report(5, "Reading source");
         var originalSource = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        CompilerProgressContext.Report(10, "Preprocessing source");
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
         var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
         var source = managedReferences.Source;
         var nativeDependencies = new NativeDependencyPackager(rid).Collect(source, includeResult.Map, sourcePath);
 
+        CompilerProgressContext.Report(20, "Transpiling XPScript");
         var transpiler = new XPScriptTranspiler();
         string generatedSource;
         using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
             generatedSource = transpiler.Transpile(source, sourcePath, rid);
 
+        CompilerProgressContext.Report(30, "Preparing run output");
         var outputRoot = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
@@ -85,13 +89,16 @@ internal static class RunCompiler
         var usesDesktopUi = RunRoslynCompiler.UsesDesktopUi(generatedSource);
         if (RunRoslynCompiler.CanCompile(generatedSource, managedReferences.Managed.Count > 0))
         {
+            CompilerProgressContext.Report(45, "Compiling generated code");
             var assembly = await RunRoslynCompiler.CompileAsync(generatedSource, outputRoot, debug, cancellationToken).ConfigureAwait(false);
+            CompilerProgressContext.Report(90, "Staging runtime dependencies");
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
             if (usesDesktopUi)
                 StageDesktopDependencies(outputRoot);
             return assembly;
         }
 
+        CompilerProgressContext.Report(40, "Building generated project");
         var runnable = await CompileWithMsBuildAsync(
             sourcePath,
             outputRoot,
@@ -100,8 +107,10 @@ internal static class RunCompiler
             nativeDependencies,
             debug,
             cancellationToken).ConfigureAwait(false);
+        CompilerProgressContext.Report(90, "Staging runtime dependencies");
         if (usesDesktopUi)
             StageDesktopDependencies(outputRoot);
+        CompilerProgressContext.Report(100, "Run build ready");
         return runnable;
     }
 
