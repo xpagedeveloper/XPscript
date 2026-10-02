@@ -776,11 +776,13 @@ public sealed class StatementParser
         var openKeyword = NextToken();
         var forIndex = FindTokenOnCurrentLine(SyntaxKind.ForKeyword);
         if (forIndex < 0)
-            return new OpenStatementSyntax(openKeyword, ParseExpressionUntilLineEnd(),
-                Match(SyntaxKind.ForKeyword), Match(SyntaxKind.InputKeyword),
-                Match(SyntaxKind.AsKeyword), ParseExpressionUntilLineEnd());
+        {
+            var path = ParseExpressionUntilLineEnd();
+            return new OpenStatementSyntax(openKeyword, path, Match(SyntaxKind.ForKeyword),
+                Match(SyntaxKind.InputKeyword), Match(SyntaxKind.AsKeyword), null, MissingExpression());
+        }
 
-        var path = ParseExpressionRange(_position, forIndex, _tokens[forIndex].Span.Start);
+        var pathExpression = ParseExpressionRange(_position, forIndex, _tokens[forIndex].Span.Start);
         _position = forIndex;
         var forKeyword = NextToken();
         var modeKeyword = Current.Kind is SyntaxKind.InputKeyword or SyntaxKind.OutputKeyword
@@ -788,13 +790,33 @@ public sealed class StatementParser
             ? NextToken()
             : Match(SyntaxKind.InputKeyword);
         var asKeyword = Match(SyntaxKind.AsKeyword);
-        var fileNumber = ParseExpressionUntilLineEnd();
-        return new OpenStatementSyntax(openKeyword, path, forKeyword, modeKeyword, asKeyword, fileNumber);
+        SyntaxToken? hashToken = Current.Kind == SyntaxKind.HashToken ? NextToken() : null;
+
+        var lenIndex = FindTokenOnCurrentLine(SyntaxKind.LenKeyword);
+        var lineEnd = FindLineEndIndex(_position);
+        var fileEnd = lenIndex >= 0 ? lenIndex : lineEnd;
+        var fileNumber = ParseExpressionRange(_position, fileEnd, _tokens[fileEnd].Span.Start);
+        _position = fileEnd;
+
+        SyntaxToken? lenKeyword = null;
+        SyntaxToken? equalsToken = null;
+        ExpressionSyntax? recordLength = null;
+        if (Current.Kind == SyntaxKind.LenKeyword)
+        {
+            lenKeyword = NextToken();
+            equalsToken = Match(SyntaxKind.EqualsToken);
+            recordLength = ParseExpressionUntilLineEnd();
+        }
+
+        return new OpenStatementSyntax(openKeyword, pathExpression, forKeyword, modeKeyword,
+            asKeyword, hashToken, fileNumber, lenKeyword, equalsToken, recordLength);
     }
 
     private StatementSyntax ParseCloseStatement()
     {
         var closeKeyword = NextToken();
+        if (Current.Kind == SyntaxKind.HashToken)
+            NextToken();
         var fileNumbers = new List<ExpressionSyntax>();
         while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
         {
@@ -811,6 +833,8 @@ public sealed class StatementParser
     private StatementSyntax ParseFileOutputStatement()
     {
         var rawKeyword = NextToken();
+        if (Current.Kind == SyntaxKind.HashToken)
+            NextToken();
         var keyword = PromoteIdentifier(rawKeyword, string.Equals(rawKeyword.Text, "Write", StringComparison.OrdinalIgnoreCase) ? SyntaxKind.WriteKeyword : SyntaxKind.PrintKeyword);
         var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
         var lineEnd = FindLineEndIndex(_position);
@@ -838,6 +862,8 @@ public sealed class StatementParser
         if (IsIdentifier("Line"))
             lineKeyword = PromoteIdentifier(NextToken(), SyntaxKind.LineKeyword);
         var inputKeyword = Match(SyntaxKind.InputKeyword);
+        if (Current.Kind == SyntaxKind.HashToken)
+            NextToken();
         var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
         var lineEnd = FindLineEndIndex(_position);
         var fileEnd = commaIndex >= 0 ? commaIndex : lineEnd;
@@ -861,6 +887,8 @@ public sealed class StatementParser
     private StatementSyntax ParseSeekStatement()
     {
         var seekKeyword = PromoteIdentifier(NextToken(), SyntaxKind.SeekKeyword);
+        if (Current.Kind == SyntaxKind.HashToken)
+            NextToken();
         var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
         if (commaIndex < 0)
         {
@@ -1002,6 +1030,12 @@ public sealed class StatementParser
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("RmDir", StringComparison.OrdinalIgnoreCase)
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("ChDir", StringComparison.OrdinalIgnoreCase)
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("SetFileAttr", StringComparison.OrdinalIgnoreCase);
+
+    private ExpressionSyntax MissingExpression()
+    {
+        var span = new TextSpan(Current.Span.Start, 0);
+        return new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, string.Empty, null, span));
+    }
 
     private bool IsIdentifier(string text) =>
         Current.Kind == SyntaxKind.IdentifierToken
