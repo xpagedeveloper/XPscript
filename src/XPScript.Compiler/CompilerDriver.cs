@@ -909,7 +909,7 @@ public sealed class CompilerDriver
 
     private sealed class PublishProgressState
     {
-        private int _percent = 39;
+        private int _percent = 40;
         private string? _lastPhase;
 
         public void Report(string phase)
