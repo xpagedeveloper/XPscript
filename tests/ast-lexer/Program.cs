@@ -453,6 +453,37 @@ var callStatementSyntax = (CallStatementSyntax)callStatement;
 Equal(SyntaxKind.CallExpression, callStatementSyntax.Expression.Kind, "Call statement expression kind");
 Equal(new TextSpan(0, 13), callStatementSyntax.Span, "Call statement full span");
 
+const string subDeclarationSource = "Public Sub Add(ByVal left As Integer, ByRef right As Integer)\nright = left + right\nEnd Sub";
+var subDeclarationParser = new DeclarationParser(subDeclarationSource);
+var subDeclaration = (SubDeclarationSyntax)subDeclarationParser.ParseDeclaration();
+Equal(0, subDeclarationParser.Diagnostics.Count, "Sub declaration diagnostics");
+Equal(SyntaxKind.PublicKeyword, subDeclaration.Visibility!.Kind, "Sub visibility");
+Equal("Add", subDeclaration.Identifier.Text, "Sub identifier");
+Equal(2, subDeclaration.Parameters.Count, "Sub parameter count");
+Equal(true, subDeclaration.Parameters[0].IsByVal, "Sub ByVal parameter");
+Equal(true, subDeclaration.Parameters[1].IsByRef, "Sub ByRef parameter");
+Equal("Integer", subDeclaration.Parameters[0].Type!.Identifier.Text, "Sub parameter type");
+Equal(1, subDeclaration.Statements.Count, "Sub body statement count");
+Equal(SyntaxKind.AssignmentStatement, subDeclaration.Statements[0].Kind, "Sub body assignment");
+Equal(new TextSpan(0, subDeclarationSource.Length), subDeclaration.Span, "Sub declaration span");
+
+const string functionDeclarationSource = "Private Function Increment(ByVal value As Integer) As Integer\nReturn value + 1\nEnd Function";
+var functionDeclarationParser = new DeclarationParser(functionDeclarationSource);
+var functionDeclaration = (FunctionDeclarationSyntax)functionDeclarationParser.ParseDeclaration();
+Equal(0, functionDeclarationParser.Diagnostics.Count, "Function declaration diagnostics");
+Equal(SyntaxKind.PrivateKeyword, functionDeclaration.Visibility!.Kind, "Function visibility");
+Equal("Increment", functionDeclaration.Identifier.Text, "Function identifier");
+Equal(1, functionDeclaration.Parameters.Count, "Function parameter count");
+Equal(true, functionDeclaration.Parameters[0].IsByVal, "Function ByVal parameter");
+Equal("Integer", functionDeclaration.ReturnType!.Identifier.Text, "Function return type");
+Equal(1, functionDeclaration.Statements.Count, "Function body statement count");
+Equal(SyntaxKind.ReturnStatement, functionDeclaration.Statements[0].Kind, "Function Return statement");
+Equal(new TextSpan(0, functionDeclarationSource.Length), functionDeclaration.Span, "Function declaration span");
+
+var missingEndFunctionParser = new DeclarationParser("Function Missing() As Integer\nReturn 1");
+missingEndFunctionParser.ParseDeclaration();
+Equal("XPS1012", missingEndFunctionParser.Diagnostics[^1].Code, "missing End Function diagnostic");
+
 var returnEmptyParser = new StatementParser("Return");
 var returnEmpty = (ReturnStatementSyntax)returnEmptyParser.ParseStatement();
 Equal(0, returnEmptyParser.Diagnostics.Count, "Return empty diagnostics");
