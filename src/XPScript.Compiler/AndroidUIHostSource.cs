@@ -169,6 +169,7 @@ public static class AndroidFormHost
                 : Array.Empty<JsonElement>();
 
             var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
+            var validationErrors = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
             var panel = new StackPanel { Spacing = 12, Margin = new Thickness(16), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Stretch };
 
             if (request.TryGetProperty("title", out var title))
@@ -205,8 +206,13 @@ public static class AndroidFormHost
                 var validationError = field.TryGetProperty("validationError", out var validationValue) ? validationValue.GetString() ?? string.Empty : string.Empty;
                 if (validationError.Length == 0 && field.TryGetProperty("schemaValidationError", out var schemaValidationValue))
                     validationError = schemaValidationValue.GetString() ?? string.Empty;
-                if (validationError.Length > 0)
-                    panel.Children.Add(new TextBlock { Text = validationError });
+                var validationBlock = new TextBlock
+                {
+                    Text = validationError,
+                    IsVisible = validationError.Length > 0
+                };
+                validationErrors[name] = validationBlock;
+                panel.Children.Add(validationBlock);
             }
 
             var actions = new WrapPanel
@@ -231,7 +237,7 @@ public static class AndroidFormHost
                         {
                             var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
                             var actionState = eventCallback("button:" + buttonName, submittedValues);
-                            ApplyActionState(actionState, editors);
+                            ApplyActionState(actionState, editors, validationErrors);
                         }
                         catch (Exception exception)
                         {
@@ -289,7 +295,7 @@ public static class AndroidFormHost
         return completion.Task.GetAwaiter().GetResult();
     }
 
-    private static void ApplyActionState(string actionStateJson, Dictionary<string, Control> editors)
+    private static void ApplyActionState(string actionStateJson, Dictionary<string, Control> editors, Dictionary<string, TextBlock> validationErrors)
     {
         if (string.IsNullOrWhiteSpace(actionStateJson)) return;
         using var document = JsonDocument.Parse(actionStateJson);
@@ -304,6 +310,14 @@ public static class AndroidFormHost
                     SetEditorValue(editor, value);
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
                 editor.IsVisible = !field.TryGetProperty("visible", out var visible) || visible.ValueKind != JsonValueKind.False;
+                if (validationErrors.TryGetValue(name, out var validationBlock))
+                {
+                    var validationError = field.TryGetProperty("validationError", out var validationValue)
+                        ? validationValue.GetString() ?? string.Empty
+                        : string.Empty;
+                    validationBlock.Text = validationError;
+                    validationBlock.IsVisible = validationError.Length > 0;
+                }
             }
         }
         if (root.TryGetProperty("navigation", out var navigation) && navigation.ValueKind == JsonValueKind.Object)
