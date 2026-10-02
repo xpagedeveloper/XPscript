@@ -81,6 +81,8 @@ public sealed record DesktopFormRequest(
     IReadOnlyList<DesktopFormField> Fields)
 {
     public string Theme { get; init; } = "System";
+    public string BootText { get; init; } = string.Empty;
+    public string BootImage { get; init; } = string.Empty;
     public bool ShowValidationErrors { get; init; } = true;
     public bool HasValidationSchema { get; init; }
     public bool ShowDefaultButtons { get; init; } = true;
