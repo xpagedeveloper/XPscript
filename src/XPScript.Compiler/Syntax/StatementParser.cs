@@ -206,8 +206,7 @@ public sealed class StatementParser
             }
 
             statements.Add(ParseCurrentStatement());
-            if (Current.Kind == SyntaxKind.NewLineToken)
-                NextToken();
+            RecoverToStatementBoundary();
         }
 
         return statements;
@@ -333,8 +332,7 @@ public sealed class StatementParser
             }
 
             statements.Add(ParseCurrentStatement());
-            if (Current.Kind == SyntaxKind.NewLineToken)
-                NextToken();
+            RecoverToStatementBoundary();
         }
 
         return new CaseClauseSyntax(
@@ -416,8 +414,7 @@ public sealed class StatementParser
             }
 
             statements.Add(ParseCurrentStatement());
-            if (Current.Kind == SyntaxKind.NewLineToken)
-                NextToken();
+            RecoverToStatementBoundary();
         }
 
         var loopKeyword = Match(SyntaxKind.LoopKeyword);
@@ -467,8 +464,7 @@ public sealed class StatementParser
             }
 
             statements.Add(ParseCurrentStatement());
-            if (Current.Kind == SyntaxKind.NewLineToken)
-                NextToken();
+            RecoverToStatementBoundary();
         }
 
         var endKeyword = Match(SyntaxKind.EndKeyword);
@@ -542,8 +538,7 @@ public sealed class StatementParser
             }
 
             statements.Add(ParseCurrentStatement());
-            if (Current.Kind == SyntaxKind.NewLineToken)
-                NextToken();
+            RecoverToStatementBoundary();
         }
 
         var nextKeyword = Match(SyntaxKind.NextKeyword);
@@ -590,8 +585,7 @@ public sealed class StatementParser
             }
 
             statements.Add(ParseCurrentStatement());
-            if (Current.Kind == SyntaxKind.NewLineToken)
-                NextToken();
+            RecoverToStatementBoundary();
         }
 
         var wendKeyword = Match(SyntaxKind.WendKeyword);
@@ -730,6 +724,29 @@ public sealed class StatementParser
         }
 
         return -1;
+    }
+
+    private void RecoverToStatementBoundary()
+    {
+        if (Current.Kind == SyntaxKind.NewLineToken)
+        {
+            NextToken();
+            return;
+        }
+
+        if (Current.Kind == SyntaxKind.EndOfFileToken)
+            return;
+
+        _diagnostics.Add(new SyntaxDiagnostic(
+            "XPS1012",
+            $"Unexpected token {Current.Kind} after statement.",
+            Current.Span));
+
+        while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
+            NextToken();
+
+        if (Current.Kind == SyntaxKind.NewLineToken)
+            NextToken();
     }
 
     private void ConsumeRequiredNewLine(string context)
