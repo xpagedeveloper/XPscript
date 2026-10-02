@@ -453,6 +453,17 @@ var callStatementSyntax = (CallStatementSyntax)callStatement;
 Equal(SyntaxKind.CallExpression, callStatementSyntax.Expression.Kind, "Call statement expression kind");
 Equal(new TextSpan(0, 13), callStatementSyntax.Span, "Call statement full span");
 
+var meMemberParser = new ExpressionParser("Me.Name");
+var meMember = (MemberAccessExpressionSyntax)meMemberParser.ParseExpression();
+Equal(0, meMemberParser.Diagnostics.Count, "Me member access diagnostics");
+Equal("Me", ((NameExpressionSyntax)meMember.Expression).IdentifierToken.Text, "Me self-reference");
+Equal("Name", meMember.NameToken.Text, "Me member name");
+
+var meCallParser = new ExpressionParser("Me.Update()");
+var meCall = (CallExpressionSyntax)meCallParser.ParseExpression();
+Equal(0, meCallParser.Diagnostics.Count, "Me method call diagnostics");
+Equal("Update", ((MemberAccessExpressionSyntax)meCall.Target).NameToken.Text, "Me method call target");
+
 const string extendedClassSource = "Public Class Employee Extend Person\nPublic EmployeeId As Integer\nEnd Class";
 var extendedClassParser = new DeclarationParser(extendedClassSource);
 var extendedClass = (ClassDeclarationSyntax)extendedClassParser.ParseDeclaration();
