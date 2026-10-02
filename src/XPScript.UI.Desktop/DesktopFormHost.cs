@@ -433,15 +433,15 @@ public static class DesktopFormHost
         var value = field.Value ?? string.Empty;
         return field.Type switch
         {
-            "TextArea" => new TextBox { Text = value, AcceptsReturn = true, MinHeight = 96, TextWrapping = TextWrapping.Wrap },
-            "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•' },
+            "TextArea" => new TextBox { Text = value, AcceptsReturn = true, MinHeight = 96, TextWrapping = TextWrapping.Wrap, CornerRadius = new CornerRadius(field.CornerRadius) },
+            "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•', CornerRadius = new CornerRadius(field.CornerRadius) },
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Select" => CreateSelect(field),
             "ListBox" => CreateListBox(field, false),
             "MultiListBox" => CreateListBox(field, true),
             "RadioGroup" => CreateRadioGroup(field),
             "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
-            _ => new TextBox { Text = value }
+            _ => new TextBox { Text = value, CornerRadius = new CornerRadius(field.CornerRadius) }
         };
     }
 
