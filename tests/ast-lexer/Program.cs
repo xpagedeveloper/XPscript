@@ -208,6 +208,30 @@ var seekHashParser = new StatementParser("Seek #1, 42");
 var seekHash = (SeekStatementSyntax)seekHashParser.ParseStatement();
 Equal(0, seekHashParser.Diagnostics.Count, "Seek hash diagnostics");
 
+var consolePrintParser = new StatementParser("Print \"hello\"");
+var consolePrint = (RuntimeFileStatementSyntax)consolePrintParser.ParseStatement();
+Equal(0, consolePrintParser.Diagnostics.Count, "console Print diagnostics");
+Equal(1, consolePrint.Arguments.Count, "console Print argument count");
+
+var randomizeParser = new StatementParser("Randomize 123");
+var randomizeStatement = (RuntimeFileStatementSyntax)randomizeParser.ParseStatement();
+Equal(0, randomizeParser.Diagnostics.Count, "Randomize seed diagnostics");
+Equal(1, randomizeStatement.Arguments.Count, "Randomize seed argument count");
+
+var randomizeEmptyParser = new StatementParser("Randomize");
+var randomizeEmpty = (RuntimeFileStatementSyntax)randomizeEmptyParser.ParseStatement();
+Equal(0, randomizeEmptyParser.Diagnostics.Count, "Randomize diagnostics");
+Equal(0, randomizeEmpty.Arguments.Count, "Randomize argument count");
+
+var beepParser = new StatementParser("Beep");
+var beepStatement = (RuntimeFileStatementSyntax)beepParser.ParseStatement();
+Equal(0, beepParser.Diagnostics.Count, "Beep diagnostics");
+Equal(0, beepStatement.Arguments.Count, "Beep argument count");
+
+var seekFunctionParser = new StatementParser("Seek(f)");
+var seekFunction = (ExpressionStatementSyntax)seekFunctionParser.ParseStatement();
+Equal(0, seekFunctionParser.Diagnostics.Count, "Seek function diagnostics");
+
 var putParser = new StatementParser("Put #f, 1, binaryValue");
 var putStatement = (RuntimeFileStatementSyntax)putParser.ParseStatement();
 Equal(0, putParser.Diagnostics.Count, "Put diagnostics");
