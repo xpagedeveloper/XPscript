@@ -66,6 +66,9 @@ foreach (var expected in new[]
     "var actionState = eventCallback(\"button:\" + buttonName, submittedValues);",
     "ApplyActionState(actionState, editors);",
     "private static void ApplyActionState",
+    "var validationErrors = new Dictionary<string, TextBlock>",
+    "validationErrors[name] = validationBlock;",
+    "validationBlock.IsVisible = validationError.Length > 0;",
     "UIForm button '\" + buttonName + \"' callback failed:",
     "catch (Exception exception)",
     "actions.Children.Add(actionButton);",
@@ -130,6 +133,8 @@ var eventDispatcherSource = File.ReadAllText(eventDispatcherSourcePath);
 foreach (var expected in new[]
 {
     "ApplySubmittedStateJson(submittedValue);",
+    "catch (XPScriptRuntimeException)",
+    "return SerializeActionState();",
     "ApplySubmittedValue(field, submitted);",
     "ApplySubmittedValues(field, submittedValues);"
 })
