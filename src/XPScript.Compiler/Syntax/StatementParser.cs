@@ -64,6 +64,8 @@ public sealed class StatementParser
             return ParseSeekStatement();
         if (IsIdentifier("Put") || IsIdentifier("Get"))
             return ParseBinaryFileStatement();
+        if (IsIdentifier("Lock") || IsIdentifier("Unlock"))
+            return ParseFileLockStatement();
         if (IsRuntimeFileCommand(Current))
             return ParseRuntimeFileStatement();
         if (IsIdentifier("Name"))
@@ -928,6 +930,34 @@ public sealed class StatementParser
         return new RuntimeFileStatementSyntax(command, arguments);
     }
 
+    private StatementSyntax ParseFileLockStatement()
+    {
+        var command = NextToken();
+        if (Current.Kind == SyntaxKind.HashToken)
+            NextToken();
+        var arguments = new List<ExpressionSyntax>();
+        var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
+        var lineEnd = FindLineEndIndex(_position);
+        var fileEnd = commaIndex >= 0 ? commaIndex : lineEnd;
+        arguments.Add(ParseExpressionRange(_position, fileEnd, _tokens[fileEnd].Span.Start));
+        _position = fileEnd;
+        if (Current.Kind == SyntaxKind.CommaToken)
+        {
+            NextToken();
+            var toIndex = FindTokenOnCurrentLine(SyntaxKind.ToKeyword);
+            lineEnd = FindLineEndIndex(_position);
+            var startEnd = toIndex >= 0 ? toIndex : lineEnd;
+            arguments.Add(ParseExpressionRange(_position, startEnd, _tokens[startEnd].Span.Start));
+            _position = startEnd;
+            if (Current.Kind == SyntaxKind.ToKeyword)
+            {
+                NextToken();
+                arguments.Add(ParseExpressionUntilLineEnd());
+            }
+        }
+        return new RuntimeFileStatementSyntax(command, arguments);
+    }
+
     private StatementSyntax ParseRuntimeFileStatement()
     {
         var command = NextToken();
@@ -1053,7 +1083,8 @@ public sealed class StatementParser
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("MkDir", StringComparison.OrdinalIgnoreCase)
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("RmDir", StringComparison.OrdinalIgnoreCase)
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("ChDir", StringComparison.OrdinalIgnoreCase)
-            || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("SetFileAttr", StringComparison.OrdinalIgnoreCase);
+            || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("SetFileAttr", StringComparison.OrdinalIgnoreCase)
+        || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("ChDrive", StringComparison.OrdinalIgnoreCase);
 
     private ExpressionSyntax MissingExpression()
     {
