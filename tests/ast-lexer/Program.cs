@@ -20,6 +20,12 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+var classCompatibilityTranspiler = new AdvancedXPScriptTranspiler();
+Equal("this.Name", classCompatibilityTranspiler.TransformExpressionForCompatibilityTest("Me.Name"), "Me lowers to this");
+Equal("base.Describe()", classCompatibilityTranspiler.TransformExpressionForCompatibilityTest("Parent.Describe()"), "Parent lowers to base");
+
+
+
 var meMemberParser = new ExpressionParser("Me.Name");
 var meMember = (MemberAccessExpressionSyntax)meMemberParser.ParseExpression();
 Equal(0, meMemberParser.Diagnostics.Count, "Me member diagnostics");
