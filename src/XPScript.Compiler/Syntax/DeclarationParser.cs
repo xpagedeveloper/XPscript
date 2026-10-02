@@ -42,6 +42,13 @@ public sealed class DeclarationParser
     {
         var classKeyword = Take(header, ref position, SyntaxKind.ClassKeyword);
         var identifier = Take(header, ref position, SyntaxKind.IdentifierToken);
+        SyntaxToken? extendKeyword = null;
+        TypeSyntax? baseType = null;
+        if (Peek(header, position).Kind == SyntaxKind.ExtendKeyword)
+        {
+            extendKeyword = header[position++];
+            baseType = new TypeSyntax(Take(header, ref position, SyntaxKind.IdentifierToken));
+        }
         var members = new List<SyntaxNode>();
 
         for (var i = 1; i < lines.Count; i++)
@@ -55,7 +62,7 @@ public sealed class DeclarationParser
             AddLexerDiagnostics(lexer.Diagnostics);
 
             if (tokens.Length >= 2 && tokens[0].Kind == SyntaxKind.EndKeyword && tokens[1].Kind == SyntaxKind.ClassKeyword)
-                return new ClassDeclarationSyntax(visibility, classKeyword, identifier, members, tokens[0], tokens[1]);
+                return new ClassDeclarationSyntax(visibility, classKeyword, identifier, extendKeyword, baseType, members, tokens[0], tokens[1]);
 
             var memberPosition = 0;
             SyntaxToken? memberVisibility = null;
@@ -86,7 +93,7 @@ public sealed class DeclarationParser
 
         var end = _baseOffset + _text.Length;
         _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Expected 'End Class' to close declaration.", new TextSpan(end, 0)));
-        return new ClassDeclarationSyntax(visibility, classKeyword, identifier, members,
+        return new ClassDeclarationSyntax(visibility, classKeyword, identifier, extendKeyword, baseType, members,
             new SyntaxToken(SyntaxKind.EndKeyword, string.Empty, null, new TextSpan(end, 0)),
             new SyntaxToken(SyntaxKind.ClassKeyword, string.Empty, null, new TextSpan(end, 0)));
     }
