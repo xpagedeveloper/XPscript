@@ -19,6 +19,7 @@ internal sealed class UIFormActionModelPostProcessor
     public bool Visible { get; set; } = true;
     public bool Enabled { get; set; } = true;
     public bool ReadOnly { get; set; }
+    public double CornerRadius { get; set; }
     public string Placeholder { get; set; } = string.Empty;
     public string Tooltip { get; set; } = string.Empty;
 """, "field-state");
@@ -112,6 +113,22 @@ internal sealed class XPScriptUIForm
     public void SetFieldReadOnly(object? name, object? readOnly)
     {
         FindField(name).ReadOnly = Convert.ToBoolean(readOnly, System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    public void SetFieldCornerRadius(object? name, object? radius)
+    {
+        var field = FindField(name);
+        if (field.Type is not ("TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField"))
+            throw new XPScriptRuntimeException(5, "UIForm field corner radius is only supported for text-entry fields.");
+        double value;
+        try { value = Convert.ToDouble(radius, System.Globalization.CultureInfo.InvariantCulture); }
+        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+        {
+            throw new XPScriptRuntimeException(13, "UIForm field corner radius must be numeric.");
+        }
+        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+            throw new XPScriptRuntimeException(5, "UIForm field corner radius must be between 0 and 1000.");
+        field.CornerRadius = value;
     }
 
     public void SetFieldPlaceholder(object? name, object? placeholder)
