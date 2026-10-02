@@ -2,6 +2,8 @@ namespace XPScript.Compiler;
 
 internal static class AndroidUIHostSource
 {
+    public static string Build(bool debug) => Code.Replace("__XPSCRIPT_ANDROID_DEBUG__", debug ? "true" : "false", StringComparison.Ordinal);
+
     public const string Code = """
 using System.Text.Json;
 using Android.App;
@@ -16,6 +18,11 @@ using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 
 namespace XPScript.UI.Android;
+
+internal static class AndroidDebugMode
+{
+    public const bool Enabled = __XPSCRIPT_ANDROID_DEBUG__;
+}
 
 public sealed class App : Avalonia.Application
 {
@@ -104,6 +111,8 @@ public sealed class MainView : UserControl
         catch (Exception exception)
         {
             Log.Error("XPScript", exception.ToString());
+            if (AndroidDebugMode.Enabled)
+                Log.Error("XPScript", "XPSCRIPT-DEBUG-DUMP=" + exception);
             Log.Error("XPScript", "XPSCRIPT-EXIT=1");
         }
     }
@@ -212,6 +221,8 @@ public static class AndroidFormHost
                         catch (Exception exception)
                         {
                             Log.Error("XPScript", "UIForm button '" + buttonName + "' callback failed: " + exception);
+                            if (AndroidDebugMode.Enabled)
+                                Log.Error("XPScript", "XPSCRIPT-DEBUG-DUMP=" + exception);
                         }
                     };
                     actions.Children.Add(actionButton);
