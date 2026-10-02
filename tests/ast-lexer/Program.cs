@@ -241,7 +241,7 @@ Equal(0, chDriveParser.Diagnostics.Count, "ChDrive diagnostics");
 Equal(1, chDrive.Arguments.Count, "ChDrive argument count");
 
 var runtimeFileIdentifierRegression = Lex("FileCopy Kill MkDir RmDir ChDir ChDrive SetFileAttr Name");
-Equal(string.Join(",", Enumerable.Repeat(SyntaxKind.IdentifierToken, 8)), string.Join(",", runtimeFileIdentifierRegression.Take(7).Select(t => t.Kind)), "runtime file commands remain identifiers");
+Equal(string.Join(",", Enumerable.Repeat(SyntaxKind.IdentifierToken, 8)), string.Join(",", runtimeFileIdentifierRegression.Take(8).Select(t => t.Kind)), "runtime file commands remain identifiers");
 
 var fileCopyParser = new StatementParser("FileCopy sourcePath, destinationPath");
 var fileCopy = (RuntimeFileStatementSyntax)fileCopyParser.ParseStatement();
