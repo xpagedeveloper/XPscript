@@ -94,7 +94,7 @@ foreach (var expected in new[]
     "actions.Children.Add(actionButton);",
     "field.TryGetProperty(\"validationError\"",
     "field.TryGetProperty(\"schemaValidationError\"",
-    "panel.Children.Add(new TextBlock { Text = validationError });",
+    "fieldContainer.Children.Add(validationBlock);",
     "request.TryGetProperty(\"initialFocus\"",
     "initialEditor.Focus();",
     "editor.IsVisible && editor.IsEnabled && editor.Focusable && editor.IsTabStop)?.Focus();",
