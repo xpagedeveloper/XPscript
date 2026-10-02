@@ -129,7 +129,7 @@ Initial declaration nodes should cover at least:
 Expressions are the first migration target because the current transpiler performs substantial textual expression rewriting and expression precedence directly affects correctness.
 
 - [x] Implement precedence-based expression parsing.
-- [ ] Define precedence and associativity for every XPscript operator.
+- [x] Define precedence and associativity for every XPscript operator.
 - [x] Implement unary `Not`, unary plus and unary minus.
 - [x] Implement arithmetic operators.
 - [x] Implement comparison operators.
@@ -140,7 +140,7 @@ Expressions are the first migration target because the current transpiler perfor
 - [x] Implement indexing.
 - [x] Implement array expressions.
 - [x] Implement `New`.
-- [ ] Implement zero-argument runtime function syntax.
+- [x] Implement zero-argument runtime function syntax.
 - [x] Test nested calls and member access.
 - [x] Test mixed unary/binary precedence.
 - [x] Add focused regression for `If Not RunCommand(...) Then`.
