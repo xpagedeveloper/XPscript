@@ -23,7 +23,7 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 const string propertyClassSource = "Class PropertyBox\nPrivate mName As String\nPublic Property Get Name As String\nName = mName\nEnd Property\nPublic Property Let Name As String\nmName = Name\nEnd Property\nPublic Property Set Owner As Person\nEnd Property\nEnd Class";
 var propertyClassParser = new DeclarationParser(propertyClassSource);
 var propertyClass = (ClassDeclarationSyntax)propertyClassParser.ParseDeclaration();
-Equal(0, propertyClassParser.Diagnostics.Count, "property class diagnostics");
+if (propertyClassParser.Diagnostics.Count != 0) throw new Exception("property class diagnostics: " + string.Join(" | ", propertyClassParser.Diagnostics.Select(d => $"{d.Code}:{d.Message}@{d.Span.Start}")));
 var propertyGet = (PropertyDeclarationSyntax)propertyClass.Members[1];
 Equal(SyntaxKind.GetKeyword, propertyGet.AccessorKeyword.Kind, "Property Get accessor");
 Equal("String", propertyGet.Type!.Identifier.Text, "Property Get type");
