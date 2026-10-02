@@ -209,6 +209,13 @@ public sealed class Lexer
         "EXIT" => SyntaxKind.ExitKeyword,
         "SUB" => SyntaxKind.SubKeyword,
         "FUNCTION" => SyntaxKind.FunctionKeyword,
+        "PUBLIC" => SyntaxKind.PublicKeyword,
+        "PRIVATE" => SyntaxKind.PrivateKeyword,
+        "BYREF" => SyntaxKind.ByRefKeyword,
+        "BYVAL" => SyntaxKind.ByValKeyword,
+        "CLASS" => SyntaxKind.ClassKeyword,
+        "PROPERTY" => SyntaxKind.PropertyKeyword,
+        "GET" => SyntaxKind.GetKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
