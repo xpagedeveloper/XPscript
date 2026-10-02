@@ -198,11 +198,12 @@ public static class AndroidFormHost
                 if (label.Length > 0)
                     panel.Children.Add(new TextBlock { Text = label });
 
+                var fieldCornerRadius = field.TryGetProperty("cornerRadius", out var fieldCornerRadiusValue) && fieldCornerRadiusValue.TryGetDouble(out var fieldRadius) ? fieldRadius : 0;
                 Control editor = type switch
                 {
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
-                    "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120 },
-                    _ => new TextBox()
+                    "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120, CornerRadius = new CornerRadius(fieldCornerRadius) },
+                    _ => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) }
                 };
 
                 if (field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
