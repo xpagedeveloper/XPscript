@@ -43,6 +43,9 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 |---|---|---|---|---|
 | `UIForm.BootText` | `form.BootText = text` | `text`: optional startup text. | Sets optional text shown while the UIForm starts. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `UIForm.AddTab` | `form.AddTab(name, label)` | tab `name` and visible `label`. | Adds a tab to the form. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UIForm.AddGrid` | `Set grid = form.AddGrid(name, columns)` | grid `name` and column count. | Adds a named grid container that can be placed on a tab. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UIGrid.SetTab` | `grid.SetTab(tab)` | existing tab name. | Places a named grid inside a UIForm tab. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UIGrid.SetFieldPosition` | `grid.SetFieldPosition(field, columnSpan)` | field name and span. | Places fields sequentially inside the named grid. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
 | `UIForm.SetFieldTab` | `form.SetFieldTab(field, tab)` | field name and tab name. | Places a field on a tab. Empty tab name returns it to the common form area. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
 | `UIForm.ActiveTab` | `form.ActiveTab = name` | existing tab name. | Gets or selects the active tab. Callback changes are propagated to the rendered form. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
 | `UIForm.SetActiveTab` | `form.SetActiveTab(name)` | existing tab name. | Selects the active tab from code. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
