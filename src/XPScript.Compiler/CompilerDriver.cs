@@ -909,18 +909,36 @@ public sealed class CompilerDriver
 
     private sealed class PublishProgressState
     {
+        private static readonly IReadOnlyDictionary<string, int> PhasePercentages =
+            new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                ["Restoring dependencies"] = 42,
+                ["Dependencies restored"] = 45,
+                ["Resolving Android libraries"] = 48,
+                ["Resolving Android assemblies"] = 51,
+                ["Generating Android Java stubs"] = 54,
+                ["Generating Android package metadata"] = 56,
+                ["Compiling generated project"] = 61,
+                ["Linking application"] = 68,
+                ["Compiling native code"] = 72,
+                ["Compiling Android native assemblies"] = 75,
+                ["Compiling Android bytecode"] = 79,
+                ["Packaging Android APK"] = 82,
+                ["Signing Android APK"] = 84
+            };
+
         private int _percent = 40;
-        private string? _lastPhase;
 
         public void Report(string phase)
         {
             lock (this)
             {
-                if (!string.Equals(_lastPhase, phase, StringComparison.Ordinal))
-                {
-                    _percent = Math.Min(84, _percent + 1);
-                    _lastPhase = phase;
-                }
+                var target = PhasePercentages.TryGetValue(phase, out var mapped)
+                    ? mapped
+                    : phase.StartsWith("MSBuild: ", StringComparison.Ordinal)
+                        ? Math.Min(83, _percent + 1)
+                        : _percent;
+                _percent = Math.Max(_percent, target);
                 CompilerProgressContext.Report(_percent, phase);
             }
         }
