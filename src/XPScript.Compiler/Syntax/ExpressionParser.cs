@@ -175,6 +175,7 @@ public sealed class ExpressionParser
         SyntaxKind.AppendKeyword or
         SyntaxKind.BinaryKeyword or
         SyntaxKind.RandomKeyword or
+        SyntaxKind.LenKeyword or
         SyntaxKind.PrintKeyword or
         SyntaxKind.WriteKeyword or
         SyntaxKind.LineKeyword or
