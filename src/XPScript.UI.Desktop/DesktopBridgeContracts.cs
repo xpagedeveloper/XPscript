@@ -32,6 +32,7 @@ public sealed record DesktopFormField(
     public double CornerRadius { get; init; }
     public string Placeholder { get; init; } = string.Empty;
     public string Tooltip { get; init; } = string.Empty;
+    public string TabName { get; init; } = string.Empty;
     public string RegexPattern { get; init; } = string.Empty;
     public string DateMinimum { get; init; } = string.Empty;
     public string DateMaximum { get; init; } = string.Empty;
@@ -77,6 +78,8 @@ public sealed record DesktopFormButton(
     public double CornerRadius { get; init; }
 }
 
+public sealed record DesktopFormTab(string Name, string Label);
+
 public sealed record DesktopFormRequest(
     string Title,
     int? Width,
@@ -92,6 +95,8 @@ public sealed record DesktopFormRequest(
     public bool ShowDefaultButtons { get; init; } = true;
     public int GridColumns { get; init; } = 1;
     public IReadOnlyList<DesktopFormButton> Buttons { get; init; } = Array.Empty<DesktopFormButton>();
+    public IReadOnlyList<DesktopFormTab> Tabs { get; init; } = Array.Empty<DesktopFormTab>();
+    public string ActiveTab { get; init; } = string.Empty;
     public string ApplicationTitle { get; init; } = string.Empty;
     public string ApplicationIcon { get; init; } = string.Empty;
     public string InstanceId { get; init; } = string.Empty;
