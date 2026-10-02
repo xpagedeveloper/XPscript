@@ -197,7 +197,7 @@ public static class AndroidFormHost
                 var label = field.TryGetProperty("label", out var labelValue) ? labelValue.GetString() ?? name : name;
                 var type = field.GetProperty("type").GetString() ?? "TextField";
 
-                if (label.Length > 0)
+                if (label.Length > 0 && type is not ("Separator" or "Spacer" or "Image"))
                     panel.Children.Add(new TextBlock { Text = label });
 
                 var fieldCornerRadius = field.TryGetProperty("cornerRadius", out var fieldCornerRadiusValue) && fieldCornerRadiusValue.TryGetDouble(out var fieldRadius) ? fieldRadius : 0;
@@ -226,6 +226,9 @@ public static class AndroidFormHost
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
                 editors[name] = editor;
                 panel.Children.Add(editor);
+
+                if (type is "Separator" or "Spacer" or "Image")
+                    continue;
 
                 var validationBlock = new TextBlock
                 {
