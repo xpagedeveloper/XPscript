@@ -19,6 +19,21 @@ static void Equal<T>(T expected, T actual, string message)
 static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
+
+var meMemberParser = new ExpressionParser("Me.Name");
+var meMember = (MemberAccessExpressionSyntax)meMemberParser.ParseExpression();
+Equal(0, meMemberParser.Diagnostics.Count, "Me member diagnostics");
+Equal("Me", ((NameExpressionSyntax)meMember.Expression).IdentifierToken.Text, "Me receiver");
+Equal("Name", meMember.NameToken.Text, "Me member name");
+
+var parentCallParser = new ExpressionParser("Parent.Describe()");
+var parentCall = (CallExpressionSyntax)parentCallParser.ParseExpression();
+Equal(0, parentCallParser.Diagnostics.Count, "Parent method call diagnostics");
+var parentMember = (MemberAccessExpressionSyntax)parentCall.Target;
+Equal("Parent", ((NameExpressionSyntax)parentMember.Expression).IdentifierToken.Text, "Parent receiver");
+Equal("Describe", parentMember.NameToken.Text, "Parent method name");
+
+
 var printIdentifierRegression = Lex("'comment\nPrint value");
 Equal(SyntaxKind.IdentifierToken, printIdentifierRegression[1].Kind, "Print remains an identifier in lexer output");
 
