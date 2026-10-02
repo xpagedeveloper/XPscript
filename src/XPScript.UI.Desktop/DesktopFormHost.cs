@@ -92,7 +92,6 @@ public static class DesktopFormHost
         }
         var validationText = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Red };
 
-        var automaticRow = 0;
         foreach (var field in request.Fields)
         {
             if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase)) continue;
