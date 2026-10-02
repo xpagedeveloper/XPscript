@@ -295,13 +295,13 @@ Equal(SyntaxKind.MemberAccessExpression, fileIoKeywordRegression.Kind, "file I/O
 var printCallRegression = new ExpressionParser("Print()").ParseExpression();
 Equal(SyntaxKind.CallExpression, printCallRegression.Kind, "Print remains a valid expression call");
 
-var printFileParser = new StatementParser("Print fileNo, value, \"text\"");
+var printFileParser = new StatementParser("Print #fileNo, value, \"text\"");
 var printFile = (FileOutputStatementSyntax)printFileParser.ParseStatement();
 Equal(0, printFileParser.Diagnostics.Count, "Print file diagnostics");
 Equal(SyntaxKind.PrintKeyword, printFile.Keyword.Kind, "Print file keyword");
 Equal(2, printFile.Values.Count, "Print file value count");
 
-var writeFileParser = new StatementParser("Write 1, value");
+var writeFileParser = new StatementParser("Write #1, value");
 var writeFile = (FileOutputStatementSyntax)writeFileParser.ParseStatement();
 Equal(0, writeFileParser.Diagnostics.Count, "Write file diagnostics");
 Equal(SyntaxKind.WriteKeyword, writeFile.Keyword.Kind, "Write file keyword");
