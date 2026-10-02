@@ -62,6 +62,8 @@ public sealed class StatementParser
             return ParseFileInputStatement();
         if (IsIdentifier("Seek"))
             return ParseSeekStatement();
+        if (IsIdentifier("Put") || IsIdentifier("Get"))
+            return ParseBinaryFileStatement();
         if (IsRuntimeFileCommand(Current))
             return ParseRuntimeFileStatement();
         if (IsIdentifier("Name"))
@@ -902,6 +904,28 @@ public sealed class StatementParser
         _position = commaIndex + 1;
         var positionExpression = ParseExpressionUntilLineEnd();
         return new SeekStatementSyntax(seekKeyword, file, positionExpression);
+    }
+
+    private StatementSyntax ParseBinaryFileStatement()
+    {
+        var command = NextToken();
+        if (Current.Kind == SyntaxKind.HashToken)
+            NextToken();
+
+        var arguments = new List<ExpressionSyntax>();
+        while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
+        {
+            var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
+            var end = commaIndex >= 0 ? commaIndex : FindLineEndIndex(_position);
+            arguments.Add(ParseExpressionRange(_position, end, _tokens[end].Span.Start));
+            _position = end;
+            if (Current.Kind == SyntaxKind.CommaToken)
+                NextToken();
+        }
+
+        if (arguments.Count < 3)
+            _diagnostics.Add(new SyntaxDiagnostic("XPS1012", $"{command.Text} expects file number, position and value/target.", command.Span));
+        return new RuntimeFileStatementSyntax(command, arguments);
     }
 
     private StatementSyntax ParseRuntimeFileStatement()
