@@ -231,6 +231,24 @@ foreach (var expected in new[] { "UIForm(\"Android UIForm Regression\")", "AddTe
         throw new Exception("Android UIForm regression sample is incomplete: " + expected);
 }
 
+var manualUiFormSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-uiform-manual-test.xps"));
+foreach (var expected in new[]
+{
+    "Android UIForm Manual Test",
+    "TEST STARTUP: PASS",
+    "Verify Input",
+    "TEST BUTTON HANDLER: PASS",
+    "TEST TOUCH: PASS",
+    "TEST LAYOUT/SCROLL: PASS",
+    "TEST FOCUS/KEYBOARD: PASS",
+    "TEST VALIDATION: PASS",
+    "XPSCRIPT-LIFECYCLE"
+})
+{
+    if (!manualUiFormSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android manual UIForm verification sample is incomplete: " + expected);
+}
+
 var outputRegressionSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-debug-output-regression.xps"));
 foreach (var expected in new[]
 {
