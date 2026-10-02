@@ -20,6 +20,19 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+const string lifecycleClassSource = "Class Lifecycle\nSub New(ByVal value As Integer)\nMe.Value = value\nEnd Sub\nSub Delete()\nEnd Sub\nValue As Integer\nEnd Class";
+var lifecycleClassParser = new DeclarationParser(lifecycleClassSource);
+var lifecycleClass = (ClassDeclarationSyntax)lifecycleClassParser.ParseDeclaration();
+Equal(0, lifecycleClassParser.Diagnostics.Count, "class lifecycle diagnostics");
+Equal(SyntaxKind.ConstructorDeclaration, lifecycleClass.Members[0].Kind, "Sub New declaration kind");
+Equal(1, ((ConstructorDeclarationSyntax)lifecycleClass.Members[0]).Parameters.Count, "Sub New parameter count");
+Equal(SyntaxKind.DestructorDeclaration, lifecycleClass.Members[1].Kind, "Sub Delete declaration kind");
+
+var invalidDeleteParser = new DeclarationParser("Class InvalidLifecycle\nSub Delete(value As Integer)\nEnd Sub\nEnd Class");
+invalidDeleteParser.ParseDeclaration();
+Equal("XPS1012", invalidDeleteParser.Diagnostics[^1].Code, "Sub Delete parameter diagnostic");
+
+
 var meRegressionParser = new ExpressionParser("Me.Name");
 var meRegression = (MemberAccessExpressionSyntax)meRegressionParser.ParseExpression();
 Equal(0, meRegressionParser.Diagnostics.Count, "Me member diagnostics");
