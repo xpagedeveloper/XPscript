@@ -47,7 +47,10 @@ public sealed class DeclarationParser
         if (Peek(header, position).Kind == SyntaxKind.ExtendKeyword)
         {
             extendKeyword = header[position++];
-            baseType = new TypeSyntax(Take(header, ref position, SyntaxKind.IdentifierToken));
+            if (Peek(header, position).Kind == SyntaxKind.IdentifierToken)
+                baseType = new TypeSyntax(header[position++]);
+            else
+                Take(header, ref position, SyntaxKind.IdentifierToken);
         }
         var members = new List<SyntaxNode>();
 
