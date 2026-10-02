@@ -93,7 +93,7 @@ foreach (var expected in new[]
     "catch (Exception exception)",
     "actions.Children.Add(actionButton);",
     "field.TryGetProperty(\"validationError\"",
-    "field.TryGetProperty(\"schemaValidationError\"",
+    "validationErrors.TryGetValue(name, out var validationBlock)",
     "fieldContainer.Children.Add(validationBlock);",
     "request.TryGetProperty(\"initialFocus\"",
     "initialEditor.Focus();",
