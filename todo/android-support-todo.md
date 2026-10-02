@@ -96,7 +96,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Verify touch input.
 - [x] Verify application lifecycle: start, pause, resume and stop.
 - [x] Verify orientation changes.
-- [ ] Verify form sizing/layout for typical phone dimensions.
+- [x] Verify form sizing/layout for typical phone dimensions. The Android host uses a scrollable, width-responsive form with phone margins, a bounded maximum content width, and wrapping action buttons; guarded by `AndroidCompilerProbe` and verified by Android CI.
 - [ ] Route Android UI diagnostics to adb/logcat. This will use the shared `Application.Debug` routing defined in `knowledge/application-debug-console.md`.
 - [ ] Keep non-UI XPScript runtime code independent from Avalonia.
 - [ ] Build and run a debug APK on Android 11 / API 30.
