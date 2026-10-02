@@ -635,9 +635,10 @@ Equal(SyntaxKind.CallExpression, notRunCommand.Operand.Kind, "Not operand is cal
 var runCommandCall = (CallExpressionSyntax)notRunCommand.Operand;
 Equal("RunCommand", ((NameExpressionSyntax)runCommandCall.Target).IdentifierToken.Text, "RunCommand target");
 Equal(2, runCommandCall.Arguments.Count, "RunCommand argument count");
-Equal(SyntaxKind.CallExpression, runCommandCall.Arguments[1].Kind, "nested Array call");
-var arrayCall = (CallExpressionSyntax)runCommandCall.Arguments[1];
-Equal("Array", ((NameExpressionSyntax)arrayCall.Target).IdentifierToken.Text, "Array target");
+Equal(SyntaxKind.ArrayExpression, runCommandCall.Arguments[1].Kind, "nested Array expression");
+var nestedArray = (ArrayExpressionSyntax)runCommandCall.Arguments[1];
+Equal("Array", nestedArray.ArrayIdentifier.Text, "Array identifier");
+Equal(1, nestedArray.Elements.Count, "nested Array element count");
 Equal(new TextSpan(0, 44), runCommandAst.Span, "Not RunCommand full span");
 
 var falseComparisonAst = new ExpressionParser("RunCommand(\"where.exe\", Array(\"winget\")) = False").ParseExpression();
