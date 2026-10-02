@@ -206,6 +206,9 @@ public sealed class Lexer
         "GOTO" => SyntaxKind.GoToKeyword,
         "RESUME" => SyntaxKind.ResumeKeyword,
         "RETURN" => SyntaxKind.ReturnKeyword,
+        "EXIT" => SyntaxKind.ExitKeyword,
+        "SUB" => SyntaxKind.SubKeyword,
+        "FUNCTION" => SyntaxKind.FunctionKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
