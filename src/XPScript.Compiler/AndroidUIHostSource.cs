@@ -2,7 +2,11 @@ namespace XPScript.Compiler;
 
 internal static class AndroidUIHostSource
 {
-    public static string Build(bool debug) => Code.Replace("__XPSCRIPT_ANDROID_DEBUG__", debug ? "true" : "false", StringComparison.Ordinal);
+    public static string Build(bool debug, string applicationTitle = "XPScript") => Code
+        .Replace("__XPSCRIPT_ANDROID_DEBUG__", debug ? "true" : "false", StringComparison.Ordinal)
+        .Replace("__XPSCRIPT_ANDROID_TITLE__", EscapeCSharpString(applicationTitle), StringComparison.Ordinal);
+
+    private static string EscapeCSharpString(string value) => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
 
     public const string Code = """
 using System.Text.Json;
@@ -36,7 +40,7 @@ public sealed class App : Avalonia.Application
 }
 
 [Activity(
-    Label = "XPScript",
+    Label = "__XPSCRIPT_ANDROID_TITLE__",
     Theme = "@style/Theme.AppCompat.DayNight.NoActionBar",
     MainLauncher = true,
     Exported = true,
