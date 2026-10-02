@@ -597,7 +597,7 @@ public static class XPScriptCompilerCommandLine
                     }
                 }
 
-                if (info || debug)
+                if (info)
                     WriteProgress($"Started to compile {sourceName}");
 
                 var compileTask = !useDaemon
@@ -668,7 +668,7 @@ public static class XPScriptCompilerCommandLine
             if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
                 throw new InvalidOperationException("Run cache did not contain a runnable executable.");
 
-            if (info || debug)
+            if (info)
                 WriteProgressLine("Starting program");
 
             // Framework-dependent run builds may return the managed assembly directly.
@@ -691,7 +691,7 @@ public static class XPScriptCompilerCommandLine
             using var process = Process.Start(startInfo)
                 ?? throw new InvalidOperationException("Unable to start the compiled XPScript program.");
             await process.WaitForExitAsync().ConfigureAwait(false);
-            if (info || debug) WriteProgressLine($"Program exited with code {process.ExitCode}");
+            if (info) WriteProgressLine($"Program exited with code {process.ExitCode}");
             if (process.ExitCode != 0 || !File.Exists(navigationPath))
                 return process.ExitCode;
 
