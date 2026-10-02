@@ -39,6 +39,12 @@ internal sealed class XPScriptUIButton
             generated = ReplaceRequiredRegex(generated,
                 @"internal\s+sealed\s+class\s+XPScriptUIForm\s*\{",
                 """
+internal sealed class XPScriptUITab
+{
+    public required string Name { get; init; }
+    public required string Label { get; set; }
+}
+
 internal sealed class XPScriptUIButton
 {
     public required string Name { get; init; }
