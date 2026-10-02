@@ -1,0 +1,101 @@
+' XPScript Android UIForm manual emulator/phone verification
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim data As New XPJsonObject
+    Dim form As New UIForm("Android UIForm Manual Test")
+    Dim schema As XPJsonSchema
+    Dim result As String
+
+    Call Application.Debug.Info("TEST STARTUP: PASS")
+    Call Application.Debug.Info("TEST INSTRUCTION: Type MANUAL-ANDROID in Name, enter multiple lines in Notes, toggle Enabled, then press Verify Input.")
+
+    Call data.Set("name", "")
+    Call data.Set("notes", "")
+    Call data.Set("enabled", False)
+    Call form.BindData(data)
+    Call form.AddTextField("name", "1. Name - type MANUAL-ANDROID")
+    Call form.AddTextArea("notes", "2. Notes - type two lines")
+    Call form.AddCheckBox("enabled", "3. Enabled - toggle this")
+    Call form.SetRequired("name", True)
+    Call form.SetLength("name", 3, 40)
+    Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string"",""minLength"":3}},""required"":[""name""]}")
+    Call form.SetValidationSchema(schema)
+
+    Call form.AddButtonCallback("verify", "Verify Input", "VerifyInput", "manual")
+    Call form.AddButtonCallback("touch", "Touch PASS", "TouchPass", "manual")
+    Call form.AddButtonCallback("layout", "Layout PASS", "LayoutPass", "manual")
+    Call form.AddButtonCallback("keyboard", "Keyboard PASS", "KeyboardPass", "manual")
+    result = form.ShowDialog()
+
+    Call Application.Debug.Info("TEST DIALOG RESULT: " & result)
+    Call Application.Debug.Info("TEST FINAL NAME: " & form.GetFieldValueString("name"))
+    Call Application.Debug.Info("TEST FINAL NOTES: " & form.GetFieldValueString("notes"))
+    Call Application.Debug.Info("TEST FINAL ENABLED: " & form.GetFieldValueString("enabled"))
+
+    If result = "OK" Then
+        If form.GetFieldValueString("name") = "MANUAL-ANDROID" Then
+            Call Application.Debug.Info("TEST TEXTFIELD/BINDING: PASS")
+        Else
+            Call Application.Debug.Error("TEST TEXTFIELD/BINDING: FAIL expected MANUAL-ANDROID")
+        End If
+        If form.GetFieldValueString("notes") <> "" Then
+            Call Application.Debug.Info("TEST TEXTAREA/BINDING: PASS")
+        Else
+            Call Application.Debug.Error("TEST TEXTAREA/BINDING: FAIL notes empty")
+        End If
+        If form.GetFieldValueString("enabled") = "true" Then
+            Call Application.Debug.Info("TEST CHECKBOX/BINDING: PASS")
+        Else
+            Call Application.Debug.Error("TEST CHECKBOX/BINDING: FAIL checkbox not enabled")
+        End If
+        If form.IsDataValid Then
+            Call Application.Debug.Info("TEST VALIDATION: PASS")
+        Else
+            Call Application.Debug.Error("TEST VALIDATION: FAIL " & form.GetValidationError("name"))
+        End If
+    Else
+        Call Application.Debug.Error("TEST DIALOG: FAIL cancelled")
+    End If
+
+    Call Application.Debug.Info("TEST INSTRUCTION: Rotate portrait/landscape, press Home and return, lock/unlock, then confirm logcat contains XPSCRIPT-LIFECYCLE pause/resume without crash.")
+    Call Application.Debug.Info("TEST MANUAL COMPLETE: inspect all TEST and XPSCRIPT-LIFECYCLE lines in logcat")
+End Sub
+
+Sub VerifyInput(evt As Variant, contextName As String)
+    Dim form As Variant
+    form = evt.Form
+    If form.GetFieldValueString("name") = "MANUAL-ANDROID" Then
+        Call Application.Debug.Info("TEST BUTTON HANDLER: PASS")
+        Call Application.Debug.Info("TEST LIVE TEXTFIELD: PASS value=MANUAL-ANDROID")
+    Else
+        Call Application.Debug.Error("TEST LIVE TEXTFIELD: FAIL value=" & form.GetFieldValueString("name"))
+    End If
+    If form.GetFieldValueString("notes") <> "" Then
+        Call Application.Debug.Info("TEST LIVE TEXTAREA: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE TEXTAREA: FAIL")
+    End If
+    If form.GetFieldValueString("enabled") = "true" Then
+        Call Application.Debug.Info("TEST LIVE CHECKBOX: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE CHECKBOX: FAIL")
+    End If
+    If form.IsDataValid Then
+        Call Application.Debug.Info("TEST LIVE VALIDATION: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE VALIDATION: FAIL " & form.GetValidationError("name"))
+    End If
+End Sub
+
+Sub TouchPass(evt As Variant, contextName As String)
+    Call Application.Debug.Info("TEST TOUCH: PASS confirmed by user")
+End Sub
+
+Sub LayoutPass(evt As Variant, contextName As String)
+    Call Application.Debug.Info("TEST LAYOUT/SCROLL: PASS confirmed by user")
+End Sub
+
+Sub KeyboardPass(evt As Variant, contextName As String)
+    Call Application.Debug.Info("TEST FOCUS/KEYBOARD: PASS confirmed by user")
+End Sub
