@@ -101,6 +101,8 @@ internal sealed class UIFormEventDispatcherPostProcessor
             {
                 return SerializeActionState();
             }
+            if (!IsDataValid)
+                return SerializeActionState();
             var button = FindButton(controlName);
             handlerName = button.Handler;
             useEventCallback = button.UseEventCallback;
@@ -167,7 +169,16 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 System.Text.Json.JsonValueKind.Null => string.Empty,
                 _ => throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' submitted an unsupported event value type.")
             };
-            ApplySubmittedValue(field, submitted);
+            try
+            {
+                field.ValidationError = string.Empty;
+                ApplySubmittedValue(field, submitted);
+            }
+            catch (XPScriptRuntimeException exception)
+            {
+                field.ValidationError = exception.Message;
+                throw;
+            }
         }
     }
 
