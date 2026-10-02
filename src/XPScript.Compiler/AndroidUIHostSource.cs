@@ -17,6 +17,8 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Controls.Primitives;
+using Avalonia.Interactivity;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 
@@ -199,10 +201,22 @@ public static class AndroidFormHost
                     panel.Children.Add(new TextBlock { Text = label });
 
                 var fieldCornerRadius = field.TryGetProperty("cornerRadius", out var fieldCornerRadiusValue) && fieldCornerRadiusValue.TryGetDouble(out var fieldRadius) ? fieldRadius : 0;
+                var options = field.TryGetProperty("options", out var optionValues) && optionValues.ValueKind == JsonValueKind.Array
+                    ? optionValues.EnumerateArray().Select(option => option.GetString() ?? string.Empty).ToArray()
+                    : Array.Empty<string>();
                 Control editor = type switch
                 {
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
                     "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120, CornerRadius = new CornerRadius(fieldCornerRadius) },
+                    "PasswordField" => new TextBox { PasswordChar = '•', CornerRadius = new CornerRadius(fieldCornerRadius) },
+                    "Select" => new ComboBox { ItemsSource = options },
+                    "ListBox" => new ListBox { ItemsSource = options, MinHeight = 112, SelectionMode = SelectionMode.Single },
+                    "MultiListBox" => new ListBox { ItemsSource = options, MinHeight = 112, SelectionMode = SelectionMode.Multiple | SelectionMode.Toggle },
+                    "RadioGroup" => CreateRadioGroup(options),
+                    "RangeField" => CreateRangeField(field),
+                    "Separator" => new Separator(),
+                    "Spacer" => new Border { Height = 16 },
+                    "Image" => CreateImage(field),
                     _ => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) }
                 };
 
@@ -331,6 +345,48 @@ public static class AndroidFormHost
         }
         if (root.TryGetProperty("navigation", out var navigation) && navigation.ValueKind == JsonValueKind.Object)
             Log.Info("XPScript", "UIForm navigation requested: " + navigation);
+    }
+
+    private static Control CreateRadioGroup(IReadOnlyList<string> options)
+    {
+        var panel = new StackPanel { Spacing = 6 };
+        foreach (var option in options)
+            panel.Children.Add(new RadioButton { Content = option, Tag = option, GroupName = Guid.NewGuid().ToString("N") });
+        return panel;
+    }
+
+    private static Control CreateRangeField(JsonElement field)
+    {
+        var minimum = field.TryGetProperty("minimum", out var minValue) && minValue.TryGetDouble(out var min) ? min : 0;
+        var maximum = field.TryGetProperty("maximum", out var maxValue) && maxValue.TryGetDouble(out var max) ? max : 100;
+        return new Slider { Minimum = minimum, Maximum = maximum };
+    }
+
+    private static Control CreateImage(JsonElement field)
+    {
+        var image = new Avalonia.Controls.Image { MaxHeight = 320, Stretch = Stretch.Uniform };
+        var source = field.TryGetProperty("imageSource", out var sourceValue) ? sourceValue.GetString() ?? string.Empty : string.Empty;
+        try
+        {
+            if (source.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+            {
+                var comma = source.IndexOf(',');
+                if (comma > 0)
+                {
+                    using var stream = new MemoryStream(Convert.FromBase64String(source[(comma + 1)..]));
+                    image.Source = new Bitmap(stream);
+                }
+            }
+            else if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && uri.IsFile)
+                image.Source = new Bitmap(uri.LocalPath);
+            else if (File.Exists(source))
+                image.Source = new Bitmap(source);
+        }
+        catch (Exception exception)
+        {
+            Log.Error("XPScript", "UIForm image failed: " + exception.Message);
+        }
+        return image;
     }
 
     private static void SetEditorValue(Control editor, JsonElement value)
