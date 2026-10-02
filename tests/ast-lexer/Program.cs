@@ -306,18 +306,18 @@ var writeFile = (FileOutputStatementSyntax)writeFileParser.ParseStatement();
 Equal(0, writeFileParser.Diagnostics.Count, "Write file diagnostics");
 Equal(SyntaxKind.WriteKeyword, writeFile.Keyword.Kind, "Write file keyword");
 
-var inputFileParser = new StatementParser("Input fileNo, first, second");
+var inputFileParser = new StatementParser("Input #fileNo, first, second");
 var inputFile = (FileInputStatementSyntax)inputFileParser.ParseStatement();
 Equal(0, inputFileParser.Diagnostics.Count, "Input file diagnostics");
 Equal(2, inputFile.Targets.Count, "Input target count");
 
-var lineInputParser = new StatementParser("Line Input fileNo, line");
+var lineInputParser = new StatementParser("Line Input #fileNo, line");
 var lineInput = (FileInputStatementSyntax)lineInputParser.ParseStatement();
 Equal(0, lineInputParser.Diagnostics.Count, "Line Input diagnostics");
 Equal(SyntaxKind.LineKeyword, lineInput.LineKeyword!.Kind, "Line Input keyword");
 Equal(1, lineInput.Targets.Count, "Line Input target count");
 
-var seekFileParser = new StatementParser("Seek fileNo, 42");
+var seekFileParser = new StatementParser("Seek #fileNo, 42");
 var seekFile = (SeekStatementSyntax)seekFileParser.ParseStatement();
 Equal(0, seekFileParser.Diagnostics.Count, "Seek diagnostics");
 Equal(SyntaxKind.LiteralExpression, seekFile.Position.Kind, "Seek position expression");
