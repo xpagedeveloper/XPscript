@@ -113,12 +113,26 @@ public sealed class DeclarationParser
         return lines.Count;
     }
 
-    private SubDeclarationSyntax ParseSub(IReadOnlyList<SourceLine> lines, SyntaxToken[] header, ref int position, SyntaxToken? visibility)
+    private SyntaxNode ParseSub(IReadOnlyList<SourceLine> lines, SyntaxToken[] header, ref int position, SyntaxToken? visibility)
     {
         var subKeyword = Take(header, ref position, SyntaxKind.SubKeyword);
-        var identifier = Take(header, ref position, SyntaxKind.IdentifierToken);
+        var isConstructor = Peek(header, position).Kind == SyntaxKind.NewKeyword;
+        var identifier = isConstructor
+            ? header[position++]
+            : Take(header, ref position, SyntaxKind.IdentifierToken);
         var (openParen, parameters, commas, closeParen) = ParseParameters(header, ref position);
         var (statements, endKeyword, endTarget) = ParseBody(lines, SyntaxKind.SubKeyword, "Sub");
+
+        if (isConstructor)
+            return new ConstructorDeclarationSyntax(visibility, subKeyword, identifier, openParen, parameters, commas, closeParen, statements, endKeyword, endTarget);
+
+        if (identifier.Text.Equals("Delete", StringComparison.OrdinalIgnoreCase))
+        {
+            if (parameters.Count != 0)
+                _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Sub Delete cannot have parameters.", parameters[0].Span));
+            return new DestructorDeclarationSyntax(visibility, subKeyword, identifier, openParen, closeParen, statements, endKeyword, endTarget);
+        }
+
         return new SubDeclarationSyntax(visibility, subKeyword, identifier, openParen, parameters, commas, closeParen, statements, endKeyword, endTarget);
     }
 
