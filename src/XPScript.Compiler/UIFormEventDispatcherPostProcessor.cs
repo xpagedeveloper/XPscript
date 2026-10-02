@@ -93,7 +93,14 @@ internal sealed class UIFormEventDispatcherPostProcessor
         }
         else if (kind.Equals("button", StringComparison.OrdinalIgnoreCase))
         {
-            ApplySubmittedStateJson(submittedValue);
+            try
+            {
+                ApplySubmittedStateJson(submittedValue);
+            }
+            catch (XPScriptRuntimeException)
+            {
+                return SerializeActionState();
+            }
             var button = FindButton(controlName);
             handlerName = button.Handler;
             useEventCallback = button.UseEventCallback;
