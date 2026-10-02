@@ -448,6 +448,26 @@ var returnCall = (ReturnStatementSyntax)returnCallParser.ParseStatement();
 Equal(0, returnCallParser.Diagnostics.Count, "Return call diagnostics");
 Equal(SyntaxKind.CallExpression, returnCall.Expression!.Kind, "Return call expression kind");
 
+foreach (var (source, targetKind) in new[]
+{
+    ("Exit Sub", SyntaxKind.SubKeyword),
+    ("Exit Function", SyntaxKind.FunctionKeyword),
+    ("Exit For", SyntaxKind.ForKeyword),
+    ("Exit ForAll", SyntaxKind.ForAllKeyword),
+    ("Exit Do", SyntaxKind.DoKeyword),
+    ("Exit While", SyntaxKind.WhileKeyword)
+})
+{
+    var exitParser = new StatementParser(source);
+    var exitStatement = (ExitStatementSyntax)exitParser.ParseStatement();
+    Equal(0, exitParser.Diagnostics.Count, source + " diagnostics");
+    Equal(targetKind, exitStatement.TargetKeyword.Kind, source + " target kind");
+}
+
+var malformedExitParser = new StatementParser("Exit Unknown");
+malformedExitParser.ParseStatement();
+Equal(2, malformedExitParser.Diagnostics.Count, "malformed Exit diagnostics");
+
 var assignmentParser = new StatementParser("count = 1 + 2");
 var assignmentStatement = assignmentParser.ParseStatement();
 Equal(SyntaxKind.AssignmentStatement, assignmentStatement.Kind, "assignment statement kind");
