@@ -28,7 +28,19 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             !generated.Contains(buttonMarker, StringComparison.Ordinal))
             throw new CompilerException("Unable to install UIForm desktop layout metadata bridge (request-object).");
 
-        generated = ReplaceFirst(generated, requestMarker, requestMarker + """
+        var requestStart = generated.IndexOf("var request = new", StringComparison.Ordinal);
+        var buttonsStart = requestStart < 0 ? -1 : generated.IndexOf("buttons = form.Buttons.Select", requestStart, StringComparison.Ordinal);
+        var requestEnd = buttonsStart < 0 ? -1 : generated.IndexOf("};", buttonsStart, StringComparison.Ordinal);
+        if (requestStart < 0 || buttonsStart < 0 || requestEnd < 0)
+            throw new CompilerException("Unable to locate the UIForm desktop request scope.");
+
+        var request = generated.Substring(requestStart, requestEnd + 2 - requestStart);
+        if (!request.Contains(requestMarker, StringComparison.Ordinal) ||
+            !request.Contains(fieldMarker, StringComparison.Ordinal) ||
+            !request.Contains(buttonMarker, StringComparison.Ordinal))
+            throw new CompilerException("Unable to install UIForm desktop layout metadata bridge inside the request scope.");
+
+        request = ReplaceFirst(request, requestMarker, requestMarker + """
             
             theme = form.Theme,
             showValidationErrors = form.ShowValidationErrors,
@@ -37,7 +49,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             hasValidationSchema = form.HasValidationSchema,
             """);
 
-        generated = ReplaceFirst(generated, fieldMarker, fieldMarker + """
+        request = ReplaceFirst(request, fieldMarker, fieldMarker + """
             
             placeholder = field.Placeholder,
             tooltip = field.Tooltip,
@@ -52,7 +64,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             schemaValidationError = form.GetValidationError(field.Name),
             """);
 
-        generated = ReplaceFirst(generated, buttonMarker, buttonMarker + """
+        request = ReplaceFirst(request, buttonMarker, buttonMarker + """
             
             layoutRow = button.LayoutRow,
             layoutColumn = button.LayoutColumn,
@@ -60,7 +72,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             rowSpan = button.RowSpan,
             """);
 
-        return generated;
+        return string.Concat(generated.AsSpan(0, requestStart), request, generated.AsSpan(requestEnd + 2));
     }
 
     private static string ReplaceFirst(string source, string marker, string replacement)
