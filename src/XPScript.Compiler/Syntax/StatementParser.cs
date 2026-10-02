@@ -72,7 +72,7 @@ public sealed class StatementParser
             return ParseFileInputStatement();
         if (IsIdentifier("Seek") && PeekKind(1) == SyntaxKind.HashToken)
             return ParseSeekStatement();
-        if (IsIdentifier("Put") || IsIdentifier("Get"))
+        if (IsIdentifier("Put") || Current.Kind == SyntaxKind.GetKeyword)
             return ParseBinaryFileStatement();
         if (IsIdentifier("Lock") || IsIdentifier("Unlock"))
             return ParseFileLockStatement();
