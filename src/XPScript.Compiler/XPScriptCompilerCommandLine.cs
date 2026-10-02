@@ -251,8 +251,8 @@ public static class XPScriptCompilerCommandLine
                     timer,
                     $"Compiling {sourceName} as WebIIS package").ConfigureAwait(false);
                 CompleteProgress(targetResult.Success
-                    ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
-                    : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
+                    ? $"Compiled {sourceName} in {FormatCompileElapsed(timer.Elapsed)}"
+                    : $"Compilation failed for {sourceName} after {FormatCompileElapsed(timer.Elapsed)}");
                 WriteResult(targetResult, resultFormat);
                 return targetResult.Success ? 0 : 2;
             }
@@ -287,8 +287,8 @@ public static class XPScriptCompilerCommandLine
             if (result.Success && !embedAssets && UIFormAppAssets.UsesUIForm(sourcePath))
                 UIFormAppAssets.PublishExternalAssets(sourcePath, outputPath);
             CompleteProgress(result.Success
-                ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
-                : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
+                ? $"Compiled {sourceName} in {FormatCompileElapsed(timer.Elapsed)}"
+                : $"Compilation failed for {sourceName} after {FormatCompileElapsed(timer.Elapsed)}");
             WriteResult(result, resultFormat);
             return result.Success ? 0 : 2;
         }
@@ -839,7 +839,17 @@ public static class XPScriptCompilerCommandLine
         if (elapsed.TotalMinutes < 1)
             return $"{elapsed.TotalSeconds:F0}s";
 
-        return elapsed.TotalMinutes.ToString("F2", System.Globalization.CultureInfo.CurrentCulture) + " min";
+        var totalSeconds = (int)Math.Floor(elapsed.TotalSeconds);
+        return $"{totalSeconds / 60},{totalSeconds % 60:00} min";
+    }
+
+    private static string FormatCompileElapsed(TimeSpan elapsed)
+    {
+        if (elapsed.TotalMinutes < 1)
+            return $"{elapsed.TotalSeconds:F1}s";
+
+        var totalSeconds = (int)Math.Floor(elapsed.TotalSeconds);
+        return $"{totalSeconds / 60},{totalSeconds % 60:00} min";
     }
 
     private static void WriteProgress(string message)
