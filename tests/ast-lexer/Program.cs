@@ -172,6 +172,32 @@ Equal(SyntaxKind.MemberAccessExpression, fileKeywordMemberRegression.Kind, "file
 var fileKeywordCallRegression = new ExpressionParser("Open()").ParseExpression();
 Equal(SyntaxKind.CallExpression, fileKeywordCallRegression.Kind, "Open remains a valid expression call");
 
+var runtimeFileIdentifierRegression = Lex("FileCopy Kill MkDir RmDir ChDir SetFileAttr Name");
+Equal(string.Join(",", Enumerable.Repeat(SyntaxKind.IdentifierToken, 7)), string.Join(",", runtimeFileIdentifierRegression.Take(7).Select(t => t.Kind)), "runtime file commands remain identifiers");
+
+var fileCopyParser = new StatementParser("FileCopy sourcePath, destinationPath");
+var fileCopy = (RuntimeFileStatementSyntax)fileCopyParser.ParseStatement();
+Equal(0, fileCopyParser.Diagnostics.Count, "FileCopy diagnostics");
+Equal(2, fileCopy.Arguments.Count, "FileCopy argument count");
+
+foreach (var command in new[] { "Kill filePath", "MkDir directoryPath", "RmDir directoryPath", "ChDir directoryPath" })
+{
+    var parser = new StatementParser(command);
+    var statement = (RuntimeFileStatementSyntax)parser.ParseStatement();
+    Equal(0, parser.Diagnostics.Count, command + " diagnostics");
+    Equal(1, statement.Arguments.Count, command + " argument count");
+}
+
+var setFileAttrParser = new StatementParser("SetFileAttr filePath, attributes");
+var setFileAttr = (RuntimeFileStatementSyntax)setFileAttrParser.ParseStatement();
+Equal(0, setFileAttrParser.Diagnostics.Count, "SetFileAttr diagnostics");
+Equal(2, setFileAttr.Arguments.Count, "SetFileAttr argument count");
+
+var renameFileParser = new StatementParser("Name oldPath As newPath");
+var renameFile = (RenameFileStatementSyntax)renameFileParser.ParseStatement();
+Equal(0, renameFileParser.Diagnostics.Count, "Name file diagnostics");
+Equal(SyntaxKind.AsKeyword, renameFile.AsKeyword.Kind, "Name file As keyword");
+
 var fileIoKeywordRegression = new ExpressionParser("obj.Print").ParseExpression();
 Equal(SyntaxKind.MemberAccessExpression, fileIoKeywordRegression.Kind, "file I/O keywords remain valid member names");
 var printCallRegression = new ExpressionParser("Print()").ParseExpression();
