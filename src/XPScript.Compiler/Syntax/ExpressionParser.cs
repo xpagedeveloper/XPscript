@@ -105,6 +105,28 @@ public sealed class ExpressionParser
 
     private ExpressionSyntax ParsePrimaryExpression()
     {
+        if (Current.Kind == SyntaxKind.IdentifierToken
+            && Current.Text.Equals("Array", StringComparison.OrdinalIgnoreCase)
+            && PeekKind(1) == SyntaxKind.OpenParenToken)
+        {
+            var arrayIdentifier = NextToken();
+            var open = NextToken();
+            var elements = new List<ExpressionSyntax>();
+            var commas = new List<SyntaxToken>();
+            if (Current.Kind != SyntaxKind.CloseParenToken)
+            {
+                while (true)
+                {
+                    elements.Add(ParseBinaryExpression());
+                    if (Current.Kind != SyntaxKind.CommaToken)
+                        break;
+                    commas.Add(NextToken());
+                }
+            }
+            var close = Match(SyntaxKind.CloseParenToken);
+            return new ArrayExpressionSyntax(arrayIdentifier, open, elements, commas, close);
+        }
+
         if (Current.Kind == SyntaxKind.NewKeyword)
         {
             var newKeyword = NextToken();
