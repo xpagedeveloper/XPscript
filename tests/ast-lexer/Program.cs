@@ -20,6 +20,19 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+const string propertyClassSource = "Class PropertyBox\nPrivate mName As String\nPublic Property Get Name As String\nName = mName\nEnd Property\nPublic Property Let Name As String\nmName = Name\nEnd Property\nPublic Property Set Owner As Person\nEnd Property\nEnd Class";
+var propertyClassParser = new DeclarationParser(propertyClassSource);
+var propertyClass = (ClassDeclarationSyntax)propertyClassParser.ParseDeclaration();
+Equal(0, propertyClassParser.Diagnostics.Count, "property class diagnostics");
+var propertyGet = (PropertyDeclarationSyntax)propertyClass.Members[1];
+Equal(SyntaxKind.GetKeyword, propertyGet.AccessorKeyword.Kind, "Property Get accessor");
+Equal("String", propertyGet.Type!.Identifier.Text, "Property Get type");
+var propertyLet = (PropertyDeclarationSyntax)propertyClass.Members[2];
+Equal(SyntaxKind.LetKeyword, propertyLet.AccessorKeyword.Kind, "Property Let accessor");
+var propertySet = (PropertyDeclarationSyntax)propertyClass.Members[3];
+Equal(SyntaxKind.SetKeyword, propertySet.AccessorKeyword.Kind, "Property Set accessor");
+
+
 const string lifecycleClassSource = "Class Lifecycle\nSub New(ByVal value As Integer)\nMe.Value = value\nEnd Sub\nSub Delete()\nEnd Sub\nValue As Integer\nEnd Class";
 var lifecycleClassParser = new DeclarationParser(lifecycleClassSource);
 var lifecycleClass = (ClassDeclarationSyntax)lifecycleClassParser.ParseDeclaration();
