@@ -257,8 +257,9 @@ public sealed class CompilerDriver
             using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start dotnet publish.");
             var stdoutLines = new List<string>();
             var stderrLines = new List<string>();
-            var stdoutTask = DrainPublishOutputAsync(process.StandardOutput, stdoutLines);
-            var stderrTask = DrainPublishOutputAsync(process.StandardError, stderrLines);
+            var publishProgress = new PublishProgressState();
+            var stdoutTask = DrainPublishOutputAsync(process.StandardOutput, stdoutLines, publishProgress);
+            var stderrTask = DrainPublishOutputAsync(process.StandardError, stderrLines, publishProgress);
             await process.WaitForExitAsync();
             await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
             var stdout = string.Join(Environment.NewLine, stdoutLines);
@@ -906,14 +907,33 @@ public sealed class CompilerDriver
                "[compiler output truncated after " + MaximumBuildDiagnosticChars + " characters]";
     }
 
-    private static async Task DrainPublishOutputAsync(StreamReader reader, List<string> lines)
+    private sealed class PublishProgressState
+    {
+        private int _percent = 39;
+        private string? _lastPhase;
+
+        public void Report(string phase)
+        {
+            lock (this)
+            {
+                if (!string.Equals(_lastPhase, phase, StringComparison.Ordinal))
+                {
+                    _percent = Math.Min(84, _percent + 1);
+                    _lastPhase = phase;
+                }
+                CompilerProgressContext.Report(_percent, phase);
+            }
+        }
+    }
+
+    private static async Task DrainPublishOutputAsync(StreamReader reader, List<string> lines, PublishProgressState progress)
     {
         while (await reader.ReadLineAsync().ConfigureAwait(false) is { } line)
         {
             lines.Add(line);
             var phase = ClassifyPublishProgress(line);
             if (phase is not null)
-                CompilerProgressContext.Report(40, phase);
+                progress.Report(phase);
         }
     }
 
