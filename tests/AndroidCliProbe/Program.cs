@@ -30,7 +30,9 @@ foreach (var expected in new[]
 
 foreach (var expected in new[]
 {
-    "UIFormAppAssets.UsesUIForm(source)",
+    "project.ApplicationType == AndroidProjectMetadata.UiApplicationType",
+    "\"pidof\", \"com.xpscript.debugapp\"",
+    "Android UI application was launched but is not running on ",
     "Android UI application launched on ",
     "xpscript android logs --device "
 })
