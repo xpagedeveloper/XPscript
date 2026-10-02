@@ -129,6 +129,9 @@ foreach (var expected in new[]
         throw new Exception("Android generated UIForm host is missing: " + expected);
 }
 
+if (System.Text.RegularExpressions.Regex.IsMatch(uiHostCode, @"(?<!Avalonia\.Controls\.)\bRadioButton\b"))
+    throw new Exception("Android UIForm host must fully qualify Avalonia RadioButton references to avoid Android.Widget ambiguity.");
+
 foreach (var forbidden in new[] { "PointerPressed", "PointerReleased", "MouseButton", "MouseDevice" })
 {
     if (uiHostCode.Contains(forbidden, StringComparison.Ordinal))
