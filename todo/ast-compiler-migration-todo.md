@@ -165,14 +165,14 @@ Expressions are the first migration target because the current transpiler perfor
 
 ## Phase 5: Declarations and program structure
 
-- [ ] Parse Subs and Functions.
-- [ ] Parse parameters including ByRef/ByVal semantics.
-- [ ] Parse return types.
+- [x] Parse Subs and Functions.
+- [x] Parse parameters including ByRef/ByVal semantics.
+- [x] Parse return types.
 - [ ] Parse Classes and inheritance syntax.
 - [ ] Parse fields.
 - [ ] Parse properties.
 - [ ] Parse constructors and destructors.
-- [ ] Parse visibility modifiers.
+- [x] Parse visibility modifiers.
 - [ ] Parse application-level declarations.
 - [ ] Parse target-specific entry points.
 - [ ] Validate block terminators structurally rather than with transpiler state.
