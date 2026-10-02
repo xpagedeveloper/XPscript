@@ -64,7 +64,9 @@ End Sub
 
 Sub VerifyInput(evt As Variant, contextName As String)
     Dim form As Variant
+    Call Application.Debug.Info("TEST VERIFY CALLBACK ENTERED")
     form = evt.Form
+    Call Application.Debug.Info("TEST VERIFY EVENT FORM: PASS")
     If form.GetFieldValueString("name") = "MANUAL-ANDROID" Then
         Call Application.Debug.Info("TEST BUTTON HANDLER: PASS")
         Call Application.Debug.Info("TEST LIVE TEXTFIELD: PASS value=MANUAL-ANDROID")
