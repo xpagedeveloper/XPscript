@@ -24,8 +24,13 @@ try
     File.WriteAllText(Path.Combine(root, "xpscript.json"), """{"target":"desktop","applicationType":"headless"}""");
     ExpectFailure(source, "target to be 'android'");
 
+    File.WriteAllText(Path.Combine(root, "xpscript.json"), """{"target":"android","applicationType":"ui"}""");
+    var uiConfig = AndroidProjectMetadata.LoadForSource(source);
+    Require(uiConfig.Target == "android", "UI target");
+    Require(uiConfig.ApplicationType == "ui", "UI application type");
+
     File.WriteAllText(Path.Combine(root, "xpscript.json"), """{"target":"android","applicationType":"uiform"}""");
-    ExpectFailure(source, "not available yet");
+    ExpectFailure(source, "Supported applicationTypes: headless, ui");
 
     File.WriteAllText(Path.Combine(root, "xpscript.json"), """{"target":"android","applicationType":false}""");
     ExpectFailure(source, "applicationType must be a string");
