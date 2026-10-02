@@ -110,6 +110,12 @@ internal static class AndroidCommand
         if (launch.ExitCode != 0 || launch.Output.Contains("No activities found", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (launch.Error + Environment.NewLine + launch.Output).Trim());
 
+        if (XPScript.Compiler.UIFormAppAssets.UsesUIForm(source))
+        {
+            Console.WriteLine("Android UI application launched on " + serial + ". Use 'xpscript android logs --device " + serial + "' for runtime diagnostics.");
+            return 0;
+        }
+
         return await WaitForCompletionAsync(adb, serial, TimeSpan.FromSeconds(30));
     }
 
