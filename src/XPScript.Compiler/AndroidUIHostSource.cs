@@ -16,6 +16,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 
@@ -130,21 +131,7 @@ public sealed class MainView : UserControl
     internal void ShowForm(Control form) => _contentHost.Content = form;
     internal void RestoreHome() => _contentHost.Content = HomeContent();
 
-    private static Control HomeContent() => new StackPanel
-    {
-        Margin = new Thickness(24),
-        Spacing = 16,
-        VerticalAlignment = VerticalAlignment.Center,
-        Children =
-        {
-            new TextBlock
-            {
-                Text = "XPScript Android UIForm host",
-                FontSize = 24,
-                HorizontalAlignment = HorizontalAlignment.Center
-            }
-        }
-    };
+    private static Control HomeContent() => new Grid();
 }
 
 public static class AndroidFormHost
@@ -172,6 +159,27 @@ public static class AndroidFormHost
             var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
             var validationErrors = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
             var panel = new StackPanel { Spacing = 12, Margin = new Thickness(16), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Stretch };
+
+            var bootText = request.TryGetProperty("bootText", out var bootTextValue) ? bootTextValue.GetString() ?? string.Empty : string.Empty;
+            var bootImage = request.TryGetProperty("bootImage", out var bootImageValue) ? bootImageValue.GetString() ?? string.Empty : string.Empty;
+            if (bootImage.Length > 0)
+            {
+                try
+                {
+                    var image = new Avalonia.Controls.Image { MaxHeight = 240, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center };
+                    if (Uri.TryCreate(bootImage, UriKind.Absolute, out var bootUri) && bootUri.IsFile)
+                        image.Source = new Bitmap(bootUri.LocalPath);
+                    else if (File.Exists(bootImage))
+                        image.Source = new Bitmap(bootImage);
+                    if (image.Source is not null) panel.Children.Add(image);
+                }
+                catch (Exception exception)
+                {
+                    Log.Error("XPScript", "UIForm boot image failed: " + exception.Message);
+                }
+            }
+            if (bootText.Length > 0)
+                panel.Children.Add(new TextBlock { Text = bootText, FontSize = 20, HorizontalAlignment = HorizontalAlignment.Center });
 
             if (request.TryGetProperty("title", out var title))
             {
