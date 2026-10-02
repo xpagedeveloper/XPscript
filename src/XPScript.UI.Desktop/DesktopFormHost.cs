@@ -265,7 +265,7 @@ public static class DesktopFormHost
             var actionButtons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
             foreach (var definition in request.Buttons)
             {
-                var button = new Button { Content = definition.Label, MinWidth = 80, IsVisible = definition.Visible, IsEnabled = definition.Enabled };
+                var button = new Button { Content = definition.Label, MinWidth = 80, IsVisible = definition.Visible, IsEnabled = definition.Enabled, CornerRadius = new CornerRadius(definition.CornerRadius) };
                 customButtons[definition.Name] = button;
                 button.Click += (_, _) => TriggerEvent("button:" + definition.Name);
                 actionButtons.Children.Add(button);
