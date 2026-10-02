@@ -134,6 +134,8 @@ internal sealed class XPScriptUIForm
     private int? _width;
     private int? _height;
     private bool _resizable;
+    private string _bootText = string.Empty;
+    private string _bootImage = string.Empty;
     private XPScriptJsonObject _data = XPScriptNativeJson.CreateObject();
     private XPScriptJsonSchema? _validationSchema;
     private readonly List<XPScriptUIField> _fields = [];
@@ -150,6 +152,8 @@ internal sealed class XPScriptUIForm
     public int Width { get => _width ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm width must be greater than zero."); _width = value; } }
     public int Height { get => _height ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm height must be greater than zero."); _height = value; } }
     public bool Resizable { get => _resizable; set => _resizable = value; }
+    public string BootText { get => _bootText; set => _bootText = value ?? string.Empty; }
+    public string BootImage { get => _bootImage; set => _bootImage = value ?? string.Empty; }
     public bool HasExplicitSize => _width.HasValue || _height.HasValue;
     public object Data => _data;
     public int FieldCount => _fields.Count;
