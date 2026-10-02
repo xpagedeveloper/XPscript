@@ -150,12 +150,12 @@ Expressions are the first migration target because the current transpiler perfor
 
 ## Phase 4: Statement parser
 
-- [ ] Parse variable declarations.
-- [ ] Parse assignments and `Set`.
-- [ ] Parse single-line and block `If`.
-- [ ] Parse `ElseIf` and `Else`.
-- [ ] Parse loops.
-- [ ] Parse `Select Case`.
+- [x] Parse variable declarations.
+- [x] Parse assignments and `Set`.
+- [x] Parse single-line and block `If`.
+- [x] Parse `ElseIf` and `Else`.
+- [x] Parse loops.
+- [x] Parse `Select Case`.
 - [x] Parse calls used as statements.
 - [x] Parse error-handling statements.
 - [x] Parse event-related statements.
