@@ -211,6 +211,22 @@ public static class AndroidFormHost
                 panel.Children.Add(tabControl);
             }
 
+            var namedGrids = new Dictionary<string, Grid>(StringComparer.OrdinalIgnoreCase);
+            if (request.TryGetProperty("grids", out var grids) && grids.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var gridDefinition in grids.EnumerateArray())
+                {
+                    var gridName = gridDefinition.GetProperty("name").GetString() ?? string.Empty;
+                    var columns = gridDefinition.TryGetProperty("columns", out var columnValue) && columnValue.TryGetInt32(out var count) ? Math.Max(1, count) : 1;
+                    var grid = new Grid();
+                    for (var column = 0; column < columns; column++) grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+                    namedGrids[gridName] = grid;
+                    var gridTabName = gridDefinition.TryGetProperty("tabName", out var gridTabValue) ? gridTabValue.GetString() ?? string.Empty : string.Empty;
+                    if (gridTabName.Length > 0 && tabPanels.TryGetValue(gridTabName, out var gridTabPanel)) gridTabPanel.Children.Add(grid);
+                    else panel.Children.Add(grid);
+                }
+            }
+
             foreach (var field in fields)
             {
                 var name = field.GetProperty("name").GetString() ?? string.Empty;
@@ -218,9 +234,12 @@ public static class AndroidFormHost
                 var type = field.GetProperty("type").GetString() ?? "TextField";
 
                 var tabName = field.TryGetProperty("tabName", out var tabNameValue) ? tabNameValue.GetString() ?? string.Empty : string.Empty;
+                var gridName = field.TryGetProperty("gridName", out var gridNameValue) ? gridNameValue.GetString() ?? string.Empty : string.Empty;
                 var targetPanel = tabName.Length > 0 && tabPanels.TryGetValue(tabName, out var fieldTabPanel) ? fieldTabPanel : panel;
+                var targetGrid = gridName.Length > 0 && namedGrids.TryGetValue(gridName, out var fieldGrid) ? fieldGrid : null;
+                var fieldContainer = new StackPanel { Spacing = 4, Margin = new Thickness(4) };
                 if (label.Length > 0 && type is not ("Separator" or "Spacer" or "Image"))
-                    targetPanel.Children.Add(new TextBlock { Text = label });
+                    fieldContainer.Children.Add(new TextBlock { Text = label });
 
                 var fieldCornerRadius = field.TryGetProperty("cornerRadius", out var fieldCornerRadiusValue) && fieldCornerRadiusValue.TryGetDouble(out var fieldRadius) ? fieldRadius : 0;
                 var options = field.TryGetProperty("options", out var optionValues) && optionValues.ValueKind == JsonValueKind.Array
@@ -247,10 +266,13 @@ public static class AndroidFormHost
 
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
                 editors[name] = editor;
-                targetPanel.Children.Add(editor);
+                fieldContainer.Children.Add(editor);
 
                 if (type is "Separator" or "Spacer" or "Image")
+                {
+                    AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
                     continue;
+                }
 
                 var validationBlock = new TextBlock
                 {
@@ -259,7 +281,8 @@ public static class AndroidFormHost
                     Foreground = Brushes.Red
                 };
                 validationErrors[name] = validationBlock;
-                targetPanel.Children.Add(validationBlock);
+                fieldContainer.Children.Add(validationBlock);
+                AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
             }
 
             var actions = new WrapPanel
@@ -377,6 +400,25 @@ public static class AndroidFormHost
         }
         if (root.TryGetProperty("navigation", out var navigation) && navigation.ValueKind == JsonValueKind.Object)
             Log.Info("XPScript", "UIForm navigation requested: " + navigation);
+    }
+
+    private static void AddFieldContainer(JsonElement field, Control container, StackPanel targetPanel, Grid? targetGrid)
+    {
+        if (targetGrid is null)
+        {
+            targetPanel.Children.Add(container);
+            return;
+        }
+        var row = field.TryGetProperty("layoutRow", out var rowValue) && rowValue.TryGetInt32(out var r) ? Math.Max(0, r - 1) : targetGrid.RowDefinitions.Count;
+        var column = field.TryGetProperty("layoutColumn", out var columnValue) && columnValue.TryGetInt32(out var c) ? Math.Max(0, c - 1) : 0;
+        var columnSpan = field.TryGetProperty("columnSpan", out var csValue) && csValue.TryGetInt32(out var cs) ? Math.Max(1, cs) : 1;
+        var rowSpan = field.TryGetProperty("rowSpan", out var rsValue) && rsValue.TryGetInt32(out var rs) ? Math.Max(1, rs) : 1;
+        while (targetGrid.RowDefinitions.Count < row + rowSpan) targetGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        Grid.SetRow(container, row);
+        Grid.SetColumn(container, column);
+        Grid.SetColumnSpan(container, columnSpan);
+        Grid.SetRowSpan(container, rowSpan);
+        targetGrid.Children.Add(container);
     }
 
     private static Control CreateRadioGroup(IReadOnlyList<string> options)
