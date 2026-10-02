@@ -14,8 +14,8 @@ var emptyReferences = Array.CreateInstance(stagedType, 0);
 var project = (string)(method.Invoke(null, new object?[] { "android-arm64", false, emptyReferences, false, false, "AndroidSmoke" })
     ?? throw new Exception("Android project generation returned null."));
 
-if (!project.Contains("<WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;CA1416;$(WarningsNotAsErrors)</WarningsNotAsErrors>", StringComparison.Ordinal))
-    throw new Exception("Generated projects must keep CA1416 platform-compatibility diagnostics from becoming build-blocking errors.");
+if (!project.Contains("<NoWarn>CA1416;$(NoWarn)</NoWarn>", StringComparison.Ordinal))
+    throw new Exception("Generated projects must suppress CA1416 for the built-in cross-platform runtime compatibility layer.");
 
 foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramework>", "<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>", "<RuntimeIdentifier>android-arm64</RuntimeIdentifier>", "<AndroidPackageFormat>apk</AndroidPackageFormat>", "<ApplicationId>com.xpscript.debugapp</ApplicationId>" })
     if (!project.Contains(expected, StringComparison.Ordinal))
