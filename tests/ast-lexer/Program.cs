@@ -467,7 +467,8 @@ var defaultByRefFunctionParser = new DeclarationParser(defaultByRefFunctionSourc
 var defaultByRefFunction = (FunctionDeclarationSyntax)defaultByRefFunctionParser.ParseDeclaration();
 Equal(0, defaultByRefFunctionParser.Diagnostics.Count, "default ByRef Function diagnostics");
 Equal(false, defaultByRefFunction.Parameters[0].IsByVal, "unmodified parameter is not ByVal");
-Equal(false, defaultByRefFunction.Parameters[0].IsByRef, "default ByRef is semantic rather than explicit syntax");
+Equal(true, defaultByRefFunction.Parameters[0].IsByRef, "unmodified parameter defaults to ByRef");
+Equal(false, defaultByRefFunction.Parameters[0].IsExplicitByRef, "default ByRef has no explicit modifier token");
 Equal("Long", defaultByRefFunction.ReturnType!.Identifier.Text, "Function Long return type");
 
 const string subDeclarationSource = "Public Sub Add(ByVal left As Integer, ByRef right As Integer)\nright = left + right\nEnd Sub";
@@ -479,6 +480,7 @@ Equal("Add", subDeclaration.Identifier.Text, "Sub identifier");
 Equal(2, subDeclaration.Parameters.Count, "Sub parameter count");
 Equal(true, subDeclaration.Parameters[0].IsByVal, "Sub ByVal parameter");
 Equal(true, subDeclaration.Parameters[1].IsByRef, "Sub ByRef parameter");
+Equal(true, subDeclaration.Parameters[1].IsExplicitByRef, "Sub explicit ByRef parameter");
 Equal("Integer", subDeclaration.Parameters[0].Type!.Identifier.Text, "Sub parameter type");
 Equal(1, subDeclaration.Statements.Count, "Sub body statement count");
 Equal(SyntaxKind.AssignmentStatement, subDeclaration.Statements[0].Kind, "Sub body assignment");
