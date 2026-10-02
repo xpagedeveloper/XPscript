@@ -97,6 +97,30 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Verify application lifecycle: start, pause, resume and stop.
 - [x] Verify orientation changes.
 - [x] Verify form sizing/layout for typical phone dimensions. The Android host uses a scrollable, width-responsive form with phone margins, a bounded maximum content width, and wrapping action buttons; guarded by `AndroidCompilerProbe` and verified by Android CI.
+- [ ] Complete Android rendering and binding coverage for all shared UIForm field types: TextField, TextArea, NumberField, RangeField, CheckBox, DateField, TimeField, DateTimeField, MonthField, ColorField, EmailField, UrlField, PasswordField, Select, ListBox, MultiListBox, RadioGroup and WebView.
+- [x] Add Android rendering/binding for PasswordField, Select, ListBox, MultiListBox, RadioGroup and RangeField.
+- [x] Add Android structural/media rendering for Separator, Spacer and Image. Local files and data-image sources are supported by the Android host; remote image loading and full image policy parity remain follow-up work.
+- [ ] Add specialized Android controls for DateField, TimeField, DateTimeField, MonthField and ColorField instead of the current generic text fallback.
+- [ ] Add Android WebView rendering with the shared UIForm WebView behavior.
+- [ ] Complete Android Image parity for remote sources, application asset resolution, alt/accessibility metadata and certificate-validation policy.
+- [x] Add UIForm boot text/image properties and transport.
+- [ ] Complete UIForm boot text/image rendering parity on every UIForm platform and define whether boot content is persistent form content or transient startup content.
+- [x] Add per-button corner-radius API and rendering on desktop and Android.
+- [x] Add per-text-entry-field corner-radius API and rendering on desktop and Android.
+- [ ] Decide and implement corner-radius behavior for default OK/Cancel buttons and preserve platform theme defaults when no explicit radius is configured.
+- [x] Add shared UIForm tabs with `AddTab`, `SetFieldTab`, `ActiveTab` and `SetActiveTab`.
+- [x] Render UIForm tabs on desktop Avalonia, Android Avalonia and web UIForm.
+- [x] Propagate programmatic active-tab changes from XPScript callbacks to rendered desktop and Android forms.
+- [ ] Verify programmatic active-tab changes and tab state on the web UIForm callback path.
+- [x] Add named UIForm grid containers that can be placed inside a tab.
+- [x] Implement named-grid rendering on desktop Avalonia, Android Avalonia and web UIForm.
+- [x] Implement Android Avalonia Grid row/column placement plus row/column spans.
+- [ ] Add focused regressions for named-grid validation, duplicate names, invalid column counts, missing tabs and fields assigned to grids.
+- [ ] Ensure non-input structural/media controls are excluded from Android submitted editor state and cannot overwrite bound data with null/empty values.
+- [ ] Make Android default OK submission apply returned action-state/validation state before closing, and keep the form open when validation fails.
+- [ ] Complete dynamic Android action-state parity for field label, visibility, enabled/read-only state, options and other mutable UIForm properties.
+- [ ] Fix general UIForm callback parameter handling so Android callbacks do not require the current explicit `ByVal` workaround.
+- [ ] Expand `samples/android-uiform-manual-test.xps` to exercise every implemented Android UIForm field/control plus tabs, programmatic tab switching, named grids, spans, validation, boot content, images and corner-radius APIs.
 - [x] Route Android UI diagnostics to adb/logcat. The shared `Application.Debug` runtime routes Android diagnostics through `Android.Util.Log` with tag `XPScript`; guarded by `AndroidCompilerProbe` and exercised by the Android UIForm sample.
 - [x] Keep non-UI XPScript runtime code independent from Avalonia. `AndroidCompilerProbe` guards the compiler/runtime project from Avalonia and `XPScript.UI.Android` references.
 - [ ] Build and run a debug APK on Android 11 / API 30.
