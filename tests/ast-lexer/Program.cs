@@ -453,6 +453,24 @@ var callStatementSyntax = (CallStatementSyntax)callStatement;
 Equal(SyntaxKind.CallExpression, callStatementSyntax.Expression.Kind, "Call statement expression kind");
 Equal(new TextSpan(0, 13), callStatementSyntax.Span, "Call statement full span");
 
+const string classDeclarationSource = "Public Class Person\nPrivate mName As String\nPublic Name As String\nPublic Function Describe() As String\nDescribe = mName\nEnd Function\nEnd Class";
+var classDeclarationParser = new DeclarationParser(classDeclarationSource);
+var classDeclaration = (ClassDeclarationSyntax)classDeclarationParser.ParseDeclaration();
+Equal(0, classDeclarationParser.Diagnostics.Count, "Class declaration diagnostics");
+Equal(SyntaxKind.PublicKeyword, classDeclaration.Visibility!.Kind, "Class visibility");
+Equal("Person", classDeclaration.Identifier.Text, "Class identifier");
+Equal(3, classDeclaration.Members.Count, "Class member count");
+Equal(SyntaxKind.FieldDeclaration, classDeclaration.Members[0].Kind, "private field kind");
+Equal(SyntaxKind.PrivateKeyword, ((FieldDeclarationSyntax)classDeclaration.Members[0]).Visibility!.Kind, "private field visibility");
+Equal("String", ((FieldDeclarationSyntax)classDeclaration.Members[1]).Type.Identifier.Text, "public field type");
+Equal(SyntaxKind.FunctionDeclaration, classDeclaration.Members[2].Kind, "class function member kind");
+Equal(SyntaxKind.PublicKeyword, ((FunctionDeclarationSyntax)classDeclaration.Members[2]).Visibility!.Kind, "class function visibility");
+Equal(new TextSpan(0, classDeclarationSource.Length), classDeclaration.Span, "Class declaration span");
+
+var missingEndClassParser = new DeclarationParser("Class Missing\nvalue As Integer");
+missingEndClassParser.ParseDeclaration();
+Equal("XPS1012", missingEndClassParser.Diagnostics[^1].Code, "missing End Class diagnostic");
+
 const string multilineSubDeclarationSource = "Sub Check(ByVal value As Integer)\nIf value > 0 Then\nPrint \"positive\"\nElse\nPrint \"zero\"\nEnd If\nEnd Sub";
 var multilineSubDeclarationParser = new DeclarationParser(multilineSubDeclarationSource);
 var multilineSubDeclaration = (SubDeclarationSyntax)multilineSubDeclarationParser.ParseDeclaration();
