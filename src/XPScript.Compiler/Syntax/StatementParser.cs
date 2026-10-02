@@ -56,11 +56,15 @@ public sealed class StatementParser
             return ParseOpenStatement();
         if (Current.Kind == SyntaxKind.CloseKeyword)
             return ParseCloseStatement();
-        if (IsIdentifier("Print") || IsIdentifier("Write"))
+        if ((IsIdentifier("Print") || IsIdentifier("Write")) && PeekKind(1) == SyntaxKind.HashToken)
             return ParseFileOutputStatement();
+        if (IsIdentifier("Print"))
+            return ParseRuntimeFileStatement();
+        if (IsIdentifier("Randomize") || IsIdentifier("Beep"))
+            return ParseRuntimeFileStatement();
         if (Current.Kind == SyntaxKind.InputKeyword || (IsIdentifier("Line") && PeekKind(1) == SyntaxKind.InputKeyword))
             return ParseFileInputStatement();
-        if (IsIdentifier("Seek"))
+        if (IsIdentifier("Seek") && PeekKind(1) == SyntaxKind.HashToken)
             return ParseSeekStatement();
         if (IsIdentifier("Put") || IsIdentifier("Get"))
             return ParseBinaryFileStatement();
