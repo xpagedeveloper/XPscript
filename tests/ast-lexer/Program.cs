@@ -172,6 +172,42 @@ Equal(SyntaxKind.MemberAccessExpression, fileKeywordMemberRegression.Kind, "file
 var fileKeywordCallRegression = new ExpressionParser("Open()").ParseExpression();
 Equal(SyntaxKind.CallExpression, fileKeywordCallRegression.Kind, "Open remains a valid expression call");
 
+var hashTokenRegression = Lex("#1");
+Equal(SyntaxKind.HashToken, hashTokenRegression[0].Kind, "file number hash token");
+
+var openHashParser = new StatementParser("Open fileName For Random As #1 Len = 128");
+var openHash = (OpenStatementSyntax)openHashParser.ParseStatement();
+Equal(0, openHashParser.Diagnostics.Count, "Open hash Len diagnostics");
+Equal(SyntaxKind.HashToken, openHash.HashToken!.Kind, "Open hash token");
+Equal(SyntaxKind.LenKeyword, openHash.LenKeyword!.Kind, "Open Len keyword");
+Equal(SyntaxKind.LiteralExpression, openHash.RecordLengthExpression!.Kind, "Open record length expression");
+
+var closeHashParser = new StatementParser("Close #1");
+var closeHash = (CloseStatementSyntax)closeHashParser.ParseStatement();
+Equal(0, closeHashParser.Diagnostics.Count, "Close hash diagnostics");
+Equal(1, closeHash.FileNumbers.Count, "Close hash file count");
+
+var printHashParser = new StatementParser("Print #1, \"value\"");
+var printHash = (FileOutputStatementSyntax)printHashParser.ParseStatement();
+Equal(0, printHashParser.Diagnostics.Count, "Print hash diagnostics");
+Equal(1, printHash.Values.Count, "Print hash value count");
+
+var writeHashParser = new StatementParser("Write #1, value");
+var writeHash = (FileOutputStatementSyntax)writeHashParser.ParseStatement();
+Equal(0, writeHashParser.Diagnostics.Count, "Write hash diagnostics");
+
+var lineInputHashParser = new StatementParser("Line Input #1, line");
+var lineInputHash = (FileInputStatementSyntax)lineInputHashParser.ParseStatement();
+Equal(0, lineInputHashParser.Diagnostics.Count, "Line Input hash diagnostics");
+
+var inputHashParser = new StatementParser("Input #1, value");
+var inputHash = (FileInputStatementSyntax)inputHashParser.ParseStatement();
+Equal(0, inputHashParser.Diagnostics.Count, "Input hash diagnostics");
+
+var seekHashParser = new StatementParser("Seek #1, 42");
+var seekHash = (SeekStatementSyntax)seekHashParser.ParseStatement();
+Equal(0, seekHashParser.Diagnostics.Count, "Seek hash diagnostics");
+
 var runtimeFileIdentifierRegression = Lex("FileCopy Kill MkDir RmDir ChDir SetFileAttr Name");
 Equal(string.Join(",", Enumerable.Repeat(SyntaxKind.IdentifierToken, 7)), string.Join(",", runtimeFileIdentifierRegression.Take(7).Select(t => t.Kind)), "runtime file commands remain identifiers");
 
