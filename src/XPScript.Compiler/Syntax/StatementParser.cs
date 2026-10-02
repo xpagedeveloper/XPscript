@@ -96,7 +96,7 @@ public sealed class StatementParser
             return ParseFileLockStatement();
         if (IsRuntimeFileCommand(Current))
             return ParseRuntimeFileStatement();
-        if (IsIdentifier("Name"))
+        if (IsIdentifier("Name") && FindTopLevelEqualsIndex(_position) < 0)
             return ParseRenameFileStatement();
         if (Current.Kind == SyntaxKind.OnKeyword && PeekKind(1) == SyntaxKind.EventKeyword)
             return ParseOnEventStatement();
