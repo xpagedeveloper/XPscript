@@ -89,6 +89,8 @@ public enum SyntaxKind
     FileOutputStatement,
     FileInputStatement,
     SeekStatement,
+    RuntimeFileStatement,
+    RenameFileStatement,
     OnErrorStatement,
     ResumeStatement,
     ErrorStatement,
