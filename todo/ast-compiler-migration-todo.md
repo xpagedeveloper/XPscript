@@ -97,7 +97,7 @@ Initial statement nodes should cover at least:
 - [ ] WhileStatementSyntax
 - [ ] DoStatementSyntax
 - [ ] SelectStatementSyntax
-- [ ] Return/Exit statements
+- [x] Return/Exit statements
 
 Initial declaration nodes should cover at least:
 
