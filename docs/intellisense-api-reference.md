@@ -37,6 +37,16 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `CompilerCommandLine.Describe` | `xpscript describe symbol [--result-format FORMAT] (FORMAT: text or json)` | exact public XPScript symbol name and optional result format. | Returns compiler-owned metadata for an exact public symbol, including signature, kind, documentation ID and target restrictions when present. | [application-crypto.xps](../samples/application-crypto.xps) |
 | `CompilerCommandLine.Explain` | `xpscript explain diagnosticCode [--result-format FORMAT] (FORMAT: text or json)` | stable XPS diagnostic code and optional result format. | Returns the compiler-owned definition and explanation for a stable XPScript diagnostic code. | [malformed-source-error.xps](../samples/malformed-source-error.xps) |
 
+## UIForm presentation additions
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `UIForm.BootText` | `form.BootText = text` | `text`: optional startup text. | Sets optional text shown while the UIForm starts. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `UIForm.BootImage` | `form.BootImage = source` | `source`: optional image source. | Sets an optional startup image for the UIForm. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `UIForm.SetButtonCornerRadius` | `form.SetButtonCornerRadius(name, radius)` | button `name`; numeric `radius` from 0 through 1000. | Sets the Avalonia corner radius for a custom UIForm button. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UIForm.SetFieldCornerRadius` | `form.SetFieldCornerRadius(name, radius)` | text-entry field `name`; numeric `radius` from 0 through 1000. | Sets the Avalonia corner radius for a compatible text-entry field. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UIButton.CornerRadius` | `button.CornerRadius` | numeric radius. | Gets or sets the corner radius stored by a UIForm button definition. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+
 ## UIForm JSON Schema validation
 
 | Member | Syntax | Parameters | Description | Example |
