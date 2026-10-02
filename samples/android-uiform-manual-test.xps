@@ -8,17 +8,46 @@ Sub Main()
     Dim result As String
 
     Call Application.Debug.Info("TEST STARTUP: PASS")
-    Call Application.Debug.Info("TEST INSTRUCTION: Type MANUAL-ANDROID in Name, enter multiple lines in Notes, toggle Enabled, then press Verify Input.")
+    Call Application.Debug.Info("TEST INSTRUCTION: Fill Name and Notes, toggle Enabled, select the requested option/list/radio values, set Range to 75, enter a password, then press Verify Input.")
 
     Call data.Set("name", "")
     Call data.Set("notes", "")
     Call data.Set("enabled", False)
+    Call data.Set("choice", "Beta")
+    Call data.Set("listChoice", "Two")
+    Call data.Set("multiChoice", Array("Red", "Blue"))
+    Call data.Set("radioChoice", "Right")
+    Call data.Set("rangeValue", 75)
+    Call data.Set("password", "")
     Call form.BindData(data)
     Call form.AddTextField("name", "1. Name - type MANUAL-ANDROID")
     Call form.AddTextArea("notes", "2. Notes - type two lines")
     Call form.AddCheckBox("enabled", "3. Enabled - toggle this")
     Call form.SetFieldCornerRadius("name", 12)
     Call form.SetFieldCornerRadius("notes", 12)
+
+    Call form.AddSeparator("section1")
+    Call form.AddSelect("choice", "4. Select - choose Beta")
+    Call form.AddOption("choice", "Alpha")
+    Call form.AddOption("choice", "Beta")
+    Call form.AddOption("choice", "Gamma")
+    Call form.AddListBox("listChoice", "5. ListBox - choose Two")
+    Call form.AddOption("listChoice", "One")
+    Call form.AddOption("listChoice", "Two")
+    Call form.AddOption("listChoice", "Three")
+    Call form.AddMultiListBox("multiChoice", "6. MultiListBox - choose Red and Blue")
+    Call form.AddOption("multiChoice", "Red")
+    Call form.AddOption("multiChoice", "Green")
+    Call form.AddOption("multiChoice", "Blue")
+    Call form.AddRadioGroup("radioChoice", "7. RadioGroup - choose Right")
+    Call form.AddOption("radioChoice", "Left")
+    Call form.AddOption("radioChoice", "Right")
+    Call form.AddRangeField("rangeValue", "8. Range - set to 75")
+    Call form.SetNumberRange("rangeValue", 0, 100)
+    Call form.AddPasswordField("password", "9. Password - type android-secret")
+    Call form.SetFieldCornerRadius("password", 12)
+    Call form.AddSpacer("space1")
+    Call form.AddImage("testImage", "Android/test-image.png", "Android UIForm test image")
     Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string"",""minLength"":3,""x-errorMessages"":{""minLength"":""Name must contain at least 3 characters""}}},""required"":[""name""],""x-requiredMessages"":{""name"":""Please enter your name""}}")
     Call form.SetValidationSchema(schema)
 
@@ -36,6 +65,10 @@ Sub Main()
     Call Application.Debug.Info("TEST FINAL NAME: " & form.GetFieldValueString("name"))
     Call Application.Debug.Info("TEST FINAL NOTES: " & form.GetFieldValueString("notes"))
     Call Application.Debug.Info("TEST FINAL ENABLED: " & form.GetFieldValueString("enabled"))
+    Call Application.Debug.Info("TEST FINAL SELECT: " & form.GetFieldValueString("choice"))
+    Call Application.Debug.Info("TEST FINAL LISTBOX: " & form.GetFieldValueString("listChoice"))
+    Call Application.Debug.Info("TEST FINAL RADIO: " & form.GetFieldValueString("radioChoice"))
+    Call Application.Debug.Info("TEST FINAL RANGE: " & form.GetFieldValueString("rangeValue"))
 
     If result = "OK" Then
         If form.GetFieldValueString("name") = "MANUAL-ANDROID" Then
@@ -86,6 +119,31 @@ Sub VerifyInput(ByVal evt As Variant, ByVal contextName As String)
         Call Application.Debug.Info("TEST LIVE CHECKBOX: PASS")
     Else
         Call Application.Debug.Error("TEST LIVE CHECKBOX: FAIL")
+    End If
+    If form.GetFieldValueString("choice") = "Beta" Then
+        Call Application.Debug.Info("TEST LIVE SELECT: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE SELECT: FAIL value=" & form.GetFieldValueString("choice"))
+    End If
+    If form.GetFieldValueString("listChoice") = "Two" Then
+        Call Application.Debug.Info("TEST LIVE LISTBOX: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE LISTBOX: FAIL value=" & form.GetFieldValueString("listChoice"))
+    End If
+    If form.GetFieldValueString("radioChoice") = "Right" Then
+        Call Application.Debug.Info("TEST LIVE RADIOGROUP: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE RADIOGROUP: FAIL value=" & form.GetFieldValueString("radioChoice"))
+    End If
+    If form.GetFieldValueString("rangeValue") = "75" Then
+        Call Application.Debug.Info("TEST LIVE RANGE: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE RANGE: FAIL value=" & form.GetFieldValueString("rangeValue"))
+    End If
+    If form.GetFieldValueString("password") = "android-secret" Then
+        Call Application.Debug.Info("TEST LIVE PASSWORD: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE PASSWORD: FAIL")
     End If
     If form.IsDataValid Then
         Call Application.Debug.Info("TEST LIVE VALIDATION: PASS")
