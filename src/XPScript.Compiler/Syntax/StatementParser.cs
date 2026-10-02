@@ -84,6 +84,8 @@ public sealed class StatementParser
             return ParseErrorStatement();
         if (Current.Kind == SyntaxKind.ReturnKeyword)
             return ParseReturnStatement();
+        if (Current.Kind == SyntaxKind.ExitKeyword)
+            return ParseExitStatement();
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
@@ -779,6 +781,18 @@ public sealed class StatementParser
         var commaToken = NextToken();
         var descriptionExpression = ParseExpressionUntilLineEnd();
         return new ErrorStatementSyntax(errorKeyword, numberExpression, commaToken, descriptionExpression);
+    }
+
+    private StatementSyntax ParseExitStatement()
+    {
+        var exitKeyword = NextToken();
+        if (Current.Kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword
+            or SyntaxKind.ForKeyword or SyntaxKind.ForAllKeyword
+            or SyntaxKind.DoKeyword or SyntaxKind.WhileKeyword)
+            return new ExitStatementSyntax(exitKeyword, NextToken());
+
+        var target = Match(SyntaxKind.SubKeyword);
+        return new ExitStatementSyntax(exitKeyword, target);
     }
 
     private StatementSyntax ParseReturnStatement()
