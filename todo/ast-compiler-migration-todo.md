@@ -110,19 +110,19 @@ Initial declaration nodes should cover at least:
 
 ## Phase 2: Lexer
 
-- [ ] Define `SyntaxKind` / token kinds.
-- [ ] Implement identifiers and keywords.
-- [ ] Implement numeric literals.
-- [ ] Implement string literals and XPscript escaping rules.
-- [ ] Implement punctuation.
-- [ ] Implement operators.
-- [ ] Implement newline handling.
-- [ ] Implement comments.
-- [ ] Preserve exact source spans.
-- [ ] Produce structured lexical diagnostics.
-- [ ] Add focused lexer tests for every token family.
-- [ ] Add malformed-token tests.
-- [ ] Add regression fixtures for quotes and comments.
+- [x] Define `SyntaxKind` / token kinds.
+- [x] Implement identifiers and keywords.
+- [x] Implement numeric literals.
+- [x] Implement string literals and XPscript escaping rules.
+- [x] Implement punctuation.
+- [x] Implement operators.
+- [x] Implement newline handling.
+- [x] Implement comments.
+- [x] Preserve exact source spans.
+- [x] Produce structured lexical diagnostics.
+- [x] Add focused lexer tests for every token family.
+- [x] Add malformed-token tests.
+- [x] Add regression fixtures for quotes and comments.
 
 ## Phase 3: Expression parser first
 
