@@ -203,7 +203,8 @@ public sealed class ExpressionParser
         SyntaxKind.LineKeyword or
         SyntaxKind.SeekKeyword or
         SyntaxKind.SubKeyword or
-        SyntaxKind.FunctionKeyword;
+        SyntaxKind.FunctionKeyword or
+        SyntaxKind.MeKeyword;
 
     private SyntaxToken Match(SyntaxKind kind)
     {
