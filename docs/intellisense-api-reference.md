@@ -47,6 +47,13 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `UIGrid.SetTab` | `grid.SetTab(tab)` | existing tab name. | Places a named grid inside a UIForm tab. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
 | `UIGrid.SetFieldPosition` | `grid.SetFieldPosition(field, columnSpan)` | field name and span. | Places fields sequentially inside the named grid. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
 | `UIForm.SetFieldTab` | `form.SetFieldTab(field, tab)` | field name and tab name. | Places a field on a tab. Empty tab name returns it to the common form area. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UIForm.SetFieldGrid` | `form.SetFieldGrid(field, grid)` | field name and named grid. | Places a field inside an existing named grid. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UIForm.SetGridTab` | `form.SetGridTab(grid, tab)` | grid name and existing tab name. | Places an existing named grid on a tab. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UIGrid.Name` | `grid.Name` | none | Returns the named grid identifier. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UIGrid.TabName` | `grid.TabName` | existing tab name. | Gets or sets the tab associated with the named grid. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UITab` | `Dim tab As UITab` | none | Represents a named UIForm tab definition. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UITab.Name` | `tab.Name` | none | Returns the tab identifier. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
+| `UITab.Label` | `tab.Label` | visible label. | Gets or sets the visible tab label. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
 | `UIForm.ActiveTab` | `form.ActiveTab = name` | existing tab name. | Gets or selects the active tab. Callback changes are propagated to the rendered form. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
 | `UIForm.SetActiveTab` | `form.SetActiveTab(name)` | existing tab name. | Selects the active tab from code. | [android-uiform-manual-test.xps](../samples/android-uiform-manual-test.xps) |
 | `UIForm.BootImage` | `form.BootImage = source` | `source`: optional image source. | Sets an optional startup image for the UIForm. | [ui-form-core.xps](../samples/ui-form-core.xps) |
