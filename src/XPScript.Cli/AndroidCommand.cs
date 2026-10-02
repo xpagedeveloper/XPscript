@@ -39,7 +39,16 @@ internal static class AndroidCommand
         var debug = false;
         for (var i = 1; i < args.Length; i++)
         {
-            if (args[i] == "--device" && i + 1 < args.Length) deviceMode = args[++i].ToLowerInvariant();
+            if (args[i] == "--device" && i + 1 < args.Length)
+            {
+                var deviceValue = args[++i];
+                if (deviceValue.Equals("auto", StringComparison.OrdinalIgnoreCase) ||
+                    deviceValue.Equals("emulator", StringComparison.OrdinalIgnoreCase) ||
+                    deviceValue.Equals("physical", StringComparison.OrdinalIgnoreCase))
+                    deviceMode = deviceValue.ToLowerInvariant();
+                else
+                    requestedSerial = deviceValue;
+            }
             else if (args[i] == "--serial" && i + 1 < args.Length) requestedSerial = args[++i];
             else if (args[i] == "--avd" && i + 1 < args.Length) requestedAvd = args[++i];
             else if (args[i] == "--platform" && i + 1 < args.Length) requestedPlatform = args[++i].ToLowerInvariant();
@@ -48,7 +57,7 @@ internal static class AndroidCommand
         }
 
         if (deviceMode is not ("auto" or "emulator" or "physical"))
-            throw new ArgumentException("Invalid --device value '" + deviceMode + "'. Use auto, emulator or physical.");
+            throw new ArgumentException("Invalid Android device selector '" + deviceMode + "'.");
         if (requestedAvd is not null && deviceMode != "emulator")
             throw new ArgumentException("--avd can only be used with --device emulator.");
         if (requestedSerial is not null && deviceMode == "emulator")
@@ -289,7 +298,7 @@ internal static class AndroidCommand
             throw new InvalidOperationException("No ready Android device or emulator was detected.");
         }
         if (ready.Length > 1)
-            throw new InvalidOperationException("Multiple Android targets are ready. Select one with --serial SERIAL.");
+            throw new InvalidOperationException("Multiple Android targets are ready. Select one with --device SERIAL or --serial SERIAL.");
         return ready[0].Serial;
     }
 
@@ -466,7 +475,7 @@ Usage:
   xpscript android install <app.apk> [--device SERIAL]
   xpscript android launch [--device SERIAL]
   xpscript android logs [--device SERIAL]
-  xpscript android run <source.xps> [--platform RID] [--device auto|emulator|physical] [--serial SERIAL] [--avd NAME] [--debug]
+  xpscript android run <source.xps> [--platform RID] [--device auto|emulator|physical|SERIAL] [--serial SERIAL] [--avd NAME] [--debug]
 
 Commands:
   devices  List Android devices/emulators visible to adb, including unauthorized/offline state.
