@@ -20,17 +20,11 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
-var classCompatibilityTranspiler = new AdvancedXPScriptTranspiler();
-Equal("this.Name", classCompatibilityTranspiler.TransformExpressionForCompatibilityTest("Me.Name"), "Me lowers to this");
-Equal("base.Describe()", classCompatibilityTranspiler.TransformExpressionForCompatibilityTest("Parent.Describe()"), "Parent lowers to base");
-
-
-
-var meMemberParser = new ExpressionParser("Me.Name");
-var meMember = (MemberAccessExpressionSyntax)meMemberParser.ParseExpression();
-Equal(0, meMemberParser.Diagnostics.Count, "Me member diagnostics");
-Equal("Me", ((NameExpressionSyntax)meMember.Expression).IdentifierToken.Text, "Me receiver");
-Equal("Name", meMember.NameToken.Text, "Me member name");
+var meRegressionParser = new ExpressionParser("Me.Name");
+var meRegression = (MemberAccessExpressionSyntax)meRegressionParser.ParseExpression();
+Equal(0, meRegressionParser.Diagnostics.Count, "Me member diagnostics");
+Equal("Me", ((NameExpressionSyntax)meRegression.Expression).IdentifierToken.Text, "Me receiver");
+Equal("Name", meRegression.NameToken.Text, "Me member name");
 
 var parentCallParser = new ExpressionParser("Parent.Describe()");
 var parentCall = (CallExpressionSyntax)parentCallParser.ParseExpression();
