@@ -101,6 +101,14 @@ foreach (var forbidden in new[] { "PointerPressed", "PointerReleased", "MouseBut
         throw new Exception("Android UIForm host must leave touch/pointer translation to Avalonia Android instead of desktop-specific input handling: " + forbidden);
 }
 
+var appDebugSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "ApplicationDebugRuntimeSource.cs");
+var appDebugSource = File.ReadAllText(appDebugSourcePath);
+foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
+{
+    if (!appDebugSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Application.Debug Android logcat routing is missing: " + expected);
+}
+
 var desktopRuntimeSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs");
 var desktopRuntimeSource = File.ReadAllText(desktopRuntimeSourcePath);
 if (!desktopRuntimeSource.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal))
