@@ -191,14 +191,36 @@ public static class AndroidFormHost
                     MainActivity.Current.Title = formTitle;
             }
 
+            var tabPanels = new Dictionary<string, StackPanel>(StringComparer.OrdinalIgnoreCase);
+            TabControl? tabControl = null;
+            if (request.TryGetProperty("tabs", out var tabs) && tabs.ValueKind == JsonValueKind.Array && tabs.GetArrayLength() > 0)
+            {
+                var tabItems = new List<TabItem>();
+                foreach (var tab in tabs.EnumerateArray())
+                {
+                    var tabName = tab.GetProperty("name").GetString() ?? string.Empty;
+                    var tabLabel = tab.TryGetProperty("label", out var tabLabelValue) ? tabLabelValue.GetString() ?? tabName : tabName;
+                    var tabPanel = new StackPanel { Spacing = 12 };
+                    tabPanels[tabName] = tabPanel;
+                    tabItems.Add(new TabItem { Header = tabLabel, Tag = tabName, Content = new ScrollViewer { Content = tabPanel } });
+                }
+                tabControl = new TabControl { ItemsSource = tabItems };
+                var activeTab = request.TryGetProperty("activeTab", out var activeTabValue) ? activeTabValue.GetString() ?? string.Empty : string.Empty;
+                var selected = tabItems.FindIndex(item => string.Equals(item.Tag?.ToString(), activeTab, StringComparison.OrdinalIgnoreCase));
+                tabControl.SelectedIndex = selected >= 0 ? selected : 0;
+                panel.Children.Add(tabControl);
+            }
+
             foreach (var field in fields)
             {
                 var name = field.GetProperty("name").GetString() ?? string.Empty;
                 var label = field.TryGetProperty("label", out var labelValue) ? labelValue.GetString() ?? name : name;
                 var type = field.GetProperty("type").GetString() ?? "TextField";
 
+                var tabName = field.TryGetProperty("tabName", out var tabNameValue) ? tabNameValue.GetString() ?? string.Empty : string.Empty;
+                var targetPanel = tabName.Length > 0 && tabPanels.TryGetValue(tabName, out var fieldTabPanel) ? fieldTabPanel : panel;
                 if (label.Length > 0 && type is not ("Separator" or "Spacer" or "Image"))
-                    panel.Children.Add(new TextBlock { Text = label });
+                    targetPanel.Children.Add(new TextBlock { Text = label });
 
                 var fieldCornerRadius = field.TryGetProperty("cornerRadius", out var fieldCornerRadiusValue) && fieldCornerRadiusValue.TryGetDouble(out var fieldRadius) ? fieldRadius : 0;
                 var options = field.TryGetProperty("options", out var optionValues) && optionValues.ValueKind == JsonValueKind.Array
@@ -225,7 +247,7 @@ public static class AndroidFormHost
 
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
                 editors[name] = editor;
-                panel.Children.Add(editor);
+                targetPanel.Children.Add(editor);
 
                 if (type is "Separator" or "Spacer" or "Image")
                     continue;
@@ -237,7 +259,7 @@ public static class AndroidFormHost
                     Foreground = Brushes.Red
                 };
                 validationErrors[name] = validationBlock;
-                panel.Children.Add(validationBlock);
+                targetPanel.Children.Add(validationBlock);
             }
 
             var actions = new WrapPanel
@@ -321,11 +343,18 @@ public static class AndroidFormHost
         return completion.Task.GetAwaiter().GetResult();
     }
 
-    private static void ApplyActionState(string actionStateJson, Dictionary<string, Control> editors, Dictionary<string, TextBlock> validationErrors)
+    private static void ApplyActionState(string actionStateJson, Dictionary<string, Control> editors, Dictionary<string, TextBlock> validationErrors, TabControl? tabControl)
     {
         if (string.IsNullOrWhiteSpace(actionStateJson)) return;
         using var document = JsonDocument.Parse(actionStateJson);
         var root = document.RootElement;
+        if (tabControl is not null && root.TryGetProperty("activeTab", out var activeTabElement))
+        {
+            var activeTab = activeTabElement.GetString() ?? string.Empty;
+            var items = tabControl.ItemsSource?.Cast<TabItem>().ToList() ?? new List<TabItem>();
+            var selected = items.FindIndex(item => string.Equals(item.Tag?.ToString(), activeTab, StringComparison.OrdinalIgnoreCase));
+            if (selected >= 0) tabControl.SelectedIndex = selected;
+        }
         if (root.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
         {
             foreach (var field in fields.EnumerateArray())
