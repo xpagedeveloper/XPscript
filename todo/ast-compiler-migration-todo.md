@@ -60,12 +60,12 @@ The existing runtime libraries, packaging, source mapping, web/desktop/mobile ta
 
 ## Phase 1: Syntax model
 
-- [ ] Define a common `SyntaxNode` base abstraction.
+- [x] Define a common `SyntaxNode` base abstraction.
 - [ ] Define source spans on every syntax node.
 - [ ] Define `CompilationUnitSyntax`.
 - [ ] Define declaration node hierarchy.
-- [ ] Define statement node hierarchy.
-- [ ] Define expression node hierarchy.
+- [x] Define statement node hierarchy.
+- [x] Define expression node hierarchy.
 - [ ] Define type syntax nodes.
 - [ ] Define parameter and argument syntax nodes.
 - [ ] Decide how comments/trivia are represented.
@@ -74,29 +74,29 @@ The existing runtime libraries, packaging, source mapping, web/desktop/mobile ta
 
 Initial expression nodes should cover at least:
 
-- [ ] LiteralExpressionSyntax
-- [ ] NameExpressionSyntax
-- [ ] UnaryExpressionSyntax
-- [ ] BinaryExpressionSyntax
-- [ ] ParenthesizedExpressionSyntax
-- [ ] CallExpressionSyntax
-- [ ] MemberAccessExpressionSyntax
-- [ ] IndexExpressionSyntax
-- [ ] NewExpressionSyntax
-- [ ] ArrayExpressionSyntax
+- [x] LiteralExpressionSyntax
+- [x] NameExpressionSyntax
+- [x] UnaryExpressionSyntax
+- [x] BinaryExpressionSyntax
+- [x] ParenthesizedExpressionSyntax
+- [x] CallExpressionSyntax
+- [x] MemberAccessExpressionSyntax
+- [x] IndexExpressionSyntax
+- [x] NewExpressionSyntax
+- [x] ArrayExpressionSyntax
 
 Initial statement nodes should cover at least:
 
-- [ ] AssignmentStatementSyntax
-- [ ] Expression/CallStatementSyntax
-- [ ] DimStatementSyntax
-- [ ] SetStatementSyntax
-- [ ] IfStatementSyntax
-- [ ] ForStatementSyntax
-- [ ] ForAllStatementSyntax
-- [ ] WhileStatementSyntax
-- [ ] DoStatementSyntax
-- [ ] SelectStatementSyntax
+- [x] AssignmentStatementSyntax
+- [x] Expression/CallStatementSyntax
+- [x] DimStatementSyntax
+- [x] SetStatementSyntax
+- [x] IfStatementSyntax
+- [x] ForStatementSyntax
+- [x] ForAllStatementSyntax
+- [x] WhileStatementSyntax
+- [x] DoStatementSyntax
+- [x] SelectStatementSyntax
 - [x] Return/Exit statements
 
 Initial declaration nodes should cover at least:
