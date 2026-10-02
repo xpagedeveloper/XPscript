@@ -26,13 +26,15 @@ internal sealed class UIFormActionModelPostProcessor
 """, "field-state");
         }
 
-        if (!generated.Contains("internal sealed class XPScriptUITab
+        if (!generated.Contains("""
+internal sealed class XPScriptUITab
 {
     public required string Name { get; init; }
     public required string Label { get; set; }
 }
 
-internal sealed class XPScriptUIButton", StringComparison.Ordinal))
+internal sealed class XPScriptUIButton
+""", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
                 @"internal\s+sealed\s+class\s+XPScriptUIForm\s*\{",
