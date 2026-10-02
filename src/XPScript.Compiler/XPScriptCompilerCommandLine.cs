@@ -583,6 +583,9 @@ public static class XPScriptCompilerCommandLine
 
                 if (debug)
                 {
+                    compilerProgressPercent = 0;
+                    compilerProgressPhase = "Validating source";
+                    WriteProgress($"Running {sourceName}... 0% | Validating source | {FormatProgressElapsed(timer.Elapsed)}");
                     var validationResult = await new CompilerDriver()
                         .ValidateWithResultAsync(sourcePath, currentRuntimeIdentifier)
                         .ConfigureAwait(false);
@@ -594,7 +597,7 @@ public static class XPScriptCompilerCommandLine
                     }
                 }
 
-                if (info)
+                if (info || debug)
                     WriteProgress($"Started to compile {sourceName}");
 
                 var compileTask = !useDaemon
@@ -612,18 +615,39 @@ public static class XPScriptCompilerCommandLine
                         restricted,
                         sourceRoots,
                         sourcePreprocessors);
-                var compileResult = info
-                    ? await WaitWithProgressAsync(
+                CompileResult compileResult;
+                if (debug)
+                {
+                    compilerProgressPercent = 0;
+                    compilerProgressPhase = "Starting";
+                    using var progressScope = CompilerProgressContext.Push((percent, phase) =>
+                    {
+                        compilerProgressPercent = percent;
+                        compilerProgressPhase = phase;
+                    });
+                    compileResult = await WaitWithProgressAsync(
                         compileTask,
                         timer,
-                        $"Compiling {sourceName} [{currentRuntimeIdentifier}, run]").ConfigureAwait(false)
-                    : await compileTask.ConfigureAwait(false);
+                        $"Compiling {sourceName} [{currentRuntimeIdentifier}, run]",
+                        () => (compilerProgressPercent, compilerProgressPhase)).ConfigureAwait(false);
+                }
+                else if (info)
+                {
+                    compileResult = await WaitWithProgressAsync(
+                        compileTask,
+                        timer,
+                        $"Compiling {sourceName} [{currentRuntimeIdentifier}, run]").ConfigureAwait(false);
+                }
+                else
+                {
+                    compileResult = await compileTask.ConfigureAwait(false);
+                }
 
                 if (!compileResult.Success)
                 {
                     runCache.Invalidate();
-                    if (info)
-                        CompleteProgress($"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
+                    if (info || debug)
+                        CompleteProgress($"Compilation failed for {sourceName} after {FormatProgressElapsed(timer.Elapsed)}");
                     WriteResult(compileResult, resultFormat);
                     return 2;
                 }
@@ -633,8 +657,8 @@ public static class XPScriptCompilerCommandLine
                     throw new InvalidOperationException("Run compilation succeeded without a runnable executable.");
 
                 if (runCache.Enabled) runCache.MarkReady(executablePath);
-                if (info)
-                    CompleteProgress($"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s");
+                if (info || debug)
+                    CompleteProgress($"Compiled {sourceName} in {FormatProgressElapsed(timer.Elapsed)}");
             }
             else if (info)
             {
@@ -644,7 +668,7 @@ public static class XPScriptCompilerCommandLine
             if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
                 throw new InvalidOperationException("Run cache did not contain a runnable executable.");
 
-            if (info)
+            if (info || debug)
                 WriteProgressLine("Starting program");
 
             // Framework-dependent run builds may return the managed assembly directly.
@@ -667,7 +691,7 @@ public static class XPScriptCompilerCommandLine
             using var process = Process.Start(startInfo)
                 ?? throw new InvalidOperationException("Unable to start the compiled XPScript program.");
             await process.WaitForExitAsync().ConfigureAwait(false);
-            if (info) WriteProgressLine($"Program exited with code {process.ExitCode}");
+            if (info || debug) WriteProgressLine($"Program exited with code {process.ExitCode}");
             if (process.ExitCode != 0 || !File.Exists(navigationPath))
                 return process.ExitCode;
 
