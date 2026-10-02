@@ -205,6 +205,7 @@ public sealed class Lexer
         "ERROR" => SyntaxKind.ErrorKeyword,
         "GOTO" => SyntaxKind.GoToKeyword,
         "RESUME" => SyntaxKind.ResumeKeyword,
+        "RETURN" => SyntaxKind.ReturnKeyword,
         "NEW" => SyntaxKind.NewKeyword,
         _ => SyntaxKind.IdentifierToken
     };
