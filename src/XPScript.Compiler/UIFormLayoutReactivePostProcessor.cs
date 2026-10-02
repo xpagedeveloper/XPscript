@@ -259,12 +259,21 @@ internal sealed class XPScriptUIForm
         }
         html.Append("<div class=\"xpscript-uiform-grid\" style=\"display:grid;grid-template-columns:repeat(")
             .Append(_gridColumns).Append(",minmax(0,1fr));gap:12px\">");
+        foreach (var grid in _grids.Values)
+        {
+            html.Append("<div class=\"xpscript-uiform-named-grid\" data-xps-grid=\"").Append(System.Net.WebUtility.HtmlEncode(grid.Name))
+                .Append("\" style=\"display:grid;grid-template-columns:repeat(").Append(grid.Columns).Append(",minmax(0,1fr));gap:12px");
+            if (grid.TabName.Length > 0 && !grid.TabName.Equals(_activeTab, StringComparison.OrdinalIgnoreCase)) html.Append(";display:none");
+            html.Append("\"></div>");
+        }
 """);
 
         generated = ReplaceRequired(generated,
             "            html.Append(\"<div class=\\\"xpscript-uiform-field\\\"><label for=\\\"xps_\").Append(name).Append(\"\\\">\").Append(label).Append(\"</label>\");\n",
             """
             html.Append("<div class=\"xpscript-uiform-field\"");
+            if (field.GridName.Length > 0)
+                html.Append(" data-xps-grid-field=\"").Append(System.Net.WebUtility.HtmlEncode(field.GridName)).Append("\"");
             if (field.TabName.Length > 0)
             {
                 html.Append(" data-xps-tab-panel=\"").Append(System.Net.WebUtility.HtmlEncode(field.TabName)).Append("\"");
@@ -283,6 +292,8 @@ internal sealed class XPScriptUIForm
             "        html.Append(\"<button type=\\\"submit\\\" name=\\\"__xps_uiform_submit\\\" value=\\\"1\\\">OK</button></form>\");\n",
             """
         html.Append("</div>");
+        if (_grids.Count > 0)
+            html.Append("<script>document.querySelectorAll('[data-xps-grid-field]').forEach(function(f){var g=document.querySelector('[data-xps-grid=\\\"'+f.getAttribute('data-xps-grid-field')+'\\\"]');if(g)g.appendChild(f)});</script>");
         if (_tabs.Count > 0)
             html.Append("<script>function xpsUIFormTab(b){var n=b.getAttribute('data-xps-tab');document.querySelectorAll('[data-xps-tab]').forEach(function(x){x.classList.toggle('active',x===b)});document.querySelectorAll('[data-xps-tab-panel]').forEach(function(x){x.style.display=x.getAttribute('data-xps-tab-panel')===n?'':'none'})}</script>");
         html.Append("<button style=\"grid-column:1/-1\" type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
