@@ -210,6 +210,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
         {
             refreshAll = _refreshAllRequested,
             refreshRegions = _requestedRefreshRegions.ToArray(),
+            activeTab = _activeTab,
             navigation = _navigationTarget.Length == 0 ? null : new
             {
                 target = _navigationTarget
