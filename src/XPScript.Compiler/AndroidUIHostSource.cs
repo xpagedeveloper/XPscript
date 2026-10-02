@@ -395,12 +395,39 @@ public static class AndroidFormHost
         if (editor is TextBox textBox) textBox.Text = text;
         else if (editor is Avalonia.Controls.CheckBox checkBox)
             checkBox.IsChecked = value.ValueKind == JsonValueKind.True || text.Equals("true", StringComparison.OrdinalIgnoreCase);
+        else if (editor is ComboBox comboBox) comboBox.SelectedItem = text;
+        else if (editor is ListBox listBox)
+        {
+            if (value.ValueKind == JsonValueKind.Array)
+            {
+                listBox.SelectedItems?.Clear();
+                foreach (var item in value.EnumerateArray())
+                {
+                    var selected = item.GetString() ?? string.Empty;
+                    if (listBox.ItemsSource is IEnumerable<string> options && options.Contains(selected))
+                        listBox.SelectedItems?.Add(selected);
+                }
+            }
+            else listBox.SelectedItem = text;
+        }
+        else if (editor is Slider slider && double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number))
+            slider.Value = number;
+        else if (editor is StackPanel radioPanel)
+        {
+            foreach (var radio in radioPanel.Children.OfType<RadioButton>())
+                radio.IsChecked = string.Equals(Convert.ToString(radio.Tag, System.Globalization.CultureInfo.InvariantCulture), text, StringComparison.Ordinal);
+        }
     }
 
     private static object? GetEditorValue(Control editor) => editor switch
     {
         TextBox textBox => textBox.Text ?? string.Empty,
         Avalonia.Controls.CheckBox checkBox => checkBox.IsChecked == true,
+        ComboBox comboBox => comboBox.SelectedItem?.ToString() ?? string.Empty,
+        ListBox listBox when listBox.SelectionMode.HasFlag(SelectionMode.Multiple) => listBox.SelectedItems?.Cast<object>().Select(item => item?.ToString() ?? string.Empty).ToArray() ?? Array.Empty<string>(),
+        ListBox listBox => listBox.SelectedItem?.ToString() ?? string.Empty,
+        Slider slider => slider.Value,
+        StackPanel radioPanel => radioPanel.Children.OfType<RadioButton>().FirstOrDefault(radio => radio.IsChecked == true)?.Tag?.ToString() ?? string.Empty,
         _ => null
     };
 }
