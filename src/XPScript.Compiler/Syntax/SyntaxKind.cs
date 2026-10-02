@@ -86,6 +86,7 @@ public enum SyntaxKind
     ParentKeyword,
     PropertyKeyword,
     GetKeyword,
+    LetKeyword,
     NextKeyword,
     NewKeyword,
     LiteralExpression,
@@ -131,5 +132,6 @@ public enum SyntaxKind
     DestructorDeclaration,
     FunctionDeclaration,
     FieldDeclaration,
+    PropertyDeclaration,
     ClassDeclaration,
 }
