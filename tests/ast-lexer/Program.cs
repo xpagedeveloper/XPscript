@@ -222,8 +222,26 @@ var malformedPutParser = new StatementParser("Put #f, 1");
 malformedPutParser.ParseStatement();
 Equal("XPS1012", malformedPutParser.Diagnostics[0].Code, "Put missing value diagnostic");
 
-var runtimeFileIdentifierRegression = Lex("FileCopy Kill MkDir RmDir ChDir SetFileAttr Name");
-Equal(string.Join(",", Enumerable.Repeat(SyntaxKind.IdentifierToken, 7)), string.Join(",", runtimeFileIdentifierRegression.Take(7).Select(t => t.Kind)), "runtime file commands remain identifiers");
+foreach (var source in new[] { "Lock #f, 1 To 64", "Unlock #f, 1 To 64" })
+{
+    var parser = new StatementParser(source);
+    var statement = (RuntimeFileStatementSyntax)parser.ParseStatement();
+    Equal(0, parser.Diagnostics.Count, source + " diagnostics");
+    Equal(3, statement.Arguments.Count, source + " argument count");
+}
+
+var lockWholeFileParser = new StatementParser("Lock #f");
+var lockWholeFile = (RuntimeFileStatementSyntax)lockWholeFileParser.ParseStatement();
+Equal(0, lockWholeFileParser.Diagnostics.Count, "Lock whole file diagnostics");
+Equal(1, lockWholeFile.Arguments.Count, "Lock whole file argument count");
+
+var chDriveParser = new StatementParser("ChDrive \"C\"");
+var chDrive = (RuntimeFileStatementSyntax)chDriveParser.ParseStatement();
+Equal(0, chDriveParser.Diagnostics.Count, "ChDrive diagnostics");
+Equal(1, chDrive.Arguments.Count, "ChDrive argument count");
+
+var runtimeFileIdentifierRegression = Lex("FileCopy Kill MkDir RmDir ChDir ChDrive SetFileAttr Name");
+Equal(string.Join(",", Enumerable.Repeat(SyntaxKind.IdentifierToken, 8)), string.Join(",", runtimeFileIdentifierRegression.Take(7).Select(t => t.Kind)), "runtime file commands remain identifiers");
 
 var fileCopyParser = new StatementParser("FileCopy sourcePath, destinationPath");
 var fileCopy = (RuntimeFileStatementSyntax)fileCopyParser.ParseStatement();
