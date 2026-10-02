@@ -17,7 +17,7 @@ internal sealed record AndroidProjectMetadata(string Target, string ApplicationT
         if (!File.Exists(configPath))
             return new AndroidProjectMetadata(
                 DefaultTarget,
-                XPScript.Compiler.UIFormAppAssets.UsesUIForm(sourcePath) ? UiApplicationType : DefaultApplicationType);
+                UsesUIForm(sourcePath) ? UiApplicationType : DefaultApplicationType);
 
         try
         {
@@ -31,7 +31,7 @@ internal sealed record AndroidProjectMetadata(string Target, string ApplicationT
 
             var target = ReadString(root, "target") ?? DefaultTarget;
             var applicationType = ReadString(root, "applicationType") ??
-                (XPScript.Compiler.UIFormAppAssets.UsesUIForm(sourcePath) ? UiApplicationType : DefaultApplicationType);
+                (UsesUIForm(sourcePath) ? UiApplicationType : DefaultApplicationType);
 
             target = target.Trim().ToLowerInvariant();
             applicationType = applicationType.Trim().ToLowerInvariant();
@@ -49,6 +49,15 @@ internal sealed record AndroidProjectMetadata(string Target, string ApplicationT
         {
             throw new InvalidOperationException("Invalid Android project config '" + configPath + "': " + ex.Message, ex);
         }
+    }
+
+    private static bool UsesUIForm(string sourcePath)
+    {
+        if (!File.Exists(sourcePath)) return false;
+        var source = File.ReadAllText(sourcePath);
+        return source.Contains("UIForm", StringComparison.OrdinalIgnoreCase) ||
+               source.Contains("AddImage", StringComparison.OrdinalIgnoreCase) ||
+               source.Contains("AddWebView", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? ReadString(JsonElement root, string propertyName)
