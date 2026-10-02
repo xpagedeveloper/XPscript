@@ -215,6 +215,7 @@ public sealed class Lexer
         "BYVAL" => SyntaxKind.ByValKeyword,
         "CLASS" => SyntaxKind.ClassKeyword,
         "EXTEND" => SyntaxKind.ExtendKeyword,
+        "ME" => SyntaxKind.MeKeyword,
         "PROPERTY" => SyntaxKind.PropertyKeyword,
         "GET" => SyntaxKind.GetKeyword,
         "NEW" => SyntaxKind.NewKeyword,
