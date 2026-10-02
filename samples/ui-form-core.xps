@@ -45,6 +45,17 @@ Sub Main()
     If first.IsDataValid Then Error 5, "Expected bound JSON data to fail configured schema"
     If first.ValidateData().FailedPaths.Get(0) <> "$.age" Then Error 5, "Expected UIForm schema failure path"
 
+    Dim customMessageForm As New UIForm("Custom schema messages")
+    Dim customMessageData As New XPJsonObject
+    Call customMessageData.Set("name", "ab")
+    Call customMessageForm.BindData(customMessageData)
+    Call customMessageForm.AddTextField("name", "Name")
+    Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string"",""minLength"":3,""x-errorMessages"":{""minLength"":""Name must contain at least 3 characters""}}},""required"":[""name""],""x-requiredMessages"":{""name"":""Please enter your name""}}")
+    Call customMessageForm.SetValidationSchema(schema)
+    If customMessageForm.GetValidationError("name") <> "Name must contain at least 3 characters" Then Error 5, "Expected custom minLength validation message"
+    Call customMessageData.Remove("name")
+    If customMessageForm.GetValidationError("name") <> "Please enter your name" Then Error 5, "Expected custom required validation message"
+
     Dim nestedForm As New UIForm("Nested schema")
     Dim nestedData As New XPJsonObject
     Dim customer As New XPJsonObject
