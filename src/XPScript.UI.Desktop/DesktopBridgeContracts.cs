@@ -71,7 +71,10 @@ public sealed record DesktopFormButton(
     int ColumnSpan,
     int RowSpan,
     bool Visible,
-    bool Enabled);
+    bool Enabled)
+{
+    public double CornerRadius { get; init; }
+}
 
 public sealed record DesktopFormRequest(
     string Title,
