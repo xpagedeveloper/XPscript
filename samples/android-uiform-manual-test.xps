@@ -17,8 +17,6 @@ Sub Main()
     Call form.AddTextField("name", "1. Name - type MANUAL-ANDROID")
     Call form.AddTextArea("notes", "2. Notes - type two lines")
     Call form.AddCheckBox("enabled", "3. Enabled - toggle this")
-    Call form.SetRequired("name", True)
-    Call form.SetLength("name", 3, 40)
     Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string"",""minLength"":3,""x-errorMessages"":{""minLength"":""Name must contain at least 3 characters""}}},""required"":[""name""],""x-requiredMessages"":{""name"":""Please enter your name""}}")
     Call form.SetValidationSchema(schema)
 
