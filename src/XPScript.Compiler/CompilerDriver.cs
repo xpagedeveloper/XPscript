@@ -250,10 +250,14 @@ public sealed class CompilerDriver
 
             CompilerProgressContext.Report(40, "Publishing application");
             using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start dotnet publish.");
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
+            var stdoutLines = new List<string>();
+            var stderrLines = new List<string>();
+            var stdoutTask = DrainPublishOutputAsync(process.StandardOutput, stdoutLines);
+            var stderrTask = DrainPublishOutputAsync(process.StandardError, stderrLines);
             await process.WaitForExitAsync();
-            var stdout = await stdoutTask; var stderr = await stderrTask;
+            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+            var stdout = string.Join(Environment.NewLine, stdoutLines);
+            var stderr = string.Join(Environment.NewLine, stderrLines);
             ApplicationSecurityAudit.Report(stdout + Environment.NewLine + stderr);
 
             CompilerProgressContext.Report(85, "Finalizing publish");
@@ -895,6 +899,31 @@ public sealed class CompilerDriver
         if (value.Length <= MaximumBuildDiagnosticChars) return value;
         return value[..MaximumBuildDiagnosticChars] + Environment.NewLine +
                "[compiler output truncated after " + MaximumBuildDiagnosticChars + " characters]";
+    }
+
+    private static async Task DrainPublishOutputAsync(StreamReader reader, List<string> lines)
+    {
+        while (await reader.ReadLineAsync().ConfigureAwait(false) is { } line)
+        {
+            lines.Add(line);
+            var phase = ClassifyPublishProgress(line);
+            if (phase is not null)
+                CompilerProgressContext.Report(40, phase);
+        }
+    }
+
+    private static string? ClassifyPublishProgress(string line)
+    {
+        var text = line.Trim();
+        if (text.Length == 0) return null;
+        if (text.Contains("Determining projects to restore", StringComparison.OrdinalIgnoreCase)) return "Restoring dependencies";
+        if (text.Contains("Restored ", StringComparison.OrdinalIgnoreCase)) return "Dependencies restored";
+        if (text.Contains(" -> ", StringComparison.Ordinal) && text.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) return "Compiling generated project";
+        if (text.Contains("LinkAssemblies", StringComparison.OrdinalIgnoreCase) || text.Contains("linking", StringComparison.OrdinalIgnoreCase)) return "Linking application";
+        if (text.Contains("AOT", StringComparison.OrdinalIgnoreCase)) return "Compiling native code";
+        if (text.Contains("apk", StringComparison.OrdinalIgnoreCase)) return "Packaging Android APK";
+        if (text.Contains("Publish", StringComparison.OrdinalIgnoreCase)) return "Publishing application";
+        return null;
     }
 
     private static IReadOnlyList<CompileDiagnostic> ParseGeneratedCompilerDiagnostics(string text, string sourcePath, string tempRoot)
