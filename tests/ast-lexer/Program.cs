@@ -453,6 +453,20 @@ var callStatementSyntax = (CallStatementSyntax)callStatement;
 Equal(SyntaxKind.CallExpression, callStatementSyntax.Expression.Kind, "Call statement expression kind");
 Equal(new TextSpan(0, 13), callStatementSyntax.Span, "Call statement full span");
 
+const string extendedClassSource = "Public Class Employee Extend Person\nPublic EmployeeId As Integer\nEnd Class";
+var extendedClassParser = new DeclarationParser(extendedClassSource);
+var extendedClass = (ClassDeclarationSyntax)extendedClassParser.ParseDeclaration();
+Equal(0, extendedClassParser.Diagnostics.Count, "Extend class diagnostics");
+Equal(SyntaxKind.ExtendKeyword, extendedClass.ExtendKeyword!.Kind, "Extend keyword");
+Equal("Person", extendedClass.BaseType!.Identifier.Text, "Extend base type");
+Equal(1, extendedClass.Members.Count, "Extend class member count");
+Equal(new TextSpan(0, extendedClassSource.Length), extendedClass.Span, "Extend class span");
+
+var missingExtendBaseParser = new DeclarationParser("Class Broken Extend\nEnd Class");
+var missingExtendBase = (ClassDeclarationSyntax)missingExtendBaseParser.ParseDeclaration();
+Equal(null, missingExtendBase.BaseType, "missing Extend base type");
+Equal("XPS1012", missingExtendBaseParser.Diagnostics[^1].Code, "missing Extend base diagnostic");
+
 const string classDeclarationSource = "Public Class Person\nPrivate mName As String\nPublic Name As String\nPublic Function Describe() As String\nDescribe = mName\nEnd Function\nEnd Class";
 var classDeclarationParser = new DeclarationParser(classDeclarationSource);
 var classDeclaration = (ClassDeclarationSyntax)classDeclarationParser.ParseDeclaration();
