@@ -251,7 +251,7 @@ internal static class LSForAllRuntime
 
             var classMatch = Regex.Match(
                 line,
-                @"^(?:(Public|Private)\s+)?Class\s+([A-Za-z_]\w*)(?:\s+As\s+([A-Za-z_]\w*))?\s*$",
+                @"^(?:(Public|Private)\s+)?Class\s+([A-Za-z_]\w*)(?:\s+Extend\s+([A-Za-z_]\w*))?\s*$",
                 RegexOptions.IgnoreCase);
 
             if (classMatch.Success)
@@ -357,7 +357,7 @@ internal static class LSForAllRuntime
     {
         var classMatch = Regex.Match(
             line,
-            @"^(?:(Public|Private)\s+)?Class\s+([A-Za-z_]\w*)(?:\s+As\s+([A-Za-z_]\w*))?\s*$",
+            @"^(?:(Public|Private)\s+)?Class\s+([A-Za-z_]\w*)(?:\s+Extend\s+([A-Za-z_]\w*))?\s*$",
             RegexOptions.IgnoreCase);
 
         if (classMatch.Success)
@@ -1100,6 +1100,7 @@ internal static class LSForAllRuntime
     private string TransformListSyntax(string expression)
     {
         var text = Regex.Replace(expression, @"\bMe\b", "this", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"\bParent\b", "base", RegexOptions.IgnoreCase);
         foreach (var alias in _forAll)
             text = Regex.Replace(text, $@"\bListTag\s*\(\s*{Regex.Escape(alias.Alias)}\s*\)", $"__LSLISTTAG_{alias.Alias}__", RegexOptions.IgnoreCase);
 
@@ -1118,6 +1119,7 @@ internal static class LSForAllRuntime
         text = Regex.Replace(text, @"(?<![<>=!])=(?![=>])", "==");
         text = text.Replace("__LS_BYREF_ASSIGN__", "=", StringComparison.Ordinal);
         text = Regex.Replace(text, @"\bMe\b", "this", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"\bParent\b", "base", RegexOptions.IgnoreCase);
 
         foreach (var objectVariable in _objectVariables)
         {
