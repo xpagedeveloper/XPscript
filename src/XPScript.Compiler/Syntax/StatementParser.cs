@@ -56,11 +56,11 @@ public sealed class StatementParser
             return ParseOpenStatement();
         if (Current.Kind == SyntaxKind.CloseKeyword)
             return ParseCloseStatement();
-        if (Current.Kind is SyntaxKind.PrintKeyword or SyntaxKind.WriteKeyword)
+        if (IsIdentifier("Print") || IsIdentifier("Write"))
             return ParseFileOutputStatement();
-        if (Current.Kind == SyntaxKind.InputKeyword || (Current.Kind == SyntaxKind.LineKeyword && PeekKind(1) == SyntaxKind.InputKeyword))
+        if (Current.Kind == SyntaxKind.InputKeyword || (IsIdentifier("Line") && PeekKind(1) == SyntaxKind.InputKeyword))
             return ParseFileInputStatement();
-        if (Current.Kind == SyntaxKind.SeekKeyword)
+        if (IsIdentifier("Seek"))
             return ParseSeekStatement();
         if (Current.Kind == SyntaxKind.OnKeyword && PeekKind(1) == SyntaxKind.EventKeyword)
             return ParseOnEventStatement();
@@ -806,7 +806,8 @@ public sealed class StatementParser
 
     private StatementSyntax ParseFileOutputStatement()
     {
-        var keyword = NextToken();
+        var rawKeyword = NextToken();
+        var keyword = PromoteIdentifier(rawKeyword, string.Equals(rawKeyword.Text, "Write", StringComparison.OrdinalIgnoreCase) ? SyntaxKind.WriteKeyword : SyntaxKind.PrintKeyword);
         var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
         var lineEnd = FindLineEndIndex(_position);
         var fileEnd = commaIndex >= 0 ? commaIndex : lineEnd;
@@ -830,8 +831,8 @@ public sealed class StatementParser
     private StatementSyntax ParseFileInputStatement()
     {
         SyntaxToken? lineKeyword = null;
-        if (Current.Kind == SyntaxKind.LineKeyword)
-            lineKeyword = NextToken();
+        if (IsIdentifier("Line"))
+            lineKeyword = PromoteIdentifier(NextToken(), SyntaxKind.LineKeyword);
         var inputKeyword = Match(SyntaxKind.InputKeyword);
         var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
         var lineEnd = FindLineEndIndex(_position);
@@ -855,7 +856,7 @@ public sealed class StatementParser
 
     private StatementSyntax ParseSeekStatement()
     {
-        var seekKeyword = NextToken();
+        var seekKeyword = PromoteIdentifier(NextToken(), SyntaxKind.SeekKeyword);
         var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
         if (commaIndex < 0)
         {
@@ -954,6 +955,13 @@ public sealed class StatementParser
 
         return -1;
     }
+
+    private bool IsIdentifier(string text) =>
+        Current.Kind == SyntaxKind.IdentifierToken
+        && string.Equals(Current.Text, text, StringComparison.OrdinalIgnoreCase);
+
+    private static SyntaxToken PromoteIdentifier(SyntaxToken token, SyntaxKind kind) =>
+        new(kind, token.Text, token.Value, token.Span);
 
     private SyntaxToken Match(SyntaxKind kind)
     {
