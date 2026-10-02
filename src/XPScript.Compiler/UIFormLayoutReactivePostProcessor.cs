@@ -17,6 +17,7 @@ internal sealed class UIFormLayoutReactivePostProcessor
     public string RegionId { get; set; } = string.Empty;
     public string RefreshTargetRegion { get; set; } = string.Empty;
     public string RefreshHandler { get; set; } = string.Empty;
+    public string GridName { get; set; } = string.Empty;
 """);
 
         generated = ReplaceRequired(generated,
@@ -26,16 +27,22 @@ internal sealed class XPScriptUIGrid
 {
     private readonly XPScriptUIForm _form;
     private readonly int _columns;
+    private readonly string _name;
+    private string _tabName = string.Empty;
     private int _row = 1;
     private int _usedColumns;
 
-    internal XPScriptUIGrid(XPScriptUIForm form, int columns)
+    internal XPScriptUIGrid(XPScriptUIForm form, int columns, string name = "")
     {
         _form = form;
         _columns = columns;
+        _name = name;
     }
 
     public int Columns => _columns;
+    public string Name => _name;
+    public string TabName => _tabName;
+    public void SetTab(object? tabName) { _form.SetGridTab(_name, tabName); _tabName = XPScriptRuntime.CStr(tabName).Trim(); }
 
     public void SetFieldPosition(object? name, object? columnSpan)
     {
@@ -57,6 +64,7 @@ internal sealed class XPScriptUIGrid
 
         var column = _usedColumns + 1;
         _form.SetFieldPosition(name, _row, column, span, 1);
+        if (_name.Length > 0) _form.SetFieldGrid(name, _name);
         _usedColumns += span;
 
         if (_usedColumns == _columns)
@@ -83,6 +91,7 @@ internal sealed class XPScriptUIForm
             """
     private readonly List<XPScriptUIField> _fields = [];
     private int _gridColumns = 1;
+    private readonly Dictionary<string, XPScriptUIGrid> _grids = new(StringComparer.OrdinalIgnoreCase);
 """);
 
         generated = ReplaceRequired(generated,
@@ -100,6 +109,42 @@ internal sealed class XPScriptUIForm
         SetGridColumns(columns);
         return new XPScriptUIGrid(this, _gridColumns);
     }
+
+    public XPScriptUIGrid AddGrid(object? name, object? columns)
+    {
+        var gridName = XPScriptRuntime.CStr(name).Trim();
+        if (gridName.Length is < 1 or > 128 || gridName.Any(ch => !(char.IsLetterOrDigit(ch) || ch is '_' or '-')))
+            throw new XPScriptRuntimeException(5, "UIForm grid name is invalid.");
+        if (_grids.ContainsKey(gridName))
+            throw new XPScriptRuntimeException(5, $"UIForm grid '{gridName}' already exists.");
+        int value;
+        try { value = Convert.ToInt32(columns, System.Globalization.CultureInfo.InvariantCulture); }
+        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+        { throw new XPScriptRuntimeException(13, "UIForm grid column count must be an Integer value."); }
+        if (value is < 1 or > 64) throw new XPScriptRuntimeException(5, "UIForm grid column count must be between 1 and 64.");
+        var grid = new XPScriptUIGrid(this, value, gridName);
+        _grids.Add(gridName, grid);
+        return grid;
+    }
+
+    public void SetGridTab(object? gridName, object? tabName)
+    {
+        var name = XPScriptRuntime.CStr(gridName).Trim();
+        if (!_grids.TryGetValue(name, out var grid)) throw new XPScriptRuntimeException(5, $"UIForm grid '{name}' does not exist.");
+        var tab = XPScriptRuntime.CStr(tabName).Trim();
+        if (tab.Length > 0 && !Tabs.Any(item => item.Name.Equals(tab, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm tab '{tab}' does not exist.");
+    }
+
+    public void SetFieldGrid(object? fieldName, object? gridName)
+    {
+        var field = FindField(fieldName);
+        var name = XPScriptRuntime.CStr(gridName).Trim();
+        if (!_grids.ContainsKey(name)) throw new XPScriptRuntimeException(5, $"UIForm grid '{name}' does not exist.");
+        field.GridName = name;
+    }
+
+    internal IReadOnlyCollection<XPScriptUIGrid> Grids => _grids.Values;
 
     public void SetGridColumns(object? columns)
     {
