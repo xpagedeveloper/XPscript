@@ -61,6 +61,8 @@ foreach (var expected in new[]
     "actions.Children.Add(ok);",
     "request.TryGetProperty(\"buttons\"",
     "eventCallback(\"button:\" + buttonName, submittedValues);",
+    "UIForm button '\" + buttonName + \"' callback failed:",
+    "catch (Exception exception)",
     "actions.Children.Add(actionButton);",
     "field.TryGetProperty(\"validationError\"",
     "field.TryGetProperty(\"schemaValidationError\"",
