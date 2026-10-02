@@ -33,6 +33,7 @@ public sealed record DesktopFormField(
     public string Placeholder { get; init; } = string.Empty;
     public string Tooltip { get; init; } = string.Empty;
     public string TabName { get; init; } = string.Empty;
+    public string GridName { get; init; } = string.Empty;
     public string RegexPattern { get; init; } = string.Empty;
     public string DateMinimum { get; init; } = string.Empty;
     public string DateMaximum { get; init; } = string.Empty;
@@ -79,6 +80,7 @@ public sealed record DesktopFormButton(
 }
 
 public sealed record DesktopFormTab(string Name, string Label);
+public sealed record DesktopFormGrid(string Name, int Columns, string TabName);
 
 public sealed record DesktopFormRequest(
     string Title,
@@ -96,6 +98,7 @@ public sealed record DesktopFormRequest(
     public int GridColumns { get; init; } = 1;
     public IReadOnlyList<DesktopFormButton> Buttons { get; init; } = Array.Empty<DesktopFormButton>();
     public IReadOnlyList<DesktopFormTab> Tabs { get; init; } = Array.Empty<DesktopFormTab>();
+    public IReadOnlyList<DesktopFormGrid> Grids { get; init; } = Array.Empty<DesktopFormGrid>();
     public string ActiveTab { get; init; } = string.Empty;
     public string ApplicationTitle { get; init; } = string.Empty;
     public string ApplicationIcon { get; init; } = string.Empty;
