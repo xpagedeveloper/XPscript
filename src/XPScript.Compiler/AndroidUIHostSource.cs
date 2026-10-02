@@ -308,7 +308,7 @@ public static class AndroidFormHost
                         {
                             var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
                             var actionState = eventCallback("button:" + buttonName, submittedValues);
-                            ApplyActionState(actionState, editors, validationErrors);
+                            ApplyActionState(actionState, editors, validationErrors, tabControl);
                         }
                         catch (Exception exception)
                         {
