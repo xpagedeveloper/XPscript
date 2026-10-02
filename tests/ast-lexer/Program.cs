@@ -1046,6 +1046,19 @@ EqualLegacyAst("\"XP\" & \"Script\"", "string concatenation");
 EqualLegacyAst("1 + 2 = 3", "comparison precedence");
 EqualLegacyAst("True And False Or True", "boolean associativity");
 
+var recoveryParser = new StatementParser("If True Then\nvalue = 1 extra junk\nnextValue = 2\nEnd If");
+var recoveryIf = (IfStatementSyntax)recoveryParser.ParseStatement();
+Equal(2, recoveryIf.ThenStatements.Count, "statement recovery preserves following statement");
+Equal(SyntaxKind.AssignmentStatement, recoveryIf.ThenStatements[0].Kind, "statement recovery malformed statement kind");
+Equal(SyntaxKind.AssignmentStatement, recoveryIf.ThenStatements[1].Kind, "statement recovery following statement kind");
+Equal(1, recoveryParser.Diagnostics.Count, "statement recovery diagnostic count");
+Equal("XPS1012", recoveryParser.Diagnostics[0].Code, "statement recovery diagnostic code");
+
+var loopRecoveryParser = new StatementParser("While True\nvalue = 1 junk\nvalue = 2\nWend");
+var recoveryWhile = (WhileStatementSyntax)loopRecoveryParser.ParseStatement();
+Equal(2, recoveryWhile.Statements.Count, "loop recovery preserves following statement");
+Equal(1, loopRecoveryParser.Diagnostics.Count, "loop recovery diagnostic count");
+
 var malformedExpressionParser = new ExpressionParser("1 2");
 malformedExpressionParser.ParseExpression();
 Equal(1, malformedExpressionParser.Diagnostics.Count, "trailing expression token diagnostic count");
