@@ -83,6 +83,7 @@ public enum SyntaxKind
     ClassKeyword,
     ExtendKeyword,
     MeKeyword,
+    ParentKeyword,
     PropertyKeyword,
     GetKeyword,
     NextKeyword,
