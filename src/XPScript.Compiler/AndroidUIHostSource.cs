@@ -204,8 +204,15 @@ public static class AndroidFormHost
                     actionButton.Click += (_, _) =>
                     {
                         if (eventCallback is null) return;
-                        var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
-                        eventCallback("button:" + buttonName, submittedValues);
+                        try
+                        {
+                            var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
+                            eventCallback("button:" + buttonName, submittedValues);
+                        }
+                        catch (Exception exception)
+                        {
+                            Log.Error("XPScript", "UIForm button '" + buttonName + "' callback failed: " + exception);
+                        }
                     };
                     actions.Children.Add(actionButton);
                 }
