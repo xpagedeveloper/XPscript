@@ -8,6 +8,7 @@ internal static class AndroidUIHostSource
 using System.Text.Json;
 using Android.App;
 using Android.Content.PM;
+using Android.OS;
 using Android.Util;
 using Avalonia;
 using Avalonia.Android;
@@ -43,6 +44,14 @@ public sealed class App : Avalonia.Application
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
 public sealed class MainActivity : AvaloniaMainActivity
 {
+    internal static MainActivity? Current { get; private set; }
+
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        Current = this;
+        base.OnCreate(savedInstanceState);
+    }
+
     protected override void OnStart()
     {
         base.OnStart();
@@ -166,11 +175,8 @@ public static class AndroidFormHost
             {
                 var formTitle = title.GetString() ?? "XPScript";
                 panel.Children.Add(new TextBlock { Text = formTitle, FontSize = 24 });
-                if (global::Android.App.Application.Context is not null)
-                {
-                    var activity = global::Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
-                    if (activity is not null) activity.Title = formTitle;
-                }
+                if (MainActivity.Current is not null)
+                    MainActivity.Current.Title = formTitle;
             }
 
             foreach (var field in fields)
