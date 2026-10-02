@@ -69,6 +69,7 @@ foreach (var expected in new[]
     "initialEditor.Focus();",
     "editor.IsVisible && editor.IsEnabled && editor.Focusable && editor.IsTabStop)?.Focus();",
     "panel.Children.Add(actions);",
+    "ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode",
     "protected override void OnStart()",
     "protected override void OnResume()",
     "protected override void OnPause()",
