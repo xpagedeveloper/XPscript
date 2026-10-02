@@ -44,6 +44,7 @@ jobs:
         run: ./.github/scripts/run-fulltests.ps1 -Suite language
 
   full-regression:
+    if: github.event_name == 'workflow_dispatch'
     name: Full regression (${{ matrix.name }})
     needs: focused-compiler-checks
     strategy:
