@@ -10,16 +10,19 @@ try
     var defaults = AndroidProjectMetadata.LoadForSource(source);
     Require(defaults.Target == "android", "default target");
     Require(defaults.ApplicationType == "headless", "default application type");
+    Require(defaults.ApplicationTitle == "XPScript", "default application title");
 
     File.WriteAllText(Path.Combine(root, "xpscript.json"), """
 {
   "target": "android",
-  "applicationType": "headless"
+  "applicationType": "headless",
+  "applicationTitle": "My Android App"
 }
 """);
     var explicitConfig = AndroidProjectMetadata.LoadForSource(source);
     Require(explicitConfig.Target == "android", "explicit target");
     Require(explicitConfig.ApplicationType == "headless", "explicit application type");
+    Require(explicitConfig.ApplicationTitle == "My Android App", "explicit application title");
 
     File.WriteAllText(Path.Combine(root, "xpscript.json"), """{"target":"desktop","applicationType":"headless"}""");
     ExpectFailure(source, "target to be 'android'");
@@ -31,6 +34,9 @@ try
 
     File.WriteAllText(Path.Combine(root, "xpscript.json"), """{"target":"android","applicationType":"uiform"}""");
     ExpectFailure(source, "Supported applicationTypes: headless, ui");
+
+    File.WriteAllText(Path.Combine(root, "xpscript.json"), """{"target":"android","applicationTitle":false}""");
+    ExpectFailure(source, "applicationTitle must be a string");
 
     File.WriteAllText(Path.Combine(root, "xpscript.json"), """{"target":"android","applicationType":false}""");
     ExpectFailure(source, "applicationType must be a string");
