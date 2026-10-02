@@ -85,6 +85,8 @@ foreach (var expected in new[]
     "var tabPanels = new Dictionary<string, StackPanel>",
     "tabControl = new TabControl",
     "root.TryGetProperty(\"activeTab\"",
+    "var namedGrids = new Dictionary<string, Grid>",
+    "AddFieldContainer(field, fieldContainer, targetPanel, targetGrid)",
     "validationBlock.IsVisible = validationError.Length > 0;",
     "if (validationError.Length == 0 && field.TryGetProperty(\"value\"",
     "UIForm button '\" + buttonName + \"' callback failed:",
