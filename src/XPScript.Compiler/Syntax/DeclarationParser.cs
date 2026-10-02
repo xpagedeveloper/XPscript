@@ -97,7 +97,6 @@ public sealed class DeclarationParser
 
     private (List<StatementSyntax> Statements, SyntaxToken EndKeyword, SyntaxToken EndTarget) ParseBody(IReadOnlyList<SourceLine> lines, SyntaxKind targetKind, string targetName)
     {
-        var statements = new List<StatementSyntax>();
         for (var i = 1; i < lines.Count; i++)
         {
             var line = lines[i];
@@ -108,17 +107,36 @@ public sealed class DeclarationParser
             var tokens = lexer.Lex().Where(t => t.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken).ToArray();
             AddLexerDiagnostics(lexer.Diagnostics);
 
-            if (tokens.Length >= 2 && tokens[0].Kind == SyntaxKind.EndKeyword && tokens[1].Kind == targetKind)
-                return (statements, tokens[0], tokens[1]);
+            if (tokens.Length < 2 || tokens[0].Kind != SyntaxKind.EndKeyword || tokens[1].Kind != targetKind)
+                continue;
 
-            var parser = new StatementParser(line.Text, _baseOffset + line.Start);
-            statements.Add(parser.ParseStatement());
+            var bodyStart = lines[0].Start + lines[0].Text.Length;
+            if (bodyStart < _text.Length && _text[bodyStart] == '\r')
+                bodyStart++;
+            if (bodyStart < _text.Length && _text[bodyStart] == '\n')
+                bodyStart++;
+
+            var bodyLength = Math.Max(0, line.Start - bodyStart);
+            var bodyText = _text.Substring(bodyStart, bodyLength);
+            var parser = new StatementParser(bodyText, _baseOffset + bodyStart);
+            var statements = parser.ParseStatements().ToList();
             _diagnostics.AddRange(parser.Diagnostics);
+            return (statements, tokens[0], tokens[1]);
         }
 
         var end = _baseOffset + _text.Length;
         _diagnostics.Add(new SyntaxDiagnostic("XPS1012", $"Expected 'End {targetName}' to close declaration.", new TextSpan(end, 0)));
-        return (statements,
+
+        var bodyStartAtEof = lines[0].Start + lines[0].Text.Length;
+        if (bodyStartAtEof < _text.Length && _text[bodyStartAtEof] == '\r')
+            bodyStartAtEof++;
+        if (bodyStartAtEof < _text.Length && _text[bodyStartAtEof] == '\n')
+            bodyStartAtEof++;
+        var bodyParser = new StatementParser(_text.Substring(bodyStartAtEof), _baseOffset + bodyStartAtEof);
+        var bodyStatements = bodyParser.ParseStatements().ToList();
+        _diagnostics.AddRange(bodyParser.Diagnostics);
+
+        return (bodyStatements,
             new SyntaxToken(SyntaxKind.EndKeyword, string.Empty, null, new TextSpan(end, 0)),
             new SyntaxToken(targetKind, string.Empty, null, new TextSpan(end, 0)));
     }
