@@ -224,6 +224,13 @@ if (!runtimeDiagnosticsSource.Contains("#if ANDROID", StringComparison.Ordinal) 
     !runtimeDiagnosticsSource.Contains("Environment.ExitCode = 1;", StringComparison.Ordinal))
     throw new Exception("Android runtime diagnostics regression is missing.");
 
+var uiFormRegressionSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-uiform-regression.xps"));
+foreach (var expected in new[] { "UIForm(\"Android UIForm Regression\")", "AddTextField", "AddTextArea", "AddCheckBox", "Application.Debug.Info" })
+{
+    if (!uiFormRegressionSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android UIForm regression sample is incomplete: " + expected);
+}
+
 var outputRegressionSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-debug-output-regression.xps"));
 foreach (var expected in new[]
 {
