@@ -214,6 +214,15 @@ var inputHashParser = new StatementParser("Input #1, value");
 var inputHash = (FileInputStatementSyntax)inputHashParser.ParseStatement();
 Equal(0, inputHashParser.Diagnostics.Count, "Input hash diagnostics");
 
+var inputFunctionParser = new StatementParser("Input(10, #1)");
+var inputFunctionStatement = inputFunctionParser.ParseStatement();
+Equal(SyntaxKind.ExpressionStatement, inputFunctionStatement.Kind, "Input function remains expression statement");
+Equal(0, inputFunctionParser.Diagnostics.Count, "Input function diagnostics");
+
+var lineCallParser = new StatementParser("Line Input(10, #1)");
+var lineCallStatement = lineCallParser.ParseStatement();
+Equal(SyntaxKind.ExpressionStatement, lineCallStatement.Kind, "Line without file hash is not file input");
+
 var seekHashParser = new StatementParser("Seek #1, 42");
 var seekHash = (SeekStatementSyntax)seekHashParser.ParseStatement();
 Equal(0, seekHashParser.Diagnostics.Count, "Seek hash diagnostics");
