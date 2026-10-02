@@ -933,12 +933,21 @@ public sealed class CompilerDriver
         {
             lock (this)
             {
-                var target = PhasePercentages.TryGetValue(phase, out var mapped)
-                    ? mapped
-                    : phase.StartsWith("MSBuild: ", StringComparison.Ordinal)
-                        ? Math.Min(83, _percent + 1)
-                        : _percent;
-                _percent = Math.Max(_percent, target);
+                if (PhasePercentages.TryGetValue(phase, out var mapped))
+                {
+                    if (mapped < _percent)
+                        return;
+                    _percent = mapped;
+                }
+                else if (phase.StartsWith("MSBuild: ", StringComparison.Ordinal))
+                {
+                    _percent = Math.Min(83, _percent + 1);
+                }
+                else
+                {
+                    return;
+                }
+
                 CompilerProgressContext.Report(_percent, phase);
             }
         }
