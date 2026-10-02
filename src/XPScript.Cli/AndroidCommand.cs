@@ -122,6 +122,11 @@ internal static class AndroidCommand
                     Environment.NewLine + logs.Output.Trim());
             }
             Console.WriteLine("Android UI application launched on " + serial + ". Use 'xpscript android logs --device " + serial + "' for runtime diagnostics.");
+            if (debug)
+            {
+                Console.WriteLine("Streaming Android debug output. Stop with Ctrl+C.");
+                return await StreamLogsAsync(adb, serial);
+            }
             return 0;
         }
 
