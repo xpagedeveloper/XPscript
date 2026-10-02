@@ -925,10 +925,14 @@ public sealed class CompilerDriver
         if (text.Contains("Restored ", StringComparison.OrdinalIgnoreCase)) return "Dependencies restored";
         if (text.Contains("CoreCompile", StringComparison.OrdinalIgnoreCase) || text.Contains("Csc", StringComparison.OrdinalIgnoreCase)) return "Compiling generated project";
         if (text.Contains(" -> ", StringComparison.Ordinal) && text.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) return "Compiling generated project";
-        if (text.Contains("ResolveAssemblies", StringComparison.OrdinalIgnoreCase)) return "Resolving Android assemblies";
+        if (text.Contains("ResolveAssemblies", StringComparison.OrdinalIgnoreCase) || text.Contains("_ResolveAssemblies", StringComparison.OrdinalIgnoreCase)) return "Resolving Android assemblies";
+        if (text.Contains("ResolveLibraryProjectImports", StringComparison.OrdinalIgnoreCase)) return "Resolving Android libraries";
+        if (text.Contains("GenerateJavaStubs", StringComparison.OrdinalIgnoreCase)) return "Generating Android Java stubs";
+        if (text.Contains("GeneratePackageManagerJava", StringComparison.OrdinalIgnoreCase)) return "Generating Android package metadata";
         if (text.Contains("LinkAssemblies", StringComparison.OrdinalIgnoreCase) || text.Contains("linking", StringComparison.OrdinalIgnoreCase)) return "Linking application";
         if (text.Contains("AOT", StringComparison.OrdinalIgnoreCase)) return "Compiling native code";
         if (text.Contains("CompileToDalvik", StringComparison.OrdinalIgnoreCase) || text.Contains("D8", StringComparison.OrdinalIgnoreCase)) return "Compiling Android bytecode";
+        if (text.Contains("CompileNativeAssembly", StringComparison.OrdinalIgnoreCase)) return "Compiling Android native assemblies";
         if (text.Contains("BuildApk", StringComparison.OrdinalIgnoreCase) || text.Contains("PackageForAndroid", StringComparison.OrdinalIgnoreCase) || text.Contains("apk", StringComparison.OrdinalIgnoreCase)) return "Packaging Android APK";
         if (text.Contains("SignAndroidPackage", StringComparison.OrdinalIgnoreCase) || text.Contains("AndroidSignPackage", StringComparison.OrdinalIgnoreCase)) return "Signing Android APK";
         if (text.StartsWith("Target \"", StringComparison.OrdinalIgnoreCase))
