@@ -1,0 +1,16 @@
+# Android UIForm regression sample
+
+Sub Main()
+    Dim data As New XPJsonObject
+    Dim form As New UIForm("Android UIForm Regression")
+    Dim result As String
+
+    Call Application.Debug.Info("ANDROID-UIFORM-REGRESSION=start")
+    Call form.BindData(data)
+    Call form.AddTextField("name", "Name")
+    Call form.AddTextArea("notes", "Notes")
+    Call form.AddCheckBox("enabled", "Enabled")
+    result = form.ShowDialog()
+    Call Application.Debug.Info("ANDROID-UIFORM-REGRESSION=result:" & result)
+    Print "ANDROID-UIFORM-REGRESSION=" & result
+End Sub
