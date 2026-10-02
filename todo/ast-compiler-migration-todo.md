@@ -128,25 +128,25 @@ Initial declaration nodes should cover at least:
 
 Expressions are the first migration target because the current transpiler performs substantial textual expression rewriting and expression precedence directly affects correctness.
 
-- [ ] Implement precedence-based expression parsing.
+- [x] Implement precedence-based expression parsing.
 - [ ] Define precedence and associativity for every XPscript operator.
-- [ ] Implement unary `Not`, unary plus and unary minus.
-- [ ] Implement arithmetic operators.
-- [ ] Implement comparison operators.
-- [ ] Implement boolean operators.
-- [ ] Implement parentheses.
-- [ ] Implement calls.
-- [ ] Implement member access.
-- [ ] Implement indexing.
-- [ ] Implement array expressions.
-- [ ] Implement `New`.
+- [x] Implement unary `Not`, unary plus and unary minus.
+- [x] Implement arithmetic operators.
+- [x] Implement comparison operators.
+- [x] Implement boolean operators.
+- [x] Implement parentheses.
+- [x] Implement calls.
+- [x] Implement member access.
+- [x] Implement indexing.
+- [x] Implement array expressions.
+- [x] Implement `New`.
 - [ ] Implement zero-argument runtime function syntax.
-- [ ] Test nested calls and member access.
-- [ ] Test mixed unary/binary precedence.
-- [ ] Add focused regression for `If Not RunCommand(...) Then`.
-- [ ] Add equivalent regression for `If RunCommand(...) = False Then`.
-- [ ] Verify both produce the intended boolean semantics.
-- [ ] Compare expression output against the legacy transpiler on existing fixtures.
+- [x] Test nested calls and member access.
+- [x] Test mixed unary/binary precedence.
+- [x] Add focused regression for `If Not RunCommand(...) Then`.
+- [x] Add equivalent regression for `If RunCommand(...) = False Then`.
+- [x] Verify both produce the intended boolean semantics.
+- [x] Compare expression output against the legacy transpiler on existing fixtures.
 
 ## Phase 4: Statement parser
 
