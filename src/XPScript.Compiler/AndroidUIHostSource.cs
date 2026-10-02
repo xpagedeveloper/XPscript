@@ -350,8 +350,9 @@ public static class AndroidFormHost
     private static Control CreateRadioGroup(IReadOnlyList<string> options)
     {
         var panel = new StackPanel { Spacing = 6 };
+        var groupName = Guid.NewGuid().ToString("N");
         foreach (var option in options)
-            panel.Children.Add(new RadioButton { Content = option, Tag = option, GroupName = Guid.NewGuid().ToString("N") });
+            panel.Children.Add(new RadioButton { Content = option, Tag = option, GroupName = groupName });
         return panel;
     }
 
