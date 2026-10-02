@@ -45,7 +45,6 @@ jobs:
 
   full-regression:
     name: Full regression (${{ matrix.name }})
-    if: github.event_name == 'workflow_dispatch'
     needs: focused-compiler-checks
     strategy:
       fail-fast: false
