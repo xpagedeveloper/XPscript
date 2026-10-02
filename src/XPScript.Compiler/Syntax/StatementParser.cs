@@ -62,7 +62,9 @@ public sealed class StatementParser
             return ParseRuntimeFileStatement();
         if (IsIdentifier("Randomize") || IsIdentifier("Beep"))
             return ParseRuntimeFileStatement();
-        if (Current.Kind == SyntaxKind.InputKeyword || (IsIdentifier("Line") && PeekKind(1) == SyntaxKind.InputKeyword))
+        if (Current.Kind == SyntaxKind.InputKeyword && PeekKind(1) == SyntaxKind.HashToken)
+            return ParseFileInputStatement();
+        if (IsIdentifier("Line") && PeekKind(1) == SyntaxKind.InputKeyword && PeekKind(2) == SyntaxKind.HashToken)
             return ParseFileInputStatement();
         if (IsIdentifier("Seek") && PeekKind(1) == SyntaxKind.HashToken)
             return ParseSeekStatement();
