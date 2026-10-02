@@ -62,6 +62,7 @@ public static class DesktopFormHost
         panel.Children.Add(fieldsGrid);
         TabControl? tabControl = null;
         var tabGrids = new Dictionary<string, Grid>(StringComparer.OrdinalIgnoreCase);
+        var namedGrids = new Dictionary<string, Grid>(StringComparer.OrdinalIgnoreCase);
         if (request.Tabs.Count > 0)
         {
             var tabItems = new List<TabItem>();
@@ -75,6 +76,19 @@ public static class DesktopFormHost
             var selected = tabItems.FindIndex(item => string.Equals(item.Tag?.ToString(), request.ActiveTab, StringComparison.OrdinalIgnoreCase));
             tabControl.SelectedIndex = selected >= 0 ? selected : 0;
             panel.Children.Add(tabControl);
+        }
+        foreach (var definition in request.Grids)
+        {
+            var grid = CreateFieldsGrid(definition.Columns);
+            namedGrids[definition.Name] = grid;
+            if (definition.TabName.Length > 0 && tabGrids.TryGetValue(definition.TabName, out var tabGrid))
+            {
+                EnsureRows(tabGrid, tabGrid.RowDefinitions.Count + 1);
+                Grid.SetRow(grid, tabGrid.RowDefinitions.Count - 1);
+                Grid.SetColumnSpan(grid, request.GridColumns);
+                tabGrid.Children.Add(grid);
+            }
+            else panel.Children.Add(grid);
         }
         var validationText = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Red };
 
@@ -114,7 +128,9 @@ public static class DesktopFormHost
             }
             fieldPanel.Children.Add(fieldValidation);
 
-            var targetGrid = field.TabName.Length > 0 && tabGrids.TryGetValue(field.TabName, out var tabGrid) ? tabGrid : fieldsGrid;
+            var targetGrid = field.GridName.Length > 0 && namedGrids.TryGetValue(field.GridName, out var namedGrid)
+                ? namedGrid
+                : field.TabName.Length > 0 && tabGrids.TryGetValue(field.TabName, out var tabGrid) ? tabGrid : fieldsGrid;
             var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : targetGrid.RowDefinitions.Count;
             var column = field.LayoutColumn > 0 ? field.LayoutColumn - 1 : 0;
             var columnSpan = field.LayoutColumn > 0 ? Math.Max(1, field.ColumnSpan) : Math.Max(1, request.GridColumns);
