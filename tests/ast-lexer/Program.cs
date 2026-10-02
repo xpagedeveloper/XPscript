@@ -453,6 +453,23 @@ var callStatementSyntax = (CallStatementSyntax)callStatement;
 Equal(SyntaxKind.CallExpression, callStatementSyntax.Expression.Kind, "Call statement expression kind");
 Equal(new TextSpan(0, 13), callStatementSyntax.Span, "Call statement full span");
 
+const string multilineSubDeclarationSource = "Sub Check(ByVal value As Integer)\nIf value > 0 Then\nPrint \"positive\"\nElse\nPrint \"zero\"\nEnd If\nEnd Sub";
+var multilineSubDeclarationParser = new DeclarationParser(multilineSubDeclarationSource);
+var multilineSubDeclaration = (SubDeclarationSyntax)multilineSubDeclarationParser.ParseDeclaration();
+Equal(0, multilineSubDeclarationParser.Diagnostics.Count, "multiline Sub declaration diagnostics");
+Equal(1, multilineSubDeclaration.Statements.Count, "multiline Sub top-level statement count");
+Equal(SyntaxKind.IfStatement, multilineSubDeclaration.Statements[0].Kind, "multiline Sub preserves block If");
+Equal(1, ((IfStatementSyntax)multilineSubDeclaration.Statements[0]).ThenStatements.Count, "multiline Sub If body count");
+Equal(1, ((IfStatementSyntax)multilineSubDeclaration.Statements[0]).ElseStatements.Count, "multiline Sub Else body count");
+
+const string defaultByRefFunctionSource = "Function AddNumbers(a As Long, b As Long) As Long\nAddNumbers = a + b\nEnd Function";
+var defaultByRefFunctionParser = new DeclarationParser(defaultByRefFunctionSource);
+var defaultByRefFunction = (FunctionDeclarationSyntax)defaultByRefFunctionParser.ParseDeclaration();
+Equal(0, defaultByRefFunctionParser.Diagnostics.Count, "default ByRef Function diagnostics");
+Equal(false, defaultByRefFunction.Parameters[0].IsByVal, "unmodified parameter is not ByVal");
+Equal(false, defaultByRefFunction.Parameters[0].IsByRef, "default ByRef is semantic rather than explicit syntax");
+Equal("Long", defaultByRefFunction.ReturnType!.Identifier.Text, "Function Long return type");
+
 const string subDeclarationSource = "Public Sub Add(ByVal left As Integer, ByRef right As Integer)\nright = left + right\nEnd Sub";
 var subDeclarationParser = new DeclarationParser(subDeclarationSource);
 var subDeclaration = (SubDeclarationSyntax)subDeclarationParser.ParseDeclaration();
