@@ -8,7 +8,7 @@ Class BaseBox
     Public Value As Integer
 End Class
 
-Class ChildBox As _
+Class ChildBox Extend _
     BaseBox
 
     Public Function Twice( _
