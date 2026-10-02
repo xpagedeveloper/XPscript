@@ -29,7 +29,12 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             width\s*=\s*form\.Width\s*>\s*0\s*\?\s*form\.Width\s*:\s*\(int\?\)null\s*,\s*
             height\s*=\s*form\.Height\s*>\s*0\s*\?\s*form\.Height\s*:\s*\(int\?\)null\s*,\s*
             resizable\s*=\s*form\.Resizable\s*,\s*
-            fields\s*=\s*fields\.Select\(field\s*=>\s*new\s*\{.*?\}\)\.ToArray\(\)\s*
+            (?:bootText\s*=\s*form\.BootText\s*,\s*)?
+            (?:bootImage\s*=\s*form\.BootImage\s*,\s*)?
+            fields\s*=\s*fields\.Select\(field\s*=>\s*new\s*\{.*?\}\)\.ToArray\(\)\s*,?\s*
+            (?:tabs\s*=\s*form\.Tabs\.Select\(.*?\)\.ToArray\(\)\s*,\s*)?
+            (?:grids\s*=\s*form\.Grids\.Select\(.*?\)\.ToArray\(\)\s*,\s*)?
+            (?:activeTab\s*=\s*form\.ActiveTab\s*,\s*)?
             \}\s*;
             """;
 
