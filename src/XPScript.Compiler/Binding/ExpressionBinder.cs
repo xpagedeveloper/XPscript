@@ -13,6 +13,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         LiteralExpressionSyntax literal => BindLiteral(literal),
         NameExpressionSyntax name => BindName(name),
         CallExpressionSyntax call => BindCall(call),
+        ArrayExpressionSyntax array => BindArray(array),
         MemberAccessExpressionSyntax member => BindMemberAccess(member),
         IndexExpressionSyntax index => BindIndex(index),
         NewExpressionSyntax @new => BindNew(@new),
@@ -94,6 +95,26 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
                 return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType, function.SemanticReturnType);
         }
         return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.SemanticType.Name}'.");
+    }
+
+    private BoundExpression BindArray(ArrayExpressionSyntax syntax)
+    {
+        var functions = _symbols.LookupAll(syntax.ArrayIdentifier.Text).OfType<FunctionSymbol>().ToArray();
+        if (functions.Length == 0)
+            return Error(syntax.ArrayIdentifier, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined function '{syntax.ArrayIdentifier.Text}'.");
+
+        var arguments = syntax.Elements.Select(Bind).ToArray();
+        var candidates = functions
+            .Where(function => function.ParameterTypes.Count == arguments.Length)
+            .Where(function => ParametersMatch(function, arguments))
+            .ToArray();
+
+        if (candidates.Length == 0)
+            return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching overload for function '{syntax.ArrayIdentifier.Text}'.");
+        if (candidates.Length > 1)
+            return Error(syntax, CompilerDiagnosticCodes.AmbiguousOverload, $"Call to function '{syntax.ArrayIdentifier.Text}' is ambiguous.");
+
+        return new BoundCallExpression(null, candidates[0], arguments);
     }
 
     private BoundExpression BindCall(CallExpressionSyntax syntax)
