@@ -28,6 +28,17 @@ foreach (var expected in new[]
         throw new Exception("Android CLI regression is missing: " + expected);
 }
 
+foreach (var expected in new[]
+{
+    "UIFormAppAssets.UsesUIForm(source)",
+    "Android UI application launched on ",
+    "xpscript android logs --device "
+})
+{
+    if (!source.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android interactive UI run regression is missing: " + expected);
+}
+
 var waitMethodStart = source.IndexOf("private static async Task<int> WaitForCompletionAsync", StringComparison.Ordinal);
 if (waitMethodStart < 0)
     throw new Exception("Android completion wait method is missing.");
