@@ -87,6 +87,7 @@ internal static class AndroidCommand
         var apk = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(source) + "-" + platform + ".apk");
         Console.WriteLine("Building " + platform + " APK...");
         var compilerArgs = new List<string> { source, "-o", apk, "--platform", platform, "--runtime=false" };
+        using var androidTitleScope = XPScript.Compiler.AndroidApplicationTitleContext.Push(project.ApplicationTitle);
         if (debug) compilerArgs.Add("--debug");
         var compileResult = await XPScript.Compiler.XPScriptCompilerCommandLine.CompileAsync(compilerArgs.ToArray());
         if (compileResult != 0) return compileResult;
