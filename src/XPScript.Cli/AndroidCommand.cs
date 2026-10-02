@@ -110,8 +110,17 @@ internal static class AndroidCommand
         if (launch.ExitCode != 0 || launch.Output.Contains("No activities found", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (launch.Error + Environment.NewLine + launch.Output).Trim());
 
-        if (XPScript.Compiler.UIFormAppAssets.UsesUIForm(source))
+        if (project.ApplicationType == AndroidProjectMetadata.UiApplicationType)
         {
+            await Task.Delay(750);
+            var process = await ExecuteAsync(adb, ["-s", serial, "shell", "pidof", "com.xpscript.debugapp"]);
+            if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(process.Output))
+            {
+                var logs = await ExecuteAsync(adb, ["-s", serial, "logcat", "-d", "-t", "200"]);
+                throw new InvalidOperationException(
+                    "Android UI application was launched but is not running on " + serial + "." +
+                    Environment.NewLine + logs.Output.Trim());
+            }
             Console.WriteLine("Android UI application launched on " + serial + ". Use 'xpscript android logs --device " + serial + "' for runtime diagnostics.");
             return 0;
         }
