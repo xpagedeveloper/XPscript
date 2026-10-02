@@ -35,6 +35,7 @@ internal sealed class XPScriptUIButton
     public required string Label { get; set; }
     public required string Handler { get; set; }
     public string Style { get; set; } = "Default";
+    public double CornerRadius { get; set; }
     public int LayoutRow { get; set; }
     public int LayoutColumn { get; set; }
     public int ColumnSpan { get; set; } = 1;
@@ -177,6 +178,19 @@ internal sealed class XPScriptUIForm
         if (value.Length is < 1 or > 64)
             throw new XPScriptRuntimeException(5, "UIForm button style must contain between 1 and 64 characters.");
         FindButton(name).Style = value;
+    }
+
+    public void SetButtonCornerRadius(object? name, object? radius)
+    {
+        double value;
+        try { value = Convert.ToDouble(radius, System.Globalization.CultureInfo.InvariantCulture); }
+        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+        {
+            throw new XPScriptRuntimeException(13, "UIForm button corner radius must be numeric.");
+        }
+        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+            throw new XPScriptRuntimeException(5, "UIForm button corner radius must be between 0 and 1000.");
+        FindButton(name).CornerRadius = value;
     }
 
     public void SetButtonVisible(object? name, object? visible)
