@@ -53,11 +53,11 @@ internal static class XPScriptCallbackRuntime
         }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
         {
-            throw new XPScriptRuntimeException(5, $"{operation} callback '{callbackName}' failed: {ex.InnerException.Message}", ex.InnerException);
+            throw new XPScriptRuntimeException(5, $"{operation} callback '{callbackName}' failed: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
         }
         catch (Exception ex)
         {
-            throw new XPScriptRuntimeException(5, $"{operation} callback '{callbackName}' could not be invoked: {ex.Message}", ex);
+            throw new XPScriptRuntimeException(5, $"{operation} callback '{callbackName}' could not be invoked: {ex.GetType().Name}: {ex.Message}");
         }
     }
 
