@@ -22,10 +22,17 @@ internal sealed class UIFormActionModelPostProcessor
     public double CornerRadius { get; set; }
     public string Placeholder { get; set; } = string.Empty;
     public string Tooltip { get; set; } = string.Empty;
+    public string TabName { get; set; } = string.Empty;
 """, "field-state");
         }
 
-        if (!generated.Contains("internal sealed class XPScriptUIButton", StringComparison.Ordinal))
+        if (!generated.Contains("internal sealed class XPScriptUITab
+{
+    public required string Name { get; init; }
+    public required string Label { get; set; }
+}
+
+internal sealed class XPScriptUIButton", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
                 @"internal\s+sealed\s+class\s+XPScriptUIForm\s*\{",
@@ -58,6 +65,8 @@ internal sealed class XPScriptUIForm
     private int _gridColumns = 1;
     private string _theme = "System";
     private readonly List<XPScriptUIButton> _buttons = [];
+    private readonly List<XPScriptUITab> _tabs = [];
+    private string _activeTab = string.Empty;
     private readonly HashSet<string> _requestedRefreshRegions = new(StringComparer.Ordinal);
     private bool _refreshAllRequested;
     private string _navigationTarget = string.Empty;
@@ -76,6 +85,8 @@ internal sealed class XPScriptUIForm
     public bool ShowValidationErrors { get; set; } = true;
     public int ButtonCount => _buttons.Count;
     internal IReadOnlyList<XPScriptUIButton> Buttons => _buttons;
+    internal IReadOnlyList<XPScriptUITab> Tabs => _tabs;
+    public string ActiveTab { get => _activeTab; set => SetActiveTab(value); }
     public object GetData() => _data;
     public void SetData(object? value) => BindData(value);
 """, "form-api");
@@ -98,6 +109,35 @@ internal sealed class XPScriptUIForm
     public void SetFieldLabel(object? name, object? label)
     {
         FindField(name).Label = XPScriptRuntime.CStr(label);
+    }
+
+    public XPScriptUITab AddTab(object? name, object? label)
+    {
+        var tabName = NormalizeControlName(name, "tab");
+        if (_tabs.Any(tab => tab.Name.Equals(tabName, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm tab '{tabName}' already exists.");
+        var tab = new XPScriptUITab { Name = tabName, Label = XPScriptRuntime.CStr(label) };
+        _tabs.Add(tab);
+        if (_activeTab.Length == 0) _activeTab = tabName;
+        return tab;
+    }
+
+    public void SetFieldTab(object? name, object? tabName)
+    {
+        var field = FindField(name);
+        var value = XPScriptRuntime.CStr(tabName).Trim();
+        if (value.Length == 0) { field.TabName = string.Empty; return; }
+        if (!_tabs.Any(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm tab '{value}' does not exist.");
+        field.TabName = _tabs.First(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)).Name;
+    }
+
+    public void SetActiveTab(object? name)
+    {
+        var value = XPScriptRuntime.CStr(name).Trim();
+        if (!_tabs.Any(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm tab '{value}' does not exist.");
+        _activeTab = _tabs.First(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)).Name;
     }
 
     public void SetFieldVisible(object? name, object? visible)
