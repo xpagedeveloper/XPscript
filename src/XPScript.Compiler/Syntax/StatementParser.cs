@@ -62,6 +62,10 @@ public sealed class StatementParser
             return ParseFileInputStatement();
         if (IsIdentifier("Seek"))
             return ParseSeekStatement();
+        if (IsRuntimeFileCommand(Current))
+            return ParseRuntimeFileStatement();
+        if (IsIdentifier("Name"))
+            return ParseRenameFileStatement();
         if (Current.Kind == SyntaxKind.OnKeyword && PeekKind(1) == SyntaxKind.EventKeyword)
             return ParseOnEventStatement();
         if (Current.Kind == SyntaxKind.OnKeyword)
@@ -872,6 +876,40 @@ public sealed class StatementParser
         return new SeekStatementSyntax(seekKeyword, file, positionExpression);
     }
 
+    private StatementSyntax ParseRuntimeFileStatement()
+    {
+        var command = NextToken();
+        var arguments = new List<ExpressionSyntax>();
+        while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
+        {
+            var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
+            var end = commaIndex >= 0 ? commaIndex : FindLineEndIndex(_position);
+            arguments.Add(ParseExpressionRange(_position, end, _tokens[end].Span.Start));
+            _position = end;
+            if (Current.Kind == SyntaxKind.CommaToken)
+                NextToken();
+        }
+        return new RuntimeFileStatementSyntax(command, arguments);
+    }
+
+    private StatementSyntax ParseRenameFileStatement()
+    {
+        var nameToken = NextToken();
+        var asIndex = FindTokenOnCurrentLine(SyntaxKind.AsKeyword);
+        if (asIndex < 0)
+        {
+            var oldPath = ParseExpressionUntilLineEnd();
+            var missingAs = Match(SyntaxKind.AsKeyword);
+            var missingPath = new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, string.Empty, null, missingAs.Span));
+            return new RenameFileStatementSyntax(nameToken, oldPath, missingAs, missingPath);
+        }
+        var oldPathExpression = ParseExpressionRange(_position, asIndex, _tokens[asIndex].Span.Start);
+        _position = asIndex;
+        var asKeyword = NextToken();
+        var newPath = ParseExpressionUntilLineEnd();
+        return new RenameFileStatementSyntax(nameToken, oldPathExpression, asKeyword, newPath);
+    }
+
     private StatementSyntax ParseCallStatement()
     {
         var callKeyword = NextToken();
@@ -955,6 +993,15 @@ public sealed class StatementParser
 
         return -1;
     }
+
+    private static bool IsRuntimeFileCommand(SyntaxToken token) =>
+        token.Kind == SyntaxKind.IdentifierToken
+        && token.Text.Equals("FileCopy", StringComparison.OrdinalIgnoreCase)
+            || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("Kill", StringComparison.OrdinalIgnoreCase)
+            || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("MkDir", StringComparison.OrdinalIgnoreCase)
+            || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("RmDir", StringComparison.OrdinalIgnoreCase)
+            || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("ChDir", StringComparison.OrdinalIgnoreCase)
+            || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("SetFileAttr", StringComparison.OrdinalIgnoreCase);
 
     private bool IsIdentifier(string text) =>
         Current.Kind == SyntaxKind.IdentifierToken
