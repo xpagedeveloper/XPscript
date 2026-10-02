@@ -70,6 +70,8 @@ foreach (var expected in new[]
     "editor.IsVisible && editor.IsEnabled && editor.Focusable && editor.IsTabStop)?.Focus();",
     "panel.Children.Add(actions);",
     "ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode",
+    "new StackPanel { Spacing = 12, Margin = new Thickness(16), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Stretch }",
+    "var actions = new WrapPanel",
     "protected override void OnStart()",
     "protected override void OnResume()",
     "protected override void OnPause()",
