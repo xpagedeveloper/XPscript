@@ -28,16 +28,16 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             !generated.Contains(buttonMarker, StringComparison.Ordinal))
             throw new CompilerException("Unable to install UIForm desktop layout metadata bridge (request-object).");
 
-        generated = generated.Replace(requestMarker, requestMarker + """
+        generated = ReplaceFirst(generated, requestMarker, requestMarker + """
             
             theme = form.Theme,
             showValidationErrors = form.ShowValidationErrors,
             showDefaultButtons = form.ShowDefaultButtons,
             gridColumns = form.GridColumns,
             hasValidationSchema = form.HasValidationSchema,
-            """, StringComparison.Ordinal);
+            """);
 
-        generated = generated.Replace(fieldMarker, fieldMarker + """
+        generated = ReplaceFirst(generated, fieldMarker, fieldMarker + """
             
             placeholder = field.Placeholder,
             tooltip = field.Tooltip,
@@ -50,16 +50,23 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             webViewBackground = field.WebViewBackground,
             regexPattern = field.RegexPattern,
             schemaValidationError = form.GetValidationError(field.Name),
-            """, StringComparison.Ordinal);
+            """);
 
-        generated = generated.Replace(buttonMarker, buttonMarker + """
+        generated = ReplaceFirst(generated, buttonMarker, buttonMarker + """
             
             layoutRow = button.LayoutRow,
             layoutColumn = button.LayoutColumn,
             columnSpan = button.ColumnSpan,
             rowSpan = button.RowSpan,
-            """, StringComparison.Ordinal);
+            """);
 
         return generated;
+    }
+
+    private static string ReplaceFirst(string source, string marker, string replacement)
+    {
+        var index = source.IndexOf(marker, StringComparison.Ordinal);
+        if (index < 0) return source;
+        return string.Concat(source.AsSpan(0, index), replacement, source.AsSpan(index + marker.Length));
     }
 }
