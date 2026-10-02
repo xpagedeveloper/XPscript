@@ -87,6 +87,7 @@ public enum SyntaxKind
     MemberAccessExpression,
     IndexExpression,
     NewExpression,
+    ArrayExpression,
     ExpressionStatement,
     CallStatement,
     OnEventStatement,
