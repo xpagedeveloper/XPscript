@@ -2,11 +2,7 @@ namespace XPScript.Compiler;
 
 internal static class AndroidUIHostSource
 {
-    public static string Build(bool debug, string applicationTitle = "XPScript") => Code
-        .Replace("__XPSCRIPT_ANDROID_DEBUG__", debug ? "true" : "false", StringComparison.Ordinal)
-        .Replace("__XPSCRIPT_ANDROID_TITLE__", EscapeCSharpString(applicationTitle), StringComparison.Ordinal);
-
-    private static string EscapeCSharpString(string value) => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+    public static string Build(bool debug) => Code.Replace("__XPSCRIPT_ANDROID_DEBUG__", debug ? "true" : "false", StringComparison.Ordinal);
 
     public const string Code = """
 using System.Text.Json;
@@ -40,7 +36,7 @@ public sealed class App : Avalonia.Application
 }
 
 [Activity(
-    Label = "__XPSCRIPT_ANDROID_TITLE__",
+    Label = "XPScript",
     Theme = "@style/Theme.AppCompat.DayNight.NoActionBar",
     MainLauncher = true,
     Exported = true,
@@ -167,7 +163,15 @@ public static class AndroidFormHost
             var panel = new StackPanel { Spacing = 12, Margin = new Thickness(16), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Stretch };
 
             if (request.TryGetProperty("title", out var title))
-                panel.Children.Add(new TextBlock { Text = title.GetString() ?? "XPScript", FontSize = 24 });
+            {
+                var formTitle = title.GetString() ?? "XPScript";
+                panel.Children.Add(new TextBlock { Text = formTitle, FontSize = 24 });
+                if (global::Android.App.Application.Context is not null)
+                {
+                    var activity = global::Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+                    if (activity is not null) activity.Title = formTitle;
+                }
+            }
 
             foreach (var field in fields)
             {
