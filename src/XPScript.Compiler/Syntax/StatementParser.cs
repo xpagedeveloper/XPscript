@@ -32,6 +32,24 @@ public sealed class StatementParser
         return statement;
     }
 
+    internal IReadOnlyList<StatementSyntax> ParseStatements()
+    {
+        var statements = new List<StatementSyntax>();
+        while (Current.Kind != SyntaxKind.EndOfFileToken)
+        {
+            if (Current.Kind == SyntaxKind.NewLineToken)
+            {
+                NextToken();
+                continue;
+            }
+
+            statements.Add(ParseCurrentStatement());
+            RecoverToStatementBoundary();
+        }
+
+        return statements;
+    }
+
     private StatementSyntax ParseCurrentStatement()
     {
         if (Current.Kind == SyntaxKind.IfKeyword)
