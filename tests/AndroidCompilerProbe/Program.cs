@@ -146,6 +146,56 @@ foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"
         throw new Exception("Application.Debug Android logcat routing is missing: " + expected);
 }
 
+var metadataPostProcessorType = type.Assembly.GetType("XPScript.Compiler.UIFormDesktopLayoutMetadataPostProcessor", throwOnError: true)!;
+var metadataPostProcessor = Activator.CreateInstance(metadataPostProcessorType)
+    ?? throw new Exception("UIForm desktop layout metadata post-processor could not be created.");
+var metadataTransform = metadataPostProcessorType.GetMethod("Transform")
+    ?? throw new Exception("UIForm desktop layout metadata Transform method was not found.");
+const string currentMetadataRequest = """
+var request = new
+{
+    resizable = form.Resizable,
+    bootText = form.BootText,
+    bootImage = form.BootImage,
+    fields = fields.Select(field => new
+    {
+        required = field.Required,
+        cornerRadius = field.CornerRadius,
+        tabName = field.TabName,
+        gridName = field.GridName,
+    }).ToArray(),
+    tabs = form.Tabs.Select(tab => new { name = tab.Name, label = tab.Label }).ToArray(),
+    grids = form.Grids.Select(grid => new { name = grid.Name, columns = grid.Columns, tabName = grid.TabName }).ToArray(),
+    activeTab = form.ActiveTab,
+    buttons = form.Buttons.Select(button => new
+    {
+        style = button.Style,
+        cornerRadius = button.CornerRadius,
+    }).ToArray()
+};
+""";
+var transformedMetadataRequest = (string)(metadataTransform.Invoke(metadataPostProcessor, new object?[] { currentMetadataRequest })
+    ?? throw new Exception("UIForm desktop layout metadata transformation returned null."));
+foreach (var expected in new[]
+{
+    "theme = form.Theme",
+    "placeholder = field.Placeholder",
+    "layoutRow = button.LayoutRow",
+    "bootText = form.BootText",
+    "bootImage = form.BootImage",
+    "cornerRadius = field.CornerRadius",
+    "tabName = field.TabName",
+    "gridName = field.GridName",
+    "tabs = form.Tabs.Select",
+    "grids = form.Grids.Select",
+    "activeTab = form.ActiveTab",
+    "cornerRadius = button.CornerRadius"
+})
+{
+    if (!transformedMetadataRequest.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("UIForm metadata post-processing lost or failed to add metadata: " + expected);
+}
+
 var desktopRuntimeSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs");
 var desktopRuntimeSource = File.ReadAllText(desktopRuntimeSourcePath);
 if (!desktopRuntimeSource.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal))
