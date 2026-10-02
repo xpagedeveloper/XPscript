@@ -60,7 +60,8 @@ public sealed class XpsBrowserWasmCompiler
             var generated = new XPScriptTranspiler().TranspileRestricted(browserSource, sourcePath, Platform, [_webRoot]);
             generated = generated.Replace("XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop", "XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser", StringComparison.Ordinal);
             await File.WriteAllTextAsync(Path.Combine(workspace, "Generated.cs"), generated, cancellationToken).ConfigureAwait(false);
-            await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildProject(typeof(BrowserFormHost).Assembly.Location), cancellationToken).ConfigureAwait(false);
+            var usesExtendedArchive = generated.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
+            await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildProject(typeof(BrowserFormHost).Assembly.Location, usesExtendedArchive), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), BrowserModuleJs, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
@@ -118,12 +119,13 @@ public sealed class XpsBrowserWasmCompiler
         if (entry is null) throw new XpsWebCompilationException("browser-wasm source must define Main, Index, or exactly one exported route.");
         return source + Environment.NewLine + Environment.NewLine + "Public Sub Main()" + Environment.NewLine + "    Call " + entry + "()" + Environment.NewLine + "End Sub" + Environment.NewLine;
     }
-    private static string BuildProject(string browserRuntimeAssemblyPath)
+    private static string BuildProject(string browserRuntimeAssemblyPath, bool usesExtendedArchive)
     {
         var escaped = SecurityElement.Escape(browserRuntimeAssemblyPath) ?? throw new XpsWebCompilationException("Unable to encode browser runtime path.");
-        return $$"""
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><RuntimeIdentifier>browser-wasm</RuntimeIdentifier><OutputType>Exe</OutputType><StartupObject>Program</StartupObject><AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmMainJSPath>main.js</WasmMainJSPath><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>XPScript.BrowserApp</AssemblyName></PropertyGroup><ItemGroup><Reference Include="XPScript.UI.Browser"><HintPath>{{escaped}}</HintPath><Private>true</Private></Reference><TrimmerRootAssembly Include="XPScript.UI.Browser" /><Content Include="index.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /><Content Include="xpscript-browser.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup></Project>
-""";
+        var archiveItems = usesExtendedArchive
+            ? "<PackageReference Include=\"SharpCompress\" Version=\"" + ApplicationDependencyCatalog.ResolveVersion("SharpCompress", ApplicationDependencyCatalog.SharpCompressVersion) + "\" /><TrimmerRootAssembly Include=\"SharpCompress\" />"
+            : string.Empty;
+        return "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><RuntimeIdentifier>browser-wasm</RuntimeIdentifier><OutputType>Exe</OutputType><StartupObject>Program</StartupObject><AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmMainJSPath>main.js</WasmMainJSPath><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>XPScript.BrowserApp</AssemblyName></PropertyGroup><ItemGroup><Reference Include=\"XPScript.UI.Browser\"><HintPath>" + escaped + "</HintPath><Private>true</Private></Reference><TrimmerRootAssembly Include=\"XPScript.UI.Browser\" />" + archiveItems + "<Content Include=\"index.html\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /><Content Include=\"xpscript-browser.js\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /></ItemGroup></Project>";
     }
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {

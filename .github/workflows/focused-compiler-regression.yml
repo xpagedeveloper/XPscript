@@ -1,0 +1,101 @@
+name: Focused Compiler Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.Compiler.Core/**'
+      - 'samples/is-nothing-unary-not-regression.xps'
+      - 'samples/function-not-byref-regression.xps'
+      - 'tests/ApplicationDebugRuntimeProbe/**'
+      - '.github/workflows/focused-compiler-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  is-nothing-unary-not:
+    name: Is Nothing unary Not regression
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile focused regression
+        shell: pwsh
+        run: |
+          dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/is-nothing-unary-not-regression.xps -o ./out/focused/is-nothing --runtime=false
+      - name: Run focused regression
+        shell: pwsh
+        run: |
+          $exe = if (Test-Path ./out/focused/is-nothing.exe) { './out/focused/is-nothing.exe' } else { './out/focused/is-nothing' }
+          $outputFile = Join-Path $env:RUNNER_TEMP 'is-nothing-output.txt'
+          $process = Start-Process -FilePath $exe -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outputFile -RedirectStandardError (Join-Path $env:RUNNER_TEMP 'is-nothing-error.txt')
+          $output = (Get-Content $outputFile -Raw) + (Get-Content (Join-Path $env:RUNNER_TEMP 'is-nothing-error.txt') -Raw)
+          Write-Host $output
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
+          if ($output -notmatch 'IS-NOTHING=OK') { throw 'Is Nothing unary Not regression failed.' }
+
+  function-not-byref:
+    name: Boolean function Not regression
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile focused regression
+        shell: pwsh
+        run: dotnet ./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ./samples/function-not-byref-regression.xps -o ./out/focused/function-not --runtime=false
+      - name: Run focused regression
+        shell: pwsh
+        run: |
+          $exe = if (Test-Path ./out/focused/function-not.exe) { './out/focused/function-not.exe' } else { './out/focused/function-not' }
+          $stdout = Join-Path $env:RUNNER_TEMP 'function-not-output.txt'
+          $stderr = Join-Path $env:RUNNER_TEMP 'function-not-error.txt'
+          $process = Start-Process -FilePath $exe -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $output = (Get-Content $stdout -Raw) + (Get-Content $stderr -Raw)
+          Write-Host $output
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
+          if ($output -notmatch 'FUNCTION-NOT-BYREF=OK') { throw 'Boolean function Not regression failed.' }
+
+  machine-interface-diagnostic:
+    name: Machine interface XPS2014 regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run machine interface probe
+        run: dotnet run --project ./tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release -- .
+
+
+  application-debug-runtime:
+    name: Application.Debug runtime regression
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run Application.Debug probe
+        shell: pwsh
+        run: dotnet run --project ./tests/ApplicationDebugRuntimeProbe/ApplicationDebugRuntimeProbe.csproj -c Release -- .

@@ -69,5 +69,32 @@ Sub Main()
     If emptySevenRead.FileCount <> 0 Then Error 5, "Extended memory empty 7z should contain zero files"
     If emptySevenRead.FolderCount <> 0 Then Error 5, "Extended memory empty 7z should contain zero folders"
 
+    Dim seedTgz() As Byte
+    Dim tgz As New Archive(seedTgz, True)
+    tgz.Create("tar.gzip")
+    tgz.AddText("manifest.txt", "memory tar gzip")
+    Dim tgzBytes As Variant
+    tgzBytes = tgz.ToBytes()
+    Dim tgzRead As New Archive(tgzBytes, True)
+    If tgzRead.ReadText("manifest.txt") <> "memory tar gzip" Then Error 5, "Extended memory TAR.GZip round-trip failed"
+
+    Dim seedTbz() As Byte
+    Dim tbz As New Archive(seedTbz, True)
+    tbz.Create("tar.bzip2")
+    tbz.AddText("manifest.txt", "memory tar bzip2")
+    Dim tbzBytes As Variant
+    tbzBytes = tbz.ToBytes()
+    Dim tbzRead As New Archive(tbzBytes, True)
+    If tbzRead.ReadText("manifest.txt") <> "memory tar bzip2" Then Error 5, "Extended memory TAR.BZip2 round-trip failed"
+
+    Dim seedTlz() As Byte
+    Dim tlz As New Archive(seedTlz, True)
+    tlz.Create("tar.lzip")
+    tlz.AddText("manifest.txt", "memory tar lzip")
+    Dim tlzBytes As Variant
+    tlzBytes = tlz.ToBytes()
+    Dim tlzRead As New Archive(tlzBytes, True)
+    If tlzRead.ReadText("manifest.txt") <> "memory tar lzip" Then Error 5, "Extended memory TAR.LZip round-trip failed"
+
     Print "ARCHIVE_EXTENDED_MEMORY_WRITE=OK"
 End Sub

@@ -273,6 +273,54 @@ internal sealed class XPScriptMemoryArchive
         return PackBytes(_data.ToArray());
     }
 
+    public bool SendToBrowser(object? downloadName)
+    {
+        EnsureCreated();
+        var name = XPScriptRuntime.CStr(downloadName).Trim();
+        if (name.Length == 0) name = "archive.zip";
+        var context = ResolveWebContext();
+        var response = context.GetType().GetProperty("Response")?.GetValue(context)
+            ?? throw new XPScriptRuntimeException(5, "Active web response is unavailable.");
+        var sendFile = response.GetType().GetMethod("SendFile", [typeof(byte[]), typeof(string), typeof(string), typeof(bool)])
+            ?? throw new XPScriptRuntimeException(5, "Web response file streaming backend is unavailable.");
+        sendFile.Invoke(response, [_data.ToArray(), name, ArchiveContentType(name), false]);
+        return true;
+    }
+
+    private static object ResolveWebContext()
+    {
+        var accessor = Type.GetType("XPScript.Web.Runtime.XpsWebContextAccessor, XPScript.Web.Runtime", throwOnError: false, ignoreCase: false)
+            ?? AppDomain.CurrentDomain.GetAssemblies()
+                .Select(assembly => assembly.GetType("XPScript.Web.Runtime.XpsWebContextAccessor", throwOnError: false, ignoreCase: false))
+                .FirstOrDefault(type => type is not null)
+            ?? throw new XPScriptRuntimeException(5, "Archive.SendToBrowser requires an active web request.");
+        try
+        {
+            return accessor.GetProperty("Current", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null)
+                ?? throw new XPScriptRuntimeException(5, "Archive.SendToBrowser requires an active web request.");
+        }
+        catch (System.Reflection.TargetInvocationException)
+        {
+            throw new XPScriptRuntimeException(5, "Archive.SendToBrowser requires an active web request.");
+        }
+    }
+
+    private static string ArchiveContentType(string name)
+    {
+        var extension = System.IO.Path.GetExtension(name).ToLowerInvariant();
+        return extension switch
+        {
+            ".zip" => "application/zip",
+            ".7z" => "application/x-7z-compressed",
+            ".rar" => "application/vnd.rar",
+            ".tar" => "application/x-tar",
+            ".gz" or ".gzip" => "application/gzip",
+            ".bz2" or ".bzip2" => "application/x-bzip2",
+            ".lzip" => "application/lzip",
+            _ => "application/octet-stream"
+        };
+    }
+
     private void Add(string name, byte[] bytes, DateTime modified)
     {
         EnsureWritable();

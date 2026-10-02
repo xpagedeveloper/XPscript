@@ -202,9 +202,9 @@ internal sealed class XPScriptExtendedMemoryArchiveV2
         {
             "TAR" => "TAR",
             "7Z" or "7ZIP" or "SEVENZIP" => "7Z",
-            "TAR.GZ" or "TGZ" or "TARGZIP" => "TAR.GZ",
-            "TAR.BZ2" or "TBZ2" or "TARBZIP2" => "TAR.BZ2",
-            "TAR.LZ" or "TARLZIP" => "TAR.LZ",
+            "TAR.GZ" or "TAR.GZIP" or "TGZ" or "TARGZIP" => "TAR.GZ",
+            "TAR.BZ2" or "TAR.BZIP2" or "TBZ2" or "TBZ" or "TARBZIP2" => "TAR.BZ2",
+            "TAR.LZ" or "TAR.LZIP" or "TLZ" or "TARLZIP" => "TAR.LZ",
             _ => throw new XPScriptRuntimeException(5, "Writable extended in-memory archives support TAR, 7z, TAR.GZip, TAR.BZip2 and TAR.LZip.")
         };
     }

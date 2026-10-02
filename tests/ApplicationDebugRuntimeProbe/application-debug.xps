@@ -1,0 +1,5 @@
+Sub Main()
+    If Application.Debug.Enabled Then
+        Call Application.Debug.Print("hello")
+    End If
+End Sub

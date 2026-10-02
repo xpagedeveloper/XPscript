@@ -9,6 +9,7 @@ CreateZip(Path.Combine(root, "traversal.zip"), archive => WriteText(archive, "..
 CreateZip(Path.Combine(root, "absolute-unix.zip"), archive => WriteText(archive, "/escape.txt", "escape"));
 CreateZip(Path.Combine(root, "absolute-windows.zip"), archive => WriteText(archive, "C:/escape.txt", "escape"));
 CreateZip(Path.Combine(root, "unc.zip"), archive => WriteText(archive, "//server/share/escape.txt", "escape"));
+CreateZip(Path.Combine(root, "mixed-separator-traversal.zip"), archive => WriteText(archive, @"folder\..\../escape.txt", "escape"));
 CreateZip(Path.Combine(root, "duplicate-names.zip"), archive =>
 {
     WriteText(archive, "duplicate.txt", "first");
@@ -30,6 +31,41 @@ CreateZip(Path.Combine(root, "max-entries.zip"), archive =>
 CreateZip(Path.Combine(root, "max-size.zip"), archive => WriteBytes(archive, "large.bin", new byte[4096]));
 CreateZip(Path.Combine(root, "compression-ratio.zip"), archive => WriteBytes(archive, "compressible.bin", new byte[1024 * 1024]));
 CreateZip(Path.Combine(root, "extraction-symlink.zip"), archive => WriteText(archive, "link/escape.txt", "must-not-escape"));
+
+var corruptPath = Path.Combine(root, "corrupt-stream.zip");
+CreateZip(corruptPath, archive => WriteBytes(archive, "payload.bin", Enumerable.Repeat((byte)0x41, 65536).ToArray()));
+var corruptBytes = File.ReadAllBytes(corruptPath);
+// Make the entry metadata claim one extra uncompressed byte. The ZIP remains
+// structurally readable, but a full entry read is shorter than the declared
+// size and must be rejected by the Archive runtime integrity check.
+const uint localHeaderSignature = 0x04034b50;
+const uint centralHeaderSignature = 0x02014b50;
+if (corruptBytes.Length < 30 || BitConverter.ToUInt32(corruptBytes, 0) != localHeaderSignature)
+    throw new InvalidDataException("Unexpected ZIP fixture layout.");
+var declaredSize = BitConverter.ToUInt32(corruptBytes, 22);
+BitConverter.GetBytes(checked(declaredSize + 1)).CopyTo(corruptBytes, 22);
+var centralOffset = FindSignature(corruptBytes, centralHeaderSignature);
+if (centralOffset < 0 || centralOffset + 28 > corruptBytes.Length)
+    throw new InvalidDataException("Unable to locate ZIP central directory entry.");
+BitConverter.GetBytes(checked(declaredSize + 1)).CopyTo(corruptBytes, centralOffset + 24);
+File.WriteAllBytes(corruptPath, corruptBytes);
+
+// Separate metadata-integrity fixture. Keep this distinct from corrupt-stream.zip
+// so the declared-size contract has its own focused regression.
+var incorrectSizePath = Path.Combine(root, "incorrect-size-metadata.zip");
+CreateZip(incorrectSizePath, archive => WriteBytes(archive, "payload.bin", Enumerable.Repeat((byte)0x42, 32768).ToArray()));
+var incorrectSizeBytes = File.ReadAllBytes(incorrectSizePath);
+if (incorrectSizeBytes.Length < 30 || BitConverter.ToUInt32(incorrectSizeBytes, 0) != localHeaderSignature)
+    throw new InvalidDataException("Unexpected ZIP metadata fixture layout.");
+var actualDeclaredSize = BitConverter.ToUInt32(incorrectSizeBytes, 22);
+BitConverter.GetBytes(checked(actualDeclaredSize + 17)).CopyTo(incorrectSizeBytes, 22);
+var incorrectCentralOffset = FindSignature(incorrectSizeBytes, centralHeaderSignature);
+if (incorrectCentralOffset < 0 || incorrectCentralOffset + 28 > incorrectSizeBytes.Length)
+    throw new InvalidDataException("Unable to locate ZIP metadata fixture central directory entry.");
+BitConverter.GetBytes(checked(actualDeclaredSize + 17)).CopyTo(incorrectSizeBytes, incorrectCentralOffset + 24);
+File.WriteAllBytes(incorrectSizePath, incorrectSizeBytes);
+
+File.WriteAllBytes(Path.Combine(root, "malformed.zip"), Encoding.ASCII.GetBytes("not-a-zip-archive"));
 
 CreateTar(Path.Combine(root, "traversal.tar"), writer => WriteTarText(writer, "../escape.txt", "escape"));
 CreateTar(Path.Combine(root, "absolute.tar"), writer => WriteTarText(writer, "/escape.txt", "escape"));
@@ -65,6 +101,13 @@ try
     if (Directory.Exists(directoryLink) || File.Exists(directoryLink)) Directory.Delete(directoryLink, recursive: false);
     if (File.Exists(readyMarker)) File.Delete(readyMarker);
     Directory.CreateSymbolicLink(directoryLink, Path.GetFullPath(outsideRoot));
+    if (OperatingSystem.IsWindows())
+    {
+        var attributes = File.GetAttributes(directoryLink);
+        if ((attributes & FileAttributes.ReparsePoint) == 0)
+            throw new InvalidOperationException("Windows extraction link was not created as a reparse point.");
+        Console.WriteLine("ARCHIVE-SECURITY-WINDOWS-REPARSE=OK");
+    }
     File.WriteAllText(readyMarker, "ready", Encoding.UTF8);
 }
 catch (Exception ex)
@@ -74,6 +117,13 @@ catch (Exception ex)
 }
 
 Console.WriteLine("ARCHIVE-SECURITY-FIXTURES=OK");
+
+static int FindSignature(byte[] data, uint signature)
+{
+    for (var i = 0; i <= data.Length - 4; i++)
+        if (BitConverter.ToUInt32(data, i) == signature) return i;
+    return -1;
+}
 
 static void CreateZip(string path, Action<ZipArchive> build)
 {

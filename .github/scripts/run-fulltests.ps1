@@ -1,5 +1,5 @@
 param(
-  [ValidateSet('all','language','notes','runtime','platform')]
+  [ValidateSet('all','language','notes','runtime','platform','archive')]
   [string] $Suite = 'all'
 )
 
@@ -35,7 +35,7 @@ function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeou
     return [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $stdout + $stderr }
   } finally { $p.Dispose() }
 }
-function Compile-Xps([string] $source, [string] $name) { Write-Host "FULLTEST_COMPILE=$name"; $r = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',"./out/fulltest/$name",'--runtime=false') $compileTimeoutMilliseconds "compile $name"; if ($r.ExitCode -ne 0) { exit $r.ExitCode } }
+function Compile-Xps([string] $source, [string] $name) { Write-Host "FULLTEST_COMPILE=$name"; $r = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',"./out/fulltest/$name",'--runtime=false') $compileTimeoutMilliseconds "compile $name"; if ($r.ExitCode -ne 0) { if ($name -eq 'archive-compressed-tar') { Write-Host 'FULLTEST_RETRY_DEBUG=archive-compressed-tar'; $debug = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',"./out/fulltest/$name-debug",'--runtime=false','--debug') $compileTimeoutMilliseconds "compile debug $name"; Write-Host $debug.Output }; exit $r.ExitCode } }
 function Get-XpsExe([string] $name) { $plain = "./out/fulltest/$name"; $win = "$plain.exe"; if (Test-Path $win -PathType Leaf) { return (Resolve-Path $win).Path }; if (Test-Path $plain -PathType Leaf) { return (Resolve-Path $plain).Path }; throw "Executable not found: $name" }
 function Run-Xps([string] $source, [string] $name, [string[]] $arguments = @()) { Compile-Xps $source $name; Write-Host "FULLTEST_RUN=$name"; $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "run $name"; if ($r.ExitCode -ne 0) { exit $r.ExitCode }; return $r }
 function Expect-XpsFailure([string] $name, [string[]] $arguments, [string] $label) { $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "security $label"; if ($r.ExitCode -eq 0) { throw "Security probe unexpectedly succeeded: $label" }; if ([string]::IsNullOrWhiteSpace($r.Output)) { throw "Security probe returned no diagnostic: $label" }; if ($r.Output -match 'SharpCompress') { throw "Security diagnostic exposed implementation detail: $label" } }
@@ -45,7 +45,20 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
-  # Keep the actively developed scope isolation regression first so CI surfaces failures immediately.
+  # Keep the smallest regression for the latest compiler failure first.
+  $isNothing = Run-Xps ./samples/is-nothing-unary-not-regression.xps is-nothing-unary-not-regression
+  if ($isNothing.Output -notmatch 'IS-NOTHING=OK') { throw 'Is Nothing unary-Not rewrite regression failed.' }
+
+  # Keep the smallest regression for the latest runtime/compiler interaction first.
+  $functionNotByRef = Run-Xps ./samples/function-not-byref-regression.xps function-not-byref-regression
+  if ($functionNotByRef.Output -notmatch 'FUNCTION-NOT-BYREF=OK') { throw 'Boolean default-ByRef function under Not regression failed.' }
+
+  # Keep the smallest regression for the latest compiler failure first.
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/function-result-name-conflict-error.xps','-o','./out/fulltest/function-result-name-conflict-error','--runtime=false') $compileTimeoutMilliseconds 'function result name conflict'
+  if ($r.ExitCode -eq 0) { throw 'Function result name conflict unexpectedly compiled.' }
+  if ($r.Output -notmatch 'XPS2014' -or $r.Output -notmatch 'conflicts with the function result name') { throw 'Function result name conflict did not produce XPS2014.' }
+
+  # Keep the actively developed scope isolation regression early so CI surfaces failures immediately.
   $scope = Run-Xps ./samples/scope-isolation.xps scope-isolation
   foreach ($expected in @('LOCAL=40','STATIC=1','STATIC=2','GLOBAL=7','BYREF=4','ARRAY=22:3','LIST=kept:2')) { if ($scope.Output -notmatch [regex]::Escape($expected)) { throw "Scope isolation regression missing: $expected" } }
   Run-Xps ./samples/array-sort-regression.xps array-sort-regression | Out-Null
@@ -65,6 +78,11 @@ if (Should-Run 'notes') {
 
 if (Should-Run 'runtime') {
   Write-Host '=== XP RUNTIME FULLTEST ==='
+  # Keep the smallest regression for managed stack-trace suppression first.
+  Compile-Xps ./samples/runtime-error-stacktrace-regression.xps runtime-error-stacktrace-regression
+  $runtimeError = Invoke-Bounded (Get-XpsExe 'runtime-error-stacktrace-regression') @() $runtimeTimeoutMilliseconds 'runtime error stacktrace regression'
+  if ($runtimeError.ExitCode -eq 0) { throw 'Runtime error stacktrace regression unexpectedly succeeded.' }
+  if ($runtimeError.Output -match ' at Script\.|System\.[A-Za-z].*Exception') { throw 'Runtime error exposed managed C#/.NET stack details without debug.' }
   # Keep the most recently failing regression first so CI surfaces it immediately.
   Write-Host 'FULLTEST_CHECKPOINT=xpspreadsheet-invalid-format-first'
   Compile-Xps ./demo/spreadsheet/xpspreadsheet-invalid-format.xps xpspreadsheet-invalid-format
@@ -99,6 +117,25 @@ if (Should-Run 'runtime') {
   Write-Host 'XP_RUNTIME_FULLTEST: passed'
 }
 
+if (Should-Run 'archive') {
+  Write-Host '=== ARCHIVE FOCUSED TEST ==='
+  # Keep compressed TAR regression first here: it is the current focused Archive failure.
+  Run-Xps ./demo/archive/archive-compressed-tar.xps archive-compressed-tar | Out-Null
+  Compile-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression
+  $readOnlyFixtureRoot = './out/fulltest/archive-read-only-fixtures'
+  Remove-Item -Recurse -Force $readOnlyFixtureRoot -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force $readOnlyFixtureRoot | Out-Null
+  Set-Content -NoNewline -Path (Join-Path $readOnlyFixtureRoot 'payload.txt') -Value 'archive-read-only-format'
+  if (-not (Get-Command 'bzip2' -ErrorAction SilentlyContinue)) { throw 'bzip2 is required for the focused Archive regression.' }
+  $bzip2Fixture = Join-Path $readOnlyFixtureRoot 'payload.txt.bz2'
+  $bzip2Process = Invoke-Bounded 'bzip2' @('-k','-f',(Resolve-Path (Join-Path $readOnlyFixtureRoot 'payload.txt')).Path) $runtimeTimeoutMilliseconds 'create BZip2 Archive read-only fixture'
+  if ($bzip2Process.ExitCode -ne 0 -or -not (Test-Path $bzip2Fixture -PathType Leaf)) { throw 'Unable to create BZip2 Archive read-only fixture.' }
+  $bzip2Extract = Join-Path $readOnlyFixtureRoot 'bzip2-extracted.txt'
+  $readOnlyRun = Run-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression @("../../out/fulltest/archive-read-only-fixtures/payload.txt.bz2","../../out/fulltest/archive-read-only-fixtures/bzip2-extracted.txt")
+  if ($readOnlyRun.Output -notmatch 'ARCHIVE_READ_ONLY_FORMAT=OK') { throw 'Archive BZip2 read-only regression did not complete.' }
+  if ((Get-Content -Raw $bzip2Extract) -ne 'archive-read-only-format') { throw 'Archive BZip2 extraction payload mismatch.' }
+}
+
 if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
   # Android setup performs real installations when run; compile it only in CI.
@@ -116,15 +153,94 @@ if (Should-Run 'platform') {
   if ($shellExecuteTimeout.Output -notmatch 'SHELLEXECUTE-TIMEOUT=OK') { throw 'ShellExecute timeout regression did not complete.' }
   $shellExecutePressure = Run-Xps ./samples/shellexecute-pressure.xps shellexecute-pressure
   if ($shellExecutePressure.Output -notmatch 'SHELLEXECUTE-PRESSURE=OK') { throw 'ShellExecute stdout/stderr pressure regression did not complete.' }
+  # Focused first regression: keep the most recently failing corrupt ZIP behavior at the front of the platform suite.
+  $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive corrupt stream fixture first'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  Compile-Xps ./demo/archive/archive-corrupt-stream-regression.xps archive-corrupt-stream-regression
+  Expect-XpsFailure archive-corrupt-stream-regression @('../../out/archive-security-fixtures/corrupt-stream.zip') 'corrupt compressed stream focused regression'
+  Expect-XpsFailure archive-corrupt-stream-regression @('../../out/archive-security-fixtures/incorrect-size-metadata.zip') 'incorrect archive size metadata focused regression'
+  # Focused replacement-failure regression: a failed save must leave the original ZIP byte-for-byte unchanged.
+  if ($IsWindows) {
+    $replacementPath = './out/fulltest/archive-replacement-failure.zip'
+    if (Test-Path $replacementPath) { Remove-Item -Force $replacementPath }
+    Compress-Archive -Path './README.md' -DestinationPath $replacementPath
+    $replacementHashBefore = (Get-FileHash $replacementPath -Algorithm SHA256).Hash
+    Compile-Xps ./demo/archive/archive-replacement-failure-regression.xps archive-replacement-failure-regression
+    try {
+      (Get-Item $replacementPath).IsReadOnly = $true
+      Expect-XpsFailure archive-replacement-failure-regression @('../../archive-replacement-failure.zip') 'archive replacement failure preserves original'
+      $replacementHashAfter = (Get-FileHash $replacementPath -Algorithm SHA256).Hash
+      if ($replacementHashAfter -ne $replacementHashBefore) { throw 'Failed Archive replacement changed the original archive.' }
+    } finally {
+      if (Test-Path $replacementPath) { (Get-Item $replacementPath).IsReadOnly = $false }
+    }
+  }
+  # Focused extraction-commit rollback regression: a failed commit must restore the destination.
+  $rollbackArchive = './out/fulltest/archive-extraction-rollback.zip'
+  $rollbackSource = './out/fulltest/archive-extraction-rollback-source'
+  $rollbackTarget = './out/fulltest/archive-extraction-rollback-target'
+  Remove-Item -Recurse -Force $rollbackSource,$rollbackTarget -ErrorAction SilentlyContinue
+  Remove-Item -Force $rollbackArchive -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force $rollbackSource,$rollbackTarget | Out-Null
+  Set-Content -NoNewline -Path (Join-Path $rollbackSource 'a-new.txt') -Value 'new'
+  Set-Content -NoNewline -Path (Join-Path $rollbackSource 'b-existing.txt') -Value 'replacement'
+  Set-Content -NoNewline -Path (Join-Path $rollbackSource 'z-blocked.txt') -Value 'blocked'
+  Compress-Archive -Path (Join-Path $rollbackSource '*') -DestinationPath $rollbackArchive
+  Set-Content -NoNewline -Path (Join-Path $rollbackTarget 'b-existing.txt') -Value 'original'
+  New-Item -ItemType Directory -Force (Join-Path $rollbackTarget 'z-blocked.txt') | Out-Null
+  Compile-Xps ./demo/archive/archive-extraction-rollback-regression.xps archive-extraction-rollback-regression
+  Expect-XpsFailure archive-extraction-rollback-regression @('../../archive-extraction-rollback.zip','../../archive-extraction-rollback-target') 'archive extraction commit rollback'
+  if (Test-Path (Join-Path $rollbackTarget 'a-new.txt')) { throw 'Failed Archive extraction left a newly committed file behind.' }
+  if ((Get-Content -Raw (Join-Path $rollbackTarget 'b-existing.txt')) -ne 'original') { throw 'Failed Archive extraction did not restore an overwritten file.' }
+  if (-not (Test-Path (Join-Path $rollbackTarget 'z-blocked.txt') -PathType Container)) { throw 'Failed Archive extraction changed the blocking destination directory.' }
+  # Practical large-file Archive regression: round-trip a 16 MiB file and verify it byte-for-byte.
+  $largeSource = './out/fulltest/archive-large-source.bin'
+  $largeExtract = './out/fulltest/archive-large-extract'
+  Remove-Item -Recurse -Force $largeExtract -ErrorAction SilentlyContinue
+  $largeBytes = New-Object byte[] (16MB)
+  for ($i = 0; $i -lt $largeBytes.Length; $i += 4096) { $largeBytes[$i] = [byte](($i / 4096) % 251) }
+  [System.IO.File]::WriteAllBytes($largeSource, $largeBytes)
+  $largeHashBefore = (Get-FileHash $largeSource -Algorithm SHA256).Hash
+  Compile-Xps ./demo/archive/archive-large-file-regression.xps archive-large-file-regression
+  $largeRun = Run-Xps ./demo/archive/archive-large-file-regression.xps archive-large-file-regression @('../../out/fulltest/archive-large-source.bin','../../out/fulltest/archive-large-extract')
+  if ($largeRun.Output -notmatch 'ARCHIVE_LARGE_FILE=OK') { throw 'Archive large-file regression did not complete.' }
+  $largeHashAfter = (Get-FileHash (Join-Path $largeExtract 'large.bin') -Algorithm SHA256).Hash
+  if ($largeHashAfter -ne $largeHashBefore) { throw 'Archive large-file round-trip changed file contents.' }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj','-c','Release','--','.') $compileTimeoutMilliseconds 'Compiler machine interface probe'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  # Keep writable extended in-memory format coverage focused and early when it regresses.
+  Compile-Xps ./demo/archive/archive-extended-memory-write.xps archive-extended-memory-write-focused
+  $archiveWriteFocused = Run-Xps ./demo/archive/archive-extended-memory-write.xps archive-extended-memory-write-focused
+  if ($archiveWriteFocused.Output -notmatch 'ARCHIVE_EXTENDED_MEMORY_WRITE=OK') { throw 'Archive writable format round-trip regression did not complete.' }
+
+  # Compile the focused read-only format probe early and run it against a deterministic
+  # read-only fixture produced by the platform tools available in CI.
+  Compile-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression
+  $readOnlyFixtureRoot = './out/fulltest/archive-read-only-fixtures'
+  Remove-Item -Recurse -Force $readOnlyFixtureRoot -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force $readOnlyFixtureRoot | Out-Null
+  Set-Content -NoNewline -Path (Join-Path $readOnlyFixtureRoot 'payload.txt') -Value 'archive-read-only-format'
+  if (Get-Command 'bzip2' -ErrorAction SilentlyContinue) {
+    $bzip2Fixture = Join-Path $readOnlyFixtureRoot 'payload.txt.bz2'
+    $bzip2Process = Invoke-Bounded 'bzip2' @('-k','-f',(Resolve-Path (Join-Path $readOnlyFixtureRoot 'payload.txt')).Path) $runtimeTimeoutMilliseconds 'create BZip2 Archive read-only fixture'
+    if ($bzip2Process.ExitCode -ne 0 -or -not (Test-Path $bzip2Fixture -PathType Leaf)) { throw 'Unable to create BZip2 Archive read-only fixture.' }
+    $bzip2Extract = Join-Path $readOnlyFixtureRoot 'bzip2-extracted.txt'
+    $readOnlyRun = Run-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression @("../../out/fulltest/archive-read-only-fixtures/payload.txt.bz2","../../out/fulltest/archive-read-only-fixtures/bzip2-extracted.txt")
+    if ($readOnlyRun.Output -notmatch 'ARCHIVE_READ_ONLY_FORMAT=OK') { throw 'Archive BZip2 read-only regression did not complete.' }
+    if ((Get-Content -Raw $bzip2Extract) -ne 'archive-read-only-format') { throw 'Archive BZip2 extraction payload mismatch.' }
+  }
+
+
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  foreach ($sample in @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-security-fixtures')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
+  foreach ($sample in @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-security-fixtures','archive-case-sensitivity-regression')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
   Compile-Xps ./demo/archive/archive-security-reject-zip.xps archive-security-reject-zip
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/traversal.zip','10000','2147483647','1000') 'path traversal'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/absolute-unix.zip','10000','2147483647','1000') 'absolute Unix path'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/absolute-windows.zip','10000','2147483647','1000') 'absolute Windows path'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/unc.zip','10000','2147483647','1000') 'UNC path'
+  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/mixed-separator-traversal.zip','10000','2147483647','1000') 'mixed separator traversal'
+  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/corrupt-stream.zip','10000','2147483647','1000','read') 'corrupt compressed stream'
+  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/incorrect-size-metadata.zip','10000','2147483647','1000','read') 'incorrect archive size metadata'
+  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/malformed.zip','10000','2147483647','1000') 'malformed archive'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/symlink-entry.zip','10000','2147483647','1000') 'symbolic link entry'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/max-entries.zip','2','2147483647','1000') 'MaxEntries'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/max-size.zip','10000','100','1000') 'MaxExtractSize'
