@@ -823,11 +823,11 @@ public sealed class StatementParser
     private StatementSyntax ParseCloseStatement()
     {
         var closeKeyword = NextToken();
-        if (Current.Kind == SyntaxKind.HashToken)
-            NextToken();
         var fileNumbers = new List<ExpressionSyntax>();
         while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
         {
+            if (Current.Kind == SyntaxKind.HashToken)
+                NextToken();
             var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
             var end = commaIndex >= 0 ? commaIndex : FindLineEndIndex(_position);
             fileNumbers.Add(ParseExpressionRange(_position, end, _tokens[end].Span.Start));
