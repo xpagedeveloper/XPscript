@@ -20,6 +20,14 @@ internal sealed class UIFormEventDispatcherPostProcessor
 
         return regex.Replace(generated,
             """
+    [System.Diagnostics.CodeAnalysis.DynamicDependency(
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods,
+        typeof(XPScriptUIFormEvent))]
+    [System.Diagnostics.CodeAnalysis.DynamicDependency(
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods,
+        typeof(XPScriptUIForm))]
     internal string DispatchRegisteredEvent(string eventToken, string submittedValue)
     {
         var separator = eventToken.IndexOf(':');
