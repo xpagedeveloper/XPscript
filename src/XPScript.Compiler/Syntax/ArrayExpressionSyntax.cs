@@ -14,5 +14,5 @@ public sealed class ArrayExpressionSyntax(
     public SyntaxToken CloseParenToken { get; } = closeParenToken;
 
     public override SyntaxKind Kind => SyntaxKind.ArrayExpression;
-    public override TextSpan Span => TextSpan.FromBounds(ArrayIdentifier.Span.Start, CloseParenToken.Span.End);
+    public override TextSpan Span => new TextSpan(ArrayIdentifier.Span.Start, CloseParenToken.Span.End - ArrayIdentifier.Span.Start);
 }
