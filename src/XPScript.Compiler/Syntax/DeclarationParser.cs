@@ -72,7 +72,7 @@ public sealed class DeclarationParser
             if (Peek(tokens, memberPosition).Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword)
                 memberVisibility = tokens[memberPosition++];
 
-            if (Peek(tokens, memberPosition).Kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword)
+            if (Peek(tokens, memberPosition).Kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword or SyntaxKind.PropertyKeyword)
             {
                 var memberStart = line.Start;
                 var targetKind = Peek(tokens, memberPosition).Kind;
@@ -82,7 +82,9 @@ public sealed class DeclarationParser
                     : _text.Length;
                 var memberText = _text.Substring(memberStart, memberEnd - memberStart);
                 var parser = new DeclarationParser(memberText, _baseOffset + memberStart);
-                members.Add(parser.ParseDeclaration());
+                members.Add(targetKind == SyntaxKind.PropertyKeyword
+                    ? parser.ParseProperty(lines: parser.GetLines())
+                    : parser.ParseDeclaration());
                 _diagnostics.AddRange(parser.Diagnostics);
                 i = endLine;
                 continue;
@@ -99,6 +101,32 @@ public sealed class DeclarationParser
         return new ClassDeclarationSyntax(visibility, classKeyword, identifier, extendKeyword, baseType, members,
             new SyntaxToken(SyntaxKind.EndKeyword, string.Empty, null, new TextSpan(end, 0)),
             new SyntaxToken(SyntaxKind.ClassKeyword, string.Empty, null, new TextSpan(end, 0)));
+    }
+
+
+    private PropertyDeclarationSyntax ParseProperty(IReadOnlyList<SourceLine> lines)
+    {
+        var lexer = new Lexer(lines[0].Text, _baseOffset + lines[0].Start);
+        var header = lexer.Lex().Where(t => t.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken).ToArray();
+        AddLexerDiagnostics(lexer.Diagnostics);
+        var position = 0;
+        SyntaxToken? visibility = null;
+        if (Peek(header, position).Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword)
+            visibility = header[position++];
+        var propertyKeyword = Take(header, ref position, SyntaxKind.PropertyKeyword);
+        var accessor = Peek(header, position).Kind is SyntaxKind.GetKeyword or SyntaxKind.LetKeyword or SyntaxKind.SetKeyword
+            ? header[position++]
+            : Take(header, ref position, SyntaxKind.GetKeyword);
+        var identifier = Take(header, ref position, SyntaxKind.IdentifierToken);
+        SyntaxToken? asKeyword = null;
+        TypeSyntax? type = null;
+        if (Peek(header, position).Kind == SyntaxKind.AsKeyword)
+        {
+            asKeyword = header[position++];
+            type = new TypeSyntax(Take(header, ref position, SyntaxKind.IdentifierToken));
+        }
+        var (statements, endKeyword, endTarget) = ParseBody(lines, SyntaxKind.PropertyKeyword, "Property");
+        return new PropertyDeclarationSyntax(visibility, propertyKeyword, accessor, identifier, asKeyword, type, statements, endKeyword, endTarget);
     }
 
     private static int FindDeclarationEnd(IReadOnlyList<SourceLine> lines, int start, SyntaxKind targetKind)
