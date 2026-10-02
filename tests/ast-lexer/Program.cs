@@ -214,6 +214,22 @@ var inputHashParser = new StatementParser("Input #1, value");
 var inputHash = (FileInputStatementSyntax)inputHashParser.ParseStatement();
 Equal(0, inputHashParser.Diagnostics.Count, "Input hash diagnostics");
 
+foreach (var (source, argumentCount) in new[]
+{
+    ("Reset", 0),
+    ("WriteFile path, content, charset", 3),
+    ("AppendFile path, content, charset", 3),
+    ("WriteLines path, values, charset", 3),
+    ("WriteBytes path, bytes", 2),
+})
+{
+    var fileConvenienceParser = new StatementParser(source);
+    var fileConvenienceStatement = (RuntimeFileStatementSyntax)fileConvenienceParser.ParseStatement();
+    Equal(SyntaxKind.RuntimeFileStatement, fileConvenienceStatement.Kind, source + " statement kind");
+    Equal(argumentCount, fileConvenienceStatement.Arguments.Count, source + " argument count");
+    Equal(0, fileConvenienceParser.Diagnostics.Count, source + " diagnostics");
+}
+
 var inputExpressionParser = new StatementParser("value = Input(1)");
 var inputExpressionStatement = (AssignmentStatementSyntax)inputExpressionParser.ParseStatement();
 Equal(SyntaxKind.CallExpression, inputExpressionStatement.Expression.Kind, "Input expression remains call expression");
