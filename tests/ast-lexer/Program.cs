@@ -432,6 +432,22 @@ var callStatementSyntax = (CallStatementSyntax)callStatement;
 Equal(SyntaxKind.CallExpression, callStatementSyntax.Expression.Kind, "Call statement expression kind");
 Equal(new TextSpan(0, 13), callStatementSyntax.Span, "Call statement full span");
 
+var returnEmptyParser = new StatementParser("Return");
+var returnEmpty = (ReturnStatementSyntax)returnEmptyParser.ParseStatement();
+Equal(0, returnEmptyParser.Diagnostics.Count, "Return empty diagnostics");
+Equal(SyntaxKind.ReturnStatement, returnEmpty.Kind, "Return empty statement kind");
+Equal<ExpressionSyntax?>(null, returnEmpty.Expression, "Return empty expression");
+
+var returnValueParser = new StatementParser("Return value + 1");
+var returnValue = (ReturnStatementSyntax)returnValueParser.ParseStatement();
+Equal(0, returnValueParser.Diagnostics.Count, "Return value diagnostics");
+Equal(SyntaxKind.BinaryExpression, returnValue.Expression!.Kind, "Return value expression kind");
+
+var returnCallParser = new StatementParser("Return BuildResult(1)");
+var returnCall = (ReturnStatementSyntax)returnCallParser.ParseStatement();
+Equal(0, returnCallParser.Diagnostics.Count, "Return call diagnostics");
+Equal(SyntaxKind.CallExpression, returnCall.Expression!.Kind, "Return call expression kind");
+
 var assignmentParser = new StatementParser("count = 1 + 2");
 var assignmentStatement = assignmentParser.ParseStatement();
 Equal(SyntaxKind.AssignmentStatement, assignmentStatement.Kind, "assignment statement kind");
