@@ -89,13 +89,16 @@ Sub VerifyInput(ByVal evt As Variant, ByVal contextName As String)
 End Sub
 
 Sub TouchPass(ByVal evt As Variant, ByVal contextName As String)
+    Call Application.Debug.Info("TEST BUTTON CLICK: touch")
     Call Application.Debug.Info("TEST TOUCH: PASS confirmed by user")
 End Sub
 
 Sub LayoutPass(ByVal evt As Variant, ByVal contextName As String)
+    Call Application.Debug.Info("TEST BUTTON CLICK: layout")
     Call Application.Debug.Info("TEST LAYOUT/SCROLL: PASS confirmed by user")
 End Sub
 
 Sub KeyboardPass(ByVal evt As Variant, ByVal contextName As String)
+    Call Application.Debug.Info("TEST BUTTON CLICK: keyboard")
     Call Application.Debug.Info("TEST FOCUS/KEYBOARD: PASS confirmed by user")
 End Sub
