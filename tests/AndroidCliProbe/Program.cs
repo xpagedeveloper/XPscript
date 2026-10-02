@@ -34,7 +34,11 @@ foreach (var expected in new[]
     "\"pidof\", \"com.xpscript.debugapp\"",
     "Android UI application was launched but is not running on ",
     "Android UI application launched on ",
-    "xpscript android logs --device "
+    "xpscript android logs --device ",
+    "if (debug)",
+    "Streaming Android debug output. Stop with Ctrl+C.",
+    "return await StreamLogsAsync(adb, serial)",
+    "AndroidApplicationTitleContext.Push(project.ApplicationTitle)"
 })
 {
     if (!source.Contains(expected, StringComparison.Ordinal))
