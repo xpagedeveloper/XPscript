@@ -502,7 +502,7 @@ public static class AndroidFormHost
         ListBox listBox when listBox.SelectionMode.HasFlag(SelectionMode.Multiple) => listBox.SelectedItems?.Cast<object>().Select(item => item?.ToString() ?? string.Empty).ToArray() ?? Array.Empty<string>(),
         ListBox listBox => listBox.SelectedItem?.ToString() ?? string.Empty,
         Slider slider => slider.Value,
-        StackPanel radioPanel => radioPanel.Children.OfType<RadioButton>().FirstOrDefault(radio => radio.IsChecked == true)?.Tag?.ToString() ?? string.Empty,
+        StackPanel radioPanel => radioPanel.Children.OfType<Avalonia.Controls.RadioButton>().FirstOrDefault(radio => radio.IsChecked == true)?.Tag?.ToString() ?? string.Empty,
         _ => null
     };
 }
