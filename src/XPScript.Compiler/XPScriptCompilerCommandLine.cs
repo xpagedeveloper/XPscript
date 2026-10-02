@@ -799,7 +799,7 @@ public static class XPScriptCompilerCommandLine
                 else
                 {
                     var current = progress();
-                    WriteProgress($"{status}... {current.Percent}% | {current.Phase} | {timer.Elapsed.TotalSeconds:F0}s");
+                    WriteProgress($"{status}... {current.Percent}% | {current.Phase} | {FormatProgressElapsed(timer.Elapsed)}");
                 }
                 nextReportAt += TimeSpan.FromSeconds(1);
             }
@@ -808,6 +808,14 @@ public static class XPScriptCompilerCommandLine
             if (completed == task) break;
         }
         return await task.ConfigureAwait(false);
+    }
+
+    private static string FormatProgressElapsed(TimeSpan elapsed)
+    {
+        if (elapsed.TotalMinutes < 1)
+            return $"{elapsed.TotalSeconds:F0}s";
+
+        return elapsed.TotalMinutes.ToString("F2", System.Globalization.CultureInfo.CurrentCulture) + " min";
     }
 
     private static void WriteProgress(string message)
