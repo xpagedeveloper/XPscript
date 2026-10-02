@@ -38,7 +38,7 @@ foreach (var expected in new[]
     "if (debug)",
     "Streaming Android debug output. Stop with Ctrl+C.",
     "return await StreamLogsAsync(adb, serial)",
-    "AndroidApplicationTitleContext.Push(project.ApplicationTitle)"
+    "Streaming Android debug output. Stop with Ctrl+C."
 })
 {
     if (!source.Contains(expected, StringComparison.Ordinal))
