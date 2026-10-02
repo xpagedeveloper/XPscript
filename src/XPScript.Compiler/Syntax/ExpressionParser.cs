@@ -162,6 +162,12 @@ public sealed class ExpressionParser
         if (Current.Kind is SyntaxKind.NumberToken or SyntaxKind.StringToken or SyntaxKind.TrueKeyword or SyntaxKind.FalseKeyword)
             return new LiteralExpressionSyntax(NextToken());
 
+        if (Current.Kind is SyntaxKind.MeKeyword or SyntaxKind.ParentKeyword)
+        {
+            var token = NextToken();
+            return new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, token.Text, token.Value, token.Span));
+        }
+
         // Statement keywords remain contextual where expressions allow identifiers.
         if (IsContextualIdentifier(Current.Kind))
         {
