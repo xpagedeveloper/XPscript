@@ -60,6 +60,22 @@ public static class DesktopFormHost
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
         var fieldsGrid = CreateFieldsGrid(request.GridColumns);
         panel.Children.Add(fieldsGrid);
+        TabControl? tabControl = null;
+        var tabGrids = new Dictionary<string, Grid>(StringComparer.OrdinalIgnoreCase);
+        if (request.Tabs.Count > 0)
+        {
+            var tabItems = new List<TabItem>();
+            foreach (var tab in request.Tabs)
+            {
+                var grid = CreateFieldsGrid(request.GridColumns);
+                tabGrids[tab.Name] = grid;
+                tabItems.Add(new TabItem { Header = tab.Label, Tag = tab.Name, Content = grid });
+            }
+            tabControl = new TabControl { ItemsSource = tabItems };
+            var selected = tabItems.FindIndex(item => string.Equals(item.Tag?.ToString(), request.ActiveTab, StringComparison.OrdinalIgnoreCase));
+            tabControl.SelectedIndex = selected >= 0 ? selected : 0;
+            panel.Children.Add(tabControl);
+        }
         var validationText = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Red };
 
         var automaticRow = 0;
@@ -98,16 +114,17 @@ public static class DesktopFormHost
             }
             fieldPanel.Children.Add(fieldValidation);
 
-            var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : automaticRow++;
+            var targetGrid = field.TabName.Length > 0 && tabGrids.TryGetValue(field.TabName, out var tabGrid) ? tabGrid : fieldsGrid;
+            var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : targetGrid.RowDefinitions.Count;
             var column = field.LayoutColumn > 0 ? field.LayoutColumn - 1 : 0;
             var columnSpan = field.LayoutColumn > 0 ? Math.Max(1, field.ColumnSpan) : Math.Max(1, request.GridColumns);
             var rowSpan = Math.Max(1, field.RowSpan);
-            EnsureRows(fieldsGrid, row + rowSpan);
+            EnsureRows(targetGrid, row + rowSpan);
             Grid.SetRow(fieldPanel, row);
             Grid.SetColumn(fieldPanel, column);
             Grid.SetColumnSpan(fieldPanel, columnSpan);
             Grid.SetRowSpan(fieldPanel, rowSpan);
-            fieldsGrid.Children.Add(fieldPanel);
+            targetGrid.Children.Add(fieldPanel);
         }
 
         var eventInProgress = false;
@@ -144,6 +161,13 @@ public static class DesktopFormHost
         {
             using var document = JsonDocument.Parse(responseJson);
             var root = document.RootElement;
+            if (tabControl is not null && root.TryGetProperty("activeTab", out var activeTabElement))
+            {
+                var activeTab = activeTabElement.GetString() ?? string.Empty;
+                var items = tabControl.ItemsSource?.Cast<TabItem>().ToList() ?? new List<TabItem>();
+                var selected = items.FindIndex(item => string.Equals(item.Tag?.ToString(), activeTab, StringComparison.OrdinalIgnoreCase));
+                if (selected >= 0) tabControl.SelectedIndex = selected;
+            }
             if (root.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
             {
                 foreach (var state in fields.EnumerateArray())
