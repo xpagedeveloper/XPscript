@@ -127,6 +127,8 @@ public enum SyntaxKind
     Type,
     Parameter,
     SubDeclaration,
+    ConstructorDeclaration,
+    DestructorDeclaration,
     FunctionDeclaration,
     FieldDeclaration,
     ClassDeclaration,
