@@ -228,7 +228,7 @@ public sealed class CompilerDriver
             if (IsAndroidRuntime(rid))
             {
                 var androidHostPath = Path.Combine(tempRoot, usesAndroidUIForm ? "AndroidUIHost.cs" : "AndroidHost.cs");
-                await File.WriteAllTextAsync(androidHostPath, usesAndroidUIForm ? AndroidUIHostSource.Code : AndroidHostSource.Code);
+                await File.WriteAllTextAsync(androidHostPath, usesAndroidUIForm ? AndroidUIHostSource.Build(CompilerDiagnosticMode.Debug) : AndroidHostSource.Code);
                 CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
             }
 
@@ -386,7 +386,7 @@ public sealed class CompilerDriver
             if (IsAndroidRuntime(rid))
             {
                 var androidHostPath = Path.Combine(tempRoot, usesAndroidUIForm ? "AndroidUIHost.cs" : "AndroidHost.cs");
-                await File.WriteAllTextAsync(androidHostPath, usesAndroidUIForm ? AndroidUIHostSource.Code : AndroidHostSource.Code);
+                await File.WriteAllTextAsync(androidHostPath, usesAndroidUIForm ? AndroidUIHostSource.Build(CompilerDiagnosticMode.Debug) : AndroidHostSource.Code);
                 CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
             }
 
