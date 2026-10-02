@@ -33,8 +33,74 @@ public sealed class DeclarationParser
         {
             SyntaxKind.SubKeyword => ParseSub(lines, header, ref position, visibility),
             SyntaxKind.FunctionKeyword => ParseFunction(lines, header, ref position, visibility),
-            _ => throw new InvalidOperationException("Expected Sub or Function declaration.")
+            SyntaxKind.ClassKeyword => ParseClass(lines, header, ref position, visibility),
+            _ => throw new InvalidOperationException("Expected Sub, Function or Class declaration.")
         };
+    }
+
+    private ClassDeclarationSyntax ParseClass(IReadOnlyList<SourceLine> lines, SyntaxToken[] header, ref int position, SyntaxToken? visibility)
+    {
+        var classKeyword = Take(header, ref position, SyntaxKind.ClassKeyword);
+        var identifier = Take(header, ref position, SyntaxKind.IdentifierToken);
+        var members = new List<SyntaxNode>();
+
+        for (var i = 1; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            if (string.IsNullOrWhiteSpace(line.Text))
+                continue;
+
+            var lexer = new Lexer(line.Text, _baseOffset + line.Start);
+            var tokens = lexer.Lex().Where(t => t.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken).ToArray();
+            AddLexerDiagnostics(lexer.Diagnostics);
+
+            if (tokens.Length >= 2 && tokens[0].Kind == SyntaxKind.EndKeyword && tokens[1].Kind == SyntaxKind.ClassKeyword)
+                return new ClassDeclarationSyntax(visibility, classKeyword, identifier, members, tokens[0], tokens[1]);
+
+            var memberPosition = 0;
+            SyntaxToken? memberVisibility = null;
+            if (Peek(tokens, memberPosition).Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword)
+                memberVisibility = tokens[memberPosition++];
+
+            if (Peek(tokens, memberPosition).Kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword)
+            {
+                var memberStart = line.Start;
+                var targetKind = Peek(tokens, memberPosition).Kind;
+                var endLine = FindDeclarationEnd(lines, i + 1, targetKind);
+                var memberEnd = endLine < lines.Count
+                    ? lines[endLine].Start + lines[endLine].Text.Length
+                    : _text.Length;
+                var memberText = _text.Substring(memberStart, memberEnd - memberStart);
+                var parser = new DeclarationParser(memberText, _baseOffset + memberStart);
+                members.Add(parser.ParseDeclaration());
+                _diagnostics.AddRange(parser.Diagnostics);
+                i = endLine;
+                continue;
+            }
+
+            var fieldIdentifier = Take(tokens, ref memberPosition, SyntaxKind.IdentifierToken);
+            var asKeyword = Take(tokens, ref memberPosition, SyntaxKind.AsKeyword);
+            var type = new TypeSyntax(Take(tokens, ref memberPosition, SyntaxKind.IdentifierToken));
+            members.Add(new FieldDeclarationSyntax(memberVisibility, fieldIdentifier, asKeyword, type));
+        }
+
+        var end = _baseOffset + _text.Length;
+        _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Expected 'End Class' to close declaration.", new TextSpan(end, 0)));
+        return new ClassDeclarationSyntax(visibility, classKeyword, identifier, members,
+            new SyntaxToken(SyntaxKind.EndKeyword, string.Empty, null, new TextSpan(end, 0)),
+            new SyntaxToken(SyntaxKind.ClassKeyword, string.Empty, null, new TextSpan(end, 0)));
+    }
+
+    private static int FindDeclarationEnd(IReadOnlyList<SourceLine> lines, int start, SyntaxKind targetKind)
+    {
+        for (var i = start; i < lines.Count; i++)
+        {
+            var lexer = new Lexer(lines[i].Text);
+            var tokens = lexer.Lex().Where(t => t.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken).ToArray();
+            if (tokens.Length >= 2 && tokens[0].Kind == SyntaxKind.EndKeyword && tokens[1].Kind == targetKind)
+                return i;
+        }
+        return lines.Count;
     }
 
     private SubDeclarationSyntax ParseSub(IReadOnlyList<SourceLine> lines, SyntaxToken[] header, ref int position, SyntaxToken? visibility)
