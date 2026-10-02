@@ -112,7 +112,7 @@ internal static class XPScriptUIDesktopAdapter
             }).ToArray(),
             buttons = form.Buttons.Select(button => new
             {
-                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style
+                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style, cornerRadius = button.CornerRadius
             }).ToArray()
         };
 
