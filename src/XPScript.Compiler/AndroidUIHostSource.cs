@@ -216,7 +216,8 @@ public static class AndroidFormHost
                         try
                         {
                             var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
-                            eventCallback("button:" + buttonName, submittedValues);
+                            var actionState = eventCallback("button:" + buttonName, submittedValues);
+                            ApplyActionState(actionState, editors);
                         }
                         catch (Exception exception)
                         {
@@ -272,6 +273,27 @@ public static class AndroidFormHost
         else Dispatcher.UIThread.Post(Show);
 
         return completion.Task.GetAwaiter().GetResult();
+    }
+
+    private static void ApplyActionState(string actionStateJson, Dictionary<string, Control> editors)
+    {
+        if (string.IsNullOrWhiteSpace(actionStateJson)) return;
+        using var document = JsonDocument.Parse(actionStateJson);
+        var root = document.RootElement;
+        if (root.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var field in fields.EnumerateArray())
+            {
+                var name = field.TryGetProperty("name", out var nameValue) ? nameValue.GetString() ?? string.Empty : string.Empty;
+                if (name.Length == 0 || !editors.TryGetValue(name, out var editor)) continue;
+                if (field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
+                    SetEditorValue(editor, value);
+                editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
+                editor.IsVisible = !field.TryGetProperty("visible", out var visible) || visible.ValueKind != JsonValueKind.False;
+            }
+        }
+        if (root.TryGetProperty("navigation", out var navigation) && navigation.ValueKind == JsonValueKind.Object)
+            Log.Info("XPScript", "UIForm navigation requested: " + navigation);
     }
 
     private static void SetEditorValue(Control editor, JsonElement value)
