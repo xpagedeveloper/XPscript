@@ -306,15 +306,15 @@ public static class AndroidFormHost
             {
                 var name = field.TryGetProperty("name", out var nameValue) ? nameValue.GetString() ?? string.Empty : string.Empty;
                 if (name.Length == 0 || !editors.TryGetValue(name, out var editor)) continue;
-                if (field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
+                var validationError = field.TryGetProperty("validationError", out var validationValue)
+                    ? validationValue.GetString() ?? string.Empty
+                    : string.Empty;
+                if (validationError.Length == 0 && field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
                     SetEditorValue(editor, value);
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
                 editor.IsVisible = !field.TryGetProperty("visible", out var visible) || visible.ValueKind != JsonValueKind.False;
                 if (validationErrors.TryGetValue(name, out var validationBlock))
                 {
-                    var validationError = field.TryGetProperty("validationError", out var validationValue)
-                        ? validationValue.GetString() ?? string.Empty
-                        : string.Empty;
                     validationBlock.Text = validationError;
                     validationBlock.IsVisible = validationError.Length > 0;
                 }
