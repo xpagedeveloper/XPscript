@@ -51,6 +51,10 @@ var uiHostCode = (string)(uiHostType.GetField("Code", BindingFlags.Public | Bind
 foreach (var expected in new[]
 {
     "public sealed class App : Avalonia.Application",
+    "public static string Build(bool debug)",
+    "public const bool Enabled = __XPSCRIPT_ANDROID_DEBUG__;",
+    "XPSCRIPT-DEBUG-DUMP=",
+    "if (AndroidDebugMode.Enabled)",
     "public class AndroidApp : AvaloniaAndroidApplication<App>",
     "global::Android.Runtime.JniHandleOwnership",
     "new Avalonia.Controls.CheckBox()",
