@@ -116,6 +116,7 @@ public sealed class Lexer
         _position++;
         return CurrentAt(start) switch
         {
+            '#' => Token(SyntaxKind.HashToken, start, 1),
             '(' => Token(SyntaxKind.OpenParenToken, start, 1),
             ')' => Token(SyntaxKind.CloseParenToken, start, 1),
             ',' => Token(SyntaxKind.CommaToken, start, 1),
@@ -200,6 +201,7 @@ public sealed class Lexer
         "APPEND" => SyntaxKind.AppendKeyword,
         "BINARY" => SyntaxKind.BinaryKeyword,
         "RANDOM" => SyntaxKind.RandomKeyword,
+        "LEN" => SyntaxKind.LenKeyword,
         "ERROR" => SyntaxKind.ErrorKeyword,
         "GOTO" => SyntaxKind.GoToKeyword,
         "RESUME" => SyntaxKind.ResumeKeyword,
