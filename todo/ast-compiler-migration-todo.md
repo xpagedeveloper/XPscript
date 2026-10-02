@@ -159,7 +159,7 @@ Expressions are the first migration target because the current transpiler perfor
 - [x] Parse calls used as statements.
 - [x] Parse error-handling statements.
 - [x] Parse event-related statements.
-- [ ] Parse file/runtime-specific statements that currently have compiler rewrites.
+- [x] Parse file/runtime-specific statements that currently have compiler rewrites.
 - [ ] Add recovery at statement boundaries so one syntax error does not destroy the remaining tree.
 - [ ] Add focused tests per statement family.
 
