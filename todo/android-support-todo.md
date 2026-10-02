@@ -102,8 +102,8 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [ ] Build and run a debug APK on Android 11 / API 30.
 - [x] Add Android UIForm regression samples. `samples/android-uiform-regression.xps` is compiler-guarded and built as an Android UIForm APK in Android CI.
 - [x] Add non-device compiler/packaging regression coverage for Android UIForm. `AndroidCompilerProbe` guards the generated host/project contract and Android CI publishes both a focused direct Avalonia Android project and the compiler-generated minimal UIForm APK.
-- [ ] Document debug APK deployment.
-- [ ] Plan signed APK/AAB publishing separately.
+- [x] Document debug APK deployment. See `knowledge/android-debug-apk-deployment.md` for the XPScript CLI/adb development path and physical-device verification boundary.
+- [x] Plan signed APK/AAB publishing separately. See `knowledge/android-publishing-plan.md` for release outputs, signing/secrets, versioning and isolated release workflow boundaries.
 
 ## Stage 4: console-style applications through Avalonia
 
