@@ -11,6 +11,12 @@ Sub Main()
     Print "FIRST_HEIGHT=" & CStr(first.Height)
     Print "FIRST_RESIZABLE=" & CStr(first.Resizable)
     Print "FIRST_HAS_SIZE=" & CStr(first.HasExplicitSize)
+    If first.BootText <> "" Then Error 5, "Expected empty UIForm boot text by default"
+    If first.BootImage <> "" Then Error 5, "Expected empty UIForm boot image by default"
+    first.BootText = "Starting customer form"
+    first.BootImage = "splash.png"
+    If first.BootText <> "Starting customer form" Then Error 5, "Expected UIForm boot text roundtrip"
+    If first.BootImage <> "splash.png" Then Error 5, "Expected UIForm boot image roundtrip"
 
     Print "SECOND_TITLE=" & second.Title
     Print "SECOND_WIDTH=" & CStr(second.Width)
