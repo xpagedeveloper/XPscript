@@ -19,6 +19,9 @@ static void Equal<T>(T expected, T actual, string message)
 static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
+var printIdentifierRegression = Lex("'comment\nPrint value");
+Equal(SyntaxKind.IdentifierToken, printIdentifierRegression[1].Kind, "Print remains an identifier in lexer output");
+
 var errorCallRegression = new ExpressionParser("Error()").ParseExpression();
 Equal(SyntaxKind.CallExpression, errorCallRegression.Kind, "Error() remains an expression call after Error statement keyword support");
 
