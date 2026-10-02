@@ -125,4 +125,6 @@ public enum SyntaxKind
     Parameter,
     SubDeclaration,
     FunctionDeclaration,
+    FieldDeclaration,
+    ClassDeclaration,
 }
