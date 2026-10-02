@@ -6,6 +6,7 @@ internal sealed record AndroidProjectMetadata(string Target, string ApplicationT
 {
     public const string DefaultTarget = "android";
     public const string DefaultApplicationType = "headless";
+    public const string UiApplicationType = "ui";
 
     public static AndroidProjectMetadata LoadForSource(string sourcePath)
     {
@@ -14,7 +15,9 @@ internal sealed record AndroidProjectMetadata(string Target, string ApplicationT
             ?? throw new InvalidOperationException("Unable to determine Android source directory.");
         var configPath = Path.Combine(sourceDirectory, "xpscript.json");
         if (!File.Exists(configPath))
-            return new AndroidProjectMetadata(DefaultTarget, DefaultApplicationType);
+            return new AndroidProjectMetadata(
+                DefaultTarget,
+                XPScript.Compiler.UIFormAppAssets.UsesUIForm(sourcePath) ? UiApplicationType : DefaultApplicationType);
 
         try
         {
@@ -27,17 +30,18 @@ internal sealed record AndroidProjectMetadata(string Target, string ApplicationT
                 throw new InvalidOperationException("xpscript.json root must be a JSON object.");
 
             var target = ReadString(root, "target") ?? DefaultTarget;
-            var applicationType = ReadString(root, "applicationType") ?? DefaultApplicationType;
+            var applicationType = ReadString(root, "applicationType") ??
+                (XPScript.Compiler.UIFormAppAssets.UsesUIForm(sourcePath) ? UiApplicationType : DefaultApplicationType);
 
             target = target.Trim().ToLowerInvariant();
             applicationType = applicationType.Trim().ToLowerInvariant();
 
             if (target != DefaultTarget)
                 throw new InvalidOperationException("Android run requires xpscript.json target to be 'android'.");
-            if (applicationType != DefaultApplicationType)
+            if (applicationType is not (DefaultApplicationType or UiApplicationType))
                 throw new InvalidOperationException(
                     "Android applicationType '" + applicationType +
-                    "' is not available yet. Supported applicationType: headless.");
+                    "' is not supported. Supported applicationTypes: headless, ui.");
 
             return new AndroidProjectMetadata(target, applicationType);
         }
