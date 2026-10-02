@@ -107,7 +107,7 @@ public sealed class ExpressionParser
     {
         if (Current.Kind == SyntaxKind.IdentifierToken
             && Current.Text.Equals("Array", StringComparison.OrdinalIgnoreCase)
-            && PeekKind(1) == SyntaxKind.OpenParenToken)
+            && Peek(1).Kind == SyntaxKind.OpenParenToken)
         {
             var arrayIdentifier = NextToken();
             var open = NextToken();
