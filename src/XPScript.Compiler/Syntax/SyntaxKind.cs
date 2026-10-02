@@ -82,6 +82,7 @@ public enum SyntaxKind
     ByValKeyword,
     ClassKeyword,
     ExtendKeyword,
+    MeKeyword,
     PropertyKeyword,
     GetKeyword,
     NextKeyword,
