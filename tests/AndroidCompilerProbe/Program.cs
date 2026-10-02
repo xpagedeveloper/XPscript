@@ -188,6 +188,11 @@ finally
     Directory.Delete(artifactRoot, recursive: true);
 }
 
+var compilerProjectSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "XPScript.Compiler.csproj"));
+if (compilerProjectSource.Contains("PackageReference Include=\"Avalonia", StringComparison.Ordinal) ||
+    compilerProjectSource.Contains("ProjectReference Include=\"../XPScript.UI.Android", StringComparison.Ordinal))
+    throw new Exception("Non-UI XPScript compiler/runtime must remain independent from Avalonia Android.");
+
 var compilerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerDriver.cs"));
 if (!compilerSource.Contains("outputPath += \".apk\";", StringComparison.Ordinal))
     throw new Exception("Android compiler output is not normalized to an .apk path.");
