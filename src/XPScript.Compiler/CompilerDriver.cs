@@ -241,6 +241,11 @@ public sealed class CompilerDriver
             psi.ArgumentList.Add("publish"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(publishDir); psi.ArgumentList.Add("--nologo");
             psi.ArgumentList.Add("-r"); psi.ArgumentList.Add(rid);
+            if (CompilerDiagnosticMode.Debug)
+            {
+                psi.ArgumentList.Add("--verbosity");
+                psi.ArgumentList.Add("normal");
+            }
             if (!usesAndroidUIForm)
             {
                 psi.ArgumentList.Add("--self-contained");
@@ -916,12 +921,21 @@ public sealed class CompilerDriver
     {
         var text = line.Trim();
         if (text.Length == 0) return null;
-        if (text.Contains("Determining projects to restore", StringComparison.OrdinalIgnoreCase)) return "Restoring dependencies";
+        if (text.Contains("Determining projects to restore", StringComparison.OrdinalIgnoreCase) || text.Contains("Restore", StringComparison.OrdinalIgnoreCase)) return "Restoring dependencies";
         if (text.Contains("Restored ", StringComparison.OrdinalIgnoreCase)) return "Dependencies restored";
+        if (text.Contains("CoreCompile", StringComparison.OrdinalIgnoreCase) || text.Contains("Csc", StringComparison.OrdinalIgnoreCase)) return "Compiling generated project";
         if (text.Contains(" -> ", StringComparison.Ordinal) && text.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) return "Compiling generated project";
+        if (text.Contains("ResolveAssemblies", StringComparison.OrdinalIgnoreCase)) return "Resolving Android assemblies";
         if (text.Contains("LinkAssemblies", StringComparison.OrdinalIgnoreCase) || text.Contains("linking", StringComparison.OrdinalIgnoreCase)) return "Linking application";
         if (text.Contains("AOT", StringComparison.OrdinalIgnoreCase)) return "Compiling native code";
-        if (text.Contains("apk", StringComparison.OrdinalIgnoreCase)) return "Packaging Android APK";
+        if (text.Contains("CompileToDalvik", StringComparison.OrdinalIgnoreCase) || text.Contains("D8", StringComparison.OrdinalIgnoreCase)) return "Compiling Android bytecode";
+        if (text.Contains("BuildApk", StringComparison.OrdinalIgnoreCase) || text.Contains("PackageForAndroid", StringComparison.OrdinalIgnoreCase) || text.Contains("apk", StringComparison.OrdinalIgnoreCase)) return "Packaging Android APK";
+        if (text.Contains("SignAndroidPackage", StringComparison.OrdinalIgnoreCase) || text.Contains("AndroidSignPackage", StringComparison.OrdinalIgnoreCase)) return "Signing Android APK";
+        if (text.StartsWith("Target \"", StringComparison.OrdinalIgnoreCase))
+        {
+            var end = text.IndexOf('"', 8);
+            if (end > 8) return "MSBuild: " + text[8..end];
+        }
         if (text.Contains("Publish", StringComparison.OrdinalIgnoreCase)) return "Publishing application";
         return null;
     }
