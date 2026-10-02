@@ -199,6 +199,19 @@ foreach (var expected in new[]
         throw new Exception("UIForm metadata post-processing lost or failed to add metadata: " + expected);
 }
 
+const string duplicateMarkerMetadataRequest = currentMetadataRequest + """
+var unrelated = new
+{
+    required = field.Required,
+    style = button.Style,
+};
+""";
+var transformedDuplicateMarkerRequest = (string)(metadataTransform.Invoke(metadataPostProcessor, new object?[] { duplicateMarkerMetadataRequest })
+    ?? throw new Exception("UIForm metadata duplicate-marker transformation returned null."));
+if (transformedDuplicateMarkerRequest.Split("placeholder = field.Placeholder", StringSplitOptions.None).Length - 1 != 1 ||
+    transformedDuplicateMarkerRequest.Split("layoutRow = button.LayoutRow", StringSplitOptions.None).Length - 1 != 1)
+    throw new Exception("UIForm metadata post-processing must inject field/button metadata only once.");
+
 var desktopRuntimeSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs");
 var desktopRuntimeSource = File.ReadAllText(desktopRuntimeSourcePath);
 if (!desktopRuntimeSource.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal))
