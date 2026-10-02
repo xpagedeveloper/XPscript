@@ -187,6 +187,16 @@ var closeHash = (CloseStatementSyntax)closeHashParser.ParseStatement();
 Equal(0, closeHashParser.Diagnostics.Count, "Close hash diagnostics");
 Equal(1, closeHash.FileNumbers.Count, "Close hash file count");
 
+var closeMultipleHashParser = new StatementParser("Close #1, #2");
+var closeMultipleHash = (CloseStatementSyntax)closeMultipleHashParser.ParseStatement();
+Equal(0, closeMultipleHashParser.Diagnostics.Count, "Close multiple hash diagnostics");
+Equal(2, closeMultipleHash.FileNumbers.Count, "Close multiple hash file count");
+
+var lenFunctionParser = new ExpressionParser("Len(value)");
+var lenFunction = lenFunctionParser.ParseExpression();
+Equal(SyntaxKind.CallExpression, lenFunction.Kind, "Len remains a valid expression call");
+Equal(0, lenFunctionParser.Diagnostics.Count, "Len function diagnostics");
+
 var printHashParser = new StatementParser("Print #1, \"value\"");
 var printHash = (FileOutputStatementSyntax)printHashParser.ParseStatement();
 Equal(0, printHashParser.Diagnostics.Count, "Print hash diagnostics");
