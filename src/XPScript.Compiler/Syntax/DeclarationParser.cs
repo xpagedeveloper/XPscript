@@ -22,7 +22,7 @@ public sealed class DeclarationParser
 
         var headerLexer = new Lexer(lines[0].Text, _baseOffset + lines[0].Start);
         var header = headerLexer.Lex().Where(t => t.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken).ToArray();
-        _diagnostics.AddRange(headerLexer.Diagnostics);
+        AddLexerDiagnostics(headerLexer.Diagnostics);
         var position = 0;
 
         SyntaxToken? visibility = null;
@@ -106,7 +106,7 @@ public sealed class DeclarationParser
 
             var lexer = new Lexer(line.Text, _baseOffset + line.Start);
             var tokens = lexer.Lex().Where(t => t.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken).ToArray();
-            _diagnostics.AddRange(lexer.Diagnostics);
+            AddLexerDiagnostics(lexer.Diagnostics);
 
             if (tokens.Length >= 2 && tokens[0].Kind == SyntaxKind.EndKeyword && tokens[1].Kind == targetKind)
                 return (statements, tokens[0], tokens[1]);
@@ -121,6 +121,12 @@ public sealed class DeclarationParser
         return (statements,
             new SyntaxToken(SyntaxKind.EndKeyword, string.Empty, null, new TextSpan(end, 0)),
             new SyntaxToken(targetKind, string.Empty, null, new TextSpan(end, 0)));
+    }
+
+    private void AddLexerDiagnostics(IEnumerable<LexerDiagnostic> diagnostics)
+    {
+        foreach (var diagnostic in diagnostics)
+            _diagnostics.Add(new SyntaxDiagnostic(diagnostic.Code, diagnostic.Message, diagnostic.Span));
     }
 
     private SyntaxToken Take(SyntaxToken[] tokens, ref int position, SyntaxKind expected)
