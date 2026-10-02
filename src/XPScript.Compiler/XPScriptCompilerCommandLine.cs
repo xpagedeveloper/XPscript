@@ -7,6 +7,8 @@ namespace XPScript.Compiler;
 public static class XPScriptCompilerCommandLine
 {
     private static int progressLineWidth;
+    private static int compilerProgressPercent;
+    private static string compilerProgressPhase = "Starting";
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -270,10 +272,18 @@ public static class XPScriptCompilerCommandLine
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
             var compiler = new CompilerDriver();
             var mode = $"single-file={singleFile.ToString().ToLowerInvariant()}, runtime={selfContained.ToString().ToLowerInvariant()}";
+            compilerProgressPercent = 0;
+            compilerProgressPhase = "Starting";
+            using var progressScope = CompilerProgressContext.Push((percent, phase) =>
+            {
+                compilerProgressPercent = percent;
+                compilerProgressPhase = phase;
+            });
             var result = await WaitWithProgressAsync(
                 compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier),
                 timer,
-                $"Compiling {sourceName} [{runtimeIdentifier}, {mode}]").ConfigureAwait(false);
+                $"Compiling {sourceName} [{runtimeIdentifier}, {mode}]",
+                () => (compilerProgressPercent, compilerProgressPhase)).ConfigureAwait(false);
             if (result.Success && !embedAssets && UIFormAppAssets.UsesUIForm(sourcePath))
                 UIFormAppAssets.PublishExternalAssets(sourcePath, outputPath);
             CompleteProgress(result.Success
@@ -777,14 +787,20 @@ public static class XPScriptCompilerCommandLine
         throw new ArgumentException(optionName + " must be true or false.");
     }
 
-    private static async Task<T> WaitWithProgressAsync<T>(Task<T> task, Stopwatch timer, string status)
+    private static async Task<T> WaitWithProgressAsync<T>(Task<T> task, Stopwatch timer, string status, Func<(int Percent, string Phase)>? progress = null)
     {
         var nextReportAt = TimeSpan.Zero;
         while (!task.IsCompleted)
         {
             if (timer.Elapsed >= nextReportAt)
             {
-                WriteProgress($"{status}... {timer.Elapsed.TotalSeconds:F0}s");
+                if (progress is null)
+                    WriteProgress($"{status}... {timer.Elapsed.TotalSeconds:F0}s");
+                else
+                {
+                    var current = progress();
+                    WriteProgress($"{status}... {current.Percent}% | {current.Phase} | {timer.Elapsed.TotalSeconds:F0}s");
+                }
                 nextReportAt += TimeSpan.FromSeconds(1);
             }
 
