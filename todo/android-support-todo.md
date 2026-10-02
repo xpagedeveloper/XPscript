@@ -100,7 +100,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Route Android UI diagnostics to adb/logcat. The shared `Application.Debug` runtime routes Android diagnostics through `Android.Util.Log` with tag `XPScript`; guarded by `AndroidCompilerProbe` and exercised by the Android UIForm sample.
 - [x] Keep non-UI XPScript runtime code independent from Avalonia. `AndroidCompilerProbe` guards the compiler/runtime project from Avalonia and `XPScript.UI.Android` references.
 - [ ] Build and run a debug APK on Android 11 / API 30.
-- [ ] Add Android UIForm regression samples.
+- [x] Add Android UIForm regression samples. `samples/android-uiform-regression.xps` is compiler-guarded and built as an Android UIForm APK in Android CI.
 - [x] Add non-device compiler/packaging regression coverage for Android UIForm. `AndroidCompilerProbe` guards the generated host/project contract and Android CI publishes both a focused direct Avalonia Android project and the compiler-generated minimal UIForm APK.
 - [ ] Document debug APK deployment.
 - [ ] Plan signed APK/AAB publishing separately.
