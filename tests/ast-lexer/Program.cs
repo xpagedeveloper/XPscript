@@ -208,6 +208,20 @@ var seekHashParser = new StatementParser("Seek #1, 42");
 var seekHash = (SeekStatementSyntax)seekHashParser.ParseStatement();
 Equal(0, seekHashParser.Diagnostics.Count, "Seek hash diagnostics");
 
+var putParser = new StatementParser("Put #f, 1, binaryValue");
+var putStatement = (RuntimeFileStatementSyntax)putParser.ParseStatement();
+Equal(0, putParser.Diagnostics.Count, "Put diagnostics");
+Equal(3, putStatement.Arguments.Count, "Put argument count");
+
+var getParser = new StatementParser("Get #f, 1, binaryValue");
+var getStatement = (RuntimeFileStatementSyntax)getParser.ParseStatement();
+Equal(0, getParser.Diagnostics.Count, "Get diagnostics");
+Equal(3, getStatement.Arguments.Count, "Get argument count");
+
+var malformedPutParser = new StatementParser("Put #f, 1");
+malformedPutParser.ParseStatement();
+Equal("XPS1012", malformedPutParser.Diagnostics[0].Code, "Put missing value diagnostic");
+
 var runtimeFileIdentifierRegression = Lex("FileCopy Kill MkDir RmDir ChDir SetFileAttr Name");
 Equal(string.Join(",", Enumerable.Repeat(SyntaxKind.IdentifierToken, 7)), string.Join(",", runtimeFileIdentifierRegression.Take(7).Select(t => t.Kind)), "runtime file commands remain identifiers");
 
