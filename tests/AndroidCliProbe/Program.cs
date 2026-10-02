@@ -12,7 +12,7 @@ foreach (var expected in new[]
     "WaitForCompletionAsync",
     "TimeSpan.FromSeconds(30)",
     "Task.Delay(250)",
-    "Multiple Android targets are ready. Select one with --serial SERIAL.",
+    "Multiple Android targets are ready. Select one with --device SERIAL or --serial SERIAL.",
     "State is \"unauthorized\" or \"offline\"",
     "State.Equals(\"unauthorized\"",
     "State.Equals(\"offline\"",
@@ -49,10 +49,10 @@ if (!compilerCommandLine.Contains("(args[i] == \"--rid\" || args[i] == \"--platf
 
 foreach (var expected in new[]
 {
-    "--device auto|emulator|physical",
+    "--device auto|emulator|physical|SERIAL",
     "--serial SERIAL",
     "--avd NAME",
-    "Invalid --device value",
+    "requestedSerial = deviceValue",
     "--avd can only be used with --device emulator",
     "--serial cannot be combined with --device emulator"
 })
