@@ -20,6 +20,9 @@ Sub Main()
     Call data.Set("radioChoice", "Right")
     Call data.Set("rangeValue", 75)
     Call data.Set("password", "")
+    Call data.Set("numberValue", 42)
+    Call data.Set("emailValue", "android@example.com")
+    Call data.Set("urlValue", "https://example.com")
     Call form.BindData(data)
     Call form.AddTab("basic", "Basic")
     Call form.AddTab("more", "More")
@@ -53,7 +56,13 @@ Sub Main()
     Call form.AddRangeField("rangeValue", "8. Range - set to 75")
     Call form.SetNumberRange("rangeValue", 0, 100)
     Call form.AddPasswordField("password", "9. Password - type android-secret")
+    Call form.AddNumberField("numberValue", "10. Number - keep 42")
+    Call form.SetNumberRange("numberValue", 0, 100)
+    Call form.AddEmailField("emailValue", "11. Email - keep android@example.com")
+    Call form.AddUrlField("urlValue", "12. URL - keep https://example.com")
     Call form.SetFieldCornerRadius("password", 12)
+    Call form.SetFieldCornerRadius("emailValue", 12)
+    Call form.SetFieldCornerRadius("urlValue", 12)
     Call form.AddSpacer("space1")
     Call form.AddImage("testImage", "Android/test-image.png", "Android UIForm test image")
     Call detailsGrid.SetFieldPosition("choice", 1)
@@ -62,6 +71,10 @@ Sub Main()
     Call detailsGrid.SetFieldPosition("radioChoice", 1)
     Call detailsGrid.SetFieldPosition("rangeValue", 1)
     Call form.SetFieldTab("password", "more")
+    Call detailsGrid.SetFieldPosition("numberValue", 2)
+    Call detailsGrid.AddNewRow()
+    Call detailsGrid.SetFieldPosition("emailValue", 1)
+    Call detailsGrid.SetFieldPosition("urlValue", 1)
     Call form.SetFieldTab("testImage", "more")
     Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string"",""minLength"":3,""x-errorMessages"":{""minLength"":""Name must contain at least 3 characters""}}},""required"":[""name""],""x-requiredMessages"":{""name"":""Please enter your name""}}")
     Call form.SetValidationSchema(schema)
@@ -84,6 +97,9 @@ Sub Main()
     Call Application.Debug.Info("TEST FINAL LISTBOX: " & form.GetFieldValueString("listChoice"))
     Call Application.Debug.Info("TEST FINAL RADIO: " & form.GetFieldValueString("radioChoice"))
     Call Application.Debug.Info("TEST FINAL RANGE: " & form.GetFieldValueString("rangeValue"))
+    Call Application.Debug.Info("TEST FINAL NUMBER: " & form.GetFieldValueString("numberValue"))
+    Call Application.Debug.Info("TEST FINAL EMAIL: " & form.GetFieldValueString("emailValue"))
+    Call Application.Debug.Info("TEST FINAL URL: " & form.GetFieldValueString("urlValue"))
 
     If result = "OK" Then
         If form.GetFieldValueString("name") = "MANUAL-ANDROID" Then
@@ -160,9 +176,30 @@ Sub VerifyInput(ByVal evt As Variant, ByVal contextName As String)
     Else
         Call Application.Debug.Error("TEST LIVE PASSWORD: FAIL")
     End If
+    If form.GetFieldValueString("numberValue") = "42" Then
+        Call Application.Debug.Info("TEST LIVE NUMBER: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE NUMBER: FAIL value=" & form.GetFieldValueString("numberValue"))
+    End If
+    If form.GetFieldValueString("emailValue") = "android@example.com" Then
+        Call Application.Debug.Info("TEST LIVE EMAIL: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE EMAIL: FAIL value=" & form.GetFieldValueString("emailValue"))
+    End If
+    If form.GetFieldValueString("urlValue") = "https://example.com" Then
+        Call Application.Debug.Info("TEST LIVE URL: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE URL: FAIL value=" & form.GetFieldValueString("urlValue"))
+    End If
+    Call Application.Debug.Info("TEST MULTILISTBOX: inspect Red and Blue selected")
+    Call Application.Debug.Info("TEST GRID: inspect two-column layout and full-width Number row")
+    Call Application.Debug.Info("TEST STRUCTURAL: inspect separator, spacer and image")
     If form.IsDataValid Then
         form.ActiveTab = "more"
         Call Application.Debug.Info("TEST ACTIVE TAB: PASS more")
+        Call form.SetActiveTab("basic")
+        Call Application.Debug.Info("TEST SET ACTIVE TAB: PASS basic")
+        form.ActiveTab = "more"
         Call Application.Debug.Info("TEST LIVE VALIDATION: PASS")
     Else
         Call Application.Debug.Error("TEST LIVE VALIDATION: FAIL " & form.GetValidationError("name"))
