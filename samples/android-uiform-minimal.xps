@@ -3,8 +3,10 @@ Sub Main()
     Dim form As New UIForm("Android UIForm")
     Dim result As String
 
+    Call Application.Debug.Info("ANDROID-UIFORM=start")
     Call form.BindData(data)
     Call form.AddTextField("name", "Name")
     result = form.ShowDialog()
+    Call Application.Debug.Info("ANDROID-UIFORM=result:" & result)
     Print "ANDROID-UIFORM-RESULT=" & result
 End Sub
