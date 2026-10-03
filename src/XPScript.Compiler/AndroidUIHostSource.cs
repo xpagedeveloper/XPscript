@@ -354,7 +354,12 @@ public static class AndroidFormHost
                 {
                     var callbackResult = eventCallback("button:OK", submittedValues);
                     if (!string.IsNullOrWhiteSpace(callbackResult))
+                    {
+                        var hasValidationErrors = ApplyActionState(callbackResult, editors, validationErrors, tabControl);
+                        if (hasValidationErrors)
+                            return;
                         result = callbackResult;
+                    }
                 }
 
                 MainView.Current?.RestoreHome();
@@ -368,9 +373,10 @@ public static class AndroidFormHost
         return completion.Task.GetAwaiter().GetResult();
     }
 
-    private static void ApplyActionState(string actionStateJson, Dictionary<string, Control> editors, Dictionary<string, TextBlock> validationErrors, TabControl? tabControl)
+    private static bool ApplyActionState(string actionStateJson, Dictionary<string, Control> editors, Dictionary<string, TextBlock> validationErrors, TabControl? tabControl)
     {
-        if (string.IsNullOrWhiteSpace(actionStateJson)) return;
+        if (string.IsNullOrWhiteSpace(actionStateJson)) return false;
+        var hasValidationErrors = false;
         using var document = JsonDocument.Parse(actionStateJson);
         var root = document.RootElement;
         if (tabControl is not null && root.TryGetProperty("activeTab", out var activeTabElement))
@@ -398,10 +404,13 @@ public static class AndroidFormHost
                     validationBlock.Text = validationError;
                     validationBlock.IsVisible = validationError.Length > 0;
                 }
+                if (validationError.Length > 0)
+                    hasValidationErrors = true;
             }
         }
         if (root.TryGetProperty("navigation", out var navigation) && navigation.ValueKind == JsonValueKind.Object)
             Log.Info("XPScript", "UIForm navigation requested: " + navigation);
+        return hasValidationErrors;
     }
 
     private static void AddFieldContainer(JsonElement field, Control container, StackPanel targetPanel, Grid? targetGrid)
