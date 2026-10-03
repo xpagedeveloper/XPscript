@@ -264,9 +264,9 @@ public sealed class XpsOpenApiGenerator
         var requestBody = XpsOpenApiSchema.Resolve(root, node, context);
         if (requestBody["content"] is not JsonObject content)
             throw new XpsOpenApiGenerationException($"{context} must declare content.");
-        var media = SelectJsonMediaType(content, context);
+        var media = SelectRequestMediaType(content, context);
         if (media["schema"] is not JsonObject schema)
-            throw new XpsOpenApiGenerationException($"{context} JSON content must declare a schema.");
+            throw new XpsOpenApiGenerationException($"{context} request content must declare a schema.");
 
         if (XpsOpenApiSchema.TryGetReference(schema, out var reference))
         {
@@ -476,8 +476,17 @@ public sealed class XpsOpenApiGenerator
         return result;
     }
 
-    private static JsonObject SelectJsonMediaType(JsonObject content, string context) =>
-        TrySelectJsonMediaType(content) ?? throw new XpsOpenApiGenerationException($"{context} currently requires application/json, a structured +json media type, or a wildcard media type with a schema.");
+    private static JsonObject SelectRequestMediaType(JsonObject content, string context)
+    {
+        var json = TrySelectJsonMediaType(content);
+        if (json is not null) return json;
+
+        foreach (var pair in content)
+            if (pair.Value is JsonObject media && media["schema"] is JsonObject)
+                return media;
+
+        throw new XpsOpenApiGenerationException($"{context} must contain at least one media type with a schema.");
+    }
 
     private static JsonObject? TrySelectJsonMediaType(JsonObject content)
     {
