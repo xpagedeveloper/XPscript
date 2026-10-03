@@ -45,6 +45,11 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  # Keep the smallest Parent visibility regression first while inheritance semantics are active.
+  $parentPrivate = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/class-parent-private-error.xps','-o','./out/fulltest/class-parent-private-error','--runtime=false') $compileTimeoutMilliseconds 'Parent private access diagnostic'
+  if ($parentPrivate.ExitCode -eq 0) { throw 'Parent private access unexpectedly compiled.' }
+  if ($parentPrivate.Output -notmatch 'XPS2009' -or $parentPrivate.Output -notmatch 'Private base member') { throw 'Parent private access did not produce XPS2009.' }
+
   # Keep the focused inheritance contract near the front while class migration is active.
   $inheritance = Run-Xps ./samples/class-inheritance-contract.xps class-inheritance-contract
   if ($inheritance.Output -notmatch 'INHERIT=base:touch\|base:touch\|base:touch:property') { throw 'Class inheritance Me/Parent contract regression failed.' }
