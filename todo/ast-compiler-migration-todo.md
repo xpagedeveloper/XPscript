@@ -177,6 +177,54 @@ Expressions are the first migration target because the current transpiler perfor
 - [ ] Parse target-specific entry points.
 - [ ] Validate block terminators structurally rather than with transpiler state.
 
+### Custom class compatibility contract
+
+Use LotusScript custom-class behavior as the semantic reference where it fits XPscript. Do not introduce SSJS, Domino product-object, Notes API, LSX, JVM, XPages, or other host-specific semantics into the XPscript class model.
+
+XPscript intentionally differs from LotusScript in these syntax choices:
+- [ ] Keep XPscript inheritance syntax as `Class Child Extend Parent`; do not restore LotusScript `Class Child As Parent`.
+- [ ] Keep `Parent.member` as the XPscript syntax for direct base-class access; do not require LotusScript `BaseClass..member`.
+- [ ] Keep the existing explicit `Sub Delete` / `Delete object` lifecycle model; do not add `Sub Terminate` or tie deletion to .NET GC/finalizer timing.
+
+Class declaration and scope:
+- [ ] Restrict class declarations to module/application declaration scope; reject nested classes and classes declared inside procedures.
+- [ ] Verify class default visibility is Private unless XPscript `Option Public` semantics explicitly change it.
+- [ ] Verify member fields default to Private.
+- [ ] Verify member Subs, Functions, and Properties default to Public.
+- [ ] Reject `Static` class fields and member procedures unless XPscript deliberately defines a documented extension.
+- [ ] Require one class field per declaration; do not silently accept comma-separated field declarations.
+- [ ] Permit self-referential field types but do not allow field declarations to instantiate themselves with `New`.
+- [ ] Define and test reserved-keyword rules for field names and keyword-named member procedures.
+
+Members and properties:
+- [ ] Support fields, Subs, Functions, Properties, `Sub New`, and `Sub Delete` as class members.
+- [ ] Keep constants out of class members unless XPscript deliberately defines a documented extension.
+- [ ] Support read-only, write-only, and read/write properties.
+- [ ] Support parameterized/indexed properties and require compatible Get/Let/Set index signatures for accessors sharing a property name.
+- [ ] Preserve XPscript scalar `Property Let` versus object/reference `Property Set` assignment semantics.
+- [ ] Enforce that a property name cannot conflict with a field/member variable name where the existing language contract forbids it.
+- [ ] Verify property getter assignment to the property name produces the getter result, and setter access exposes the documented incoming value semantics.
+
+Inheritance and member access:
+- [ ] Bind `Me.member` to the current class instance and validate it only where an instance context exists.
+- [ ] Bind `Parent.member` to the direct base-class member and support base Subs, Functions, and Properties according to XPscript visibility rules.
+- [ ] Define whether `Parent` may access Private base procedures/properties; test the chosen XPscript rule explicitly rather than inheriting backend C# behavior accidentally.
+- [ ] Support overriding inherited methods/properties only with compatible signatures and produce XPscript diagnostics for incompatible overrides.
+- [ ] Verify inherited constructor behavior and define explicit base-constructor invocation syntax/semantics for XPscript.
+- [ ] Verify inherited destructor/delete ordering and ensure base cleanup occurs exactly once.
+
+Object lifecycle and references:
+- [ ] Verify `New` invokes `Sub New` for each newly created XPscript object.
+- [ ] Verify object references start as `Nothing` where required by XPscript semantics.
+- [ ] Verify `Delete object` invokes `Sub Delete`, clears the deleted reference, and preserves the repository's defined alias/reference semantics.
+- [ ] Verify `Set object = Nothing` remains reference clearing only and does not implicitly call `Sub Delete`.
+- [ ] Add focused tests for constructor arguments, explicit deletion, aliases, inheritance, `Me`, `Parent`, and property access before marking class migration complete.
+
+Class-oriented language patterns:
+- [ ] Verify fluent/chained method calls on class instances, including continued chains across XPscript line continuation.
+- [ ] Treat singleton/lazy-instance patterns as ordinary XPscript module/application-level state plus class construction; do not add NotesSession-, JVM-, SSJS-, or Domino-specific singleton behavior.
+
+
 ## Phase 6: Symbols and semantic binder
 
 - [ ] Define symbol base model.
