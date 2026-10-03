@@ -99,6 +99,10 @@ foreach (var expected in new[]
     "imageCertificateValidation",
     "AutomationProperties.SetName(image, altText)",
     "CreateAndroidImageHttpClient(certificateValidation)",
+    "ReadAndroidImageBytes(bootImage, \"Strict\")",
+    "ResolveAndroidWebViewUri(source)",
+    "System.Environment.SpecialFolder.LocalApplicationData",
+
     "ResolveAndroidImagePath(value)",
     "uri.Scheme is \"http\" or \"https\"",
 
@@ -322,6 +326,37 @@ var compilerProjectSource = File.ReadAllText(Path.Combine(AppContext.BaseDirecto
 if (compilerProjectSource.Contains("PackageReference Include=\"Avalonia", StringComparison.Ordinal) ||
     compilerProjectSource.Contains("ProjectReference Include=\"../XPScript.UI.Android", StringComparison.Ordinal))
     throw new Exception("Non-UI XPScript compiler/runtime must remain independent from Avalonia Android.");
+
+var compilerCliSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "XPScriptCompilerCommandLine.cs"));
+if (!compilerCliSource.Contains("var effectiveEmbedAssets = embedAssets || usesUiFormAssets;", StringComparison.Ordinal))
+    throw new Exception("UIForm applications must embed assets automatically for native compilation.");
+
+var uiFormAssetsSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormAppAssets.cs"));
+if (!uiFormAssetsSource.Contains("System.Environment.SpecialFolder.LocalApplicationData", StringComparison.Ordinal) ||
+    !uiFormAssetsSource.Contains("System.OperatingSystem.IsAndroid()", StringComparison.Ordinal))
+    throw new Exception("Embedded Android UIForm assets must materialize into the writable application sandbox.");
+
+var uiExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionRuntimeSource.cs"));
+foreach (var expected in new[] { "\"assets/\" + normalized", "UIForm WebView relative Source must stay within the application asset root.", "UIForm BootImage relative source must stay within the application asset root." })
+    if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Shared UIForm asset-reference normalization is missing: " + expected);
+
+var mediaSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormMediaButtonsPostProcessor.cs"));
+if (!mediaSource.Contains("normalized = \"assets/\" + normalized;", StringComparison.Ordinal))
+    throw new Exception("UIForm image/media references must normalize relative paths into the assets root.");
+
+var desktopWebViewSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Desktop", "DesktopWebViewHost.cs"));
+if (!desktopWebViewSource.Contains("ResolveSourceUri(source)", StringComparison.Ordinal) ||
+    !desktopWebViewSource.Contains("Path.Combine(AppContext.BaseDirectory, normalized)", StringComparison.Ordinal))
+    throw new Exception("Desktop WebView must resolve local UIForm assets.");
+
+var desktopFormSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Desktop", "DesktopFormHost.cs"));
+if (!desktopFormSource.Contains("DesktopImageHost.Create(request.BootImage", StringComparison.Ordinal))
+    throw new Exception("Desktop UIForm must render BootImage through the shared asset-aware image host.");
+
+var browserWasmSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Web.Compiler", "XpsBrowserWasmCompiler.cs"));
+if (!browserWasmSource.Contains("UIFormAppAssets.CopyAssetsToDirectory(sourcePath, appRoot)", StringComparison.Ordinal))
+    throw new Exception("Browser-WASM UIForm bundles must publish the shared assets directory.");
 
 var compilerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerDriver.cs"));
 if (!compilerSource.Contains("<PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"12.0.1\" />", StringComparison.Ordinal))
