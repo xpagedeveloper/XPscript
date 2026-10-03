@@ -79,7 +79,7 @@ internal sealed class ClassOverloadValidator
 
             foreach (var child in pair.Value)
             {
-                var inherited = baseMembers.Where(m => m.Name.Equals(child.Name, StringComparison.OrdinalIgnoreCase) && !m.Visibility.Equals("Private", StringComparison.OrdinalIgnoreCase)).ToArray();
+                var inherited = FindInheritedOverrideMembers(baseName, child.Name, bases, members).ToArray();
                 if (inherited.Length == 0) continue;
                 if (inherited.Any(parent => parent.Kind.Equals(child.Kind, StringComparison.OrdinalIgnoreCase) && parent.Signature.Equals(child.Signature, StringComparison.OrdinalIgnoreCase)))
                     continue;
@@ -114,6 +114,34 @@ internal sealed class ClassOverloadValidator
 
     private static string BuildOverrideParameterSignature(IReadOnlyList<Parameter> parameters) =>
         string.Join("|", parameters.Select(p => $"{NormalizeType(p.Type)}:{p.IsArray}:{p.IsByRef}"));
+
+    private static IEnumerable<OverrideMember> FindInheritedOverrideMembers(
+        string baseName,
+        string memberName,
+        IReadOnlyDictionary<string, string?> bases,
+        IReadOnlyDictionary<string, List<OverrideMember>> members)
+    {
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var current = baseName;
+        while (!string.IsNullOrWhiteSpace(current) && visited.Add(current))
+        {
+            if (members.TryGetValue(current, out var declared))
+            {
+                var accessible = declared
+                    .Where(m => m.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase) &&
+                                !m.Visibility.Equals("Private", StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+                if (accessible.Length > 0)
+                    return accessible;
+            }
+
+            if (!bases.TryGetValue(current, out var next) || string.IsNullOrWhiteSpace(next))
+                break;
+            current = next;
+        }
+
+        return [];
+    }
 
     private static void ValidateParentVisibility(string[] lines, string sourceName)
     {
