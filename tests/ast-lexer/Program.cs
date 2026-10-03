@@ -20,6 +20,19 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+Equal(DeclarationVisibility.Private, DeclarationVisibilityResolver.ResolveClass(null), "default class visibility");
+Equal(DeclarationVisibility.Public, DeclarationVisibilityResolver.ResolveClass(null, optionPublic: true), "Option Public class visibility");
+Equal(DeclarationVisibility.Private, DeclarationVisibilityResolver.ResolveField(null), "default field visibility");
+Equal(DeclarationVisibility.Public, DeclarationVisibilityResolver.ResolveField(null, optionPublic: true), "Option Public field visibility");
+Equal(DeclarationVisibility.Public, DeclarationVisibilityResolver.ResolveClassMember(null), "default class member visibility");
+
+var privateVisibilityParser = new DeclarationParser("Private Class VisibilityBox\nPrivate Value As Integer\nPrivate Sub Hidden()\nEnd Sub\nPublic Function Visible() As Integer\nVisible = 1\nEnd Function\nEnd Class");
+var privateVisibilityClass = (ClassDeclarationSyntax)privateVisibilityParser.ParseDeclaration();
+Equal(DeclarationVisibility.Private, DeclarationVisibilityResolver.ResolveClass(privateVisibilityClass.Visibility), "explicit private class visibility");
+Equal(DeclarationVisibility.Private, DeclarationVisibilityResolver.ResolveField(((FieldDeclarationSyntax)privateVisibilityClass.Members[0]).Visibility), "explicit private field visibility");
+Equal(DeclarationVisibility.Private, DeclarationVisibilityResolver.ResolveClassMember(((SubDeclarationSyntax)privateVisibilityClass.Members[1]).Visibility), "explicit private method visibility");
+Equal(DeclarationVisibility.Public, DeclarationVisibilityResolver.ResolveClassMember(((FunctionDeclarationSyntax)privateVisibilityClass.Members[2]).Visibility), "explicit public method visibility");
+
 const string indexedPropertySource = "Class IndexedBox\nPublic Property Get Item(index As Integer) As String\nItem = \"ok\"\nEnd Property\nPublic Property Let Item(index As Integer, value As String)\nEnd Property\nPublic Property Set Owner(index As Integer, value As Person)\nEnd Property\nEnd Class";
 var indexedPropertyParser = new DeclarationParser(indexedPropertySource);
 var indexedPropertyClass = (ClassDeclarationSyntax)indexedPropertyParser.ParseDeclaration();
