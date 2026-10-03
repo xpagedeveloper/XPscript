@@ -58,6 +58,8 @@ public static class DesktopFormHost
         var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var customButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
+        if (!string.IsNullOrWhiteSpace(request.BootImage)) panel.Children.Add(DesktopImageHost.Create(request.BootImage, string.Empty));
+        if (!string.IsNullOrWhiteSpace(request.BootText)) panel.Children.Add(new TextBlock { Text = request.BootText, FontSize = 20, HorizontalAlignment = HorizontalAlignment.Center });
         var fieldsGrid = CreateFieldsGrid(request.GridColumns);
         panel.Children.Add(fieldsGrid);
         TabControl? tabControl = null;
