@@ -100,7 +100,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [ ] Complete Android rendering and binding coverage for all shared UIForm field types: TextField, TextArea, NumberField, RangeField, CheckBox, DateField, TimeField, DateTimeField, MonthField, ColorField, EmailField, UrlField, PasswordField, Select, ListBox, MultiListBox, RadioGroup and WebView.
 - [x] Add Android rendering/binding for PasswordField, Select, ListBox, MultiListBox, RadioGroup and RangeField.
 - [x] Add Android structural/media rendering for Separator, Spacer and Image. Local files and data-image sources are supported by the Android host; remote image loading and full image policy parity remain follow-up work.
-- [ ] Add specialized Android controls for DateField, TimeField, DateTimeField, MonthField and ColorField instead of the current generic text fallback.
+- [x] Add specialized Android controls for DateField, TimeField, DateTimeField, MonthField and ColorField instead of the current generic text fallback. Android now uses dedicated date/time controls plus composite DateTime, Month and Color editors with value roundtrip; guarded by AndroidCompilerProbe and verified by Android Build.
 - [ ] Add Android WebView rendering with the shared UIForm WebView behavior.
 - [ ] Complete Android Image parity for remote sources, application asset resolution, alt/accessibility metadata and certificate-validation policy.
 - [x] Add UIForm boot text/image properties and transport.
