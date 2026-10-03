@@ -813,6 +813,7 @@ public sealed class CompilerDriver
     <PackageReference Include="Avalonia" Version="12.0.3" />
     <PackageReference Include="Avalonia.Android" Version="12.0.3" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />
   </ItemGroup>
 """;
         return project.Replace("</Project>", packages + "</Project>", StringComparison.Ordinal);
