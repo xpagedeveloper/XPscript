@@ -20,6 +20,19 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+const string indexedPropertySource = "Class IndexedBox\nPublic Property Get Item(index As Integer) As String\nItem = \"ok\"\nEnd Property\nPublic Property Let Item(index As Integer, value As String)\nEnd Property\nPublic Property Set Owner(index As Integer, value As Person)\nEnd Property\nEnd Class";
+var indexedPropertyParser = new DeclarationParser(indexedPropertySource);
+var indexedPropertyClass = (ClassDeclarationSyntax)indexedPropertyParser.ParseDeclaration();
+Equal(0, indexedPropertyParser.Diagnostics.Count, "indexed property diagnostics");
+var indexedGet = (PropertyDeclarationSyntax)indexedPropertyClass.Members[0];
+Equal(1, indexedGet.Parameters.Count, "indexed Property Get parameter count");
+Equal("String", indexedGet.Type!.Identifier.Text, "indexed Property Get return type");
+var indexedLet = (PropertyDeclarationSyntax)indexedPropertyClass.Members[1];
+Equal(2, indexedLet.Parameters.Count, "indexed Property Let parameter count");
+Equal("value", indexedLet.Parameters[1].Identifier.Text, "indexed Property Let value parameter");
+var indexedSet = (PropertyDeclarationSyntax)indexedPropertyClass.Members[2];
+Equal(2, indexedSet.Parameters.Count, "indexed Property Set parameter count");
+
 const string propertyClassSource = "Class PropertyBox\nPrivate mName As String\nPublic Property Get Name As String\nName = mName\nEnd Property\nPublic Property Let Name As String\nmName = Name\nEnd Property\nPublic Property Set Owner As Person\nEnd Property\nEnd Class";
 var propertyClassParser = new DeclarationParser(propertyClassSource);
 var propertyClass = (ClassDeclarationSyntax)propertyClassParser.ParseDeclaration();
