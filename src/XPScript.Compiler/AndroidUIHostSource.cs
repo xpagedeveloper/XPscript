@@ -12,6 +12,7 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Util;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Android;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -624,31 +625,113 @@ public static class AndroidFormHost
     private static string BoolWebView(bool value) => value ? "true" : "false";
     private static string WebViewKey(string instanceId, string fieldName) => instanceId + "\u001f" + fieldName.ToLowerInvariant();
 
+    private const int MaximumAndroidImageBytes = 32 * 1024 * 1024;
+
+    private static HttpClient CreateAndroidImageHttpClient(string certificateValidation)
+    {
+        var mode = string.IsNullOrWhiteSpace(certificateValidation) ? "Strict" : certificateValidation.Trim();
+        if (!(mode.Equals("Strict", StringComparison.OrdinalIgnoreCase) ||
+              mode.Equals("AllowSelfSigned", StringComparison.OrdinalIgnoreCase) ||
+              mode.Equals("Insecure", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Image certificate validation must be Strict, AllowSelfSigned, or Insecure.");
+
+        var handler = new HttpClientHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                     System.Net.DecompressionMethods.Deflate |
+                                     System.Net.DecompressionMethods.Brotli,
+            ServerCertificateCustomValidationCallback = (_, _, chain, errors) =>
+            {
+                if (errors == System.Net.Security.SslPolicyErrors.None) return true;
+                if (mode.Equals("Insecure", StringComparison.OrdinalIgnoreCase)) return true;
+                if (!mode.Equals("AllowSelfSigned", StringComparison.OrdinalIgnoreCase)) return false;
+                if ((errors & (System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch |
+                               System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable)) != 0)
+                    return false;
+                var statuses = chain?.ChainStatus ?? [];
+                return statuses.Length > 0 && statuses.All(status =>
+                    status.Status is System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.UntrustedRoot or
+                                     System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.PartialChain or
+                                     System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NoError);
+            }
+        };
+        return new HttpClient(handler, disposeHandler: true) { Timeout = TimeSpan.FromSeconds(15) };
+    }
+
     private static Control CreateImage(JsonElement field)
     {
         var image = new Avalonia.Controls.Image { MaxHeight = 320, Stretch = Stretch.Uniform };
         var source = field.TryGetProperty("imageSource", out var sourceValue) ? sourceValue.GetString() ?? string.Empty : string.Empty;
+        var altText = field.TryGetProperty("imageAltText", out var altValue) ? altValue.GetString() ?? string.Empty : string.Empty;
+        var certificateValidation = field.TryGetProperty("imageCertificateValidation", out var certificateValue) ? certificateValue.GetString() ?? "Strict" : "Strict";
         try
         {
-            if (source.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
-            {
-                var comma = source.IndexOf(',');
-                if (comma > 0)
-                {
-                    using var stream = new MemoryStream(Convert.FromBase64String(source[(comma + 1)..]));
-                    image.Source = new Bitmap(stream);
-                }
-            }
-            else if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && uri.IsFile)
-                image.Source = new Bitmap(uri.LocalPath);
-            else if (File.Exists(source))
-                image.Source = new Bitmap(source);
+            var bytes = ReadAndroidImageBytes(source, certificateValidation);
+            using var stream = new MemoryStream(bytes, writable: false);
+            image.Source = new Bitmap(stream);
+            if (!string.IsNullOrWhiteSpace(altText)) AutomationProperties.SetName(image, altText);
         }
         catch (Exception exception)
         {
             Log.Error("XPScript", "UIForm image failed: " + exception.Message);
         }
         return image;
+    }
+
+    private static byte[] ReadAndroidImageBytes(string source, string certificateValidation)
+    {
+        var value = (source ?? string.Empty).Trim();
+        if (value.Length == 0) throw new InvalidOperationException("UIForm image source is empty.");
+
+        if (value.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+        {
+            var comma = value.IndexOf(',');
+            if (comma <= 0 || !value[..comma].Contains(";base64", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("UIForm Android Image supports base64 data:image URLs.");
+            var bytes = Convert.FromBase64String(value[(comma + 1)..]);
+            ValidateAndroidImageSize(bytes.LongLength);
+            return bytes;
+        }
+
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
+        {
+            using var http = CreateAndroidImageHttpClient(certificateValidation);
+            var bytes = http.GetByteArrayAsync(uri).GetAwaiter().GetResult();
+            ValidateAndroidImageSize(bytes.LongLength);
+            return bytes;
+        }
+
+        var path = ResolveAndroidImagePath(value);
+        var info = new FileInfo(path);
+        if (!info.Exists) throw new FileNotFoundException("UIForm image asset was not found.", path);
+        ValidateAndroidImageSize(info.Length);
+        return File.ReadAllBytes(path);
+    }
+
+    private static string ResolveAndroidImagePath(string source)
+    {
+        var value = (source ?? string.Empty).Trim();
+        if (Path.IsPathRooted(value)) return Path.GetFullPath(value);
+        if (value.Contains("..", StringComparison.Ordinal))
+            throw new InvalidOperationException("UIForm image relative path may not contain '..'.");
+
+        var normalized = value.Replace('/', Path.DirectorySeparatorChar);
+        var baseDirectory = Path.GetFullPath(AppContext.BaseDirectory);
+        var candidates = new[]
+        {
+            Path.GetFullPath(Path.Combine(baseDirectory, normalized)),
+            Path.GetFullPath(Path.Combine(baseDirectory, "assets", normalized)),
+            Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, normalized))
+        };
+        foreach (var candidate in candidates)
+            if (File.Exists(candidate)) return candidate;
+        return candidates[0];
+    }
+
+    private static void ValidateAndroidImageSize(long length)
+    {
+        if (length <= 0 || length > MaximumAndroidImageBytes)
+            throw new InvalidOperationException("UIForm image must contain between 1 byte and 32 MiB.");
     }
 
     private sealed class AndroidDateTimeFieldEditor : StackPanel
