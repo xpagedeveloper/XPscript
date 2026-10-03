@@ -296,10 +296,24 @@ if (!runtimeDiagnosticsSource.Contains("#if ANDROID", StringComparison.Ordinal) 
     throw new Exception("Android runtime diagnostics regression is missing.");
 
 var uiFormRegressionSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-uiform-regression.xps"));
-foreach (var expected in new[] { "UIForm(\"Android UIForm Regression\")", "AddTextField", "AddTextArea", "AddCheckBox", "Application.Debug.Info" })
+foreach (var expected in new[] { "UIForm(\"Android UIForm Regression\")", "AddTextField", "AddTextArea", "AddCheckBox", "AddTab(\"details\"", "AddGrid(\"detailsGrid\", 2)", "detailsGrid.SetTab(\"details\")", "detailsGrid.SetFieldPosition(\"email\", 2)", "Application.Debug.Info" })
 {
     if (!uiFormRegressionSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android UIForm regression sample is incomplete: " + expected);
+}
+
+var layoutRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormLayoutReactivePostProcessor.cs"));
+foreach (var expected in new[]
+{
+    "UIForm grid name is invalid.",
+    "already exists.",
+    "UIForm grid column count must be between 1 and 64.",
+    "UIForm tab '{tab}' does not exist.",
+    "UIForm grid '{name}' does not exist."
+})
+{
+    if (!layoutRuntimeSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Named-grid validation regression is missing: " + expected);
 }
 
 var manualUiFormSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-uiform-manual-test.xps"));
