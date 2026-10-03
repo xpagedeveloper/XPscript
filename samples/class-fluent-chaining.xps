@@ -1,0 +1,25 @@
+Class ChainProbe
+    Public Value As String
+
+    Public Sub New(ByVal value As String)
+        Value = value
+    End Sub
+
+    Public Function Append(ByVal suffix As String) As ChainProbe
+        Value = Value & suffix
+        Set Append = Me
+    End Function
+
+    Public Property Get Text As String
+        Text = Value
+    End Property
+End Class
+
+Sub Main()
+    Dim probe As New ChainProbe("A")
+
+    Print "CHAIN=" & probe.Append("B").Append("C").Text
+    Print "CONTINUED=" & probe.Append("D") _
+        .Append("E") _
+        .Text
+End Sub
