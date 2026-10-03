@@ -1,0 +1,16 @@
+Class BaseProperty
+    Public Property Get Label As String
+        Label = "base"
+    End Property
+End Class
+
+Class ChildProperty Extend BaseProperty
+    Public Property Get Label As String
+        Label = Parent.Label & ":child"
+    End Property
+End Class
+
+Sub Main()
+    Dim item As New ChildProperty()
+    Print item.Label
+End Sub
