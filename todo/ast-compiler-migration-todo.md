@@ -182,9 +182,9 @@ Expressions are the first migration target because the current transpiler perfor
 Use LotusScript custom-class behavior as the semantic reference where it fits XPscript. Do not introduce SSJS, Domino product-object, Notes API, LSX, JVM, XPages, or other host-specific semantics into the XPscript class model.
 
 XPscript intentionally differs from LotusScript in these syntax choices:
-- [ ] Keep XPscript inheritance syntax as `Class Child Extend Parent`; do not restore LotusScript `Class Child As Parent`.
-- [ ] Keep `Parent.member` as the XPscript syntax for direct base-class access; do not require LotusScript `BaseClass..member`.
-- [ ] Keep the existing explicit `Sub Delete` / `Delete object` lifecycle model; do not add `Sub Terminate` or tie deletion to .NET GC/finalizer timing.
+- [x] Keep XPscript inheritance syntax as `Class Child Extend Parent`; do not restore LotusScript `Class Child As Parent`.
+- [x] Keep `Parent.member` as the XPscript syntax for direct base-class access; do not require LotusScript `BaseClass..member`.
+- [x] Keep the existing explicit `Sub Delete` / `Delete object` lifecycle model; do not add `Sub Terminate` or tie deletion to .NET GC/finalizer timing.
 
 Class declaration and scope:
 - [x] Restrict class declarations to module/application declaration scope; reject nested classes and classes declared inside procedures.
@@ -206,7 +206,7 @@ Members and properties:
 - [x] Verify property getter assignment to the property name produces the getter result, and setter access exposes the documented incoming value semantics.
 
 Inheritance and member access:
-- [ ] Bind `Me.member` to the current class instance and validate it only where an instance context exists.
+- [x] Bind `Me.member` to the current class instance and validate it only where an instance context exists.
 - [ ] Bind `Parent.member` to the direct base-class member and support base Subs, Functions, and Properties according to XPscript visibility rules.
 - [ ] Define whether `Parent` may access Private base procedures/properties; test the chosen XPscript rule explicitly rather than inheriting backend C# behavior accidentally.
 - [ ] Support overriding inherited methods/properties only with compatible signatures and produce XPscript diagnostics for incompatible overrides.
