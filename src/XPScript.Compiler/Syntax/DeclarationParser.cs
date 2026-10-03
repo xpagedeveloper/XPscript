@@ -115,6 +115,9 @@ public sealed class DeclarationParser
             var asKeyword = Take(tokens, ref memberPosition, SyntaxKind.AsKeyword);
             var type = new TypeSyntax(Take(tokens, ref memberPosition, SyntaxKind.IdentifierToken));
             members.Add(new FieldDeclarationSyntax(memberVisibility, fieldIdentifier, asKeyword, type));
+
+            if (Peek(tokens, memberPosition).Kind != SyntaxKind.EndOfFileToken)
+                _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Class fields must use one declaration per line and cannot have an initializer.", Peek(tokens, memberPosition).Span));
         }
 
         var end = _baseOffset + _text.Length;
