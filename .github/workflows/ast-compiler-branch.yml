@@ -30,6 +30,9 @@ jobs:
       - name: Run focused class override regression first
         shell: pwsh
         run: ./tests/class-override/run-class-override.ps1
+      - name: Run focused Parent member regression
+        shell: pwsh
+        run: ./tests/class-parent/run-class-parent.ps1
       - name: Run focused AST lexer tests first
         run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
       - name: Run deterministic AST compatibility tests first
