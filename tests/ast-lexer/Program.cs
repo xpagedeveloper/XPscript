@@ -20,6 +20,17 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+const string moduleLifecycleNamesSource = "Sub New()\nEnd Sub";
+var moduleNewParser = new DeclarationParser(moduleLifecycleNamesSource);
+var moduleNew = moduleNewParser.ParseDeclaration();
+Equal(SyntaxKind.SubDeclaration, moduleNew.Kind, "module Sub New remains ordinary Sub");
+Equal(0, moduleNewParser.Diagnostics.Count, "module Sub New diagnostics");
+
+var moduleDeleteParser = new DeclarationParser("Sub Delete()\nEnd Sub");
+var moduleDelete = moduleDeleteParser.ParseDeclaration();
+Equal(SyntaxKind.SubDeclaration, moduleDelete.Kind, "module Sub Delete remains ordinary Sub");
+Equal(0, moduleDeleteParser.Diagnostics.Count, "module Sub Delete diagnostics");
+
 const string classConstantSource = "Class ConstantBox\nConst Limit = 10\nPublic Kept As Integer\nEnd Class";
 var classConstantParser = new DeclarationParser(classConstantSource);
 var classConstantClass = (ClassDeclarationSyntax)classConstantParser.ParseDeclaration();
