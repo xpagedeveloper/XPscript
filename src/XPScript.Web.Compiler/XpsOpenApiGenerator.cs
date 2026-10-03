@@ -477,13 +477,18 @@ public sealed class XpsOpenApiGenerator
     }
 
     private static JsonObject SelectJsonMediaType(JsonObject content, string context) =>
-        TrySelectJsonMediaType(content) ?? throw new XpsOpenApiGenerationException($"{context} currently requires application/json or a structured +json media type.");
+        TrySelectJsonMediaType(content) ?? throw new XpsOpenApiGenerationException($"{context} currently requires application/json, a structured +json media type, or a wildcard media type with a schema.");
 
     private static JsonObject? TrySelectJsonMediaType(JsonObject content)
     {
         if (content["application/json"] is JsonObject exact) return exact;
         foreach (var pair in content)
             if (pair.Key.EndsWith("+json", StringComparison.OrdinalIgnoreCase) && pair.Value is JsonObject media) return media;
+
+        foreach (var wildcard in new[] { "application/*", "*/*" })
+            if (content[wildcard] is JsonObject media && media["schema"] is JsonObject)
+                return media;
+
         return null;
     }
 
