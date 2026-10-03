@@ -107,7 +107,10 @@ internal sealed class UIFormMediaButtonsPostProcessor
         var hasParentSegment = text.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == "..");
         if (!uri.IsAbsoluteUri && (hasParentSegment || text.StartsWith("/", StringComparison.Ordinal) || text.StartsWith("\\", StringComparison.Ordinal)))
             throw new XPScriptRuntimeException(5, $"UIForm {kind} relative source must stay within the application asset root.");
-        return text.Replace('\\', '/');
+        var normalized = text.Replace('\\', '/');
+        if (!uri.IsAbsoluteUri && !normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+            normalized = "assets/" + normalized;
+        return normalized;
     }
 
     private static string NormalizeMediaText(object? value, string kind, int maximumLength)
