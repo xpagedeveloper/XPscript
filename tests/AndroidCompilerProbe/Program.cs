@@ -48,11 +48,20 @@ foreach (var expected in new[]
         throw new Exception("Android UIForm generated project is missing: " + expected);
 }
 
+var androidHostType = type.Assembly.GetType("XPScript.Compiler.AndroidHostSource", throwOnError: true)!;
+var androidHostCode = (string)(androidHostType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
+    ?? throw new Exception("AndroidHostSource.Code was not found."));
+foreach (var expected in new[] { "Intent?.GetBooleanExtra(\"xpscript.appdebug\", false)", "System.Environment.SetEnvironmentVariable(\"XPSCRIPT_APPDEBUG\", \"1\")" })
+    if (!androidHostCode.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android headless Application.Debug launch routing is missing: " + expected);
+
 var uiHostType = type.Assembly.GetType("XPScript.Compiler.AndroidUIHostSource", throwOnError: true)!;
 var uiHostCode = (string)(uiHostType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
     ?? throw new Exception("AndroidUIHostSource.Code was not found."));
 foreach (var expected in new[]
 {
+    "Intent?.GetBooleanExtra(\"xpscript.appdebug\", false)",
+    "System.Environment.SetEnvironmentVariable(\"XPSCRIPT_APPDEBUG\", \"1\")",
     "public sealed class App : Avalonia.Application",
     "public const bool Enabled = __XPSCRIPT_ANDROID_DEBUG__;",
     "XPSCRIPT-DEBUG-DUMP=",
