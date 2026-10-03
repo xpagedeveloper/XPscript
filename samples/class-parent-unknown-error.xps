@@ -1,0 +1,13 @@
+Class BaseThing
+    Public Sub Touch()
+    End Sub
+End Class
+
+Class ChildThing Extend BaseThing
+    Public Sub Probe()
+        Call Parent.Missing()
+    End Sub
+End Class
+
+Sub Main()
+End Sub
