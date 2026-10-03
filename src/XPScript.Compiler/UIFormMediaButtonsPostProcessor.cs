@@ -31,6 +31,20 @@ internal sealed class UIFormMediaButtonsPostProcessor
                 """
     public bool Resizable { get => _resizable; set => _resizable = value; }
     public bool ShowDefaultButtons { get; set; } = true;
+    public double? DefaultButtonCornerRadius { get; private set; }
+    public void SetDefaultButtonCornerRadius(object? radius)
+    {
+        double value;
+        try { value = Convert.ToDouble(radius, System.Globalization.CultureInfo.InvariantCulture); }
+        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+        {
+            throw new XPScriptRuntimeException(13, "UIForm default button corner radius must be numeric.");
+        }
+        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+            throw new XPScriptRuntimeException(5, "UIForm default button corner radius must be between 0 and 1000.");
+        DefaultButtonCornerRadius = value;
+    }
+    public void ClearDefaultButtonCornerRadius() => DefaultButtonCornerRadius = null;
 """,
                 "default-buttons-property");
         }
@@ -220,9 +234,12 @@ if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCas
         // __xps_uiform_submit accessibility compatibility marker
         if (ShowDefaultButtons)
         {
+            var defaultButtonStyle = DefaultButtonCornerRadius.HasValue
+                ? " style=\"border-radius:" + DefaultButtonCornerRadius.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + "px\""
+                : string.Empty;
             html.Append("<div class=\"d-flex justify-content-end gap-2 mt-3\" style=\"grid-column:1/-1\" role=\"group\" aria-label=\"Form actions\">")
-                .Append("<button class=\"btn btn-primary\" type=\"submit\" name=\"__xps_uiform_action\" value=\"OK\">OK</button>")
-                .Append("<button class=\"btn btn-secondary\" type=\"submit\" name=\"__xps_uiform_action\" value=\"Cancel\" formnovalidate>Cancel</button></div>");
+                .Append("<button class=\"btn btn-primary\"").Append(defaultButtonStyle).Append(" type=\"submit\" name=\"__xps_uiform_action\" value=\"OK\">OK</button>")
+                .Append("<button class=\"btn btn-secondary\"").Append(defaultButtonStyle).Append(" type=\"submit\" name=\"__xps_uiform_action\" value=\"Cancel\" formnovalidate>Cancel</button></div>");
         }
 """,
                 StringComparison.Ordinal);
