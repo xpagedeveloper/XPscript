@@ -72,6 +72,14 @@ public sealed class DeclarationParser
             if (Peek(tokens, memberPosition).Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword)
                 memberVisibility = tokens[memberPosition++];
 
+            if (Peek(tokens, memberPosition).Kind == SyntaxKind.ClassKeyword)
+            {
+                _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Nested class declarations are not allowed.", Peek(tokens, memberPosition).Span));
+                var nestedEnd = FindDeclarationEnd(lines, i + 1, SyntaxKind.ClassKeyword);
+                i = nestedEnd;
+                continue;
+            }
+
             if (Peek(tokens, memberPosition).Kind is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword or SyntaxKind.PropertyKeyword)
             {
                 var memberStart = line.Start;
