@@ -5,11 +5,13 @@ public sealed class DeclarationParser
     private readonly string _text;
     private readonly int _baseOffset;
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
+    private readonly bool _classMemberContext;
 
-    public DeclarationParser(string text, int baseOffset = 0)
+    public DeclarationParser(string text, int baseOffset = 0, bool classMemberContext = false)
     {
         _text = text;
         _baseOffset = baseOffset;
+        _classMemberContext = classMemberContext;
     }
 
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
@@ -109,7 +111,7 @@ public sealed class DeclarationParser
                     ? lines[endLine].Start + lines[endLine].Text.Length
                     : _text.Length;
                 var memberText = _text.Substring(memberStart, memberEnd - memberStart);
-                var parser = new DeclarationParser(memberText, _baseOffset + memberStart);
+                var parser = new DeclarationParser(memberText, _baseOffset + memberStart, classMemberContext: true);
                 members.Add(targetKind == SyntaxKind.PropertyKeyword
                     ? parser.ParseProperty(lines: parser.GetLines())
                     : parser.ParseDeclaration());
@@ -187,8 +189,9 @@ public sealed class DeclarationParser
     private SyntaxNode ParseSub(IReadOnlyList<SourceLine> lines, SyntaxToken[] header, ref int position, SyntaxToken? visibility)
     {
         var subKeyword = Take(header, ref position, SyntaxKind.SubKeyword);
-        var isConstructor = Peek(header, position).Kind == SyntaxKind.NewKeyword;
-        var identifier = isConstructor
+        var hasNewName = Peek(header, position).Kind == SyntaxKind.NewKeyword;
+        var isConstructor = _classMemberContext && hasNewName;
+        var identifier = hasNewName
             ? header[position++]
             : Take(header, ref position, SyntaxKind.IdentifierToken);
         var (openParen, parameters, commas, closeParen) = ParseParameters(header, ref position);
@@ -197,7 +200,7 @@ public sealed class DeclarationParser
         if (isConstructor)
             return new ConstructorDeclarationSyntax(visibility, subKeyword, identifier, openParen, parameters, commas, closeParen, statements, endKeyword, endTarget);
 
-        if (identifier.Text.Equals("Delete", StringComparison.OrdinalIgnoreCase))
+        if (_classMemberContext && identifier.Text.Equals("Delete", StringComparison.OrdinalIgnoreCase))
         {
             if (parameters.Count != 0)
                 _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Sub Delete cannot have parameters.", parameters[0].Span));
