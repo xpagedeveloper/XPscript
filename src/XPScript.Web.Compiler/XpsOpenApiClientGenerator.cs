@@ -164,11 +164,12 @@ public sealed class XpsOpenApiClientGenerator
         {
             if (value is not JsonValue jsonValue || !jsonValue.TryGetValue<string>(out var member) || !IdentifierPattern.IsMatch(member))
                 throw new XpsOpenApiGenerationException($"Schema '{name}' enum value '{value}' cannot be represented losslessly as an XPScript enum member.");
-            if (!string.Equals(member, "New", StringComparison.OrdinalIgnoreCase))
-                ValidateNotReservedIdentifier(member, $"Schema '{name}' enum member");
-            if (!used.Add(member))
-                throw new XpsOpenApiGenerationException($"Schema '{name}' enum contains an XPScript identifier collision at '{member}'.");
-            b.AppendLine($"    {member}");
+            var generatedMember = IsDeclarationReserved(member) && !string.Equals(member, "New", StringComparison.OrdinalIgnoreCase)
+                ? "Api" + char.ToUpperInvariant(member[0]) + member[1..]
+                : member;
+            if (!used.Add(generatedMember))
+                throw new XpsOpenApiGenerationException($"Schema '{name}' enum contains an XPScript identifier collision at '{generatedMember}'.");
+            b.AppendLine($"    {generatedMember}");
         }
         b.AppendLine("End Enum");
     }
