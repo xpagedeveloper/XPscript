@@ -359,6 +359,36 @@ if (!punctuatedEnumClient.Source.Contains("    EndToEndId", StringComparison.Ord
     throw new Exception("OpenAPI client punctuated enum regression must normalize enum values to XPScript identifiers.");
 Console.WriteLine("OPENAPI-CLIENT-PUNCTUATED-ENUM=OK");
 
+const string validIdentifierClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Valid schema identifier client regression", "version": "1.0" },
+  "paths": {
+    "/model": {
+      "get": {
+        "operationId": "getModel",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/fortnox_Test_Wrap" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "fortnox_Test_Wrap": { "type": "object", "properties": { "value": { "type": "string" } } }
+    }
+  }
+}
+""";
+var validIdentifierClient = new XpsOpenApiClientGenerator().Generate(validIdentifierClientOpenApi, "valid-identifier-client.json");
+if (!validIdentifierClient.Source.Contains("Public Class fortnox_Test_Wrap", StringComparison.Ordinal) ||
+    !validIdentifierClient.Models.Contains("fortnox_Test_Wrap", StringComparer.Ordinal))
+    throw new Exception("OpenAPI client valid schema identifier regression must preserve the original identifier.");
+Console.WriteLine("OPENAPI-CLIENT-VALID-IDENTIFIER-PRESERVATION=OK");
+
 var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecification, "fortnoxapi.json");
 foreach (var marker in new[]
 {
