@@ -188,9 +188,9 @@ XPscript intentionally differs from LotusScript in these syntax choices:
 
 Class declaration and scope:
 - [ ] Restrict class declarations to module/application declaration scope; reject nested classes and classes declared inside procedures.
-- [ ] Verify class default visibility is Private unless XPscript `Option Public` semantics explicitly change it.
-- [ ] Verify member fields default to Private.
-- [ ] Verify member Subs, Functions, and Properties default to Public.
+- [x] Verify class default visibility is Private unless XPscript `Option Public` semantics explicitly change it.
+- [x] Verify member fields default to Private.
+- [x] Verify member Subs, Functions, and Properties default to Public.
 - [ ] Reject `Static` class fields and member procedures unless XPscript deliberately defines a documented extension.
 - [ ] Require one class field per declaration; do not silently accept comma-separated field declarations.
 - [ ] Permit self-referential field types but do not allow field declarations to instantiate themselves with `New`.
