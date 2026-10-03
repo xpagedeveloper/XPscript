@@ -122,9 +122,16 @@ internal sealed class XPScriptUIField
     {
         var text = (value ?? string.Empty).Trim();
         if (text.Length == 0) return "about:blank";
-        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri)) throw new XPScriptRuntimeException(5, "UIForm WebView Source must be an absolute URI.");
-        if (uri.Scheme is not ("http" or "https" or "file" or "about" or "data")) throw new XPScriptRuntimeException(5, "UIForm WebView Source uses an unsupported URI scheme.");
-        return uri.AbsoluteUri;
+        if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri)) throw new XPScriptRuntimeException(5, "UIForm WebView Source is invalid.");
+        if (uri.IsAbsoluteUri)
+        {
+            if (uri.Scheme is not ("http" or "https" or "file" or "about" or "data")) throw new XPScriptRuntimeException(5, "UIForm WebView Source uses an unsupported URI scheme.");
+            return uri.AbsoluteUri;
+        }
+        var normalized = text.Replace('\\', '/');
+        if (normalized.StartsWith("/", StringComparison.Ordinal) || normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
+            throw new XPScriptRuntimeException(5, "UIForm WebView relative Source must stay within the application asset root.");
+        return normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? normalized : "assets/" + normalized;
     }
 }
 
@@ -153,7 +160,21 @@ internal sealed class XPScriptUIForm
     public int Height { get => _height ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm height must be greater than zero."); _height = value; } }
     public bool Resizable { get => _resizable; set => _resizable = value; }
     public string BootText { get => _bootText; set => _bootText = value ?? string.Empty; }
-    public string BootImage { get => _bootImage; set => _bootImage = value ?? string.Empty; }
+    public string BootImage
+    {
+        get => _bootImage;
+        set
+        {
+            var text = (value ?? string.Empty).Trim();
+            if (text.Length == 0) { _bootImage = string.Empty; return; }
+            if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri)) throw new XPScriptRuntimeException(5, "UIForm BootImage source is invalid.");
+            if (uri.IsAbsoluteUri) { _bootImage = uri.AbsoluteUri; return; }
+            var normalized = text.Replace('\\', '/');
+            if (normalized.StartsWith("/", StringComparison.Ordinal) || normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
+                throw new XPScriptRuntimeException(5, "UIForm BootImage relative source must stay within the application asset root.");
+            _bootImage = normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? normalized : "assets/" + normalized;
+        }
+    }
     public bool HasExplicitSize => _width.HasValue || _height.HasValue;
     public object Data => _data;
     public int FieldCount => _fields.Count;
