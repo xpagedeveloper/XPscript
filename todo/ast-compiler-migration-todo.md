@@ -200,7 +200,7 @@ Members and properties:
 - [x] Support fields, Subs, Functions, Properties, `Sub New`, and `Sub Delete` as class members.
 - [x] Keep constants out of class members unless XPscript deliberately defines a documented extension.
 - [x] Support read-only, write-only, and read/write properties.
-- [ ] Support parameterized/indexed properties and require compatible Get/Let/Set index signatures for accessors sharing a property name.
+- [x] Support parameterized/indexed properties and require compatible Get/Let/Set index signatures for accessors sharing a property name.
 - [x] Preserve XPscript scalar `Property Let` versus object/reference `Property Set` assignment semantics.
 - [x] Enforce that a property name cannot conflict with a field/member variable name where the existing language contract forbids it.
 - [x] Verify property getter assignment to the property name produces the getter result, and setter access exposes the documented incoming value semantics.
