@@ -198,12 +198,12 @@ Class declaration and scope:
 
 Members and properties:
 - [ ] Support fields, Subs, Functions, Properties, `Sub New`, and `Sub Delete` as class members.
-- [ ] Keep constants out of class members unless XPscript deliberately defines a documented extension.
-- [ ] Support read-only, write-only, and read/write properties.
+- [x] Keep constants out of class members unless XPscript deliberately defines a documented extension.
+- [x] Support read-only, write-only, and read/write properties.
 - [ ] Support parameterized/indexed properties and require compatible Get/Let/Set index signatures for accessors sharing a property name.
-- [ ] Preserve XPscript scalar `Property Let` versus object/reference `Property Set` assignment semantics.
+- [x] Preserve XPscript scalar `Property Let` versus object/reference `Property Set` assignment semantics.
 - [ ] Enforce that a property name cannot conflict with a field/member variable name where the existing language contract forbids it.
-- [ ] Verify property getter assignment to the property name produces the getter result, and setter access exposes the documented incoming value semantics.
+- [x] Verify property getter assignment to the property name produces the getter result, and setter access exposes the documented incoming value semantics.
 
 Inheritance and member access:
 - [ ] Bind `Me.member` to the current class instance and validate it only where an instance context exists.
