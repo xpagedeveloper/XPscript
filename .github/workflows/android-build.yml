@@ -1,0 +1,130 @@
+name: Android Build
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-debug-apk:
+    name: Android debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      # Keep the smallest Android regressions first.
+      - name: Run Android CLI probe first
+        run: dotnet run --project ./tests/AndroidCliProbe/AndroidCliProbe.csproj -c Release
+
+      - name: Run Android setup probe
+        run: dotnet run --project ./tests/AndroidSetupProbe/AndroidSetupProbe.csproj -c Release
+
+      - name: Run Android project metadata probe
+        run: dotnet run --project ./tests/AndroidProjectMetadataProbe/AndroidProjectMetadataProbe.csproj -c Release
+
+      - name: Run Android scaffold probe
+        run: dotnet run --project ./tests/AndroidScaffoldProbe/AndroidScaffoldProbe.csproj -c Release
+
+      - name: Run Android compiler probe
+        run: dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
+
+      - name: Restore XPScript CLI
+        run: dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+
+      - name: Build XPScript CLI
+        run: dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore
+
+      - name: Install .NET Android workload
+        run: dotnet workload install android
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+
+      - name: Build Avalonia Android dependency layer
+        run: dotnet build ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release
+
+      - name: Build Avalonia Android x64 dependency probe first
+        run: dotnet build ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release -r android-x64
+
+      - name: Publish Avalonia Android x64 dependency probe first
+        run: dotnet publish ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release -r android-x64 --no-restore
+
+      - name: Compare Avalonia Android restore graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet list ./src/XPScript.UI.Android/XPScript.UI.Android.csproj package --include-transitive > /tmp/avalonia-packages.txt
+          cat /tmp/avalonia-packages.txt
+
+      - name: Compile Android runtime failure regression
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-runtime-error.xps -o ./out/android-runtime-error --runtime=false --platform android-x64 --debug
+
+      - name: Build minimal XPScript Android APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print --runtime=false --platform android-arm64 --debug
+
+      - name: Build x64 emulator APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print-emulator --runtime=false --platform android-x64 --debug
+
+      - name: Reproduce Android UIForm project directly first
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe="$RUNNER_TEMP/android-uiform-direct"
+          rm -rf "$probe"
+          mkdir -p "$probe"
+          cp ./src/XPScript.UI.Android/*.cs "$probe/"
+          cat > "$probe/Direct.csproj" <<'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net10.0-android</TargetFramework>
+              <AssemblyName>android-uiform-direct</AssemblyName>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <Nullable>enable</Nullable>
+              <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+              <RuntimeIdentifier>android-x64</RuntimeIdentifier>
+              <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
+              <AndroidPackageFormat>apk</AndroidPackageFormat>
+              <ApplicationId>com.xpscript.debugapp</ApplicationId>
+              <ApplicationVersion>1</ApplicationVersion>
+              <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="Avalonia" Version="12.0.3" />
+              <PackageReference Include="Avalonia.Android" Version="12.0.3" />
+              <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
+            </ItemGroup>
+          </Project>
+          EOF
+          dotnet publish "$probe/Direct.csproj" -c Release -r android-x64 -o "$probe/publish"
+
+      - name: Build minimal Android UIForm APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-minimal.xps -o ./out/android-uiform-minimal --runtime=false --platform android-x64 --debug
+
+      - name: Build Android UIForm regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-regression.xps -o ./out/android-uiform-regression --runtime=false --platform android-x64 --debug
+
+      - name: Build Android UIForm manual test APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-manual-test.xps -o ./out/android-uiform-manual-test --runtime=false --platform android-x64 --debug
+
+      - name: Verify debug APKs exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t apks < <(find ./out -type f -name '*.apk' -print)
+          if [ "${#apks[@]}" -lt 5 ]; then
+            echo 'Android compiler did not produce the ARM64 headless, x64 headless, minimal x64 UIForm, regression x64 UIForm and manual-test x64 UIForm APKs.' >&2
+            exit 1
+          fi
+          printf 'ANDROID_APK=%s\n' "${apks[@]}"

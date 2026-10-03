@@ -3,6 +3,7 @@ name: FullTest
 on:
   pull_request:
     branches: [main]
+    types: [opened, reopened, ready_for_review]
   push:
     branches: [main, openapi-client-v2]
   workflow_dispatch:

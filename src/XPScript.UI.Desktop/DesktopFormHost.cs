@@ -58,11 +58,42 @@ public static class DesktopFormHost
         var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var customButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
+        if (!string.IsNullOrWhiteSpace(request.BootImage)) panel.Children.Add(DesktopImageHost.Create(request.BootImage, string.Empty));
+        if (!string.IsNullOrWhiteSpace(request.BootText)) panel.Children.Add(new TextBlock { Text = request.BootText, FontSize = 20, HorizontalAlignment = HorizontalAlignment.Center });
         var fieldsGrid = CreateFieldsGrid(request.GridColumns);
         panel.Children.Add(fieldsGrid);
+        TabControl? tabControl = null;
+        var tabGrids = new Dictionary<string, Grid>(StringComparer.OrdinalIgnoreCase);
+        var namedGrids = new Dictionary<string, Grid>(StringComparer.OrdinalIgnoreCase);
+        if (request.Tabs.Count > 0)
+        {
+            var tabItems = new List<TabItem>();
+            foreach (var tab in request.Tabs)
+            {
+                var grid = CreateFieldsGrid(request.GridColumns);
+                tabGrids[tab.Name] = grid;
+                tabItems.Add(new TabItem { Header = tab.Label, Tag = tab.Name, Content = grid });
+            }
+            tabControl = new TabControl { ItemsSource = tabItems };
+            var selected = tabItems.FindIndex(item => string.Equals(item.Tag?.ToString(), request.ActiveTab, StringComparison.OrdinalIgnoreCase));
+            tabControl.SelectedIndex = selected >= 0 ? selected : 0;
+            panel.Children.Add(tabControl);
+        }
+        foreach (var definition in request.Grids)
+        {
+            var grid = CreateFieldsGrid(definition.Columns);
+            namedGrids[definition.Name] = grid;
+            if (definition.TabName.Length > 0 && tabGrids.TryGetValue(definition.TabName, out var tabGrid))
+            {
+                EnsureRows(tabGrid, tabGrid.RowDefinitions.Count + 1);
+                Grid.SetRow(grid, tabGrid.RowDefinitions.Count - 1);
+                Grid.SetColumnSpan(grid, request.GridColumns);
+                tabGrid.Children.Add(grid);
+            }
+            else panel.Children.Add(grid);
+        }
         var validationText = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Red };
 
-        var automaticRow = 0;
         foreach (var field in request.Fields)
         {
             if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase)) continue;
@@ -98,16 +129,19 @@ public static class DesktopFormHost
             }
             fieldPanel.Children.Add(fieldValidation);
 
-            var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : automaticRow++;
+            var targetGrid = field.GridName.Length > 0 && namedGrids.TryGetValue(field.GridName, out var namedGrid)
+                ? namedGrid
+                : field.TabName.Length > 0 && tabGrids.TryGetValue(field.TabName, out var tabGrid) ? tabGrid : fieldsGrid;
+            var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : targetGrid.RowDefinitions.Count;
             var column = field.LayoutColumn > 0 ? field.LayoutColumn - 1 : 0;
             var columnSpan = field.LayoutColumn > 0 ? Math.Max(1, field.ColumnSpan) : Math.Max(1, request.GridColumns);
             var rowSpan = Math.Max(1, field.RowSpan);
-            EnsureRows(fieldsGrid, row + rowSpan);
+            EnsureRows(targetGrid, row + rowSpan);
             Grid.SetRow(fieldPanel, row);
             Grid.SetColumn(fieldPanel, column);
             Grid.SetColumnSpan(fieldPanel, columnSpan);
             Grid.SetRowSpan(fieldPanel, rowSpan);
-            fieldsGrid.Children.Add(fieldPanel);
+            targetGrid.Children.Add(fieldPanel);
         }
 
         var eventInProgress = false;
@@ -144,6 +178,13 @@ public static class DesktopFormHost
         {
             using var document = JsonDocument.Parse(responseJson);
             var root = document.RootElement;
+            if (tabControl is not null && root.TryGetProperty("activeTab", out var activeTabElement))
+            {
+                var activeTab = activeTabElement.GetString() ?? string.Empty;
+                var items = tabControl.ItemsSource?.Cast<TabItem>().ToList() ?? new List<TabItem>();
+                var selected = items.FindIndex(item => string.Equals(item.Tag?.ToString(), activeTab, StringComparison.OrdinalIgnoreCase));
+                if (selected >= 0) tabControl.SelectedIndex = selected;
+            }
             if (root.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
             {
                 foreach (var state in fields.EnumerateArray())
@@ -265,7 +306,7 @@ public static class DesktopFormHost
             var actionButtons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
             foreach (var definition in request.Buttons)
             {
-                var button = new Button { Content = definition.Label, MinWidth = 80, IsVisible = definition.Visible, IsEnabled = definition.Enabled };
+                var button = new Button { Content = definition.Label, MinWidth = 80, IsVisible = definition.Visible, IsEnabled = definition.Enabled, CornerRadius = new CornerRadius(definition.CornerRadius) };
                 customButtons[definition.Name] = button;
                 button.Click += (_, _) => TriggerEvent("button:" + definition.Name);
                 actionButtons.Children.Add(button);
@@ -433,15 +474,15 @@ public static class DesktopFormHost
         var value = field.Value ?? string.Empty;
         return field.Type switch
         {
-            "TextArea" => new TextBox { Text = value, AcceptsReturn = true, MinHeight = 96, TextWrapping = TextWrapping.Wrap },
-            "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•' },
+            "TextArea" => new TextBox { Text = value, AcceptsReturn = true, MinHeight = 96, TextWrapping = TextWrapping.Wrap, CornerRadius = new CornerRadius(field.CornerRadius) },
+            "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•', CornerRadius = new CornerRadius(field.CornerRadius) },
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Select" => CreateSelect(field),
             "ListBox" => CreateListBox(field, false),
             "MultiListBox" => CreateListBox(field, true),
             "RadioGroup" => CreateRadioGroup(field),
             "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
-            _ => new TextBox { Text = value }
+            _ => new TextBox { Text = value, CornerRadius = new CornerRadius(field.CornerRadius) }
         };
     }
 

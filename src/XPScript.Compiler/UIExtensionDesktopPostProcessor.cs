@@ -134,7 +134,6 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIFormCallbackModelPostProcessor().Transform(replaced);
         replaced = new UIFormNavigationCompatibilityPostProcessor().Transform(replaced);
         replaced = new UIFormEventDispatcherPostProcessor().Transform(replaced);
-        replaced = new UIFormDesktopLayoutMetadataPostProcessor().Transform(replaced);
         replaced = new UIFormDesktopReactivePostProcessor().Transform(replaced);
 
         if (needsListView)

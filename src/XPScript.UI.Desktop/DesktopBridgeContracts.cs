@@ -29,8 +29,11 @@ public sealed record DesktopFormField(
     public bool Visible { get; init; } = true;
     public bool Enabled { get; init; } = true;
     public bool ReadOnly { get; init; }
+    public double CornerRadius { get; init; }
     public string Placeholder { get; init; } = string.Empty;
     public string Tooltip { get; init; } = string.Empty;
+    public string TabName { get; init; } = string.Empty;
+    public string GridName { get; init; } = string.Empty;
     public string RegexPattern { get; init; } = string.Empty;
     public string DateMinimum { get; init; } = string.Empty;
     public string DateMaximum { get; init; } = string.Empty;
@@ -71,7 +74,13 @@ public sealed record DesktopFormButton(
     int ColumnSpan,
     int RowSpan,
     bool Visible,
-    bool Enabled);
+    bool Enabled)
+{
+    public double CornerRadius { get; init; }
+}
+
+public sealed record DesktopFormTab(string Name, string Label);
+public sealed record DesktopFormGrid(string Name, int Columns, string TabName);
 
 public sealed record DesktopFormRequest(
     string Title,
@@ -81,11 +90,16 @@ public sealed record DesktopFormRequest(
     IReadOnlyList<DesktopFormField> Fields)
 {
     public string Theme { get; init; } = "System";
+    public string BootText { get; init; } = string.Empty;
+    public string BootImage { get; init; } = string.Empty;
     public bool ShowValidationErrors { get; init; } = true;
     public bool HasValidationSchema { get; init; }
     public bool ShowDefaultButtons { get; init; } = true;
     public int GridColumns { get; init; } = 1;
     public IReadOnlyList<DesktopFormButton> Buttons { get; init; } = Array.Empty<DesktopFormButton>();
+    public IReadOnlyList<DesktopFormTab> Tabs { get; init; } = Array.Empty<DesktopFormTab>();
+    public IReadOnlyList<DesktopFormGrid> Grids { get; init; } = Array.Empty<DesktopFormGrid>();
+    public string ActiveTab { get; init; } = string.Empty;
     public string ApplicationTitle { get; init; } = string.Empty;
     public string ApplicationIcon { get; init; } = string.Empty;
     public string InstanceId { get; init; } = string.Empty;

@@ -119,7 +119,9 @@ internal static class XPScriptEmbeddedAppAssets
     [System.Runtime.CompilerServices.ModuleInitializer]
     internal static void Materialize()
     {
-        var root = System.IO.Path.Combine(System.AppContext.BaseDirectory, "assets");
+        var root = System.OperatingSystem.IsAndroid()
+            ? System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "assets")
+            : System.IO.Path.Combine(System.AppContext.BaseDirectory, "assets");
         System.IO.Directory.CreateDirectory(root);
 {{entries}}    }
 

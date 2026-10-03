@@ -6,11 +6,37 @@ internal static class UIExtensionDesktopRuntimeSource
 internal static class XPScriptUIDesktopAdapter
 {
     private const string HostTypeName = "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop";
+    private const string AndroidHostTypeName = "XPScript.UI.Android.AndroidFormHost, XPScript.UI.Android";
     private static bool IsBrowserHost => HostTypeName.Contains("XPScript.UI.Browser", StringComparison.Ordinal);
     private static string LifecycleHostTypeName => IsBrowserHost
         ? "XPScript.UI.Browser.BrowserFormLifecycleHost, XPScript.UI.Browser"
         : "XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop";
-    private static Type? HostType => Type.GetType(HostTypeName, throwOnError: false, ignoreCase: false);
+    private static Type? HostType => ResolveHostType();
+
+    private static Type? ResolveHostType()
+    {
+        var names = global::System.OperatingSystem.IsAndroid()
+            ? new[] { AndroidHostTypeName, HostTypeName }
+            : new[] { HostTypeName };
+
+        foreach (var name in names)
+        {
+            var direct = Type.GetType(name, throwOnError: false, ignoreCase: false);
+            if (direct is not null) return direct;
+        }
+
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            foreach (var name in names)
+            {
+                var typeName = name.Split(',', 2)[0].Trim();
+                var candidate = assembly.GetType(typeName, throwOnError: false, ignoreCase: false);
+                if (candidate is not null) return candidate;
+            }
+        }
+
+        return null;
+    }
     private static Type? LifecycleHostType => Type.GetType(LifecycleHostTypeName, throwOnError: false, ignoreCase: false);
 
     private static System.Reflection.MethodInfo? ResolveShowDialog(Type type) =>
@@ -74,13 +100,30 @@ internal static class XPScriptUIDesktopAdapter
             width = form.Width > 0 ? form.Width : (int?)null,
             height = form.Height > 0 ? form.Height : (int?)null,
             resizable = form.Resizable,
+            theme = form.Theme,
+            showValidationErrors = form.ShowValidationErrors,
+            showDefaultButtons = form.ShowDefaultButtons,
+            gridColumns = form.GridColumns,
+            hasValidationSchema = form.HasValidationSchema,
+            bootText = form.BootText,
+            bootImage = form.BootImage,
             fields = fields.Select(field => new
             {
-                name = field.Name, label = field.Label, type = field.Type, required = field.Required,
+                name = field.Name, label = field.Label, type = field.Type, required = field.Required, layoutRow = field.LayoutRow, layoutColumn = field.LayoutColumn, columnSpan = field.ColumnSpan, rowSpan = field.RowSpan,
+                placeholder = field.Placeholder, tooltip = field.Tooltip, imageSource = field.ImageSource, imageAltText = field.ImageAltText, imageCertificateValidation = field.ImageCertificateValidation,
+                regexPattern = field.RegexPattern, schemaValidationError = form.GetValidationError(field.Name),
                 value = field.Type is "PasswordField" or "MultiListBox" ? null : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
-                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, options = field.Options,
+                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, options = field.Options, cornerRadius = field.CornerRadius, tabName = field.TabName, gridName = field.GridName,
                 webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground
+            }).ToArray(),
+            tabs = form.Tabs.Select(tab => new { name = tab.Name, label = tab.Label }).ToArray(),
+            grids = form.Grids.Select(grid => new { name = grid.Name, columns = grid.Columns, tabName = grid.TabName }).ToArray(),
+            activeTab = form.ActiveTab,
+            buttons = form.Buttons.Select(button => new
+            {
+                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style, cornerRadius = button.CornerRadius,
+                layoutRow = button.LayoutRow, layoutColumn = button.LayoutColumn, columnSpan = button.ColumnSpan, rowSpan = button.RowSpan
             }).ToArray()
         };
 

@@ -20,6 +20,14 @@ internal sealed class UIFormEventDispatcherPostProcessor
 
         return regex.Replace(generated,
             """
+    [System.Diagnostics.CodeAnalysis.DynamicDependency(
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods,
+        typeof(XPScriptUIFormEvent))]
+    [System.Diagnostics.CodeAnalysis.DynamicDependency(
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods,
+        typeof(XPScriptUIForm))]
     internal string DispatchRegisteredEvent(string eventToken, string submittedValue)
     {
         var separator = eventToken.IndexOf(':');
@@ -85,7 +93,16 @@ internal sealed class UIFormEventDispatcherPostProcessor
         }
         else if (kind.Equals("button", StringComparison.OrdinalIgnoreCase))
         {
-            ApplySubmittedStateJson(submittedValue);
+            try
+            {
+                ApplySubmittedStateJson(submittedValue);
+            }
+            catch (XPScriptRuntimeException)
+            {
+                return SerializeActionState();
+            }
+            if (!IsDataValid)
+                return SerializeActionState();
             var button = FindButton(controlName);
             handlerName = button.Handler;
             useEventCallback = button.UseEventCallback;
@@ -152,7 +169,16 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 System.Text.Json.JsonValueKind.Null => string.Empty,
                 _ => throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' submitted an unsupported event value type.")
             };
-            ApplySubmittedValue(field, submitted);
+            try
+            {
+                field.ValidationError = string.Empty;
+                ApplySubmittedValue(field, submitted);
+            }
+            catch (XPScriptRuntimeException exception)
+            {
+                field.ValidationError = exception.Message;
+                throw;
+            }
         }
     }
 
@@ -184,6 +210,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
         {
             refreshAll = _refreshAllRequested,
             refreshRegions = _requestedRefreshRegions.ToArray(),
+            activeTab = _activeTab,
             navigation = _navigationTarget.Length == 0 ? null : new
             {
                 target = _navigationTarget

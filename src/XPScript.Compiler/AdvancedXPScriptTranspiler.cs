@@ -160,10 +160,23 @@ internal static class Program
         }
         catch (Exception ex)
         {
+            var runtimeSource = XPSourceLineRuntime.CurrentSource;
+            var runtimeLine = XPSourceLineRuntime.Current;
+#if ANDROID
+            if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_RUNTIME_DEBUG"), "1", StringComparison.Ordinal))
+                Console.WriteLine(ex.ToString());
+            else
+                Console.WriteLine("error: " + ex.Message);
+            if (!string.IsNullOrWhiteSpace(runtimeSource) && runtimeLine > 0)
+                Console.WriteLine("at " + runtimeSource + ":" + runtimeLine.ToString(System.Globalization.CultureInfo.InvariantCulture));
+#else
             if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_RUNTIME_DEBUG"), "1", StringComparison.Ordinal))
                 Console.Error.WriteLine(ex.ToString());
             else
                 Console.Error.WriteLine("error: " + ex.Message);
+            if (!string.IsNullOrWhiteSpace(runtimeSource) && runtimeLine > 0)
+                Console.Error.WriteLine("at " + runtimeSource + ":" + runtimeLine.ToString(System.Globalization.CultureInfo.InvariantCulture));
+#endif
             Environment.ExitCode = 1;
         }
         finally

@@ -19,22 +19,39 @@ internal sealed class UIFormActionModelPostProcessor
     public bool Visible { get; set; } = true;
     public bool Enabled { get; set; } = true;
     public bool ReadOnly { get; set; }
+    public double CornerRadius { get; set; }
     public string Placeholder { get; set; } = string.Empty;
     public string Tooltip { get; set; } = string.Empty;
+    public string TabName { get; set; } = string.Empty;
 """, "field-state");
         }
 
-        if (!generated.Contains("internal sealed class XPScriptUIButton", StringComparison.Ordinal))
+        if (!generated.Contains("""
+internal sealed class XPScriptUITab
+{
+    public required string Name { get; init; }
+    public required string Label { get; set; }
+}
+
+internal sealed class XPScriptUIButton
+""", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
                 @"internal\s+sealed\s+class\s+XPScriptUIForm\s*\{",
                 """
+internal sealed class XPScriptUITab
+{
+    public required string Name { get; init; }
+    public required string Label { get; set; }
+}
+
 internal sealed class XPScriptUIButton
 {
     public required string Name { get; init; }
     public required string Label { get; set; }
     public required string Handler { get; set; }
     public string Style { get; set; } = "Default";
+    public double CornerRadius { get; set; }
     public int LayoutRow { get; set; }
     public int LayoutColumn { get; set; }
     public int ColumnSpan { get; set; } = 1;
@@ -56,6 +73,8 @@ internal sealed class XPScriptUIForm
     private int _gridColumns = 1;
     private string _theme = "System";
     private readonly List<XPScriptUIButton> _buttons = [];
+    private readonly List<XPScriptUITab> _tabs = [];
+    private string _activeTab = string.Empty;
     private readonly HashSet<string> _requestedRefreshRegions = new(StringComparer.Ordinal);
     private bool _refreshAllRequested;
     private string _navigationTarget = string.Empty;
@@ -74,6 +93,8 @@ internal sealed class XPScriptUIForm
     public bool ShowValidationErrors { get; set; } = true;
     public int ButtonCount => _buttons.Count;
     internal IReadOnlyList<XPScriptUIButton> Buttons => _buttons;
+    internal IReadOnlyList<XPScriptUITab> Tabs => _tabs;
+    public string ActiveTab { get => _activeTab; set => SetActiveTab(value); }
     public object GetData() => _data;
     public void SetData(object? value) => BindData(value);
 """, "form-api");
@@ -98,6 +119,35 @@ internal sealed class XPScriptUIForm
         FindField(name).Label = XPScriptRuntime.CStr(label);
     }
 
+    public XPScriptUITab AddTab(object? name, object? label)
+    {
+        var tabName = NormalizeControlName(name, "tab");
+        if (_tabs.Any(tab => tab.Name.Equals(tabName, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm tab '{tabName}' already exists.");
+        var tab = new XPScriptUITab { Name = tabName, Label = XPScriptRuntime.CStr(label) };
+        _tabs.Add(tab);
+        if (_activeTab.Length == 0) _activeTab = tabName;
+        return tab;
+    }
+
+    public void SetFieldTab(object? name, object? tabName)
+    {
+        var field = FindField(name);
+        var value = XPScriptRuntime.CStr(tabName).Trim();
+        if (value.Length == 0) { field.TabName = string.Empty; return; }
+        if (!_tabs.Any(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm tab '{value}' does not exist.");
+        field.TabName = _tabs.First(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)).Name;
+    }
+
+    public void SetActiveTab(object? name)
+    {
+        var value = XPScriptRuntime.CStr(name).Trim();
+        if (!_tabs.Any(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm tab '{value}' does not exist.");
+        _activeTab = _tabs.First(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)).Name;
+    }
+
     public void SetFieldVisible(object? name, object? visible)
     {
         FindField(name).Visible = Convert.ToBoolean(visible, System.Globalization.CultureInfo.CurrentCulture);
@@ -111,6 +161,22 @@ internal sealed class XPScriptUIForm
     public void SetFieldReadOnly(object? name, object? readOnly)
     {
         FindField(name).ReadOnly = Convert.ToBoolean(readOnly, System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    public void SetFieldCornerRadius(object? name, object? radius)
+    {
+        var field = FindField(name);
+        if (field.Type is not ("TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField"))
+            throw new XPScriptRuntimeException(5, "UIForm field corner radius is only supported for text-entry fields.");
+        double value;
+        try { value = Convert.ToDouble(radius, System.Globalization.CultureInfo.InvariantCulture); }
+        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+        {
+            throw new XPScriptRuntimeException(13, "UIForm field corner radius must be numeric.");
+        }
+        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+            throw new XPScriptRuntimeException(5, "UIForm field corner radius must be between 0 and 1000.");
+        field.CornerRadius = value;
     }
 
     public void SetFieldPlaceholder(object? name, object? placeholder)
@@ -177,6 +243,19 @@ internal sealed class XPScriptUIForm
         if (value.Length is < 1 or > 64)
             throw new XPScriptRuntimeException(5, "UIForm button style must contain between 1 and 64 characters.");
         FindButton(name).Style = value;
+    }
+
+    public void SetButtonCornerRadius(object? name, object? radius)
+    {
+        double value;
+        try { value = Convert.ToDouble(radius, System.Globalization.CultureInfo.InvariantCulture); }
+        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
+        {
+            throw new XPScriptRuntimeException(13, "UIForm button corner radius must be numeric.");
+        }
+        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+            throw new XPScriptRuntimeException(5, "UIForm button corner radius must be between 0 and 1000.");
+        FindButton(name).CornerRadius = value;
     }
 
     public void SetButtonVisible(object? name, object? visible)
