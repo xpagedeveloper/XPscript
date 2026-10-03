@@ -70,6 +70,34 @@ if (!multipartImport.Source.Contains("Public Class ArchiveController_doCreateBod
     throw new Exception("OpenAPI multipart request-body regression failed.");
 Console.WriteLine("OPENAPI-MULTIPART-REQUEST-BODY=OK");
 
+const string validOpenApiIdentifier = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Valid identifier regression", "version": "1.0" },
+  "paths": {
+    "/currencies": {
+      "get": {
+        "operationId": "CurrencyController_doIndex",
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "fortnox_CurrencyListItem_Wrap": {
+        "type": "object",
+        "properties": { "Currencies": { "type": "array", "items": { "type": "string" } } }
+      }
+    }
+  }
+}
+""";
+var validIdentifierImport = new XpsOpenApiImporter().Import(validOpenApiIdentifier, "", "valid-identifier.json");
+if (!validIdentifierImport.Source.Contains("Public Class fortnox_CurrencyListItem_Wrap", StringComparison.Ordinal) ||
+    !validIdentifierImport.AddedClasses.Contains("fortnox_CurrencyListItem_Wrap", StringComparer.Ordinal))
+    throw new Exception("OpenAPI valid identifier preservation regression failed.");
+Console.WriteLine("OPENAPI-VALID-IDENTIFIER-PRESERVATION=OK");
+
 const string reservedModelMemberOpenApi = """
 {
   "openapi": "3.0.3",
