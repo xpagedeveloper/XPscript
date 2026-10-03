@@ -194,17 +194,41 @@ internal sealed class ClassOverloadValidator
             foreach (Match access in Regex.Matches(line, @"\bParent\.(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase))
             {
                 var name = access.Groups["name"].Value;
-                if (!baseClass.Members.TryGetValue(name, out var members) || members.Count == 0 || members.Any(m => !m.Visibility.Equals("Private", StringComparison.OrdinalIgnoreCase)))
+                if (!baseClass.Members.TryGetValue(name, out var members) || members.Count == 0)
+                {
+                    var description = $"Parent base type '{baseClass.Name}' has no member '{name}'.";
+                    var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
+                    var diagnostic = new CompileDiagnostic
+                    {
+                        File = sourceName,
+                        Line = i + 1,
+                        Position = access.Index + 1,
+                        Description = description,
+                        DiagnosticCode = CompilerDiagnosticCodes.UnknownMember,
+                        Category = "member-resolution",
+                        Properties =
+                        [
+                            new() { Name = "receiverType", Value = baseClass.Name },
+                            new() { Name = "symbol", Value = name },
+                            new() { Name = "symbolKind", Value = "member" }
+                        ],
+                        SourceCode = safeSource,
+                        MarkedCode = safeSource + Environment.NewLine + new string(' ', Math.Max(0, access.Index)) + "^"
+                    };
+                    throw new CompilerException(description, CompilerDiagnosticCodes.UnknownMember, "member-resolution", [diagnostic]);
+                }
+
+                if (members.Any(m => !m.Visibility.Equals("Private", StringComparison.OrdinalIgnoreCase)))
                     continue;
 
-                var description = $"Parent cannot access Private base member '{baseClass.Name}.{name}'.";
-                var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
-                var diagnostic = new CompileDiagnostic
+                var privateDescription = $"Parent cannot access Private base member '{baseClass.Name}.{name}'.";
+                var privateSafeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
+                var privateDiagnostic = new CompileDiagnostic
                 {
                     File = sourceName,
                     Line = i + 1,
                     Position = access.Index + 1,
-                    Description = description,
+                    Description = privateDescription,
                     DiagnosticCode = CompilerDiagnosticCodes.UnknownMember,
                     Category = "member-resolution",
                     Properties =
@@ -214,10 +238,10 @@ internal sealed class ClassOverloadValidator
                         new() { Name = "symbolKind", Value = members[0].Kind },
                         new() { Name = "visibility", Value = "Private" }
                     ],
-                    SourceCode = safeSource,
-                    MarkedCode = safeSource + Environment.NewLine + new string(' ', Math.Max(0, access.Index)) + "^"
+                    SourceCode = privateSafeSource,
+                    MarkedCode = privateSafeSource + Environment.NewLine + new string(' ', Math.Max(0, access.Index)) + "^"
                 };
-                throw new CompilerException(description, CompilerDiagnosticCodes.UnknownMember, "member-resolution", [diagnostic]);
+                throw new CompilerException(privateDescription, CompilerDiagnosticCodes.UnknownMember, "member-resolution", [privateDiagnostic]);
             }
         }
     }
