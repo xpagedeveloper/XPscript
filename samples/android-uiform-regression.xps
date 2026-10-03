@@ -2,12 +2,20 @@ Sub Main()
     Dim data As New XPJsonObject
     Dim form As New UIForm("Android UIForm Regression")
     Dim result As String
+    Dim detailsGrid As Variant
 
     Call Application.Debug.Info("ANDROID-UIFORM-REGRESSION=start")
     Call form.BindData(data)
     Call form.AddTextField("name", "Name")
     Call form.AddTextArea("notes", "Notes")
     Call form.AddCheckBox("enabled", "Enabled")
+    Call form.AddTab("details", "Details")
+    detailsGrid = form.AddGrid("detailsGrid", 2)
+    Call detailsGrid.SetTab("details")
+    Call form.AddTextField("email", "Email")
+    Call form.AddTextField("city", "City")
+    Call detailsGrid.SetFieldPosition("email", 2)
+    Call detailsGrid.SetFieldPosition("city", 1)
     result = form.ShowDialog()
     Call Application.Debug.Info("ANDROID-UIFORM-REGRESSION=result:" & result)
     Print "ANDROID-UIFORM-REGRESSION=" & result
