@@ -74,7 +74,23 @@ const string reservedModelMemberOpenApi = """
 {
   "openapi": "3.0.3",
   "info": { "title": "Reserved model member regression", "version": "1.0" },
-  "paths": {},
+  "paths": {
+    "/activity": {
+      "get": {
+        "operationId": "BureauActivityController_doIndex",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Bureau_Activity" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "components": {
     "schemas": {
       "Bureau_Activity": {
