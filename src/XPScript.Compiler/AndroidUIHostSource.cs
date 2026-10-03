@@ -162,6 +162,9 @@ public static class AndroidFormHost
 
             var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
             var validationErrors = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
+            var fieldContainers = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
+            var fieldLabels = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
+            var actionButtons = new Dictionary<string, Avalonia.Controls.Button>(StringComparer.OrdinalIgnoreCase);
             var panel = new StackPanel { Spacing = 12, Margin = new Thickness(16), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Stretch };
 
             var bootText = request.TryGetProperty("bootText", out var bootTextValue) ? bootTextValue.GetString() ?? string.Empty : string.Empty;
@@ -240,8 +243,14 @@ public static class AndroidFormHost
                 var targetPanel = tabName.Length > 0 && tabPanels.TryGetValue(tabName, out var fieldTabPanel) ? fieldTabPanel : panel;
                 var targetGrid = gridName.Length > 0 && namedGrids.TryGetValue(gridName, out var fieldGrid) ? fieldGrid : null;
                 var fieldContainer = new StackPanel { Spacing = 4, Margin = new Thickness(4) };
+                fieldContainer.IsVisible = !field.TryGetProperty("visible", out var fieldVisible) || fieldVisible.ValueKind != JsonValueKind.False;
+                fieldContainers[name] = fieldContainer;
                 if (label.Length > 0 && type is not ("Separator" or "Spacer" or "Image"))
-                    fieldContainer.Children.Add(new TextBlock { Text = label });
+                {
+                    var labelBlock = new TextBlock { Text = label };
+                    fieldLabels[name] = labelBlock;
+                    fieldContainer.Children.Add(labelBlock);
+                }
 
                 var fieldCornerRadius = field.TryGetProperty("cornerRadius", out var fieldCornerRadiusValue) && fieldCornerRadiusValue.TryGetDouble(out var fieldRadius) ? fieldRadius : 0;
                 var options = field.TryGetProperty("options", out var optionValues) && optionValues.ValueKind == JsonValueKind.Array
@@ -267,6 +276,7 @@ public static class AndroidFormHost
                     SetEditorValue(editor, value);
 
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
+                ApplyEditorReadOnly(editor, field.TryGetProperty("readOnly", out var readOnly) && readOnly.ValueKind == JsonValueKind.True);
                 fieldContainer.Children.Add(editor);
 
                 if (type is "Separator" or "Spacer" or "Image")
@@ -303,6 +313,7 @@ public static class AndroidFormHost
                     var cornerRadius = buttonValue.TryGetProperty("cornerRadius", out var cornerRadiusValue) && cornerRadiusValue.TryGetDouble(out var radius) ? radius : 0;
                     var actionButton = new Avalonia.Controls.Button { Content = buttonLabel, MinWidth = 100, CornerRadius = new CornerRadius(cornerRadius) };
                     actionButton.IsEnabled = !buttonValue.TryGetProperty("enabled", out var buttonEnabled) || buttonEnabled.ValueKind != JsonValueKind.False;
+                    actionButtons[buttonName] = actionButton;
                     actionButton.Click += (_, _) =>
                     {
                         if (eventCallback is null) return;
@@ -310,7 +321,7 @@ public static class AndroidFormHost
                         {
                             var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
                             var actionState = eventCallback("button:" + buttonName, submittedValues);
-                            ApplyActionState(actionState, editors, validationErrors, tabControl);
+                            ApplyActionState(actionState, editors, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
                         }
                         catch (Exception exception)
                         {
@@ -355,7 +366,7 @@ public static class AndroidFormHost
                     var callbackResult = eventCallback("button:OK", submittedValues);
                     if (!string.IsNullOrWhiteSpace(callbackResult))
                     {
-                        var hasValidationErrors = ApplyActionState(callbackResult, editors, validationErrors, tabControl);
+                        var hasValidationErrors = ApplyActionState(callbackResult, editors, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
                         if (hasValidationErrors)
                             return;
                         result = callbackResult;
@@ -373,7 +384,14 @@ public static class AndroidFormHost
         return completion.Task.GetAwaiter().GetResult();
     }
 
-    private static bool ApplyActionState(string actionStateJson, Dictionary<string, Control> editors, Dictionary<string, TextBlock> validationErrors, TabControl? tabControl)
+    private static bool ApplyActionState(
+        string actionStateJson,
+        Dictionary<string, Control> editors,
+        Dictionary<string, TextBlock> validationErrors,
+        Dictionary<string, Control> fieldContainers,
+        Dictionary<string, TextBlock> fieldLabels,
+        Dictionary<string, Avalonia.Controls.Button> actionButtons,
+        TabControl? tabControl)
     {
         if (string.IsNullOrWhiteSpace(actionStateJson)) return false;
         var hasValidationErrors = false;
@@ -395,10 +413,23 @@ public static class AndroidFormHost
                 var validationError = field.TryGetProperty("validationError", out var validationValue)
                     ? validationValue.GetString() ?? string.Empty
                     : string.Empty;
-                if (validationError.Length == 0 && field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
-                    SetEditorValue(editor, value);
-                editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
-                editor.IsVisible = !field.TryGetProperty("visible", out var visible) || visible.ValueKind != JsonValueKind.False;
+                if (fieldLabels.TryGetValue(name, out var labelBlock) && field.TryGetProperty("label", out var labelValue))
+                    labelBlock.Text = labelValue.GetString() ?? string.Empty;
+                if (fieldContainers.TryGetValue(name, out var fieldContainer))
+                    fieldContainer.IsVisible = !field.TryGetProperty("visible", out var visible) || visible.ValueKind != JsonValueKind.False;
+                var enabledState = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
+                var readOnlyState = field.TryGetProperty("readOnly", out var readOnly) && readOnly.ValueKind == JsonValueKind.True;
+                editor.IsEnabled = enabledState;
+                ApplyEditorReadOnly(editor, readOnlyState);
+                if (field.TryGetProperty("options", out var optionValues) && optionValues.ValueKind == JsonValueKind.Array)
+                    ApplyEditorOptions(editor, optionValues.EnumerateArray().Select(option => option.GetString() ?? string.Empty).ToArray());
+                if (validationError.Length == 0)
+                {
+                    if (field.TryGetProperty("values", out var values) && values.ValueKind == JsonValueKind.Array)
+                        SetEditorValues(editor, values);
+                    else if (field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
+                        SetEditorValue(editor, value);
+                }
                 if (validationErrors.TryGetValue(name, out var validationBlock))
                 {
                     validationBlock.Text = validationError;
@@ -408,9 +439,61 @@ public static class AndroidFormHost
                     hasValidationErrors = true;
             }
         }
+        if (root.TryGetProperty("buttons", out var buttons) && buttons.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var button in buttons.EnumerateArray())
+            {
+                var buttonName = button.TryGetProperty("name", out var nameValue) ? nameValue.GetString() ?? string.Empty : string.Empty;
+                if (buttonName.Length == 0 || !actionButtons.TryGetValue(buttonName, out var actionButton)) continue;
+                if (button.TryGetProperty("label", out var labelValue))
+                    actionButton.Content = labelValue.GetString() ?? buttonName;
+                if (button.TryGetProperty("visible", out var visibleValue))
+                    actionButton.IsVisible = visibleValue.ValueKind != JsonValueKind.False;
+                if (button.TryGetProperty("enabled", out var enabledValue))
+                    actionButton.IsEnabled = enabledValue.ValueKind != JsonValueKind.False;
+            }
+        }
         if (root.TryGetProperty("navigation", out var navigation) && navigation.ValueKind == JsonValueKind.Object)
             Log.Info("XPScript", "UIForm navigation requested: " + navigation);
         return hasValidationErrors;
+    }
+
+    private static void ApplyEditorReadOnly(Control editor, bool readOnly)
+    {
+        if (editor is TextBox textBox)
+        {
+            textBox.IsReadOnly = readOnly;
+            return;
+        }
+        if (readOnly)
+            editor.IsEnabled = false;
+    }
+
+    private static void ApplyEditorOptions(Control editor, IReadOnlyList<string> options)
+    {
+        if (editor is ComboBox comboBox)
+            comboBox.ItemsSource = options.ToArray();
+        else if (editor is ListBox listBox)
+            listBox.ItemsSource = options.ToArray();
+        else if (editor is StackPanel radioPanel)
+        {
+            radioPanel.Children.Clear();
+            var groupName = Guid.NewGuid().ToString("N");
+            foreach (var option in options)
+                radioPanel.Children.Add(new Avalonia.Controls.RadioButton { Content = option, Tag = option, GroupName = groupName });
+        }
+    }
+
+    private static void SetEditorValues(Control editor, JsonElement values)
+    {
+        if (editor is not ListBox listBox) return;
+        listBox.SelectedItems?.Clear();
+        foreach (var item in values.EnumerateArray())
+        {
+            var selected = item.GetString() ?? string.Empty;
+            if (listBox.ItemsSource is IEnumerable<string> options && options.Contains(selected))
+                listBox.SelectedItems?.Add(selected);
+        }
     }
 
     private static void AddFieldContainer(JsonElement field, Control container, StackPanel targetPanel, Grid? targetGrid)
