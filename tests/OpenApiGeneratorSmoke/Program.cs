@@ -1302,10 +1302,9 @@ paths:
 foreach (var marker in new[] { "Enum PetStatus", "    Available", "    Pending", "    Sold", "End Enum", "[JsonName(\"status\")]", "Public Status As PetStatus", "[JsonName(\"history\")]", "Public History() As PetStatus" })
     if (!enumClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Typed OpenAPI enum is missing marker: " + marker);
 
-var badEnumValue = false;
-try { _ = new XpsOpenApiClientGenerator().Generate("""
+var normalizedEnumValue = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
-info: { title: Bad Enum, version: 1.0.0 }
+info: { title: Normalized Enum, version: 1.0.0 }
 components:
   schemas:
     BadStatus:
@@ -1321,8 +1320,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/BadStatus' }
-"""); } catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("cannot be represented losslessly", StringComparison.OrdinalIgnoreCase)) { badEnumValue = true; }
-if (!badEnumValue) throw new Exception("String enum values that cannot be represented losslessly must be rejected.");
+""").Source;
+if (!normalizedEnumValue.Contains("    InProgress", StringComparison.Ordinal))
+    throw new Exception("String enum values with punctuation must be normalized to valid XPScript enum identifiers.");
 
 var badNumericEnum = false;
 try { _ = new XpsOpenApiClientGenerator().Generate("""
