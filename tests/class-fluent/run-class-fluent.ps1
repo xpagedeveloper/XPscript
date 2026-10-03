@@ -9,7 +9,16 @@ $source = Join-Path $root "samples/class-fluent-chaining.xps"
 $output = Join-Path $outRoot "class-fluent-chaining"
 
 & dotnet run --project $compiler -c Release --no-build -- $source -o $output --runtime=false
-if ($LASTEXITCODE -ne 0) { throw "Compilation failed: class-fluent-chaining.xps" }
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "=== Generated fluent-chain C# diagnostics ==="
+    Get-ChildItem -Path $outRoot -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue | ForEach-Object {
+        Write-Host "--- $($_.FullName) ---"
+        Select-String -Path $_.FullName -Pattern "Append|CHAIN|CONTINUED" -Context 2,2 | ForEach-Object {
+            Write-Host $_.ToString()
+        }
+    }
+    throw "Compilation failed: class-fluent-chaining.xps"
+}
 
 $text = & $output 2>&1
 if ($LASTEXITCODE -ne 0) { throw "Program failed: class-fluent-chaining.xps" }
