@@ -69,6 +69,13 @@ public sealed class DeclarationParser
 
             var memberPosition = 0;
             if (Peek(tokens, memberPosition).Kind == SyntaxKind.IdentifierToken &&
+                Peek(tokens, memberPosition).Text.Equals("Const", StringComparison.OrdinalIgnoreCase))
+            {
+                _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Constants are not supported as class members.", Peek(tokens, memberPosition).Span));
+                continue;
+            }
+
+            if (Peek(tokens, memberPosition).Kind == SyntaxKind.IdentifierToken &&
                 Peek(tokens, memberPosition).Text.Equals("Static", StringComparison.OrdinalIgnoreCase))
             {
                 _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Static class members are not supported.", Peek(tokens, memberPosition).Span));
