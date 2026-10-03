@@ -721,7 +721,7 @@ public static class AndroidFormHost
         {
             Path.GetFullPath(Path.Combine(baseDirectory, normalized)),
             Path.GetFullPath(Path.Combine(baseDirectory, "assets", normalized)),
-            Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, normalized))
+            Path.GetFullPath(Path.Combine(System.Environment.CurrentDirectory, normalized))
         };
         foreach (var candidate in candidates)
             if (File.Exists(candidate)) return candidate;
@@ -768,7 +768,7 @@ public static class AndroidFormHost
 
     private sealed class AndroidColorFieldEditor : StackPanel
     {
-        public TextBox ValueEditor { get; } = new TextBox { Watermark = "#RRGGBB", MinWidth = 180 };
+        public TextBox ValueEditor { get; } = new TextBox { PlaceholderText = "#RRGGBB", MinWidth = 180 };
         public Border Preview { get; } = new Border { Width = 36, Height = 36, BorderThickness = new Thickness(1), BorderBrush = Brushes.Gray };
 
         public AndroidColorFieldEditor()
