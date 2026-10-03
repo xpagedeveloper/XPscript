@@ -166,6 +166,20 @@ if (!importSkeleton.AddedClasses.Contains("fortnox_CurrencyListItem_Wrap", Strin
 
 Console.WriteLine("OPENAPI-IMPORT-FORTNOX-CLASS-SKELETON=OK");
 
+var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecification, "fortnoxapi.json");
+foreach (var marker in new[]
+{
+    "Public Class fortnox_CurrencyListItem_Wrap",
+    "Public Currencies As ",
+    "Public Function CurrencyController_doIndex"
+})
+    if (!fortnoxClient.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("Fortnox OpenAPI REST client smoke is missing marker: " + marker);
+if (!fortnoxClient.Models.Contains("fortnox_CurrencyListItem_Wrap", StringComparer.Ordinal) ||
+    !fortnoxClient.Operations.Contains("CurrencyController_doIndex", StringComparer.Ordinal))
+    throw new Exception("Fortnox OpenAPI REST client did not report the generated currency model and operation.");
+Console.WriteLine("OPENAPI-FORTNOX-REST-CLIENT=OK");
+
 var generator = new XpsOpenApiGenerator();
 var result = generator.GenerateFile(fixture);
 var clientResult = new XpsOpenApiClientGenerator().GenerateFile(fixture);
