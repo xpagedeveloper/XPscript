@@ -169,7 +169,7 @@ Expressions are the first migration target because the current transpiler perfor
 - [x] Parse parameters including ByRef/ByVal semantics.
 - [x] Parse return types.
 - [ ] Parse Classes and inheritance syntax.
-- [ ] Parse fields.
+- [x] Parse fields.
 - [x] Parse properties.
 - [x] Parse constructors and destructors.
 - [x] Parse visibility modifiers.
@@ -192,8 +192,8 @@ Class declaration and scope:
 - [x] Verify member fields default to Private.
 - [x] Verify member Subs, Functions, and Properties default to Public.
 - [x] Reject `Static` class fields and member procedures unless XPscript deliberately defines a documented extension.
-- [ ] Require one class field per declaration; do not silently accept comma-separated field declarations.
-- [ ] Permit self-referential field types but do not allow field declarations to instantiate themselves with `New`.
+- [x] Require one class field per declaration; do not silently accept comma-separated field declarations.
+- [x] Permit self-referential field types but do not allow field declarations to instantiate themselves with `New`.
 - [ ] Define and test reserved-keyword rules for field names and keyword-named member procedures.
 
 Members and properties:
