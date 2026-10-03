@@ -37,6 +37,7 @@ internal sealed class AdvancedXPScriptTranspiler
         public string Visibility { get; set; } = "private";
         public Dictionary<string, FieldInfo> Fields { get; } = new(StringComparer.OrdinalIgnoreCase);
         public Dictionary<string, PropertyInfo> Properties { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, string> FunctionReturnTypes { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     private sealed class FieldInfo
@@ -275,6 +276,17 @@ internal static class LSForAllRuntime
 
             if (current is null)
                 continue;
+
+            var functionMatch = Regex.Match(
+                line,
+                @"^(?:(Public|Private)\s+)?Function\s+([A-Za-z_]\w*)\s*\(.*\)\s*(?:As\s+([A-Za-z_]\w*))?\s*$",
+                RegexOptions.IgnoreCase);
+            if (functionMatch.Success)
+            {
+                current.FunctionReturnTypes[functionMatch.Groups[2].Value] =
+                    string.IsNullOrWhiteSpace(functionMatch.Groups[3].Value) ? "Variant" : functionMatch.Groups[3].Value;
+                continue;
+            }
 
             var propertyMatch = Regex.Match(
                 line,
@@ -1139,6 +1151,30 @@ internal static class LSForAllRuntime
             // Len(image.GetProfile("icc")); leaving the LSRef<T> receiver intact makes the
             // later ByRef lowering treat it as dynamic and produces an invalid ref argument.
             text = Regex.Replace(text, $@"\b{name}\.", $"{objectVariable.Key}.Value!.", RegexOptions.IgnoreCase);
+        }
+
+        // Class functions return LSRef<T> when their XPscript return type is a class.
+        // In a fluent expression the following member belongs to T, not LSRef<T>, so
+        // dereference the function result before continuing the chain.
+        foreach (var classInfo in _classes.Values)
+        {
+            foreach (var function in classInfo.FunctionReturnTypes)
+            {
+                if (!_classes.ContainsKey(function.Value)) continue;
+                var functionName = Regex.Escape(function.Key);
+                var pattern = $@"\.{functionName}\s*\(([^()]*)\)\s*\.";
+                string previous;
+                do
+                {
+                    previous = text;
+                    text = Regex.Replace(
+                        text,
+                        pattern,
+                        m => m.Value[..m.Value.LastIndexOf('.')] + ".Value!.",
+                        RegexOptions.IgnoreCase);
+                }
+                while (!text.Equals(previous, StringComparison.Ordinal));
+            }
         }
 
         foreach (var runtimeObject in _runtimeObjectVariables)
