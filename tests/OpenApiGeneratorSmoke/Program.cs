@@ -4,6 +4,42 @@ using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
 var fixture = Path.Combine(AppContext.BaseDirectory, "petstore.yaml");
+// Keep this focused regression before the full Fortnox import so wildcard request-body failures surface immediately.
+const string wildcardRequestBodyOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Wildcard request body regression", "version": "1.0" },
+  "paths": {
+    "/3/absencetransactions": {
+      "post": {
+        "operationId": "AbsenceTransactionsController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": { "$ref": "#/components/schemas/Payload" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Payload": {
+        "type": "object",
+        "properties": { "EmployeeId": { "type": "string" } }
+      }
+    }
+  }
+}
+""";
+var wildcardImport = new XpsOpenApiImporter().Import(wildcardRequestBodyOpenApi, "", "wildcard-request-body.json");
+if (!wildcardImport.Source.Contains("Public Class Payload", StringComparison.Ordinal) ||
+    !wildcardImport.Source.Contains("Sub EndpointAbsenceTransactionsController_doCreate", StringComparison.Ordinal))
+    throw new Exception("OpenAPI wildcard request-body regression failed.");
+Console.WriteLine("OPENAPI-WILDCARD-REQUEST-BODY=OK");
+
 var fortnoxFixtureDirectory = Path.Combine(AppContext.BaseDirectory, "fixtures");
 var fortnoxSpecification = string.Concat(
     Directory.GetFiles(fortnoxFixtureDirectory, "fortnoxapi.part*.json")
