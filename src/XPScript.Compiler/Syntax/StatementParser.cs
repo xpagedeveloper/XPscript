@@ -52,6 +52,12 @@ public sealed class StatementParser
 
     private StatementSyntax ParseCurrentStatement()
     {
+        if (Current.Kind == SyntaxKind.ClassKeyword)
+        {
+            var classKeyword = NextToken();
+            _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Class declarations are not allowed inside procedures.", classKeyword.Span));
+            return new ExpressionStatementSyntax(new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, classKeyword.Text, classKeyword.Value, classKeyword.Span)));
+        }
         if (Current.Kind == SyntaxKind.IfKeyword)
             return ParseIfStatement();
         if (Current.Kind == SyntaxKind.SetKeyword)
