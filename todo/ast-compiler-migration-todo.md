@@ -170,7 +170,7 @@ Expressions are the first migration target because the current transpiler perfor
 - [x] Parse return types.
 - [ ] Parse Classes and inheritance syntax.
 - [ ] Parse fields.
-- [ ] Parse properties.
+- [x] Parse properties.
 - [x] Parse constructors and destructors.
 - [x] Parse visibility modifiers.
 - [ ] Parse application-level declarations.
