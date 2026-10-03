@@ -135,7 +135,7 @@ public sealed class XpsOpenApiGenerator
         {
             if (pair.Value is not JsonObject schema)
                 throw new XpsOpenApiGenerationException($"components.schemas.{pair.Key} must be an object.");
-            var modelName = ToTypeIdentifier(pair.Key, $"schema '{pair.Key}'");
+            var modelName = ToSchemaIdentifier(pair.Key, $"schema '{pair.Key}'");
             if (!result.TryAdd(modelName, schema))
                 throw new XpsOpenApiGenerationException($"OpenAPI schemas generate duplicate XPScript class name '{modelName}'.");
         }
@@ -542,12 +542,19 @@ public sealed class XpsOpenApiGenerator
         return candidate;
     }
 
-    private static string ToTypeIdentifier(string value, string context)
+    private static string ToSchemaIdentifier(string value, string context)
     {
         if (string.IsNullOrWhiteSpace(value)) throw new XpsOpenApiGenerationException($"{context} has an empty identifier.");
         var trimmed = value.Trim();
-        if (IdentifierPattern.IsMatch(trimmed) && !IsDeclarationReserved(trimmed)) return trimmed;
-        var parts = Regex.Split(trimmed, "[^A-Za-z0-9_]+", RegexOptions.CultureInvariant).Where(part => part.Length > 0).ToArray();
+        return IdentifierPattern.IsMatch(trimmed) && !IsDeclarationReserved(trimmed)
+            ? trimmed
+            : ToTypeIdentifier(trimmed, context);
+    }
+
+    private static string ToTypeIdentifier(string value, string context)
+    {
+        if (string.IsNullOrWhiteSpace(value)) throw new XpsOpenApiGenerationException($"{context} has an empty identifier.");
+        var parts = Regex.Split(value.Trim(), "[^A-Za-z0-9_]+", RegexOptions.CultureInvariant).Where(part => part.Length > 0).ToArray();
         if (parts.Length == 0) throw new XpsOpenApiGenerationException($"{context} cannot be converted to an XPScript identifier.");
         var joined = string.Concat(parts.Select(Pascalize));
         if (joined.Length == 0 || char.IsDigit(joined[0])) joined = "Api" + joined;
