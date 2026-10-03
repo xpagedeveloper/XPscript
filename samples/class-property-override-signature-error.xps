@@ -1,0 +1,14 @@
+Class BaseProperty
+    Public Property Get Label As String
+        Label = "base"
+    End Property
+End Class
+
+Class ChildProperty Extend BaseProperty
+    Public Property Get Label As Integer
+        Label = 7
+    End Property
+End Class
+
+Sub Main()
+End Sub
