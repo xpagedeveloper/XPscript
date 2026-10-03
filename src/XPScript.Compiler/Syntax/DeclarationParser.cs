@@ -118,6 +118,18 @@ public sealed class DeclarationParser
             ? header[position++]
             : Take(header, ref position, SyntaxKind.GetKeyword);
         var identifier = Take(header, ref position, SyntaxKind.IdentifierToken);
+        SyntaxToken? openParen = null;
+        SyntaxToken? closeParen = null;
+        var parameters = new List<ParameterSyntax>();
+        var commas = new List<SyntaxToken>();
+        if (Peek(header, position).Kind == SyntaxKind.OpenParenToken)
+        {
+            var parsed = ParseParameters(header, ref position);
+            openParen = parsed.OpenParen;
+            parameters = parsed.Parameters;
+            commas = parsed.Commas;
+            closeParen = parsed.CloseParen;
+        }
         SyntaxToken? asKeyword = null;
         TypeSyntax? type = null;
         if (Peek(header, position).Kind == SyntaxKind.AsKeyword)
@@ -126,7 +138,7 @@ public sealed class DeclarationParser
             type = new TypeSyntax(Take(header, ref position, SyntaxKind.IdentifierToken));
         }
         var (statements, endKeyword, endTarget) = ParseBody(lines, SyntaxKind.PropertyKeyword, "Property");
-        return new PropertyDeclarationSyntax(visibility, propertyKeyword, accessor, identifier, asKeyword, type, statements, endKeyword, endTarget);
+        return new PropertyDeclarationSyntax(visibility, propertyKeyword, accessor, identifier, openParen, parameters, commas, closeParen, asKeyword, type, statements, endKeyword, endTarget);
     }
 
     private static int FindDeclarationEnd(IReadOnlyList<SourceLine> lines, int start, SyntaxKind targetKind)
