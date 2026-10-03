@@ -225,6 +225,41 @@ if (!multipartClientRequestBody.Source.Contains("Public Function ArchiveControll
     throw new Exception("OpenAPI multipart client request-body regression failed.");
 Console.WriteLine("OPENAPI-CLIENT-MULTIPART-REQUEST-BODY=OK");
 
+const string numericAllOfClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Numeric allOf client regression", "version": "1.0" },
+  "paths": {
+    "/bundle": {
+      "get": {
+        "operationId": "getBundle",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Combined" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Base": { "type": "object", "properties": { "Vat": { "type": "number", "format": "double" } } },
+      "Combined": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Base" },
+          { "type": "object", "properties": { "Vat": { "type": "number", "format": "float" } } }
+        ]
+      }
+    }
+  }
+}
+""";
+var numericAllOfClient = new XpsOpenApiClientGenerator().Generate(numericAllOfClientOpenApi, "numeric-allof-client.json");
+if (!numericAllOfClient.Source.Contains("Public Vat As Double", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client numeric allOf regression must widen Single/Double to Double.");
+Console.WriteLine("OPENAPI-CLIENT-NUMERIC-ALLOF=OK");
+
 var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecification, "fortnoxapi.json");
 foreach (var marker in new[]
 {
