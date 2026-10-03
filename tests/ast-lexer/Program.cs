@@ -20,6 +20,16 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+const string incompatibleIndexedPropertySource = "Class BadIndexed\nPublic Property Get Item(index As Integer) As String\nItem = \"ok\"\nEnd Property\nPublic Property Let Item(key As String, value As String)\nEnd Property\nEnd Class";
+var incompatibleIndexedPropertyParser = new DeclarationParser(incompatibleIndexedPropertySource);
+_ = incompatibleIndexedPropertyParser.ParseDeclaration();
+Equal(1, incompatibleIndexedPropertyParser.Diagnostics.Count(d => d.Message.Contains("compatible index parameter signatures", StringComparison.Ordinal)), "indexed property signature mismatch diagnostic");
+
+const string compatibleIndexedPropertySource = "Class GoodIndexed\nPublic Property Get Item(index As Integer) As String\nItem = \"ok\"\nEnd Property\nPublic Property Let Item(index As Integer, value As String)\nEnd Property\nEnd Class";
+var compatibleIndexedPropertyParser = new DeclarationParser(compatibleIndexedPropertySource);
+_ = compatibleIndexedPropertyParser.ParseDeclaration();
+Equal(0, compatibleIndexedPropertyParser.Diagnostics.Count, "compatible indexed property signatures");
+
 const string moduleLifecycleNamesSource = "Sub New()\nEnd Sub";
 var moduleNewParser = new DeclarationParser(moduleLifecycleNamesSource);
 var moduleNew = moduleNewParser.ParseDeclaration();
