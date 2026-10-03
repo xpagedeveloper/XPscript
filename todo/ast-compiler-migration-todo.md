@@ -211,7 +211,7 @@ Inheritance and member access:
 - [x] Define whether `Parent` may access Private base procedures/properties; test the chosen XPscript rule explicitly rather than inheriting backend C# behavior accidentally.
 - [x] Support overriding inherited methods/properties only with compatible signatures and produce XPscript diagnostics for incompatible overrides.
 - [x] Verify inherited constructor behavior and define explicit base-constructor invocation syntax/semantics for XPscript.
-- [ ] Verify inherited destructor/delete ordering and ensure base cleanup occurs exactly once.
+- [x] Verify inherited destructor/delete ordering and ensure base cleanup occurs exactly once.
 
 Object lifecycle and references:
 - [ ] Verify `New` invokes `Sub New` for each newly created XPscript object.
