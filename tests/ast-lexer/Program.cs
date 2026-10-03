@@ -20,6 +20,12 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+const string localClassSource = "Sub InvalidLocalClass()\nClass LocalBox\nEnd Class\nEnd Sub";
+var localClassParser = new DeclarationParser(localClassSource);
+_ = localClassParser.ParseDeclaration();
+var localClassDiagnostic = localClassParser.Diagnostics.FirstOrDefault(d => d.Message == "Class declarations are not allowed inside procedures.");
+Equal("XPS1012", localClassDiagnostic?.Code, "procedure-local class diagnostic code");
+
 const string nestedClassSource = "Class Outer\nClass Inner\nEnd Class\nPublic Value As Integer\nEnd Class";
 var nestedClassParser = new DeclarationParser(nestedClassSource);
 var nestedClass = (ClassDeclarationSyntax)nestedClassParser.ParseDeclaration();
