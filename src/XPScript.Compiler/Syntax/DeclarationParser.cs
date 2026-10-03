@@ -67,6 +67,7 @@ public sealed class DeclarationParser
             AddLexerDiagnostics(lexer.Diagnostics);
 
             if (tokens.Length >= 2 && tokens[0].Kind == SyntaxKind.EndKeyword && tokens[1].Kind == SyntaxKind.ClassKeyword)
+                ValidateIndexedPropertySignatures(members);
                 return new ClassDeclarationSyntax(visibility, classKeyword, identifier, extendKeyword, baseType, members, tokens[0], tokens[1]);
 
             var memberPosition = 0;
@@ -136,6 +137,37 @@ public sealed class DeclarationParser
             new SyntaxToken(SyntaxKind.ClassKeyword, string.Empty, null, new TextSpan(end, 0)));
     }
 
+    private void ValidateIndexedPropertySignatures(IReadOnlyList<SyntaxNode> members)
+    {
+        foreach (var group in members.OfType<PropertyDeclarationSyntax>().GroupBy(p => p.Identifier.Text, StringComparer.OrdinalIgnoreCase))
+        {
+            var getter = group.FirstOrDefault(p => p.IsGetter);
+            if (getter is null || getter.Parameters.Count == 0)
+                continue;
+
+            foreach (var setter in group.Where(p => p.IsSetter))
+            {
+                var setterIndexCount = Math.Max(0, setter.Parameters.Count - 1);
+                var compatible = setter.Parameters.Count > 0 && setterIndexCount == getter.Parameters.Count;
+                if (compatible)
+                {
+                    for (var i = 0; i < getter.Parameters.Count; i++)
+                    {
+                        var getterType = getter.Parameters[i].Type?.Identifier.Text ?? "Variant";
+                        var setterType = setter.Parameters[i].Type?.Identifier.Text ?? "Variant";
+                        if (!getterType.Equals(setterType, StringComparison.OrdinalIgnoreCase) || getter.Parameters[i].IsByRef != setter.Parameters[i].IsByRef)
+                        {
+                            compatible = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (!compatible)
+                    _diagnostics.Add(new SyntaxDiagnostic("XPS1012", $"Indexed property '{group.Key}' accessors must use compatible index parameter signatures.", setter.Identifier.Span));
+            }
+        }
+    }
 
     private PropertyDeclarationSyntax ParseProperty(IReadOnlyList<SourceLine> lines)
     {
