@@ -68,6 +68,19 @@ public sealed class DeclarationParser
                 return new ClassDeclarationSyntax(visibility, classKeyword, identifier, extendKeyword, baseType, members, tokens[0], tokens[1]);
 
             var memberPosition = 0;
+            if (Peek(tokens, memberPosition).Kind == SyntaxKind.IdentifierToken &&
+                Peek(tokens, memberPosition).Text.Equals("Static", StringComparison.OrdinalIgnoreCase))
+            {
+                _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Static class members are not supported.", Peek(tokens, memberPosition).Span));
+                var staticTarget = Peek(tokens, memberPosition + 1).Kind;
+                if (staticTarget is SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword or SyntaxKind.PropertyKeyword)
+                {
+                    var staticEnd = FindDeclarationEnd(lines, i + 1, staticTarget);
+                    i = staticEnd;
+                }
+                continue;
+            }
+
             SyntaxToken? memberVisibility = null;
             if (Peek(tokens, memberPosition).Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword)
                 memberVisibility = tokens[memberPosition++];
