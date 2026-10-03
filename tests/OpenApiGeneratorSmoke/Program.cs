@@ -151,7 +151,7 @@ End Sub
 foreach (var marker in new[]
 {
     "Public Class fortnox_CurrencyListItem_Wrap",
-    "Public Currencies As ",
+    "Public Currencies() As fortnox_CurrencySingleItem",
     "Sub EndpointCurrencyController_doIndex",
     "Function HandleCurrencyController_doIndex",
     "Sub ExistingProcedure()",
