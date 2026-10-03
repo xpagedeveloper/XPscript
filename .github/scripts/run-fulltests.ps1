@@ -50,7 +50,17 @@ if (Should-Run 'language') {
   if ($overrideBad.ExitCode -eq 0) { throw 'Incompatible class override unexpectedly compiled.' }
   if ($overrideBad.Output -notmatch 'XPS2007' -or $overrideBad.Output -notmatch 'incompatible override') { throw 'Incompatible class override did not produce XPS2007.' }
   $overrideGood = Run-Xps ./samples/class-override-signature-ok.xps class-override-signature-ok
-  if ($overrideGood.Output -notmatch '(?m)^7\s*
+  if ($overrideGood.Output -notmatch "(?m)^7\s*$") { throw 'Compatible class override regression failed.' }
+
+  # Cover property overrides separately from method overrides.
+  $propertyOverrideBad = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/class-property-override-signature-error.xps','-o','./out/fulltest/class-property-override-signature-error','--runtime=false') $compileTimeoutMilliseconds 'incompatible property override diagnostic'
+  if ($propertyOverrideBad.ExitCode -eq 0) { throw 'Incompatible property override unexpectedly compiled.' }
+  if ($propertyOverrideBad.Output -notmatch 'XPS2007' -or $propertyOverrideBad.Output -notmatch 'incompatible override') { throw 'Incompatible property override did not produce XPS2007.' }
+  $propertyOverrideGood = Run-Xps ./samples/class-property-override-signature-ok.xps class-property-override-signature-ok
+  if ($propertyOverrideGood.Output -notmatch "(?m)^base:child\s*$") { throw 'Compatible property override regression failed.' }
+
+  # Keep the smallest Parent visibility regression first while inheritance semantics are active.
+  $parentPrivate = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/class-parent-private-error.xps','-o','./out/fulltest/class-parent-private-error','--runtime=false') $compileTimeoutMilliseconds 'Parent private access diagnostic'
   if ($parentPrivate.ExitCode -eq 0) { throw 'Parent private access unexpectedly compiled.' }
   if ($parentPrivate.Output -notmatch 'XPS2009' -or $parentPrivate.Output -notmatch 'Private base member') { throw 'Parent private access did not produce XPS2009.' }
 
