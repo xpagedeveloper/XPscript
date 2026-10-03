@@ -296,7 +296,7 @@ const string modelConflictAllOfClientOpenApi = """
 }
 """;
 var modelConflictAllOfClient = new XpsOpenApiClientGenerator().Generate(modelConflictAllOfClientOpenApi, "model-conflict-allof-client.json");
-if (!modelConflictAllOfClient.Source.Contains("Public customer As Variant", StringComparison.Ordinal))
+if (!modelConflictAllOfClient.Source.Contains("Public Customer As Variant", StringComparison.Ordinal))
     throw new Exception("OpenAPI client model-conflict allOf regression must fall back to Variant.");
 Console.WriteLine("OPENAPI-CLIENT-MODEL-CONFLICT-ALLOF=OK");
 
