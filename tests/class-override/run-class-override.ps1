@@ -33,5 +33,6 @@ Compile-ExpectFailure "class-override-signature-error.xps"
 Compile-And-Run "class-override-signature-ok.xps" "(?m)^7\s*$"
 Compile-ExpectFailure "class-property-override-signature-error.xps"
 Compile-And-Run "class-property-override-signature-ok.xps" "(?m)^base:child\s*$"
+Compile-ExpectFailure "class-transitive-override-signature-error.xps"
 
 Write-Host "CLASS_OVERRIDE_FOCUSED=OK"
