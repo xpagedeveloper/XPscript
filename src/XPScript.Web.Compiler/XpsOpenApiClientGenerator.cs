@@ -218,6 +218,11 @@ public sealed class XpsOpenApiClientGenerator
                             result[property.Key] = propertySchema;
                         continue;
                     }
+                    if (IsModelReferenceType(eyistingType) && IsModelReferenceType(incomingType))
+                    {
+                        result[property.Key] = new JsonObject();
+                        continue;
+                    }
                     throw new XpsOpenApiGenerationException($"Schema '{modelName}' allOf property '{property.Key}' has conflicting XPScript types '{eyistingType}' and '{incomingType}'.");
                 }
                 continue;
@@ -225,6 +230,11 @@ public sealed class XpsOpenApiClientGenerator
             result[property.Key] = propertySchema;
         }
     }
+    private static bool IsModelReferenceType(string typeName)
+    {
+        return typeName is not ("String" or "Boolean" or "Integer" or "Long" or "Single" or "Double" or "Date" or "Variant" or "XPJsonObject" or "XPJsonArray");
+    }
+
     private static bool TryWidenNumericType(string left, string right, out string widened)
     {
         static int Rank(string typeName) => typeName.ToLowerInvariant() switch
