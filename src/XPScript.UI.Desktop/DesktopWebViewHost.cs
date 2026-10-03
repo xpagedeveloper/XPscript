@@ -18,7 +18,7 @@ internal static class DesktopWebViewHost
         if (!string.IsNullOrWhiteSpace(background)) view.Background = new SolidColorBrush(Color.Parse(background));
         Views[Key(instanceId, fieldName)] = view;
         if (!string.IsNullOrEmpty(html)) view.AdapterCreated += (_, _) => view.NavigateToString(html);
-        else if (Uri.TryCreate(string.IsNullOrWhiteSpace(source) ? "about:blank" : source, UriKind.Absolute, out var uri)) view.Source = uri;
+        else view.Source = ResolveSourceUri(source);
         return view;
     }
 
@@ -57,7 +57,8 @@ internal static class DesktopWebViewHost
         return result;
     }
 
-    private static string Navigate(NativeWebView view, string? value) { if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) throw new InvalidOperationException("WebView navigation requires an absolute URI."); view.Navigate(uri); return uri.AbsoluteUri; }
+    private static string Navigate(NativeWebView view, string? value) { var uri = ResolveSourceUri(value); view.Navigate(uri); return uri.AbsoluteUri; }
+    private static Uri ResolveSourceUri(string? value) { var source = string.IsNullOrWhiteSpace(value) ? "about:blank" : value.Trim(); if (Uri.TryCreate(source, UriKind.Absolute, out var absolute)) return absolute; var normalized = source.Replace('/', Path.DirectorySeparatorChar); if (normalized.Contains("..", StringComparison.Ordinal)) throw new InvalidOperationException("WebView asset path may not contain '..'."); var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, normalized)); if (!File.Exists(path)) throw new FileNotFoundException("UIForm WebView asset was not found.", path); return new Uri(path); }
     private static string NavigateHtml(NativeWebView view, string? html) { view.NavigateToString(html ?? string.Empty); return "true"; }
     private static string SetUserAgent(NativeWebView view, string? value) { view.UserAgent = value ?? string.Empty; return view.UserAgent ?? string.Empty; }
     private static string SetBackground(NativeWebView view, string? value) { if (!string.IsNullOrWhiteSpace(value)) view.Background = new SolidColorBrush(Color.Parse(value)); return view.Background?.ToString() ?? string.Empty; }
