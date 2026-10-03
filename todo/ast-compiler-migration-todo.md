@@ -197,7 +197,7 @@ Class declaration and scope:
 - [ ] Define and test reserved-keyword rules for field names and keyword-named member procedures.
 
 Members and properties:
-- [ ] Support fields, Subs, Functions, Properties, `Sub New`, and `Sub Delete` as class members.
+- [x] Support fields, Subs, Functions, Properties, `Sub New`, and `Sub Delete` as class members.
 - [x] Keep constants out of class members unless XPscript deliberately defines a documented extension.
 - [x] Support read-only, write-only, and read/write properties.
 - [ ] Support parameterized/indexed properties and require compatible Get/Let/Set index signatures for accessors sharing a property name.
