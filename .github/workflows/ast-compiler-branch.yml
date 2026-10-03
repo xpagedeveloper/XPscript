@@ -45,6 +45,9 @@ jobs:
       - name: Run focused object reference default regression
         shell: pwsh
         run: ./tests/class-reference-default/run-class-reference-default.ps1
+      - name: Run focused Delete alias regression
+        shell: pwsh
+        run: ./tests/class-delete-alias/run-class-delete-alias.ps1
       - name: Run focused AST lexer tests first
         run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
       - name: Run deterministic AST compatibility tests first
