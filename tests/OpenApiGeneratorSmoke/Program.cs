@@ -166,6 +166,65 @@ if (!importSkeleton.AddedClasses.Contains("fortnox_CurrencyListItem_Wrap", Strin
 
 Console.WriteLine("OPENAPI-IMPORT-FORTNOX-CLASS-SKELETON=OK");
 
+const string wildcardClientRequestBodyOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Wildcard client request body regression", "version": "1.0" },
+  "paths": {
+    "/3/absencetransactions": {
+      "post": {
+        "operationId": "AbsenceTransactionsController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": { "schema": { "$ref": "#/components/schemas/Payload" } }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Payload": { "type": "object", "properties": { "value": { "type": "string" } } }
+    }
+  }
+}
+""";
+var wildcardClientRequestBody = new XpsOpenApiClientGenerator().Generate(wildcardClientRequestBodyOpenApi, "wildcard-client-request-body.json");
+if (!wildcardClientRequestBody.Source.Contains("Public Class Payload", StringComparison.Ordinal) ||
+    !wildcardClientRequestBody.Source.Contains("Public Function AbsenceTransactionsController_doCreate", StringComparison.Ordinal))
+    throw new Exception("OpenAPI wildcard client request-body regression failed.");
+Console.WriteLine("OPENAPI-CLIENT-WILDCARD-REQUEST-BODY=OK");
+
+const string multipartClientRequestBodyOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Multipart client request body regression", "version": "1.0" },
+  "paths": {
+    "/3/archive": {
+      "post": {
+        "operationId": "ArchiveController_doCreate",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": { "file": { "type": "object" } }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    }
+  }
+}
+""";
+var multipartClientRequestBody = new XpsOpenApiClientGenerator().Generate(multipartClientRequestBodyOpenApi, "multipart-client-request-body.json");
+if (!multipartClientRequestBody.Source.Contains("Public Function ArchiveController_doCreate", StringComparison.Ordinal))
+    throw new Exception("OpenAPI multipart client request-body regression failed.");
+Console.WriteLine("OPENAPI-CLIENT-MULTIPART-REQUEST-BODY=OK");
+
 var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecification, "fortnoxapi.json");
 foreach (var marker in new[]
 {
