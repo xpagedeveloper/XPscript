@@ -218,7 +218,7 @@ Object lifecycle and references:
 - [x] Verify object references start as `Nothing` where required by XPscript semantics.
 - [x] Verify `Delete object` invokes `Sub Delete`, clears the deleted reference, and preserves the repository's defined alias/reference semantics.
 - [x] Verify `Set object = Nothing` remains reference clearing only and does not implicitly call `Sub Delete`.
-- [ ] Add focused tests for constructor arguments, explicit deletion, aliases, inheritance, `Me`, `Parent`, and property access before marking class migration complete.
+- [x] Add focused tests for constructor arguments, explicit deletion, aliases, inheritance, `Me`, `Parent`, and property access before marking class migration complete.
 
 Class-oriented language patterns:
 - [ ] Verify fluent/chained method calls on class instances, including continued chains across XPscript line continuation.
