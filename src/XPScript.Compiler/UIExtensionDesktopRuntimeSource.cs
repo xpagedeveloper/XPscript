@@ -100,11 +100,18 @@ internal static class XPScriptUIDesktopAdapter
             width = form.Width > 0 ? form.Width : (int?)null,
             height = form.Height > 0 ? form.Height : (int?)null,
             resizable = form.Resizable,
+            theme = form.Theme,
+            showValidationErrors = form.ShowValidationErrors,
+            showDefaultButtons = form.ShowDefaultButtons,
+            gridColumns = form.GridColumns,
+            hasValidationSchema = form.HasValidationSchema,
             bootText = form.BootText,
             bootImage = form.BootImage,
             fields = fields.Select(field => new
             {
                 name = field.Name, label = field.Label, type = field.Type, required = field.Required, layoutRow = field.LayoutRow, layoutColumn = field.LayoutColumn, columnSpan = field.ColumnSpan, rowSpan = field.RowSpan,
+                placeholder = field.Placeholder, tooltip = field.Tooltip, imageSource = field.ImageSource, imageAltText = field.ImageAltText, imageCertificateValidation = field.ImageCertificateValidation,
+                regexPattern = field.RegexPattern, schemaValidationError = form.GetValidationError(field.Name),
                 value = field.Type is "PasswordField" or "MultiListBox" ? null : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
                 minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, options = field.Options, cornerRadius = field.CornerRadius, tabName = field.TabName, gridName = field.GridName,
@@ -115,7 +122,8 @@ internal static class XPScriptUIDesktopAdapter
             activeTab = form.ActiveTab,
             buttons = form.Buttons.Select(button => new
             {
-                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style, cornerRadius = button.CornerRadius
+                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style, cornerRadius = button.CornerRadius,
+                layoutRow = button.LayoutRow, layoutColumn = button.LayoutColumn, columnSpan = button.ColumnSpan, rowSpan = button.RowSpan
             }).ToArray()
         };
 
