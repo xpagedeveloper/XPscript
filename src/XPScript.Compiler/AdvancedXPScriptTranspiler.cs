@@ -1213,12 +1213,22 @@ internal static class LSForAllRuntime
         {
             if (!_classes.TryGetValue(objectVariable.Value, out var rootClass)) continue;
 
-            var root = Regex.Escape(objectVariable.Key) + @"\.Value!\.";
-            text = Regex.Replace(
-                text,
-                root + @"([A-Za-z_]\w*)\s*\(([^()]*)\)",
-                match => LowerFluentClassCall(match, rootClass),
-                RegexOptions.IgnoreCase);
+            var receiver = Regex.Escape(objectVariable.Key) + @"\.Value!";
+            string previous;
+            do
+            {
+                previous = text;
+                text = Regex.Replace(
+                    text,
+                    receiver + @"\.([A-Za-z_]\w*)\s*\(([^()]*)\)",
+                    match => LowerFluentClassCall(match, rootClass),
+                    RegexOptions.IgnoreCase);
+
+                // A class-returning call lowered above ends in .Value!, which is
+                // itself the receiver for the next member in the fluent chain.
+                receiver = @"[A-Za-z_]\w*\.Value!(?:\.[A-Za-z_]\w*\([^()]*\)\.Value!)*";
+            }
+            while (!text.Equals(previous, StringComparison.Ordinal));
         }
         return text;
     }
