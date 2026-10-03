@@ -14,6 +14,8 @@ sealed class AndroidEntryActivity : Activity
     {
         base.OnCreate(savedInstanceState);
         Console.AndroidLog = (text, isError) => Log.WriteLine(isError ? LogPriority.Error : LogPriority.Info, "XPScript", text);
+        if (Intent?.GetBooleanExtra("xpscript.appdebug", false) == true)
+            System.Environment.SetEnvironmentVariable("XPSCRIPT_APPDEBUG", "1");
         try
         {
             System.Environment.ExitCode = 0;
