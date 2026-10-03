@@ -70,6 +70,27 @@ if (!multipartImport.Source.Contains("Public Class ArchiveController_doCreateBod
     throw new Exception("OpenAPI multipart request-body regression failed.");
 Console.WriteLine("OPENAPI-MULTIPART-REQUEST-BODY=OK");
 
+const string reservedModelMemberOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Reserved model member regression", "version": "1.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Bureau_Activity": {
+        "type": "object",
+        "properties": { "date": { "type": "string", "format": "date" } }
+      }
+    }
+  }
+}
+""";
+var reservedMemberImport = new XpsOpenApiImporter().Import(reservedModelMemberOpenApi, "", "reserved-model-member.json");
+if (!reservedMemberImport.Source.Contains("' OpenAPI property: date", StringComparison.Ordinal) ||
+    !reservedMemberImport.Source.Contains("Public ApiDate As Date", StringComparison.Ordinal))
+    throw new Exception("OpenAPI reserved model-member regression failed.");
+Console.WriteLine("OPENAPI-RESERVED-MODEL-MEMBER=OK");
+
 var fortnoxFixtureDirectory = Path.Combine(AppContext.BaseDirectory, "fixtures");
 var fortnoxSpecification = string.Concat(
     Directory.GetFiles(fortnoxFixtureDirectory, "fortnoxapi.part*.json")
