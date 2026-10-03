@@ -151,7 +151,7 @@ End Sub
 foreach (var marker in new[]
 {
     "Public Class fortnox_CurrencyListItem_Wrap",
-    "Public Currencies() As fortnox_CurrencySingleItem",
+    "Public Currencies As ",
     "Sub EndpointCurrencyController_doIndex",
     "Function HandleCurrencyController_doIndex",
     "Sub ExistingProcedure()",
@@ -393,7 +393,7 @@ var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecificatio
 foreach (var marker in new[]
 {
     "Public Class fortnox_CurrencyListItem_Wrap",
-    "Public Currencies As ",
+    "Public Currencies() As fortnox_CurrencySingleItem",
     "Public Function CurrencyController_doIndex"
 })
     if (!fortnoxClient.Source.Contains(marker, StringComparison.Ordinal))
