@@ -149,6 +149,13 @@ var editorRegistrationIndex = uiHostCode.IndexOf("editors[name] = editor;", Stri
 if (structuralBranchIndex < 0 || editorRegistrationIndex < 0 || editorRegistrationIndex < structuralBranchIndex)
     throw new Exception("Android structural/media controls must bypass editor-state registration so they cannot overwrite bound data during submission.");
 
+var defaultOkStart = uiHostCode.IndexOf("ok.Click += (_, _) =>", StringComparison.Ordinal);
+var defaultOkEnd = defaultOkStart >= 0 ? uiHostCode.IndexOf("};", defaultOkStart, StringComparison.Ordinal) : -1;
+var defaultOkBlock = defaultOkStart >= 0 && defaultOkEnd > defaultOkStart ? uiHostCode[defaultOkStart..defaultOkEnd] : string.Empty;
+if (!defaultOkBlock.Contains("ApplyActionState(", StringComparison.Ordinal) ||
+    !defaultOkBlock.Contains("return;", StringComparison.Ordinal))
+    throw new Exception("Android default OK must apply callback action-state and keep the form open when validation fails.");
+
 foreach (var forbidden in new[] { "PointerPressed", "PointerReleased", "MouseButton", "MouseDevice" })
 {
     if (uiHostCode.Contains(forbidden, StringComparison.Ordinal))
