@@ -95,6 +95,13 @@ foreach (var expected in new[]
     "\"RangeField\" => CreateRangeField(field)",
     "\"Separator\" => new Separator()",
     "\"Image\" => CreateImage(field)",
+    "\"WebView\" => CreateWebView(field, instanceId, name)",
+    "private static Avalonia.Controls.NativeWebView CreateWebView",
+    "public static string WebViewCommand(string instanceId, string fieldName, string command, string? argument)",
+    "webViewSource",
+    "webViewHtml",
+    "webViewUserAgent",
+    "webViewBackground",
     "\"DateField\" => new Avalonia.Controls.DatePicker()",
     "\"TimeField\" => new Avalonia.Controls.TimePicker()",
     "\"DateTimeField\" => new AndroidDateTimeFieldEditor()",
@@ -310,6 +317,9 @@ if (compilerProjectSource.Contains("PackageReference Include=\"Avalonia", String
     throw new Exception("Non-UI XPScript compiler/runtime must remain independent from Avalonia Android.");
 
 var compilerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerDriver.cs"));
+if (!compilerSource.Contains("<PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"12.0.1\" />", StringComparison.Ordinal))
+    throw new Exception("Android UIForm generated project must include Avalonia.Controls.WebView for shared WebView support.");
+
 if (!compilerSource.Contains("outputPath += \".apk\";", StringComparison.Ordinal))
     throw new Exception("Android compiler output is not normalized to an .apk path.");
 
