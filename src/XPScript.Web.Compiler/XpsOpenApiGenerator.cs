@@ -545,7 +545,9 @@ public sealed class XpsOpenApiGenerator
     private static string ToTypeIdentifier(string value, string context)
     {
         if (string.IsNullOrWhiteSpace(value)) throw new XpsOpenApiGenerationException($"{context} has an empty identifier.");
-        var parts = Regex.Split(value.Trim(), "[^A-Za-z0-9_]+", RegexOptions.CultureInvariant).Where(part => part.Length > 0).ToArray();
+        var trimmed = value.Trim();
+        if (IdentifierPattern.IsMatch(trimmed) && !IsDeclarationReserved(trimmed)) return trimmed;
+        var parts = Regex.Split(trimmed, "[^A-Za-z0-9_]+", RegexOptions.CultureInvariant).Where(part => part.Length > 0).ToArray();
         if (parts.Length == 0) throw new XpsOpenApiGenerationException($"{context} cannot be converted to an XPScript identifier.");
         var joined = string.Concat(parts.Select(Pascalize));
         if (joined.Length == 0 || char.IsDigit(joined[0])) joined = "Api" + joined;
