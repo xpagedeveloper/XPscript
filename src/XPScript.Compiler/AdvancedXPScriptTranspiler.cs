@@ -1114,7 +1114,7 @@ internal static class LSForAllRuntime
             if (piece.IsString) { result.Append(ConvertXPScriptStringLiteral(piece.Text)); continue; }
             result.Append(TransformNonStringExpression(piece.Text));
         }
-        return result.ToString().Trim();
+        return TransformFluentClassChains(result.ToString()).Trim();
     }
 
     private string TransformListSyntax(string expression)
@@ -1152,8 +1152,6 @@ internal static class LSForAllRuntime
             // later ByRef lowering treat it as dynamic and produces an invalid ref argument.
             text = Regex.Replace(text, $@"\b{name}\.", $"{objectVariable.Key}.Value!.", RegexOptions.IgnoreCase);
         }
-
-        text = TransformFluentClassChains(text);
 
         foreach (var runtimeObject in _runtimeObjectVariables)
         {
