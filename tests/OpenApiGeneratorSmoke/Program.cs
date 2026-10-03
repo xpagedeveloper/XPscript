@@ -4,6 +4,55 @@ using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
 var fixture = Path.Combine(AppContext.BaseDirectory, "petstore.yaml");
+var importSkeleton = new XpsOpenApiImporter().Import("""
+openapi: 3.1.0
+info: { title: Import Skeleton Smoke, version: 1.0.0 }
+components:
+  schemas:
+    ImportedPet:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        age: { type: integer, format: int32 }
+paths:
+  /pets/{id}:
+    get:
+      operationId: getImportedPet
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportedPet' }
+""", """
+' Existing handwritten XPscript source must survive the import.
+Sub ExistingProcedure()
+    Print "existing"
+End Sub
+""", "import-skeleton-smoke.yaml");
+
+foreach (var marker in new[]
+{
+    "Public Class ImportedPet",
+    "Public Name As String",
+    "Public Age As Integer",
+    "Sub EndpointGetImportedPet",
+    "Function HandleGetImportedPet",
+    "Sub ExistingProcedure()",
+    "Print \"existing\""
+})
+    if (!importSkeleton.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("OpenAPI import skeleton smoke is missing marker: " + marker);
+
+if (!importSkeleton.AddedClasses.Contains("ImportedPet", StringComparer.Ordinal) ||
+    !importSkeleton.AddedProcedures.Any(item => item.Contains("GetImportedPet", StringComparison.Ordinal)))
+    throw new Exception("OpenAPI import skeleton smoke did not report the generated class and endpoint procedures.");
+
+Console.WriteLine("OPENAPI-IMPORT-CLASS-SKELETON=OK");
+
 var generator = new XpsOpenApiGenerator();
 var result = generator.GenerateFile(fixture);
 var clientResult = new XpsOpenApiClientGenerator().GenerateFile(fixture);
