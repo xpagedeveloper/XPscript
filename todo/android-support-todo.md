@@ -115,7 +115,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Add named UIForm grid containers that can be placed inside a tab.
 - [x] Implement named-grid rendering on desktop Avalonia, Android Avalonia and web UIForm.
 - [x] Implement Android Avalonia Grid row/column placement plus row/column spans.
-- [ ] Add focused regressions for named-grid validation, duplicate names, invalid column counts, missing tabs and fields assigned to grids.
+- [x] Add focused regressions for named-grid validation, duplicate names, invalid column counts, missing tabs and fields assigned to grids. `AndroidCompilerProbe` guards the validation/error paths and `samples/android-uiform-regression.xps` exercises named-grid creation, tab assignment, field assignment and spans through the Android compiler/APK path.
 - [ ] Ensure non-input structural/media controls are excluded from Android submitted editor state and cannot overwrite bound data with null/empty values.
 - [ ] Make Android default OK submission apply returned action-state/validation state before closing, and keep the form open when validation fails.
 - [ ] Complete dynamic Android action-state parity for field label, visibility, enabled/read-only state, options and other mutable UIForm properties.
