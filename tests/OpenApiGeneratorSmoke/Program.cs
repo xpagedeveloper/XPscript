@@ -891,8 +891,7 @@ if (securityCollisionSource.Split("Sub ApiSetHeader(", StringSplitOptions.None).
     !securityCollisionSource.Contains("Function SetHeader(", StringComparison.Ordinal))
     throw new Exception("OpenAPI operation names must be preserved, same-name method overloads with different parameter signatures must remain valid, and true same-scope helper collisions must be deterministic. Generated source:\n" + securityCollisionSource);
 
-var keywordEnumMemberRejected = false;
-try { _ = new XpsOpenApiClientGenerator().Generate("""
+var keywordEnumClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Keyword Enum, version: 1.0.0 }
 components:
@@ -910,8 +909,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/State' }
-""", "keyword-enum.yaml"); } catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("reserved XPScript keyword", StringComparison.OrdinalIgnoreCase) && ex.Message.Contains("Class", StringComparison.OrdinalIgnoreCase)) { keywordEnumMemberRejected = true; }
-if (!keywordEnumMemberRejected) throw new Exception("OpenAPI enum members that map to XPScript keywords must be rejected.");
+""", "keyword-enum.yaml");
+if (!keywordEnumClient.Source.Contains("    Ready", StringComparison.Ordinal) ||
+    !keywordEnumClient.Source.Contains("    ApiClass", StringComparison.Ordinal))
+    throw new Exception("OpenAPI enum members that map to XPScript keywords must be normalized to valid identifiers.");
 
 var keywordComponentClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
