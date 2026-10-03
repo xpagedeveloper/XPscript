@@ -354,6 +354,15 @@ var desktopFormSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, 
 if (!desktopFormSource.Contains("DesktopImageHost.Create(request.BootImage", StringComparison.Ordinal))
     throw new Exception("Desktop UIForm must render BootImage through the shared asset-aware image host.");
 
+if (!desktopFormSource.Contains("request.BootText", StringComparison.Ordinal))
+    throw new Exception("Desktop UIForm must render BootText persistently with BootImage.");
+
+if (!uiExtensionSource.Contains("xpscript-uiform-boot-image", StringComparison.Ordinal) ||
+    !uiExtensionSource.Contains("xpscript-uiform-boot-text", StringComparison.Ordinal))
+    throw new Exception("Server-rendered UIForm must render persistent boot image/text content.");
+
+
+
 var browserWasmSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Web.Compiler", "XpsBrowserWasmCompiler.cs"));
 if (!browserWasmSource.Contains("UIFormAppAssets.CopyAssetsToDirectory(sourcePath, appRoot)", StringComparison.Ordinal))
     throw new Exception("Browser-WASM UIForm bundles must publish the shared assets directory.");
