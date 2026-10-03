@@ -61,7 +61,7 @@ public sealed class XpsOpenApiClientGenerator
         foreach (var pair in schemas)
         {
             if (pair.Value is not JsonObject schema) continue;
-            var identifier = UniqueTypeIdentifier(ToIdentifier(pair.Key), used);
+            var identifier = UniqueTypeIdentifier(ToSchemaIdentifier(pair.Key), used);
             models.Add(identifier, schema);
             typeNames.Add(pair.Key, identifier);
         }
@@ -493,6 +493,15 @@ public sealed class XpsOpenApiClientGenerator
     private static string SafeIdentifier(string identifier) => IsDeclarationReserved(identifier) ? "Api" + identifier : identifier;
     private static bool IsDeclarationReserved(string identifier) => identifier.StartsWith("__", StringComparison.OrdinalIgnoreCase) || LexicalKeywords.Contains(identifier);
     private static string? ReadServerUrl(JsonObject root) { if (root["servers"] is not JsonArray servers || servers.Count == 0 || servers[0] is not JsonObject server) return null; var url = ReadString(server, "url"); return url is not null && Uri.TryCreate(url, UriKind.Absolute, out _) ? url.TrimEnd('/') : null; }
+    private static string ToSchemaIdentifier(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new XpsOpenApiGenerationException("OpenAPI schema has an empty identifier.");
+        var trimmed = value.Trim();
+        return IdentifierPattern.IsMatch(trimmed) && !IsDeclarationReserved(trimmed)
+            ? trimmed
+            : ToIdentifier(trimmed);
+    }
     private static string ToIdentifier(string value) { var parts = Regex.Split(value.Trim(), "[^A-Za-z0-9_]+").Where(y => y.Length > 0).ToArray(); if (parts.Length == 0) throw new XpsOpenApiGenerationException($"'{value}' cannot be converted to an XPScript identifier."); var result = string.Concat(parts.Select(y => char.ToUpperInvariant(y[0]) + y[1..])); if (char.IsDigit(result[0])) result = "Api" + result; return result; }
     private static string EscapeXps(string value) => value.Replace("\"", "\"\""); private static string? ReadString(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<string>(out var teyt) ? teyt : null; private static bool ReadBool(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<bool>(out var result) && result;
     private sealed record ClientModelSet(Dictionary<string, JsonObject> Models, Dictionary<string, string> TypeNames);
