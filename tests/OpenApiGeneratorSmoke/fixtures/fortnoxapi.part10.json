@@ -1,0 +1,4996 @@
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Voucherseries of voucher file connections to list",
+            "in": "query",
+            "name": "voucherseries",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_VoucherFileConnectionListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list voucher file connections response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of voucher file connections",
+        "tags": [
+          "fortnox_VoucherFileConnections"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create a voucher file connection",
+        "operationId": "VoucherFileConnectionController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Da_VoucherFileConnectionSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create voucher file connection"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_VoucherFileConnectionSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create voucher file connection response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Voucher file connection not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a voucher file connection",
+        "tags": [
+          "fortnox_VoucherFileConnections"
+        ],
+        "x-codegen-request-body-name": "voucherFileConnection",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/voucherfileconnections/{FileId}": {
+      "delete": {
+        "description": "Delete a voucher file connection",
+        "operationId": "VoucherFileConnectionController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the voucher file connection",
+            "in": "path",
+            "name": "FileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete voucher file connection response with no content"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Voucher file connection not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove a voucher file connection",
+        "tags": [
+          "fortnox_VoucherFileConnections"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve a voucher file connection",
+        "operationId": "VoucherFileConnectionController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the voucher file connection",
+            "in": "path",
+            "name": "FileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_VoucherFileConnectionSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show voucher file connection response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Voucher file connection not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single voucher file connection",
+        "tags": [
+          "fortnox_VoucherFileConnections"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/vouchers": {
+      "get": {
+        "description": "Note that vouchers have two keys, one for voucher series and one for voucher number. The financial year is also specified for each voucher, this is due to the same voucher series and number is used each year.\n To get a unique voucher you need the voucher series, the voucher number and the financial year. These properties will always be returned where ever vouchers is used.",
+        "operationId": "VoucherController_doIndex",
+        "parameters": [
+          {
+            "description": "filter on cost center",
+            "in": "query",
+            "name": "costcenter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on last modified date",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on from date",
+            "in": "query",
+            "name": "fromdate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on to date",
+            "in": "query",
+            "name": "todate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on voucher series",
+            "in": "query",
+            "name": "voucherseries",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on financial year",
+            "in": "query",
+            "name": "financialyear",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_VoucherListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list vouchers response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve all vouchers",
+        "tags": [
+          "fortnox_Vouchers"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "The created voucher will be returned if everything succeeded, if there were any problems an error will be returned.\n If no query param is used the voucher will be created in the preselected financial year. Go to the financialyears endpoint to read on how to retreive the Financial year id.",
+        "operationId": "VoucherController_doCreate",
+        "parameters": [
+          {
+            "description": "Financial year id, used to determine which financial year the voucher is created in",
+            "in": "query",
+            "name": "financialyear",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Bf_VoucherSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create voucher"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_VoucherSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create voucher response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a voucher",
+        "tags": [
+          "fortnox_Vouchers"
+        ],
+        "x-codegen-request-body-name": "voucher",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/vouchers/sublist": {
+      "get": {
+        "description": "Get vouchers",
+        "operationId": "VoucherController_doSubList",
+        "parameters": [
+          {
+            "description": "filter on cost center",
+            "in": "query",
+            "name": "costcenter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on last modified date",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on from date",
+            "in": "query",
+            "name": "fromdate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on to date",
+            "in": "query",
+            "name": "todate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on voucher series",
+            "in": "query",
+            "name": "voucherseries",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_VoucherListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list vouchers response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve all vouchers for the current financial year",
+        "tags": [
+          "fortnox_Vouchers"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/vouchers/sublist/{VoucherSeries}": {
+      "get": {
+        "description": "Get vouchers",
+        "operationId": "VoucherController_doSublistWithParam",
+        "parameters": [
+          {
+            "description": "Voucher series of vouchers to list",
+            "in": "path",
+            "name": "VoucherSeries",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on cost center",
+            "in": "query",
+            "name": "costcenter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on last modified date",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on from date",
+            "in": "query",
+            "name": "fromdate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on to date",
+            "in": "query",
+            "name": "todate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter on financial year",
+            "in": "query",
+            "name": "financialyear",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_VoucherListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list vouchers response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of vouchers for a specific series",
+        "tags": [
+          "fortnox_Vouchers"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/vouchers/{VoucherSeries}/{VoucherNumber}": {
+      "get": {
+        "description": "Retrieve a voucher",
+        "operationId": "VoucherController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the voucher series",
+            "in": "path",
+            "name": "VoucherSeries",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "identifies the voucher number",
+            "in": "path",
+            "name": "VoucherNumber",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "filter on financial year",
+            "in": "query",
+            "name": "financialyear",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_VoucherSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show voucher response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Voucher not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a specific voucher",
+        "tags": [
+          "fortnox_Vouchers"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/voucherseries": {
+      "get": {
+        "description": "The voucher series register can return a list of records or a single record. By specifying a Code in the URL, a single record will be returned. Not specifying a Code will return a list of records.",
+        "operationId": "VoucherSeriesController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_VoucherSeriesListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list voucher series collection response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of voucher series",
+        "tags": [
+          "fortnox_VoucherSeries"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create a voucher series",
+        "operationId": "VoucherSeriesController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Bf_VoucherSeriesSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create voucher series"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_VoucherSeriesSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create voucher series response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a voucher series",
+        "tags": [
+          "fortnox_VoucherSeries"
+        ],
+        "x-codegen-request-body-name": "voucherSeries",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/voucherseries/{Code}": {
+      "get": {
+        "description": "Retrieve a voucher series",
+        "operationId": "VoucherSeriesController_doShow",
+        "parameters": [
+          {
+            "description": "Code of voucher series to show",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_VoucherSeriesSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show voucher series response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Voucher series not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single voucher series",
+        "tags": [
+          "fortnox_VoucherSeries"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update a voucher series",
+        "operationId": "VoucherSeriesController_doUpdate",
+        "parameters": [
+          {
+            "description": "Code of voucher series to update",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Bf_VoucherSeriesSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update voucher series"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_VoucherSeriesSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update voucher series response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Voucher series not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a voucher series",
+        "tags": [
+          "fortnox_VoucherSeries"
+        ],
+        "x-codegen-request-body-name": "voucherSeries",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/wayofdeliveries": {
+      "get": {
+        "description": "The way of delivery register can return a list of records or a single record. By specifying a Code in the URL, a single record will be returned. Not specifying a Code will return a list of records.",
+        "operationId": "WayOfDeliveryController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_WayOfDeliveryListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list way of deliveries response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of way of deliveries",
+        "tags": [
+          "fortnox_WayOfDeliveries"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create a way of delivery",
+        "operationId": "WayOfDeliveryController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_WayOfDeliverySinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create way of delivery"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_WayOfDeliverySingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create way of delivery response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a way of delivery",
+        "tags": [
+          "fortnox_WayOfDeliveries"
+        ],
+        "x-codegen-request-body-name": "wayOfDelivery",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/wayofdeliveries/{Code}": {
+      "delete": {
+        "description": "Delete a way of delivery",
+        "operationId": "WayOfDeliveryController_doDelete",
+        "parameters": [
+          {
+            "description": "Code of way of delivery to delete",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete way of delivery response with no content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Way of delivery not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove a way of delivery",
+        "tags": [
+          "fortnox_WayOfDeliveries"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve a way of delivery",
+        "operationId": "WayOfDeliveryController_doShow",
+        "parameters": [
+          {
+            "description": "Code of way of delivery to show",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_WayOfDeliverySingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show way of delivery response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Way of delivery not found"
+          },
+          "default": {            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single way of delivery",
+        "tags": [
+          "fortnox_WayOfDeliveries"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update a way of delivery",
+        "operationId": "WayOfDeliveryController_doUpdate",
+        "parameters": [
+          {
+            "description": "Code of way of delivery to update",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_WayOfDeliverySinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update way of delivery"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_WayOfDeliverySingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update way of delivery response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Way of delivery not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a way of delivery",
+        "tags": [
+          "fortnox_WayOfDeliveries"
+        ],
+        "x-codegen-request-body-name": "wayOfDelivery",
+        "x-fn-is-public": true
+      }
+    },
+    "/api/bank-process-orders/v1": {
+      "get": {
+        "description": "Returns a list of orders depending on the statuses provided.",
+        "operationId": "getOrders",
+        "parameters": [
+          {
+            "description": "Maximum number of orders to return.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of matching orders to skip before returning results.",
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter orders by one or more statuses.\n- ACCEPTED: Orders accepted by us and currently in active processing.\n- SENT_TO_BV: Orders that have been sent to and are being processed by Bolagsverket.\n- COMPLETED: Orders that are completed and finalized.\n- ABORTED: Orders that have been cancelled by us.\n- DENIED_BY_BANK: Orders that were denied by the bank.\nNote: UNKNOWN is not a valid filter value. It may appear as a status on returned orders if an internal status could not be mapped to a known bank-process status.\n",
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "items": {
+                "enum": [
+                  "ACCEPTED",
+                  "SENT_TO_BV",
+                  "COMPLETED",
+                  "ABORTED",
+                  "DENIED_BY_BANK"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CreatedAtFrom"
+          },
+          {
+            "$ref": "#/components/parameters/CreatedAtTo"
+          },
+          {
+            "$ref": "#/components/parameters/UpdatedAtFrom"
+          },
+          {
+            "$ref": "#/components/parameters/UpdatedAtTo"
+          },
+          {
+            "$ref": "#/components/parameters/Sort"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Orders"
+                }
+              }
+            },
+            "description": "A list of orders"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Returns orders",
+        "tags": [
+          "Company-Order-Bank-Process-API_CompanyOrderBankProcess"
+        ]
+      }
+    },
+    "/api/bank-process-orders/v1/find-by-organization-number/{organization_number}": {
+      "get": {
+        "description": "Returns orders by organization number",
+        "operationId": "findOrdersByOrganizationNumber",
+        "parameters": [
+          {
+            "description": "Organization number to return orders for, acceptable formats are \"123456789\" or \"123456-7890\"",
+            "in": "path",
+            "name": "organization_number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Orders"
+                }
+              }
+            },
+            "description": "A list of orders"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Returns zero or multiple orders",
+        "tags": [
+          "Company-Order-Bank-Process-API_CompanyOrderBankProcess"
+        ]
+      }
+    },
+    "/api/bank-process-orders/v1/{order_id}": {
+      "get": {
+        "description": "Returns one order by ID",
+        "operationId": "getOrder",
+        "parameters": [
+          {
+            "description": "ID of order to return",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Order"
+                }
+              }
+            },
+            "description": "Order object"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Returns an order",
+        "tags": [
+          "Company-Order-Bank-Process-API_CompanyOrderBankProcess"
+        ]
+      },
+      "patch": {
+        "description": "Modify an order",
+        "operationId": "updateOrder",
+        "parameters": [
+          {
+            "description": "ID of order to update",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Company-Order-Bank-Process-API_UpdateOrderRequest"
+              }
+            }
+          },
+          "description": "Update order payload",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Order"
+                }
+              }
+            },
+            "description": "Order was successfully modified"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Modify an order",
+        "tags": [
+          "Company-Order-Bank-Process-API_CompanyOrderBankProcess"
+        ]
+      }
+    },
+    "/api/bank-process-orders/v1/{order_id}/documents": {
+      "get": {
+        "description": "- ACCEPTED: Orders accepted by us and currently in active processing.\n- SENT_TO_BV: Orders that have been sent to and are being processed by Bolagsverket.\n- COMPLETED: Orders that are completed and finalized.\n- ABORTED: Orders that have been cancelled by us.\n- DENIED_BY_BANK: Orders that were denied by the bank.\n\nReturns order document types by order ID.\n\n| Document type | Swedish name | Available when |\n| --- | --- | --- |\n| LiquidityCertificate | Likvidintyg | After it has been uploaded — ACCEPTED, SENT_TO_BV, COMPLETED |\n| RegistrationCertificate | Registreringsbevis | Available once the company has been registered — COMPLETED, ABORTED |\n| MemorandumOfAssociation | Stiftelseurkund | ACCEPTED, SENT_TO_BV, COMPLETED, sometimes during ABORTED depending on whether it had already been generated before it was cancelled |\n| ArticlesOfAssociation | Bolagsordning | ACCEPTED, SENT_TO_BV, COMPLETED, ABORTED |\n| MinutesOfAnExtraordinaryGeneralMeeting | Protokoll extra bolagsstämma | ACCEPTED, SENT_TO_BV, COMPLETED, ABORTED |\n| MinutesOfABoardMeeting | Protokoll styrelsemöte | ACCEPTED, SENT_TO_BV, COMPLETED, ABORTED |\n| BankPowerOfAttorney | Bankfullmakt | ACCEPTED, SENT_TO_BV, COMPLETED, and sometimes during ABORTED depending on whether it had already been created before it was cancelled |\n| GeneralPowerOfAttorney | Generalfullmakt | Available once the order has proceeded to or beyond status SENT_TO_BV |\n| SubscriptionList | Teckningslista | Only available for emission orders — any status |\n| BoardsProposal | Styrelsens förslag | Only available for emission orders — any status |\n| RegistrationNotification | Registreringsanmälan | Any status |\n| SignedDocumentCollection | — | A collection of Registreringsbevis, Protokoll extra bolagsstämma, and Protokoll styrelsemöte that have been signed by the customer with a digital certificate — available SENT_TO_BV, COMPLETED, ABORTED |\n",
+        "operationId": "getOrderDocumentsTypes",
+        "parameters": [
+          {
+            "description": "ID of the order",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_DocumentTypes"
+                }
+              }
+            },
+            "description": "A list of documents"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Returns available document types for an order",
+        "tags": [
+          "Company-Order-Bank-Process-API_CompanyOrderBankProcess"
+        ]
+      },
+      "post": {
+        "deprecated": true,
+        "description": "This endpoint is deprecated. Use `PUT /api/bank-process-orders/v1/{order_id}/documents` instead.",
+        "operationId": "createOrderDocumentDeprecated",
+        "parameters": [
+          {
+            "description": "ID of order to return",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "encoding": {
+                "file": {
+                  "contentType": "application/pdf"
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Company-Order-Bank-Process-API_CreateDocument"
+              }
+            }
+          },
+          "description": "The document in binary format and what type it is."
+        },
+        "responses": {
+          "201": {
+            "description": "Successful upload"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Create or update a document for an order.",
+        "tags": [
+          "Company-Order-Bank-Process-API_CompanyOrderBankProcess"
+        ]
+      },
+      "put": {
+        "description": "Supported upload type:\n- LiquidityCertificate (Likvidintyg)\n",
+        "operationId": "createOrderDocument",
+        "parameters": [
+          {
+            "description": "ID of order to return",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "encoding": {
+                "file": {
+                  "contentType": "application/pdf"
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Company-Order-Bank-Process-API_CreateDocument"
+              }
+            }
+          },
+          "description": "The document in binary format and what type it is."
+        },
+        "responses": {
+          "201": {
+            "description": "Successful upload"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Create or update a document for an order.",
+        "tags": [
+          "Company-Order-Bank-Process-API_CompanyOrderBankProcess"
+        ]
+      }
+    },
+    "/api/bank-process-orders/v1/{order_id}/documents/{document_type}/content": {
+      "get": {
+        "description": "Returns content of order document",
+        "operationId": "getOrderDocumentsContent",
+        "parameters": [
+          {
+            "description": "ID of order for document",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Type of document to return content for",
+            "in": "path",
+            "name": "document_type",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Company-Order-Bank-Process-API_DocumentType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Document"
+                }
+              }
+            },
+            "description": "Document content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Returns content of order document",
+        "tags": [
+          "Company-Order-Bank-Process-API_CompanyOrderBankProcess"
+        ]
+      }
+    },
+    "/api/bank-process-start-orders/v1": {
+      "get": {
+        "description": "Returns a list of orders depending on the statuses provided.",
+        "operationId": "getStartOrders",
+        "parameters": [
+          {
+            "description": "Maximum number of orders to return.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of matching orders to skip before returning results.",
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter orders by one or multiple statuses.\n",
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "items": {
+                "$ref": "#/components/schemas/Company-Order-Bank-Process-API_StartOrderStatus"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Filter orders by founder civic number.\n",
+            "in": "query",
+            "name": "founder_civic_number",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CreatedAtFrom"
+          },
+          {
+            "$ref": "#/components/parameters/CreatedAtTo"
+          },
+          {
+            "$ref": "#/components/parameters/UpdatedAtFrom"
+          },
+          {
+            "$ref": "#/components/parameters/UpdatedAtTo"
+          },
+          {
+            "$ref": "#/components/parameters/Sort"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_StartOrders"
+                }
+              }
+            },
+            "description": "A list of orders"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Returns start company orders",
+        "tags": [
+          "Company-Order-Bank-Process-API_StartCompanyOrderBankProcess"
+        ]
+      }
+    },
+    "/api/bank-process-start-orders/v1/{order_id}": {
+      "get": {
+        "description": "Returns one order by ID",
+        "operationId": "getStartOrder",
+        "parameters": [
+          {
+            "description": "ID of order to return",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_StartOrder"
+                }
+              }
+            },
+            "description": "Order object"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Returns a start company order",
+        "tags": [
+          "Company-Order-Bank-Process-API_StartCompanyOrderBankProcess"
+        ]
+      },
+      "patch": {
+        "description": "Modify an order",
+        "operationId": "updateStartOrder",
+        "parameters": [
+          {
+            "description": "ID of order to update",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Company-Order-Bank-Process-API_UpdateStartOrderRequest"
+              }
+            }
+          },
+          "description": "Update order payload",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_StartOrder"
+                }
+              }
+            },
+            "description": "Order was successfully modified"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Modify an order",
+        "tags": [
+          "Company-Order-Bank-Process-API_StartCompanyOrderBankProcess"
+        ]
+      }
+    },
+    "/api/bank-process-start-orders/v1/{order_id}/documents": {
+      "get": {
+        "description": "Returns order document types by order ID.\nDocument types:\n- RegistrationCertificate (Registreringsbevis)\n- MemorandumOfAssociation (Stiftelseurkund)\n- BankPowerOfAttorney (Bankfullmakt)\n- GeneralPowerOfAttorney (Generalfullmakt)\n- BankCertificate (Bankintyg)\n- ArticlesOfAssociation (Bolagsordning)\n",
+        "operationId": "getStartOrderDocumentsTypes",
+        "parameters": [
+          {
+            "description": "ID of order to return documents for",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_DocumentTypes"
+                }
+              }
+            },
+            "description": "A list of documents"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Returns available document types for an order",
+        "tags": [
+          "Company-Order-Bank-Process-API_StartCompanyOrderBankProcess"
+        ]
+      },
+      "post": {
+        "description": "Create doc for order. If the document already exists for the provided type, a 409 Conflict is returned.\nSupported upload type:\n- BankCertificate (Bankintyg)\n",
+        "operationId": "createStartOrderDocument",
+        "parameters": [
+          {
+            "description": "ID of order to return",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "encoding": {
+                "file": {
+                  "contentType": "application/pdf"
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Company-Order-Bank-Process-API_CreateDocument"
+              }
+            }
+          },
+          "description": "Create a new document for the order"
+        },
+        "responses": {
+          "201": {
+            "description": "Successful upload"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "A document of this type already exists for the order."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Create document for the order",
+        "tags": [
+          "Company-Order-Bank-Process-API_StartCompanyOrderBankProcess"
+        ]
+      }
+    },
+    "/api/bank-process-start-orders/v1/{order_id}/documents/{document_type}/content": {
+      "get": {
+        "description": "Returns content of order document",
+        "operationId": "getStartOrderDocumentsContent",
+        "parameters": [
+          {
+            "description": "ID of order for document",
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Type of document to return content for",
+            "in": "path",
+            "name": "document_type",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Company-Order-Bank-Process-API_DocumentType"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Document"
+                }
+              }
+            },
+            "description": "Document content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Returns content of order document",
+        "tags": [
+          "Company-Order-Bank-Process-API_StartCompanyOrderBankProcess"
+        ]
+      }
+    },
+    "/api/bank-process-webhooks/v1": {
+      "get": {
+        "description": "List previously created webhooks",
+        "operationId": "listWebhooks",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_Webhooks"
+                }
+              }
+            },
+            "description": "A list of webhooks"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "List webhooks",
+        "tags": [
+          "Company-Order-Bank-Process-Webhook-API_BankProcessWebhook"
+        ]
+      },
+      "post": {
+        "callbacks": {
+          "orderEvent": {
+            "{$request.body#/url}": {
+              "post": {
+                "parameters": [
+                  {
+                    "in": "header",
+                    "name": "X-Fnox-Signature-256",
+                    "required": true,
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "properties": {
+                          "event_type": {
+                            "description": "Type of event, from the perspective of the receiving bank:\n  * ORDER_ACCEPTED - the order is now associated with your bank, either because it became\n    actionable or because its bank was switched to you.\n  * ORDER_UPDATED - an order already associated with your bank changed.\n  * ORDER_DELETED - the order is no longer associated with your bank, because it was cancelled\n    or its bank was switched away from you.\n",
+                            "example": "ORDER_UPDATED",
+                            "type": "string",
+                            "x-extensible-enum": [
+                              "ORDER_ACCEPTED",
+                              "ORDER_UPDATED",
+                              "ORDER_DELETED"
+                            ]
+                          },
+                          "order_id": {
+                            "description": "Id of the order the event relates to. The format depends on `order_type`; resolve the id against\nthe API indicated by `order_type` (e.g. \"Company Order Bank Process API\") to fetch the order.\n",
+                            "example": "e2c04429-b29a-41a2-8f73-aa1f92abbe91",
+                            "type": "string"
+                          },
+                          "order_type": {
+                            "description": "Defines the type of order. See \"Company Order Bank Process API\" for more information.",
+                            "example": "START_COMPANY_ORDER",
+                            "type": "string",
+                            "x-extensible-enum": [
+                              "START_COMPANY_ORDER",
+                              "STOCK_COMPANY_ORDER"
+                            ]
+                          },
+                          "webhook_id": {
+                            "description": "Id of webhook.",
+                            "example": "e2c04429-b29a-41a2-8f73-aa1f92abbe91",
+                            "format": "uuid",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "webhook_id",
+                          "event_type",
+                          "order_type",
+                          "order_id"
+                        ],
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "required": true
+                },
+                "responses": {
+                  "2XX": {
+                    "description": "Client acknowledged the event."
+                  }
+                },
+                "summary": "Order event notification"
+              }
+            }
+          }
+        },
+        "description": "Creates a webhook ie. a subscription for updates. The registered url will be called whenever an\norder is accepted, updated or deleted.\nThe call will be a POST call with body as defined in WebhookEvent.\n\nA header \"X-Fnox-Signature-256\" will also be passed containing a HMAC hash of the content calculated\nusing the secret provided when registering the webhook. This hash should be used to verify that the\ncontent is not tampered with and that the call is coming from Fortnox.\n\nA maximum of 10 webhooks can be registered.\n\nIf a callback fails it is retried automatically, once per minute,\nfor up to 5 attempts before the delivery is abandoned.\n\nEvents are superseded per order. If a newer event is generated before a pending event is delivered,\nthe older event is dropped. You may not receive every state change; each delivered event reflects \nthe order's latest state.\n",
+        "operationId": "createWebhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_CreateWebhook"
+              }
+            }
+          },
+          "description": "The webhook to create.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_Webhook"
+                }
+              }
+            },
+            "description": "Successfully created the webhook."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Creates a webhook",
+        "tags": [
+          "Company-Order-Bank-Process-Webhook-API_BankProcessWebhook"
+        ]
+      }
+    },
+    "/api/bank-process-webhooks/v1/{webhook_id}": {
+      "delete": {
+        "description": "Deletes a registered webhook.",
+        "operationId": "deleteWebhook",
+        "parameters": [
+          {
+            "description": "ID of the webhook",
+            "in": "path",
+            "name": "webhook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {          "204": {
+            "description": "Successfully deleted the webhook."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Deletes a webhook",
+        "tags": [
+          "Company-Order-Bank-Process-Webhook-API_BankProcessWebhook"
+        ]
+      },
+      "get": {
+        "description": "Returns a registered webhook by id.",
+        "operationId": "getWebhook",
+        "parameters": [
+          {
+            "description": "ID of the webhook",
+            "in": "path",
+            "name": "webhook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_Webhook"
+                }
+              }
+            },
+            "description": "Webhook object"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Returns a webhook",
+        "tags": [
+          "Company-Order-Bank-Process-Webhook-API_BankProcessWebhook"
+        ]
+      },
+      "patch": {
+        "description": "Updates fields on a previously registered webhook. Use this endpoint to rotate the shared secret.",
+        "operationId": "updateWebhook",
+        "parameters": [
+          {
+            "description": "ID of the webhook to update",
+            "in": "path",
+            "name": "webhook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_UpdateWebhook"
+              }
+            },
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_UpdateWebhook"
+              }
+            }
+          },
+          "description": "Fields to update on the webhook. At least one field must be supplied.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_Webhook"
+                }
+              }
+            },
+            "description": "Successfully updated the webhook."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Updates a webhook",
+        "tags": [
+          "Company-Order-Bank-Process-Webhook-API_BankProcessWebhook"
+        ]
+      }
+    },
+    "/api/bank-process-webhooks/v1/{webhook_id}/evaluate": {
+      "post": {
+        "description": "Evaluates (triggers) a previously registered webhook. Should only be used for testing purposes.\nThe body in callback will contain dummy data.\n",
+        "operationId": "evaluateWebhook",
+        "parameters": [
+          {
+            "description": "ID of the webhook to evaluate",
+            "in": "path",
+            "name": "webhook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully evaluated the webhook."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Company-Order-Bank-Process-Webhook-API_Problem"
+                }
+              }
+            },
+            "description": "error occurred - see status code and problem object for more information."
+          }
+        },
+        "summary": "Evaluates a webhook",
+        "tags": [
+          "Company-Order-Bank-Process-Webhook-API_BankProcessWebhook"
+        ]
+      }
+    },
+    "/api/fileattachments/attachments-v1": {
+      "get": {
+        "operationId": "getAttachments",
+        "parameters": [
+          {
+            "description": "ids of the entities whose attachments should be fetched",
+            "explode": true,
+            "in": "query",
+            "name": "entityid",
+            "required": true,
+            "schema": {
+              "items": {
+                "format": "int64",
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "type of the entities whose attachments should be fetched",
+            "in": "query",
+            "name": "entitytype",
+            "required": true,
+            "schema": {
+              "enum": [
+                "OF",
+                "O",
+                "F",
+                "C",
+                "LGR_IO",
+                "LGR_IG"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileattachments_Attachment"
+                }
+              }
+            },
+            "description": "A list of attachments"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileattachments_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Get attached files on an entity",
+        "tags": [
+          "fileattachments_Attachment"
+        ],
+        "x-fn-is-public": "true"
+      },
+      "post": {
+        "operationId": "attach",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/fileattachments_Attachment"
+                },
+                "type": "array"
+              }
+            }
+          },
+          "description": "A list of attachments"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileattachments_Attachment"
+                }
+              }
+            },
+            "description": "A list of attachments"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileattachments_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Attach files to one or more entities",
+        "tags": [
+          "fileattachments_Attachment"
+        ],
+        "x-codegen-request-body-name": "attachments",
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/fileattachments/attachments-v1/numberofattachments": {
+      "get": {
+        "operationId": "getNumberOfAttachmentsForEntity",
+        "parameters": [
+          {
+            "description": "ids of the entities to look for number of attachments on",
+            "explode": true,
+            "in": "query",
+            "name": "entityids",
+            "required": true,
+            "schema": {
+              "items": {
+                "format": "int64",
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "type of the entities  to look for number of attachments on",
+            "in": "query",
+            "name": "entitytype",
+            "required": true,
+            "schema": {
+              "enum": [
+                "OF",
+                "O",
+                "F",
+                "C",
+                "LGR_IO",
+                "LGR_IG"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileattachments_NumberOfAttachments"
+                }
+              }
+            },
+            "description": "A list of the number of attachments on each entity"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileattachments_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "List number of attachments",
+        "tags": [
+          "fileattachments_Attachment"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/fileattachments/attachments-v1/validateincludedonsend": {
+      "post": {
+        "operationId": "validateIncludedOnSend",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/fileattachments_Attachment"
+                },
+                "type": "array"
+              }
+            }
+          },
+          "description": "a list of Attachments"
+        },
+        "responses": {
+          "204": {
+            "description": "Successfully created a new resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileattachments_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Validates a list of attachments that will be included on send",
+        "tags": [
+          "fileattachments_Attachment"
+        ],
+        "x-codegen-request-body-name": "attachments",
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/fileattachments/attachments-v1/{attachmentId}": {
+      "delete": {
+        "operationId": "detach",
+        "parameters": [
+          {
+            "description": "id of the attachment to be detached",
+            "in": "path",
+            "name": "attachmentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully removed the specified resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileattachments_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Detach file",
+        "tags": [
+          "fileattachments_Attachment"
+        ],
+        "x-fn-is-public": "true"
+      },
+      "put": {
+        "operationId": "updateAttachment",
+        "parameters": [
+          {
+            "description": "id of the attachment to be updated",
+            "in": "path",
+            "name": "attachmentId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fileattachments_Attachment"
+              }
+            }
+          },
+          "description": "an attachment"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileattachments_Attachment"
+                }
+              }
+            },
+            "description": "The updated attachment"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fileattachments_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Update attachment",
+        "tags": [
+          "fileattachments_Attachment"
+        ],
+        "x-codegen-request-body-name": "attachment",
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/integration-developer/ratings-v1": {
+      "get": {
+        "description": "**Required OAuth2 scope:** `developerapi`\n\n<p>\n Use this to monitor the feedback tenants have left on your integrations and to find reviews that still\n need a response via addResponseToRating.",
+        "operationId": "listRatings",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "integrationId",
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeOnlyUnrespondedRatings",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/integration-developer_RatingDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "list of ratings"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/integration-developer_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "security": [
+          {
+            "fortnoxOAuth2": [
+              "developerapi"
+            ]
+          }
+        ],
+        "summary": "List rating and reviews for integrations that you own",
+        "tags": [
+          "integration-developer_Integration Ratings"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/integration-developer/sales-v1/{integrationId}": {
+      "get": {
+        "description": "**Required OAuth2 scope:** `developerapi`\n\n<p>\n Returns each order and cancellation event for the integration, with tenant, date and amount, so you can\n reconcile your own sales records with what Fortnox has billed on your behalf.\n <p>\n Prerequisites\n The partner has an active developer account and a published integration that is purchased through Fortnox.",
+        "operationId": "getSalesForSingleIntegration",
+        "parameters": [
+          {
+            "description": "of the integration to look up sales information for",
+            "in": "path",
+            "name": "integrationId",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/integration-developer_IntegrationSalesResponse"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/integration-developer_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "security": [
+          {
+            "fortnoxOAuth2": [
+              "developerapi"
+            ]
+          }
+        ],
+        "summary": "Resolves sales information of an integration",
+        "tags": [
+          "integration-developer_Integration Sales"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/integration-developer/users/users-v1/{integrationId}/{tenantId}": {
+      "get": {
+        "description": "**Required OAuth2 scope:** `developerapi`\n\n<p>\n Use this to provision or deprovision accounts in your own system as users are added, removed or promoted\n to admin within that tenant, or to see who currently has access before deactivating the integration for\n a tenant.",
+        "operationId": "getUsersForSingleIntegrationAndTenant",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "integrationId",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tenantId",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/integration-developer_UsersResponse"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/integration-developer_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "security": [
+          {
+            "fortnoxOAuth2": [
+              "developerapi"
+            ]
+          }
+        ],
+        "summary": "Fetch user information for a single published integration and tenant",
+        "tags": [
+          "integration-developer_Users"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/recurring-billing/recurrings-invoice-requests-v1": {
+      "get": {
+        "description": "Returns invoice requests (the administrative records for invoice generation) for the supplied recurring IDs, optionally narrowed by status.",
+        "operationId": "listInvoiceRequests",
+        "parameters": [
+          {
+            "description": "Filter by invoice request status. Multiple values must be comma-separated (e.g. `status=PENDING,FAILED`).",
+            "explode": false,
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "items": {
+                "$ref": "#/components/schemas/Recurring-API_InvoiceRequestStatus"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "Recurring IDs to return invoice requests for. At least one and at most 100 IDs, comma-separated.",
+            "explode": false,
+            "in": "query",
+            "name": "recurring-ids",
+            "required": true,
+            "schema": {
+              "items": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "maxItems": 100,
+              "minItems": 1,
+              "type": "array"
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Recurring-API_InvoiceRequest"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "A list of invoice requests"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "List all invoice requests",
+        "tags": [
+          "Recurring-API_InvoiceRequests"
+        ],
+        "x-fn-is-hidden": false,
+        "x-fn-is-public": true,
+        "x-stability-level": "stable"
+      },
+      "post": {
+        "description": "Generates invoices for the supplied recurrings. With `processing-mode=SYNC` (the default) the invoices are created immediately and the completed request is returned, limited to at most 100 recurring IDs. With `processing-mode=ASYNC` the request is persisted and processed in the background, supports larger batches, and is returned with status `PENDING`/`PROCESSING`. A recurring that already has an in-flight request causes the new request to be rejected with `409`.",
+        "operationId": "createInvoiceRequests",
+        "parameters": [
+          {
+            "description": "Controls how invoice creation is processed. SYNC processes immediately and returns the result, but is limited to a maximum of 100 recurring IDs. ASYNC accepts any number of IDs, persists the request, and processes it in the background — use this for batches larger than 100.",
+            "in": "query",
+            "name": "processing-mode",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Recurring-API_ProcessingMode"
+                },
+                {
+                  "default": "SYNC"
+                }
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Recurring-API_CreateInvoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_InvoiceRequest"
+                }
+              }
+            },
+            "description": "Invoice requests processed synchronously"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_InvoiceRequest"
+                }
+              }
+            },
+            "description": "Invoice requests accepted for async processing"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Invalid request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "If there is an ongoing request for a recurring that's in this request then the new request will be denied.  Wait until the other one completes."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create invoice requests for multiple recurrings",
+        "tags": [
+          "Recurring-API_InvoiceRequests"
+        ],
+        "x-fn-is-hidden": false,
+        "x-fn-is-public": true,
+        "x-stability-level": "stable"
+      }
+    },
+    "/api/recurring-billing/recurrings-invoice-requests-v1/{invoice-request-id}": {
+      "get": {
+        "description": "Returns a single invoice request including its per-recurring items, overall status and the generated invoice numbers. Use this to poll the result of an asynchronous request.",
+        "operationId": "getInvoiceRequestById",
+        "parameters": [
+          {
+            "description": "The unique identifier of the invoice request.",
+            "in": "path",
+            "name": "invoice-request-id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_InvoiceRequest"
+                }
+              }
+            },
+            "description": "A single invoice request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Invoice request not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Get an invoice request by ID",
+        "tags": [
+          "Recurring-API_InvoiceRequests"
+        ],
+        "x-fn-is-hidden": false,
+        "x-fn-is-public": true,
+        "x-stability-level": "stable"
+      }
+    },
+    "/api/recurring-billing/recurrings-v1": {
+      "get": {
+        "description": "Returns a paginated list of recurring contracts for the authenticated tenant. The result can be narrowed with the `customer-numbers`, `statuses`, `invoice-handlings` and `error-status` filters, ordered with `sortby` and `order`, and paged with `offset` and `limit` (1-100, default 100). Pagination metadata is returned in the `X-PAGINATION` and `X-LAST-RECORD` response headers.",
+        "operationId": "listRecurrings",
+        "parameters": [
+          {
+            "description": "Filter by customer numbers. Multiple values must be comma-separated (e.g. `customer-numbers=1,2,3`).",
+            "explode": false,
+            "in": "query",
+            "name": "customer-numbers",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "Filter by recurring statuses. Multiple values must be comma-separated (e.g. `statuses=ACTIVE,DRAFT`).",
+            "explode": false,
+            "in": "query",
+            "name": "statuses",
+            "schema": {
+              "items": {
+                "$ref": "#/components/schemas/Recurring-API_RecurringStatus"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "Filter by invoice handling types. Multiple values must be comma-separated (e.g. `invoice-handlings=MANUAL,AUTOMATIC`).",
+            "explode": false,
+            "in": "query",
+            "name": "invoice-handlings",
+            "schema": {
+              "items": {
+                "$ref": "#/components/schemas/Recurring-API_InvoiceHandling"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "Filter recurrings by error status",
+            "in": "query",
+            "name": "error-status",
+            "schema": {
+              "$ref": "#/components/schemas/Recurring-API_ErrorStatus"
+            }
+          },
+          {
+            "description": "Number of items to skip",
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Maximum number of items to return",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Field to sort by",
+            "in": "query",
+            "name": "sortby",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Recurring-API_RecurringSortBy"
+                },
+                {
+                  "default": "SERIAL_NUMBER"
+                }
+              ]
+            }
+          },
+          {
+            "description": "Sort order direction",
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Recurring-API_SortOrder"
+                },
+                {
+                  "default": "ASC"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Recurring-API_ListRecurring"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "A paginated list of recurring contracts",
+            "headers": {
+              "X-LAST-RECORD": {
+                "description": "Indicates whether the current page is the last page in the result set.",
+                "example": false,
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "X-PAGINATION": {
+                "description": "JSON-serialized pagination metadata. The current payload contains the total count only, for example {\"count\": 42}.",
+                "example": "{\"count\":42}",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"          }
+        },
+        "summary": "List all recurring contracts",
+        "tags": [
+          "Recurring-API_Recurrings"
+        ],
+        "x-fn-is-hidden": false,
+        "x-fn-is-public": true,
+        "x-stability-level": "stable"
+      },
+      "post": {
+        "description": "Creates a new recurring contract. The created recurring is always persisted with status `ACTIVE`.  The full created representation is returned together with a `Location` header pointing to it, plus `ETag` and `Last-Modified` headers for subsequent optimistic concurrency control.",
+        "operationId": "createRecurring",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Recurring-API_CreateActiveRecurring"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_Recurring"
+                }
+              }
+            },
+            "description": "Recurring created",
+            "headers": {
+              "ETag": {
+                "description": "Strong entity tag derived from a deterministic SHA-256 hash of the returned recurring representation",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP modification timestamp derived from the persisted recurring modified_at value, formatted as an RFC 1123 date in GMT",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "description": "URL of the newly created recurring, e.g. /api/recurring-billing/recurrings-v1/{recurring-id}",
+                "schema": {
+                  "example": "/api/recurring-billing/recurrings-v1/550e8400-e29b-41d4-a716-446655440000",
+                  "format": "uri",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Recurring creation failed due to validation errors. See the response body for details"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a new Recurring",
+        "tags": [
+          "Recurring-API_Recurrings"
+        ],
+        "x-fn-is-hidden": false,
+        "x-fn-is-public": true,
+        "x-stability-level": "stable"
+      }
+    },
+    "/api/recurring-billing/recurrings-v1/{recurring-id}": {
+      "get": {
+        "description": "Returns the full representation of a single recurring contract, including its rows, accrual, tax reductions, calculated totals and any accumulated error logs. The `ETag` and `Last-Modified` response headers can be used for later conditional updates.",
+        "operationId": "getRecurringById",
+        "parameters": [
+          {
+            "description": "The unique identifier of the recurring contract.",
+            "in": "path",
+            "name": "recurring-id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_Recurring"
+                }
+              }
+            },
+            "description": "A single recurring",
+            "headers": {
+              "ETag": {
+                "description": "Strong entity tag derived from a deterministic SHA-256 hash of the returned recurring representation",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP modification timestamp derived from the persisted recurring modified_at value, formatted as an RFC 1123 date in GMT",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Recurring not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Get a recurring by ID",
+        "tags": [
+          "Recurring-API_Recurrings"
+        ],
+        "x-fn-is-hidden": false,
+        "x-fn-is-public": true,
+        "x-stability-level": "stable"
+      },
+      "patch": {
+        "description": "Applies JSON Patch operations to editable recurring fields. Supported operations are `add`, `remove`, and `replace`.\nAllowed root paths are: `/accrual`, `/project_id`, `/cost_center_id`, `/price_list_id`, `/dates`, `/amount_per_invoicing`, `/status`, `/invoice_handling`, `/distribution_method`, `/payment_terms`, `/our_reference`, `/your_reference`, `/remark`, `/order_number`, `/print_configuration`, `/vat_option`, `/vat_payment_type`, `/currency`, `/email`, `/customer`, `/delivery`, `/tax_reduction_category`, `/tax_reductions`, `/rows`.\nDeviation-related paths are not supported on this endpoint and return 400. JSON Pointer escape sequences are supported (`~0` for `~`, `~1` for `/`).\nThe `If-Match` (ETag) header is mandatory: requests without it are rejected with `428`, and a stale ETag is rejected with `412`.",
+        "operationId": "patchRecurring",
+        "parameters": [
+          {
+            "description": "The unique identifier of the recurring contract to patch.",
+            "in": "path",
+            "name": "recurring-id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required strong ETag for optimistic concurrency control; standard comma-separated If-Match lists are also accepted. Requests without this header are rejected with 428.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional expected Last-Modified value for optimistic concurrency control, formatted as an RFC 1123 date in GMT. Evaluated only after If-Match succeeds.",
+            "in": "header",
+            "name": "If-Unmodified-Since",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Recurring-API_JsonPatchDocument"
+              }
+            }
+          },
+          "description": "The Content-Type header must be set to `application/json`. The body is fully JSON Patch compliant (RFC 6902).",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_Recurring"
+                }
+              }
+            },
+            "description": "Recurring updated",
+            "headers": {
+              "ETag": {
+                "description": "Strong entity tag derived from a deterministic SHA-256 hash of the returned recurring representation",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP modification timestamp derived from the persisted recurring modified_at value, formatted as an RFC 1123 date in GMT",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Recurring update failed due to validation errors. See the response body for details"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Precondition Failed - The recurring was modified since the supplied conditional headers were retrieved"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Precondition Required - The mandatory If-Match header was not supplied"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update only specified fields of a Recurring by ID",
+        "tags": [
+          "Recurring-API_Recurrings"
+        ],
+        "x-fn-is-hidden": false,
+        "x-fn-is-public": true,
+        "x-stability-level": "stable"
+      },
+      "put": {
+        "description": "Replaces the editable fields of an existing recurring with the supplied representation. The `If-Match` (ETag) header is mandatory for optimistic concurrency control: requests without it are rejected with `428`, and requests whose ETag no longer matches the current recurring are rejected with `412`. The current ETag is returned by GET and by every successful mutation. The optional `If-Unmodified-Since` header may be supplied as an additional check.",
+        "operationId": "updateRecurring",
+        "parameters": [
+          {
+            "description": "The unique identifier of the recurring contract to update.",
+            "in": "path",
+            "name": "recurring-id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Required strong ETag for optimistic concurrency control; standard comma-separated If-Match lists are also accepted. Requests without this header are rejected with 428.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional expected Last-Modified value for optimistic concurrency control, formatted as an RFC 1123 date in GMT. Evaluated only after If-Match succeeds.",
+            "in": "header",
+            "name": "If-Unmodified-Since",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Recurring-API_UpdateRecurring"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_Recurring"
+                }
+              }
+            },
+            "description": "Recurring updated",
+            "headers": {
+              "ETag": {
+                "description": "Strong entity tag derived from a deterministic SHA-256 hash of the returned recurring representation",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP modification timestamp derived from the persisted recurring modified_at value, formatted as an RFC 1123 date in GMT",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Recurring update failed due to validation errors. See the response body for details"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Precondition Failed - The recurring was modified since the supplied conditional headers were retrieved"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Precondition Required - The mandatory If-Match header was not supplied"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a Recurring by ID",
+        "tags": [
+          "Recurring-API_Recurrings"
+        ],
+        "x-fn-is-hidden": false,
+        "x-fn-is-public": true,
+        "x-stability-level": "stable"
+      }
+    },
+    "/api/recurring-billing/recurrings-v1/{recurring-id}/deviations": {
+      "get": {
+        "description": "Returns the deviations defined for a recurring. A deviation overrides the normal invoicing for one or more occurrences of the recurring — either changing the rows (`ROWS`) or skipping the invoice entirely (`SKIP`).",
+        "operationId": "listRecurringDeviations",
+        "parameters": [
+          {
+            "description": "The unique identifier of the recurring contract.",
+            "in": "path",
+            "name": "recurring-id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Recurring-API_Deviation"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "A list of deviations"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Recurring not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "List all deviations for a recurring",
+        "tags": [
+          "Recurring-API_RecurringDeviations"
+        ],
+        "x-fn-is-hidden": false,
+        "x-fn-is-public": true,
+        "x-stability-level": "stable"
+      }
+    },
+    "/api/recurring-billing/recurrings-v1/{recurring-id}/deviations/{deviation-id}": {
+      "get": {
+        "description": "Returns a single deviation for a recurring, including its rows and any accrual override.",
+        "operationId": "getRecurringDeviation",
+        "parameters": [
+          {
+            "description": "The unique identifier of the recurring contract.",
+            "in": "path",
+            "name": "recurring-id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The unique identifier of the deviation.",
+            "in": "path",
+            "name": "deviation-id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_Deviation"
+                }
+              }
+            },
+            "description": "A single deviation",
+            "headers": {
+              "ETag": {
+                "description": "Strong entity tag derived from a deterministic SHA-256 hash of the returned deviation representation",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Last-Modified": {
+                "description": "HTTP modification timestamp derived from the persisted deviation modified_at value, formatted as an RFC 1123 date in GMT",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Recurring or deviation not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recurring-API_ErrorInformation"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Get a deviation by ID",
+        "tags": [
+          "Recurring-API_RecurringDeviations"
+        ],
+        "x-fn-is-hidden": false,
+        "x-fn-is-public": true,
+        "x-stability-level": "stable"
+      }
+    },
+    "/api/time/articles-v1": {
+      "get": {
+        "description": "<p>\n <b>Response property descriptions:</b><br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>id</i></b> - The unique id of a basic common combination of article registrations. (The basic common combination means \"user/purchase date/customer/project/cost center\", which leads to a dialog with several article registrations.)<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>purchaseDate</i></b> - The date on which the article is purchased or registered for charging.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>ownerId</i></b> - The user ID who creates the basic common combination.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>ownerName</i></b> - The name of the user who creates the basic common combination.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>version</i></b> - The version of the basic common combination (article dialog) being updated, which is used for handling the concurrency issue.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>registrationType</i></b> - It is always \"ARTICLE\" for article list endpoint.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b>Sub-Class - ArticleRegistration:</b><br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>id</i></b> - The unique id of an article registration.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>registrationId</i></b> - The id of the basic common combination.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>orderIndex</i></b> - the order index for the article registration in regard of the common combination.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>ownerId</i></b> - The user ID who owns the article registration.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>ownerName</i></b> - The name of the user who owns the article registration.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>totalQuantity</i></b> - The quantity of the article.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>unitPrice</i></b> - The unit price connected to the article registration, which might be locked on an invoice/order basis or for non-invoiceable.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>unitCost</i></b> - The unit cost connected to the article registration, which might be locked on an invoice/order basis.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>invoiceBasisId</i></b> - The ID of invoice/order basis which is used for creating an invoice/order.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>nonInvoiceable</i></b> - If the article registration would be ignored for charging or not.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>note</i></b> - The note on the article registration.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>documentId</i></b> - The document ID which includes the article registration and is created in Invoicing application.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;        <b><i>documentType</i></b> - The document type which could be \"invoice\" or \"order\".\n </p>",
+        "operationId": "list_8",
+        "parameters": [
+          {
+            "description": "The start date of the search span, the max of which should be 1 year to the end date (\"toDate\").\n Example: 2022-11-01",
+            "in": "query",
+            "name": "fromDate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The end date of the search span, the max of which should be 1 year back to the start date (\"fromDate\").\n Example: 2022-11-30",
+            "in": "query",
+            "name": "toDate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "An array of customer IDs which are being used in database and in one-to-one relation with customer numbers.\n Example: 100,101,102",
+            "explode": true,
+            "in": "query",
+            "name": "customerIds",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "An array of project IDs.\n Example: p1,p2,p3",
+            "explode": true,
+            "in": "query",
+            "name": "projectIds",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "If the article registration without project is included, or not.",
+            "in": "query",
+            "name": "includeRegistrationsWithoutProject",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "An array of article IDs.\n Example: s1,s2,s3",
+            "explode": true,
+            "in": "query",
+            "name": "itemIds",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "An array of cost center IDs.\n Example: cc1,cc2,cc3",
+            "explode": true,
+            "in": "query",
+            "name": "costCenterIds",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "An array of user ids who own the article registrations.\n Example: 1,2,3",
+            "explode": true,
+            "in": "query",
+            "name": "ownerIds",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "If a document is created with the article registration, or not.",
+            "in": "query",
+            "name": "invoiced",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "If the article registration is locked on an invoice basis, or not.",
+            "in": "query",
+            "name": "inInvoiceBasis",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "If the article registration is internal, which is registered on an internal customer, or not.",
+            "in": "query",
+            "name": "internalArticles",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "If the article registration has been moved to non-invoiceable, or not.",
+            "in": "query",
+            "name": "nonInvoiceable",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "If the price of the non-invoiceable article registration is included, or not.",
+            "in": "query",
+            "name": "includeNonInvoiceablePrice",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/time-reporting_BaseArticleRegistration"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "list of article registrations  <code>BaseArticleRegistration</code>"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/time-reporting_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Get full article registrations that match filter",
+        "tags": [
+          "time-reporting_Articles"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/time/registrations-v2": {
+      "get": {
+        "description": "<p>\n <b>Response property descriptions:</b><br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>id</i></b> - The unique id of the registration.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>userId</i></b> - The user ID who owns the registration.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>userName</i></b> - The name of the user who owns the registration.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>workedDate</i></b> - The date for which the registration is created.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>workedHours</i></b> - The time spent, or the time of absence.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>startTime</i></b> - The start of clock time.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>stopTime</i></b> - The end of clock time.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>invoiceText</i></b> - The text to be included in the invoice/order basis which would be used to create an invoice/order.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>note</i></b> - The note on the registration.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>chargeHours</i></b> - The time to be invoiced, or 0 for the absence, or locked for non-invoiceable.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>childId</i></b> - The child ID related to the absence registration of parental leave (FPE), which comes from Payroll application.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>nonInvoiceable</i></b> - If the registration would be ignored for charging or not.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>invoiceBasisId</i></b> - The ID of invoice/order basis which is used for creating an invoice/order.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>documentId</i></b> - The document ID which includes the registration and is created in Invoicing application.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>documentType</i></b> - The document type which could be \"invoice\" or \"order\".<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>unitCost</i></b> - The unit cost from the registration owner who takes the work.<br/>\n &nbsp;&nbsp;&nbsp;&nbsp;    <b><i>unitPrice</i></b> - The unit price for the service on the registration, which comes in priority from \"invoice/order basis\", \"price group\" or \"service\".\n <p>",
+        "operationId": "list_2",
+        "parameters": [
+          {
+            "description": "The start date of the search span, the max of which should be 1 year to the end date (\"toDate\").\n Example: 2022-11-01",
+            "in": "query",
+            "name": "fromDate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The end date of the search span, the max of which should be 1 year back to the start date (\"fromDate\").\n Example: 2022-11-30",
+            "in": "query",
+            "name": "toDate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "An array of customer IDs which are being used in database and in one-to-one relation with customer numbers.\n Example: 100,101,102",
+            "explode": true,
+            "in": "query",
+            "name": "customerIds",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "An array of project IDs.\n Example: p1,p2,p3",
+            "explode": true,
+            "in": "query",
+            "name": "projectIds",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "An array of service IDs.\n Example: s1,s2,s3",
+            "explode": true,
+            "in": "query",
+            "name": "serviceIds",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "An array of cost center IDs.\n Example: cc1,cc2,cc3",
+            "explode": true,
+            "in": "query",
+            "name": "costCenterIds",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "An array of registration codes.\n Example: TID,SEM,FPE",
+            "explode": true,
+            "in": "query",
+            "name": "regCodes",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "An array of user IDs that time/absence registrations belong to.\n Example: 1,2,3",
+            "explode": true,
+            "in": "query",
+            "name": "userIds",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "If the time/absence registration without project is included, or not.",
+            "in": "query",
+            "name": "includeRegistrationsWithoutProject",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "If a document is created with the time/absence registration, or not.",
+            "in": "query",
+            "name": "invoiced",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "If the time/absence registration is locked on an invoice basis, or not.",
+            "in": "query",
+            "name": "inInvoiceBasis",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "If the time/absence registration is internal, which is registered on an internal customer, or not.",
+            "in": "query",
+            "name": "internalTime",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "If the time/absence registration has been moved to non-invoiceable, or not.",
+            "in": "query",
+            "name": "nonInvoiceable",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "If the price of the non-invoiceable time/absence registration is included, or not.",
+            "in": "query",
+            "name": "includeNonInvoiceableChargeHours",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/time-reporting_DetailedRegistration"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "list of registrations <code>DetailedRegistration</code>\n <b>Note</b>: used by mobile client and in detailed chargeable units"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/time-reporting_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Get time/absence registrations that match filter",
+        "tags": [
+          "time-reporting_Registrations"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/deliveries-v1": {
+      "get": {
+        "operationId": "getAll",
+        "parameters": [
+          {
+            "description": "Include only documents with given state.",
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "enum": [
+                "all",
+                "unreleased",
+                "released",
+                "voided"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Include only documents with given type.",
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "enum": [
+                "all",
+                "inbound",
+                "outbound",
+                "stocktransfer"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Include only documents containing the given item.",
+            "in": "query",
+            "name": "itemId",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_ManualDocument"
+                }
+              }
+            },
+            "description": "A list of manual documents."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "List manual documents",
+        "tags": [
+          "warehouse_ManualDocument"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/deliveries-v1/inbounddeliveries": {
+      "post": {
+        "description": "<p>\n The <code>id</code> is set automatically.",
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouse_ManualInboundDocument"
+              }
+            }
+          },
+          "description": "manual inbound document"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_ManualInboundDocument"
+                }
+              }
+            },
+            "description": "the <code>ManualInboundDocument</code> document."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Create manual inbound document",
+        "tags": [
+          "warehouse_ManualInboundDocument"
+        ],
+        "x-codegen-request-body-name": "manualInboundDocument",
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/deliveries-v1/inbounddeliveries/{id}": {
+      "get": {
+        "operationId": "get",
+        "parameters": [          {
+            "description": "Manual Inbound document id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_ManualInboundDocument"
+                }
+              }
+            },
+            "description": "the <code>ManualInboundDocument</code> document."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Get manual inbound document",
+        "tags": [
+          "warehouse_ManualInboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      },
+      "patch": {
+        "description": "<p>\n When a Manual Inbound has been released, it is locked.\n The <code>note</code> field can still be updated using this endpoint.",
+        "operationId": "updateNote",
+        "parameters": [
+          {
+            "description": "Manual Inbound document id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouse_ManualInboundDocumentPatch"
+              }
+            }
+          },
+          "description": "Note."
+        },
+        "responses": {
+          "204": {
+            "description": "Successfully applied partial modifications to the resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Update note on manual inbound document",
+        "tags": [
+          "warehouse_ManualInboundDocument"
+        ],
+        "x-codegen-request-body-name": "manualInboundDocumentPatch",
+        "x-fn-is-public": "true"
+      },
+      "put": {
+        "operationId": "update",
+        "parameters": [
+          {
+            "description": "Manual Inbound document id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouse_ManualInboundDocument"
+              }
+            }
+          },
+          "description": "Manual Inbound document"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_ManualInboundDocument"
+                }
+              }
+            },
+            "description": "the <code>ManualInboundDocument</code> document."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Update manual inbound document",
+        "tags": [
+          "warehouse_ManualInboundDocument"
+        ],
+        "x-codegen-request-body-name": "manualInboundDocument",
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/deliveries-v1/inbounddeliveries/{id}/release": {
+      "put": {
+        "description": "<p>\n The document will be locked and bookkept.\n <p>\n The following error codes might be thrown:\n  <dl>\n  <dt>cannot_release_later_than_current_date</dt>\n    <dd>Document date cannot be in the future.</dd>\n  <dt>document_is_voided</dt>\n    <dd>Document is voided.</dd>\n  <dt>period_locked</dt>\n    <dd>Document date is within a locked bookkeeping period.</dd>\n  </dl>",
+        "operationId": "release",
+        "parameters": [
+          {
+            "description": "Manual Inbound document id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully updated the specified resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Release manual inbound document",
+        "tags": [
+          "warehouse_ManualInboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/deliveries-v1/inbounddeliveries/{id}/void": {
+      "put": {
+        "description": "<p>\n A released manual inbound document might have connected outbounds, and can only be force voided.\n Note that a force void operation might cause a negative stock.\n <p>\n The following error codes might be thrown:\n  <dl>\n  <dt>void_linked_outbound</dt>\n    <dd>If this document has any outbounds transactions connected to it.</dd>\n  </dl>",
+        "operationId": "voidDocument",
+        "parameters": [
+          {
+            "description": "Manual Inbound document id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "true if we should force void, defaults to false",
+            "in": "query",
+            "name": "force",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "date the void operation should be bookkeept on",
+            "in": "query",
+            "name": "customVoidDate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully updated the specified resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Void manual inbound document",
+        "tags": [
+          "warehouse_ManualInboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/deliveries-v1/outbounddeliveries": {
+      "post": {
+        "description": "<p>\n The <code>id</code> is set automatically.",
+        "operationId": "create_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouse_ManualOutboundDocument"
+              }
+            }
+          },
+          "description": "manual outbound document"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_ManualOutboundDocument"
+                }
+              }
+            },
+            "description": "the <code>ManualOutboundDocument</code> document."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Create manual outbound document",
+        "tags": [
+          "warehouse_ManualOutboundDocument"
+        ],
+        "x-codegen-request-body-name": "manualOutboundDocument",
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/deliveries-v1/outbounddeliveries/{id}": {
+      "get": {
+        "operationId": "get_1",
+        "parameters": [
+          {
+            "description": "Manual Outbound document id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_ManualOutboundDocument"
+                }
+              }
+            },
+            "description": "the <code>ManualOutboundDocument</code> document."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Get manual outbound document",
+        "tags": [
+          "warehouse_ManualOutboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      },
+      "patch": {
+        "description": "<p>\n When a Manual Outbound has been released, it is locked.\n The <code>note</code> field can still be updated using this endpoint.",
+        "operationId": "updateNote_1",
+        "parameters": [
+          {
+            "description": "Manual Outbound document id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouse_ManualOutboundDocumentPatch"
+              }
+            }
+          },
+          "description": "Note."
+        },
+        "responses": {
+          "204": {
+            "description": "Successfully applied partial modifications to the resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Update note on manual outbound document",
+        "tags": [
+          "warehouse_ManualOutboundDocument"
+        ],
+        "x-codegen-request-body-name": "manualOutboundDocumentPatch",
+        "x-fn-is-public": "true"
+      },
+      "put": {
+        "description": "<p>\n HTTP code 400 cannot_modify_released_document\n HTTP code 400 document_is_voided Document is voided.\n HTTP code 404 not found",
+        "operationId": "update_1",
+        "parameters": [
+          {
+            "description": "Manual Outbound document id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouse_ManualOutboundDocument"
+              }
+            }
+          },
+          "description": "Manual Outbound document."
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_ManualOutboundDocument"
+                }
+              }
+            },
+            "description": "the <code>ManualOutboundDocument</code> document."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Update manual outbound document",
+        "tags": [
+          "warehouse_ManualOutboundDocument"
+        ],
+        "x-codegen-request-body-name": "manualOutboundDocument",
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/deliveries-v1/outbounddeliveries/{id}/release": {
+      "put": {
+        "description": "<p>\n The document will be locked and bookkept.\n <p>\n The following error codes might be thrown:\n  <dl>\n  <dt>cannot_release_later_than_current_date</dt>\n    <dd>Document date cannot be in the future.</dd>\n  <dt>document_is_voided</dt>\n    <dd>Document is voided.</dd>\n  <dt>period_locked</dt>\n    <dd>Document date is within a locked bookkeeping period.</dd>\n  </dl>",
+        "operationId": "release_1",
+        "parameters": [
+          {
+            "description": "Manual Outbound document id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully updated the specified resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Release manual outbound document",
+        "tags": [
+          "warehouse_ManualOutboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/deliveries-v1/outbounddeliveries/{id}/void": {
+      "put": {
+        "operationId": "voidDocument_1",
+        "parameters": [
+          {
+            "description": "Manual Outbound document id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "if provided this date will be used as the voided date instead of the document date",
+            "in": "query",
+            "name": "customVoidDate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully updated the specified resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Void manual outbound document",
+        "tags": [
+          "warehouse_ManualOutboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/documentdeliveries/custom/documenttypes-v1": {
+      "get": {
+        "operationId": "getAll_6",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_CustomDocumentType"
+                }
+              }
+            },
+            "description": "A list of <code>CustomDocumentTypes</code>"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "List custom document types",
+        "tags": [
+          "warehouse_CustomDocumentType"
+        ],
+        "x-fn-is-public": "true"
+      },
+      "post": {
+        "description": "Create type, if it doesn't already exists. Note that new custom document types are\n created automatically when you create custom documents, so normally\n you do not need to call this method.\n\n Throws HTTP 400 <code>referenceTypeNotAllowed</code> if the name of the type is not allowed.",
+        "operationId": "create_8",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouse_CustomDocumentType"
+              }
+            }
+          },
+          "description": "The <code>CustomDocumentType</code>."
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "int32",
+                  "type": "integer"
+                }
+              }
+            },
+            "description": "`1` if created, else `0` if type already exists."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Create custom document type",
+        "tags": [
+          "warehouse_CustomDocumentType"
+        ],
+        "x-codegen-request-body-name": "customDocumentType",
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/documentdeliveries/custom/documenttypes-v1/{type}": {
+      "get": {
+        "operationId": "get_11",
+        "parameters": [
+          {
+            "description": "the name of the reference type",
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_CustomDocumentType"
+                }
+              }
+            },
+            "description": "A <code>CustomDocumentType</code>"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Get custom document type",
+        "tags": [
+          "warehouse_CustomDocumentType"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/documentdeliveries/custom/inbound-v1/{type}/{id}": {
+      "get": {
+        "operationId": "get_12",
+        "parameters": [
+          {
+            "description": "Document type.",
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Document id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_CustomInboundDocument"
+                }
+              }
+            },
+            "description": "The <code>CustomInboundDocument</code>."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Get custom inbound document",
+        "tags": [
+          "warehouse_CustomInboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      },
+      "put": {
+        "operationId": "save",
+        "parameters": [
+          {
+            "description": "min 1 character, max 25 characters, may contain letters A-Z, digits 0-9, underscore (_), and dash (-), type is case-insensitive\n <blockquote><pre>\n      Type is a custom name/reference of the document that will be used to reference the document type <br>\n      * If type is not known, it will be registered as belonging to the INBOUND category. <br>\n      * If type is an existing custom document type of category OUTBOUND an error is thrown. <br>\n      * If type is invalid an error is thrown. <br>\n </pre></blockquote>",
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "min 1 character, max 25 characters, may only contain digits 0-9",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouse_CustomInboundDocument"
+              }
+            }
+          },
+          "description": "the <code>CustomInboundDocument</code> to create"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_CustomInboundDocument"
+                }
+              }
+            },
+            "description": "the stored <code>CustomInboundDocument</code>"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Save custom inbound document",
+        "tags": [
+          "warehouse_CustomInboundDocument"
+        ],
+        "x-codegen-request-body-name": "document",
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/documentdeliveries/custom/inbound-v1/{type}/{id}/release": {
+      "put": {
+        "description": "The document will be locked and bookkept.\n The inbound deliveries will affect available stock.",
+        "operationId": "release_4",
+        "parameters": [
+          {
+            "description": "document type",
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "document id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully updated the specified resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Release custom inbound document",
+        "tags": [
+          "warehouse_CustomInboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/documentdeliveries/custom/inbound-v1/{type}/{id}/void": {
+      "put": {
+        "description": "Voiding a document will undo the possible stock changes that the document had made,\n note that the document and the transactions created are not deleted. Some limitations apply, see below.",
+        "operationId": "voidDocument_2",
+        "parameters": [
+          {
+            "description": "document type",
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "document id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "true if the document should be voided even if the document has connected outbounds, defaults to false.",
+            "in": "query",
+            "name": "force",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully updated the specified resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Void custom inbound document",
+        "tags": [
+          "warehouse_CustomInboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/documentdeliveries/custom/outbound-v1/{type}/{id}": {
+      "get": {
+        "operationId": "get_13",
+        "parameters": [
+          {
+            "description": "document type",
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "document id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_CustomOutboundDocument"
+                }
+              }
+            },
+            "description": "the fetched <code>CustomOutboundDocument</code>"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Get custom outbound document",
+        "tags": [
+          "warehouse_CustomOutboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      },
+      "put": {
+        "description": "<br>\n If type is not known, it will be registered as belonging to the OUTBOUND category.<br>\n If type is an existing custom document type of category INBOUND an error is thrown.<br>\n If type is invalid an error is thrown.<br>",
+        "operationId": "save_1",
+        "parameters": [
+          {
+            "description": "the type of the custom outbound document, min 1 character, max 25 characters, may contain letters A-Z, digits 0-9, underscore (_), and dash (-). Always stored as upper case.",
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "the id of the custom outbound document, min 1 character, max 25 characters, may only contain digits 0-9",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/warehouse_CustomOutboundDocument"
+              }
+            }
+          },
+          "description": "the <code>CustomOutboundDocument</code> to create"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_CustomOutboundDocument"
+                }
+              }
+            },
+            "description": "the stored <code>CustomOutboundDocument</code>"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Save a custom outbound document",
+        "tags": [
+          "warehouse_CustomOutboundDocument"
+        ],
+        "x-codegen-request-body-name": "document",
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/documentdeliveries/custom/outbound-v1/{type}/{id}/release": {
+      "put": {
+        "operationId": "release_5",
+        "parameters": [
+          {
+            "description": "document type",
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "document id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successfully updated the specified resource."
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/warehouse_WebException"
+                }
+              }
+            },
+            "description": "WebException"
+          }
+        },
+        "summary": "Release custom outbound document",
+        "tags": [
+          "warehouse_CustomOutboundDocument"
+        ],
+        "x-fn-is-public": "true"
+      }
+    },
+    "/api/warehouse/documentdeliveries/custom/outbound-v1/{type}/{id}/void": {
+      "put": {
+        "operationId": "voidDocument_3",
+        "parameters": [

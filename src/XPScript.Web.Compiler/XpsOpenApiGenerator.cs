@@ -135,7 +135,7 @@ public sealed class XpsOpenApiGenerator
         {
             if (pair.Value is not JsonObject schema)
                 throw new XpsOpenApiGenerationException($"components.schemas.{pair.Key} must be an object.");
-            var modelName = ToTypeIdentifier(pair.Key, $"schema '{pair.Key}'");
+            var modelName = ToSchemaIdentifier(pair.Key, $"schema '{pair.Key}'");
             if (!result.TryAdd(modelName, schema))
                 throw new XpsOpenApiGenerationException($"OpenAPI schemas generate duplicate XPScript class name '{modelName}'.");
         }
@@ -264,9 +264,9 @@ public sealed class XpsOpenApiGenerator
         var requestBody = XpsOpenApiSchema.Resolve(root, node, context);
         if (requestBody["content"] is not JsonObject content)
             throw new XpsOpenApiGenerationException($"{context} must declare content.");
-        var media = SelectJsonMediaType(content, context);
+        var media = SelectRequestMediaType(content, context);
         if (media["schema"] is not JsonObject schema)
-            throw new XpsOpenApiGenerationException($"{context} JSON content must declare a schema.");
+            throw new XpsOpenApiGenerationException($"{context} request content must declare a schema.");
 
         if (XpsOpenApiSchema.TryGetReference(schema, out var reference))
         {
@@ -350,12 +350,15 @@ public sealed class XpsOpenApiGenerator
         }
 
         var required = ReadStringSet(resolved["required"]);
+        var usedFieldNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var property in properties)
         {
-            var fieldName = ValidateModelMemberName(property.Key, name);
+            var fieldName = ModelMemberName(property.Key, name, usedFieldNames);
             if (property.Value is not JsonObject propertySchema)
                 throw new XpsOpenApiGenerationException($"Schema '{name}' property '{property.Key}' must be an object.");
             var fieldType = new XpsType(XpsOpenApiSchema.XpsType(root, propertySchema, $"schema '{name}' property '{property.Key}'"), XpsOpenApiSchema.IsObjectType(root, propertySchema, $"schema '{name}' property '{property.Key}'"));
+            if (!fieldName.Equals(property.Key, StringComparison.Ordinal))
+                builder.AppendLine($"    ' OpenAPI property: {property.Key}");
             if (required.Contains(property.Key)) builder.AppendLine("    [Required]");
             var resolvedProperty = XpsOpenApiSchema.Resolve(root, propertySchema, $"schema '{name}' property '{property.Key}'");
             if (ReadString(resolvedProperty, "format")?.Equals("email", StringComparison.OrdinalIgnoreCase) == true)
@@ -476,14 +479,28 @@ public sealed class XpsOpenApiGenerator
         return result;
     }
 
-    private static JsonObject SelectJsonMediaType(JsonObject content, string context) =>
-        TrySelectJsonMediaType(content) ?? throw new XpsOpenApiGenerationException($"{context} currently requires application/json or a structured +json media type.");
+    private static JsonObject SelectRequestMediaType(JsonObject content, string context)
+    {
+        var json = TrySelectJsonMediaType(content);
+        if (json is not null) return json;
+
+        foreach (var pair in content)
+            if (pair.Value is JsonObject media && media["schema"] is JsonObject)
+                return media;
+
+        throw new XpsOpenApiGenerationException($"{context} must contain at least one media type with a schema.");
+    }
 
     private static JsonObject? TrySelectJsonMediaType(JsonObject content)
     {
         if (content["application/json"] is JsonObject exact) return exact;
         foreach (var pair in content)
             if (pair.Key.EndsWith("+json", StringComparison.OrdinalIgnoreCase) && pair.Value is JsonObject media) return media;
+
+        foreach (var wildcard in new[] { "application/*", "*/*" })
+            if (content[wildcard] is JsonObject media && media["schema"] is JsonObject)
+                return media;
+
         return null;
     }
 
@@ -510,11 +527,28 @@ public sealed class XpsOpenApiGenerator
         return result;
     }
 
-    private static string ValidateModelMemberName(string name, string modelName)
+    private static string ModelMemberName(string name, string modelName, HashSet<string> used)
     {
-        if (!IdentifierPattern.IsMatch(name) || IsDeclarationReserved(name))
-            throw new XpsOpenApiGenerationException($"Schema '{modelName}' property '{name}' cannot be represented losslessly as an XPScript field name. Rename the OpenAPI property to a valid XPScript identifier in that declaration scope.");
-        return name;
+        if (string.IsNullOrWhiteSpace(name))
+            throw new XpsOpenApiGenerationException($"Schema '{modelName}' declares an empty property name.");
+
+        var baseName = IdentifierPattern.IsMatch(name) && !IsDeclarationReserved(name)
+            ? name
+            : ToTypeIdentifier(name, $"schema '{modelName}' property '{name}'");
+        var candidate = baseName;
+        var suffix = 2;
+        while (!used.Add(candidate))
+            candidate = baseName + suffix++.ToString(CultureInfo.InvariantCulture);
+        return candidate;
+    }
+
+    private static string ToSchemaIdentifier(string value, string context)
+    {
+        if (string.IsNullOrWhiteSpace(value)) throw new XpsOpenApiGenerationException($"{context} has an empty identifier.");
+        var trimmed = value.Trim();
+        return IdentifierPattern.IsMatch(trimmed) && !IsDeclarationReserved(trimmed)
+            ? trimmed
+            : ToTypeIdentifier(trimmed, context);
     }
 
     private static string ToTypeIdentifier(string value, string context)
