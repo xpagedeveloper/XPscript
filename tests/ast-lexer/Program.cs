@@ -20,6 +20,13 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+const string staticClassMemberSource = "Class StaticBox\nStatic Value As Integer\nStatic Sub Work()\nEnd Sub\nPublic Kept As Integer\nEnd Class";
+var staticClassMemberParser = new DeclarationParser(staticClassMemberSource);
+var staticClassMemberClass = (ClassDeclarationSyntax)staticClassMemberParser.ParseDeclaration();
+Equal(2, staticClassMemberParser.Diagnostics.Count(d => d.Message == "Static class members are not supported."), "static class member diagnostics");
+Equal(1, staticClassMemberClass.Members.Count, "members retained after static member diagnostics");
+Equal("Kept", ((FieldDeclarationSyntax)staticClassMemberClass.Members[0]).Identifier.Text, "field after static members");
+
 const string localClassSource = "Sub InvalidLocalClass()\nClass LocalBox\nEnd Class\nEnd Sub";
 var localClassParser = new DeclarationParser(localClassSource);
 _ = localClassParser.ParseDeclaration();
