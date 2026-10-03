@@ -265,10 +265,12 @@ public static class XPScriptCompilerCommandLine
             var defaultExtension = runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".exe" : "";
             outputPath ??= Path.Combine(Path.GetDirectoryName(sourcePath)!, fileName + defaultExtension);
 
-            if (UIFormAppAssets.UsesUIForm(sourcePath))
+            var usesUiFormAssets = UIFormAppAssets.UsesUIForm(sourcePath);
+            if (usesUiFormAssets)
                 UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
 
-            using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
+            var effectiveEmbedAssets = embedAssets || usesUiFormAssets;
+            using var assetScope = UIFormAssetCompileContext.Push(effectiveEmbedAssets);
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
             var compiler = new CompilerDriver();
@@ -277,7 +279,7 @@ public static class XPScriptCompilerCommandLine
                 compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier),
                 timer,
                 $"Compiling {sourceName} [{runtimeIdentifier}, {mode}]").ConfigureAwait(false);
-            if (result.Success && !embedAssets && UIFormAppAssets.UsesUIForm(sourcePath))
+            if (result.Success && !effectiveEmbedAssets && usesUiFormAssets)
                 UIFormAppAssets.PublishExternalAssets(sourcePath, outputPath);
             CompleteProgress(result.Success
                 ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
