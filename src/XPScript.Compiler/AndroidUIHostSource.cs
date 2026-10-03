@@ -259,6 +259,11 @@ public static class AndroidFormHost
                 Control editor = type switch
                 {
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
+                    "DateField" => new DatePicker(),
+                    "TimeField" => new TimePicker(),
+                    "DateTimeField" => new AndroidDateTimeFieldEditor(),
+                    "MonthField" => new AndroidMonthFieldEditor(),
+                    "ColorField" => new AndroidColorFieldEditor(),
                     "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120, CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "PasswordField" => new TextBox { PasswordChar = '•', CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "Select" => new ComboBox { ItemsSource = options },
@@ -558,9 +563,132 @@ public static class AndroidFormHost
         return image;
     }
 
+    private sealed class AndroidDateTimeFieldEditor : StackPanel
+    {
+        public DatePicker DateEditor { get; } = new DatePicker();
+        public TimePicker TimeEditor { get; } = new TimePicker();
+
+        public AndroidDateTimeFieldEditor()
+        {
+            Spacing = 8;
+            Orientation = Avalonia.Layout.Orientation.Horizontal;
+            Children.Add(DateEditor);
+            Children.Add(TimeEditor);
+        }
+    }
+
+    private sealed class AndroidMonthFieldEditor : StackPanel
+    {
+        public NumericUpDown YearEditor { get; } = new NumericUpDown { Minimum = 1, Maximum = 9999, Width = 120 };
+        public ComboBox MonthEditor { get; } = new ComboBox
+        {
+            ItemsSource = Enumerable.Range(1, 12).Select(month => month.ToString("00", System.Globalization.CultureInfo.InvariantCulture)).ToArray(),
+            Width = 100
+        };
+
+        public AndroidMonthFieldEditor()
+        {
+            Spacing = 8;
+            Orientation = Avalonia.Layout.Orientation.Horizontal;
+            Children.Add(YearEditor);
+            Children.Add(MonthEditor);
+        }
+    }
+
+    private sealed class AndroidColorFieldEditor : StackPanel
+    {
+        public TextBox ValueEditor { get; } = new TextBox { Watermark = "#RRGGBB", MinWidth = 180 };
+        public Border Preview { get; } = new Border { Width = 36, Height = 36, BorderThickness = new Thickness(1), BorderBrush = Brushes.Gray };
+
+        public AndroidColorFieldEditor()
+        {
+            Spacing = 8;
+            Orientation = Avalonia.Layout.Orientation.Horizontal;
+            Children.Add(ValueEditor);
+            Children.Add(Preview);
+        }
+    }
+
+    private static bool SetTemporalEditorValue(Control editor, string text)
+    {
+        if (editor is DatePicker datePicker)
+        {
+            if (DateTimeOffset.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AllowWhiteSpaces, out var date))
+                datePicker.SelectedDate = date;
+            else
+                datePicker.SelectedDate = null;
+            return true;
+        }
+        if (editor is TimePicker timePicker)
+        {
+            timePicker.SelectedTime = TimeSpan.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var time) ? time : null;
+            return true;
+        }
+        if (editor is AndroidDateTimeFieldEditor dateTimeEditor)
+        {
+            if (DateTimeOffset.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AllowWhiteSpaces, out var dateTime))
+            {
+                dateTimeEditor.DateEditor.SelectedDate = dateTime;
+                dateTimeEditor.TimeEditor.SelectedTime = dateTime.TimeOfDay;
+            }
+            else
+            {
+                dateTimeEditor.DateEditor.SelectedDate = null;
+                dateTimeEditor.TimeEditor.SelectedTime = null;
+            }
+            return true;
+        }
+        if (editor is AndroidMonthFieldEditor monthEditor)
+        {
+            if (DateTime.TryParseExact(text + "-01", "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var month))
+            {
+                monthEditor.YearEditor.Value = month.Year;
+                monthEditor.MonthEditor.SelectedIndex = month.Month - 1;
+            }
+            else
+            {
+                monthEditor.YearEditor.Value = DateTime.Now.Year;
+                monthEditor.MonthEditor.SelectedIndex = DateTime.Now.Month - 1;
+            }
+            return true;
+        }
+        if (editor is AndroidColorFieldEditor colorEditor)
+        {
+            colorEditor.ValueEditor.Text = text;
+            return true;
+        }
+        return false;
+    }
+
+    private static string? GetTemporalEditorValue(Control editor)
+    {
+        if (editor is DatePicker datePicker)
+            return datePicker.SelectedDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+        if (editor is TimePicker timePicker)
+            return timePicker.SelectedTime?.ToString(@"hh\:mm", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+        if (editor is AndroidDateTimeFieldEditor dateTimeEditor)
+        {
+            if (dateTimeEditor.DateEditor.SelectedDate is not DateTimeOffset date) return string.Empty;
+            var time = dateTimeEditor.TimeEditor.SelectedTime ?? TimeSpan.Zero;
+            return date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) + "T" +
+                   time.ToString(@"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+        }
+        if (editor is AndroidMonthFieldEditor monthEditor)
+        {
+            var year = Convert.ToInt32(monthEditor.YearEditor.Value ?? DateTime.Now.Year, System.Globalization.CultureInfo.InvariantCulture);
+            var month = monthEditor.MonthEditor.SelectedIndex >= 0 ? monthEditor.MonthEditor.SelectedIndex + 1 : DateTime.Now.Month;
+            return year.ToString("0000", System.Globalization.CultureInfo.InvariantCulture) + "-" +
+                   month.ToString("00", System.Globalization.CultureInfo.InvariantCulture);
+        }
+        if (editor is AndroidColorFieldEditor colorEditor)
+            return colorEditor.ValueEditor.Text ?? string.Empty;
+        return null;
+    }
+
     private static void SetEditorValue(Control editor, JsonElement value)
     {
         var text = value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : value.ToString();
+        if (SetTemporalEditorValue(editor, text)) return;
         if (editor is TextBox textBox) textBox.Text = text;
         else if (editor is Avalonia.Controls.CheckBox checkBox)
             checkBox.IsChecked = value.ValueKind == JsonValueKind.True || text.Equals("true", StringComparison.OrdinalIgnoreCase);
@@ -588,8 +716,13 @@ public static class AndroidFormHost
         }
     }
 
-    private static object? GetEditorValue(Control editor) => editor switch
+    private static object? GetEditorValue(Control editor)
     {
+        if (editor is DatePicker or TimePicker or AndroidDateTimeFieldEditor or AndroidMonthFieldEditor or AndroidColorFieldEditor)
+            return GetTemporalEditorValue(editor);
+
+        return editor switch
+        {
         TextBox textBox => textBox.Text ?? string.Empty,
         Avalonia.Controls.CheckBox checkBox => checkBox.IsChecked == true,
         ComboBox comboBox => comboBox.SelectedItem?.ToString() ?? string.Empty,
@@ -598,7 +731,8 @@ public static class AndroidFormHost
         Slider slider => slider.Value,
         StackPanel radioPanel => radioPanel.Children.OfType<Avalonia.Controls.RadioButton>().FirstOrDefault(radio => radio.IsChecked == true)?.Tag?.ToString() ?? string.Empty,
         _ => null
-    };
+        };
+    }
 }
 """;
 }
