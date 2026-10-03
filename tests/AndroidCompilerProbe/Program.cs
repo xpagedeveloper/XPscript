@@ -77,7 +77,7 @@ foreach (var expected in new[]
     "actions.Children.Add(ok);",
     "request.TryGetProperty(\"buttons\"",
     "var actionState = eventCallback(\"button:\" + buttonName, submittedValues);",
-    "ApplyActionState(actionState, editors, validationErrors, tabControl);",
+    "ApplyActionState(actionState, editors, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);",
     "private static bool ApplyActionState",
     "var validationErrors = new Dictionary<string, TextBlock>",
     "validationErrors[name] = validationBlock;",
