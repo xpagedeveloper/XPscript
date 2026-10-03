@@ -6,6 +6,7 @@ Sub Main()
     Dim form As New UIForm("Android UIForm Manual Test")
     Dim schema As XPJsonSchema
     Dim detailsGrid As Variant
+    Dim browser As Variant
     Dim result As String
 
     Call Application.Debug.Info("TEST STARTUP: PASS")
@@ -23,6 +24,11 @@ Sub Main()
     Call data.Set("numberValue", 42)
     Call data.Set("emailValue", "android@example.com")
     Call data.Set("urlValue", "https://example.com")
+    Call data.Set("dateValue", "2026-10-03")
+    Call data.Set("timeValue", "19:30")
+    Call data.Set("dateTimeValue", "2026-10-03T19:30")
+    Call data.Set("monthValue", "2026-10")
+    Call data.Set("colorValue", "#336699")
     form.BootText = "Loading Android UIForm manual test"
     form.BootImage = "Android/test-image.png"
     Call form.BindData(data)
@@ -62,6 +68,13 @@ Sub Main()
     Call form.SetNumberRange("numberValue", 0, 100)
     Call form.AddEmailField("emailValue", "11. Email - keep android@example.com")
     Call form.AddUrlField("urlValue", "12. URL - keep https://example.com")
+    Call form.AddDateField("dateValue", "13. Date - keep 2026-10-03")
+    Call form.AddTimeField("timeValue", "14. Time - keep 19:30")
+    Call form.AddDateTimeField("dateTimeValue", "15. DateTime - keep 2026-10-03 19:30")
+    Call form.AddMonthField("monthValue", "16. Month - keep 2026-10")
+    Call form.AddColorField("colorValue", "17. Color - keep #336699")
+    browser = form.AddWebView("webPreview", "18. WebView - example.com")
+    browser.Source = "https://example.com"
     Call form.SetFieldCornerRadius("password", 12)
     Call form.SetFieldCornerRadius("emailValue", 12)
     Call form.SetFieldCornerRadius("urlValue", 12)
@@ -78,6 +91,12 @@ Sub Main()
     Call detailsGrid.SetFieldPosition("emailValue", 1)
     Call detailsGrid.SetFieldPosition("urlValue", 1)
     Call form.SetFieldTab("testImage", "more")
+    Call form.SetFieldTab("dateValue", "more")
+    Call form.SetFieldTab("timeValue", "more")
+    Call form.SetFieldTab("dateTimeValue", "more")
+    Call form.SetFieldTab("monthValue", "more")
+    Call form.SetFieldTab("colorValue", "more")
+    Call form.SetFieldTab("webPreview", "more")
     Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string"",""minLength"":3,""x-errorMessages"":{""minLength"":""Name must contain at least 3 characters""}}},""required"":[""name""],""x-requiredMessages"":{""name"":""Please enter your name""}}")
     Call form.SetValidationSchema(schema)
 
@@ -102,6 +121,11 @@ Sub Main()
     Call Application.Debug.Info("TEST FINAL NUMBER: " & form.GetFieldValueString("numberValue"))
     Call Application.Debug.Info("TEST FINAL EMAIL: " & form.GetFieldValueString("emailValue"))
     Call Application.Debug.Info("TEST FINAL URL: " & form.GetFieldValueString("urlValue"))
+    Call Application.Debug.Info("TEST FINAL DATE: " & form.GetFieldValueString("dateValue"))
+    Call Application.Debug.Info("TEST FINAL TIME: " & form.GetFieldValueString("timeValue"))
+    Call Application.Debug.Info("TEST FINAL DATETIME: " & form.GetFieldValueString("dateTimeValue"))
+    Call Application.Debug.Info("TEST FINAL MONTH: " & form.GetFieldValueString("monthValue"))
+    Call Application.Debug.Info("TEST FINAL COLOR: " & form.GetFieldValueString("colorValue"))
 
     If result = "OK" Then
         If form.GetFieldValueString("name") = "MANUAL-ANDROID" Then
@@ -193,6 +217,32 @@ Sub VerifyInput(evt As Variant, contextName As String)
     Else
         Call Application.Debug.Error("TEST LIVE URL: FAIL value=" & form.GetFieldValueString("urlValue"))
     End If
+    If form.GetFieldValueString("dateValue") = "2026-10-03" Then
+        Call Application.Debug.Info("TEST LIVE DATE: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE DATE: FAIL value=" & form.GetFieldValueString("dateValue"))
+    End If
+    If form.GetFieldValueString("timeValue") = "19:30" Then
+        Call Application.Debug.Info("TEST LIVE TIME: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE TIME: FAIL value=" & form.GetFieldValueString("timeValue"))
+    End If
+    If form.GetFieldValueString("dateTimeValue") = "2026-10-03T19:30" Then
+        Call Application.Debug.Info("TEST LIVE DATETIME: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE DATETIME: FAIL value=" & form.GetFieldValueString("dateTimeValue"))
+    End If
+    If form.GetFieldValueString("monthValue") = "2026-10" Then
+        Call Application.Debug.Info("TEST LIVE MONTH: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE MONTH: FAIL value=" & form.GetFieldValueString("monthValue"))
+    End If
+    If form.GetFieldValueString("colorValue") = "#336699" Then
+        Call Application.Debug.Info("TEST LIVE COLOR: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE COLOR: FAIL value=" & form.GetFieldValueString("colorValue"))
+    End If
+    Call Application.Debug.Info("TEST WEBVIEW: inspect example.com rendered inside form")
     Call Application.Debug.Info("TEST MULTILISTBOX: inspect Red and Blue selected")
     Call Application.Debug.Info("TEST GRID: inspect two-column layout and full-width Number row")
     Call Application.Debug.Info("TEST STRUCTURAL: inspect separator, spacer and image")
