@@ -174,6 +174,8 @@ public sealed class XpsOpenApiClientGenerator
     }
     private static string ModelPropertyDeclaration(JsonObject root, string name, JsonObject schema)
     {
+        if (schema["x-xpscript-conflicting-allof-model"]?.GetValue<bool>() == true)
+            return $"Public {name} As Variant";
         var resolved = XpsOpenApiSchema.Resolve(root, schema, "OpenAPI client model property");
         if (XpsOpenApiSchema.PrimaryType(resolved) == "array" && resolved["items"] is JsonObject items)
         {
@@ -220,7 +222,7 @@ public sealed class XpsOpenApiClientGenerator
                     }
                     if (IsModelReferenceType(eyistingType) && IsModelReferenceType(incomingType))
                     {
-                        result[property.Key] = new JsonObject { ["type"] = new JsonArray("null", "object") };
+                        result[property.Key] = new JsonObject { ["x-xpscript-conflicting-allof-model"] = true };
                         continue;
                     }
                     throw new XpsOpenApiGenerationException($"Schema '{modelName}' allOf property '{property.Key}' has conflicting XPScript types '{eyistingType}' and '{incomingType}'.");
