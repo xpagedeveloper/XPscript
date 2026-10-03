@@ -23,6 +23,8 @@ Sub Main()
     Call data.Set("numberValue", 42)
     Call data.Set("emailValue", "android@example.com")
     Call data.Set("urlValue", "https://example.com")
+    form.BootText = "Loading Android UIForm manual test"
+    form.BootImage = "Android/test-image.png"
     Call form.BindData(data)
     Call form.AddTab("basic", "Basic")
     Call form.AddTab("more", "More")
