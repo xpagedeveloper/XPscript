@@ -530,6 +530,10 @@ internal sealed class XPScriptUIForm
     {
         var html = new System.Text.StringBuilder();
         html.Append("<form method=\"post\" class=\"xpscript-uiform\">");
+        if (_bootImage.Length > 0)
+            html.Append("<img class=\"xpscript-uiform-boot-image\" src=\"").Append(System.Net.WebUtility.HtmlEncode(_bootImage)).Append("\" alt=\"\" aria-hidden=\"true\">");
+        if (_bootText.Length > 0)
+            html.Append("<div class=\"xpscript-uiform-boot-text\">").Append(System.Net.WebUtility.HtmlEncode(_bootText)).Append("</div>");
         if (_title.Length > 0) html.Append("<h1>").Append(System.Net.WebUtility.HtmlEncode(_title)).Append("</h1>");
         foreach (var field in _fields)
         {
