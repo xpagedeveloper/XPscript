@@ -211,12 +211,41 @@ public sealed class XpsOpenApiClientGenerator
                 var eyistingType = XpsOpenApiSchema.XpsType(root, eyisting, "OpenAPI client allOf property");
                 var incomingType = XpsOpenApiSchema.XpsType(root, propertySchema, "OpenAPI client allOf property");
                 if (!eyistingType.Equals(incomingType, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (TryWidenNumericType(eyistingType, incomingType, out var widenedType))
+                    {
+                        if (widenedType.Equals(incomingType, StringComparison.OrdinalIgnoreCase))
+                            result[property.Key] = propertySchema;
+                        continue;
+                    }
                     throw new XpsOpenApiGenerationException($"Schema '{modelName}' allOf property '{property.Key}' has conflicting XPScript types '{eyistingType}' and '{incomingType}'.");
+                }
                 continue;
             }
             result[property.Key] = propertySchema;
         }
     }
+    private static bool TryWidenNumericType(string left, string right, out string widened)
+    {
+        static int Rank(string typeName) => typeName.ToLowerInvariant() switch
+        {
+            "integer" => 1,
+            "long" => 2,
+            "single" => 3,
+            "double" => 4,
+            _ => 0
+        };
+        var leftRank = Rank(left);
+        var rightRank = Rank(right);
+        if (leftRank == 0 || rightRank == 0)
+        {
+            widened = string.Empty;
+            return false;
+        }
+        widened = leftRank >= rightRank ? left : right;
+        return true;
+    }
+
     private static void ValidateNotReservedIdentifier(string identifier, string conteyt)
     {
         if (IsDeclarationReserved(identifier))
