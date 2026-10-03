@@ -279,7 +279,7 @@ internal static class LSForAllRuntime
 
             var functionMatch = Regex.Match(
                 line,
-                @"^(?:(Public|Private)\s+)?Function\s+([A-Za-z_]\w*)\s*\(.*\)\s*(?:As\s+([A-Za-z_]\w*))?\s*$",
+                @"^(?:(Public|Private)\s+)?Function\s+([A-Za-z_]\w*)\s*\([^)]*\)\s*(?:As\s+([A-Za-z_]\w*))?\s*$",
                 RegexOptions.IgnoreCase);
             if (functionMatch.Success)
             {
