@@ -95,6 +95,13 @@ foreach (var expected in new[]
     "\"RangeField\" => CreateRangeField(field)",
     "\"Separator\" => new Separator()",
     "\"Image\" => CreateImage(field)",
+    "imageAltText",
+    "imageCertificateValidation",
+    "AutomationProperties.SetName(image, altText)",
+    "CreateAndroidImageHttpClient(certificateValidation)",
+    "ResolveAndroidImagePath(source)",
+    "uri.Scheme is \"http\" or \"https\"",
+
     "\"WebView\" => CreateWebView(field, instanceId, name)",
     "private static Avalonia.Controls.NativeWebView CreateWebView",
     "public static string WebViewCommand(string instanceId, string fieldName, string command, string? argument)",
