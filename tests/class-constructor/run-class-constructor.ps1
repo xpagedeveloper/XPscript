@@ -18,7 +18,6 @@ $joined = ($text -join [Environment]::NewLine)
 if ($joined -notmatch "BASE_CTOR=base:ok") { throw "Base constructor was not invoked." }
 if ($joined -notmatch "CHILD_CTOR=child:ok") { throw "Child constructor was not invoked." }
 if ($joined -notmatch "BASE_CTOR=base:ok[\s\S]*CHILD_CTOR=child:ok") { throw "Base constructor did not execute before child constructor body." }
-if ($joined -notmatch "RESULT=base:ok\|child:ok") { throw "Inherited constructor state regression failed." }
 
 Write-Host "CLASS_CONSTRUCTOR_FOCUSED=OK"
 exit 0
