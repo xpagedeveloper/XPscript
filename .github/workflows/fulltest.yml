@@ -263,6 +263,10 @@ jobs:
           status=$?
           set -e
           printf '%s\n' "$output"
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then
+            echo 'Desktop scaffold run failed; rerunning with compiler debug diagnostics.' >&2
+            timeout --kill-after=5s 10s "${cli[@]}" run --debug ./out/desktop-native-first/main.xps || true
+          fi
           if printf '%s\n' "$output" | grep -q "Unable to load shared library 'libSkiaSharp'"; then
             echo 'Linux desktop runtime did not stage libSkiaSharp.so.' >&2
             exit 1
