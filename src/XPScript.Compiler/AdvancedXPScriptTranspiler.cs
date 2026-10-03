@@ -951,8 +951,16 @@ internal static class LSForAllRuntime
             }
         }
 
+        if (rhsRaw.Equals("Me", StringComparison.OrdinalIgnoreCase) && _currentClass is not null)
+        {
+            if (!_currentClass.Equals(targetClass, StringComparison.OrdinalIgnoreCase))
+                throw new CompilerException($"Cannot assign Me ({_currentClass}) to object reference of type {targetClass}.");
+            Write(sb, $"{lhs} = LSRef<{targetClass}>.Create(this);");
+            return true;
+        }
+
         var rhs = TransformObjectReferenceTarget(rhsRaw);
-        if (rhs is null) throw new CompilerException("Set requires Nothing, New Class(...), typed XPJson.ToObject(...), or another object reference.");
+        if (rhs is null) throw new CompilerException("Set requires Nothing, New Class(...), typed XPJson.ToObject(...), Me, or another object reference.");
         Write(sb, $"{lhs} = {rhs};"); return true;
     }
 
