@@ -1153,29 +1153,7 @@ internal static class LSForAllRuntime
             text = Regex.Replace(text, $@"\b{name}\.", $"{objectVariable.Key}.Value!.", RegexOptions.IgnoreCase);
         }
 
-        // Class functions return LSRef<T> when their XPscript return type is a class.
-        // In a fluent expression the following member belongs to T, not LSRef<T>, so
-        // dereference the function result before continuing the chain.
-        foreach (var fluentClass in _classes.Values)
-        {
-            foreach (var function in fluentClass.FunctionReturnTypes)
-            {
-                if (!_classes.ContainsKey(function.Value)) continue;
-                var functionName = Regex.Escape(function.Key);
-                var pattern = $@"\.{functionName}\s*\(([^()]*)\)(?!\.Value!)";
-                text = Regex.Replace(
-                    text,
-                    pattern,
-                    m =>
-                    {
-                        var tail = text[(m.Index + m.Length)..];
-                        return tail.TrimStart().StartsWith(".", StringComparison.Ordinal)
-                            ? m.Value + ".Value!"
-                            : m.Value;
-                    },
-                    RegexOptions.IgnoreCase);
-            }
-        }
+        text = TransformFluentClassChains(text);
 
         foreach (var runtimeObject in _runtimeObjectVariables)
         {
@@ -1227,6 +1205,32 @@ internal static class LSForAllRuntime
         foreach (var fn in ZeroArgRuntimeFunctions)
             text = Regex.Replace(text, $@"(?<![\w.]){Regex.Escape(fn)}\$?(?!\s*\(|[\w])", $"XPScriptRuntime.{fn}()", RegexOptions.IgnoreCase);
         return text;
+    }
+
+    private string TransformFluentClassChains(string text)
+    {
+        foreach (var objectVariable in _objectVariables)
+        {
+            if (!_classes.TryGetValue(objectVariable.Value, out var rootClass)) continue;
+
+            var root = Regex.Escape(objectVariable.Key) + @"\.Value!\.";
+            text = Regex.Replace(
+                text,
+                root + @"([A-Za-z_]\w*)\s*\(([^()]*)\)",
+                match => LowerFluentClassCall(match, rootClass),
+                RegexOptions.IgnoreCase);
+        }
+        return text;
+    }
+
+    private string LowerFluentClassCall(Match match, ClassInfo receiverClass)
+    {
+        var methodName = match.Groups[1].Value;
+        if (!receiverClass.FunctionReturnTypes.TryGetValue(methodName, out var returnType) ||
+            !_classes.ContainsKey(returnType))
+            return match.Value;
+
+        return match.Value + ".Value!";
     }
 
     private string TransformAssignmentTarget(string lhs)
