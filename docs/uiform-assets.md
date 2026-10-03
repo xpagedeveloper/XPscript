@@ -51,3 +51,10 @@ Relative references are confined to the application asset root. Parent traversal
 ## Limits
 
 Embedded UIForm assets have a combined compile-time limit of 64 MiB. Individual UIForm images are limited to 32 MiB by the image runtime.
+
+
+## Boot content semantics
+
+`BootImage` and `BootText` are persistent form-start content. They render above the UIForm title and fields and remain visible for the lifetime of the form. They are not a timed splash screen and are not automatically removed after initialization.
+
+This behavior is shared across native desktop, Android, server-rendered web UIForm and browser-WASM UIForm.
