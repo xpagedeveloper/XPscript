@@ -20,6 +20,18 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+var moduleMeParser = new DeclarationParser("Sub Main()\nPrint Me.Name\nEnd Sub");
+_ = moduleMeParser.ParseDeclaration();
+Equal(1, moduleMeParser.Diagnostics.Count(d => d.Message == "'Me' is only valid inside class instance members."), "module Me context diagnostic");
+
+var noBaseParentParser = new DeclarationParser("Class Child\nPublic Function Describe() As String\nDescribe = Parent.Describe()\nEnd Function\nEnd Class");
+_ = noBaseParentParser.ParseDeclaration();
+Equal(1, noBaseParentParser.Diagnostics.Count(d => d.Message == "'Parent' requires the current class to Extend a base class."), "Parent without base diagnostic");
+
+var inheritedContextParser = new DeclarationParser("Class Child Extend BaseClass\nPublic Function Describe() As String\nDescribe = Me.Name & Parent.Describe()\nEnd Function\nEnd Class");
+_ = inheritedContextParser.ParseDeclaration();
+Equal(0, inheritedContextParser.Diagnostics.Count, "Me and Parent inherited class context diagnostics");
+
 var keywordFieldParser = new DeclarationParser("Class KeywordBox\nPrivate If As Integer\nEnd Class");
 _ = keywordFieldParser.ParseDeclaration();
 Equal("XPS1012", keywordFieldParser.Diagnostics.First().Code, "keyword field diagnostic code");
