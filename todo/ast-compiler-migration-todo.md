@@ -207,8 +207,8 @@ Members and properties:
 
 Inheritance and member access:
 - [x] Bind `Me.member` to the current class instance and validate it only where an instance context exists.
-- [ ] Bind `Parent.member` to the direct base-class member and support base Subs, Functions, and Properties according to XPscript visibility rules.
-- [ ] Define whether `Parent` may access Private base procedures/properties; test the chosen XPscript rule explicitly rather than inheriting backend C# behavior accidentally.
+- [x] Bind `Parent.member` to the direct base-class member and support base Subs, Functions, and Properties according to XPscript visibility rules.
+- [x] Define whether `Parent` may access Private base procedures/properties; test the chosen XPscript rule explicitly rather than inheriting backend C# behavior accidentally.
 - [x] Support overriding inherited methods/properties only with compatible signatures and produce XPscript diagnostics for incompatible overrides.
 - [ ] Verify inherited constructor behavior and define explicit base-constructor invocation syntax/semantics for XPscript.
 - [ ] Verify inherited destructor/delete ordering and ensure base cleanup occurs exactly once.
