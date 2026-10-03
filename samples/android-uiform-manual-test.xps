@@ -130,7 +130,7 @@ Sub Main()
     Call Application.Debug.Info("TEST MANUAL COMPLETE: inspect all TEST and XPSCRIPT-LIFECYCLE lines in logcat")
 End Sub
 
-Sub VerifyInput(ByVal evt As Variant, ByVal contextName As String)
+Sub VerifyInput(evt As Variant, contextName As String)
     Dim form As Variant
     Call Application.Debug.Info("TEST VERIFY CALLBACK ENTERED")
     form = evt.Form
@@ -206,17 +206,17 @@ Sub VerifyInput(ByVal evt As Variant, ByVal contextName As String)
     End If
 End Sub
 
-Sub TouchPass(ByVal evt As Variant, ByVal contextName As String)
+Sub TouchPass(evt As Variant, contextName As String)
     Call Application.Debug.Info("TEST BUTTON CLICK: touch")
     Call Application.Debug.Info("TEST TOUCH: PASS confirmed by user")
 End Sub
 
-Sub LayoutPass(ByVal evt As Variant, ByVal contextName As String)
+Sub LayoutPass(evt As Variant, contextName As String)
     Call Application.Debug.Info("TEST BUTTON CLICK: layout")
     Call Application.Debug.Info("TEST LAYOUT/SCROLL: PASS confirmed by user")
 End Sub
 
-Sub KeyboardPass(ByVal evt As Variant, ByVal contextName As String)
+Sub KeyboardPass(evt As Variant, contextName As String)
     Call Application.Debug.Info("TEST BUTTON CLICK: keyboard")
     Call Application.Debug.Info("TEST FOCUS/KEYBOARD: PASS confirmed by user")
 End Sub
