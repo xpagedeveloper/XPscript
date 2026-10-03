@@ -99,7 +99,7 @@ foreach (var expected in new[]
     "imageCertificateValidation",
     "AutomationProperties.SetName(image, altText)",
     "CreateAndroidImageHttpClient(certificateValidation)",
-    "ResolveAndroidImagePath(source)",
+    "ResolveAndroidImagePath(value)",
     "uri.Scheme is \"http\" or \"https\"",
 
     "\"WebView\" => CreateWebView(field, instanceId, name)",
