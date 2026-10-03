@@ -179,6 +179,7 @@ public sealed partial class XPScriptTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
+        generated = new BaseConstructorPostProcessor().Transform(generated);
         generated = jsonNames.ApplyToGeneratedCode(generated);
         generated = new ParameterPassingPostProcessor().Transform(generated);
         generated = new NativeInteropDiagnosticsPostProcessor().Transform(generated);
