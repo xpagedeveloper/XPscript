@@ -6,12 +6,14 @@ public sealed class DeclarationParser
     private readonly int _baseOffset;
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
     private readonly bool _classMemberContext;
+    private readonly bool _classHasBase;
 
-    public DeclarationParser(string text, int baseOffset = 0, bool classMemberContext = false)
+    public DeclarationParser(string text, int baseOffset = 0, bool classMemberContext = false, bool classHasBase = false)
     {
         _text = text;
         _baseOffset = baseOffset;
         _classMemberContext = classMemberContext;
+        _classHasBase = classHasBase;
     }
 
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
@@ -114,7 +116,7 @@ public sealed class DeclarationParser
                     ? lines[endLine].Start + lines[endLine].Text.Length
                     : _text.Length;
                 var memberText = _text.Substring(memberStart, memberEnd - memberStart);
-                var parser = new DeclarationParser(memberText, _baseOffset + memberStart, classMemberContext: true);
+                var parser = new DeclarationParser(memberText, _baseOffset + memberStart, classMemberContext: true, classHasBase: baseType is not null);
                 members.Add(targetKind == SyntaxKind.PropertyKeyword
                     ? parser.ParseProperty(lines: parser.GetLines())
                     : parser.ParseDeclaration());
@@ -319,6 +321,7 @@ public sealed class DeclarationParser
             var parser = new StatementParser(bodyText, _baseOffset + bodyStart);
             var statements = parser.ParseStatements().ToList();
             _diagnostics.AddRange(parser.Diagnostics);
+            ValidateClassReferenceContext(bodyText, _baseOffset + bodyStart);
             return (statements, tokens[0], tokens[1]);
         }
 
@@ -333,10 +336,23 @@ public sealed class DeclarationParser
         var bodyParser = new StatementParser(_text.Substring(bodyStartAtEof), _baseOffset + bodyStartAtEof);
         var bodyStatements = bodyParser.ParseStatements().ToList();
         _diagnostics.AddRange(bodyParser.Diagnostics);
+        ValidateClassReferenceContext(_text.Substring(bodyStartAtEof), _baseOffset + bodyStartAtEof);
 
         return (bodyStatements,
             new SyntaxToken(SyntaxKind.EndKeyword, string.Empty, null, new TextSpan(end, 0)),
             new SyntaxToken(targetKind, string.Empty, null, new TextSpan(end, 0)));
+    }
+
+    private void ValidateClassReferenceContext(string bodyText, int bodyOffset)
+    {
+        var lexer = new Lexer(bodyText, bodyOffset);
+        foreach (var token in lexer.Lex())
+        {
+            if (token.Kind == SyntaxKind.MeKeyword && !_classMemberContext)
+                _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "'Me' is only valid inside class instance members.", token.Span));
+            else if (token.Kind == SyntaxKind.ParentKeyword && (!_classMemberContext || !_classHasBase))
+                _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "'Parent' requires the current class to Extend a base class.", token.Span));
+        }
     }
 
     private void AddLexerDiagnostics(IEnumerable<LexerDiagnostic> diagnostics)
