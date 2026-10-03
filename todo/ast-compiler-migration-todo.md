@@ -214,7 +214,7 @@ Inheritance and member access:
 - [x] Verify inherited destructor/delete ordering and ensure base cleanup occurs exactly once.
 
 Object lifecycle and references:
-- [ ] Verify `New` invokes `Sub New` for each newly created XPscript object.
+- [x] Verify `New` invokes `Sub New` for each newly created XPscript object.
 - [ ] Verify object references start as `Nothing` where required by XPscript semantics.
 - [ ] Verify `Delete object` invokes `Sub Delete`, clears the deleted reference, and preserves the repository's defined alias/reference semantics.
 - [ ] Verify `Set object = Nothing` remains reference clearing only and does not implicitly call `Sub Delete`.
