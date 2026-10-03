@@ -33,6 +33,9 @@ jobs:
       - name: Run focused Parent member regression
         shell: pwsh
         run: ./tests/class-parent/run-class-parent.ps1
+      - name: Run focused inherited constructor regression
+        shell: pwsh
+        run: ./tests/class-constructor/run-class-constructor.ps1
       - name: Run focused AST lexer tests first
         run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
       - name: Run deterministic AST compatibility tests first
