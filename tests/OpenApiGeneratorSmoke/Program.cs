@@ -330,6 +330,35 @@ if (!reservedEnumClient.Source.Contains("    ApiIn", StringComparison.Ordinal) |
     throw new Exception("OpenAPI client reserved enum regression must normalize reserved enum identifiers.");
 Console.WriteLine("OPENAPI-CLIENT-RESERVED-ENUM=OK");
 
+const string punctuatedEnumClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Punctuated enum client regression", "version": "1.0" },
+  "paths": {
+    "/reference-type": {
+      "get": {
+        "operationId": "getReferenceType",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReferenceType" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ReferenceType": { "type": "string", "enum": ["end-to-end-id"] }
+    }
+  }
+}
+""";
+var punctuatedEnumClient = new XpsOpenApiClientGenerator().Generate(punctuatedEnumClientOpenApi, "punctuated-enum-client.json");
+if (!punctuatedEnumClient.Source.Contains("    EndToEndId", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client punctuated enum regression must normalize enum values to XPScript identifiers.");
+Console.WriteLine("OPENAPI-CLIENT-PUNCTUATED-ENUM=OK");
+
 var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecification, "fortnoxapi.json");
 foreach (var marker in new[]
 {
