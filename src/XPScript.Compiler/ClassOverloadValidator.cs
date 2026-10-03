@@ -169,8 +169,11 @@ internal sealed class ClassOverloadValidator
             if (procedure.Success)
             {
                 var name = procedure.Groups[3].Value;
-                if (!name.Equals("New", StringComparison.OrdinalIgnoreCase) && !name.Equals("Delete", StringComparison.OrdinalIgnoreCase))
-                    AddInheritanceMember(current, new InheritanceMember(name, procedure.Groups[2].Value, NormalizeVisibilityForInheritance(procedure.Groups[1].Value), i + 1));
+                if (!name.Equals("Delete", StringComparison.OrdinalIgnoreCase))
+                {
+                    var kind = name.Equals("New", StringComparison.OrdinalIgnoreCase) ? "Constructor" : procedure.Groups[2].Value;
+                    AddInheritanceMember(current, new InheritanceMember(name, kind, NormalizeVisibilityForInheritance(procedure.Groups[1].Value), i + 1));
+                }
                 continue;
             }
 
