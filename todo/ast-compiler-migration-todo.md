@@ -191,7 +191,7 @@ Class declaration and scope:
 - [x] Verify class default visibility is Private unless XPscript `Option Public` semantics explicitly change it.
 - [x] Verify member fields default to Private.
 - [x] Verify member Subs, Functions, and Properties default to Public.
-- [ ] Reject `Static` class fields and member procedures unless XPscript deliberately defines a documented extension.
+- [x] Reject `Static` class fields and member procedures unless XPscript deliberately defines a documented extension.
 - [ ] Require one class field per declaration; do not silently accept comma-separated field declarations.
 - [ ] Permit self-referential field types but do not allow field declarations to instantiate themselves with `New`.
 - [ ] Define and test reserved-keyword rules for field names and keyword-named member procedures.
