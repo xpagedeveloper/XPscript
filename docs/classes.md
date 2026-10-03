@@ -26,6 +26,30 @@ End Sub
 
 `Sub New` is the constructor. `Me` references the current instance. Class variables use reference semantics.
 
+For inherited classes, call the direct base-class constructor explicitly with `Parent.New(...)` as the first statement in the child `Sub New` when the base constructor requires arguments:
+
+```xpscript
+Class BasePerson
+    Public Name As String
+
+    Public Sub New(ByVal name As String)
+        Name = name
+    End Sub
+End Class
+
+Class Employee Extend BasePerson
+    Public Role As String
+
+    Public Sub New(ByVal name As String, ByVal role As String)
+        Call Parent.New(name)
+        Role = role
+    End Sub
+End Class
+```
+
+`Parent.New(...)` targets the direct base class. The base constructor completes before the remaining child-constructor statements execute. A derived constructor that does not use `Parent.New(...)` relies on the base class having a parameterless constructor.
+
+
 ## Default visibility and Option Public
 
 Without an explicit visibility modifier, variables, procedures and properties are `Private` by default.
