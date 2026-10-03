@@ -1207,6 +1207,7 @@ internal static class LSForAllRuntime
     private string TransformCallableTarget(string target)
     {
         var text = Regex.Replace(target, @"^Me\.", "this.", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"^Parent\.", "base.", RegexOptions.IgnoreCase);
         foreach (var objectVariable in _objectVariables)
             if (text.StartsWith(objectVariable.Key + ".", StringComparison.OrdinalIgnoreCase)) return objectVariable.Key + ".Value!." + text[(objectVariable.Key.Length + 1)..];
         if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var classInfo))
