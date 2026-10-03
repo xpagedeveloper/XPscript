@@ -53,6 +53,8 @@ public sealed class MainActivity : AvaloniaMainActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         Current = this;
+        if (Intent?.GetBooleanExtra("xpscript.appdebug", false) == true)
+            System.Environment.SetEnvironmentVariable("XPSCRIPT_APPDEBUG", "1");
         base.OnCreate(savedInstanceState);
     }
 
