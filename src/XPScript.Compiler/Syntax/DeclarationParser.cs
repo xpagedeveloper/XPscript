@@ -67,8 +67,10 @@ public sealed class DeclarationParser
             AddLexerDiagnostics(lexer.Diagnostics);
 
             if (tokens.Length >= 2 && tokens[0].Kind == SyntaxKind.EndKeyword && tokens[1].Kind == SyntaxKind.ClassKeyword)
+            {
                 ValidateIndexedPropertySignatures(members);
                 return new ClassDeclarationSyntax(visibility, classKeyword, identifier, extendKeyword, baseType, members, tokens[0], tokens[1]);
+            }
 
             var memberPosition = 0;
             if (Peek(tokens, memberPosition).Kind == SyntaxKind.IdentifierToken &&
