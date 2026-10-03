@@ -156,6 +156,26 @@ if (!defaultOkBlock.Contains("ApplyActionState(", StringComparison.Ordinal) ||
     !defaultOkBlock.Contains("return;", StringComparison.Ordinal))
     throw new Exception("Android default OK must apply callback action-state and keep the form open when validation fails.");
 
+foreach (var expected in new[]
+{
+    "var fieldContainers = new Dictionary<string, Control>",
+    "var fieldLabels = new Dictionary<string, TextBlock>",
+    "var actionButtons = new Dictionary<string, Avalonia.Controls.Button>",
+    "fieldContainer.IsVisible =",
+    "ApplyEditorReadOnly(editor,",
+    "ApplyEditorOptions(editor,",
+    "fieldLabels.TryGetValue(name, out var labelBlock)",
+    "fieldContainers.TryGetValue(name, out var fieldContainer)",
+    "actionButtons.TryGetValue(buttonName, out var actionButton)",
+    "button.TryGetProperty(\"label\"",
+    "button.TryGetProperty(\"visible\"",
+    "button.TryGetProperty(\"enabled\""
+})
+{
+    if (!uiHostCode.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android dynamic UIForm action-state parity is missing: " + expected);
+}
+
 foreach (var forbidden in new[] { "PointerPressed", "PointerReleased", "MouseButton", "MouseDevice" })
 {
     if (uiHostCode.Contains(forbidden, StringComparison.Ordinal))
