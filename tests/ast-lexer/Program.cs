@@ -20,6 +20,15 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+const string nestedClassSource = "Class Outer\nClass Inner\nEnd Class\nPublic Value As Integer\nEnd Class";
+var nestedClassParser = new DeclarationParser(nestedClassSource);
+var nestedClass = (ClassDeclarationSyntax)nestedClassParser.ParseDeclaration();
+Equal("XPS1012", nestedClassParser.Diagnostics[0].Code, "nested class diagnostic code");
+Equal("Nested class declarations are not allowed.", nestedClassParser.Diagnostics[0].Message, "nested class diagnostic message");
+Equal(1, nestedClass.Members.Count, "outer class members after nested class diagnostic");
+Equal("Value", ((FieldDeclarationSyntax)nestedClass.Members[0]).Identifier.Text, "outer class field after nested class diagnostic");
+Equal(nestedClassSource.Length, nestedClass.Span.End, "outer class closes at its own End Class");
+
 Equal(DeclarationVisibility.Private, DeclarationVisibilityResolver.ResolveClass(null), "default class visibility");
 Equal(DeclarationVisibility.Public, DeclarationVisibilityResolver.ResolveClass(null, optionPublic: true), "Option Public class visibility");
 Equal(DeclarationVisibility.Private, DeclarationVisibilityResolver.ResolveField(null), "default field visibility");
