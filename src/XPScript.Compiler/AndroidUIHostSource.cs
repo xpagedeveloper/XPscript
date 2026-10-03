@@ -179,11 +179,10 @@ public static class AndroidFormHost
                 try
                 {
                     var image = new Avalonia.Controls.Image { MaxHeight = 240, Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center };
-                    if (Uri.TryCreate(bootImage, UriKind.Absolute, out var bootUri) && bootUri.IsFile)
-                        image.Source = new Bitmap(bootUri.LocalPath);
-                    else if (File.Exists(bootImage))
-                        image.Source = new Bitmap(bootImage);
-                    if (image.Source is not null) panel.Children.Add(image);
+                    var bytes = ReadAndroidImageBytes(bootImage, "Strict");
+                    using var stream = new MemoryStream(bytes, writable: false);
+                    image.Source = new Bitmap(stream);
+                    panel.Children.Add(image);
                 }
                 catch (Exception exception)
                 {
@@ -558,7 +557,7 @@ public static class AndroidFormHost
         if (!string.IsNullOrWhiteSpace(background)) view.Background = new SolidColorBrush(Color.Parse(background));
         if (instanceId.Length > 0 && fieldName.Length > 0) WebViews[WebViewKey(instanceId, fieldName)] = view;
         if (!string.IsNullOrEmpty(html)) view.AdapterCreated += (_, _) => view.NavigateToString(html);
-        else if (Uri.TryCreate(string.IsNullOrWhiteSpace(source) ? "about:blank" : source, UriKind.Absolute, out var uri)) view.Source = uri;
+        else view.Source = ResolveAndroidWebViewUri(source);
         return view;
     }
 
@@ -607,9 +606,16 @@ public static class AndroidFormHost
 
     private static string NavigateWebView(Avalonia.Controls.NativeWebView view, string? value)
     {
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) throw new InvalidOperationException("WebView navigation requires an absolute URI.");
+        var uri = ResolveAndroidWebViewUri(value);
         view.Navigate(uri);
         return uri.AbsoluteUri;
+    }
+
+    private static Uri ResolveAndroidWebViewUri(string? value)
+    {
+        var source = string.IsNullOrWhiteSpace(value) ? "about:blank" : value.Trim();
+        if (Uri.TryCreate(source, UriKind.Absolute, out var absolute)) return absolute;
+        return new Uri(ResolveAndroidImagePath(source));
     }
 
     private static string NavigateWebViewHtml(Avalonia.Controls.NativeWebView view, string? html) { view.NavigateToString(html ?? string.Empty); return "true"; }
@@ -717,10 +723,14 @@ public static class AndroidFormHost
 
         var normalized = value.Replace('/', Path.DirectorySeparatorChar);
         var baseDirectory = Path.GetFullPath(AppContext.BaseDirectory);
+        var assetsPrefix = "assets" + Path.DirectorySeparatorChar;
+        var assetRelative = normalized.StartsWith(assetsPrefix, StringComparison.OrdinalIgnoreCase) ? normalized[assetsPrefix.Length..] : normalized;
+        var localAssets = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "assets");
         var candidates = new[]
         {
+            Path.GetFullPath(Path.Combine(localAssets, assetRelative)),
             Path.GetFullPath(Path.Combine(baseDirectory, normalized)),
-            Path.GetFullPath(Path.Combine(baseDirectory, "assets", normalized)),
+            Path.GetFullPath(Path.Combine(baseDirectory, "assets", assetRelative)),
             Path.GetFullPath(Path.Combine(System.Environment.CurrentDirectory, normalized))
         };
         foreach (var candidate in candidates)
