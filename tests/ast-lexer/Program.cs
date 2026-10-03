@@ -20,6 +20,13 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+const string classConstantSource = "Class ConstantBox\nConst Limit = 10\nPublic Kept As Integer\nEnd Class";
+var classConstantParser = new DeclarationParser(classConstantSource);
+var classConstantClass = (ClassDeclarationSyntax)classConstantParser.ParseDeclaration();
+Equal("XPS1012", classConstantParser.Diagnostics.First(d => d.Message == "Constants are not supported as class members.").Code, "class constant diagnostic code");
+Equal(1, classConstantClass.Members.Count, "members retained after class constant diagnostic");
+Equal("Kept", ((FieldDeclarationSyntax)classConstantClass.Members[0]).Identifier.Text, "field after class constant");
+
 const string classFieldContractSource = "Class Node\nPrivate NextNode As Node\nPrivate Left As Node, Right As Node\nPrivate Current As Node = New Node()\nEnd Class";
 var classFieldContractParser = new DeclarationParser(classFieldContractSource);
 var classFieldContractClass = (ClassDeclarationSyntax)classFieldContractParser.ParseDeclaration();
