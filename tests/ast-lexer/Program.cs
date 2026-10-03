@@ -20,6 +20,12 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+const string classFieldContractSource = "Class Node\nPrivate NextNode As Node\nPrivate Left As Node, Right As Node\nPrivate Current As Node = New Node()\nEnd Class";
+var classFieldContractParser = new DeclarationParser(classFieldContractSource);
+var classFieldContractClass = (ClassDeclarationSyntax)classFieldContractParser.ParseDeclaration();
+Equal("Node", ((FieldDeclarationSyntax)classFieldContractClass.Members[0]).Type.Identifier.Text, "self-referential class field type");
+Equal(2, classFieldContractParser.Diagnostics.Count(d => d.Message == "Class fields must use one declaration per line and cannot have an initializer."), "invalid class field declaration diagnostics");
+
 const string staticClassMemberSource = "Class StaticBox\nStatic Value As Integer\nStatic Sub Work()\nEnd Sub\nPublic Kept As Integer\nEnd Class";
 var staticClassMemberParser = new DeclarationParser(staticClassMemberSource);
 var staticClassMemberClass = (ClassDeclarationSyntax)staticClassMemberParser.ParseDeclaration();
