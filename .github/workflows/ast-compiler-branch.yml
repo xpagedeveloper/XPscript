@@ -51,6 +51,9 @@ jobs:
       - name: Run focused Set Nothing regression
         shell: pwsh
         run: ./tests/class-set-nothing/run-class-set-nothing.ps1
+      - name: Run focused fluent class regression
+        shell: pwsh
+        run: ./tests/class-fluent/run-class-fluent.ps1
       - name: Run focused AST lexer tests first
         run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
       - name: Run deterministic AST compatibility tests first
