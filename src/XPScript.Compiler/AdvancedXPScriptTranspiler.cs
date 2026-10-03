@@ -1211,20 +1211,24 @@ internal static class LSForAllRuntime
         {
             if (!_classes.TryGetValue(objectVariable.Value, out var rootClass)) continue;
 
-            var receiver = Regex.Escape(objectVariable.Key) + @"\.Value!";
+            // Lower one class-returning call at a time. The negative lookahead is
+            // essential: once a call ends in .Value! it must never be lowered again.
+            // This guarantees progress and prevents an infinite .Value!.Value!... loop.
+            var receiver = Regex.Escape(objectVariable.Key) + @"\\.Value!";
+            var pattern = receiver + @"\\.([A-Za-z_]\\w*)\\s*\\(([^()]*)\\)(?!\\.Value!)";
             string previous;
             do
             {
                 previous = text;
                 text = Regex.Replace(
                     text,
-                    receiver + @"\.([A-Za-z_]\w*)\s*\(([^()]*)\)",
+                    pattern,
                     match => LowerFluentClassCall(match, rootClass),
                     RegexOptions.IgnoreCase);
 
-                // A class-returning call lowered above ends in .Value!, which is
-                // itself the receiver for the next member in the fluent chain.
-                receiver = @"[A-Za-z_]\w*\.Value!(?:\.[A-Za-z_]\w*\([^()]*\)\.Value!)*";
+                // After the first lowering, permit the complete already-lowered
+                // receiver chain and target only its next, not-yet-lowered call.
+                pattern = @"[A-Za-z_]\\w*\\.Value!(?:\\.[A-Za-z_]\\w*\\([^()]*\\)\\.Value!)*\\.([A-Za-z_]\\w*)\\s*\\(([^()]*)\\)(?!\\.Value!)";
             }
             while (!text.Equals(previous, StringComparison.Ordinal));
         }
