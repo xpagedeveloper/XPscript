@@ -220,7 +220,7 @@ public sealed class XpsOpenApiClientGenerator
                     }
                     if (IsModelReferenceType(eyistingType) && IsModelReferenceType(incomingType))
                     {
-                        result[property.Key] = new JsonObject();
+                        result[property.Key] = new JsonObject { ["type"] = new JsonArray("null", "object") };
                         continue;
                     }
                     throw new XpsOpenApiGenerationException($"Schema '{modelName}' allOf property '{property.Key}' has conflicting XPScript types '{eyistingType}' and '{incomingType}'.");
