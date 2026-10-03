@@ -105,7 +105,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Complete Android Image parity for remote sources, application asset resolution, alt/accessibility metadata and certificate-validation policy. Android Image now supports packaged assets, HTTP/HTTPS, data images, alt/accessibility metadata and Strict/AllowSelfSigned/Insecure certificate policy; verified through focused probes and Android Build.
 - [x] Add a shared UIForm application asset root for BootImage, Image and WebView resources across native desktop, Android, browser-WASM and server/web packaging. Relative references normalize to `assets/...`; native UIForm builds embed assets automatically while web targets publish the asset tree through their platform bundle/static-file pipeline.
 - [x] Add UIForm boot text/image properties and transport.
-- [ ] Complete UIForm boot text/image rendering parity on every UIForm platform and define whether boot content is persistent form content or transient startup content.
+- [x] Complete UIForm boot text/image rendering parity on every UIForm platform and define whether boot content is persistent form content or transient startup content. BootImage/BootText are persistent form-start content across desktop, Android, server-rendered web and browser-WASM; verified by focused guards and Android Build.
 - [x] Add per-button corner-radius API and rendering on desktop and Android.
 - [x] Add per-text-entry-field corner-radius API and rendering on desktop and Android.
 - [ ] Decide and implement corner-radius behavior for default OK/Cancel buttons and preserve platform theme defaults when no explicit radius is configured.
