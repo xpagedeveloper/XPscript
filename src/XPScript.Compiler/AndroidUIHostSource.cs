@@ -267,7 +267,6 @@ public static class AndroidFormHost
                     SetEditorValue(editor, value);
 
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
-                editors[name] = editor;
                 fieldContainer.Children.Add(editor);
 
                 if (type is "Separator" or "Spacer" or "Image")
@@ -276,6 +275,7 @@ public static class AndroidFormHost
                     continue;
                 }
 
+                editors[name] = editor;
                 var validationBlock = new TextBlock
                 {
                     Text = string.Empty,
