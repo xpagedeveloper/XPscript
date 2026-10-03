@@ -36,6 +36,9 @@ jobs:
       - name: Run focused inherited constructor regression
         shell: pwsh
         run: ./tests/class-constructor/run-class-constructor.ps1
+      - name: Run focused inherited delete regression
+        shell: pwsh
+        run: ./tests/class-delete/run-class-delete.ps1
       - name: Run focused AST lexer tests first
         run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
       - name: Run deterministic AST compatibility tests first
