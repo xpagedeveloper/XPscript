@@ -300,6 +300,24 @@ if (!modelConflictAllOfClient.Source.Contains("Public Customer As Variant", Stri
     throw new Exception("OpenAPI client model-conflict allOf regression must fall back to Variant.");
 Console.WriteLine("OPENAPI-CLIENT-MODEL-CONFLICT-ALLOF=OK");
 
+const string reservedEnumClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Reserved enum client regression", "version": "1.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Direction": { "type": "string", "enum": ["in", "out"] }
+    }
+  }
+}
+""";
+var reservedEnumClient = new XpsOpenApiClientGenerator().Generate(reservedEnumClientOpenApi, "reserved-enum-client.json");
+if (!reservedEnumClient.Source.Contains("    ApiIn", StringComparison.Ordinal) ||
+    !reservedEnumClient.Source.Contains("    out", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client reserved enum regression must normalize reserved enum identifiers.");
+Console.WriteLine("OPENAPI-CLIENT-RESERVED-ENUM=OK");
+
 var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecification, "fortnoxapi.json");
 foreach (var marker in new[]
 {
