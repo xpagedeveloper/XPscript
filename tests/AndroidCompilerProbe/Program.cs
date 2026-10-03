@@ -369,6 +369,22 @@ foreach (var expected in new[]
         throw new Exception("Android manual UIForm verification sample is incomplete: " + expected);
 }
 
+foreach (var callbackHeader in new[]
+{
+    "Sub VerifyInput(evt As Variant, contextName As String)",
+    "Sub TouchPass(evt As Variant, contextName As String)",
+    "Sub LayoutPass(evt As Variant, contextName As String)",
+    "Sub KeyboardPass(evt As Variant, contextName As String)"
+})
+{
+    if (!manualUiFormSample.Contains(callbackHeader, StringComparison.Ordinal))
+        throw new Exception("Android UIForm callback regression must exercise default parameter passing without explicit ByVal: " + callbackHeader);
+}
+
+if (manualUiFormSample.Contains("ByVal evt As Variant", StringComparison.Ordinal) ||
+    manualUiFormSample.Contains("ByVal contextName As String", StringComparison.Ordinal))
+    throw new Exception("Android UIForm manual callback regression still uses the explicit ByVal workaround.");
+
 var outputRegressionSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-debug-output-regression.xps"));
 foreach (var expected in new[]
 {
