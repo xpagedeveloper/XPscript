@@ -40,6 +40,36 @@ if (!wildcardImport.Source.Contains("Public Class Payload", StringComparison.Ord
     throw new Exception("OpenAPI wildcard request-body regression failed.");
 Console.WriteLine("OPENAPI-WILDCARD-REQUEST-BODY=OK");
 
+const string multipartRequestBodyOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Multipart request body regression", "version": "1.0" },
+  "paths": {
+    "/3/archive": {
+      "post": {
+        "operationId": "ArchiveController_doCreate",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": { "file": { "type": "object" } }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    }
+  }
+}
+""";
+var multipartImport = new XpsOpenApiImporter().Import(multipartRequestBodyOpenApi, "", "multipart-request-body.json");
+if (!multipartImport.Source.Contains("Public Class ArchiveController_doCreateBody", StringComparison.Ordinal) ||
+    !multipartImport.Source.Contains("Sub EndpointArchiveController_doCreate", StringComparison.Ordinal))
+    throw new Exception("OpenAPI multipart request-body regression failed.");
+Console.WriteLine("OPENAPI-MULTIPART-REQUEST-BODY=OK");
+
 var fortnoxFixtureDirectory = Path.Combine(AppContext.BaseDirectory, "fixtures");
 var fortnoxSpecification = string.Concat(
     Directory.GetFiles(fortnoxFixtureDirectory, "fortnoxapi.part*.json")
