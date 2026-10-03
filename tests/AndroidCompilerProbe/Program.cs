@@ -102,6 +102,8 @@ foreach (var expected in new[]
     "ReadAndroidImageBytes(bootImage, \"Strict\")",
     "ResolveAndroidWebViewUri(source)",
     "System.Environment.SpecialFolder.LocalApplicationData",
+    "\"defaultButtonCornerRadius\"",
+    "defaultButtonCornerRadiusValue.ValueKind == JsonValueKind.Number",
 
     "ResolveAndroidImagePath(value)",
     "uri.Scheme is \"http\" or \"https\"",
@@ -356,6 +358,21 @@ if (!desktopFormSource.Contains("DesktopImageHost.Create(request.BootImage", Str
 
 if (!desktopFormSource.Contains("request.BootText", StringComparison.Ordinal))
     throw new Exception("Desktop UIForm must render BootText persistently with BootImage.");
+
+if (!desktopFormSource.Contains("request.DefaultButtonCornerRadius is double defaultButtonRadius", StringComparison.Ordinal))
+    throw new Exception("Desktop default OK/Cancel radius must only override the platform theme when explicitly configured.");
+
+if (!uiExtensionSource.Contains("SetDefaultButtonCornerRadius", StringComparison.Ordinal) ||
+    !uiExtensionSource.Contains("ClearDefaultButtonCornerRadius", StringComparison.Ordinal))
+{
+    var mediaButtonsSourceForRadius = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormMediaButtonsPostProcessor.cs"));
+    if (!mediaButtonsSourceForRadius.Contains("SetDefaultButtonCornerRadius", StringComparison.Ordinal) ||
+        !mediaButtonsSourceForRadius.Contains("ClearDefaultButtonCornerRadius", StringComparison.Ordinal) ||
+        !mediaButtonsSourceForRadius.Contains("DefaultButtonCornerRadius.HasValue", StringComparison.Ordinal))
+        throw new Exception("Shared UIForm default button radius API/theme-preserving web rendering is missing.");
+}
+
+
 
 if (!uiExtensionSource.Contains("xpscript-uiform-boot-image", StringComparison.Ordinal) ||
     !uiExtensionSource.Contains("xpscript-uiform-boot-text", StringComparison.Ordinal))
