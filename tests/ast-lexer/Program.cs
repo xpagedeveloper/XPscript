@@ -20,6 +20,20 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 
+var keywordFieldParser = new DeclarationParser("Class KeywordBox\nPrivate If As Integer\nEnd Class");
+_ = keywordFieldParser.ParseDeclaration();
+Equal("XPS1012", keywordFieldParser.Diagnostics.First().Code, "keyword field diagnostic code");
+
+var keywordMethodParser = new DeclarationParser("Class KeywordBox\nPublic Sub If()\nEnd Sub\nEnd Class");
+_ = keywordMethodParser.ParseDeclaration();
+Equal("XPS1012", keywordMethodParser.Diagnostics.First().Code, "keyword method diagnostic code");
+
+var scopedRuntimeNameParser = new DeclarationParser("Class RuntimeNames\nJsonParse As String\nPublic Function StrLeftBack() As String\nStrLeftBack = JsonParse\nEnd Function\nEnd Class");
+var scopedRuntimeNameClass = (ClassDeclarationSyntax)scopedRuntimeNameParser.ParseDeclaration();
+Equal(0, scopedRuntimeNameParser.Diagnostics.Count, "runtime/global names remain legal class members");
+Equal("JsonParse", ((FieldDeclarationSyntax)scopedRuntimeNameClass.Members[0]).Identifier.Text, "runtime-named field");
+Equal("StrLeftBack", ((FunctionDeclarationSyntax)scopedRuntimeNameClass.Members[1]).Identifier.Text, "runtime-named method");
+
 const string incompatibleIndexedPropertySource = "Class BadIndexed\nPublic Property Get Item(index As Integer) As String\nItem = \"ok\"\nEnd Property\nPublic Property Let Item(key As String, value As String)\nEnd Property\nEnd Class";
 var incompatibleIndexedPropertyParser = new DeclarationParser(incompatibleIndexedPropertySource);
 _ = incompatibleIndexedPropertyParser.ParseDeclaration();
