@@ -1,0 +1,20 @@
+Class BaseSecret
+    Private Function Secret() As String
+        Secret = "hidden"
+    End Function
+
+    Private Property Get Hidden As String
+        Hidden = "hidden"
+    End Property
+End Class
+
+Class ChildSecret Extend BaseSecret
+    Public Function Probe() As String
+        Probe = Parent.Secret() & Parent.Hidden
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New ChildSecret()
+    Print item.Probe()
+End Sub
