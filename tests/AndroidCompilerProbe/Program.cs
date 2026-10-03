@@ -362,6 +362,15 @@ foreach (var expected in new[]
     "TEST LAYOUT/SCROLL: PASS",
     "TEST FOCUS/KEYBOARD: PASS",
     "TEST VALIDATION: PASS",
+    "form.BootText = \"Loading Android UIForm manual test\"",
+    "form.BootImage = \"Android/test-image.png\"",
+    "AddTab(\"basic\", \"Basic\")",
+    "AddTab(\"more\", \"More\")",
+    "AddGrid(\"detailsGrid\", 2)",
+    "detailsGrid.SetFieldPosition(\"numberValue\", 2)",
+    "AddImage(\"testImage\", \"Android/test-image.png\"",
+    "SetFieldCornerRadius(\"name\", 12)",
+    "SetButtonCornerRadius(\"verify\", 12)",
     "XPSCRIPT-LIFECYCLE"
 })
 {
