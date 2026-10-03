@@ -1156,9 +1156,9 @@ internal static class LSForAllRuntime
         // Class functions return LSRef<T> when their XPscript return type is a class.
         // In a fluent expression the following member belongs to T, not LSRef<T>, so
         // dereference the function result before continuing the chain.
-        foreach (var classInfo in _classes.Values)
+        foreach (var fluentClass in _classes.Values)
         {
-            foreach (var function in classInfo.FunctionReturnTypes)
+            foreach (var function in fluentClass.FunctionReturnTypes)
             {
                 if (!_classes.ContainsKey(function.Value)) continue;
                 var functionName = Regex.Escape(function.Key);
