@@ -4,54 +4,36 @@ using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
 var fixture = Path.Combine(AppContext.BaseDirectory, "petstore.yaml");
-var importSkeleton = new XpsOpenApiImporter().Import("""
-openapi: 3.1.0
-info: { title: Import Skeleton Smoke, version: 1.0.0 }
-components:
-  schemas:
-    ImportedPet:
-      type: object
-      required: [name]
-      properties:
-        name: { type: string }
-        age: { type: integer, format: int32 }
-paths:
-  /pets/{id}:
-    get:
-      operationId: getImportedPet
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string } }
-      responses:
-        '200':
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ImportedPet' }
-""", """
+var fortnoxFixtureDirectory = Path.Combine(AppContext.BaseDirectory, "fixtures");
+var fortnoxSpecification = string.Concat(
+    Directory.GetFiles(fortnoxFixtureDirectory, "fortnoxapi.part*.json")
+        .OrderBy(path => path, StringComparer.Ordinal)
+        .Select(File.ReadAllText));
+
+var importSkeleton = new XpsOpenApiImporter().Import(fortnoxSpecification, """
 ' Existing handwritten XPscript source must survive the import.
 Sub ExistingProcedure()
     Print "existing"
 End Sub
-""", "import-skeleton-smoke.yaml");
+""", "fortnoxapi.json");
 
 foreach (var marker in new[]
 {
-    "Public Class ImportedPet",
-    "Public Name As String",
-    "Public Age As Integer",
-    "Sub EndpointGetImportedPet",
-    "Function HandleGetImportedPet",
+    "Public Class fortnox_CurrencyListItem_Wrap",
+    "Public Currencies As ",
+    "Sub EndpointCurrencyController_doIndex",
+    "Function HandleCurrencyController_doIndex",
     "Sub ExistingProcedure()",
     "Print \"existing\""
 })
     if (!importSkeleton.Source.Contains(marker, StringComparison.Ordinal))
-        throw new Exception("OpenAPI import skeleton smoke is missing marker: " + marker);
+        throw new Exception("Fortnox OpenAPI import skeleton smoke is missing marker: " + marker);
 
-if (!importSkeleton.AddedClasses.Contains("ImportedPet", StringComparer.Ordinal) ||
-    !importSkeleton.AddedProcedures.Any(item => item.Contains("GetImportedPet", StringComparison.Ordinal)))
-    throw new Exception("OpenAPI import skeleton smoke did not report the generated class and endpoint procedures.");
+if (!importSkeleton.AddedClasses.Contains("fortnox_CurrencyListItem_Wrap", StringComparer.Ordinal) ||
+    !importSkeleton.AddedProcedures.Any(item => item.Contains("CurrencyController_doIndex", StringComparison.Ordinal)))
+    throw new Exception("Fortnox OpenAPI import did not report the generated currency class and endpoint procedures.");
 
-Console.WriteLine("OPENAPI-IMPORT-CLASS-SKELETON=OK");
+Console.WriteLine("OPENAPI-IMPORT-FORTNOX-CLASS-SKELETON=OK");
 
 var generator = new XpsOpenApiGenerator();
 var result = generator.GenerateFile(fixture);
