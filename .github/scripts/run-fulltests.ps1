@@ -45,6 +45,11 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  # Keep the focused inheritance contract near the front while class migration is active.
+  $inheritance = Run-Xps ./samples/class-inheritance-contract.xps class-inheritance-contract
+  if ($inheritance.Output -notmatch 'INHERIT=base:touch\|base:touch\|base:touch:property') { throw 'Class inheritance Me/Parent contract regression failed.' }
+  if ($inheritance.Output -notmatch 'CHILD_DELETE[\s\S]*BASE_DELETE') { throw 'Class Delete inheritance order regression failed.' }
+
   # Keep the smallest regression for the latest compiler failure first.
   $isNothing = Run-Xps ./samples/is-nothing-unary-not-regression.xps is-nothing-unary-not-regression
   if ($isNothing.Output -notmatch 'IS-NOTHING=OK') { throw 'Is Nothing unary-Not rewrite regression failed.' }
