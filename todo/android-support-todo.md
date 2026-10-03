@@ -97,11 +97,11 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Verify application lifecycle: start, pause, resume and stop.
 - [x] Verify orientation changes.
 - [x] Verify form sizing/layout for typical phone dimensions. The Android host uses a scrollable, width-responsive form with phone margins, a bounded maximum content width, and wrapping action buttons; guarded by `AndroidCompilerProbe` and verified by Android CI.
-- [ ] Complete Android rendering and binding coverage for all shared UIForm field types: TextField, TextArea, NumberField, RangeField, CheckBox, DateField, TimeField, DateTimeField, MonthField, ColorField, EmailField, UrlField, PasswordField, Select, ListBox, MultiListBox, RadioGroup and WebView.
+- [x] Complete Android rendering and binding coverage for all shared UIForm field types: TextField, TextArea, NumberField, RangeField, CheckBox, DateField, TimeField, DateTimeField, MonthField, ColorField, EmailField, UrlField, PasswordField, Select, ListBox, MultiListBox, RadioGroup and WebView. Specialized temporal/color controls plus shared NativeWebView support are compiler-guarded and verified by Android Build.
 - [x] Add Android rendering/binding for PasswordField, Select, ListBox, MultiListBox, RadioGroup and RangeField.
 - [x] Add Android structural/media rendering for Separator, Spacer and Image. Local files and data-image sources are supported by the Android host; remote image loading and full image policy parity remain follow-up work.
 - [x] Add specialized Android controls for DateField, TimeField, DateTimeField, MonthField and ColorField instead of the current generic text fallback. Android now uses dedicated date/time controls plus composite DateTime, Month and Color editors with value roundtrip; guarded by AndroidCompilerProbe and verified by Android Build.
-- [ ] Add Android WebView rendering with the shared UIForm WebView behavior.
+- [x] Add Android WebView rendering with the shared UIForm WebView behavior. Android uses Avalonia NativeWebView, shared Source/Html/UserAgent/Background metadata and the existing WebViewCommand bridge; guarded by AndroidCompilerProbe and verified by Android Build.
 - [ ] Complete Android Image parity for remote sources, application asset resolution, alt/accessibility metadata and certificate-validation policy.
 - [x] Add UIForm boot text/image properties and transport.
 - [ ] Complete UIForm boot text/image rendering parity on every UIForm platform and define whether boot content is persistent form content or transient startup content.
