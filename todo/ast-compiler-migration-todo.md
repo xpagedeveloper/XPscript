@@ -194,7 +194,7 @@ Class declaration and scope:
 - [x] Reject `Static` class fields and member procedures unless XPscript deliberately defines a documented extension.
 - [x] Require one class field per declaration; do not silently accept comma-separated field declarations.
 - [x] Permit self-referential field types but do not allow field declarations to instantiate themselves with `New`.
-- [ ] Define and test reserved-keyword rules for field names and keyword-named member procedures.
+- [x] Define and test reserved-keyword rules for field names and keyword-named member procedures.
 
 Members and properties:
 - [x] Support fields, Subs, Functions, Properties, `Sub New`, and `Sub Delete` as class members.
