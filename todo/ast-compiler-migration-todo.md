@@ -187,7 +187,7 @@ XPscript intentionally differs from LotusScript in these syntax choices:
 - [ ] Keep the existing explicit `Sub Delete` / `Delete object` lifecycle model; do not add `Sub Terminate` or tie deletion to .NET GC/finalizer timing.
 
 Class declaration and scope:
-- [ ] Restrict class declarations to module/application declaration scope; reject nested classes and classes declared inside procedures.
+- [x] Restrict class declarations to module/application declaration scope; reject nested classes and classes declared inside procedures.
 - [x] Verify class default visibility is Private unless XPscript `Option Public` semantics explicitly change it.
 - [x] Verify member fields default to Private.
 - [x] Verify member Subs, Functions, and Properties default to Public.
