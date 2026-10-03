@@ -1162,18 +1162,18 @@ internal static class LSForAllRuntime
             {
                 if (!_classes.ContainsKey(function.Value)) continue;
                 var functionName = Regex.Escape(function.Key);
-                var pattern = $@"\.{functionName}\s*\(([^()]*)\)\s*\.";
-                string previous;
-                do
-                {
-                    previous = text;
-                    text = Regex.Replace(
-                        text,
-                        pattern,
-                        m => m.Value[..m.Value.LastIndexOf('.')] + ".Value!.",
-                        RegexOptions.IgnoreCase);
-                }
-                while (!text.Equals(previous, StringComparison.Ordinal));
+                var pattern = $@"\.{functionName}\s*\(([^()]*)\)(?!\.Value!)";
+                text = Regex.Replace(
+                    text,
+                    pattern,
+                    m =>
+                    {
+                        var tail = text[(m.Index + m.Length)..];
+                        return tail.TrimStart().StartsWith(".", StringComparison.Ordinal)
+                            ? m.Value + ".Value!"
+                            : m.Value;
+                    },
+                    RegexOptions.IgnoreCase);
             }
         }
 
