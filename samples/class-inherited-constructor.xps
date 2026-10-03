@@ -1,0 +1,23 @@
+Class BaseCtor
+    Public Value As String
+
+    Public Sub New(ByVal value As String)
+        Value = "base:" & value
+        Print "BASE_CTOR=" & Value
+    End Sub
+End Class
+
+Class ChildCtor Extend BaseCtor
+    Public ChildValue As String
+
+    Public Sub New(ByVal value As String)
+        Call Parent.New(value)
+        ChildValue = "child:" & value
+        Print "CHILD_CTOR=" & ChildValue
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As New ChildCtor("ok")
+    Print "RESULT=" & item.Value & "|" & item.ChildValue
+End Sub
