@@ -216,6 +216,7 @@ public sealed class Lexer
         "CLASS" => SyntaxKind.ClassKeyword,
         "EXTEND" => SyntaxKind.ExtendKeyword,
         "ME" => SyntaxKind.MeKeyword,
+        "PARENT" => SyntaxKind.ParentKeyword,
         "PROPERTY" => SyntaxKind.PropertyKeyword,
         "GET" => SyntaxKind.GetKeyword,
         "LET" => SyntaxKind.LetKeyword,
