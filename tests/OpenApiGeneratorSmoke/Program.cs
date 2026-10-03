@@ -389,6 +389,35 @@ if (!validIdentifierClient.Source.Contains("Public Class fortnox_Test_Wrap", Str
     throw new Exception("OpenAPI client valid schema identifier regression must preserve the original identifier.");
 Console.WriteLine("OPENAPI-CLIENT-VALID-IDENTIFIER-PRESERVATION=OK");
 
+var runtimeReservedClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Runtime Reserved Names, version: 1.0.0 }
+components:
+  schemas:
+    RuntimeReservedModel:
+      type: object
+      properties:
+        body: { type: string }
+        application: { type: string }
+paths:
+  /reserved:
+    get:
+      operationId: runtimeReserved
+      parameters:
+        - { name: body, in: query, required: false, schema: { type: string } }
+        - { name: application, in: query, required: false, schema: { type: string } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RuntimeReservedModel' }
+""", "runtime-reserved-client.yaml");
+foreach (var marker in new[] { "Public ApiBody As String", "Public ApiApplication As String", "Optional ApiBody As Variant", "Optional ApiApplication As Variant" })
+    if (!runtimeReservedClient.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("OpenAPI client runtime-reserved identifier regression is missing marker: " + marker);
+Console.WriteLine("OPENAPI-CLIENT-RUNTIME-RESERVED-IDENTIFIERS=OK");
+
 var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecification, "fortnoxapi.json");
 foreach (var marker in new[]
 {
