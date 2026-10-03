@@ -317,6 +317,11 @@ public static class DesktopFormHost
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
         var ok = new Button { Content = "OK", MinWidth = 80 };
         var cancel = new Button { Content = "Cancel", MinWidth = 80 };
+        if (request.DefaultButtonCornerRadius is double defaultButtonRadius)
+        {
+            ok.CornerRadius = new CornerRadius(defaultButtonRadius);
+            cancel.CornerRadius = new CornerRadius(defaultButtonRadius);
+        }
         buttons.Children.Add(ok);
         buttons.Children.Add(cancel);
         panel.Children.Add(buttons);
