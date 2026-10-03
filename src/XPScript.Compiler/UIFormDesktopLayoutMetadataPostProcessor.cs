@@ -45,6 +45,7 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             theme = form.Theme,
             showValidationErrors = form.ShowValidationErrors,
             showDefaultButtons = form.ShowDefaultButtons,
+            defaultButtonCornerRadius = form.DefaultButtonCornerRadius,
             gridColumns = form.GridColumns,
             hasValidationSchema = form.HasValidationSchema,
             """);
