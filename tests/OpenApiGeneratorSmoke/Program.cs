@@ -260,6 +260,46 @@ if (!numericAllOfClient.Source.Contains("Public Vat As Double", StringComparison
     throw new Exception("OpenAPI client numeric allOf regression must widen Single/Double to Double.");
 Console.WriteLine("OPENAPI-CLIENT-NUMERIC-ALLOF=OK");
 
+const string modelConflictAllOfClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Model conflict allOf client regression", "version": "1.0" },
+  "paths": {
+    "/recurring": {
+      "get": {
+        "operationId": "getRecurring",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PartialRecurring" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RecurringCustomer": { "type": "object", "properties": { "name": { "type": "string" } } },
+      "PartialRecurringCustomer": { "type": "object", "properties": { "id": { "type": "integer" } } },
+      "Recurring": {
+        "type": "object",
+        "properties": { "customer": { "$ref": "#/components/schemas/RecurringCustomer" } }
+      },
+      "PartialRecurring": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Recurring" },
+          { "type": "object", "properties": { "customer": { "$ref": "#/components/schemas/PartialRecurringCustomer" } } }
+        ]
+      }
+    }
+  }
+}
+""";
+var modelConflictAllOfClient = new XpsOpenApiClientGenerator().Generate(modelConflictAllOfClientOpenApi, "model-conflict-allof-client.json");
+if (!modelConflictAllOfClient.Source.Contains("Public customer As Variant", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client model-conflict allOf regression must fall back to Variant.");
+Console.WriteLine("OPENAPI-CLIENT-MODEL-CONFLICT-ALLOF=OK");
+
 var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecification, "fortnoxapi.json");
 foreach (var marker in new[]
 {
