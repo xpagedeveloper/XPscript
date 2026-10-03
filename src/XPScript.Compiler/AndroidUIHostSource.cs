@@ -6,6 +6,7 @@ internal static class AndroidUIHostSource
 
     public const string Code = """
 using System.Text.Json;
+using System.Collections.Concurrent;
 using Android.App;
 using Android.Content.PM;
 using Android.OS;
@@ -140,6 +141,8 @@ public sealed class MainView : UserControl
 
 public static class AndroidFormHost
 {
+    private static readonly ConcurrentDictionary<string, Avalonia.Controls.NativeWebView> WebViews = new(StringComparer.Ordinal);
+
     public static string ShowDialog(string requestJson) => ShowDialog(requestJson, null);
 
     public static string ShowDialog(string requestJson, Func<string, string, string>? eventCallback)
@@ -154,6 +157,7 @@ public static class AndroidFormHost
         {
             using var document = JsonDocument.Parse(requestJson);
             var request = document.RootElement;
+            var instanceId = request.TryGetProperty("instanceId", out var instanceIdValue) ? instanceIdValue.GetString() ?? string.Empty : string.Empty;
             var fields = request.TryGetProperty("fields", out var fieldArray) && fieldArray.ValueKind == JsonValueKind.Array
                 ? fieldArray.EnumerateArray()
                     .Where(x => !x.GetProperty("type").GetString()!.Equals("HiddenField", StringComparison.OrdinalIgnoreCase))
@@ -259,6 +263,7 @@ public static class AndroidFormHost
                 Control editor = type switch
                 {
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
+                    "WebView" => CreateWebView(field, instanceId, name),
                     "DateField" => new Avalonia.Controls.DatePicker(),
                     "TimeField" => new Avalonia.Controls.TimePicker(),
                     "DateTimeField" => new AndroidDateTimeFieldEditor(),
@@ -284,7 +289,7 @@ public static class AndroidFormHost
                 ApplyEditorReadOnly(editor, field.TryGetProperty("readOnly", out var readOnly) && readOnly.ValueKind == JsonValueKind.True);
                 fieldContainer.Children.Add(editor);
 
-                if (type is "Separator" or "Spacer" or "Image")
+                if (type is "Separator" or "Spacer" or "Image" or "WebView")
                 {
                     AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
                     continue;
@@ -535,6 +540,89 @@ public static class AndroidFormHost
         var maximum = field.TryGetProperty("maximum", out var maxValue) && maxValue.TryGetDouble(out var max) ? max : 100;
         return new Slider { Minimum = minimum, Maximum = maximum };
     }
+
+    private static Avalonia.Controls.NativeWebView CreateWebView(JsonElement field, string instanceId, string fieldName)
+    {
+        var view = new Avalonia.Controls.NativeWebView
+        {
+            MinHeight = 240,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch
+        };
+        var source = field.TryGetProperty("webViewSource", out var sourceValue) ? sourceValue.GetString() ?? "about:blank" : "about:blank";
+        var html = field.TryGetProperty("webViewHtml", out var htmlValue) ? htmlValue.GetString() ?? string.Empty : string.Empty;
+        var userAgent = field.TryGetProperty("webViewUserAgent", out var userAgentValue) ? userAgentValue.GetString() ?? string.Empty : string.Empty;
+        var background = field.TryGetProperty("webViewBackground", out var backgroundValue) ? backgroundValue.GetString() ?? string.Empty : string.Empty;
+        if (!string.IsNullOrWhiteSpace(userAgent)) view.UserAgent = userAgent;
+        if (!string.IsNullOrWhiteSpace(background)) view.Background = new SolidColorBrush(Color.Parse(background));
+        if (instanceId.Length > 0 && fieldName.Length > 0) WebViews[WebViewKey(instanceId, fieldName)] = view;
+        if (!string.IsNullOrEmpty(html)) view.AdapterCreated += (_, _) => view.NavigateToString(html);
+        else if (Uri.TryCreate(string.IsNullOrWhiteSpace(source) ? "about:blank" : source, UriKind.Absolute, out var uri)) view.Source = uri;
+        return view;
+    }
+
+    public static string WebViewCommand(string instanceId, string fieldName, string command, string? argument)
+    {
+        if (!WebViews.TryGetValue(WebViewKey(instanceId, fieldName), out var view))
+            throw new InvalidOperationException("UIForm WebView is not active.");
+
+        string result = string.Empty;
+        void Execute()
+        {
+            result = command.ToLowerInvariant() switch
+            {
+                "source" => view.Source?.ToString() ?? string.Empty,
+                "navigate" => NavigateWebView(view, argument),
+                "html" => NavigateWebViewHtml(view, argument),
+                "script" => WaitWebView(view.InvokeScript(argument ?? string.Empty)) ?? string.Empty,
+                "back" => BoolWebView(view.GoBack()),
+                "forward" => BoolWebView(view.GoForward()),
+                "refresh" => BoolWebView(view.Refresh()),
+                "stop" => BoolWebView(view.Stop()),
+                "cangoback" => BoolWebView(view.CanGoBack),
+                "cangoforward" => BoolWebView(view.CanGoForward),
+                "useragent:get" => view.UserAgent ?? string.Empty,
+                "useragent:set" => SetWebViewUserAgent(view, argument),
+                "background:get" => view.Background?.ToString() ?? string.Empty,
+                "background:set" => SetWebViewBackground(view, argument),
+                "adapterinfo" => view.AdapterInfo?.ToString() ?? string.Empty,
+                "platformhandle" => view.TryGetPlatformHandle()?.Handle.ToString() ?? string.Empty,
+                "copy" => EditWebView(view, manager => manager.Copy()),
+                "cut" => EditWebView(view, manager => manager.Cut()),
+                "paste" => EditWebView(view, manager => manager.Paste()),
+                "selectall" => EditWebView(view, manager => manager.SelectAll()),
+                "undo" => EditWebView(view, manager => manager.Undo()),
+                "redo" => EditWebView(view, manager => manager.Redo()),
+                "cookies:get" => GetWebViewCookies(view),
+                "cookies:set" => SetWebViewCookie(view, argument),
+                "cookies:delete" => DeleteWebViewCookie(view, argument),
+                "cookies:clear" => ClearWebViewCookies(view),
+                _ => throw new InvalidOperationException("Unknown UIForm WebView command: " + command)
+            };
+        }
+        if (Dispatcher.UIThread.CheckAccess()) Execute(); else Dispatcher.UIThread.Invoke(Execute);
+        return result;
+    }
+
+    private static string NavigateWebView(Avalonia.Controls.NativeWebView view, string? value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) throw new InvalidOperationException("WebView navigation requires an absolute URI.");
+        view.Navigate(uri);
+        return uri.AbsoluteUri;
+    }
+
+    private static string NavigateWebViewHtml(Avalonia.Controls.NativeWebView view, string? html) { view.NavigateToString(html ?? string.Empty); return "true"; }
+    private static string SetWebViewUserAgent(Avalonia.Controls.NativeWebView view, string? value) { view.UserAgent = value ?? string.Empty; return view.UserAgent ?? string.Empty; }
+    private static string SetWebViewBackground(Avalonia.Controls.NativeWebView view, string? value) { if (!string.IsNullOrWhiteSpace(value)) view.Background = new SolidColorBrush(Color.Parse(value)); return view.Background?.ToString() ?? string.Empty; }
+    private static string EditWebView(Avalonia.Controls.NativeWebView view, Action<Avalonia.Controls.NativeWebViewCommandManager> action) { var manager = view.TryGetCommandManager(); if (manager is null) return "false"; action(manager); return "true"; }
+    private static string GetWebViewCookies(Avalonia.Controls.NativeWebView view) { var manager = view.TryGetCookieManager(); if (manager is null) return "[]"; var cookies = WaitWebView(manager.GetCookiesAsync()) ?? []; return JsonSerializer.Serialize(cookies.Select(cookie => new { cookie.Name, cookie.Value, cookie.Domain, cookie.Path, cookie.Secure, cookie.HttpOnly })); }
+    private static string SetWebViewCookie(Avalonia.Controls.NativeWebView view, string? payload) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; using var document = JsonDocument.Parse(payload ?? "{}"); manager.AddOrUpdateCookie(BuildWebViewCookie(document.RootElement, true)); return "true"; }
+    private static string DeleteWebViewCookie(Avalonia.Controls.NativeWebView view, string? payload) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; using var document = JsonDocument.Parse(payload ?? "{}"); var cookie = BuildWebViewCookie(document.RootElement, false); manager.DeleteCookie(cookie.Name, cookie.Domain, cookie.Path); return "true"; }
+    private static string ClearWebViewCookies(Avalonia.Controls.NativeWebView view) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; var cookies = WaitWebView(manager.GetCookiesAsync()) ?? []; foreach (var cookie in cookies) manager.DeleteCookie(cookie.Name, cookie.Domain, cookie.Path); return "true"; }
+    private static Avalonia.Controls.Cookie BuildWebViewCookie(JsonElement root, bool includeValue) { static string Read(JsonElement value, string name, string fallback = "") => value.TryGetProperty(name, out var property) ? property.GetString() ?? fallback : fallback; var name = Read(root, "name"); var domain = Read(root, "domain"); var path = Read(root, "path", "/"); if (name.Length == 0 || domain.Length == 0) throw new InvalidOperationException("WebView cookies require name and domain."); return new Avalonia.Controls.Cookie(name, includeValue ? Read(root, "value") : string.Empty, path.Length == 0 ? "/" : path, domain); }
+    private static T? WaitWebView<T>(Task<T> task) { if (!Dispatcher.UIThread.CheckAccess() || task.IsCompleted) return task.GetAwaiter().GetResult(); var frame = new DispatcherFrame(); task.ContinueWith(_ => Dispatcher.UIThread.Post(() => frame.Continue = false), TaskScheduler.Default); Dispatcher.UIThread.PushFrame(frame); return task.GetAwaiter().GetResult(); }
+    private static string BoolWebView(bool value) => value ? "true" : "false";
+    private static string WebViewKey(string instanceId, string fieldName) => instanceId + "\u001f" + fieldName.ToLowerInvariant();
 
     private static Control CreateImage(JsonElement field)
     {
