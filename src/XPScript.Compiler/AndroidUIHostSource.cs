@@ -259,8 +259,8 @@ public static class AndroidFormHost
                 Control editor = type switch
                 {
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
-                    "DateField" => new DatePicker(),
-                    "TimeField" => new TimePicker(),
+                    "DateField" => new Avalonia.Controls.DatePicker(),
+                    "TimeField" => new Avalonia.Controls.TimePicker(),
                     "DateTimeField" => new AndroidDateTimeFieldEditor(),
                     "MonthField" => new AndroidMonthFieldEditor(),
                     "ColorField" => new AndroidColorFieldEditor(),
@@ -565,8 +565,8 @@ public static class AndroidFormHost
 
     private sealed class AndroidDateTimeFieldEditor : StackPanel
     {
-        public DatePicker DateEditor { get; } = new DatePicker();
-        public TimePicker TimeEditor { get; } = new TimePicker();
+        public Avalonia.Controls.DatePicker DateEditor { get; } = new Avalonia.Controls.DatePicker();
+        public Avalonia.Controls.TimePicker TimeEditor { get; } = new Avalonia.Controls.TimePicker();
 
         public AndroidDateTimeFieldEditor()
         {
@@ -611,7 +611,7 @@ public static class AndroidFormHost
 
     private static bool SetTemporalEditorValue(Control editor, string text)
     {
-        if (editor is DatePicker datePicker)
+        if (editor is Avalonia.Controls.DatePicker datePicker)
         {
             if (DateTimeOffset.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AllowWhiteSpaces, out var date))
                 datePicker.SelectedDate = date;
@@ -619,7 +619,7 @@ public static class AndroidFormHost
                 datePicker.SelectedDate = null;
             return true;
         }
-        if (editor is TimePicker timePicker)
+        if (editor is Avalonia.Controls.TimePicker timePicker)
         {
             timePicker.SelectedTime = TimeSpan.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var time) ? time : null;
             return true;
@@ -662,9 +662,9 @@ public static class AndroidFormHost
 
     private static string? GetTemporalEditorValue(Control editor)
     {
-        if (editor is DatePicker datePicker)
+        if (editor is Avalonia.Controls.DatePicker datePicker)
             return datePicker.SelectedDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
-        if (editor is TimePicker timePicker)
+        if (editor is Avalonia.Controls.TimePicker timePicker)
             return timePicker.SelectedTime?.ToString(@"hh\:mm", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is AndroidDateTimeFieldEditor dateTimeEditor)
         {
@@ -718,7 +718,7 @@ public static class AndroidFormHost
 
     private static object? GetEditorValue(Control editor)
     {
-        if (editor is DatePicker or TimePicker or AndroidDateTimeFieldEditor or AndroidMonthFieldEditor or AndroidColorFieldEditor)
+        if (editor is Avalonia.Controls.DatePicker or Avalonia.Controls.TimePicker or AndroidDateTimeFieldEditor or AndroidMonthFieldEditor or AndroidColorFieldEditor)
             return GetTemporalEditorValue(editor);
 
         return editor switch
