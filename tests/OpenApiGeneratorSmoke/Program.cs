@@ -304,7 +304,19 @@ const string reservedEnumClientOpenApi = """
 {
   "openapi": "3.0.3",
   "info": { "title": "Reserved enum client regression", "version": "1.0" },
-  "paths": {},
+  "paths": {
+    "/direction": {
+      "get": {
+        "operationId": "getDirection",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Direction" } } }
+          }
+        }
+      }
+    }
+  },
   "components": {
     "schemas": {
       "Direction": { "type": "string", "enum": ["in", "out"] }
