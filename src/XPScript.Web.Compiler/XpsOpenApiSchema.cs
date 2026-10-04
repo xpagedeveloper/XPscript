@@ -5,19 +5,25 @@ namespace XPScript.Web.Compiler;
 
 internal static class XpsOpenApiSchema
 {
-    private static readonly Regex ExternalReferenceLine = new(
-        "(?:^|[,{]\\s*)[\\\"\']?\\$ref[\\\"\']?\\s*:\\s*[\\\"\']?(?<ref>[^\\\"\'\\s,}]+)",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
     internal static void ValidateExternalReferences(string specification, string? sourceName)
     {
         var lines = specification.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
         for (var index = 0; index < lines.Length; index++)
         {
-            var match = ExternalReferenceLine.Match(lines[index]);
-            if (!match.Success) continue;
-            var reference = match.Groups["ref"].Value;
+            var trimmed = lines[index].TrimStart();
+            if (!trimmed.StartsWith("$ref:", StringComparison.Ordinal) &&
+                !trimmed.StartsWith("'$ref':", StringComparison.Ordinal) &&
+                !trimmed.StartsWith("\"$ref\":", StringComparison.Ordinal))
+                continue;
+
+            var colon = trimmed.IndexOf(':');
+            var reference = trimmed[(colon + 1)..].Trim();
+            if (reference.Length >= 2 &&
+                ((reference[0] == '\'' && reference[^1] == '\'') ||
+                 (reference[0] == '"' && reference[^1] == '"')))
+                reference = reference[1..^1];
             if (reference.StartsWith("#/", StringComparison.Ordinal)) continue;
+
             var source = string.IsNullOrWhiteSpace(sourceName) ? "OpenAPI source" : sourceName;
             throw new XpsOpenApiGenerationException(
                 $"{source}: line {index + 1}, property '$ref' uses external reference '{reference}'. External OpenAPI references are not supported; provide a bundled definition with local '#/' references.");
