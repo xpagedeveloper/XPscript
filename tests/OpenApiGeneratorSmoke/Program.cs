@@ -190,6 +190,47 @@ _ = new XpsOpenApiGenerator().Generate(foldedLocalReference, "folded-local-ref.y
 _ = new XpsOpenApiClientGenerator().Generate(foldedLocalReference, "folded-local-ref.yaml");
 Console.WriteLine("OPENAPI-FOLDED-LOCAL-REF=OK");
 
+const string primitiveReferenceServerOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Primitive reference parameter regression", "version": "1.0" },
+  "paths": {
+    "/providers/{provider}": {
+      "get": {
+        "operationId": "getProvider",
+        "parameters": [
+          { "name": "provider", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/provider" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "provider": { "type": "string" }
+    }
+  }
+}
+""";
+var primitiveReferenceServer = new XpsOpenApiGenerator().Generate(primitiveReferenceServerOpenApi, "primitive-reference-server.json");
+if (primitiveReferenceServer.Source.Contains("Set request.Provider =", StringComparison.Ordinal))
+    throw new Exception("Primitive OpenAPI schema references must not use Set assignment.");
+var primitiveReferenceRoot = Path.Combine(Path.GetTempPath(), "xps-openapi-primitive-reference-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(primitiveReferenceRoot);
+try
+{
+    var primitiveReferencePath = Path.Combine(primitiveReferenceRoot, "primitive-reference-server.xps");
+    File.WriteAllText(primitiveReferencePath, primitiveReferenceServer.Source);
+    await using var primitiveReferenceUnit = await new XpsWebCompiler().CompileAsync(primitiveReferencePath, primitiveReferenceRoot);
+    if (!primitiveReferenceUnit.Routes.ContainsKey("EndpointGetProvider"))
+        throw new Exception("Primitive OpenAPI schema reference regression did not compile the generated endpoint.");
+}
+finally
+{
+    try { Directory.Delete(primitiveReferenceRoot, true); } catch { }
+}
+Console.WriteLine("OPENAPI-SERVER-PRIMITIVE-REFERENCE=OK");
+
 const string runtimeReservedServerOpenApi = """
 {
   "openapi": "3.0.3",
