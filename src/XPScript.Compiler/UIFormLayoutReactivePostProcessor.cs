@@ -261,8 +261,10 @@ internal sealed class XPScriptUIForm
             .Append(_gridColumns).Append(",minmax(0,1fr));gap:12px\">");
         foreach (var grid in _grids.Values)
         {
-            html.Append("<div class=\"xpscript-uiform-named-grid\" data-xps-grid=\"").Append(System.Net.WebUtility.HtmlEncode(grid.Name))
-                .Append("\" style=\"display:grid;grid-template-columns:repeat(").Append(grid.Columns).Append(",minmax(0,1fr));gap:12px");
+            html.Append("<div class=\"xpscript-uiform-named-grid\" data-xps-grid=\"").Append(System.Net.WebUtility.HtmlEncode(grid.Name)).Append("\"");
+            if (grid.TabName.Length > 0)
+                html.Append(" data-xps-tab-panel=\"").Append(System.Net.WebUtility.HtmlEncode(grid.TabName)).Append("\"");
+            html.Append(" style=\"display:grid;grid-template-columns:repeat(").Append(grid.Columns).Append(",minmax(0,1fr));gap:12px");
             if (grid.TabName.Length > 0 && !grid.TabName.Equals(_activeTab, StringComparison.OrdinalIgnoreCase)) html.Append(";display:none");
             html.Append("\"></div>");
         }
