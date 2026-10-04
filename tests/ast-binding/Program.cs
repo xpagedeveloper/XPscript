@@ -151,3 +151,30 @@ if (incompatibleAssignmentBinder.Diagnostics.Count != 1 || incompatibleAssignmen
     throw new InvalidOperationException("Assignment with incompatible types must produce exactly one XPS2001 diagnostic.");
 
 Console.WriteLine("AST_BINDING_ASSIGNMENT_COMPATIBILITY_OK");
+
+
+var customerType = XpTypeSymbol.User("Customer");
+var setSymbols = new SymbolTable();
+setSymbols.Declare(new VariableSymbol("firstCustomer", typeof(object), customerType));
+setSymbols.Declare(new VariableSymbol("secondCustomer", typeof(object), customerType));
+setSymbols.Declare(new VariableSymbol("scalarNumber", typeof(long)));
+
+var referenceSetParser = new StatementParser("Set firstCustomer = secondCustomer");
+var referenceSet = referenceSetParser.ParseStatement();
+if (referenceSetParser.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Reference Set fixture must parse without diagnostics.");
+var referenceSetBinder = new StatementBinder(setSymbols);
+referenceSetBinder.Bind(referenceSet);
+if (referenceSetBinder.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Set between matching object references must bind without diagnostics.");
+
+var scalarSetParser = new StatementParser("Set scalarNumber = 1");
+var scalarSet = scalarSetParser.ParseStatement();
+if (scalarSetParser.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Scalar Set fixture must parse without diagnostics.");
+var scalarSetBinder = new StatementBinder(setSymbols);
+scalarSetBinder.Bind(scalarSet);
+if (scalarSetBinder.Diagnostics.Count != 1 || scalarSetBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Set on a scalar target must produce exactly one XPS2001 diagnostic.");
+
+Console.WriteLine("AST_BINDING_SET_COMPATIBILITY_OK");
