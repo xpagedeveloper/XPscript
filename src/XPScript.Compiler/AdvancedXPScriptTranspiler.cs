@@ -1214,8 +1214,8 @@ internal static class LSForAllRuntime
             // Lower one class-returning call at a time. The negative lookahead is
             // essential: once a call ends in .Value! it must never be lowered again.
             // This guarantees progress and prevents an infinite .Value!.Value!... loop.
-            var receiver = Regex.Escape(objectVariable.Key) + @"\\.Value!";
-            var pattern = receiver + @"\\.([A-Za-z_]\\w*)\\s*\\(([^()]*)\\)(?!\\.Value!)";
+            var receiver = Regex.Escape(objectVariable.Key) + @"\.Value!";
+            var pattern = receiver + @"\.([A-Za-z_]\w*)\s*\(([^()]*)\)(?!\.Value!)";
             string previous;
             do
             {
@@ -1228,7 +1228,7 @@ internal static class LSForAllRuntime
 
                 // After the first lowering, permit the complete already-lowered
                 // receiver chain and target only its next, not-yet-lowered call.
-                pattern = @"[A-Za-z_]\\w*\\.Value!(?:\\.[A-Za-z_]\\w*\\([^()]*\\)\\.Value!)*\\.([A-Za-z_]\\w*)\\s*\\(([^()]*)\\)(?!\\.Value!)";
+                pattern = @"[A-Za-z_]\w*\.Value!(?:\.[A-Za-z_]\w*\([^()]*\)\.Value!)*\.([A-Za-z_]\w*)\s*\(([^()]*)\)(?!\.Value!)";
             }
             while (!text.Equals(previous, StringComparison.Ordinal));
         }
