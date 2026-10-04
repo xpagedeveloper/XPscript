@@ -330,12 +330,6 @@ public sealed class CompilerDriver
                 ThirdPartyLicenseNoticeGenerator.PublishSidecar(licenseNoticePath, outputPath);
             }
 
-            if (IsAndroidRuntime(rid) && File.Exists(outputPath))
-            {
-                var apkBytes = new FileInfo(outputPath).Length;
-                var apkMiB = apkBytes / (1024d * 1024d);
-                Console.Error.WriteLine($"Android APK: {outputPath} ({apkMiB:F2} MiB, {apkBytes:N0} bytes)");
-            }
         }
         finally
         {
