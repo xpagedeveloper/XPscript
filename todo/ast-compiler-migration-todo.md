@@ -237,7 +237,7 @@ Class-oriented language patterns:
 - [x] Implement lexical scopes.
 - [x] Implement name lookup.
 - [x] Implement duplicate declaration diagnostics.
-- [ ] Implement unknown symbol diagnostics.
+- [x] Implement unknown symbol diagnostics.
 - [ ] Implement member lookup.
 - [ ] Implement overload/call binding where required.
 - [ ] Implement ByRef/ByVal validation.
