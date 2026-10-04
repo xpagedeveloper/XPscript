@@ -17,6 +17,7 @@ internal sealed class XPImage : System.IDisposable
     private ImageMagick.MagickImage? _image;
     private string _format = string.Empty;
     private string _src = string.Empty;
+    private string _loadError = string.Empty;
 
     public XPImage() { EnsureResourceLimits(); }
 
@@ -49,13 +50,23 @@ internal sealed class XPImage : System.IDisposable
             _image = null;
             _format = string.Empty;
             _src = source;
+            _loadError = string.Empty;
             if (source.Length == 0) return;
-            var loaded = LoadSource(source);
-            _image = loaded._image;
-            loaded._image = null;
-            _format = loaded._format;
+            try
+            {
+                var loaded = LoadSource(source);
+                _image = loaded._image;
+                loaded._image = null;
+                _format = loaded._format;
+            }
+            catch (System.Exception ex)
+            {
+                _loadError = ex.Message;
+            }
         }
     }
+
+    public string LoadError => _loadError;
 
     public int Width => checked((int)Image.Width);
     public int Height => checked((int)Image.Height);
