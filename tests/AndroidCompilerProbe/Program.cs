@@ -224,6 +224,24 @@ foreach (var forbidden in new[] { "PointerPressed", "PointerReleased", "MouseBut
         throw new Exception("Android UIForm host must leave touch/pointer translation to Avalonia Android instead of desktop-specific input handling: " + forbidden);
 }
 
+var crossPlatformRuntimePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CrossPlatformRuntimeSource.cs");
+var crossPlatformRuntime = File.ReadAllText(crossPlatformRuntimePath);
+foreach (var expected in new[]
+{
+    "File.Exists(XPScriptFileSystemRuntime.ResolvePath(path))",
+    "Directory.Exists(XPScriptFileSystemRuntime.ResolvePath(path))",
+    "var file = XPScriptFileSystemRuntime.ResolvePath(path);",
+    "var left = XPScriptFileSystemRuntime.ResolvePath(leftValue);",
+    "new StreamReader(XPScriptFileSystemRuntime.ResolvePath(path)",
+    "File.ReadAllBytes(XPScriptFileSystemRuntime.ResolvePath(path))",
+    "root = XPScriptFileSystemRuntime.ResolvePath(raw);",
+    "XPScriptFileSystemRuntime.ResolvePath(string.IsNullOrEmpty(directoryPart) ? \".\" : directoryPart)"
+})
+{
+    if (!crossPlatformRuntime.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Cross-platform read-only asset routing is missing: " + expected);
+}
+
 var fileSystemRuntimePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "FileSystemPortabilityRuntimeSource.cs");
 var fileSystemRuntime = File.ReadAllText(fileSystemRuntimePath);
 foreach (var expected in new[]
