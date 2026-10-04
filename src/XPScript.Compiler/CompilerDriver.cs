@@ -775,7 +775,7 @@ public sealed class CompilerDriver
             ? """
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
-    <ApplicationId>eu.xpscript.debugapp</ApplicationId>
+    <ApplicationId>eu.xpscript.app</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
 """
