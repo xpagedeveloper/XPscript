@@ -1,5 +1,3 @@
-Private sharedProbe As LazyProbe
-
 Class LazyProbe
     Public Marker As String
 
@@ -7,6 +5,8 @@ Class LazyProbe
         Me.Marker = "ready"
     End Sub
 End Class
+
+Private sharedProbe As LazyProbe
 
 Function GetProbe() As LazyProbe
     If sharedProbe Is Nothing Then
