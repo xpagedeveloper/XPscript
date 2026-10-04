@@ -1,9 +1,29 @@
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 namespace XPScript.Web.Compiler;
 
 internal static class XpsOpenApiSchema
 {
+    private static readonly Regex ExternalReferenceLine = new(
+        @"(?:^|[,{]\s*)[\"']?\$ref[\"']?\s*:\s*[\"']?(?<ref>[^\"'\s,}]+)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    internal static void ValidateExternalReferences(string specification, string? sourceName)
+    {
+        var lines = specification.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var match = ExternalReferenceLine.Match(lines[index]);
+            if (!match.Success) continue;
+            var reference = match.Groups["ref"].Value;
+            if (reference.StartsWith("#/", StringComparison.Ordinal)) continue;
+            var source = string.IsNullOrWhiteSpace(sourceName) ? "OpenAPI source" : sourceName;
+            throw new XpsOpenApiGenerationException(
+                $"{source}: line {index + 1}, property '$ref' uses external reference '{reference}'. External OpenAPI references are not supported; provide a bundled definition with local '#/' references.");
+        }
+    }
+
     internal sealed record NormalizedDocument(
         string Version,
         JsonObject Root,
