@@ -133,6 +133,10 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [ ] Preserve platform-appropriate UIForm media sources alongside assets: desktop Windows/Linux/macOS may load local filesystem images and HTTP/HTTPS; Android may load accessible local files and HTTP/HTTPS; server-web and Browser-WASM may load web assets and HTTP/HTTPS without exposing arbitrary server/user filesystem paths.
 - [ ] Allow `XPImage.Load` and every supported read-only file operation (input/binary reads, existence/length/date/attributes, enumeration and other file-inspection APIs) to read packaged application assets on every platform where that operation is supported.
 - [ ] Enforce application assets as read-only for file mutation APIs and `XPImage.Save`, with a clear runtime error.
+- [ ] Extend XPImage source loading so desktop apps can load local filesystem images, all supported app targets can load packaged `assets/...`, base64/data:image sources and HTTP/HTTPS where networking is supported.
+- [ ] Add instance-based XPImage `Src` and `IsLoaded` lifecycle: assigning a new source clears the loaded state/image first; `IsLoaded` becomes true only after the source has been fully fetched/decoded and validated as an image; failed loads remain false and surface the load error.
+- [ ] Keep existing XPImage constructors/factories deterministic: newly created canvas images and successful `Load`/`FromBase64`/`FromBytes` results are immediately `IsLoaded = true`.
+- [ ] Support `data:image/...;base64,...` for UIForm BootImage and Image controls on every UIForm platform that supports image rendering.
 - [ ] Add focused cross-platform regression coverage for XPImage-backed UIForm media and read-only asset I/O.
 - [x] Add Android UIForm regression samples. `samples/android-uiform-regression.xps` is compiler-guarded and built as an Android UIForm APK in Android CI.
 - [x] Add non-device compiler/packaging regression coverage for Android UIForm. `AndroidCompilerProbe` guards the generated host/project contract and Android CI publishes both a focused direct Avalonia Android project and the compiler-generated minimal UIForm APK.
