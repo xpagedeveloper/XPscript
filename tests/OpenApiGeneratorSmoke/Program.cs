@@ -2232,11 +2232,21 @@ try
 {
     var digitalOceanServerPath = Path.Combine(root, "digitalocean-server.xps");
     var digitalOceanClientPath = Path.Combine(root, "digitalocean-client.xps");
-    _ = new XPScriptTranspiler().TranspileRestricted(
-        digitalOceanServer.Source + "\nSub Main()\nEnd Sub\n",
-        digitalOceanServerPath,
-        CompilerDriver.CurrentRuntimeIdentifier(),
-        [root]);
+    try
+    {
+        _ = new XPScriptTranspiler().TranspileRestricted(
+            digitalOceanServer.Source + "\nSub Main()\nEnd Sub\n",
+            digitalOceanServerPath,
+            CompilerDriver.CurrentRuntimeIdentifier(),
+            [root]);
+    }
+    catch (CompilerException ex) when (ex.GeneratedDiagnostics.Count > 0)
+    {
+        var diagnostic = ex.GeneratedDiagnostics[0];
+        var sourceLines = digitalOceanServer.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+        var line = diagnostic.Line > 0 && diagnostic.Line <= sourceLines.Length ? sourceLines[diagnostic.Line - 1] : "<line unavailable>";
+        throw new Exception($"DigitalOcean server compile failed at generated line {diagnostic.Line}, column {diagnostic.Position}: {line}", ex);
+    }
     try
     {
         _ = new XPScriptTranspiler().TranspileRestricted(
