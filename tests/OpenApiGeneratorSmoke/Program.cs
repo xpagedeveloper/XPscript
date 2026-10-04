@@ -190,6 +190,41 @@ _ = new XpsOpenApiGenerator().Generate(foldedLocalReference, "folded-local-ref.y
 _ = new XpsOpenApiClientGenerator().Generate(foldedLocalReference, "folded-local-ref.yaml");
 Console.WriteLine("OPENAPI-FOLDED-LOCAL-REF=OK");
 
+const string runtimeReservedServerOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Runtime reserved identifier regression", "version": "1.0" },
+  "paths": {
+    "/reserved": {
+      "post": {
+        "operationId": "reservedNames",
+        "parameters": [
+          { "name": "application", "in": "query", "schema": { "type": "string" } },
+          { "name": "body", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  }
+}
+""";
+var runtimeReservedServer = new XpsOpenApiGenerator().Generate(runtimeReservedServerOpenApi, "runtime-reserved-server.json");
+var runtimeReservedRoot = Path.Combine(Path.GetTempPath(), "xps-openapi-runtime-reserved-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(runtimeReservedRoot);
+try
+{
+    var runtimeReservedPath = Path.Combine(runtimeReservedRoot, "runtime-reserved-server.xps");
+    File.WriteAllText(runtimeReservedPath, runtimeReservedServer.Source);
+    await using var runtimeReservedUnit = await new XpsWebCompiler().CompileAsync(runtimeReservedPath, runtimeReservedRoot);
+    if (!runtimeReservedUnit.Routes.ContainsKey("EndpointReservedNames"))
+        throw new Exception("OpenAPI server runtime-reserved identifier regression did not compile the generated endpoint.");
+}
+finally
+{
+    try { Directory.Delete(runtimeReservedRoot, true); } catch { }
+}
+Console.WriteLine("OPENAPI-SERVER-RUNTIME-RESERVED-IDENTIFIERS=OK");
+
 const string routePlaceholderServerOpenApi = """
 {
   "openapi": "3.0.3",
