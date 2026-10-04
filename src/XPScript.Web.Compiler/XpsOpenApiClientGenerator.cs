@@ -221,7 +221,9 @@ public sealed class XpsOpenApiClientGenerator
                             result[property.Key] = propertySchema;
                         continue;
                     }
-                    if (IsModelReferenceType(eyistingType) && IsModelReferenceType(incomingType))
+                    if ((IsModelReferenceType(eyistingType) && IsModelReferenceType(incomingType)) ||
+                        (IsModelReferenceType(eyistingType) && incomingType.Equals("Variant", StringComparison.OrdinalIgnoreCase)) ||
+                        (eyistingType.Equals("Variant", StringComparison.OrdinalIgnoreCase) && IsModelReferenceType(incomingType)))
                     {
                         result[property.Key] = new JsonObject { ["x-xpscript-conflicting-allof-model"] = true };
                         continue;
