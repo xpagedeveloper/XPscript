@@ -17,17 +17,17 @@ internal static class XPCrossPlatformRuntime
         return "Unknown";
     }
 
-    public static bool FileExists(object? path) => File.Exists(XPScriptRuntime.CStr(path));
+    public static bool FileExists(object? path) => File.Exists(XPScriptFileSystemRuntime.ResolvePath(path));
 
-    public static bool DirExists(object? path) => Directory.Exists(XPScriptRuntime.CStr(path));
+    public static bool DirExists(object? path) => Directory.Exists(XPScriptFileSystemRuntime.ResolvePath(path));
 
     public static bool IsFile(object? path)
     {
-        var value = XPScriptRuntime.CStr(path);
+        var value = XPScriptFileSystemRuntime.ResolvePath(path);
         return File.Exists(value) && !Directory.Exists(value);
     }
 
-    public static bool IsDir(object? path) => Directory.Exists(XPScriptRuntime.CStr(path));
+    public static bool IsDir(object? path) => Directory.Exists(XPScriptFileSystemRuntime.ResolvePath(path));
 
     public static bool CopyFile(object? source, object? target, int action = 1) =>
         ApplyFileTransferPolicy(source, target, action, move: false);
@@ -188,7 +188,7 @@ internal static class XPCrossPlatformRuntime
 
         public XPFileInfoValue(string path)
         {
-            FullPath = Path.GetFullPath(path);
+            FullPath = XPScriptFileSystemRuntime.ResolvePath(path);
             FileSystemInfo info;
             if (File.Exists(FullPath)) info = new System.IO.FileInfo(FullPath);
             else if (Directory.Exists(FullPath)) info = new DirectoryInfo(FullPath);
@@ -208,11 +208,11 @@ internal static class XPCrossPlatformRuntime
     }
 
     public static XPFileInfoValue FileInfo(object? path) =>
-        new(Path.GetFullPath(XPScriptRuntime.CStr(path)));
+        new(XPScriptFileSystemRuntime.ResolvePath(path));
 
     public static string FileHash(object? path, object? algorithm = null)
     {
-        var file = Path.GetFullPath(XPScriptRuntime.CStr(path));
+        var file = XPScriptFileSystemRuntime.ResolvePath(path);
         var name = algorithm is null ? "SHA256" : XPScriptRuntime.CStr(algorithm).Trim().ToUpperInvariant().Replace("-", "", StringComparison.Ordinal);
         using System.Security.Cryptography.HashAlgorithm hash = name switch
         {
@@ -229,8 +229,8 @@ internal static class XPCrossPlatformRuntime
 
     public static bool FileEquals(object? leftValue, object? rightValue)
     {
-        var left = Path.GetFullPath(XPScriptRuntime.CStr(leftValue));
-        var right = Path.GetFullPath(XPScriptRuntime.CStr(rightValue));
+        var left = XPScriptFileSystemRuntime.ResolvePath(leftValue);
+        var right = XPScriptFileSystemRuntime.ResolvePath(rightValue);
         var leftInfo = new System.IO.FileInfo(left);
         var rightInfo = new System.IO.FileInfo(right);
         if (!leftInfo.Exists || !rightInfo.Exists) return false;
@@ -320,7 +320,7 @@ internal static class XPCrossPlatformRuntime
     public static string ReadFile(object? path, object? charset = null)
     {
         var encoding = ResolveTextEncoding(charset);
-        using var reader = new StreamReader(Path.GetFullPath(XPScriptRuntime.CStr(path)), encoding, detectEncodingFromByteOrderMarks: true);
+        using var reader = new StreamReader(XPScriptFileSystemRuntime.ResolvePath(path), encoding, detectEncodingFromByteOrderMarks: true);
         return reader.ReadToEnd();
     }
 
@@ -333,7 +333,7 @@ internal static class XPCrossPlatformRuntime
     public static LSArray ReadLines(object? path, object? charset = null)
     {
         var values = new List<object?>();
-        using var reader = new StreamReader(Path.GetFullPath(XPScriptRuntime.CStr(path)), ResolveTextEncoding(charset), detectEncodingFromByteOrderMarks: true);
+        using var reader = new StreamReader(XPScriptFileSystemRuntime.ResolvePath(path), ResolveTextEncoding(charset), detectEncodingFromByteOrderMarks: true);
         string? line;
         while ((line = reader.ReadLine()) is not null) values.Add(line);
         return ToXPScriptArray("String", values);
@@ -347,7 +347,7 @@ internal static class XPCrossPlatformRuntime
 
     public static LSArray ReadBytes(object? path)
     {
-        var bytes = File.ReadAllBytes(Path.GetFullPath(XPScriptRuntime.CStr(path)));
+        var bytes = File.ReadAllBytes(XPScriptFileSystemRuntime.ResolvePath(path));
         return ToXPScriptArray("Byte", bytes.Cast<object?>());
     }
 
