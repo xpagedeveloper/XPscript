@@ -135,6 +135,37 @@ if (!reservedMemberImport.Source.Contains("' OpenAPI property: date", StringComp
     throw new Exception("OpenAPI reserved model-member regression failed.");
 Console.WriteLine("OPENAPI-RESERVED-MODEL-MEMBER=OK");
 
+const string externalOperationReferenceDiagnostic = """
+openapi: 3.0.3
+info:
+  title: External operation reference diagnostic
+  version: 1.0.0
+paths:
+  /limits:
+    get:
+      $ref: "resources/limits_get.yml"
+""";
+foreach (var generate in new Func<string, object>[]
+{
+    spec => new XpsOpenApiGenerator().Generate(spec, "external-operation-ref.yaml"),
+    spec => new XpsOpenApiClientGenerator().Generate(spec, "external-operation-ref.yaml")
+})
+{
+    try
+    {
+        _ = generate(externalOperationReferenceDiagnostic);
+        throw new Exception("External OpenAPI operation $ref must fail with an actionable diagnostic.");
+    }
+    catch (XpsOpenApiGenerationException ex)
+    {
+        if (!ex.Message.Contains("line 8", StringComparison.OrdinalIgnoreCase) ||
+            !ex.Message.Contains("$ref", StringComparison.Ordinal) ||
+            !ex.Message.Contains("resources/limits_get.yml", StringComparison.Ordinal))
+            throw new Exception("External OpenAPI $ref diagnostic must identify line, property and reference.", ex);
+    }
+}
+Console.WriteLine("OPENAPI-EXTERNAL-REF-DIAGNOSTIC=OK");
+
 var digitalOceanPath = Path.Combine(AppContext.BaseDirectory, "fixtures", "digitalocean.yaml");
 var digitalOceanSpecification = File.ReadAllText(digitalOceanPath);
 var digitalOceanServer = new XpsOpenApiGenerator().Generate(digitalOceanSpecification, "digitalocean.yaml");
