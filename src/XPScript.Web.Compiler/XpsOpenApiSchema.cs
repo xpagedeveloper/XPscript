@@ -248,6 +248,13 @@ internal static class XpsOpenApiSchema
     {
         var type = XpsType(root, schema, context);
         if (type is "XPJsonArray" or "XPJsonObject") return true;
+        foreach (var keyword in new[] { "oneOf", "anyOf", "allOf" })
+        {
+            if (schema[keyword] is not JsonArray branches || branches.Count == 0) continue;
+            var objectBranches = branches.OfType<JsonObject>().ToArray();
+            if (objectBranches.Length == branches.Count && objectBranches.All(branch => IsObjectType(root, branch, context + " " + keyword)))
+                return true;
+        }
         if (ReadString(schema, "$ref") is null) return false;
         var resolved = Resolve(root, schema, context);
         var resolvedType = XpsType(root, resolved, context);
