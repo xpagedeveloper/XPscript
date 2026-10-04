@@ -6,7 +6,8 @@ public enum ConversionKind
     Identity,
     NumericWidening,
     ToVariant,
-    FromVariant
+    FromVariant,
+    ToObject
 }
 
 public readonly record struct Conversion(ConversionKind Kind)
@@ -28,8 +29,16 @@ public readonly record struct Conversion(ConversionKind Kind)
         if (source.IsVariant)
             return new Conversion(ConversionKind.FromVariant);
 
-        // Plain Object and user-defined object-backed types are not Variant.
-        if (source.RuntimeType == typeof(object) || target.RuntimeType == typeof(object))
+        // Object is an object-reference target, not a dynamic scalar container.
+        // Only reference-shaped values can flow into it implicitly.
+        if (target.IsObject)
+            return source.RuntimeType == typeof(object) || (!source.RuntimeType.IsValueType && source.RuntimeType != typeof(string))
+                ? new Conversion(ConversionKind.ToObject)
+                : new Conversion(ConversionKind.None);
+
+        // Object cannot implicitly flow back to a concrete/user type. That requires
+        // object-reference semantics (Set/cast) rather than Variant-style coercion.
+        if (source.IsObject || source.RuntimeType == typeof(object) || target.RuntimeType == typeof(object))
             return new Conversion(ConversionKind.None);
 
         if (source.RuntimeType == typeof(long) && target.RuntimeType == typeof(double))
