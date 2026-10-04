@@ -112,8 +112,10 @@ if (byValLiteralBinder.Diagnostics.Count != 0)
 var modeOverloads = new SymbolTable();
 if (!modeOverloads.TryDeclare(new FunctionSymbol("Mode", typeof(long), [typeof(long)], ByRefParameters: [true])))
     throw new InvalidOperationException("ByRef overload declaration must succeed.");
-if (!modeOverloads.TryDeclare(new FunctionSymbol("Mode", typeof(long), [typeof(long)], ByRefParameters: [false])))
-    throw new InvalidOperationException("ByVal overload with the same type signature must remain distinct.");
+if (modeOverloads.TryDeclare(new FunctionSymbol("Mode", typeof(long), [typeof(long)], ByRefParameters: [false]), out var modeDuplicateCode, out _))
+    throw new InvalidOperationException("ByRef/ByVal alone must not create a distinct overload.");
+if (modeDuplicateCode != "XPS2006")
+    throw new InvalidOperationException($"Duplicate overload differing only by ByRef/ByVal must produce XPS2006, got {modeDuplicateCode}.");
 
 var defaultParameter = new ParameterSymbol("defaultByRef", typeof(long));
 if (!defaultParameter.IsByRef)
