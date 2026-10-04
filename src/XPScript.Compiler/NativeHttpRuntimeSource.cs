@@ -19,7 +19,7 @@ internal sealed class XPScriptHttpClient : IDisposable
     private readonly XPScriptTlsValidationState _tls = new();
     private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
     private TimeSpan _timeout = TimeSpan.FromSeconds(30);
-    private long _maxRequestBodyBytes = Default_maxRequestBodyBytes;
+    private long _maxRequestBodyBytes = DefaultMaxRequestBodyBytes;
     private bool _allowPrivateNetwork;
     private bool _disposed;
 
