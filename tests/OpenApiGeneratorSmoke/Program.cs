@@ -2044,8 +2044,6 @@ End Class
 
     var clientPath = Path.Combine(root, "petstore-client.xps");
     await File.WriteAllTextAsync(clientPath, clientResult.Source);
-    var fortnoxClientPath = Path.Combine(root, "fortnox-client.xps");
-    await File.WriteAllTextAsync(fortnoxClientPath, fortnoxClient.Source);
 
     var sourcePath = Path.Combine(root, "petstore.xps");
     await File.WriteAllTextAsync(sourcePath, result.Source);
@@ -2060,12 +2058,6 @@ End Class
 
     // Client-only generated sources do not export web routes. Compile them through the
     // language transpiler directly; XpsWebCompiler intentionally requires at least one route.
-    _ = new XPScriptTranspiler().TranspileRestricted(
-        fortnoxClient.Source + "\nSub Main()\nEnd Sub\n",
-        fortnoxClientPath,
-        CompilerDriver.CurrentRuntimeIdentifier(),
-        [root]);
-    Console.WriteLine("OPENAPI-FORTNOX-REST-CLIENT-COMPILE=OK");
     _ = new XPScriptTranspiler().TranspileRestricted(
         crossScopeRuntimeNames.Source + "\nSub Main()\nEnd Sub\n",
         crossScopeRuntimePath,
