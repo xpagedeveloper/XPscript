@@ -157,7 +157,7 @@ foreach (var expected in new[]
 {
     "INSTALL_FAILED_UPDATE_INCOMPATIBLE",
     "uninstall",
-    "eu.xpscript.debugapp"
+    "eu.xpscript.app"
 })
 {
     if (!androidCommand.Contains(expected, StringComparison.Ordinal))
