@@ -2,6 +2,15 @@ namespace XPScript.Compiler.Binding;
 
 public sealed class SymbolTable
 {
+    public SymbolTable(SymbolTable? parent = null)
+    {
+        Parent = parent;
+    }
+
+    public SymbolTable? Parent { get; }
+
+    public SymbolTable CreateChildScope() => new(this);
+
     public static SymbolTable CreateWithCompilerCatalog()
     {
         var table = new SymbolTable();
@@ -72,10 +81,17 @@ public sealed class SymbolTable
             return true;
         }
 
+        if (Parent is not null)
+            return Parent.TryLookup(name, out symbol);
+
         symbol = null!;
         return false;
     }
 
-    public IReadOnlyList<Symbol> LookupAll(string name) =>
-        _symbols.TryGetValue(name, out var symbols) ? symbols : [];
+    public IReadOnlyList<Symbol> LookupAll(string name)
+    {
+        if (_symbols.TryGetValue(name, out var symbols) && symbols.Count > 0)
+            return symbols;
+        return Parent?.LookupAll(name) ?? [];
+    }
 }
