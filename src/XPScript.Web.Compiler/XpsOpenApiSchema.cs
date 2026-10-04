@@ -21,6 +21,13 @@ internal static class XpsOpenApiSchema
                 ((reference[0] == '\'' && reference[^1] == '\'') ||
                  (reference[0] == '"' && reference[^1] == '"')))
                 reference = reference[1..^1];
+
+            // YAML block scalar indicators are syntax, not the $ref value itself.
+            // The actual folded/literal value is on the following indented line(s)
+            // and is resolved by the YAML parser.
+            if (reference is "|" or "|-" or "|+" or ">" or ">-" or ">+")
+                continue;
+
             if (reference.StartsWith("#/", StringComparison.Ordinal)) continue;
 
             var source = string.IsNullOrWhiteSpace(sourceName) ? "OpenAPI source" : sourceName;
