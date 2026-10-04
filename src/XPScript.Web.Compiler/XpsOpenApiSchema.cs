@@ -135,7 +135,10 @@ internal static class XpsOpenApiSchema
         {
             var referenced = Resolve(root, schema, context);
             var referencedType = ReadString(referenced, "type")?.ToLowerInvariant();
-            if (referencedType is not null && referencedType != "object" && !referenced.ContainsKey("properties"))
+            if (referencedType is not null &&
+                referencedType != "object" &&
+                !referenced.ContainsKey("properties") &&
+                referenced["enum"] is not JsonArray)
                 return XpsType(root, referenced, context + " referenced schema");
             return ReferenceTypeName(reference, context);
         }
