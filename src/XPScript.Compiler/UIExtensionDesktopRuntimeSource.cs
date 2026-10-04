@@ -103,6 +103,7 @@ internal static class XPScriptUIDesktopAdapter
             theme = form.Theme,
             showValidationErrors = form.ShowValidationErrors,
             showDefaultButtons = form.ShowDefaultButtons,
+            defaultButtonCornerRadius = form.DefaultButtonCornerRadius,
             gridColumns = form.GridColumns,
             hasValidationSchema = form.HasValidationSchema,
             bootText = form.BootText,
