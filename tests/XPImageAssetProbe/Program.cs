@@ -25,7 +25,28 @@ foreach (var expected in new[]
 var runtimeType = typeof(CompilerDriver).Assembly.GetType("XPScript.Compiler.XPImageRuntimeSource", throwOnError: true)!;
 var runtime = (string)(runtimeType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
     ?? throw new Exception("XPImageRuntimeSource.Code was not found."));
-if (!runtime.Contains("var resolved = XPScriptFileSystemRuntime.ResolvePath(source);", StringComparison.Ordinal))
-    throw new Exception("XPImage local sources must resolve through the shared filesystem runtime.");
+foreach (var expected in new[]
+{
+    "var resolved = XPScriptFileSystemRuntime.ResolvePath(source);",
+    "XPScriptFileSystemRuntime.EnsureWritablePath(resolved);"
+})
+{
+    if (!runtime.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("XPImage asset runtime contract is missing: " + expected);
+}
+
+var fileSystemType = typeof(CompilerDriver).Assembly.GetType("XPScript.Compiler.FileSystemPortabilityRuntimeSource", throwOnError: true)!;
+var fileSystemRuntime = (string)(fileSystemType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
+    ?? throw new Exception("FileSystemPortabilityRuntimeSource.Code was not found."));
+foreach (var expected in new[]
+{
+    "throw new XPScriptRuntimeException(5, \"Application assets are read-only.\");",
+    "if (IsAssetPath(path))",
+    "Access = FileAccess.Read"
+})
+{
+    if (!fileSystemRuntime.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Application asset read-only contract is missing: " + expected);
+}
 
 Console.WriteLine("XPIMAGE_ASSET_ROUTING_OK");
