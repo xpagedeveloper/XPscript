@@ -34,7 +34,7 @@ foreach (var expected in new[]
 foreach (var expected in new[]
 {
     "project.ApplicationType == AndroidProjectMetadata.UiApplicationType",
-    "\"pidof\", \"com.xpscript.debugapp\"",
+    "\"pidof\", \"eu.xpscript.debugapp\"",
     "Android UI application was launched but is not running on ",
     "Android UI application launched on ",
     "xpscript android logs --device ",
@@ -155,7 +155,7 @@ foreach (var expected in new[]
 {
     "INSTALL_FAILED_UPDATE_INCOMPATIBLE",
     "uninstall",
-    "com.xpscript.debugapp"
+    "eu.xpscript.debugapp"
 })
 {
     if (!androidCommand.Contains(expected, StringComparison.Ordinal))
