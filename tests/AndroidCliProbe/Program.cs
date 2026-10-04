@@ -34,7 +34,9 @@ foreach (var expected in new[]
 foreach (var expected in new[]
 {
     "project.ApplicationType == AndroidProjectMetadata.UiApplicationType",
-    "\"pidof\", \"eu.xpscript.debugapp\"",
+    "ResolveApplicationPackageName(source)",
+    "Application\\.PackageName",
+    "\"pidof\", packageName",
     "Android UI application was launched but is not running on ",
     "Android UI application launched on ",
     "xpscript android logs --device ",
