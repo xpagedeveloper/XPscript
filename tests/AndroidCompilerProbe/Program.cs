@@ -174,6 +174,15 @@ foreach (var expected in new[]
         throw new Exception("Android generated UIForm host is missing: " + expected);
 }
 
+if (!uiHostCode.Contains("var cancel = new Avalonia.Controls.Button { Content = \"Cancel\", MinWidth = 100 };", StringComparison.Ordinal) ||
+    !uiHostCode.Contains("var ok = new Avalonia.Controls.Button { Content = \"OK\", MinWidth = 100 };", StringComparison.Ordinal) ||
+    !uiHostCode.Contains("defaultButtonCornerRadiusValue.TryGetDouble(out var defaultButtonRadius)", StringComparison.Ordinal))
+    throw new Exception("Android default OK/Cancel buttons must retain Avalonia theme radius unless an explicit defaultButtonCornerRadius is supplied.");
+
+var androidFormHostSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidFormHost.cs"));
+if (!androidFormHostSource.Contains("defaultButtonCornerRadiusValue.TryGetDouble(out var defaultButtonRadius)", StringComparison.Ordinal))
+    throw new Exception("Direct Android UIForm host must preserve theme default button radius and only override it when explicitly configured.");
+
 if (System.Text.RegularExpressions.Regex.IsMatch(uiHostCode, @"(?<!Avalonia\.Controls\.)\bRadioButton\b"))
     throw new Exception("Android UIForm host must fully qualify Avalonia RadioButton references to avoid Android.Widget ambiguity.");
 
@@ -229,6 +238,7 @@ foreach (var expected in new[]
 {
     "theme = form.Theme",
     "showValidationErrors = form.ShowValidationErrors",
+    "defaultButtonCornerRadius = form.DefaultButtonCornerRadius",
     "gridColumns = form.GridColumns",
     "placeholder = field.Placeholder",
     "schemaValidationError = form.GetValidationError(field.Name)",
