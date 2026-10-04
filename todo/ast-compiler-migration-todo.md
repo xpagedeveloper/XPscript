@@ -224,7 +224,6 @@ Class-oriented language patterns:
 - [x] Verify fluent/chained method calls on class instances, including continued chains across XPscript line continuation.
 - [x] Treat singleton/lazy-instance patterns as ordinary XPscript module/application-level state plus class construction; do not add NotesSession-, JVM-, SSJS-, or Domino-specific singleton behavior.
 
-
 ## Phase 6: Symbols and semantic binder
 
 - [x] Define symbol base model.
@@ -259,7 +258,7 @@ Class-oriented language patterns:
 - [x] Define Variant/dynamic semantics explicitly.
 - [x] Define Object semantics explicitly.
 - [x] Define Null/Empty behavior needed by XPscript.
-- [ ] Define array/list typing behavior.
+- [x] Define array/list typing behavior.
 - [ ] Move applicable type diagnostics from Roslyn-derived failures into XPscript semantic diagnostics.
 
 ## Phase 8: C# emitter
