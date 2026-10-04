@@ -108,7 +108,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Complete UIForm boot text/image rendering parity on every UIForm platform and define whether boot content is persistent form content or transient startup content. BootImage/BootText are persistent form-start content across desktop, Android, server-rendered web and browser-WASM; verified by focused guards and Android Build.
 - [x] Add per-button corner-radius API and rendering on desktop and Android.
 - [x] Add per-text-entry-field corner-radius API and rendering on desktop and Android.
-- [ ] Decide and implement corner-radius behavior for default OK/Cancel buttons and preserve platform theme defaults when no explicit radius is configured.
+- [x] Decide and implement corner-radius behavior for default OK/Cancel buttons and preserve platform theme defaults when no explicit radius is configured.
 - [x] Add shared UIForm tabs with `AddTab`, `SetFieldTab`, `ActiveTab` and `SetActiveTab`.
 - [x] Render UIForm tabs on desktop Avalonia, Android Avalonia and web UIForm.
 - [x] Propagate programmatic active-tab changes from XPScript callbacks to rendered desktop and Android forms.
