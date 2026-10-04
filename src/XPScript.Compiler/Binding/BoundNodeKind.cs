@@ -10,5 +10,14 @@ public enum BoundNodeKind
     IndexExpression,
     NewExpression,
     UnaryExpression,
-    BinaryExpression
+    BinaryExpression,
+    AssignmentStatement,
+    ExpressionStatement,
+    ReturnStatement,
+    IfStatement,
+    ForStatement,
+    ForAllStatement,
+    WhileStatement,
+    DoStatement,
+    SelectStatement
 }
