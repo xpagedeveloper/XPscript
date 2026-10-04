@@ -769,7 +769,7 @@ internal static class LSForAllRuntime
 
         var moduleMemberAssignment = Regex.Match(
             line,
-            @"^(XPModuleObjectRuntime\.Value\s*\(\s*\"(?:\"\"|[^\"])*\"\s*\)\.[A-Za-z_]\w*)\s*=\s*(.+)$",
+            @"^(XPModuleObjectRuntime\.Value\s*\(\s*""(?:""""|[^""])*""\s*\)\.[A-Za-z_]\w*)\s*=\s*(.+)$",
             RegexOptions.IgnoreCase);
         if (moduleMemberAssignment.Success)
         {
