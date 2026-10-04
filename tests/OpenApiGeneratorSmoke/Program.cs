@@ -225,6 +225,28 @@ if (!multipartClientRequestBody.Source.Contains("Public Function ArchiveControll
     throw new Exception("OpenAPI multipart client request-body regression failed.");
 Console.WriteLine("OPENAPI-CLIENT-MULTIPART-REQUEST-BODY=OK");
 
+var multipartFileClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.0.3
+info: { title: Multipart File Client, version: 1.0.0 }
+paths:
+  /upload:
+    post:
+      operationId: uploadFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: object }
+      responses:
+        '200': { description: ok }
+""", "multipart-file-client.yaml");
+if (!multipartFileClient.Source.Contains("AddMultipartFile(\"file\"", StringComparison.Ordinal))
+    throw new Exception("Multipart file OpenAPI client must emit XPHttpRequest.AddMultipartFile.");
+Console.WriteLine("OPENAPI-CLIENT-MULTIPART-FILE=OK");
+
 const string numericAllOfClientOpenApi = """
 {
   "openapi": "3.0.3",
