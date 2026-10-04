@@ -159,7 +159,7 @@ public sealed class ExpressionParser
             return new ParenthesizedExpressionSyntax(open, expression, close);
         }
 
-        if (Current.Kind is SyntaxKind.NumberToken or SyntaxKind.StringToken or SyntaxKind.TrueKeyword or SyntaxKind.FalseKeyword)
+        if (Current.Kind is SyntaxKind.NumberToken or SyntaxKind.StringToken or SyntaxKind.TrueKeyword or SyntaxKind.FalseKeyword or SyntaxKind.NullKeyword or SyntaxKind.EmptyKeyword or SyntaxKind.NothingKeyword)
             return new LiteralExpressionSyntax(NextToken());
 
         if (Current.Kind is SyntaxKind.MeKeyword or SyntaxKind.ParentKeyword)
