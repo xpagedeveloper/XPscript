@@ -140,7 +140,15 @@ internal static class XPScriptFileSystemRuntime
 
     public static FileStream OpenBinaryStream(string path)
     {
-        EnsureWritablePath(path);
+        if (IsAssetPath(path))
+        {
+            return new FileStream(path, new FileStreamOptions
+            {
+                Mode = FileMode.Open,
+                Access = FileAccess.Read,
+                Share = FileShare.ReadWrite
+            });
+        }
         if (!OperatingSystem.IsMacOS())
         {
             return new FileStream(path, new FileStreamOptions
