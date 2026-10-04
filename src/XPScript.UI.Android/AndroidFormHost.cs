@@ -95,6 +95,13 @@ public static class AndroidFormHost
 
             var cancel = new Avalonia.Controls.Button { Content = "Cancel", MinWidth = 100 };
             var ok = new Avalonia.Controls.Button { Content = "OK", MinWidth = 100 };
+            if (request.TryGetProperty("defaultButtonCornerRadius", out var defaultButtonCornerRadiusValue) &&
+                defaultButtonCornerRadiusValue.ValueKind == JsonValueKind.Number &&
+                defaultButtonCornerRadiusValue.TryGetDouble(out var defaultButtonRadius))
+            {
+                cancel.CornerRadius = new CornerRadius(defaultButtonRadius);
+                ok.CornerRadius = new CornerRadius(defaultButtonRadius);
+            }
             actions.Children.Add(cancel);
             actions.Children.Add(ok);
             panel.Children.Add(actions);
