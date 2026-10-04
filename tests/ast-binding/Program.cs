@@ -74,3 +74,17 @@ if (ambiguousBinder.Diagnostics.Count != 1 || ambiguousBinder.Diagnostics[0].Cod
     throw new InvalidOperationException("Ambiguous overload must produce exactly one XPS2005 diagnostic.");
 
 Console.WriteLine("AST_BINDING_AMBIGUOUS_OVERLOAD_OK");
+
+var declarationSymbols = new SymbolTable();
+if (!declarationSymbols.TryDeclare(new FunctionSymbol("Format", typeof(string), [typeof(long)])))
+    throw new InvalidOperationException("First overload declaration must succeed.");
+if (!declarationSymbols.TryDeclare(new FunctionSymbol("Format", typeof(string), [typeof(string)])))
+    throw new InvalidOperationException("Same-name overload with a different parameter type must succeed.");
+if (!declarationSymbols.TryDeclare(new FunctionSymbol("Format", typeof(string), [typeof(long), typeof(string)])))
+    throw new InvalidOperationException("Same-name overload with a different parameter count must succeed.");
+if (declarationSymbols.TryDeclare(new FunctionSymbol("Format", typeof(long), [typeof(long)]), out var duplicateCode, out _))
+    throw new InvalidOperationException("Return type alone must not create a distinct overload.");
+if (duplicateCode != "XPS2006")
+    throw new InvalidOperationException($"Duplicate parameter signature must produce XPS2006, got {duplicateCode}.");
+
+Console.WriteLine("AST_BINDING_OVERLOAD_DECLARATION_RULES_OK");
