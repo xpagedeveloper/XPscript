@@ -264,6 +264,64 @@ public static class XpsKestrelAdapter
             });
         }
 
+        app.Use(async (http, next) =>
+        {
+            if (!string.Equals(http.Request.Path.Value, XpsUIWebRuntimeBridge.AssetRoute, StringComparison.Ordinal))
+            {
+                await next();
+                return;
+            }
+
+            if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method))
+            {
+                http.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+                http.Response.Headers.Allow = "GET, HEAD";
+                return;
+            }
+
+            var origin = http.Request.Headers.Origin.FirstOrDefault();
+            var referer = http.Request.Headers.Referer.FirstOrDefault();
+            if ((!string.IsNullOrWhiteSpace(origin) && !SameOrigin(origin, http.Request)) ||
+                (!string.IsNullOrWhiteSpace(referer) && !SameOrigin(referer, http.Request)))
+            {
+                http.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return;
+            }
+
+            if (sessions is null)
+            {
+                http.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            var assetResponse = new XpsWebResponse();
+            var assetRequest = await CreateRequestAsync(http, options.MaxRequestBodySize);
+            var session = sessions.Bind(assetRequest, assetResponse);
+            var path = http.Request.Query["path"].FirstOrDefault() ?? string.Empty;
+            var token = http.Request.Query["token"].FirstOrDefault() ?? string.Empty;
+            if (!long.TryParse(http.Request.Query["expires"].FirstOrDefault(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var expires) ||
+                !XpsUIWebRuntimeBridge.TryResolveAsset(path, expires, token, session.Id, serverInfo.RootPath, out var fullPath))
+            {
+                http.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            var info = new FileInfo(fullPath);
+            if (!info.Exists || info.Length > options.MaxStaticFileBytes || IsLinkedFile(info))
+            {
+                http.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            http.Response.StatusCode = StatusCodes.Status200OK;
+            http.Response.ContentType = MimeForAsset(fullPath);
+            http.Response.ContentLength = info.Length;
+            http.Response.Headers.CacheControl = "private, no-store";
+            http.Response.Headers["X-Content-Type-Options"] = "nosniff";
+            if (!HttpMethods.IsHead(http.Request.Method))
+                await http.Response.SendFileAsync(fullPath, http.RequestAborted);
+        });
+
         var staticServer = new XpsWebServer(serverInfo);
         app.Use(async (http, next) =>
         {
@@ -451,6 +509,27 @@ public static class XpsKestrelAdapter
         if (!HttpMethods.IsHead(http.Request.Method) && response.Body.Length > 0)
             await http.Response.Body.WriteAsync(response.Body, http.RequestAborted);
     }
+
+    private static bool SameOrigin(string value, HttpRequest request)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) return false;
+        var requestPort = request.Host.Port ?? (request.IsHttps ? 443 : 80);
+        var uriPort = uri.IsDefaultPort ? (uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ? 443 : 80) : uri.Port;
+        return uri.Scheme.Equals(request.Scheme, StringComparison.OrdinalIgnoreCase) &&
+               uri.Host.Equals(request.Host.Host, StringComparison.OrdinalIgnoreCase) &&
+               uriPort == requestPort;
+    }
+
+    private static string MimeForAsset(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+    {
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".gif" => "image/gif",
+        ".webp" => "image/webp",
+        ".svg" => "image/svg+xml",
+        ".ico" => "image/x-icon",
+        _ => "application/octet-stream"
+    };
 
     private static bool TryGetStaticRequestPath(string requestPath, string urlPrefix, string? directoryPrefix, out string relativePath)
     {
