@@ -7,8 +7,9 @@ on:
       - .github/workflows/oneshot-notes-query-access.yml
       - samples/notes-database-query-access-runtime-test.xps
       - tests/NotesFullRuntimeSurfaceAudit/**
-      - src/XPScript.Compiler/**
-      - src/XPScript.Compiler.Core/**
+      - src/XPScript.Compiler/NotesRuntimeSource.cs
+      - src/XPScript.Compiler/NotesDatabaseRuntimeSource.cs
+      - src/XPScript.Compiler.Core/Notes*.cs
   workflow_dispatch:
 
 permissions:
