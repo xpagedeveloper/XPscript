@@ -56,14 +56,23 @@ public sealed class SymbolTable
 
     private readonly Dictionary<string, List<Symbol>> _symbols = new(StringComparer.OrdinalIgnoreCase);
 
-    public bool TryDeclare(Symbol symbol)
+    public bool TryDeclare(Symbol symbol) =>
+        TryDeclare(symbol, out _, out _);
+
+    public bool TryDeclare(Symbol symbol, out string? diagnosticCode, out string? diagnosticMessage)
     {
         if (_symbols.TryGetValue(symbol.Name, out var existing) &&
             existing.Count > 0 &&
             symbol is not FunctionSymbol)
+        {
+            diagnosticCode = CompilerDiagnosticCodes.DuplicateOverload;
+            diagnosticMessage = $"Symbol '{symbol.Name}' is already declared in this scope.";
             return false;
+        }
 
         Declare(symbol);
+        diagnosticCode = null;
+        diagnosticMessage = null;
         return true;
     }
 
