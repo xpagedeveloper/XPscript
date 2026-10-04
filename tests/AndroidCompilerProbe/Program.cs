@@ -450,8 +450,12 @@ if (!compilerSource.Contains("phase + \" (step \" + _phaseActivity + \")\"", Str
     !compilerSource.Contains("Math.Min(nextMilestone - 1, Math.Max(_percent, mapped) + 1)", StringComparison.Ordinal))
     throw new Exception("Android publish progress must expose repeated long-running publish phases as visible substeps.");
 
-if (!compilerSource.Contains("Android APK: {outputPath} ({apkMiB:F2} MiB, {apkBytes:N0} bytes)", StringComparison.Ordinal))
-    throw new Exception("Android compilation must report the final APK size.");
+var compilerCommandLineSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "XPScriptCompilerCommandLine.cs"));
+if (!compilerCommandLineSource.Contains("else if (args[i] == \"--info\")", StringComparison.Ordinal) ||
+    !compilerCommandLineSource.Contains("if (result.Success && (info || debug))", StringComparison.Ordinal) ||
+    !compilerCommandLineSource.Contains("WriteArtifactSize(executablePath);", StringComparison.Ordinal) ||
+    !compilerCommandLineSource.Contains("Output: {path} ({mib:F2} MiB, {bytes:N0} bytes)", StringComparison.Ordinal))
+    throw new Exception("Compile/run --info and --debug must report the produced artifact size.");
 
 var buildEnvironmentSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerBuildEnvironment.cs"));
 if (!buildEnvironmentSource.Contains("&& !usesAndroidUi", StringComparison.Ordinal))
