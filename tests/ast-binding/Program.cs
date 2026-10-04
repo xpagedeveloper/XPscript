@@ -178,3 +178,31 @@ if (scalarSetBinder.Diagnostics.Count != 1 || scalarSetBinder.Diagnostics[0].Cod
     throw new InvalidOperationException("Set on a scalar target must produce exactly one XPS2001 diagnostic.");
 
 Console.WriteLine("AST_BINDING_SET_COMPATIBILITY_OK");
+
+
+var compatibleReturnParser = new StatementParser("Return 1");
+var compatibleReturn = compatibleReturnParser.ParseStatement();
+if (compatibleReturnParser.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Compatible return fixture must parse without diagnostics.");
+var compatibleReturnBinder = new StatementBinder(returnType: XpTypeSymbol.FromClr(typeof(long)), allowsReturnValue: true);
+compatibleReturnBinder.Bind(compatibleReturn);
+if (compatibleReturnBinder.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Function return with matching type must bind without diagnostics.");
+
+var incompatibleReturnParser = new StatementParser("Return \"wrong\"");
+var incompatibleReturn = incompatibleReturnParser.ParseStatement();
+if (incompatibleReturnParser.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Incompatible return fixture must parse without diagnostics.");
+var incompatibleReturnBinder = new StatementBinder(returnType: XpTypeSymbol.FromClr(typeof(long)), allowsReturnValue: true);
+incompatibleReturnBinder.Bind(incompatibleReturn);
+if (incompatibleReturnBinder.Diagnostics.Count != 1 || incompatibleReturnBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Function return with incompatible type must produce exactly one XPS2001 diagnostic.");
+
+var subReturnParser = new StatementParser("Return 1");
+var subReturn = subReturnParser.ParseStatement();
+var subReturnBinder = new StatementBinder();
+subReturnBinder.Bind(subReturn);
+if (subReturnBinder.Diagnostics.Count != 1 || subReturnBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Sub returning a value must produce exactly one XPS2001 diagnostic.");
+
+Console.WriteLine("AST_BINDING_RETURN_TYPE_OK");
