@@ -767,6 +767,16 @@ internal static class LSForAllRuntime
             }
         }
 
+        var moduleMemberAssignment = Regex.Match(
+            line,
+            @"^(XPModuleObjectRuntime\.Value\s*\(\s*\"(?:\"\"|[^\"])*\"\s*\)\.[A-Za-z_]\w*)\s*=\s*(.+)$",
+            RegexOptions.IgnoreCase);
+        if (moduleMemberAssignment.Success)
+        {
+            Write(sb, $"{moduleMemberAssignment.Groups[1].Value} = {TransformExpression(moduleMemberAssignment.Groups[2].Value)};");
+            return;
+        }
+
         var assignment = Regex.Match(line, @"^(?:Let\s+)?([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
         if (assignment.Success)
         {
