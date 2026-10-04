@@ -366,8 +366,10 @@ public sealed class XpsOpenApiGenerator
                 builder.AppendLine("    [Email]");
             if (TryReadInt(resolvedProperty, "maxLength", out var maxLength) && maxLength > 0)
                 builder.AppendLine($"    [MaxLength:{maxLength.ToString(CultureInfo.InvariantCulture)}]");
-            if (TryReadNumber(resolvedProperty, "minimum", out var minimum) && TryReadNumber(resolvedProperty, "maximum", out var maximum))
-                builder.AppendLine($"    [Range:{minimum};{maximum}]");
+            if (TryReadRangeNumber(resolvedProperty, "minimum", out var minimum) &&
+                TryReadRangeNumber(resolvedProperty, "maximum", out var maximum) &&
+                minimum.Value <= maximum.Value)
+                builder.AppendLine($"    [Range:{minimum.Text};{maximum.Text}]");
             builder.AppendLine($"    Public {fieldName} As {fieldType.TypeName}");
             builder.AppendLine();
         }
@@ -635,6 +637,18 @@ public sealed class XpsOpenApiGenerator
         if (value.TryGetValue<long>(out var longValue) && longValue is >= int.MinValue and <= int.MaxValue)
         {
             result = (int)longValue;
+            return true;
+        }
+        return false;
+    }
+
+    private static bool TryReadRangeNumber(JsonObject node, string propertyName, out (decimal Value, string Text) result)
+    {
+        result = default;
+        if (node[propertyName] is not JsonValue value) return false;
+        if (value.TryGetValue<decimal>(out var number))
+        {
+            result = (number, number.ToString(CultureInfo.InvariantCulture));
             return true;
         }
         return false;
