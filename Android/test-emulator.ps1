@@ -30,16 +30,20 @@ function Resolve-AndroidTool([string]$Name) {
 
 $adb = Resolve-AndroidTool "adb"
 
-$ready = @(& $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '^emulator-\d+\s+device
-    $avds = @(& $emulator -list-avds | Where-Object { $_.Trim() })
-    if ($avds.Count -eq 0) { throw "No Android Virtual Device is configured." }
-    if ($avds.Count -gt 1) {
-        throw "Multiple AVDs found. Specify -AvdName. Available: $($avds -join ', ')"
-    }
-    $AvdName = $avds[0]
-}
+$ready = @(& $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '^emulator-\d+\s+device$' })
+$emulator = $null
 
 if ($ready.Count -eq 0) {
+    $emulator = Resolve-AndroidTool "emulator"
+    if (-not $AvdName) {
+        $avds = @(& $emulator -list-avds | Where-Object { $_.Trim() })
+        if ($avds.Count -eq 0) { throw "No Android Virtual Device is configured." }
+        if ($avds.Count -gt 1) {
+            throw "Multiple AVDs found. Specify -AvdName. Available: $($avds -join ', ')"
+        }
+        $AvdName = $avds[0]
+    }
+
     Write-Host "Starting Android emulator '$AvdName'..."
     Start-Process -FilePath $emulator -ArgumentList @("-avd", $AvdName, "-no-boot-anim") | Out-Null
 }
