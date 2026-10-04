@@ -88,3 +88,31 @@ if (duplicateCode != "XPS2006")
     throw new InvalidOperationException($"Duplicate parameter signature must produce XPS2006, got {duplicateCode}.");
 
 Console.WriteLine("AST_BINDING_OVERLOAD_DECLARATION_RULES_OK");
+
+var byRefSymbols = new SymbolTable();
+byRefSymbols.Declare(new VariableSymbol("value", typeof(long)));
+byRefSymbols.Declare(new FunctionSymbol("Touch", typeof(long), [typeof(long)], ByRefParameters: [true]));
+byRefSymbols.Declare(new FunctionSymbol("Read", typeof(long), [typeof(long)], ByRefParameters: [false]));
+
+var byRefVariableBinder = new ExpressionBinder(byRefSymbols);
+_ = byRefVariableBinder.Bind(Parse("Touch(value)"));
+if (byRefVariableBinder.Diagnostics.Count != 0)
+    throw new InvalidOperationException("A variable argument must be valid for a ByRef parameter.");
+
+var byRefLiteralBinder = new ExpressionBinder(byRefSymbols);
+_ = byRefLiteralBinder.Bind(Parse("Touch(1)"));
+if (byRefLiteralBinder.Diagnostics.Count != 1 || byRefLiteralBinder.Diagnostics[0].Code != "XPS2004")
+    throw new InvalidOperationException("A literal argument must not match a ByRef overload.");
+
+var byValLiteralBinder = new ExpressionBinder(byRefSymbols);
+_ = byValLiteralBinder.Bind(Parse("Read(1)"));
+if (byValLiteralBinder.Diagnostics.Count != 0)
+    throw new InvalidOperationException("A literal argument must be valid for a ByVal parameter.");
+
+var modeOverloads = new SymbolTable();
+if (!modeOverloads.TryDeclare(new FunctionSymbol("Mode", typeof(long), [typeof(long)], ByRefParameters: [true])))
+    throw new InvalidOperationException("ByRef overload declaration must succeed.");
+if (!modeOverloads.TryDeclare(new FunctionSymbol("Mode", typeof(long), [typeof(long)], ByRefParameters: [false])))
+    throw new InvalidOperationException("ByVal overload with the same type signature must remain distinct.");
+
+Console.WriteLine("AST_BINDING_BYREF_BYVAL_OK");
