@@ -221,7 +221,7 @@ Object lifecycle and references:
 - [x] Add focused tests for constructor arguments, explicit deletion, aliases, inheritance, `Me`, `Parent`, and property access before marking class migration complete.
 
 Class-oriented language patterns:
-- [ ] Verify fluent/chained method calls on class instances, including continued chains across XPscript line continuation.
+- [x] Verify fluent/chained method calls on class instances, including continued chains across XPscript line continuation.
 - [ ] Treat singleton/lazy-instance patterns as ordinary XPscript module/application-level state plus class construction; do not add NotesSession-, JVM-, SSJS-, or Domino-specific singleton behavior.
 
 
