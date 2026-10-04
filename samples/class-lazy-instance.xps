@@ -1,11 +1,9 @@
-Dim sharedProbe As LazyProbe
-Dim constructionCount As Integer
+Private sharedProbe As LazyProbe
 
 Class LazyProbe
     Public Marker As String
 
     Public Sub New()
-        constructionCount = constructionCount + 1
         Me.Marker = "ready"
     End Sub
 End Class
@@ -18,13 +16,15 @@ Function GetProbe() As LazyProbe
 End Function
 
 Sub Main()
-    Print "BEFORE=" & CStr(constructionCount)
+    Print "BEFORE=" & CStr(sharedProbe Is Nothing)
+
     Dim first As LazyProbe
     Dim second As LazyProbe
     Set first = GetProbe()
-    Print "AFTER-FIRST=" & CStr(constructionCount)
+    first.Marker = "reused"
     Set second = GetProbe()
-    Print "AFTER-SECOND=" & CStr(constructionCount)
+
+    Print "AFTER=" & CStr(sharedProbe Is Nothing)
     Print "FIRST=" & first.Marker
     Print "SECOND=" & second.Marker
 End Sub
