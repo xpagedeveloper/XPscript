@@ -129,6 +129,10 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [ ] Verify XPImage can load packaged application assets on Android.
 - [ ] Verify application asset file reads work on Android and asset mutation attempts fail with runtime error 5.
 - [ ] Build and run a debug APK on Android 11 / API 30.
+- [ ] Allow `UIForm.BootImage` and Image controls to use an `XPImage` source consistently on desktop, Android, server-web and Browser-WASM UIForm paths.
+- [ ] Allow `XPImage.Load` and file read APIs to read packaged application assets.
+- [ ] Enforce application assets as read-only for file mutation APIs and `XPImage.Save`, with a clear runtime error.
+- [ ] Add focused cross-platform regression coverage for XPImage-backed UIForm media and read-only asset I/O.
 - [x] Add Android UIForm regression samples. `samples/android-uiform-regression.xps` is compiler-guarded and built as an Android UIForm APK in Android CI.
 - [x] Add non-device compiler/packaging regression coverage for Android UIForm. `AndroidCompilerProbe` guards the generated host/project contract and Android CI publishes both a focused direct Avalonia Android project and the compiler-generated minimal UIForm APK.
 - [x] Document debug APK deployment. See `knowledge/android-debug-apk-deployment.md` for the XPScript CLI/adb development path and physical-device verification boundary.
