@@ -233,7 +233,7 @@ Class-oriented language patterns:
 - [x] Define procedure symbols.
 - [x] Define class/type symbols.
 - [x] Define property/field symbols.
-- [ ] Integrate compiler-owned runtime/public symbol catalog.
+- [x] Integrate compiler-owned runtime/public symbol catalog.
 - [ ] Implement lexical scopes.
 - [ ] Implement name lookup.
 - [ ] Implement duplicate declaration diagnostics.
