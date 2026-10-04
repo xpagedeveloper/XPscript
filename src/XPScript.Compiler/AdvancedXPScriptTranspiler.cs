@@ -1228,7 +1228,7 @@ internal static class LSForAllRuntime
 
                 // After the first lowering, permit the complete already-lowered
                 // receiver chain and target only its next, not-yet-lowered call.
-                pattern = @"[A-Za-z_]\w*\.Value!(?:\.[A-Za-z_]\w*\([^()]*\)\.Value!)*\.([A-Za-z_]\w*)\s*\(([^()]*)\)(?!\.Value!)";
+                pattern = @"[A-Za-z_]\w*\.Value!(?:\s*\.[A-Za-z_]\w*\([^()]*\)\.Value!)*\s*\.([A-Za-z_]\w*)\s*\(([^()]*)\)(?!\.Value!)";
             }
             while (!text.Equals(previous, StringComparison.Ordinal));
         }
