@@ -1337,7 +1337,7 @@ internal static class LSForAllRuntime
     private string? TransformObjectReferenceTarget(string raw)
     {
         var text = Regex.Replace(raw.Trim(), @"^Me\.", "this.", RegexOptions.IgnoreCase);
-        if (_objectVariables.ContainsKey(text)) return text;
+        if (_objectVariables.ContainsKey(text) || _moduleObjectVariables.ContainsKey(text)) return text;
         if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var current))
         {
             if (current.Fields.TryGetValue(text, out var field) && !field.IsList && _classes.ContainsKey(field.XPScriptType)) return "this." + text;
@@ -1360,6 +1360,7 @@ internal static class LSForAllRuntime
     {
         var text = Regex.Replace(raw.Trim(), @"^Me\.", "this.", RegexOptions.IgnoreCase);
         if (_objectVariables.TryGetValue(text, out var localClass)) return localClass;
+        if (_moduleObjectVariables.TryGetValue(text, out var moduleClass)) return moduleClass;
         if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var current))
         {
             var member = text.StartsWith("this.", StringComparison.OrdinalIgnoreCase) ? text["this.".Length..] : text;
