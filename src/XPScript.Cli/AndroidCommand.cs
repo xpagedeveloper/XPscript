@@ -142,7 +142,7 @@ internal static class AndroidCommand
     {
         const string fallback = "eu.xpscript.debugapp";
         var source = File.ReadAllText(sourcePath);
-        var matches = Regex.Matches(source, @"(?im)^\s*Application\.PackageName\s*=\s*\""(?<value>(?:\"\"|[^\""])*)\""\s*(?:'.*)?$", RegexOptions.CultureInvariant);
+        var matches = Regex.Matches(source, @"(?im)^\s*Application\.PackageName\s*=\s*""(?<value>(?:""""|[^""])*)""\s*(?:'.*)?$", RegexOptions.CultureInvariant);
         if (matches.Count == 0) return fallback;
         var value = matches[^1].Groups["value"].Value.Replace("\"\"", "\"", StringComparison.Ordinal).Trim();
         if (!Regex.IsMatch(value, @"^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$", RegexOptions.CultureInvariant))
