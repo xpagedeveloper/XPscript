@@ -54,6 +54,9 @@ jobs:
       - name: Run focused fluent class regression
         shell: pwsh
         run: ./tests/class-fluent/run-class-fluent.ps1
+      - name: Run focused lazy class instance regression
+        shell: pwsh
+        run: ./tests/class-lazy-instance/run-class-lazy-instance.ps1
       - name: Run focused AST lexer tests first
         run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
       - name: Run deterministic AST compatibility tests first
