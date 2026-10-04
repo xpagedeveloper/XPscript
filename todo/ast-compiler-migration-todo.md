@@ -229,7 +229,7 @@ Class-oriented language patterns:
 
 - [x] Define symbol base model.
 - [x] Define variable/local symbols.
-- [ ] Define parameter symbols.
+- [x] Define parameter symbols.
 - [ ] Define procedure symbols.
 - [ ] Define class/type symbols.
 - [ ] Define property/field symbols.
