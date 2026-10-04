@@ -206,3 +206,47 @@ if (subReturnBinder.Diagnostics.Count != 1 || subReturnBinder.Diagnostics[0].Cod
     throw new InvalidOperationException("Sub returning a value must produce exactly one XPS2001 diagnostic.");
 
 Console.WriteLine("AST_BINDING_RETURN_TYPE_OK");
+
+
+var controlFlowSymbols = new SymbolTable();
+controlFlowSymbols.Declare(new VariableSymbol("number", typeof(long)));
+
+var ifParser = new StatementParser("If True Then\nnumber = 1\nEnd If");
+var ifSyntax = ifParser.ParseStatement();
+if (ifParser.Diagnostics.Count != 0)
+    throw new InvalidOperationException($"Control-flow If fixture must parse without diagnostics: {string.Join("; ", ifParser.Diagnostics.Select(d => d.Message))}.");
+var ifBinder = new StatementBinder(controlFlowSymbols);
+var boundIf = ifBinder.Bind(ifSyntax);
+if (ifBinder.Diagnostics.Count != 0)
+    throw new InvalidOperationException($"Boolean If must bind without diagnostics: {string.Join("; ", ifBinder.Diagnostics.Select(d => d.Message))}.");
+if (boundIf is not BoundIfStatement typedIf || typedIf.ThenStatements.Count != 1 || typedIf.ThenStatements[0] is not BoundAssignmentStatement)
+    throw new InvalidOperationException("If binding must produce a bound If with its bound assignment body.");
+
+var invalidIfParser = new StatementParser("If 1 Then\nnumber = 1\nEnd If");
+var invalidIfSyntax = invalidIfParser.ParseStatement();
+if (invalidIfParser.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Non-Boolean If fixture must parse without diagnostics.");
+var invalidIfBinder = new StatementBinder(controlFlowSymbols);
+_ = invalidIfBinder.Bind(invalidIfSyntax);
+if (invalidIfBinder.Diagnostics.Count != 1 || invalidIfBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Non-Boolean If condition must produce exactly one XPS2001 diagnostic.");
+
+var whileParser = new StatementParser("While True\nnumber = 1\nWend");
+var whileSyntax = whileParser.ParseStatement();
+if (whileParser.Diagnostics.Count != 0)
+    throw new InvalidOperationException("While fixture must parse without diagnostics.");
+var whileBinder = new StatementBinder(controlFlowSymbols);
+var boundWhile = whileBinder.Bind(whileSyntax);
+if (whileBinder.Diagnostics.Count != 0 || boundWhile is not BoundWhileStatement)
+    throw new InvalidOperationException("Boolean While must produce a bound While statement without diagnostics.");
+
+var selectParser = new StatementParser("Select Case number\nCase 1\nnumber = 1\nEnd Select");
+var selectSyntax = selectParser.ParseStatement();
+if (selectParser.Diagnostics.Count != 0)
+    throw new InvalidOperationException($"Select Case fixture must parse without diagnostics: {string.Join("; ", selectParser.Diagnostics.Select(d => d.Message))}.");
+var selectBinder = new StatementBinder(controlFlowSymbols);
+var boundSelect = selectBinder.Bind(selectSyntax);
+if (selectBinder.Diagnostics.Count != 0 || boundSelect is not BoundSelectStatement typedSelect || typedSelect.Cases.Count != 1)
+    throw new InvalidOperationException("Select Case must produce a bound Select statement without diagnostics.");
+
+Console.WriteLine("AST_BINDING_CONTROL_FLOW_OK");
