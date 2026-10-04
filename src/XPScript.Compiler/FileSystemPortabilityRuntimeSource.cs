@@ -117,7 +117,6 @@ internal static class XPScriptFileSystemRuntime
     public static FileStream OpenBinaryStream(string path)
     {
         EnsureWritablePath(path);
-    {
         if (!OperatingSystem.IsMacOS())
         {
             return new FileStream(path, new FileStreamOptions
