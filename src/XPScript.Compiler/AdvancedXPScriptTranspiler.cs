@@ -246,6 +246,28 @@ internal static class LSForAllRuntime
         _moduleObjectVariables.Clear();
         ClassInfo? current = null;
 
+        // Pass 1: collect every class symbol so module-level object declarations
+        // can reference classes declared later in the source.
+        foreach (var raw in lines)
+        {
+            var line = StripComment(raw).Trim();
+            var classMatch = Regex.Match(
+                line,
+                @"^(?:(Public|Private)\s+)?Class\s+([A-Za-z_]\w*)(?:\s+Extend\s+([A-Za-z_]\w*))?\s*$",
+                RegexOptions.IgnoreCase);
+            if (!classMatch.Success)
+                continue;
+
+            var info = new ClassInfo
+            {
+                Name = classMatch.Groups[2].Value,
+                BaseName = string.IsNullOrWhiteSpace(classMatch.Groups[3].Value) ? null : classMatch.Groups[3].Value,
+                Visibility = NormalizeVisibility(classMatch.Groups[1].Value, "private")
+            };
+            _classes[info.Name] = info;
+        }
+
+        // Pass 2: populate class metadata and module-level object symbols.
         foreach (var raw in lines)
         {
             var line = StripComment(raw).Trim();
@@ -259,14 +281,7 @@ internal static class LSForAllRuntime
 
             if (classMatch.Success)
             {
-                var info = new ClassInfo
-                {
-                    Name = classMatch.Groups[2].Value,
-                    BaseName = string.IsNullOrWhiteSpace(classMatch.Groups[3].Value) ? null : classMatch.Groups[3].Value,
-                    Visibility = NormalizeVisibility(classMatch.Groups[1].Value, "private")
-                };
-                _classes[info.Name] = info;
-                current = info;
+                current = _classes[classMatch.Groups[2].Value];
                 continue;
             }
 
