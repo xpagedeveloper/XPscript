@@ -114,8 +114,8 @@ internal static class XPCrossPlatformRuntime
 
             var directoryPart = Path.GetDirectoryName(raw);
             var directory = string.IsNullOrEmpty(directoryPart)
-                ? Environment.CurrentDirectory
-                : Path.GetFullPath(directoryPart);
+                ? XPScriptFileSystemRuntime.ResolvePath(".")
+                : XPScriptFileSystemRuntime.ResolvePath(directoryPart);
             var mask = Path.GetFileName(raw);
             if (string.IsNullOrEmpty(mask)) mask = "*";
             if (!Directory.Exists(directory))
@@ -269,14 +269,14 @@ internal static class XPCrossPlatformRuntime
         string mask;
         if (maskValue is not null)
         {
-            root = Path.GetFullPath(raw);
+            root = XPScriptFileSystemRuntime.ResolvePath(raw);
             mask = XPScriptRuntime.CStr(maskValue);
             if (string.IsNullOrWhiteSpace(mask)) mask = "*";
         }
         else if (raw.IndexOfAny(['*', '?']) >= 0)
         {
             var directoryPart = Path.GetDirectoryName(raw);
-            root = Path.GetFullPath(string.IsNullOrEmpty(directoryPart) ? "." : directoryPart);
+            root = XPScriptFileSystemRuntime.ResolvePath(string.IsNullOrEmpty(directoryPart) ? "." : directoryPart);
             mask = Path.GetFileName(raw);
             if (string.IsNullOrWhiteSpace(mask)) mask = "*";
         }
