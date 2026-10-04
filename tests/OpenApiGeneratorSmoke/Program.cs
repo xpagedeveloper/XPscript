@@ -2237,11 +2237,21 @@ try
         digitalOceanServerPath,
         CompilerDriver.CurrentRuntimeIdentifier(),
         [root]);
-    _ = new XPScriptTranspiler().TranspileRestricted(
-        digitalOceanClient.Source + "\nSub Main()\nEnd Sub\n",
-        digitalOceanClientPath,
-        CompilerDriver.CurrentRuntimeIdentifier(),
-        [root]);
+    try
+    {
+        _ = new XPScriptTranspiler().TranspileRestricted(
+            digitalOceanClient.Source + "\nSub Main()\nEnd Sub\n",
+            digitalOceanClientPath,
+            CompilerDriver.CurrentRuntimeIdentifier(),
+            [root]);
+    }
+    catch (CompilerException ex) when (ex.GeneratedDiagnostics.Count > 0)
+    {
+        var diagnostic = ex.GeneratedDiagnostics[0];
+        var sourceLines = digitalOceanClient.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+        var line = diagnostic.Line > 0 && diagnostic.Line <= sourceLines.Length ? sourceLines[diagnostic.Line - 1] : "<line unavailable>";
+        throw new Exception($"DigitalOcean client compile failed at generated line {diagnostic.Line}, column {diagnostic.Position}: {line}", ex);
+    }
     Console.WriteLine("OPENAPI-DIGITALOCEAN-SERVER-CLIENT-COMPILE=OK");
 
     var openApi32ServerPath = Path.Combine(root, "openapi32-server.xps");
