@@ -257,7 +257,7 @@ Class-oriented language patterns:
 - [x] Bind control flow.
 - [x] Define conversion rules.
 - [x] Define Variant/dynamic semantics explicitly.
-- [ ] Define Object semantics explicitly.
+- [x] Define Object semantics explicitly.
 - [ ] Define Null/Empty behavior needed by XPscript.
 - [ ] Define array/list typing behavior.
 - [ ] Move applicable type diagnostics from Roslyn-derived failures into XPscript semantic diagnostics.
