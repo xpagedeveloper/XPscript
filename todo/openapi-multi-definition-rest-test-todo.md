@@ -9,8 +9,10 @@ For each definition:
 4. Generate the XPscript REST client from the same complete definition.
 5. Verify generation completes and produces real models and operations from that definition.
 6. Compile/transpile an appropriate generated client regression under the same rule.
-7. If anything fails, follow `knowledge/test-failure-feedback-rule.md`: add or move a small deterministic regression so the failing behavior runs first, fix it, rerun the focused regression, then rerun the definition test.
-8. Mark the definition complete only when both REST server and REST client verification pass.
+7. If REST server or REST client import/generation fails because the OpenAPI definition contains unsupported or invalid input, the importer/generator must return a clear error message that identifies the source line and the OpenAPI property/field that could not be handled. Do not accept a generic parse/generation failure without actionable location/property information.
+8. Add a focused regression that verifies the diagnostic includes the relevant line and property/field for every newly discovered import/generation failure.
+9. If anything fails, follow `knowledge/test-failure-feedback-rule.md`: add or move a small deterministic regression so the failing behavior runs first, fix it, rerun the focused regression, then rerun the definition test.
+10. Mark the definition complete only when both REST server and REST client verification pass.
 
 ## Definitions
 
