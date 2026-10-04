@@ -224,6 +224,39 @@ if (!modelVariantConflictAllOfClient.Source.Contains("Public Spec As Variant", S
     throw new Exception("OpenAPI client model/Variant allOf regression must fall back to Variant.");
 Console.WriteLine("OPENAPI-CLIENT-MODEL-VARIANT-ALLOF=OK");
 
+const string responseSchemaReachabilityClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Response schema reachability regression", "version": "1.0" },
+  "paths": {
+    "/item": {
+      "get": {
+        "operationId": "getItem",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Item": { "type": "object", "properties": { "child": { "$ref": "#/components/schemas/Child" } } },
+      "Child": { "type": "object", "properties": { "name": { "type": "string" } } },
+      "Unrelated": { "type": "object", "description": "UNRELATED_RESPONSE_SCHEMA_SENTINEL" }
+    }
+  }
+}
+""";
+var responseSchemaReachabilityClient = new XpsOpenApiClientGenerator().Generate(responseSchemaReachabilityClientOpenApi, "response-schema-reachability-client.json");
+if (responseSchemaReachabilityClient.Source.Contains("UNRELATED_RESPONSE_SCHEMA_SENTINEL", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client response validation must not embed unrelated component schemas.");
+if (!responseSchemaReachabilityClient.Source.Contains("#/$defs/Child", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client response validation must retain transitively referenced component schemas.");
+Console.WriteLine("OPENAPI-CLIENT-RESPONSE-SCHEMA-REACHABILITY=OK");
+
 var digitalOceanPath = Path.Combine(AppContext.BaseDirectory, "fixtures", "digitalocean.yaml");
 var digitalOceanSpecification = File.ReadAllText(digitalOceanPath);
 var digitalOceanServer = new XpsOpenApiGenerator().Generate(digitalOceanSpecification, "digitalocean.yaml");
