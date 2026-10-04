@@ -232,7 +232,9 @@ foreach (var expected in new[]
     "Environment.SpecialFolder.LocalApplicationData), \"assets\"",
     "Path.Combine(AppContext.BaseDirectory, \"assets\")",
     "normalized.StartsWith(\"assets/\"",
-    "Application assets are read-only."
+    "Application assets are read-only.",
+    "Application asset path escapes the assets directory.",
+    "if (!IsAssetPath(resolvedAsset))"
 })
 {
     if (!fileSystemRuntime.Contains(expected, StringComparison.Ordinal))
