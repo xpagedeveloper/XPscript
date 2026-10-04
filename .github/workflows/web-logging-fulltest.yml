@@ -4,14 +4,12 @@ on:
   pull_request:
     paths:
       - "src/XPScript.Web.*/**"
-      - "src/XPScript.Compiler/**"
       - "tests/WebRuntimeSmoke/**"
       - ".github/workflows/web-logging-fulltest.yml"
   push:
     branches: [main]
     paths:
       - "src/XPScript.Web.*/**"
-      - "src/XPScript.Compiler/**"
       - "tests/WebRuntimeSmoke/**"
 
 permissions:
