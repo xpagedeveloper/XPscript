@@ -107,6 +107,15 @@ internal sealed class XPImage : System.IDisposable
 
     public XPImage Clone() => new((ImageMagick.MagickImage)_image.Clone(), _format);
 
+    public static implicit operator string(XPImage image)
+    {
+        System.ArgumentNullException.ThrowIfNull(image);
+        var bytes = image.ToBytes("png");
+        if (bytes.LongLength is < 1 or > 32L * 1024 * 1024)
+            throw new XPScriptRuntimeException(5, "UIForm image source must contain between 1 byte and 32 MiB.");
+        return "data:image/png;base64," + System.Convert.ToBase64String(bytes);
+    }
+
     public void Resize(int width, int height)
     {
         ValidateDimensions(width, height);
@@ -702,6 +711,7 @@ internal sealed class XPImage : System.IDisposable
             throw new System.ArgumentException("XPImage output path must be relative to the application directory.", nameof(path));
         var root = XPScriptFileSystemRuntime.ResolvePath(".");
         var resolved = XPScriptFileSystemRuntime.ResolvePath(path);
+        XPScriptFileSystemRuntime.EnsureWritablePath(resolved);
         var relative = System.IO.Path.GetRelativePath(root, resolved);
         if (relative == ".." || relative.StartsWith(".." + System.IO.Path.DirectorySeparatorChar, System.StringComparison.Ordinal) || System.IO.Path.IsPathRooted(relative))
             throw new System.ArgumentException("XPImage output path must remain inside the application directory.", nameof(path));
