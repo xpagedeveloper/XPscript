@@ -23,14 +23,23 @@ Sub Index()
 
     Call data.Set("existing", "Loaded from JSON")
     Call form.BindData(data)
+    Call form.AddTab("main", "Main")
+    Call form.AddTab("details", "Details")
     Call form.AddTextField("existing", "Existing")
     Call form.AddTextField("missing", "Missing")
+    Call form.SetFieldTab("existing", "main")
+    Call form.SetFieldTab("missing", "details")
+    Call form.AddButtonCallback("switch", "Show details", "SwitchTab")
 
     result = form.ShowDialog()
     If result = "OK" Then
         Response.ContentType = "application/json; charset=utf-8"
         Response.Write(data.Stringify())
     End If
+End Sub
+
+Sub SwitchTab(evt As Variant)
+    Call evt.Form.SetActiveTab("details")
 End Sub
 """);
 
@@ -63,6 +72,19 @@ try
         if (!body.Contains(">Contact form</h1>", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not render title.");
         if (!body.Contains("name=\"existing\" value=\"Loaded from JSON\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not load existing JSON value.");
         if (!body.Contains("name=\"missing\" value=\"\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not render missing JSON field as empty.");
+        if (!body.Contains("data-xps-tab=\"main\"", StringComparison.Ordinal) || !body.Contains("data-xps-tab=\"details\"", StringComparison.Ordinal))
+            throw new Exception("UIForm Kestrel GET did not render tab controls.");
+        if (!body.Contains("if(s.activeTab)", StringComparison.Ordinal))
+            throw new Exception("UIForm Kestrel GET reactive callback script does not apply activeTab.");
+    }
+
+    using (var content = new StringContent("existing=Loaded+from+JSON&missing=&__xps_uiform_event=button%3Aswitch&__xps_uiform_event_value=", Encoding.UTF8, "application/x-www-form-urlencoded"))
+    using (var response = await client.PostAsync("/form.xps", content))
+    {
+        if ((int)response.StatusCode != 200) throw new Exception($"UIForm Kestrel callback POST expected 200, got {(int)response.StatusCode}.");
+        var body = await response.Content.ReadAsStringAsync();
+        if (!body.Contains("\"activeTab\":\"details\"", StringComparison.Ordinal))
+            throw new Exception("UIForm Kestrel callback did not return the programmatically selected active tab.");
     }
 
     using (var content = new StringContent("existing=Changed+value&missing=Created+by+user", Encoding.UTF8, "application/x-www-form-urlencoded"))
