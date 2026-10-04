@@ -43,3 +43,34 @@ if (missingMemberBinder.Diagnostics.Count != 1 || missingMemberBinder.Diagnostic
     throw new InvalidOperationException("Missing member must produce exactly one XPS2009 diagnostic.");
 
 Console.WriteLine("AST_BINDING_UNKNOWN_MEMBER_OK");
+
+var overloadSymbols = new SymbolTable();
+overloadSymbols.Declare(new FunctionSymbol("Pick", typeof(string), [typeof(long)]));
+overloadSymbols.Declare(new FunctionSymbol("Pick", typeof(long), [typeof(string)]));
+
+var overloadBinder = new ExpressionBinder(overloadSymbols);
+var overloadCall = overloadBinder.Bind(Parse("Pick(1)"));
+if (overloadBinder.Diagnostics.Count != 0)
+    throw new InvalidOperationException($"Expected exact overload binding to succeed, got: {string.Join("; ", overloadBinder.Diagnostics.Select(d => d.Message))}.");
+if (overloadCall is not BoundCallExpression boundCall || boundCall.Function.ParameterTypes.Count != 1 || boundCall.Function.ParameterTypes[0] != typeof(long))
+    throw new InvalidOperationException("Call binding did not select the exact Integer/Long overload.");
+
+Console.WriteLine("AST_BINDING_OVERLOAD_OK");
+
+var noMatchBinder = new ExpressionBinder(overloadSymbols);
+_ = noMatchBinder.Bind(Parse("Pick(True)"));
+if (noMatchBinder.Diagnostics.Count != 1 || noMatchBinder.Diagnostics[0].Code != "XPS2004")
+    throw new InvalidOperationException("No matching overload must produce exactly one XPS2004 diagnostic.");
+
+Console.WriteLine("AST_BINDING_NO_MATCHING_OVERLOAD_OK");
+
+var ambiguousSymbols = new SymbolTable();
+ambiguousSymbols.Declare(new FunctionSymbol("Choose", typeof(long), [typeof(long)]));
+ambiguousSymbols.Declare(new FunctionSymbol("Choose", typeof(string), [typeof(long)]));
+
+var ambiguousBinder = new ExpressionBinder(ambiguousSymbols);
+_ = ambiguousBinder.Bind(Parse("Choose(1)"));
+if (ambiguousBinder.Diagnostics.Count != 1 || ambiguousBinder.Diagnostics[0].Code != "XPS2005")
+    throw new InvalidOperationException("Ambiguous overload must produce exactly one XPS2005 diagnostic.");
+
+Console.WriteLine("AST_BINDING_AMBIGUOUS_OVERLOAD_OK");
