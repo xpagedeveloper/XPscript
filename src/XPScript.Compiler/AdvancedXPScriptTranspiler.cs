@@ -1026,6 +1026,17 @@ internal static class LSForAllRuntime
             return true;
         }
 
+        // Module-level object references are persistent script state, not procedure locals.
+        // Resolve them directly from the declaration metadata so Set semantics do not depend
+        // on the procedure-local object symbol table.
+        if (_moduleObjectVariables.TryGetValue(rhsRaw, out var moduleClass))
+        {
+            if (!moduleClass.Equals(targetClass, StringComparison.OrdinalIgnoreCase))
+                throw new CompilerException($"Cannot assign object reference of type {moduleClass} to {targetClass}.");
+            Write(sb, $"{lhs} = {rhsRaw};");
+            return true;
+        }
+
         var rhs = TransformObjectReferenceTarget(rhsRaw);
         if (rhs is null) throw new CompilerException("Set requires Nothing, New Class(...), typed XPJson.ToObject(...), Me, or another object reference.");
         Write(sb, $"{lhs} = {rhs};"); return true;
