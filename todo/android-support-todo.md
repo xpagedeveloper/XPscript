@@ -130,6 +130,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [ ] Verify application asset file reads work on Android and asset mutation attempts fail with runtime error 5.
 - [x] Build and run a debug APK on Android 11 / API 30. (Verified in CI on an Android 11 / API 30 x86_64 emulator: generated APK installed, launched and the expected XPScript log output was observed.)
 - [ ] Allow `UIForm.BootImage` and Image controls to use an `XPImage` source consistently on desktop, Android, server-web and Browser-WASM UIForm paths.
+- [ ] Preserve platform-appropriate UIForm media sources alongside assets: desktop Windows/Linux/macOS may load local filesystem images and HTTP/HTTPS; Android may load accessible local files and HTTP/HTTPS; server-web and Browser-WASM may load web assets and HTTP/HTTPS without exposing arbitrary server/user filesystem paths.
 - [ ] Allow `XPImage.Load` and every supported read-only file operation (input/binary reads, existence/length/date/attributes, enumeration and other file-inspection APIs) to read packaged application assets on every platform where that operation is supported.
 - [ ] Enforce application assets as read-only for file mutation APIs and `XPImage.Save`, with a clear runtime error.
 - [ ] Add focused cross-platform regression coverage for XPImage-backed UIForm media and read-only asset I/O.
