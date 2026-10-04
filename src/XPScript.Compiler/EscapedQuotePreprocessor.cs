@@ -65,7 +65,7 @@ internal sealed class EscapedQuotePreprocessor
             }
 
             output.Append(c);
-            if (!inString && c is '\r' or '\n') lineStart = true;
+            if (!inString && (c is '\r' or '\n')) lineStart = true;
         }
 
         return output.ToString();
