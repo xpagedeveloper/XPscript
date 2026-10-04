@@ -23,6 +23,9 @@ if ($LASTEXITCODE -ne 0) {
 $text = & $output 2>&1
 if ($LASTEXITCODE -ne 0) { throw "Program failed: class-fluent-chaining.xps" }
 $joined = ($text -join [Environment]::NewLine)
+Write-Host "=== Fluent runtime output ==="
+Write-Host $joined
+Write-Host "=== End fluent runtime output ==="
 
 if ($joined -notmatch "(?m)^CHAIN=ABC\s*$") { throw "Single-line fluent chain failed." }
 if ($joined -notmatch "(?m)^CONTINUED=ABCDE\s*$") { throw "Line-continued fluent chain failed." }
