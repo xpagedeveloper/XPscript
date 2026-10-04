@@ -60,6 +60,11 @@ jobs:
           $fontSource = $fontCandidates | Where-Object { Test-Path $_ -PathType Leaf } | Select-Object -First 1
           if (-not $fontSource) { throw 'XPImage FullTest could not locate its platform test font.' }
           Copy-Item $fontSource ./samples/xpimage-test-font.ttf -Force
+          New-Item -ItemType Directory -Force ./samples/assets | Out-Null
+          [IO.File]::WriteAllBytes(
+            (Join-Path (Resolve-Path './samples/assets').Path 'xpimage-asset.png'),
+            [Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=')
+          )
           $compileOutput = dotnet $compiler ./samples/xpimage-runtime.xps -o ./out/xpimage/xpimage-runtime --runtime=false --debug 2>&1
           $compileExitCode = $LASTEXITCODE
           $compileOutput | ForEach-Object { Write-Host $_ }
