@@ -24,6 +24,9 @@ jobs:
           dotnet-version: '10.0.x'
 
       # Keep the smallest Android regressions first.
+      - name: Run UIForm media target policy probe first
+        run: dotnet run --project ./tests/UIFormMediaPolicyProbe/UIFormMediaPolicyProbe.csproj -c Release
+
       - name: Run XPImage asset routing probe first
         run: dotnet run --project ./tests/XPImageAssetProbe/XPImageAssetProbe.csproj -c Release
 
