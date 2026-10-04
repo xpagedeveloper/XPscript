@@ -88,6 +88,22 @@ internal static class XPScriptFileSystemRuntime
         }
     }
 
+    public static bool IsAssetPath(string path)
+    {
+        var full = Path.GetFullPath(path);
+        var assetRoot = Path.GetFullPath(Path.Combine(_scriptDirectory, "assets"));
+        if (full.Equals(assetRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            return true;
+        var prefix = assetRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        return full.StartsWith(prefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    }
+
+    public static void EnsureWritablePath(string path)
+    {
+        if (IsAssetPath(path))
+            throw new XPScriptRuntimeException(5, "Application assets are read-only.");
+    }
+
     public static string NewLine => Environment.NewLine;
 
     public static FileStream OpenInputStream(string path) => new(path, new FileStreamOptions
@@ -97,14 +113,20 @@ internal static class XPScriptFileSystemRuntime
         Share = FileShare.ReadWrite
     });
 
-    public static FileStream OpenOutputStream(string path, bool append) => new(path, new FileStreamOptions
+    public static FileStream OpenOutputStream(string path, bool append)
+    {
+        EnsureWritablePath(path);
+        return new FileStream(path, new FileStreamOptions
     {
         Mode = append ? FileMode.Append : FileMode.Create,
         Access = FileAccess.Write,
         Share = FileShare.Read
-    });
+        });
+    }
 
     public static FileStream OpenBinaryStream(string path)
+    {
+        EnsureWritablePath(path);
     {
         if (!OperatingSystem.IsMacOS())
         {
@@ -175,6 +197,7 @@ internal static class XPScriptFileSystemRuntime
     public static void SetFileAttr(object? value, int attributesValue)
     {
         var path = RequireExistingPath(value);
+        EnsureWritablePath(path);
         var attributes = (FileAttributes)attributesValue;
         if (!OperatingSystem.IsWindows() && attributes.HasFlag(FileAttributes.Hidden) && !IsDotHidden(path))
             throw new XPScriptRuntimeException(5,
@@ -190,6 +213,7 @@ internal static class XPScriptFileSystemRuntime
     {
         var source = RequireExistingFile(sourceValue);
         var destination = ResolvePath(destinationValue);
+        EnsureWritablePath(destination);
         EnsureDifferentPaths(source, destination, "FileCopy");
         RejectLinkedPath(source, "FileCopy", "source");
         RejectLinkedPath(destination, "FileCopy", "destination");
@@ -292,6 +316,7 @@ internal static class XPScriptFileSystemRuntime
     public static void DeleteFile(object? value)
     {
         var path = ResolvePath(value);
+        EnsureWritablePath(path);
         if (!File.Exists(path)) return;
         RejectLinkedPath(path, "Kill", "target");
         try
@@ -311,7 +336,9 @@ internal static class XPScriptFileSystemRuntime
     public static void MoveFile(object? sourceValue, object? destinationValue, bool overwrite = true)
     {
         var source = RequireExistingFile(sourceValue);
+        EnsureWritablePath(source);
         var destination = ResolvePath(destinationValue);
+        EnsureWritablePath(destination);
         EnsureDifferentPaths(source, destination, "Name");
         RejectLinkedPath(source, "Name", "source");
         RejectLinkedPath(destination, "Name", "destination");
@@ -331,11 +358,17 @@ internal static class XPScriptFileSystemRuntime
         }
     }
 
-    public static void MakeDirectory(object? value) => Directory.CreateDirectory(ResolvePath(value));
+    public static void MakeDirectory(object? value)
+    {
+        var path = ResolvePath(value);
+        EnsureWritablePath(path);
+        Directory.CreateDirectory(path);
+    }
 
     public static void RemoveDirectory(object? value)
     {
         var path = ResolvePath(value);
+        EnsureWritablePath(path);
         RejectLinkedPath(path, "RmDir", "target");
         RejectLinkedPath(path, "RmDir", "target");
         Directory.Delete(path, recursive: false);
