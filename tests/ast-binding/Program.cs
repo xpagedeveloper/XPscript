@@ -366,3 +366,58 @@ if (invalidObjectAssignmentBinder.Diagnostics.Count != 1 || invalidObjectAssignm
     throw new InvalidOperationException("Scalar assignment to Object must produce exactly one XPS2001 diagnostic.");
 
 Console.WriteLine("AST_BINDING_OBJECT_SEMANTICS_OK");
+
+
+var emptyLiteralBinder = new ExpressionBinder();
+var boundEmptyLiteral = emptyLiteralBinder.Bind(Parse("Empty"));
+if (emptyLiteralBinder.Diagnostics.Count != 0 || boundEmptyLiteral.SemanticType != XpTypeSymbol.Empty || boundEmptyLiteral is not BoundLiteralExpression { Value: null })
+    throw new InvalidOperationException("EMPTY must bind as the distinct uninitialized Variant state.");
+
+var nullLiteralBinder = new ExpressionBinder();
+var boundNullLiteral = nullLiteralBinder.Bind(Parse("Null"));
+if (nullLiteralBinder.Diagnostics.Count != 0 || boundNullLiteral.SemanticType != XpTypeSymbol.Null || boundNullLiteral is not BoundLiteralExpression { Value: DBNull })
+    throw new InvalidOperationException("NULL must bind as the distinct explicit Variant NULL state.");
+
+var nothingLiteralBinder = new ExpressionBinder();
+var boundNothingLiteral = nothingLiteralBinder.Bind(Parse("Nothing"));
+if (nothingLiteralBinder.Diagnostics.Count != 0 || boundNothingLiteral.SemanticType != XpTypeSymbol.Nothing || boundNothingLiteral is not BoundLiteralExpression { Value: null })
+    throw new InvalidOperationException("NOTHING must bind as a distinct object-reference state.");
+
+var specialValueSymbols = new SymbolTable();
+specialValueSymbols.Declare(new VariableSymbol("variantValue", typeof(object), XpTypeSymbol.Variant));
+specialValueSymbols.Declare(new VariableSymbol("objectValue", typeof(object), XpTypeSymbol.Object));
+specialValueSymbols.Declare(new VariableSymbol("typedValue", typeof(long)));
+
+foreach (var literal in new[] { "Empty", "Null" })
+{
+    var parser = new StatementParser($"variantValue = {literal}");
+    var syntax = parser.ParseStatement();
+    var binder = new StatementBinder(specialValueSymbols);
+    var bound = binder.Bind(syntax);
+    if (parser.Diagnostics.Count != 0 || binder.Diagnostics.Count != 0 || bound is not BoundAssignmentStatement { Expression: BoundConversionExpression })
+        throw new InvalidOperationException($"{literal} must be assignable to Variant through an explicit semantic conversion.");
+}
+
+var nothingObjectParser = new StatementParser("Set objectValue = Nothing");
+var nothingObjectSyntax = nothingObjectParser.ParseStatement();
+var nothingObjectBinder = new StatementBinder(specialValueSymbols);
+var boundNothingObject = nothingObjectBinder.Bind(nothingObjectSyntax);
+if (nothingObjectParser.Diagnostics.Count != 0 || nothingObjectBinder.Diagnostics.Count != 0 ||
+    boundNothingObject is not BoundAssignmentStatement { IsSet: true, Expression: BoundConversionExpression { Conversion.Kind: ConversionKind.NothingToObject } })
+    throw new InvalidOperationException("Set Object = Nothing must bind as an explicit object-reference clearing conversion.");
+
+var nothingVariantParser = new StatementParser("variantValue = Nothing");
+var nothingVariantSyntax = nothingVariantParser.ParseStatement();
+var nothingVariantBinder = new StatementBinder(specialValueSymbols);
+_ = nothingVariantBinder.Bind(nothingVariantSyntax);
+if (nothingVariantBinder.Diagnostics.Count != 1 || nothingVariantBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Variant = Nothing must remain invalid.");
+
+var nullScalarParser = new StatementParser("typedValue = Null");
+var nullScalarSyntax = nullScalarParser.ParseStatement();
+var nullScalarBinder = new StatementBinder(specialValueSymbols);
+_ = nullScalarBinder.Bind(nullScalarSyntax);
+if (nullScalarBinder.Diagnostics.Count != 1 || nullScalarBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("NULL must not be assignable to a typed scalar.");
+
+Console.WriteLine("AST_BINDING_NULL_EMPTY_NOTHING_SEMANTICS_OK");
