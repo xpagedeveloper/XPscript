@@ -566,7 +566,11 @@ public sealed class XpsOpenApiGenerator
         return joined;
     }
 
-    private static bool IsDeclarationReserved(string identifier) => identifier.StartsWith("__", StringComparison.OrdinalIgnoreCase) || LexicalKeywords.Contains(identifier);
+    private static bool IsDeclarationReserved(string identifier) =>
+        identifier.StartsWith("__", StringComparison.OrdinalIgnoreCase) ||
+        LexicalKeywords.Contains(identifier) ||
+        identifier.Equals("Application", StringComparison.OrdinalIgnoreCase) ||
+        identifier.Equals("Body", StringComparison.OrdinalIgnoreCase);
 
     private static string Pascalize(string value) => value.Length == 0 ? value : char.ToUpperInvariant(value[0]) + value[1..];
 
