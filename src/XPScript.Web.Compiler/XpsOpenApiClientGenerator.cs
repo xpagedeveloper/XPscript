@@ -23,7 +23,7 @@ public sealed class XpsOpenApiClientGenerator
     }
     public XpsOpenApiClientGenerationResult Generate(string specification, string? sourceName = null, string? className = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(specification); var root = ParseDocument(specification);
+        ArgumentException.ThrowIfNullOrWhiteSpace(specification); XpsOpenApiSchema.ValidateExternalReferences(specification, sourceName); var root = ParseDocument(specification);
         var normalized = XpsOpenApiSchema.NormalizeDocument(root); var version = normalized.Version;
         using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version); var apiName = ResolveClassName(root, sourceName, className); var modelSet = CollectModels(root); using var typeNameScope = XpsOpenApiSchema.UseReferenceTypeNames(modelSet.TypeNames); var models = modelSet.Models; var securitySchemes = CollectSecuritySchemes(root); var operations = CollectOperations(root); AssignGeneratedApiMemberNames(operations, securitySchemes);
         if (operations.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI document does not contain any supported path operations.");
