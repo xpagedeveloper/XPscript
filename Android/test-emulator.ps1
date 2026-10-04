@@ -71,7 +71,7 @@ Write-Host "Installing $ApkPath"
 if ($LASTEXITCODE -ne 0) { throw "adb install failed with exit code $LASTEXITCODE." }
 
 & $adb logcat -c
-& $adb shell monkey -p eu.xpscript.debugapp -c android.intent.category.LAUNCHER 1 | Out-Host
+& $adb shell monkey -p eu.xpscript.app -c android.intent.category.LAUNCHER 1 | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "Android application launch failed with exit code $LASTEXITCODE." }
 
 $deadline = (Get-Date).AddSeconds($LogTimeoutSeconds)
