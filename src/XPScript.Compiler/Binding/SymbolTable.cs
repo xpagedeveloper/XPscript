@@ -56,6 +56,17 @@ public sealed class SymbolTable
 
     private readonly Dictionary<string, List<Symbol>> _symbols = new(StringComparer.OrdinalIgnoreCase);
 
+    public bool TryDeclare(Symbol symbol)
+    {
+        if (_symbols.TryGetValue(symbol.Name, out var existing) &&
+            existing.Count > 0 &&
+            symbol is not FunctionSymbol)
+            return false;
+
+        Declare(symbol);
+        return true;
+    }
+
     public void Declare(Symbol symbol)
     {
         if (!_symbols.TryGetValue(symbol.Name, out var symbols))
