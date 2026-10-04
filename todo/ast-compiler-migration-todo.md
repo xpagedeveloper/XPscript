@@ -246,14 +246,14 @@ Class-oriented language patterns:
 
 ## Phase 7: Bound tree and types
 
-- [ ] Define `BoundNode` hierarchy separate from syntax.
-- [ ] Bind literals to XPscript types.
-- [ ] Bind names to symbols.
-- [ ] Bind unary operators.
-- [ ] Bind binary operators.
-- [ ] Bind calls.
-- [ ] Bind member access.
-- [ ] Bind assignments.
+- [x] Define `BoundNode` hierarchy separate from syntax.
+- [x] Bind literals to XPscript types.
+- [x] Bind names to symbols.
+- [x] Bind unary operators.
+- [x] Bind binary operators.
+- [x] Bind calls.
+- [x] Bind member access.
+- [x] Bind assignments.
 - [ ] Bind control flow.
 - [ ] Define conversion rules.
 - [ ] Define Variant/dynamic semantics explicitly.
