@@ -222,7 +222,7 @@ Object lifecycle and references:
 
 Class-oriented language patterns:
 - [x] Verify fluent/chained method calls on class instances, including continued chains across XPscript line continuation.
-- [ ] Treat singleton/lazy-instance patterns as ordinary XPscript module/application-level state plus class construction; do not add NotesSession-, JVM-, SSJS-, or Domino-specific singleton behavior.
+- [x] Treat singleton/lazy-instance patterns as ordinary XPscript module/application-level state plus class construction; do not add NotesSession-, JVM-, SSJS-, or Domino-specific singleton behavior.
 
 
 ## Phase 6: Symbols and semantic binder
