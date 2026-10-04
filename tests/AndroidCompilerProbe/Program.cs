@@ -450,6 +450,9 @@ if (!compilerSource.Contains("phase + \" (step \" + _phaseActivity + \")\"", Str
     !compilerSource.Contains("Math.Min(nextMilestone - 1, Math.Max(_percent, mapped) + 1)", StringComparison.Ordinal))
     throw new Exception("Android publish progress must expose repeated long-running publish phases as visible substeps.");
 
+if (!compilerSource.Contains("Android APK: {outputPath} ({apkMiB:F2} MiB, {apkBytes:N0} bytes)", StringComparison.Ordinal))
+    throw new Exception("Android compilation must report the final APK size.");
+
 var buildEnvironmentSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerBuildEnvironment.cs"));
 if (!buildEnvironmentSource.Contains("&& !usesAndroidUi", StringComparison.Ordinal))
     throw new Exception("Android UIForm builds must not inherit desktop Avalonia package references.");
