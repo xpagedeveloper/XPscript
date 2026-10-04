@@ -254,7 +254,7 @@ Class-oriented language patterns:
 - [x] Bind calls.
 - [x] Bind member access.
 - [x] Bind assignments.
-- [ ] Bind control flow.
+- [x] Bind control flow.
 - [ ] Define conversion rules.
 - [ ] Define Variant/dynamic semantics explicitly.
 - [ ] Define Object semantics explicitly.
