@@ -8,6 +8,7 @@ Sub Main()
     Dim detailsGrid As Variant
     Dim browser As Variant
     Dim result As String
+    Dim runtimeImage As XPImage
 
     Call Application.Debug.Info("TEST STARTUP: PASS")
     Call Application.Debug.Info("TEST INSTRUCTION: Fill Name and Notes, toggle Enabled, select the requested option/list/radio values, set Range to 75, enter a password, then press Verify Input.")
@@ -30,7 +31,8 @@ Sub Main()
     Call data.Set("monthValue", "2026-10")
     Call data.Set("colorValue", "#336699")
     form.BootText = "Loading Android UIForm manual test"
-    form.BootImage = "Android/test-image.png"
+    Set runtimeImage = New XPImage(32, 32, "#336699")
+    form.BootImage = runtimeImage
     Call form.BindData(data)
     Call form.AddTab("basic", "Basic")
     Call form.AddTab("more", "More")
@@ -79,7 +81,8 @@ Sub Main()
     Call form.SetFieldCornerRadius("emailValue", 12)
     Call form.SetFieldCornerRadius("urlValue", 12)
     Call form.AddSpacer("space1")
-    Call form.AddImage("testImage", "Android/test-image.png", "Android UIForm test image")
+    Call form.AddImage("testImage", "Android/test-image.png", "Android UIForm asset image")
+    Call form.AddImage("xpImage", runtimeImage, "Android UIForm XPImage")
     Call detailsGrid.SetFieldPosition("choice", 1)
     Call detailsGrid.SetFieldPosition("listChoice", 1)
     Call form.SetFieldTab("multiChoice", "more")
@@ -91,6 +94,7 @@ Sub Main()
     Call detailsGrid.SetFieldPosition("emailValue", 1)
     Call detailsGrid.SetFieldPosition("urlValue", 1)
     Call form.SetFieldTab("testImage", "more")
+    Call form.SetFieldTab("xpImage", "more")
     Call form.SetFieldTab("dateValue", "more")
     Call form.SetFieldTab("timeValue", "more")
     Call form.SetFieldTab("dateTimeValue", "more")
