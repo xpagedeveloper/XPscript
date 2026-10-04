@@ -211,10 +211,20 @@ const string routePlaceholderServerOpenApi = """
 var routePlaceholderServer = new XpsOpenApiGenerator().Generate(routePlaceholderServerOpenApi, "route-placeholder-server.json");
 if (!routePlaceholderServer.Source.Contains("[Route:/v2/action-gateway/toolbelts/{name}/providers/{provider}/tools]", StringComparison.Ordinal))
     throw new Exception("OpenAPI server route placeholder regression must preserve route placeholders.");
-_ = new XPScriptTranspiler().Transpile(
-    routePlaceholderServer.Source + "\nSub Main()\nEnd Sub\n",
-    Path.Combine(Path.GetTempPath(), "route-placeholder-server.xps"),
-    CompilerDriver.CurrentRuntimeIdentifier());
+var routePlaceholderRoot = Path.Combine(Path.GetTempPath(), "xps-openapi-route-placeholder-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(routePlaceholderRoot);
+try
+{
+    var routePlaceholderPath = Path.Combine(routePlaceholderRoot, "route-placeholder-server.xps");
+    File.WriteAllText(routePlaceholderPath, routePlaceholderServer.Source);
+    await using var routePlaceholderUnit = await new XpsWebCompiler().CompileAsync(routePlaceholderPath, routePlaceholderRoot);
+    if (!routePlaceholderUnit.Routes.ContainsKey("EndpointGetProviderTools"))
+        throw new Exception("OpenAPI server route placeholder regression did not compile the generated endpoint.");
+}
+finally
+{
+    try { Directory.Delete(routePlaceholderRoot, true); } catch { }
+}
 Console.WriteLine("OPENAPI-SERVER-ROUTE-PLACEHOLDERS=OK");
 
 const string modelVariantConflictAllOfClientOpenApi = """
@@ -2261,11 +2271,8 @@ try
     var digitalOceanClientPath = Path.Combine(root, "digitalocean-client.xps");
     try
     {
-        _ = new XPScriptTranspiler().TranspileRestricted(
-            digitalOceanServer.Source + "\nSub Main()\nEnd Sub\n",
-            digitalOceanServerPath,
-            CompilerDriver.CurrentRuntimeIdentifier(),
-            [root]);
+        await File.WriteAllTextAsync(digitalOceanServerPath, digitalOceanServer.Source);
+        await using var digitalOceanServerUnit = await new XpsWebCompiler().CompileAsync(digitalOceanServerPath, root);
     }
     catch (CompilerException ex) when (ex.GeneratedDiagnostics.Count > 0)
     {
