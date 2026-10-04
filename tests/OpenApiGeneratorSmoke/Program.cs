@@ -225,20 +225,6 @@ if (!multipartClientRequestBody.Source.Contains("Public Function ArchiveControll
     throw new Exception("OpenAPI multipart client request-body regression failed.");
 Console.WriteLine("OPENAPI-CLIENT-MULTIPART-REQUEST-BODY=OK");
 
-var sizeLiteralSource = """
-Sub Main()
-    Dim http As New XPHttpClient
-    http.MaxRequestBodyBytes = 100mb
-    Dim kilobytes As Long
-    Dim gigabytes As Long
-    kilobytes = 2kb
-    gigabytes = 3gb
-End Sub
-""";
-var sizeLiteralPath = Path.Combine(Path.GetTempPath(), "xpscript-size-literals-" + Guid.NewGuid().ToString("N") + ".xps");
-_ = new XPScriptTranspiler().TranspileRestricted(sizeLiteralSource, sizeLiteralPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
-Console.WriteLine("SIZE-LITERALS=OK");
-
 var multipartFileClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.0.3
 info: { title: Multipart File Client, version: 1.0.0 }
@@ -2062,6 +2048,21 @@ if (openApi32Client.OpenApiVersion != "3.2.0" || !openApi32Client.Operations.Con
 
 var root = Path.Combine(Path.GetTempPath(), "xps-openapi-generator-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
+
+var sizeLiteralSource = """
+Sub Main()
+    Dim http As New XPHttpClient
+    http.MaxRequestBodyBytes = 100mb
+    Dim kilobytes As Long
+    Dim gigabytes As Long
+    kilobytes = 2kb
+    gigabytes = 3gb
+End Sub
+""";
+var sizeLiteralPath = Path.Combine(Path.GetTempPath(), "xpscript-size-literals-" + Guid.NewGuid().ToString("N") + ".xps");
+_ = new XPScriptTranspiler().TranspileRestricted(sizeLiteralSource, sizeLiteralPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
+Console.WriteLine("SIZE-LITERALS=OK");
+
 try
 {
     var openApi32ServerPath = Path.Combine(root, "openapi32-server.xps");
