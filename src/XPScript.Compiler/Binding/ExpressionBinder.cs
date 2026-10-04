@@ -29,6 +29,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             return new BoundLiteralExpression(true, typeof(bool));
         if (syntax.LiteralToken.Kind == SyntaxKind.FalseKeyword)
             return new BoundLiteralExpression(false, typeof(bool));
+        if (syntax.LiteralToken.Kind == SyntaxKind.EmptyKeyword)
+            return new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Empty);
+        if (syntax.LiteralToken.Kind == SyntaxKind.NullKeyword)
+            return new BoundLiteralExpression(DBNull.Value, typeof(object), XpTypeSymbol.Null);
+        if (syntax.LiteralToken.Kind == SyntaxKind.NothingKeyword)
+            return new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Nothing);
         if (syntax.LiteralToken.Kind == SyntaxKind.NumberToken)
             return syntax.Value switch
             {
