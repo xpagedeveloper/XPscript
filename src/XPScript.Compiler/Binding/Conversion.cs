@@ -4,7 +4,9 @@ public enum ConversionKind
 {
     None,
     Identity,
-    NumericWidening
+    NumericWidening,
+    ToVariant,
+    FromVariant
 }
 
 public readonly record struct Conversion(ConversionKind Kind)
@@ -19,8 +21,14 @@ public readonly record struct Conversion(ConversionKind Kind)
             string.Equals(source.Name, target.Name, StringComparison.OrdinalIgnoreCase))
             return new Conversion(ConversionKind.Identity);
 
-        // Variant/Object/Null have dedicated Phase 7 semantics and are intentionally
-        // not treated as catch-all conversions here.
+        // Variant is XPscript's dynamic value carrier. Values can flow into and out of
+        // Variant; the latter remains a runtime-checked conversion.
+        if (target.IsVariant)
+            return new Conversion(ConversionKind.ToVariant);
+        if (source.IsVariant)
+            return new Conversion(ConversionKind.FromVariant);
+
+        // Plain Object and user-defined object-backed types are not Variant.
         if (source.RuntimeType == typeof(object) || target.RuntimeType == typeof(object))
             return new Conversion(ConversionKind.None);
 
