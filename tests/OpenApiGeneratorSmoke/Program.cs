@@ -237,7 +237,7 @@ const string responseSchemaQuotedTextClientOpenApi = """
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "type": "string", "description": "Value may contain \\"quoted\\" text." }
+                "schema": { "type": "string", "description": "Value may contain \"quoted\" text." }
               }
             }
           }
