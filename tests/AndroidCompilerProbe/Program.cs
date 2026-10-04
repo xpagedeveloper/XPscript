@@ -224,6 +224,29 @@ foreach (var forbidden in new[] { "PointerPressed", "PointerReleased", "MouseBut
         throw new Exception("Android UIForm host must leave touch/pointer translation to Avalonia Android instead of desktop-specific input handling: " + forbidden);
 }
 
+var fileSystemRuntimePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "FileSystemPortabilityRuntimeSource.cs");
+var fileSystemRuntime = File.ReadAllText(fileSystemRuntimePath);
+foreach (var expected in new[]
+{
+    "private static string _assetDirectory",
+    "Environment.SpecialFolder.LocalApplicationData), \"assets\"",
+    "Path.Combine(AppContext.BaseDirectory, \"assets\")",
+    "normalized.StartsWith(\"assets/\"",
+    "Application assets are read-only."
+})
+{
+    if (!fileSystemRuntime.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Cross-platform read-only asset filesystem routing is missing: " + expected);
+}
+
+var xpImageRuntimePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "XPImageRuntimeSource.cs");
+var xpImageRuntime = File.ReadAllText(xpImageRuntimePath);
+foreach (var expected in new[] { "public static implicit operator string(XPImage image)", "\"data:image/png;base64,\"", "EnsureWritablePath(resolved)" })
+{
+    if (!xpImageRuntime.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("XPImage UIForm/asset integration is missing: " + expected);
+}
+
 var appDebugSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "ApplicationDebugRuntimeSource.cs");
 var appDebugSource = File.ReadAllText(appDebugSourcePath);
 foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
