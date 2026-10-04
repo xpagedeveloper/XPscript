@@ -48,6 +48,12 @@ Absolute `http:`, `https:`, `file:`, `about:` and `data:` WebView sources remain
 
 Relative references are confined to the application asset root. Parent traversal such as `../secret.txt` is rejected. The compiler also rejects symbolic links and reparse points inside the packaged asset tree.
 
+## XPImage and file access
+
+`XPImage.Load("assets/images/logo.png")` reads from the same application asset namespace used by UIForm. UIForm `BootImage`, `AddImage` and `SetImageSource` also accept an `XPImage` instance directly; the image is encoded in memory and no temporary image file is required.
+
+Application assets are read-only at runtime. Normal file-input APIs may read files below `assets/`, and an asset may be used as a `FileCopy` source. Operations that write, append, create, rename, delete, change attributes, or otherwise mutate a path below `assets/` fail with XPScript runtime error 5. `XPImage.Save` follows the same rule.
+
 ## Limits
 
 Embedded UIForm assets have a combined compile-time limit of 64 MiB. Individual UIForm images are limited to 32 MiB by the image runtime.
