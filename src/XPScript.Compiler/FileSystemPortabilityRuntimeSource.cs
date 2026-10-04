@@ -7,11 +7,22 @@ internal static class XPScriptFileSystemRuntime
 {
     public static Encoding LegacyEncoding { get; } = Encoding.Latin1;
     private static string _scriptDirectory = Environment.CurrentDirectory;
+    private static string _assetDirectory = Path.Combine(Environment.CurrentDirectory, "assets");
 
     public static void SetScriptDirectory(string directory)
     {
         if (!string.IsNullOrWhiteSpace(directory))
             _scriptDirectory = Path.GetFullPath(directory);
+        _assetDirectory = ResolveAssetDirectory();
+    }
+
+    private static string ResolveAssetDirectory()
+    {
+        if (OperatingSystem.IsAndroid())
+            return Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "assets"));
+        var published = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "assets"));
+        if (Directory.Exists(published)) return published;
+        return Path.GetFullPath(Path.Combine(_scriptDirectory, "assets"));
     }
 
     private const int DarwinOpenReadWrite = 0x0002;
@@ -71,7 +82,15 @@ internal static class XPScriptFileSystemRuntime
         var path = XPScriptRuntime.CStr(value);
         if (string.IsNullOrWhiteSpace(path))
             throw new XPScriptRuntimeException(5, "File path must not be empty.");
-        try { return Path.GetFullPath(path, _scriptDirectory); }
+        try
+        {
+            var normalized = path.Replace('\\', '/');
+            if (normalized.Equals("assets", StringComparison.OrdinalIgnoreCase))
+                return _assetDirectory;
+            if (normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+                return Path.GetFullPath(Path.Combine(_assetDirectory, normalized["assets/".Length..].Replace('/', Path.DirectorySeparatorChar)));
+            return Path.GetFullPath(path, _scriptDirectory);
+        }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
             throw new XPScriptRuntimeException(5, "Invalid file path.");
@@ -81,7 +100,7 @@ internal static class XPScriptFileSystemRuntime
     private static bool IsAssetPath(string path)
     {
         var full = Path.GetFullPath(path);
-        var assetRoot = Path.GetFullPath(Path.Combine(_scriptDirectory, "assets"));
+        var assetRoot = _assetDirectory;
         if (full.Equals(assetRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
             return true;
         var prefix = assetRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
