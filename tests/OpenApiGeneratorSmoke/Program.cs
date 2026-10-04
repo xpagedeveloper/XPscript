@@ -213,6 +213,10 @@ const string primitiveReferenceServerOpenApi = """
 }
 """;
 var primitiveReferenceServer = new XpsOpenApiGenerator().Generate(primitiveReferenceServerOpenApi, "primitive-reference-server.json");
+if (!primitiveReferenceServer.Source.Contains("Public Provider As String", StringComparison.Ordinal))
+    throw new Exception("Primitive OpenAPI schema references must use the resolved primitive request type.");
+if (!primitiveReferenceServer.Source.Contains("pProvider As String", StringComparison.Ordinal))
+    throw new Exception("Primitive OpenAPI schema references must use the resolved primitive wrapper type.");
 if (primitiveReferenceServer.Source.Contains("Set request.Provider =", StringComparison.Ordinal))
     throw new Exception("Primitive OpenAPI schema references must not use Set assignment.");
 var primitiveReferenceRoot = Path.Combine(Path.GetTempPath(), "xps-openapi-primitive-reference-" + Guid.NewGuid().ToString("N"));
