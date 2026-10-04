@@ -17,7 +17,7 @@ var project = (string)(method.Invoke(null, new object?[] { "android-arm64", fals
 if (!project.Contains("<NoWarn>CA1416;$(NoWarn)</NoWarn>", StringComparison.Ordinal))
     throw new Exception("Generated projects must suppress CA1416 for the built-in cross-platform runtime compatibility layer.");
 
-foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramework>", "<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>", "<RuntimeIdentifier>android-arm64</RuntimeIdentifier>", "<AndroidPackageFormat>apk</AndroidPackageFormat>", "<ApplicationId>com.xpscript.debugapp</ApplicationId>" })
+foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramework>", "<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>", "<RuntimeIdentifier>android-arm64</RuntimeIdentifier>", "<AndroidPackageFormat>apk</AndroidPackageFormat>", "<ApplicationId>eu.xpscript.app</ApplicationId>" })
     if (!project.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android generated project is missing: " + expected);
 
