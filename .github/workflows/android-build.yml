@@ -76,8 +76,8 @@ jobs:
       - name: Build minimal XPScript Android APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print --runtime=false --platform android-arm64 --debug
 
-      - name: Build x64 emulator APK
-        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print-emulator --runtime=false --platform android-x64 --debug
+      - name: Build x64 headless APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print-x64 --runtime=false --platform android-x64 --debug
 
       - name: Reproduce Android UIForm project directly first
         shell: bash
