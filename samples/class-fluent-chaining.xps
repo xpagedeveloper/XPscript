@@ -2,7 +2,7 @@ Class ChainProbe
     Public Value As String
 
     Public Sub New(ByVal value As String)
-        Value = value
+        Me.Value = value
     End Sub
 
     Public Function Append(ByVal suffix As String) As ChainProbe
