@@ -930,6 +930,8 @@ public sealed class CompilerDriver
             };
 
         private int _percent = 40;
+        private string _lastPhase = string.Empty;
+        private int _phaseActivity;
 
         public void Report(string phase)
         {
@@ -939,18 +941,36 @@ public sealed class CompilerDriver
                 {
                     if (mapped < _percent)
                         return;
-                    _percent = mapped;
+
+                    if (phase.Equals(_lastPhase, StringComparison.Ordinal))
+                    {
+                        _phaseActivity++;
+                        var nextMilestone = PhasePercentages.Values
+                            .Where(value => value > mapped)
+                            .DefaultIfEmpty(85)
+                            .Min();
+                        _percent = Math.Min(nextMilestone - 1, Math.Max(_percent, mapped) + 1);
+                    }
+                    else
+                    {
+                        _percent = Math.Max(_percent, mapped);
+                        _lastPhase = phase;
+                        _phaseActivity = 1;
+                    }
                 }
                 else if (phase.StartsWith("MSBuild: ", StringComparison.Ordinal))
                 {
                     _percent = Math.Min(83, _percent + 1);
+                    _lastPhase = phase;
+                    _phaseActivity = 1;
                 }
                 else
                 {
                     return;
                 }
 
-                CompilerProgressContext.Report(_percent, phase);
+                var visiblePhase = _phaseActivity > 1 ? phase + " (step " + _phaseActivity + ")" : phase;
+                CompilerProgressContext.Report(_percent, visiblePhase);
             }
         }
     }
