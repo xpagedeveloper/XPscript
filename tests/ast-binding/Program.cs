@@ -329,3 +329,40 @@ if (fromVariantBinder.Diagnostics.Count != 0 ||
     throw new InvalidOperationException("Assignment from Variant must retain an explicit runtime-checked conversion in the bound tree.");
 
 Console.WriteLine("AST_BINDING_VARIANT_SEMANTICS_OK");
+
+
+var objectType = XpTypeSymbol.Object;
+if (objectType.RuntimeType != typeof(object) || !objectType.IsObject || objectType.IsVariant)
+    throw new InvalidOperationException("Object must be an explicit object-reference semantic type distinct from Variant.");
+if (XpTypeSymbol.User("Customer").IsObject)
+    throw new InvalidOperationException("User-defined class types must remain distinct from the Object type.");
+
+var customerType = XpTypeSymbol.User("Customer");
+var customerToObject = Conversion.Classify(customerType, objectType);
+if (!customerToObject.IsImplicit || customerToObject.Kind != ConversionKind.ToObject)
+    throw new InvalidOperationException("User-defined object references must convert implicitly to Object.");
+if (Conversion.Classify(XpTypeSymbol.FromClr(typeof(long)), objectType).Exists)
+    throw new InvalidOperationException("Scalar values must not convert implicitly to Object.");
+if (Conversion.Classify(objectType, customerType).Exists)
+    throw new InvalidOperationException("Object must not use Variant-style implicit conversion to a concrete user type.");
+
+var objectSymbols = new SymbolTable();
+objectSymbols.Declare(new VariableSymbol("targetObject", typeof(object), objectType));
+objectSymbols.Declare(new VariableSymbol("customer", typeof(object), customerType));
+objectSymbols.Declare(new VariableSymbol("scalar", typeof(long)));
+var objectAssignmentParser = new StatementParser("targetObject = customer");
+var objectAssignmentSyntax = objectAssignmentParser.ParseStatement();
+var objectAssignmentBinder = new StatementBinder(objectSymbols);
+var boundObjectAssignment = objectAssignmentBinder.Bind(objectAssignmentSyntax);
+if (objectAssignmentBinder.Diagnostics.Count != 0 ||
+    boundObjectAssignment is not BoundAssignmentStatement { Expression: BoundConversionExpression { Conversion.Kind: ConversionKind.ToObject } })
+    throw new InvalidOperationException("Object assignment from a user-defined reference must retain an explicit ToObject conversion.");
+
+var invalidObjectAssignmentParser = new StatementParser("targetObject = scalar");
+var invalidObjectAssignmentSyntax = invalidObjectAssignmentParser.ParseStatement();
+var invalidObjectAssignmentBinder = new StatementBinder(objectSymbols);
+_ = invalidObjectAssignmentBinder.Bind(invalidObjectAssignmentSyntax);
+if (invalidObjectAssignmentBinder.Diagnostics.Count != 1 || invalidObjectAssignmentBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Scalar assignment to Object must produce exactly one XPS2001 diagnostic.");
+
+Console.WriteLine("AST_BINDING_OBJECT_SEMANTICS_OK");
