@@ -173,17 +173,37 @@ internal static class XpsOpenApiSchema
         RewriteComponentReferences(document);
         if (root["components"] is JsonObject components && components["schemas"] is JsonObject schemas)
         {
+            var referenced = new HashSet<string>(StringComparer.Ordinal);
+            CollectComponentReferences(schema, referenced);
             var defs = new JsonObject();
-            foreach (var pair in schemas)
+            var pending = new Queue<string>(referenced);
+            while (pending.Count > 0)
             {
-                if (pair.Value is null) continue;
-                var clone = pair.Value.DeepClone();
+                var name = pending.Dequeue();
+                if (defs.ContainsKey(name) || !schemas.TryGetPropertyValue(name, out var value) || value is null) continue;
+                var clone = value.DeepClone();
+                var nested = new HashSet<string>(StringComparer.Ordinal);
+                CollectComponentReferences(clone, nested);
+                foreach (var nestedName in nested)
+                    if (!defs.ContainsKey(nestedName)) pending.Enqueue(nestedName);
                 RewriteComponentReferences(clone);
-                defs[pair.Key] = clone;
+                defs[name] = clone;
             }
             if (defs.Count > 0) document["$defs"] = defs;
         }
         return document.ToJsonString();
+    }
+
+    private static void CollectComponentReferences(JsonNode? node, HashSet<string> references)
+    {
+        if (node is JsonObject obj)
+        {
+            if (ReadString(obj, "$ref") is { } reference && reference.StartsWith("#/components/schemas/", StringComparison.Ordinal))
+                references.Add(reference["#/components/schemas/".Length..].Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal));
+            foreach (var pair in obj) CollectComponentReferences(pair.Value, references);
+        }
+        else if (node is JsonArray array)
+            foreach (var item in array) CollectComponentReferences(item, references);
     }
 
     private static void RewriteComponentReferences(JsonNode? node)
