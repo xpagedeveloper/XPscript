@@ -70,7 +70,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             c.GetParameters().Select(p => p.ParameterType).SequenceEqual(arguments.Select(a => a.Type)));
 
         if (constructor is null)
-            return Error(syntax, $"No matching constructor for '{typeName}'.");
+            return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
 
         return new BoundNewExpression(type, arguments, typeEntry.SemanticType ?? new XpTypeSymbol(typeEntry.Name, type));
     }
@@ -80,14 +80,14 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         var expression = Bind(syntax.Expression);
         var index = Bind(syntax.Index);
         if (index.Type != typeof(long))
-            return Error(syntax.Index, "Array index must be an integer.");
-        if (expression.Type.IsArray)
+            return Error(syntax.Index, CompilerDiagnosticCodes.ArgumentTypeMismatch, "Array index must be an integer.");
+        if (expression.SemanticType.IsArray && expression.SemanticType.ElementType is not null)
             return new BoundIndexExpression(
                 expression,
                 index,
-                expression.Type.GetElementType()!,
+                expression.SemanticType.ElementType.RuntimeType,
                 expression.SemanticType.ElementType);
-        return Error(syntax, $"Indexing is not defined for {expression.SemanticType.Name}.");
+        return Error(syntax, CompilerDiagnosticCodes.TypeMismatch, $"Indexing is not defined for {expression.SemanticType.Name}.");
     }
 
     private BoundExpression BindMemberAccess(MemberAccessExpressionSyntax syntax)
@@ -161,7 +161,6 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         return BindOverloadSet(syntax, target, name, functions);
     }
 
-
     private BoundExpression BindOverloadSet(CallExpressionSyntax syntax, BoundExpression? target, string name, IReadOnlyList<FunctionSymbol> functions)
     {
         var arguments = syntax.Arguments.Select(Bind).ToArray();
@@ -176,7 +175,23 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         if (candidates.Length > 1)
             return Error(syntax, CompilerDiagnosticCodes.AmbiguousOverload, $"Call to function '{name}' is ambiguous.");
 
-        return new BoundCallExpression(target, candidates[0], arguments);
+        return new BoundCallExpression(target, candidates[0], ConvertArguments(candidates[0], arguments));
+    }
+
+    private static BoundExpression[] ConvertArguments(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
+    {
+        var converted = new BoundExpression[arguments.Count];
+        for (var i = 0; i < arguments.Count; i++)
+        {
+            var targetType = function.SemanticParameterTypes is not null
+                ? function.SemanticParameterTypes[i]
+                : XpTypeSymbol.FromClr(function.ParameterTypes[i]);
+            var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
+            converted[i] = conversion.IsIdentity
+                ? arguments[i]
+                : new BoundConversionExpression(arguments[i], targetType, conversion);
+        }
+        return converted;
     }
 
     private static bool ParameterModesMatch(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
@@ -221,14 +236,17 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
     {
         var arguments = syntax.Arguments.Select(Bind).ToArray();
         if (arguments.Length != property.ParameterTypes.Count)
-            return Error(syntax, $"Indexed property '{property.Name}' expects {property.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
+            return Error(syntax, CompilerDiagnosticCodes.ArgumentCountMismatch, $"Indexed property '{property.Name}' expects {property.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
         for (var i = 0; i < arguments.Length; i++)
         {
-            if (arguments[i].Type != property.ParameterTypes[i])
-                return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch, $"Argument {i + 1} to '{property.Name}' must be {property.ParameterTypes[i].Name}, not {arguments[i].Type.Name}.");
-            if (property.SemanticParameterTypes is not null &&
-                !string.Equals(property.SemanticParameterTypes[i].Name, arguments[i].SemanticType.Name, StringComparison.OrdinalIgnoreCase))
-                return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch, $"Argument {i + 1} to '{property.Name}' must be {property.SemanticParameterTypes[i].Name}, not {arguments[i].SemanticType.Name}.");
+            var targetType = property.SemanticParameterTypes is not null
+                ? property.SemanticParameterTypes[i]
+                : XpTypeSymbol.FromClr(property.ParameterTypes[i]);
+            var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
+            if (!conversion.IsImplicit)
+                return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch, $"Argument {i + 1} to '{property.Name}' must be {targetType.Name}, not {arguments[i].SemanticType.Name}.");
+            if (!conversion.IsIdentity)
+                arguments[i] = new BoundConversionExpression(arguments[i], targetType, conversion);
         }
         return new BoundIndexedPropertyExpression(receiver, property, arguments);
     }
@@ -237,11 +255,19 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
     {
         var arguments = syntax.Arguments.Select(Bind).ToArray();
         if (arguments.Length != function.ParameterTypes.Count)
-            return Error(syntax, $"Function '{function.Name}' expects {function.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
+            return Error(syntax, CompilerDiagnosticCodes.ArgumentCountMismatch, $"Function '{function.Name}' expects {function.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
 
         for (var i = 0; i < arguments.Length; i++)
-            if (arguments[i].Type != function.ParameterTypes[i])
-                return Error(syntax.Arguments[i], $"Argument {i + 1} to '{function.Name}' must be {function.ParameterTypes[i].Name}, not {arguments[i].Type.Name}.");
+        {
+            var targetType = function.SemanticParameterTypes is not null
+                ? function.SemanticParameterTypes[i]
+                : XpTypeSymbol.FromClr(function.ParameterTypes[i]);
+            var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
+            if (!conversion.IsImplicit)
+                return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch, $"Argument {i + 1} to '{function.Name}' must be {targetType.Name}, not {arguments[i].SemanticType.Name}.");
+            if (!conversion.IsIdentity)
+                arguments[i] = new BoundConversionExpression(arguments[i], targetType, conversion);
+        }
 
         return new BoundCallExpression(target, function, arguments);
     }
@@ -254,7 +280,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         if (syntax.OperatorToken.Kind is SyntaxKind.PlusToken or SyntaxKind.MinusToken &&
             (operand.Type == typeof(long) || operand.Type == typeof(double)))
             return new BoundUnaryExpression(syntax.OperatorToken.Kind, operand, operand.Type);
-        return Error(syntax, $"Unary operator {syntax.OperatorToken.Text} is not defined for {operand.Type.Name}.");
+        return Error(syntax, CompilerDiagnosticCodes.TypeMismatch, $"Unary operator {syntax.OperatorToken.Text} is not defined for {operand.SemanticType.Name}.");
     }
 
     private BoundExpression BindBinary(BinaryExpressionSyntax syntax)
@@ -276,7 +302,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         if (op is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken && left.Type == right.Type)
             return new BoundBinaryExpression(left, op, right, typeof(bool));
 
-        return Error(syntax, $"Binary operator {syntax.OperatorToken.Text} is not defined for {left.Type.Name} and {right.Type.Name}.");
+        return Error(syntax, CompilerDiagnosticCodes.TypeMismatch, $"Binary operator {syntax.OperatorToken.Text} is not defined for {left.SemanticType.Name} and {right.SemanticType.Name}.");
     }
 
     private BoundExpression Error(SyntaxNode syntax, string message) =>
