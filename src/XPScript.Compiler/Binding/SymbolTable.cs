@@ -61,19 +61,40 @@ public sealed class SymbolTable
 
     public bool TryDeclare(Symbol symbol, out string? diagnosticCode, out string? diagnosticMessage)
     {
-        if (_symbols.TryGetValue(symbol.Name, out var existing) &&
-            existing.Count > 0 &&
-            symbol is not FunctionSymbol)
+        if (_symbols.TryGetValue(symbol.Name, out var existing) && existing.Count > 0)
         {
-            diagnosticCode = CompilerDiagnosticCodes.DuplicateOverload;
-            diagnosticMessage = $"Symbol '{symbol.Name}' is already declared in this scope.";
-            return false;
+            var duplicate = symbol is FunctionSymbol function
+                ? existing.OfType<FunctionSymbol>().Any(candidate => SameParameterSignature(candidate, function))
+                : true;
+
+            if (duplicate)
+            {
+                diagnosticCode = CompilerDiagnosticCodes.DuplicateOverload;
+                diagnosticMessage = $"Symbol '{symbol.Name}' is already declared with the same parameter signature in this scope.";
+                return false;
+            }
         }
 
         Declare(symbol);
         diagnosticCode = null;
         diagnosticMessage = null;
         return true;
+    }
+
+    private static bool SameParameterSignature(FunctionSymbol left, FunctionSymbol right)
+    {
+        if (!left.ParameterTypes.SequenceEqual(right.ParameterTypes))
+            return false;
+
+        if (left.SemanticParameterTypes is null || right.SemanticParameterTypes is null)
+            return true;
+
+        if (left.SemanticParameterTypes.Count != right.SemanticParameterTypes.Count)
+            return false;
+
+        return left.SemanticParameterTypes
+            .Select(type => type.Name)
+            .SequenceEqual(right.SemanticParameterTypes.Select(type => type.Name), StringComparer.OrdinalIgnoreCase);
     }
 
     public void Declare(Symbol symbol)
