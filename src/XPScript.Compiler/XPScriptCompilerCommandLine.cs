@@ -264,11 +264,9 @@ public static class XPScriptCompilerCommandLine
             var defaultExtension = runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".exe" : "";
             outputPath ??= Path.Combine(Path.GetDirectoryName(sourcePath)!, fileName + defaultExtension);
 
-            var usesUiFormAssets = UIFormAppAssets.UsesUIForm(sourcePath);
-            if (usesUiFormAssets)
-                UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
+            UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
 
-            var effectiveEmbedAssets = embedAssets || usesUiFormAssets;
+            var effectiveEmbedAssets = embedAssets;
             using var assetScope = UIFormAssetCompileContext.Push(effectiveEmbedAssets);
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
