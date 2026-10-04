@@ -190,6 +190,33 @@ _ = new XpsOpenApiGenerator().Generate(foldedLocalReference, "folded-local-ref.y
 _ = new XpsOpenApiClientGenerator().Generate(foldedLocalReference, "folded-local-ref.yaml");
 Console.WriteLine("OPENAPI-FOLDED-LOCAL-REF=OK");
 
+const string routePlaceholderServerOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Route placeholder regression", "version": "1.0" },
+  "paths": {
+    "/v2/action-gateway/toolbelts/{name}/providers/{provider}/tools": {
+      "get": {
+        "operationId": "getProviderTools",
+        "parameters": [
+          { "name": "name", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  }
+}
+""";
+var routePlaceholderServer = new XpsOpenApiGenerator().Generate(routePlaceholderServerOpenApi, "route-placeholder-server.json");
+if (!routePlaceholderServer.Source.Contains("[Route:/v2/action-gateway/toolbelts/{name}/providers/{provider}/tools]", StringComparison.Ordinal))
+    throw new Exception("OpenAPI server route placeholder regression must preserve route placeholders.");
+_ = new XPScriptTranspiler().Transpile(
+    routePlaceholderServer.Source + "\nSub Main()\nEnd Sub\n",
+    Path.Combine(Path.GetTempPath(), "route-placeholder-server.xps"),
+    CompilerDriver.CurrentRuntimeIdentifier());
+Console.WriteLine("OPENAPI-SERVER-ROUTE-PLACEHOLDERS=OK");
+
 const string modelVariantConflictAllOfClientOpenApi = """
 {
   "openapi": "3.0.3",
