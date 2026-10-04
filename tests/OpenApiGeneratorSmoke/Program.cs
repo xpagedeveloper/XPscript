@@ -248,7 +248,7 @@ const string responseSchemaQuotedTextClientOpenApi = """
 }
 """;
 var responseSchemaQuotedTextClient = new XpsOpenApiClientGenerator().Generate(responseSchemaQuotedTextClientOpenApi, "response-schema-quoted-text-client.json");
-if (!responseSchemaQuotedTextClient.Source.Contains(@"\\u0022quoted\\u0022", StringComparison.Ordinal))
+if (!responseSchemaQuotedTextClient.Source.Contains(@"\u0022quoted\u0022", StringComparison.Ordinal))
     throw new Exception("OpenAPI client response validation must encode JSON escaped quotes safely for XPScript.");
 var responseSchemaQuotedTextPath = Path.Combine(Path.GetTempPath(), "response-schema-quoted-text-client.xps");
 _ = new XPScriptTranspiler().Transpile(
