@@ -234,8 +234,9 @@ public sealed class XpsOpenApiGenerator
                 throw new XpsOpenApiGenerationException($"Parameter '{name}' uses unsupported location '{location}'. Supported locations are path, query, header and cookie.");
             if (parameter["schema"] is not JsonObject schema)
                 throw new XpsOpenApiGenerationException($"Parameter '{name}' in {context} must declare a schema.");
-            var type = new XpsType(XpsOpenApiSchema.XpsType(root, schema, $"parameter '{name}'"), XpsOpenApiSchema.IsObjectType(root, schema, $"parameter '{name}'"));
-            result.Add(new ParameterModel(name, location, type.TypeName, type.IsObject, ReadBoolean(parameter, "required")));
+            var typeName = XpsOpenApiSchema.XpsType(root, schema, $"parameter '{name}'");
+            var isObject = IsReferenceAssignmentType(typeName) && XpsOpenApiSchema.IsObjectType(root, schema, $"parameter '{name}'");
+            result.Add(new ParameterModel(name, location, typeName, isObject, ReadBoolean(parameter, "required")));
         }
         return result;
     }
@@ -691,6 +692,16 @@ public sealed class XpsOpenApiGenerator
         }
         return false;
     }
+
+    private static bool IsReferenceAssignmentType(string typeName) =>
+        typeName is "XPJsonArray" or "XPJsonObject" or "Variant" ||
+        !typeName.Equals("String", StringComparison.OrdinalIgnoreCase) &&
+        !typeName.Equals("Integer", StringComparison.OrdinalIgnoreCase) &&
+        !typeName.Equals("Long", StringComparison.OrdinalIgnoreCase) &&
+        !typeName.Equals("Single", StringComparison.OrdinalIgnoreCase) &&
+        !typeName.Equals("Double", StringComparison.OrdinalIgnoreCase) &&
+        !typeName.Equals("Boolean", StringComparison.OrdinalIgnoreCase) &&
+        !typeName.Equals("Date", StringComparison.OrdinalIgnoreCase);
 
     private static string FormatSourceName(string? sourceName) => string.IsNullOrWhiteSpace(sourceName) ? string.Empty : $" '{sourceName}'";
 
