@@ -133,7 +133,10 @@ internal static class XpsOpenApiSchema
         }
         if (ReadString(schema, "$ref") is { } reference)
         {
-            _ = Resolve(root, schema, context);
+            var referenced = Resolve(root, schema, context);
+            var referencedType = ReadString(referenced, "type")?.ToLowerInvariant();
+            if (referencedType is not null && referencedType != "object" && !referenced.ContainsKey("properties"))
+                return XpsType(root, referenced, context + " referenced schema");
             return ReferenceTypeName(reference, context);
         }
         var resolved = Resolve(root, schema, context);
