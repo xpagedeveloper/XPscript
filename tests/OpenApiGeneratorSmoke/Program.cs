@@ -235,6 +235,50 @@ finally
 }
 Console.WriteLine("OPENAPI-SERVER-PRIMITIVE-REFERENCE=OK");
 
+const string referencedParameterServerOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Referenced primitive parameter regression", "version": "1.0" },
+  "paths": {
+    "/providers/{provider}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/provider" }
+      ],
+      "get": {
+        "operationId": "getReferencedProvider",
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "provider": {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/provider" }
+      }
+    },
+    "schemas": {
+      "provider": { "type": "string" }
+    }
+  }
+}
+""";
+var referencedParameterServer = new XpsOpenApiGenerator().Generate(referencedParameterServerOpenApi, "referenced-primitive-parameter-server.json");
+if (!referencedParameterServer.Source.Contains("pProvider As String", StringComparison.Ordinal) ||
+    referencedParameterServer.Source.Contains("Set request.Provider =", StringComparison.Ordinal))
+    throw new Exception("Referenced primitive OpenAPI parameters must use scalar assignment.");
+var referencedParameterPath = Path.Combine(Path.GetTempPath(), "xps-openapi-referenced-parameter-" + Guid.NewGuid().ToString("N") + ".xps");
+await File.WriteAllTextAsync(referencedParameterPath, referencedParameterServer.Source);
+await using (var referencedParameterUnit = await new XpsWebCompiler().CompileAsync(referencedParameterPath, Path.GetDirectoryName(referencedParameterPath)!))
+{
+    if (!referencedParameterUnit.Routes.ContainsKey("EndpointGetReferencedProvider"))
+        throw new Exception("Referenced primitive OpenAPI parameter regression did not compile its route.");
+}
+File.Delete(referencedParameterPath);
+Console.WriteLine("OPENAPI-SERVER-REFERENCED-PRIMITIVE-PARAMETER=OK");
+
 const string runtimeReservedServerOpenApi = """
 {
   "openapi": "3.0.3",
