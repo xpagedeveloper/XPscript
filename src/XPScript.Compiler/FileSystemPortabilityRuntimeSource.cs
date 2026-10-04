@@ -88,7 +88,12 @@ internal static class XPScriptFileSystemRuntime
             if (normalized.Equals("assets", StringComparison.OrdinalIgnoreCase))
                 return _assetDirectory;
             if (normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
-                return Path.GetFullPath(Path.Combine(_assetDirectory, normalized["assets/".Length..].Replace('/', Path.DirectorySeparatorChar)));
+            {
+                var resolvedAsset = Path.GetFullPath(Path.Combine(_assetDirectory, normalized["assets/".Length..].Replace('/', Path.DirectorySeparatorChar)));
+                if (!IsAssetPath(resolvedAsset))
+                    throw new XPScriptRuntimeException(5, "Application asset path escapes the assets directory.");
+                return resolvedAsset;
+            }
             return Path.GetFullPath(path, _scriptDirectory);
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
