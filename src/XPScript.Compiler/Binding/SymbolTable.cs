@@ -114,4 +114,23 @@ public sealed class SymbolTable
             return symbols;
         return Parent?.LookupAll(name) ?? [];
     }
+
+    public IReadOnlyList<Symbol> LookupMembers(XpTypeSymbol receiverType, string memberName) =>
+        LookupAll(MemberKey(receiverType.Name, memberName));
+
+    public bool TryLookupMember(XpTypeSymbol receiverType, string memberName, out Symbol symbol)
+    {
+        var members = LookupMembers(receiverType, memberName);
+        if (members.Count > 0)
+        {
+            symbol = members[^1];
+            return true;
+        }
+
+        symbol = null!;
+        return false;
+    }
+
+    private static string MemberKey(string typeName, string memberName) =>
+        typeName + "." + memberName;
 }
