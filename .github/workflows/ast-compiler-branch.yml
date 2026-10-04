@@ -59,6 +59,8 @@ jobs:
         run: ./tests/class-lazy-instance/run-class-lazy-instance.ps1
       - name: Run focused AST lexer tests first
         run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
+      - name: Run focused AST unknown-symbol binder test
+        run: dotnet run --project ./tests/ast-binding/AstBindingProbe.csproj -c Release
       - name: Run deterministic AST compatibility tests first
         shell: pwsh
         run: ./tests/ast-compat/run-ast-compat.ps1
