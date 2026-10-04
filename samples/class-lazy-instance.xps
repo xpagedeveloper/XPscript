@@ -8,23 +8,20 @@ End Class
 
 Private sharedProbe As LazyProbe
 
-Function GetProbe() As LazyProbe
+Sub EnsureProbe()
     If sharedProbe Is Nothing Then
         Set sharedProbe = New LazyProbe()
     End If
-    Set GetProbe = sharedProbe
-End Function
+End Sub
 
 Sub Main()
     Print "BEFORE=" & CStr(sharedProbe Is Nothing)
 
-    Dim first As LazyProbe
-    Dim second As LazyProbe
-    Set first = GetProbe()
-    first.Marker = "reused"
-    Set second = GetProbe()
-
+    Call EnsureProbe()
+    sharedProbe.Marker = "reused"
     Print "AFTER=" & CStr(sharedProbe Is Nothing)
-    Print "FIRST=" & first.Marker
-    Print "SECOND=" & second.Marker
+    Print "FIRST=" & sharedProbe.Marker
+
+    Call EnsureProbe()
+    Print "SECOND=" & sharedProbe.Marker
 End Sub
