@@ -3,6 +3,7 @@ namespace XPScript.Compiler.Binding;
 public enum SymbolKind
 {
     Variable,
+    Local,
     Property,
     IndexedProperty,
     Function,
@@ -17,6 +18,11 @@ public abstract record Symbol(string Name)
 public sealed record VariableSymbol(string Name, Type Type, XpTypeSymbol? SemanticType = null) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.Variable;
+}
+
+public sealed record LocalSymbol(string Name, Type Type, XpTypeSymbol? SemanticType = null) : Symbol(Name)
+{
+    public override SymbolKind Kind => SymbolKind.Local;
 }
 
 public sealed record PropertySymbol(string Name, Type PropertyType, XpTypeSymbol? SemanticType = null) : Symbol(Name)
