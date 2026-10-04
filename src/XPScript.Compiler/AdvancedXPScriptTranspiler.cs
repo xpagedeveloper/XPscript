@@ -74,6 +74,7 @@ internal sealed class AdvancedXPScriptTranspiler
     private readonly Dictionary<string, ClassInfo> _classes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _variableTypes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _objectVariables = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _moduleObjectVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _runtimeObjectVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _listVariables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<ForAllContext> _forAll = new();
@@ -233,6 +234,7 @@ internal static class LSForAllRuntime
         _procedureKind = ProcedureKind.None;
         _variableTypes.Clear();
         _objectVariables.Clear();
+        _moduleObjectVariables.Clear();
         _runtimeObjectVariables.Clear();
         _listVariables.Clear();
         _forAll.Clear();
@@ -349,6 +351,9 @@ internal static class LSForAllRuntime
                     return;
             }
 
+            if (_currentClass is null && TryEmitModuleObjectField(sb, line))
+                return;
+
             if (TryBeginProcedure(sb, line))
                 return;
         }
@@ -363,6 +368,32 @@ internal static class LSForAllRuntime
         }
 
         throw new CompilerException($"Unsupported module/class declaration: {line}");
+    }
+
+    private bool TryEmitModuleObjectField(StringBuilder sb, string line)
+    {
+        var match = Regex.Match(
+            line,
+            @"^(Public|Private)\s+([A-Za-z_]\w*)\s+As\s+([A-Za-z_]\w*)\s*$",
+            RegexOptions.IgnoreCase);
+        if (!match.Success || !_classes.ContainsKey(match.Groups[3].Value))
+            return false;
+
+        var visibility = NormalizeVisibility(match.Groups[1].Value, "private");
+        var name = match.Groups[2].Value;
+        var className = match.Groups[3].Value;
+        _moduleObjectVariables[name] = className;
+        _objectVariables[name] = className;
+        Write(sb, $"{visibility} static LSRef<{className}> {name} = new();");
+        return true;
+    }
+
+    private void RestoreModuleObjectVariables()
+    {
+        if (_currentClass is not null)
+            return;
+        foreach (var item in _moduleObjectVariables)
+            _objectVariables[item.Key] = item.Value;
     }
 
     private bool TryEmitClassBoundary(StringBuilder sb, string line)
@@ -488,6 +519,7 @@ internal static class LSForAllRuntime
             _currentReturnType = null;
             _variableTypes.Clear();
             _objectVariables.Clear();
+            RestoreModuleObjectVariables();
             _runtimeObjectVariables.Clear();
             _listVariables.Clear();
             RegisterArguments(sub.Groups[3].Value);
@@ -539,6 +571,7 @@ internal static class LSForAllRuntime
         _procedureKind = ProcedureKind.Function;
         _variableTypes.Clear();
         _objectVariables.Clear();
+        RestoreModuleObjectVariables();
         _listVariables.Clear();
         RegisterArguments(fn.Groups[3].Value);
 
@@ -589,6 +622,7 @@ internal static class LSForAllRuntime
         _procedureKind = ProcedureKind.None;
         _variableTypes.Clear();
         _objectVariables.Clear();
+        RestoreModuleObjectVariables();
         _listVariables.Clear();
         _forAll.Clear();
     }
