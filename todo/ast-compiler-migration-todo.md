@@ -240,7 +240,7 @@ Class-oriented language patterns:
 - [x] Implement unknown symbol diagnostics.
 - [x] Implement member lookup.
 - [x] Implement overload/call binding where required.
-- [ ] Implement ByRef/ByVal validation.
+- [x] Implement ByRef/ByVal validation.
 - [ ] Implement assignment compatibility.
 - [ ] Implement return-type validation.
 
