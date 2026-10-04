@@ -421,7 +421,11 @@ public sealed class XpsOpenApiClientGenerator
     }
     private static string ResponseSchemaText(JsonObject root, JsonObject schema)
     {
-        return XpsOpenApiSchema.StandaloneJsonSchema(root, schema, "OpenAPI client response schema");
+        // Avoid JSON escaped quotes (\\") inside generated XPScript string literals.
+        // The XPScript quote preprocessor treats a backslash followed by a quote as
+        // an escaped XPScript quote, while JSON accepts the equivalent \\u0022 form.
+        return XpsOpenApiSchema.StandaloneJsonSchema(root, schema, "OpenAPI client response schema")
+            .Replace("\\\"", "\\u0022", StringComparison.Ordinal);
     }
     private static void EmitResponseMapping(StringBuilder b, ClientOperation op, Dictionary<string, JsonObject> models, IReadOnlyDictionary<string, string> responseMembers, string rawName, string resultName, HashSet<string> parameterNames)
     {
