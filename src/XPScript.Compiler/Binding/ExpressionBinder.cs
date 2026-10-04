@@ -107,6 +107,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         var candidates = functions
             .Where(function => function.ParameterTypes.Count == arguments.Length)
             .Where(function => ParametersMatch(function, arguments))
+            .Where(function => ParameterModesMatch(function, arguments))
             .ToArray();
 
         if (candidates.Length == 0)
@@ -161,6 +162,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         var candidates = functions
             .Where(function => function.ParameterTypes.Count == arguments.Length)
             .Where(function => ParametersMatch(function, arguments))
+            .Where(function => ParameterModesMatch(function, arguments))
             .ToArray();
 
         if (candidates.Length == 0)
@@ -169,6 +171,25 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             return Error(syntax, CompilerDiagnosticCodes.AmbiguousOverload, $"Call to function '{name}' is ambiguous.");
 
         return new BoundCallExpression(target, candidates[0], arguments);
+    }
+
+    private static bool ParameterModesMatch(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
+    {
+        if (function.ByRefParameters is null)
+            return true;
+        if (function.ByRefParameters.Count != arguments.Count)
+            return false;
+
+        for (var i = 0; i < arguments.Count; i++)
+        {
+            if (!function.ByRefParameters[i])
+                continue;
+            if (arguments[i] is not BoundNameExpression name ||
+                name.Symbol is not (VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol))
+                return false;
+        }
+
+        return true;
     }
 
     private static bool ParametersMatch(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
