@@ -646,10 +646,27 @@ public sealed class XpsOpenApiGenerator
     {
         result = default;
         if (node[propertyName] is not JsonValue value) return false;
-        if (value.TryGetValue<decimal>(out var number))
+        if (value.TryGetValue<long>(out var integer))
         {
+            var number = (decimal)integer;
             result = (number, number.ToString(CultureInfo.InvariantCulture));
             return true;
+        }
+        if (value.TryGetValue<double>(out var floatingPoint) &&
+            double.IsFinite(floatingPoint) &&
+            floatingPoint >= (double)decimal.MinValue &&
+            floatingPoint <= (double)decimal.MaxValue)
+        {
+            try
+            {
+                var number = (decimal)floatingPoint;
+                result = (number, number.ToString(CultureInfo.InvariantCulture));
+                return true;
+            }
+            catch (OverflowException)
+            {
+                return false;
+            }
         }
         return false;
     }
