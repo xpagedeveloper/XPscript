@@ -86,6 +86,10 @@ public sealed class SymbolTable
         if (!left.ParameterTypes.SequenceEqual(right.ParameterTypes))
             return false;
 
+        if (left.ByRefParameters is not null && right.ByRefParameters is not null &&
+            !left.ByRefParameters.SequenceEqual(right.ByRefParameters))
+            return false;
+
         if (left.SemanticParameterTypes is null || right.SemanticParameterTypes is null)
             return true;
 
