@@ -135,6 +135,16 @@ if (!reservedMemberImport.Source.Contains("' OpenAPI property: date", StringComp
     throw new Exception("OpenAPI reserved model-member regression failed.");
 Console.WriteLine("OPENAPI-RESERVED-MODEL-MEMBER=OK");
 
+var digitalOceanPath = Path.Combine(AppContext.BaseDirectory, "fixtures", "digitalocean.yaml");
+var digitalOceanSpecification = File.ReadAllText(digitalOceanPath);
+var digitalOceanServer = new XpsOpenApiGenerator().Generate(digitalOceanSpecification, "digitalocean.yaml");
+var digitalOceanClient = new XpsOpenApiClientGenerator().Generate(digitalOceanSpecification, "digitalocean.yaml");
+if (digitalOceanServer.Operations.Count == 0 || digitalOceanServer.Models.Count == 0)
+    throw new Exception("DigitalOcean OpenAPI REST server generation produced no operations or models.");
+if (digitalOceanClient.Operations.Count == 0 || digitalOceanClient.Models.Count == 0)
+    throw new Exception("DigitalOcean OpenAPI REST client generation produced no operations or models.");
+Console.WriteLine("OPENAPI-DIGITALOCEAN-SERVER-CLIENT=OK");
+
 var fortnoxFixtureDirectory = Path.Combine(AppContext.BaseDirectory, "fixtures");
 var fortnoxSpecification = string.Concat(
     Directory.GetFiles(fortnoxFixtureDirectory, "fortnoxapi.part*.json")
@@ -2065,6 +2075,20 @@ Console.WriteLine("SIZE-LITERALS=OK");
 
 try
 {
+    var digitalOceanServerPath = Path.Combine(root, "digitalocean-server.xps");
+    var digitalOceanClientPath = Path.Combine(root, "digitalocean-client.xps");
+    _ = new XPScriptTranspiler().TranspileRestricted(
+        digitalOceanServer.Source + "\nSub Main()\nEnd Sub\n",
+        digitalOceanServerPath,
+        CompilerDriver.CurrentRuntimeIdentifier(),
+        [root]);
+    _ = new XPScriptTranspiler().TranspileRestricted(
+        digitalOceanClient.Source + "\nSub Main()\nEnd Sub\n",
+        digitalOceanClientPath,
+        CompilerDriver.CurrentRuntimeIdentifier(),
+        [root]);
+    Console.WriteLine("OPENAPI-DIGITALOCEAN-SERVER-CLIENT-COMPILE=OK");
+
     var openApi32ServerPath = Path.Combine(root, "openapi32-server.xps");
     await File.WriteAllTextAsync(openApi32ServerPath, openApi32Server.Source);
     var openApi32ClientPath = Path.Combine(root, "openapi32-client.xps");
