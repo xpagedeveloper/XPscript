@@ -234,7 +234,9 @@ foreach (var expected in new[]
     "normalized.StartsWith(\"assets/\"",
     "Application assets are read-only.",
     "Application asset path escapes the assets directory.",
-    "if (!IsAssetPath(resolvedAsset))"
+    "if (!IsAssetPath(resolvedAsset))",
+    "if (IsAssetPath(path))",
+    "Access = FileAccess.Read"
 })
 {
     if (!fileSystemRuntime.Contains(expected, StringComparison.Ordinal))
