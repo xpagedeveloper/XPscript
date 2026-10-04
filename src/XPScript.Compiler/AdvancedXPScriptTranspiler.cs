@@ -234,7 +234,6 @@ internal static class LSForAllRuntime
         _procedureKind = ProcedureKind.None;
         _variableTypes.Clear();
         _objectVariables.Clear();
-        _moduleObjectVariables.Clear();
         _runtimeObjectVariables.Clear();
         _listVariables.Clear();
         _forAll.Clear();
@@ -244,6 +243,7 @@ internal static class LSForAllRuntime
     private void AnalyzeSource(string[] lines)
     {
         _classes.Clear();
+        _moduleObjectVariables.Clear();
         ClassInfo? current = null;
 
         foreach (var raw in lines)
@@ -277,7 +277,15 @@ internal static class LSForAllRuntime
             }
 
             if (current is null)
+            {
+                var moduleObjectMatch = Regex.Match(
+                    line,
+                    @"^(Public|Private)\s+([A-Za-z_]\w*)\s+As\s+([A-Za-z_]\w*)\s*$",
+                    RegexOptions.IgnoreCase);
+                if (moduleObjectMatch.Success && _classes.ContainsKey(moduleObjectMatch.Groups[3].Value))
+                    _moduleObjectVariables[moduleObjectMatch.Groups[2].Value] = moduleObjectMatch.Groups[3].Value;
                 continue;
+            }
 
             var functionMatch = Regex.Match(
                 line,
