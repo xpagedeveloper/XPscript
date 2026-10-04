@@ -8,7 +8,7 @@ using Android.OS;
 using Android.Util;
 
 [Activity(Label = "XPScript", MainLauncher = true, Exported = true)]
-sealed class AndroidEntryActivity : Activity
+public sealed class AndroidEntryActivity : Activity
 {
     protected override void OnCreate(Bundle? savedInstanceState)
     {
