@@ -10,6 +10,33 @@ static ExpressionSyntax Parse(string text)
     return syntax;
 }
 
+// Collection typing runs first because failures here should be isolated before the broader binder probe.
+var stringType = XpTypeSymbol.FromClr(typeof(string));
+var stringArrayType = XpTypeSymbol.ArrayOf(stringType);
+if (!stringArrayType.IsArray || stringArrayType.IsList || stringArrayType.ElementType != stringType || stringArrayType.RuntimeType != typeof(string[]))
+    throw new InvalidOperationException("XPscript arrays must retain their explicit array shape and element type.");
+
+var clrStringArrayType = XpTypeSymbol.FromClr(typeof(string[]));
+if (!clrStringArrayType.IsArray || clrStringArrayType.ElementType != stringType)
+    throw new InvalidOperationException("CLR array types must map to the same XPscript array semantic shape.");
+
+var variantArrayType = XpTypeSymbol.ArrayOf(XpTypeSymbol.Variant);
+if (!variantArrayType.IsArray || variantArrayType.IsVariant || variantArrayType.ElementType != XpTypeSymbol.Variant)
+    throw new InvalidOperationException("Variant() must be an array of Variant, not a scalar Variant.");
+
+var stringListType = XpTypeSymbol.ListOf(stringType);
+if (!stringListType.IsList || stringListType.IsArray || stringListType.ElementType != stringType || stringListType.RuntimeType != typeof(object))
+    throw new InvalidOperationException("XPscript List must retain a distinct list shape and element type.");
+
+var variantListType = XpTypeSymbol.ListOf(XpTypeSymbol.Variant);
+if (!variantListType.IsList || variantListType.IsVariant || variantListType.ElementType != XpTypeSymbol.Variant)
+    throw new InvalidOperationException("List As Variant must remain distinct from scalar Variant and Variant().");
+
+if (stringArrayType == stringListType)
+    throw new InvalidOperationException("Array and List semantic types must never collapse to the same XPscript type.");
+
+Console.WriteLine("AST_BINDING_COLLECTION_TYPES_OK");
+
 var unknownBinder = new ExpressionBinder();
 _ = unknownBinder.Bind(Parse("missingName"));
 if (unknownBinder.Diagnostics.Count != 1)
@@ -285,12 +312,12 @@ if (wideningReturnBinder.Diagnostics.Count != 0 ||
 var wideningCallBinder = new ExpressionBinder(conversionSymbols);
 _ = wideningCallBinder.Bind(Parse("TakeDouble(1)"));
 if (wideningCallBinder.Diagnostics.Count != 0)
-    throw new InvalidOperationException("ByVal Integer argument must be allowed to widen to Double.");
+    throw new InvalidOperationException("ByVal calls must allow defined implicit widening conversions.");
 
-var wideningByRefBinder = new ExpressionBinder(conversionSymbols);
-_ = wideningByRefBinder.Bind(Parse("TouchDouble(narrow)"));
-if (wideningByRefBinder.Diagnostics.Count != 1 || wideningByRefBinder.Diagnostics[0].Code != "XPS2004")
-    throw new InvalidOperationException("ByRef arguments must require identity conversion.");
+var byRefWideningBinder = new ExpressionBinder(conversionSymbols);
+_ = byRefWideningBinder.Bind(Parse("TouchDouble(narrow)"));
+if (byRefWideningBinder.Diagnostics.Count != 1 || byRefWideningBinder.Diagnostics[0].Code != "XPS2004")
+    throw new InvalidOperationException("ByRef calls must require identity conversion and reject widening.");
 
 Console.WriteLine("AST_BINDING_CONVERSION_RULES_OK");
 
