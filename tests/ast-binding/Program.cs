@@ -250,3 +250,46 @@ if (selectBinder.Diagnostics.Count != 0 || boundSelect is not BoundSelectStateme
     throw new InvalidOperationException("Select Case must produce a bound Select statement without diagnostics.");
 
 Console.WriteLine("AST_BINDING_CONTROL_FLOW_OK");
+
+
+var conversionSymbols = new SymbolTable();
+conversionSymbols.Declare(new VariableSymbol("wide", typeof(double)));
+conversionSymbols.Declare(new VariableSymbol("narrow", typeof(long)));
+conversionSymbols.Declare(new FunctionSymbol("TakeDouble", typeof(double), [typeof(double)], ByRefParameters: [false]));
+conversionSymbols.Declare(new FunctionSymbol("TouchDouble", typeof(double), [typeof(double)], ByRefParameters: [true]));
+
+var wideningAssignmentParser = new StatementParser("wide = 1");
+var wideningAssignment = wideningAssignmentParser.ParseStatement();
+var wideningAssignmentBinder = new StatementBinder(conversionSymbols);
+var boundWideningAssignment = wideningAssignmentBinder.Bind(wideningAssignment);
+if (wideningAssignmentParser.Diagnostics.Count != 0 || wideningAssignmentBinder.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Integer-to-Double widening assignment must bind without diagnostics.");
+if (boundWideningAssignment is not BoundAssignmentStatement { Expression: BoundConversionExpression { Conversion.Kind: ConversionKind.NumericWidening } })
+    throw new InvalidOperationException("Widening assignment must contain an explicit bound numeric conversion.");
+
+var narrowingAssignmentParser = new StatementParser("narrow = 1.5");
+var narrowingAssignment = narrowingAssignmentParser.ParseStatement();
+var narrowingAssignmentBinder = new StatementBinder(conversionSymbols);
+_ = narrowingAssignmentBinder.Bind(narrowingAssignment);
+if (narrowingAssignmentBinder.Diagnostics.Count != 1 || narrowingAssignmentBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Double-to-Integer narrowing assignment must remain a type mismatch.");
+
+var wideningReturnParser = new StatementParser("Return 1");
+var wideningReturn = wideningReturnParser.ParseStatement();
+var wideningReturnBinder = new StatementBinder(returnType: XpTypeSymbol.FromClr(typeof(double)), allowsReturnValue: true);
+var boundWideningReturn = wideningReturnBinder.Bind(wideningReturn);
+if (wideningReturnBinder.Diagnostics.Count != 0 ||
+    boundWideningReturn is not BoundReturnStatement { Expression: BoundConversionExpression { Conversion.Kind: ConversionKind.NumericWidening } })
+    throw new InvalidOperationException("Integer-to-Double Function return must bind through an explicit widening conversion.");
+
+var wideningCallBinder = new ExpressionBinder(conversionSymbols);
+_ = wideningCallBinder.Bind(Parse("TakeDouble(1)"));
+if (wideningCallBinder.Diagnostics.Count != 0)
+    throw new InvalidOperationException("ByVal Integer argument must be allowed to widen to Double.");
+
+var wideningByRefBinder = new ExpressionBinder(conversionSymbols);
+_ = wideningByRefBinder.Bind(Parse("TouchDouble(narrow)"));
+if (wideningByRefBinder.Diagnostics.Count != 1 || wideningByRefBinder.Diagnostics[0].Code != "XPS2004")
+    throw new InvalidOperationException("ByRef arguments must require identity conversion.");
+
+Console.WriteLine("AST_BINDING_CONVERSION_RULES_OK");
