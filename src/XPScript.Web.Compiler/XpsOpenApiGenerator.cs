@@ -42,6 +42,7 @@ public sealed class XpsOpenApiGenerator
     public XpsOpenApiGenerationResult Generate(string specification, string? sourceName = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(specification);
+        XpsOpenApiSchema.ValidateExternalReferences(specification, sourceName);
         var root = ParseDocument(specification, sourceName);
         var normalized = XpsOpenApiSchema.NormalizeDocument(root);
         var version = normalized.Version;
