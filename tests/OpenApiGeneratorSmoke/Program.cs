@@ -225,6 +225,20 @@ if (!multipartClientRequestBody.Source.Contains("Public Function ArchiveControll
     throw new Exception("OpenAPI multipart client request-body regression failed.");
 Console.WriteLine("OPENAPI-CLIENT-MULTIPART-REQUEST-BODY=OK");
 
+var sizeLiteralSource = """
+Sub Main()
+    Dim http As New XPHttpClient
+    http.MaxRequestBodyBytes = 100mb
+    Dim kilobytes As Long
+    Dim gigabytes As Long
+    kilobytes = 2kb
+    gigabytes = 3gb
+End Sub
+""";
+var sizeLiteralPath = Path.Combine(Path.GetTempPath(), "xpscript-size-literals-" + Guid.NewGuid().ToString("N") + ".xps");
+_ = new XPScriptTranspiler().TranspileRestricted(sizeLiteralSource, sizeLiteralPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
+Console.WriteLine("SIZE-LITERALS=OK");
+
 var multipartFileClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.0.3
 info: { title: Multipart File Client, version: 1.0.0 }
