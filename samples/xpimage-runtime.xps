@@ -1,3 +1,35 @@
+Sub VerifyApplicationAssetReadOnly()
+    Dim asset As XPImage
+    Set asset = XPImage.Load("assets/xpimage-asset.png")
+    If Not asset.IsLoaded Then Error 5, "XPImage application asset did not load"
+    If asset.Width <> 1 Or asset.Height <> 1 Then Error 5, "XPImage application asset dimensions failed"
+    If FileLen("assets/xpimage-asset.png") <= 0 Then Error 5, "Application asset FileLen failed"
+
+    Dim assetFile As Integer
+    Dim firstByte As Byte
+    assetFile = FreeFile()
+    Open "assets/xpimage-asset.png" For Binary As #assetFile
+    Get #assetFile, 1, firstByte
+    Close #assetFile
+
+    Dim saveErr As Integer
+    On Error Resume Next
+    asset.Save("assets/xpimage-asset-copy.png")
+    saveErr = Err
+    On Error GoTo 0
+    If saveErr <> 5 Then Error 5, "XPImage.Save to application assets must return runtime error 5"
+
+    Dim putErr As Integer
+    assetFile = FreeFile()
+    Open "assets/xpimage-asset.png" For Binary As #assetFile
+    On Error Resume Next
+    Put #assetFile, 1, firstByte
+    putErr = Err
+    On Error GoTo 0
+    Close #assetFile
+    If putErr <> 5 Then Error 5, "Binary Put to application assets must return runtime error 5"
+End Sub
+
 Function MakeReturnedImage() As XPImage
     Dim localOnly As XPImage
     Set localOnly = New XPImage(3, 3, "#010203")
@@ -91,6 +123,7 @@ Sub VerifyOutputPathSafety()
 End Sub
 
 Sub Main()
+    Call VerifyApplicationAssetReadOnly()
     Call VerifyOutputPathSafety()
     Call VerifyUnsupportedActiveContent()
     Call VerifyOversizedRotation()
