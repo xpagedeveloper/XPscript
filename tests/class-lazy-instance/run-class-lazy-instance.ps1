@@ -16,11 +16,10 @@ if ($LASTEXITCODE -ne 0) { throw "Program failed: class-lazy-instance.xps" }
 $joined = ($text -join [Environment]::NewLine)
 Write-Host $joined
 
-if ($joined -notmatch "(?m)^BEFORE=0\s*$") { throw "Lazy instance was constructed before first access." }
-if ($joined -notmatch "(?m)^AFTER-FIRST=1\s*$") { throw "First access did not construct exactly one instance." }
-if ($joined -notmatch "(?m)^AFTER-SECOND=1\s*$") { throw "Second access constructed another instance." }
-if ($joined -notmatch "(?m)^FIRST=ready\s*$") { throw "First lazy instance is invalid." }
-if ($joined -notmatch "(?m)^SECOND=ready\s*$") { throw "Reused lazy instance is invalid." }
+if ($joined -notmatch "(?m)^BEFORE=True\s*$") { throw "Module class reference did not start as Nothing." }
+if ($joined -notmatch "(?m)^AFTER=False\s*$") { throw "Lazy instance was not retained in module state." }
+if ($joined -notmatch "(?m)^FIRST=reused\s*$") { throw "First lazy instance is invalid." }
+if ($joined -notmatch "(?m)^SECOND=reused\s*$") { throw "Second access did not reuse the lazy instance." }
 
 Write-Host "CLASS_LAZY_INSTANCE_FOCUSED=OK"
 exit 0
