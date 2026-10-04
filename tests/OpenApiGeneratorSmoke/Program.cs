@@ -279,6 +279,35 @@ await using (var referencedParameterUnit = await new XpsWebCompiler().CompileAsy
 File.Delete(referencedParameterPath);
 Console.WriteLine("OPENAPI-SERVER-REFERENCED-PRIMITIVE-PARAMETER=OK");
 
+const string arrayProviderParameterOpenApi = """
+openapi: 3.0.3
+info: { title: Array provider parameter regression, version: 1.0.0 }
+paths:
+  /models:
+    get:
+      operationId: listModelsByProvider
+      parameters:
+        - name: provider
+          in: query
+          required: false
+          schema:
+            type: array
+            items: { type: string }
+      responses:
+        '200': { description: ok }
+""";
+var arrayProviderParameterServer = generator.Generate(arrayProviderParameterOpenApi, "array-provider-parameter.yaml");
+if (!arrayProviderParameterServer.Source.Contains("Public Provider As XPJsonArray", StringComparison.Ordinal) ||
+    !arrayProviderParameterServer.Source.Contains("pProvider As XPJsonArray", StringComparison.Ordinal))
+    throw new Exception("Array OpenAPI parameter must remain XPJsonArray in generated server request and wrapper.");
+var arrayProviderParameterPath = Path.Combine(Path.GetTempPath(), "array-provider-parameter-server.xps");
+await File.WriteAllTextAsync(arrayProviderParameterPath, arrayProviderParameterServer.Source);
+await using (var arrayProviderParameterUnit = await new XpsWebCompiler().CompileAsync(arrayProviderParameterPath, Path.GetTempPath()))
+{
+}
+Console.WriteLine("OPENAPI-SERVER-ARRAY-PARAMETER=OK");
+
+
 const string runtimeReservedServerOpenApi = """
 {
   "openapi": "3.0.3",
