@@ -78,7 +78,7 @@ internal static class XPScriptFileSystemRuntime
         }
     }
 
-    public static bool IsAssetPath(string path)
+    private static bool IsAssetPath(string path)
     {
         var full = Path.GetFullPath(path);
         var assetRoot = Path.GetFullPath(Path.Combine(_scriptDirectory, "assets"));
@@ -88,7 +88,7 @@ internal static class XPScriptFileSystemRuntime
         return full.StartsWith(prefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     }
 
-    public static void EnsureWritablePath(string path)
+    internal static void EnsureWritablePath(string path)
     {
         if (IsAssetPath(path))
             throw new XPScriptRuntimeException(5, "Application assets are read-only.");
