@@ -2059,7 +2059,7 @@ Sub Main()
     gigabytes = 3gb
 End Sub
 """;
-var sizeLiteralPath = Path.Combine(Path.GetTempPath(), "xpscript-size-literals-" + Guid.NewGuid().ToString("N") + ".xps");
+var sizeLiteralPath = Path.Combine(root, "size-literals.xps");
 _ = new XPScriptTranspiler().TranspileRestricted(sizeLiteralSource, sizeLiteralPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
 Console.WriteLine("SIZE-LITERALS=OK");
 
