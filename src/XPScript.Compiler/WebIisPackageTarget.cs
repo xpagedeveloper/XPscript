@@ -25,6 +25,9 @@ internal static class WebIisPackageTarget
         var siteRoot = Path.Combine(outputPath, "site");
         Directory.CreateDirectory(siteRoot);
         CopyApplicationFiles(root, siteRoot);
+        var sourceAssets = Path.Combine(root, UIFormAppAssets.DirectoryName);
+        if (Directory.Exists(sourceAssets) && UIFormAppAssets.UsesUIForm(sourcePath))
+            UIFormAppAssets.CopyAssetsToDirectory(sourcePath, Path.Combine(siteRoot, ".xpscript-private"));
 
         var hostRoot = Path.Combine(siteRoot, "host");
         Directory.CreateDirectory(hostRoot);
