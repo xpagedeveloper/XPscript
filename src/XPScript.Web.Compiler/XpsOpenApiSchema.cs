@@ -6,7 +6,7 @@ namespace XPScript.Web.Compiler;
 internal static class XpsOpenApiSchema
 {
     private static readonly Regex ExternalReferenceLine = new(
-        @"(?:^|[,{]\s*)[\"']?\$ref[\"']?\s*:\s*[\"']?(?<ref>[^\"'\s,}]+)",
+        "(?:^|[,{]\\s*)[\\\"\']?\\$ref[\\\"\']?\\s*:\\s*[\\\"\']?(?<ref>[^\\\"\'\\s,}]+)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     internal static void ValidateExternalReferences(string specification, string? sourceName)
