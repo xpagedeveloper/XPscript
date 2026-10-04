@@ -242,7 +242,7 @@ Class-oriented language patterns:
 - [x] Implement overload/call binding where required.
 - [x] Implement ByRef/ByVal validation.
 - [x] Implement assignment compatibility.
-- [ ] Implement return-type validation.
+- [x] Implement return-type validation.
 
 ## Phase 7: Bound tree and types
 
