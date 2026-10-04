@@ -2,9 +2,11 @@ using XPScript.Compiler.Syntax;
 
 namespace XPScript.Compiler.Binding;
 
-public sealed class StatementBinder(SymbolTable? symbols = null)
+public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
+    private readonly XpTypeSymbol? _returnType = returnType;
+    private readonly bool _allowsReturnValue = allowsReturnValue;
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
@@ -18,6 +20,9 @@ public sealed class StatementBinder(SymbolTable? symbols = null)
             case SetStatementSyntax set:
                 BindAssignment(set.Target, set.Expression, isSet: true);
                 break;
+            case ReturnStatementSyntax @return:
+                BindReturn(@return);
+                break;
             default:
                 _diagnostics.Add(new SyntaxDiagnostic(
                     CompilerDiagnosticCodes.InvalidSyntax,
@@ -25,6 +30,33 @@ public sealed class StatementBinder(SymbolTable? symbols = null)
                     syntax.Span));
                 break;
         }
+    }
+
+    private void BindReturn(ReturnStatementSyntax syntax)
+    {
+        if (!_allowsReturnValue)
+        {
+            if (syntax.Expression is not null)
+                _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "A Sub cannot return a value.", syntax.Expression.Span));
+            return;
+        }
+
+        if (syntax.Expression is null || _returnType is null)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "A Function return requires a value.", syntax.Span));
+            return;
+        }
+
+        var binder = new ExpressionBinder(_symbols);
+        var value = binder.Bind(syntax.Expression);
+        _diagnostics.AddRange(binder.Diagnostics);
+        if (binder.Diagnostics.Count != 0)
+            return;
+
+        if (value.Type != _returnType.RuntimeType ||
+            !string.Equals(value.SemanticType.Name, _returnType.Name, StringComparison.OrdinalIgnoreCase))
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
+                $"Cannot return {value.SemanticType.Name} from a Function returning {_returnType.Name}.", syntax.Expression.Span));
     }
 
     private void BindAssignment(ExpressionSyntax targetSyntax, ExpressionSyntax valueSyntax, bool isSet = false)
