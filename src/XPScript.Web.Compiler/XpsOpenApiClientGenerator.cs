@@ -353,7 +353,7 @@ public sealed class XpsOpenApiClientGenerator
         b.AppendLine($"        {urlName} = BaseUrl_i & \"{EscapeXps(op.Path)}\"");
         foreach (var p in op.Parameters.Where(y => y.Location == "path")) b.AppendLine($"        {urlName} = Replace({urlName}, \"{{{EscapeXps(p.Name)}}}\", Http_i.EncodePath({p.GeneratedName}))"); foreach (var p in op.Parameters.Where(y => y.Location == "query")) { var line = $"{urlName} = Http_i.AddQuery({urlName}, \"{EscapeXps(p.Name)}\", {p.GeneratedName})"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); } foreach (var p in op.Parameters.Where(y => y.Location == "header")) { var line = $"Call {requestName}.SetHeader(\"{EscapeXps(p.Name)}\", CStr({p.GeneratedName}))"; if (p.Required) b.AppendLine($"        {line}"); else EmitOptionalValue(b, p, line); }
         EmitSecurity(b, op, securitySchemes, urlName, requestName);
-        b.AppendLine($"        {requestName}.Method = \"{op.Method}\""); b.AppendLine($"        {requestName}.Url = {urlName}"); if (op.Body is not null) { if (!op.Body.Required) b.AppendLine($"        If Not {payloadName} Is Nothing Then"); var indent = op.Body.Required ? "        " : "            "; b.AppendLine(indent + $"Call {requestName}.SetHeader(\"Content-Type\", \"application/json\")"); b.AppendLine(indent + $"{requestName}.Body = JsonStringify({payloadName})"); if (!op.Body.Required) b.AppendLine("        End If"); } b.AppendLine($"        Set {rawName} = Http_i.Send({requestName})");
+        b.AppendLine($"        {requestName}.Method = \"{op.Method}\""); b.AppendLine($"        {requestName}.Url = {urlName}"); if (op.Body is not null) { if (!op.Body.Required) b.AppendLine($"        If Not {payloadName} Is Nothing Then"); var indent = op.Body.Required ? "        " : "            "; if (op.Body.MediaType.Equals("multipart/form-data", StringComparison.OrdinalIgnoreCase) && op.Body.MultipartFileField is not null) { b.AppendLine(indent + $"Call {requestName}.AddMultipartFile(\"{EscapeXps(op.Body.MultipartFileField)}\", {payloadName})"); } else { b.AppendLine(indent + $"Call {requestName}.SetHeader(\"Content-Type\", \"{EscapeXps(op.Body.MediaType)}\")"); b.AppendLine(indent + $"{requestName}.Body = JsonStringify({payloadName})"); } if (!op.Body.Required) b.AppendLine("        End If"); } b.AppendLine($"        Set {rawName} = Http_i.Send({requestName})");
         b.AppendLine($"        Set {resultName}.Raw = {rawName}"); b.AppendLine($"        {resultName}.StatusCode = {rawName}.StatusCode"); b.AppendLine($"        {resultName}.IsSuccess = {rawName}.IsSuccess"); b.AppendLine($"        If Len({rawName}.Body) > 0 Then Set {resultName}.Json = {rawName}.Json()"); EmitResponseValidation(b, op, root, rawName, resultName); EmitResponseMapping(b, op, models, responseMembers, rawName, resultName, procedureNames); b.AppendLine($"        Set {op.Name} = {resultName}"); b.AppendLine("    End Function");
     }
     private static void EmitSecurity(StringBuilder b, ClientOperation op, Dictionary<string, ClientSecurityScheme> securitySchemes, string urlName, string requestName)
@@ -479,15 +479,17 @@ public sealed class XpsOpenApiClientGenerator
         _ => "Nothing"
     };
     private static JsonObject? SelectJson(JsonObject content) { if (content["application/json"] is JsonObject eyact) return eyact; foreach (var pair in content) if (pair.Key.EndsWith("+json", StringComparison.OrdinalIgnoreCase) && pair.Value is JsonObject media) return media; return null; }
-    private static JsonObject? SelectRequestMediaType(JsonObject content)
+    private static KeyValuePair<string, JsonObject> SelectRequestMediaTypeEntry(JsonObject content)
     {
-        var json = SelectJson(content);
-        if (json is not null && json["schema"] is JsonObject) return json;
+        foreach (var pair in content)
+            if ((pair.Key.Equals("application/json", StringComparison.OrdinalIgnoreCase) || pair.Key.EndsWith("+json", StringComparison.OrdinalIgnoreCase)) && pair.Value is JsonObject json && json["schema"] is JsonObject)
+                return new KeyValuePair<string, JsonObject>(pair.Key, json);
         foreach (var pair in content)
             if (pair.Value is JsonObject media && media["schema"] is JsonObject)
-                return media;
-        return null;
+                return new KeyValuePair<string, JsonObject>(pair.Key, media);
+        return default;
     }
+    private static JsonObject? SelectRequestMediaType(JsonObject content) => SelectRequestMediaTypeEntry(content).Value;
     private static string ResolveClassName(JsonObject root, string? sourceName, string? requested) { if (!string.IsNullOrWhiteSpace(requested)) return SafeIdentifier(ToIdentifier(requested)); var title = root["info"] is JsonObject info ? ReadString(info, "title") : null; if (!string.IsNullOrWhiteSpace(title)) return SafeIdentifier(ToIdentifier(title) + "_API"); var domainName = ReadServerDomainName(root); if (!string.IsNullOrWhiteSpace(domainName)) return SafeIdentifier(ToIdentifier(domainName) + "_API"); var fallback = ToIdentifier(Path.GetFileNameWithoutExtension(sourceName ?? "OpenApi")); return SafeIdentifier(fallback + "_API"); }
     private static string? ReadServerDomainName(JsonObject root) { var serverUrl = ReadServerUrl(root); if (serverUrl is null || !Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri)) return null; var host = uri.IdnHost; if (string.IsNullOrWhiteSpace(host)) return null; if (host.StartsWith("www.", StringComparison.OrdinalIgnoreCase)) host = host[4..]; var labels = host.Split('.', StringSplitOptions.RemoveEmptyEntries); if (labels.Length == 0) return null; return labels.Length >= 2 ? labels[^2] : labels[0]; }
     private static string SafeIdentifier(string identifier) => IsDeclarationReserved(identifier) ? "Api" + identifier : identifier;
