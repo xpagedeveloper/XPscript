@@ -352,7 +352,7 @@ finally
     Directory.Delete(apkRoot, recursive: true);
 }
 
-foreach (var expected in new[] { "AndroidEntryActivity", "MainLauncher = true", "Console.AndroidLog", "\"XPScript\"", "Log.Error", "Program.Main(Array.Empty<string>())", "XPSCRIPT-EXIT=0", "XPSCRIPT-EXIT=1" })
+foreach (var expected in new[] { "public sealed class AndroidEntryActivity : Activity", "MainLauncher = true", "Console.AndroidLog", "\"XPScript\"", "Log.Error", "Program.Main(Array.Empty<string>())", "XPSCRIPT-EXIT=0", "XPSCRIPT-EXIT=1" })
     if (!code.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android host is missing: " + expected);
 
