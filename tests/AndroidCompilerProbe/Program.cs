@@ -446,6 +446,10 @@ if (!compilerSource.Contains("<PackageReference Include=\"Avalonia.Controls.WebV
 if (!compilerSource.Contains("outputPath += \".apk\";", StringComparison.Ordinal))
     throw new Exception("Android compiler output is not normalized to an .apk path.");
 
+if (!compilerSource.Contains("phase + \" (step \" + _phaseActivity + \")\"", StringComparison.Ordinal) ||
+    !compilerSource.Contains("Math.Min(nextMilestone - 1, Math.Max(_percent, mapped) + 1)", StringComparison.Ordinal))
+    throw new Exception("Android publish progress must expose repeated long-running publish phases as visible substeps.");
+
 var buildEnvironmentSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerBuildEnvironment.cs"));
 if (!buildEnvironmentSource.Contains("&& !usesAndroidUi", StringComparison.Ordinal))
     throw new Exception("Android UIForm builds must not inherit desktop Avalonia package references.");
