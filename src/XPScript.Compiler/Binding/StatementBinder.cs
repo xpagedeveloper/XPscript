@@ -16,7 +16,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null)
                 BindAssignment(assignment.Target, assignment.Expression);
                 break;
             case SetStatementSyntax set:
-                BindAssignment(set.Target, set.Expression);
+                BindAssignment(set.Target, set.Expression, isSet: true);
                 break;
             default:
                 _diagnostics.Add(new SyntaxDiagnostic(
@@ -27,7 +27,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null)
         }
     }
 
-    private void BindAssignment(ExpressionSyntax targetSyntax, ExpressionSyntax valueSyntax)
+    private void BindAssignment(ExpressionSyntax targetSyntax, ExpressionSyntax valueSyntax, bool isSet = false)
     {
         var targetBinder = new ExpressionBinder(_symbols);
         var target = targetBinder.Bind(targetSyntax);
@@ -50,6 +50,15 @@ public sealed class StatementBinder(SymbolTable? symbols = null)
         if (valueBinder.Diagnostics.Count != 0)
             return;
 
+        if (isSet && !IsReferenceType(target))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(
+                CompilerDiagnosticCodes.TypeMismatch,
+                $"Set requires an object/reference target, not {target.SemanticType.Name}.",
+                targetSyntax.Span));
+            return;
+        }
+
         if (!IsAssignmentCompatible(target, value))
             _diagnostics.Add(new SyntaxDiagnostic(
                 CompilerDiagnosticCodes.TypeMismatch,
@@ -62,6 +71,9 @@ public sealed class StatementBinder(SymbolTable? symbols = null)
         name.Symbol is VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol
         || target is BoundMemberAccessExpression
         || target is BoundIndexExpression;
+
+    private static bool IsReferenceType(BoundExpression expression) =>
+        expression.Type == typeof(object) || !expression.Type.IsValueType && expression.Type != typeof(string);
 
     private static bool IsAssignmentCompatible(BoundExpression target, BoundExpression value)
     {
