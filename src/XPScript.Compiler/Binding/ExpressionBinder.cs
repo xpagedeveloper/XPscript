@@ -194,17 +194,19 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
 
     private static bool ParametersMatch(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
     {
-        if (!function.ParameterTypes.SequenceEqual(arguments.Select(argument => argument.Type)))
-            return false;
-
-        if (function.SemanticParameterTypes is null)
-            return true;
-        if (function.SemanticParameterTypes.Count != arguments.Count)
+        if (function.ParameterTypes.Count != arguments.Count)
             return false;
 
         for (var i = 0; i < arguments.Count; i++)
-            if (!string.Equals(function.SemanticParameterTypes[i].Name, arguments[i].SemanticType.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            var targetType = function.SemanticParameterTypes is not null
+                ? function.SemanticParameterTypes[i]
+                : XpTypeSymbol.FromClr(function.ParameterTypes[i]);
+            var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
+            var isByRef = function.ByRefParameters is not null && function.ByRefParameters[i];
+            if (!conversion.IsImplicit || isByRef && !conversion.IsIdentity)
                 return false;
+        }
 
         return true;
     }

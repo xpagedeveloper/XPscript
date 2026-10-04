@@ -3,6 +3,7 @@ namespace XPScript.Compiler.Binding;
 public enum BoundNodeKind
 {
     LiteralExpression,
+    ConversionExpression,
     NameExpression,
     CallExpression,
     IndexedPropertyExpression,

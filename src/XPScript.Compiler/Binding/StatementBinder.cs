@@ -234,10 +234,12 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         if (value is null)
             return new BoundReturnStatement(null);
 
-        if (value.Type != _returnType.RuntimeType ||
-            !string.Equals(value.SemanticType.Name, _returnType.Name, StringComparison.OrdinalIgnoreCase))
+        var conversion = Conversion.Classify(value.SemanticType, _returnType);
+        if (!conversion.IsImplicit)
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 $"Cannot return {value.SemanticType.Name} from a Function returning {_returnType.Name}.", syntax.Expression.Span));
+        else if (!conversion.IsIdentity)
+            value = new BoundConversionExpression(value, _returnType, conversion);
 
         return new BoundReturnStatement(value);
     }
@@ -270,11 +272,14 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             return new BoundAssignmentStatement(target, value, true);
         }
 
-        if (!IsAssignmentCompatible(target, value))
+        var conversion = Conversion.Classify(value.SemanticType, target.SemanticType);
+        if (!conversion.IsImplicit)
             _diagnostics.Add(new SyntaxDiagnostic(
                 CompilerDiagnosticCodes.TypeMismatch,
                 $"Cannot assign {value.SemanticType.Name} to {target.SemanticType.Name}.",
                 valueSyntax.Span));
+        else if (!conversion.IsIdentity)
+            value = new BoundConversionExpression(value, target.SemanticType, conversion);
 
         return new BoundAssignmentStatement(target, value, isSet);
     }
@@ -290,14 +295,4 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     private static bool IsReferenceType(BoundExpression expression) =>
         expression.Type == typeof(object) || !expression.Type.IsValueType && expression.Type != typeof(string);
 
-    private static bool IsAssignmentCompatible(BoundExpression target, BoundExpression value)
-    {
-        if (target.Type != value.Type)
-            return false;
-
-        return string.Equals(
-            target.SemanticType.Name,
-            value.SemanticType.Name,
-            StringComparison.OrdinalIgnoreCase);
-    }
 }
