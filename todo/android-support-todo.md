@@ -112,7 +112,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Add shared UIForm tabs with `AddTab`, `SetFieldTab`, `ActiveTab` and `SetActiveTab`.
 - [x] Render UIForm tabs on desktop Avalonia, Android Avalonia and web UIForm.
 - [x] Propagate programmatic active-tab changes from XPScript callbacks to rendered desktop and Android forms.
-- [ ] Verify programmatic active-tab changes and tab state on the web UIForm callback path.
+- [x] Verify programmatic active-tab changes and tab state on the web UIForm callback path.
 - [x] Add named UIForm grid containers that can be placed inside a tab.
 - [x] Implement named-grid rendering on desktop Avalonia, Android Avalonia and web UIForm.
 - [x] Implement Android Avalonia Grid row/column placement plus row/column spans.
