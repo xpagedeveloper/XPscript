@@ -293,3 +293,39 @@ if (wideningByRefBinder.Diagnostics.Count != 1 || wideningByRefBinder.Diagnostic
     throw new InvalidOperationException("ByRef arguments must require identity conversion.");
 
 Console.WriteLine("AST_BINDING_CONVERSION_RULES_OK");
+
+
+var variantType = XpTypeSymbol.Variant;
+if (variantType.RuntimeType != typeof(object) || !variantType.IsVariant)
+    throw new InvalidOperationException("Variant must be represented explicitly as an object-backed XPscript dynamic type.");
+if (XpTypeSymbol.User("Customer").IsVariant)
+    throw new InvalidOperationException("Object-backed user types must not be classified as Variant.");
+
+var toVariant = Conversion.Classify(XpTypeSymbol.FromClr(typeof(long)), variantType);
+if (!toVariant.IsImplicit || toVariant.Kind != ConversionKind.ToVariant)
+    throw new InvalidOperationException("Statically typed values must convert implicitly to Variant.");
+
+var fromVariant = Conversion.Classify(variantType, XpTypeSymbol.FromClr(typeof(double)));
+if (!fromVariant.IsImplicit || fromVariant.Kind != ConversionKind.FromVariant)
+    throw new InvalidOperationException("Variant-to-static conversion must be represented as a runtime-checked conversion.");
+
+var variantSymbols = new SymbolTable();
+variantSymbols.Declare(new VariableSymbol("dynamicValue", typeof(object), variantType));
+variantSymbols.Declare(new VariableSymbol("numberValue", typeof(long)));
+var toVariantParser = new StatementParser("dynamicValue = 1");
+var toVariantSyntax = toVariantParser.ParseStatement();
+var toVariantBinder = new StatementBinder(variantSymbols);
+var boundToVariant = toVariantBinder.Bind(toVariantSyntax);
+if (toVariantBinder.Diagnostics.Count != 0 ||
+    boundToVariant is not BoundAssignmentStatement { Expression: BoundConversionExpression { Conversion.Kind: ConversionKind.ToVariant } })
+    throw new InvalidOperationException("Assignment to Variant must retain an explicit dynamic conversion in the bound tree.");
+
+var fromVariantParser = new StatementParser("numberValue = dynamicValue");
+var fromVariantSyntax = fromVariantParser.ParseStatement();
+var fromVariantBinder = new StatementBinder(variantSymbols);
+var boundFromVariant = fromVariantBinder.Bind(fromVariantSyntax);
+if (fromVariantBinder.Diagnostics.Count != 0 ||
+    boundFromVariant is not BoundAssignmentStatement { Expression: BoundConversionExpression { Conversion.Kind: ConversionKind.FromVariant } })
+    throw new InvalidOperationException("Assignment from Variant must retain an explicit runtime-checked conversion in the bound tree.");
+
+Console.WriteLine("AST_BINDING_VARIANT_SEMANTICS_OK");
