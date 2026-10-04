@@ -418,6 +418,20 @@ foreach (var marker in new[] { "Public ApiBody As String", "Public ApiApplicatio
         throw new Exception("OpenAPI client runtime-reserved identifier regression is missing marker: " + marker);
 Console.WriteLine("OPENAPI-CLIENT-RUNTIME-RESERVED-IDENTIFIERS=OK");
 
+var runtimeReservedClientPath = Path.Combine(Path.GetTempPath(), "xpscript-openapi-runtime-reserved-" + Guid.NewGuid().ToString("N") + ".xps");
+try
+{
+    _ = new XPScriptTranspiler().Transpile(
+        runtimeReservedClient.Source + "\nSub Main()\nEnd Sub\n",
+        runtimeReservedClientPath,
+        CompilerDriver.CurrentRuntimeIdentifier());
+}
+finally
+{
+    if (File.Exists(runtimeReservedClientPath)) File.Delete(runtimeReservedClientPath);
+}
+Console.WriteLine("OPENAPI-CLIENT-RUNTIME-RESERVED-COMPILE=OK");
+
 var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecification, "fortnoxapi.json");
 foreach (var marker in new[]
 {
