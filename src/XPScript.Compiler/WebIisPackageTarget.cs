@@ -127,7 +127,8 @@ internal static class WebIisPackageTarget
 
     private static bool IsExcludedDirectory(string segment)
         => segment.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
-           segment.Equals(".xpscript-cache", StringComparison.OrdinalIgnoreCase) ||\n           segment.Equals("assets", StringComparison.OrdinalIgnoreCase) ||
+           segment.Equals(".xpscript-cache", StringComparison.OrdinalIgnoreCase) ||
+           segment.Equals("assets", StringComparison.OrdinalIgnoreCase) ||
            segment.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
            segment.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
            segment.Equals("publish-webiis", StringComparison.OrdinalIgnoreCase);
