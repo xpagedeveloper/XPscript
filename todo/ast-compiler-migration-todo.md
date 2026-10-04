@@ -256,7 +256,7 @@ Class-oriented language patterns:
 - [x] Bind assignments.
 - [x] Bind control flow.
 - [x] Define conversion rules.
-- [ ] Define Variant/dynamic semantics explicitly.
+- [x] Define Variant/dynamic semantics explicitly.
 - [ ] Define Object semantics explicitly.
 - [ ] Define Null/Empty behavior needed by XPscript.
 - [ ] Define array/list typing behavior.
