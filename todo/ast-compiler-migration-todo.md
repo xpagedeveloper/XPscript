@@ -228,7 +228,7 @@ Class-oriented language patterns:
 ## Phase 6: Symbols and semantic binder
 
 - [x] Define symbol base model.
-- [ ] Define variable/local symbols.
+- [x] Define variable/local symbols.
 - [ ] Define parameter symbols.
 - [ ] Define procedure symbols.
 - [ ] Define class/type symbols.
