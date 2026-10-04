@@ -124,8 +124,8 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Expand `samples/android-uiform-manual-test.xps` to exercise every implemented Android UIForm field/control plus tabs, programmatic tab switching, named grids, spans, validation, boot content, images and corner-radius APIs. AndroidCompilerProbe guards this coverage and Android Build successfully compiles the expanded manual-test APK.
 - [x] Route Android UI diagnostics to adb/logcat. The shared `Application.Debug` runtime routes Android diagnostics through `Android.Util.Log` with tag `XPScript`; guarded by `AndroidCompilerProbe` and exercised by the Android UIForm sample.
 - [x] Keep non-UI XPScript runtime code independent from Avalonia. `AndroidCompilerProbe` guards the compiler/runtime project from Avalonia and `XPScript.UI.Android` references.
-- [ ] Verify UIForm BootImage accepts XPImage directly on Android.
-- [ ] Verify UIForm Image source accepts XPImage directly on Android.
+- [x] Verify UIForm BootImage accepts XPImage directly on Android. The Android manual UIForm sample assigns a live `XPImage` to `form.BootImage`; the XPImage implicit data-image conversion is accepted by the Android image loader and the Android Build/manual-test APK compiles successfully.
+- [x] Verify UIForm Image source accepts XPImage directly on Android. `AddImage(..., runtimeImage)` is covered by the Android manual UIForm sample, normalized to a data-image source by the shared media runtime, and the Android Build/manual-test APK compiles successfully.
 - [ ] Verify XPImage can load packaged application assets on Android.
 - [ ] Verify application asset file reads work on Android and asset mutation attempts fail with runtime error 5.
 - [x] Build and run a debug APK on Android 11 / API 30. (Verified in CI on an Android 11 / API 30 x86_64 emulator: generated APK installed, launched and the expected XPScript log output was observed.)
