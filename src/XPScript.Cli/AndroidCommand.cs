@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace XPScript.Cli;
 
@@ -30,6 +31,7 @@ internal static class AndroidCommand
         if (!File.Exists(source)) throw new FileNotFoundException("XPScript source file was not found.", source);
 
         var project = AndroidProjectMetadata.LoadForSource(source);
+        var packageName = ResolveApplicationPackageName(source);
         Console.WriteLine("Android project: target=" + project.Target + ", applicationType=" + project.ApplicationType);
 
         string deviceMode = "auto";
@@ -84,18 +86,30 @@ internal static class AndroidCommand
         if (!File.Exists(apk)) throw new InvalidOperationException("Android compilation completed without producing the expected APK: " + apk);
 
         var install = await ExecuteAsync(adb, ["-s", serial, "install", "-r", apk]);
+        var installDiagnostics = install.Error + Environment.NewLine + install.Output;
+        if (install.ExitCode != 0 &&
+            installDiagnostics.Contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE", StringComparison.OrdinalIgnoreCase))
+        {
+            var uninstall = await ExecuteAsync(adb, ["-s", serial, "shell", "pm", "uninstall", "--user", "0", packageName]);
+            if (uninstall.ExitCode == 0 || uninstall.Output.Contains("Success", StringComparison.OrdinalIgnoreCase))
+                install = await ExecuteAsync(adb, ["-s", serial, "install", "-r", apk]);
+        }
+
         if (install.ExitCode != 0 || !install.Output.Contains("Success", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("adb install failed for " + serial + ": " + (install.Error + Environment.NewLine + install.Output).Trim());
 
         await ExecuteAsync(adb, ["-s", serial, "logcat", "-c"]);
-        var launch = await ExecuteAsync(adb, ["-s", serial, "shell", "monkey", "-p", "eu.xpscript.app", "-c", "android.intent.category.LAUNCHER", "1"]);
-        if (launch.ExitCode != 0 || launch.Output.Contains("No activities found", StringComparison.OrdinalIgnoreCase))
+        var launcherComponent = await ResolveLauncherComponentAsync(adb, serial, packageName);
+        var launchArgs = new List<string> { "-s", serial, "shell", "am", "start", "-W", "-n", launcherComponent };
+        if (debug) launchArgs.AddRange(["--ez", "xpscript.appdebug", "true"]);
+        var launch = await ExecuteAsync(adb, launchArgs);
+        if (launch.ExitCode != 0 || launch.Output.Contains("Error:", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (launch.Error + Environment.NewLine + launch.Output).Trim());
 
         if (project.ApplicationType == AndroidProjectMetadata.UiApplicationType)
         {
             await Task.Delay(750);
-            var process = await ExecuteAsync(adb, ["-s", serial, "shell", "pidof", "eu.xpscript.app"]);
+            var process = await ExecuteAsync(adb, ["-s", serial, "shell", "pidof", packageName]);
             if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(process.Output))
             {
                 var logs = await ExecuteAsync(adb, ["-s", serial, "logcat", "-d", "-t", "200"]);
@@ -108,6 +122,28 @@ internal static class AndroidCommand
         }
 
         return await WaitForCompletionAsync(adb, serial, TimeSpan.FromSeconds(30));
+    }
+
+    private static string ResolveApplicationPackageName(string sourcePath)
+    {
+        const string fallback = "eu.xpscript.debugapp";
+        var source = File.ReadAllText(sourcePath);
+        var matches = Regex.Matches(source, @"(?im)^\s*Application\.PackageName\s*=\s*\""(?<value>(?:\"\"|[^\""])*)\""\s*(?:'.*)?$", RegexOptions.CultureInvariant);
+        if (matches.Count == 0) return fallback;
+        var value = matches[^1].Groups["value"].Value.Replace("\"\"", "\"", StringComparison.Ordinal).Trim();
+        if (!Regex.IsMatch(value, @"^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$", RegexOptions.CultureInvariant))
+            throw new ArgumentException("Application.PackageName must be a reverse-domain identifier such as se.company.myapp.");
+        return value;
+    }
+
+    private static async Task<string> ResolveLauncherComponentAsync(string adb, string serial, string packageName)
+    {
+        var resolve = await ExecuteAsync(adb, ["-s", serial, "shell", "cmd", "package", "resolve-activity", "--brief", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER", packageName]);
+        var component = resolve.Output.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .LastOrDefault(line => line.Contains('/', StringComparison.Ordinal));
+        if (resolve.ExitCode != 0 || string.IsNullOrWhiteSpace(component))
+            throw new InvalidOperationException("Unable to resolve the launcher activity for Android package '" + packageName + "' on " + serial + ": " + (resolve.Error + Environment.NewLine + resolve.Output).Trim());
+        return component;
     }
 
     private static async Task<int> WaitForCompletionAsync(string adb, string serial, TimeSpan timeout)
