@@ -11,7 +11,7 @@ internal static class XPScriptNativeHttp
 
 internal sealed class XPScriptHttpClient : IDisposable
 {
-    private const int MaxRequestBodyBytes = 8 * 1024 * 1024;
+    private const long DefaultMaxRequestBodyBytes = 8L * 1024 * 1024;
     private const int MaxResponseBodyBytes = 64 * 1024 * 1024;
 
     private readonly System.Net.Http.HttpClientHandler _handler;
@@ -19,6 +19,7 @@ internal sealed class XPScriptHttpClient : IDisposable
     private readonly XPScriptTlsValidationState _tls = new();
     private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
     private TimeSpan _timeout = TimeSpan.FromSeconds(30);
+    private long _maxRequestBodyBytes = Default_maxRequestBodyBytes;
     private bool _allowPrivateNetwork;
     private bool _disposed;
 
@@ -62,6 +63,18 @@ internal sealed class XPScriptHttpClient : IDisposable
             {
                 throw new XPScriptRuntimeException(5, "HttpClient.Timeout is outside the supported range.");
             }
+        }
+    }
+
+    public double MaxRequestBodyBytes
+    {
+        get => _maxRequestBodyBytes;
+        set
+        {
+            EnsureNotDisposed();
+            if (value <= 0 || double.IsNaN(value) || double.IsInfinity(value) || value > long.MaxValue)
+                throw new XPScriptRuntimeException(5, "HttpClient.MaxRequestBodyBytes must be a finite value greater than zero.");
+            _maxRequestBodyBytes = checked((long)value);
         }
     }
 
@@ -179,7 +192,7 @@ internal sealed class XPScriptHttpClient : IDisposable
                         throw new XPScriptRuntimeException(5, "Unable to read multipart file: " + ex.Message);
                     }
                     totalBytes = checked(totalBytes + bytes.LongLength);
-                    if (totalBytes > MaxRequestBodyBytes) { multipart.Dispose(); throw new XPScriptRuntimeException(5, "HTTP request body exceeds the 8 MiB limit."); }
+                    if (totalBytes > _maxRequestBodyBytes) { multipart.Dispose(); throw new XPScriptRuntimeException(5, "HTTP request body exceeds the 8 MiB limit."); }
                     content = new System.Net.Http.ByteArrayContent(bytes);
                     if (!string.IsNullOrWhiteSpace(part.ContentType))
                         content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(part.ContentType);
@@ -189,7 +202,7 @@ internal sealed class XPScriptHttpClient : IDisposable
                 {
                     var value = part.Value ?? string.Empty;
                     totalBytes = checked(totalBytes + Encoding.UTF8.GetByteCount(value));
-                    if (totalBytes > MaxRequestBodyBytes) { multipart.Dispose(); throw new XPScriptRuntimeException(5, "HTTP request body exceeds the 8 MiB limit."); }
+                    if (totalBytes > _maxRequestBodyBytes) { multipart.Dispose(); throw new XPScriptRuntimeException(5, "HTTP request body exceeds the 8 MiB limit."); }
                     content = new System.Net.Http.StringContent(value, Encoding.UTF8);
                     multipart.Add(content, part.Name);
                 }
@@ -200,7 +213,7 @@ internal sealed class XPScriptHttpClient : IDisposable
         {
             var bodyText = XPScriptRuntime.CStr(bodyValue);
             var requestBytes = Encoding.UTF8.GetByteCount(bodyText);
-            if (requestBytes > MaxRequestBodyBytes)
+            if (requestBytes > _maxRequestBodyBytes)
                 throw new XPScriptRuntimeException(5, "HTTP request body exceeds the 8 MiB limit.");
 
             request.Content = new System.Net.Http.StringContent(bodyText, Encoding.UTF8);
