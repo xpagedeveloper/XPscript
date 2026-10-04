@@ -166,6 +166,24 @@ foreach (var generate in new Func<string, object>[]
 }
 Console.WriteLine("OPENAPI-EXTERNAL-REF-DIAGNOSTIC=OK");
 
+const string foldedLocalReference = """
+openapi: 3.0.3
+info:
+  title: Folded local reference
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Item:
+      type: object
+    ItemAlias:
+      $ref: >-
+        #/components/schemas/Item
+""";
+_ = new XpsOpenApiGenerator().Generate(foldedLocalReference, "folded-local-ref.yaml");
+_ = new XpsOpenApiClientGenerator().Generate(foldedLocalReference, "folded-local-ref.yaml");
+Console.WriteLine("OPENAPI-FOLDED-LOCAL-REF=OK");
+
 var digitalOceanPath = Path.Combine(AppContext.BaseDirectory, "fixtures", "digitalocean.yaml");
 var digitalOceanSpecification = File.ReadAllText(digitalOceanPath);
 var digitalOceanServer = new XpsOpenApiGenerator().Generate(digitalOceanSpecification, "digitalocean.yaml");
