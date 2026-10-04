@@ -126,3 +126,28 @@ if (explicitByValParameter.IsByRef)
     throw new InvalidOperationException("Explicit ByVal parameters must not be ByRef.");
 
 Console.WriteLine("AST_BINDING_BYREF_BYVAL_OK");
+
+
+var assignmentSymbols = new SymbolTable();
+assignmentSymbols.Declare(new VariableSymbol("number", typeof(long)));
+assignmentSymbols.Declare(new VariableSymbol("text", typeof(string)));
+
+var compatibleAssignmentParser = new StatementParser("number = 1");
+var compatibleAssignment = compatibleAssignmentParser.ParseStatement();
+if (compatibleAssignmentParser.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Compatible assignment fixture must parse without diagnostics.");
+var compatibleAssignmentBinder = new StatementBinder(assignmentSymbols);
+compatibleAssignmentBinder.Bind(compatibleAssignment);
+if (compatibleAssignmentBinder.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Assignment with matching types must bind without diagnostics.");
+
+var incompatibleAssignmentParser = new StatementParser("number = \"wrong\"");
+var incompatibleAssignment = incompatibleAssignmentParser.ParseStatement();
+if (incompatibleAssignmentParser.Diagnostics.Count != 0)
+    throw new InvalidOperationException("Incompatible assignment fixture must parse without diagnostics.");
+var incompatibleAssignmentBinder = new StatementBinder(assignmentSymbols);
+incompatibleAssignmentBinder.Bind(incompatibleAssignment);
+if (incompatibleAssignmentBinder.Diagnostics.Count != 1 || incompatibleAssignmentBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Assignment with incompatible types must produce exactly one XPS2001 diagnostic.");
+
+Console.WriteLine("AST_BINDING_ASSIGNMENT_COMPATIBILITY_OK");
