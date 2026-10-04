@@ -4,6 +4,13 @@ namespace XPScript.Compiler;
 
 internal sealed class UIFormMediaButtonsPostProcessor
 {
+    private readonly string _runtimeIdentifier;
+
+    public UIFormMediaButtonsPostProcessor(string? runtimeIdentifier = null)
+    {
+        _runtimeIdentifier = runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier();
+    }
+
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
@@ -97,9 +104,10 @@ internal sealed class UIFormMediaButtonsPostProcessor
 
         if (!generated.Contains("private static string NormalizeMediaSource", StringComparison.Ordinal))
         {
+            var allowLocalFileUris = !_runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase);
             generated = ReplaceOnce(generated,
                 "    private static string NormalizeFieldName(object? value)\n    {\n",
-                """
+                $$"""
     private static string NormalizeMediaSource(object? value, string kind)
     {
         if (value is not null && value.GetType().Name.Equals("XPImage", StringComparison.Ordinal))
@@ -122,13 +130,23 @@ internal sealed class UIFormMediaButtonsPostProcessor
         var text = XPScriptRuntime.CStr(value).Trim();
         if (text.Length is < 1 or > 4096) throw new XPScriptRuntimeException(5, $"UIForm {kind} source must contain between 1 and 4096 characters.");
         if (text.Any(char.IsControl)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source contains a control character.");
-        if (text.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source uses an unsupported URI scheme.");
         if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source is invalid.");
+        if (uri.IsAbsoluteUri)
+        {
+            var allowed = uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+                          uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+                          (kind.Equals("image", StringComparison.OrdinalIgnoreCase) && uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase)) ||
+                          ({{allowLocalFileUris.ToString().ToLowerInvariant()}} && uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase));
+            if (!allowed) throw new XPScriptRuntimeException(5, $"UIForm {kind} source uses an unsupported URI scheme.");
+            if (uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase) && !text.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+                throw new XPScriptRuntimeException(5, "UIForm image data URI must use an image media type.");
+            return text;
+        }
         var hasParentSegment = text.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == "..");
-        if (!uri.IsAbsoluteUri && (hasParentSegment || text.StartsWith("/", StringComparison.Ordinal) || text.StartsWith("\\", StringComparison.Ordinal)))
+        if (hasParentSegment || text.StartsWith("/", StringComparison.Ordinal) || text.StartsWith("\\", StringComparison.Ordinal))
             throw new XPScriptRuntimeException(5, $"UIForm {kind} relative source must stay within the application asset root.");
         var normalized = text.Replace('\\', '/');
-        if (!uri.IsAbsoluteUri && !normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+        if (!normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
             normalized = "assets/" + normalized;
         return normalized;
     }
@@ -279,7 +297,7 @@ if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCas
     private static string ReplaceOnce(string source, string marker, string replacement, string stage)
     {
         if (!source.Contains(marker, StringComparison.Ordinal))
-            throw new CompilerException($"Unable to install UIForm media/default button runtime extension ({stage}).");
+            throw new CompilerException($"Unable to install UIForm media/buttons runtime ({stage}).");
         return source.Replace(marker, replacement, StringComparison.Ordinal);
     }
 }
