@@ -8,7 +8,7 @@ New-Item -ItemType Directory -Force -Path $outRoot | Out-Null
 $source = Join-Path $root "samples/class-fluent-chaining.xps"
 $output = Join-Path $outRoot "class-fluent-chaining"
 
-& dotnet run --project $compiler -c Release --no-build -- $source -o $output --runtime=false --debug
+& dotnet run --project $compiler -c Release -- $source -o $output --runtime=false --debug
 if ($LASTEXITCODE -ne 0) {
     Write-Host "=== Generated fluent-chain C# diagnostics ==="
     Get-ChildItem -Path $outRoot -Recurse -Filter "*.cs" -ErrorAction SilentlyContinue | ForEach-Object {
