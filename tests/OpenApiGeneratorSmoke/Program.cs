@@ -190,6 +190,40 @@ _ = new XpsOpenApiGenerator().Generate(foldedLocalReference, "folded-local-ref.y
 _ = new XpsOpenApiClientGenerator().Generate(foldedLocalReference, "folded-local-ref.yaml");
 Console.WriteLine("OPENAPI-FOLDED-LOCAL-REF=OK");
 
+const string modelVariantConflictAllOfClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Model variant allOf client regression", "version": "1.0" },
+  "paths": {
+    "/alert-rule": {
+      "post": {
+        "operationId": "createAlertRule",
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlertRuleSpec": { "type": "object", "properties": { "window": { "type": "string" } } },
+      "AlertRuleBase": {
+        "type": "object",
+        "properties": { "spec": { "$ref": "#/components/schemas/AlertRuleSpec" } }
+      },
+      "AlertRuleCreateRequest": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AlertRuleBase" },
+          { "type": "object", "properties": { "spec": {} } }
+        ]
+      }
+    }
+  }
+}
+""";
+var modelVariantConflictAllOfClient = new XpsOpenApiClientGenerator().Generate(modelVariantConflictAllOfClientOpenApi, "model-variant-conflict-allof-client.json");
+if (!modelVariantConflictAllOfClient.Source.Contains("Public Spec As Variant", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client model/Variant allOf regression must fall back to Variant.");
+Console.WriteLine("OPENAPI-CLIENT-MODEL-VARIANT-ALLOF=OK");
+
 var digitalOceanPath = Path.Combine(AppContext.BaseDirectory, "fixtures", "digitalocean.yaml");
 var digitalOceanSpecification = File.ReadAllText(digitalOceanPath);
 var digitalOceanServer = new XpsOpenApiGenerator().Generate(digitalOceanSpecification, "digitalocean.yaml");
