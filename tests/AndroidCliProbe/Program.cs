@@ -20,6 +20,9 @@ foreach (var expected in new[]
     "\"x86_64\" => \"android-x64\"",
     "\"install\", \"-r\"",
     "\"logcat\", \"-c\"",
+    "ResolveLauncherComponentAsync",
+    "\"cmd\", \"package\", \"resolve-activity\"",
+    "\"-n\", launcherComponent",
     "\"monkey\", \"-p\"",
     "\"logcat\", \"-d\", \"-s\", \"XPScript:I\""
 })
