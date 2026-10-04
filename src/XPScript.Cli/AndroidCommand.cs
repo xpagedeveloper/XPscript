@@ -106,9 +106,9 @@ internal static class AndroidCommand
             throw new InvalidOperationException("adb install failed for " + serial + ": " + (install.Error + Environment.NewLine + install.Output).Trim());
 
         await ExecuteAsync(adb, ["-s", serial, "logcat", "-c"]);
-        var launchArgs = new List<string> { "-s", serial, "shell", "am", "start", "-W", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER" };
+        var launcherComponent = await ResolveLauncherComponentAsync(adb, serial, "com.xpscript.debugapp");
+        var launchArgs = new List<string> { "-s", serial, "shell", "am", "start", "-W", "-n", launcherComponent };
         if (debug) launchArgs.AddRange(["--ez", "xpscript.appdebug", "true"]);
-        launchArgs.Add("com.xpscript.debugapp");
         var launch = await ExecuteAsync(adb, launchArgs);
         if (launch.ExitCode != 0 || launch.Output.Contains("Error:", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (launch.Error + Environment.NewLine + launch.Output).Trim());
@@ -134,6 +134,16 @@ internal static class AndroidCommand
         }
 
         return await WaitForCompletionAsync(adb, serial, TimeSpan.FromSeconds(30));
+    }
+
+    private static async Task<string> ResolveLauncherComponentAsync(string adb, string serial, string packageName)
+    {
+        var resolve = await ExecuteAsync(adb, ["-s", serial, "shell", "cmd", "package", "resolve-activity", "--brief", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER", packageName]);
+        var component = resolve.Output.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .LastOrDefault(line => line.Contains('/', StringComparison.Ordinal));
+        if (resolve.ExitCode != 0 || string.IsNullOrWhiteSpace(component))
+            throw new InvalidOperationException("Unable to resolve the launcher activity for Android package '" + packageName + "' on " + serial + ": " + (resolve.Error + Environment.NewLine + resolve.Output).Trim());
+        return component;
     }
 
     private static async Task<int> WaitForCompletionAsync(string adb, string serial, TimeSpan timeout)
