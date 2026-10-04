@@ -224,6 +224,39 @@ if (!modelVariantConflictAllOfClient.Source.Contains("Public Spec As Variant", S
     throw new Exception("OpenAPI client model/Variant allOf regression must fall back to Variant.");
 Console.WriteLine("OPENAPI-CLIENT-MODEL-VARIANT-ALLOF=OK");
 
+const string responseSchemaQuotedTextClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Response schema quote regression", "version": "1.0" },
+  "paths": {
+    "/quoted": {
+      "get": {
+        "operationId": "getQuoted",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "string", "description": "Value may contain \\"quoted\\" text." }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+""";
+var responseSchemaQuotedTextClient = new XpsOpenApiClientGenerator().Generate(responseSchemaQuotedTextClientOpenApi, "response-schema-quoted-text-client.json");
+if (!responseSchemaQuotedTextClient.Source.Contains(@"\\u0022quoted\\u0022", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client response validation must encode JSON escaped quotes safely for XPScript.");
+var responseSchemaQuotedTextPath = Path.Combine(Path.GetTempPath(), "response-schema-quoted-text-client.xps");
+_ = new XPScriptTranspiler().Transpile(
+    responseSchemaQuotedTextClient.Source + "\nSub Main()\nEnd Sub\n",
+    responseSchemaQuotedTextPath,
+    CompilerDriver.CurrentRuntimeIdentifier());
+Console.WriteLine("OPENAPI-CLIENT-RESPONSE-SCHEMA-QUOTED-TEXT=OK");
+
 const string responseSchemaReachabilityClientOpenApi = """
 {
   "openapi": "3.0.3",
