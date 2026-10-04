@@ -15,7 +15,10 @@ internal sealed class XPImage : System.IDisposable
     private const ulong MaxPixelCacheDiskBytes = 512UL * 1024 * 1024;
     private static int _resourceLimitsInitialized;
     private ImageMagick.MagickImage? _image;
-    private string _format;
+    private string _format = string.Empty;
+    private string _src = string.Empty;
+
+    public XPImage() { EnsureResourceLimits(); }
 
     public XPImage(int width, int height) : this(width, height, "transparent") { }
 
@@ -35,6 +38,25 @@ internal sealed class XPImage : System.IDisposable
         _format = NormalizeFormat(format);
     }
 
+    public bool IsLoaded => _image is not null;
+    public string Src
+    {
+        get => _src;
+        set
+        {
+            var source = value?.Trim() ?? string.Empty;
+            _image?.Dispose();
+            _image = null;
+            _format = string.Empty;
+            _src = source;
+            if (source.Length == 0) return;
+            var loaded = LoadSource(source);
+            _image = loaded._image;
+            loaded._image = null;
+            _format = loaded._format;
+        }
+    }
+
     public int Width => checked((int)Image.Width);
     public int Height => checked((int)Image.Height);
     public string Format => _format;
@@ -50,10 +72,26 @@ internal sealed class XPImage : System.IDisposable
     public double DpiX => _image.Density?.X ?? 0d;
     public double DpiY => _image.Density?.Y ?? 0d;
 
-    public static XPImage Load(string path)
+    public static XPImage Load(string source)
     {
-        if (string.IsNullOrWhiteSpace(path)) throw new System.ArgumentException("Image path cannot be empty.", nameof(path));
-        var resolved = XPScriptFileSystemRuntime.ResolvePath(path);
+        if (string.IsNullOrWhiteSpace(source)) throw new System.ArgumentException("Image source cannot be empty.", nameof(source));
+        return LoadSource(source.Trim());
+    }
+
+    private static XPImage LoadSource(string source)
+    {
+        if (source.StartsWith("data:", System.StringComparison.OrdinalIgnoreCase))
+            return FromBase64(source);
+
+        if (System.Uri.TryCreate(source, System.UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
+        {
+            using var client = new System.Net.Http.HttpClient { Timeout = System.TimeSpan.FromSeconds(15) };
+            var bytes = client.GetByteArrayAsync(uri).GetAwaiter().GetResult();
+            if (bytes.LongLength > MaxEncodedBytes) throw new System.InvalidOperationException("Image exceeds the maximum encoded size.");
+            return FromBytes(bytes);
+        }
+
+        var resolved = XPScriptFileSystemRuntime.ResolvePath(source);
         var info = new System.IO.FileInfo(resolved);
         if (!info.Exists) throw new System.IO.FileNotFoundException("Image file was not found.", resolved);
         if (info.Length > MaxEncodedBytes) throw new System.InvalidOperationException("Image exceeds the maximum encoded size.");
