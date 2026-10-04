@@ -337,18 +337,18 @@ if (objectType.RuntimeType != typeof(object) || !objectType.IsObject || objectTy
 if (XpTypeSymbol.User("Customer").IsObject)
     throw new InvalidOperationException("User-defined class types must remain distinct from the Object type.");
 
-var customerType = XpTypeSymbol.User("Customer");
-var customerToObject = Conversion.Classify(customerType, objectType);
+var objectCustomerType = XpTypeSymbol.User("Customer");
+var customerToObject = Conversion.Classify(objectCustomerType, objectType);
 if (!customerToObject.IsImplicit || customerToObject.Kind != ConversionKind.ToObject)
     throw new InvalidOperationException("User-defined object references must convert implicitly to Object.");
 if (Conversion.Classify(XpTypeSymbol.FromClr(typeof(long)), objectType).Exists)
     throw new InvalidOperationException("Scalar values must not convert implicitly to Object.");
-if (Conversion.Classify(objectType, customerType).Exists)
+if (Conversion.Classify(objectType, objectCustomerType).Exists)
     throw new InvalidOperationException("Object must not use Variant-style implicit conversion to a concrete user type.");
 
 var objectSymbols = new SymbolTable();
 objectSymbols.Declare(new VariableSymbol("targetObject", typeof(object), objectType));
-objectSymbols.Declare(new VariableSymbol("customer", typeof(object), customerType));
+objectSymbols.Declare(new VariableSymbol("customer", typeof(object), objectCustomerType));
 objectSymbols.Declare(new VariableSymbol("scalar", typeof(long)));
 var objectAssignmentParser = new StatementParser("targetObject = customer");
 var objectAssignmentSyntax = objectAssignmentParser.ParseStatement();
