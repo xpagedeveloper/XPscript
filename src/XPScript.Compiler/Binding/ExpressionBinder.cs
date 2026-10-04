@@ -87,8 +87,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
     private BoundExpression BindMemberAccess(MemberAccessExpressionSyntax syntax)
     {
         var receiver = Bind(syntax.Expression);
-        var key = receiver.SemanticType.Name + "." + syntax.NameToken.Text;
-        if (_symbols.TryLookup(key, out var symbol))
+        if (_symbols.TryLookupMember(receiver.SemanticType, syntax.NameToken.Text, out var symbol))
         {
             if (symbol is PropertySymbol property)
                 return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, property.PropertyType, property.SemanticType);
@@ -132,7 +131,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             var receiver = Bind(memberSyntax.Expression);
             name = memberSyntax.NameToken.Text;
             var memberKey = receiver.SemanticType.Name + "." + name;
-            var memberSymbols = _symbols.LookupAll(memberKey);
+            var memberSymbols = _symbols.LookupMembers(receiver.SemanticType, name);
             if (memberSymbols.Count == 0)
                 return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{name}' on '{receiver.SemanticType.Name}'.");
             var indexedProperty = memberSymbols.OfType<IndexedPropertySymbol>().LastOrDefault();
