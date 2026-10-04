@@ -36,7 +36,7 @@ foreach (var expected in new[]
     "Multiple AVDs found",
     "sys.boot_completed",
     "adb install failed",
-    "com.xpscript.debugapp",
+    "eu.xpscript.app",
     "Hello from XPScript on Android",
     "Expected XPScript Android log output was not observed"
 })
