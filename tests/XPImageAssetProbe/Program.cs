@@ -42,11 +42,20 @@ foreach (var expected in new[]
 {
     "throw new XPScriptRuntimeException(5, \"Application assets are read-only.\");",
     "if (IsAssetPath(path))",
-    "Access = FileAccess.Read"
+    "Access = FileAccess.Read",
+    "var directory = string.IsNullOrEmpty(directoryPart) ? _scriptDirectory : ResolvePath(directoryPart);",
+    "public static long FileLen(object? value) => new FileInfo(RequireExistingFile(value)).Length;",
+    "public static DateTime FileDateTime(object? value) => File.GetLastWriteTime(RequireExistingFile(value));"
 })
 {
     if (!fileSystemRuntime.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Application asset read-only contract is missing: " + expected);
 }
+
+var coreType = typeof(CompilerDriver).Assembly.GetType("XPScript.Compiler.CoreCompatibilityRuntimeSource", throwOnError: true)!;
+var coreRuntime = (string)(coreType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
+    ?? throw new Exception("CoreCompatibilityRuntimeSource.Code was not found."));
+if (!coreRuntime.Contains("XPScriptFileSystemRuntime.EnsureWritablePath(state.Stream.Name);", StringComparison.Ordinal))
+    throw new Exception("Binary/Random Put must reject writes to application assets with runtime error 5.");
 
 Console.WriteLine("XPIMAGE_ASSET_ROUTING_OK");
