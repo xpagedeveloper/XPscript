@@ -1,0 +1,30 @@
+Dim sharedProbe As LazyProbe
+Dim constructionCount As Integer
+
+Class LazyProbe
+    Public Marker As String
+
+    Public Sub New()
+        constructionCount = constructionCount + 1
+        Me.Marker = "ready"
+    End Sub
+End Class
+
+Function GetProbe() As LazyProbe
+    If sharedProbe Is Nothing Then
+        Set sharedProbe = New LazyProbe()
+    End If
+    Set GetProbe = sharedProbe
+End Function
+
+Sub Main()
+    Print "BEFORE=" & CStr(constructionCount)
+    Dim first As LazyProbe
+    Dim second As LazyProbe
+    Set first = GetProbe()
+    Print "AFTER-FIRST=" & CStr(constructionCount)
+    Set second = GetProbe()
+    Print "AFTER-SECOND=" & CStr(constructionCount)
+    Print "FIRST=" & first.Marker
+    Print "SECOND=" & second.Marker
+End Sub
