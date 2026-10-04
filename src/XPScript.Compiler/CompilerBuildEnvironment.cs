@@ -173,6 +173,7 @@ internal static class CompilerBuildEnvironment
             RegexOptions.CultureInvariant);
         var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
+        var packageName = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildPackageNameMarker);
         var product = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildProductMarker);
         var company = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCompanyMarker);
         var version = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildVersionMarker);
@@ -191,7 +192,10 @@ internal static class CompilerBuildEnvironment
         }
         var fileDescriptionValue = fileDescription ?? "Application compiled with XPScript";
         var commentsValue = comments ?? "XPScript by XPageDeveloper.com";
+        if (packageName is not null && !Regex.IsMatch(packageName, @"^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$", RegexOptions.CultureInvariant))
+            throw new CompilerException("Application.PackageName must be a reverse-domain identifier such as se.company.myapp.");
         var propertyEntries = $"    <Description>{EscapeMsBuild(commentsValue)}</Description>\n    <Trademark>{EscapeMsBuild(commentsValue)}</Trademark>\n    <AssemblyTitle>{EscapeMsBuild(fileDescriptionValue)}</AssemblyTitle>\n";
+        if (runtimeIdentifier.StartsWith("android-", StringComparison.OrdinalIgnoreCase) && packageName is not null) propertyEntries += $"    <ApplicationId>{EscapeMsBuild(packageName)}</ApplicationId>\n";
         if (stagedIconName is not null) propertyEntries += $"    <ApplicationIcon>{EscapeMsBuild(stagedIconName)}</ApplicationIcon>\n";
         if (product is not null) propertyEntries += $"    <Product>{EscapeMsBuild(product)}</Product>\n";
         if (company is not null) propertyEntries += $"    <Company>{EscapeMsBuild(company)}</Company>\n";
