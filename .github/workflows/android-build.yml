@@ -76,6 +76,15 @@ jobs:
       - name: Build x64 emulator APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print-emulator --runtime=false --platform android-x64 --debug
 
+      - name: Run x64 debug APK on Android 11 / API 30 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: pwsh -File ./Android/test-emulator.ps1 -ApkPath ./out/android-debug-print-emulator/bin/Release/net10.0-android/android-x64/publish/com.xpscript.debugapp-Signed.apk
+
       - name: Reproduce Android UIForm project directly first
         shell: bash
         run: |
