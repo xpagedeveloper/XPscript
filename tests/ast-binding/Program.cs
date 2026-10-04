@@ -115,4 +115,12 @@ if (!modeOverloads.TryDeclare(new FunctionSymbol("Mode", typeof(long), [typeof(l
 if (!modeOverloads.TryDeclare(new FunctionSymbol("Mode", typeof(long), [typeof(long)], ByRefParameters: [false])))
     throw new InvalidOperationException("ByVal overload with the same type signature must remain distinct.");
 
+var defaultParameter = new ParameterSymbol("defaultByRef", typeof(long));
+if (!defaultParameter.IsByRef)
+    throw new InvalidOperationException("Parameters must be ByRef by default.");
+
+var explicitByValParameter = new ParameterSymbol("explicitByVal", typeof(long), IsByRef: false);
+if (explicitByValParameter.IsByRef)
+    throw new InvalidOperationException("Explicit ByVal parameters must not be ByRef.");
+
 Console.WriteLine("AST_BINDING_BYREF_BYVAL_OK");
