@@ -4,6 +4,7 @@ public enum SymbolKind
 {
     Variable,
     Local,
+    Parameter,
     Property,
     IndexedProperty,
     Function,
@@ -23,6 +24,15 @@ public sealed record VariableSymbol(string Name, Type Type, XpTypeSymbol? Semant
 public sealed record LocalSymbol(string Name, Type Type, XpTypeSymbol? SemanticType = null) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.Local;
+}
+
+public sealed record ParameterSymbol(
+    string Name,
+    Type Type,
+    bool IsByRef = false,
+    XpTypeSymbol? SemanticType = null) : Symbol(Name)
+{
+    public override SymbolKind Kind => SymbolKind.Parameter;
 }
 
 public sealed record PropertySymbol(string Name, Type PropertyType, XpTypeSymbol? SemanticType = null) : Symbol(Name)
