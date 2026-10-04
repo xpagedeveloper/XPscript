@@ -1256,6 +1256,9 @@ internal static class LSForAllRuntime
             if (classInfo.Properties.ContainsKey(text)) return "this." + text;
             foreach (var field in classInfo.Fields.Values)
             {
+                if (text.Equals(field.Name, StringComparison.OrdinalIgnoreCase))
+                    return "this." + field.Name;
+
                 if (!_classes.ContainsKey(field.XPScriptType) || field.IsList) continue;
                 if (text.StartsWith(field.Name + ".", StringComparison.OrdinalIgnoreCase)) return "this." + field.Name + ".Value!." + text[(field.Name.Length + 1)..];
                 if (text.StartsWith("this." + field.Name + ".", StringComparison.OrdinalIgnoreCase)) return "this." + field.Name + ".Value!." + text[("this." + field.Name + ".").Length..];
