@@ -106,6 +106,12 @@ internal sealed class UIFormMediaButtonsPostProcessor
         {
             if (!kind.Equals("image", StringComparison.OrdinalIgnoreCase))
                 throw new XPScriptRuntimeException(5, $"UIForm {kind} source does not accept XPImage.");
+            var isLoaded = value.GetType().GetProperty("IsLoaded");
+            if (isLoaded?.GetValue(value) is bool loaded && !loaded)
+            {
+                const string brokenSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='96' height='72' viewBox='0 0 96 72'><rect width='96' height='72' fill='#eee'/><path d='M8 58l20-20 14 14 12-12 34 30H8z' fill='#aaa'/><path d='M10 10l76 52M86 10L10 62' stroke='#c33' stroke-width='6'/></svg>";
+                return "data:image/svg+xml;base64," + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(brokenSvg));
+            }
             var toBytes = value.GetType().GetMethod("ToBytes", new[] { typeof(string) });
             if (toBytes is null || toBytes.Invoke(value, new object[] { "png" }) is not byte[] bytes)
                 throw new XPScriptRuntimeException(5, "UIForm could not encode the XPImage source.");
