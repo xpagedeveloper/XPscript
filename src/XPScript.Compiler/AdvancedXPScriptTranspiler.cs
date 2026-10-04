@@ -390,8 +390,6 @@ internal static class LSForAllRuntime
 
     private void RestoreModuleObjectVariables()
     {
-        if (_currentClass is not null)
-            return;
         foreach (var item in _moduleObjectVariables)
             _objectVariables[item.Key] = item.Value;
     }
