@@ -9,6 +9,7 @@ public enum SymbolKind
     IndexedProperty,
     Procedure,
     Function,
+    Class,
     Type
 }
 
@@ -69,6 +70,14 @@ public sealed record FunctionSymbol(
     IReadOnlyList<XpTypeSymbol>? SemanticParameterTypes = null) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.Function;
+}
+
+public sealed record ClassSymbol(
+    string Name,
+    ClassSymbol? BaseClass = null) : Symbol(Name)
+{
+    public override SymbolKind Kind => SymbolKind.Class;
+    public XpTypeSymbol SemanticType { get; } = XpTypeSymbol.User(Name);
 }
 
 public sealed record TypeSymbol(string Name, Type Type, XpTypeSymbol? SemanticType = null) : Symbol(Name)
