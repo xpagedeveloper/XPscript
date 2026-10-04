@@ -3,6 +3,10 @@ set -euo pipefail
 
 mkdir -p ./out
 
+# Run the focused regression first so request-body assignment failures surface
+# before the full DigitalOcean generation and compilation.
+dotnet run --project ./tests/OpenApiRequestBodyAssignmentSmoke/OpenApiRequestBodyAssignmentSmoke.csproj -c Release
+
 # DigitalOcean's repository source is multi-file. Test the official bundled artifact
 # that DigitalOcean publishes from the same source tree so every external $ref is present.
 curl --fail --location --retry 3 --retry-delay 2 \
