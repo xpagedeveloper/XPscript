@@ -2,9 +2,8 @@ using XPScript.Compiler;
 
 const string source = """
 Sub Main()
-    Dim form
-    Set form = UIForm("MediaPolicy")
-    form.AddImage "Preview", "assets/test.png"
+    Dim form As New UIForm("MediaPolicy")
+    Call form.AddImage("Preview", "assets/test.png")
 End Sub
 """;
 
