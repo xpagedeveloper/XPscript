@@ -171,7 +171,13 @@ openapi: 3.0.3
 info:
   title: Folded local reference
   version: 1.0.0
-paths: {}
+paths:
+  /items:
+    get:
+      operationId: listItems
+      responses:
+        '200':
+          description: OK
 components:
   schemas:
     Item:
