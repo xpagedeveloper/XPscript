@@ -6,15 +6,17 @@ namespace XPScript.Compiler;
 internal sealed class UIExtensionDesktopPostProcessor
 {
     private readonly NotesRuntimeFeatures _notesRuntimeFeatures;
+    private readonly string? _runtimeIdentifier;
 
     public UIExtensionDesktopPostProcessor()
-        : this(NotesRuntimeFeatures.Full)
+        : this(NotesRuntimeFeatures.Full, null)
     {
     }
 
-    internal UIExtensionDesktopPostProcessor(NotesRuntimeFeatures notesRuntimeFeatures)
+    internal UIExtensionDesktopPostProcessor(NotesRuntimeFeatures notesRuntimeFeatures, string? runtimeIdentifier = null)
     {
         _notesRuntimeFeatures = notesRuntimeFeatures;
+        _runtimeIdentifier = runtimeIdentifier;
     }
 
     private const string InstalledRuntimeSentinel = "internal static class XPScriptUIDesktopAdapter";
@@ -95,8 +97,6 @@ internal sealed class UIExtensionDesktopPostProcessor
         var hasDesktopRuntime = generated.Contains(InstalledRuntimeSentinel, StringComparison.Ordinal);
         var needsUiExtensions = !hasDesktopRuntime && NeedsUiExtensions(generated);
 
-        // Most programs use neither Notes nor desktop UI. Avoid copying and scanning the
-        // complete generated runtime when this postprocessor has no work to perform.
         if (!needsNotesRuntime && !hasNotesRuntime && !needsUiExtensions)
             return generated;
 
@@ -147,7 +147,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         }
 
         replaced = new UIFormWebPartialRefreshPostProcessor().Transform(replaced);
-        replaced = new UIFormStructuralElementsPostProcessor().Transform(replaced);
+        replaced = new UIFormStructuralElementsPostProcessor(_runtimeIdentifier).Transform(replaced);
         replaced = new UIFormRegexValidationPostProcessor().Transform(replaced);
         replaced = new UIFormDateRangeValidationPostProcessor().Transform(replaced);
         replaced = new UIFormTemporalRangeValidationPostProcessor().Transform(replaced);
