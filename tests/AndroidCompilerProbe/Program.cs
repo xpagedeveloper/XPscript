@@ -484,7 +484,8 @@ foreach (var expected in new[]
     "TEST FOCUS/KEYBOARD: PASS",
     "TEST VALIDATION: PASS",
     "form.BootText = \"Loading Android UIForm manual test\"",
-    "form.BootImage = \"Android/test-image.png\"",
+    "Set runtimeImage = New XPImage(32, 32, \"#336699\")",
+    "form.BootImage = runtimeImage",
     "AddTab(\"basic\", \"Basic\")",
     "AddTab(\"more\", \"More\")",
     "AddGrid(\"detailsGrid\", 2)",
@@ -497,6 +498,7 @@ foreach (var expected in new[]
     "AddWebView(\"webPreview\", \"18. WebView - example.com\")",
     "browser.Source = \"https://example.com\"",
     "AddImage(\"testImage\", \"Android/test-image.png\"",
+    "AddImage(\"xpImage\", runtimeImage",
     "SetFieldCornerRadius(\"name\", 12)",
     "SetButtonCornerRadius(\"verify\", 12)",
     "XPSCRIPT-LIFECYCLE"
