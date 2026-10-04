@@ -97,7 +97,7 @@ internal static class AndroidCommand
         if (install.ExitCode != 0 &&
             installDiagnostics.Contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE", StringComparison.OrdinalIgnoreCase))
         {
-            var uninstall = await ExecuteAsync(adb, ["-s", serial, "shell", "pm", "uninstall", "--user", "0", "com.xpscript.debugapp"]);
+            var uninstall = await ExecuteAsync(adb, ["-s", serial, "shell", "pm", "uninstall", "--user", "0", "eu.xpscript.debugapp"]);
             if (uninstall.ExitCode == 0 || uninstall.Output.Contains("Success", StringComparison.OrdinalIgnoreCase))
                 install = await ExecuteAsync(adb, ["-s", serial, "install", "-r", apk]);
         }
@@ -106,7 +106,7 @@ internal static class AndroidCommand
             throw new InvalidOperationException("adb install failed for " + serial + ": " + (install.Error + Environment.NewLine + install.Output).Trim());
 
         await ExecuteAsync(adb, ["-s", serial, "logcat", "-c"]);
-        var launcherComponent = await ResolveLauncherComponentAsync(adb, serial, "com.xpscript.debugapp");
+        var launcherComponent = await ResolveLauncherComponentAsync(adb, serial, "eu.xpscript.debugapp");
         var launchArgs = new List<string> { "-s", serial, "shell", "am", "start", "-W", "-n", launcherComponent };
         if (debug) launchArgs.AddRange(["--ez", "xpscript.appdebug", "true"]);
         var launch = await ExecuteAsync(adb, launchArgs);
@@ -116,7 +116,7 @@ internal static class AndroidCommand
         if (project.ApplicationType == AndroidProjectMetadata.UiApplicationType)
         {
             await Task.Delay(750);
-            var process = await ExecuteAsync(adb, ["-s", serial, "shell", "pidof", "com.xpscript.debugapp"]);
+            var process = await ExecuteAsync(adb, ["-s", serial, "shell", "pidof", "eu.xpscript.debugapp"]);
             if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(process.Output))
             {
                 var logs = await ExecuteAsync(adb, ["-s", serial, "logcat", "-d", "-t", "200"]);
@@ -176,10 +176,10 @@ internal static class AndroidCommand
         var requestedSerial = ParseOptionalDevice(args, "android launch");
         var adb = ResolveAdb();
         var serial = await RequireReadyDeviceAsync(adb, "auto", requestedSerial, null);
-        var result = await ExecuteAsync(adb, ["-s", serial, "shell", "monkey", "-p", "com.xpscript.debugapp", "-c", "android.intent.category.LAUNCHER", "1"]);
+        var result = await ExecuteAsync(adb, ["-s", serial, "shell", "monkey", "-p", "eu.xpscript.debugapp", "-c", "android.intent.category.LAUNCHER", "1"]);
         if (result.ExitCode != 0 || result.Output.Contains("No activities found", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (result.Error + Environment.NewLine + result.Output).Trim());
-        Console.WriteLine("Launched com.xpscript.debugapp on " + serial + ".");
+        Console.WriteLine("Launched eu.xpscript.debugapp on " + serial + ".");
         return 0;
     }
 
