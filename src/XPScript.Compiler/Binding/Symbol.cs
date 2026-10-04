@@ -32,7 +32,7 @@ public sealed record LocalSymbol(string Name, Type Type, XpTypeSymbol? SemanticT
 public sealed record ParameterSymbol(
     string Name,
     Type Type,
-    bool IsByRef = false,
+    bool IsByRef = true,
     XpTypeSymbol? SemanticType = null) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.Parameter;
