@@ -44,8 +44,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
     private BoundExpression BindName(NameExpressionSyntax syntax)
     {
         var name = syntax.IdentifierToken.Text;
-        if (_symbols.TryLookup(name, out var symbol) && symbol is VariableSymbol variable)
-            return new BoundNameExpression(variable);
+        if (_symbols.TryLookup(name, out var symbol) &&
+            symbol is VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol)
+            return new BoundNameExpression(symbol);
         return Error(syntax.IdentifierToken, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined variable '{name}'.");
     }
 
