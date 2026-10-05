@@ -503,7 +503,18 @@ internal static class Program
     public static string Trim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
     public static string UCase(object? value) => (value?.ToString() ?? string.Empty).ToUpperInvariant();
     public static string LCase(object? value) => (value?.ToString() ?? string.Empty).ToLowerInvariant();
-    public static object? ArraySort(object? value) => value;
+    public static object? ArraySort(object? value) {
+        if (value is not IEnumerable values) return value;
+        var result = values.Cast<object?>().ToArray();
+        System.Array.Sort(result, (left, right) => left is string || right is string
+            ? StringComparer.OrdinalIgnoreCase.Compare(CStr(left), CStr(right))
+            : left is IComparable comparable ? comparable.CompareTo(right) : StringComparer.OrdinalIgnoreCase.Compare(CStr(left), CStr(right)));
+        if (value.GetType().IsArray) {
+            var typed = System.Array.CreateInstance(value.GetType().GetElementType()!, result.Length);
+            result.CopyTo(typed, 0); return typed;
+        }
+        return result;
+    }
     public static string Join(object? value, object? separator = null) => value is System.Collections.IEnumerable items ? string.Join(separator is null ? " " : CStr(separator), items.Cast<object?>()) : string.Empty;
     public static string Implode(object? value, object? separator = null) => Join(value, separator);
     public static object CDate(object value) => Convert.ToDateTime(value);
