@@ -29,6 +29,7 @@ internal static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^[ \t]*[A-Za-z_]\w*:[ \t]*$", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?:GoTo|GoSub|Resume)(?:\s+[^\r\n]+)?$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)On\s+Error\s+.*$", "${indent}Call AstNoOp()");
+        source = Regex.Replace(source, @"(?im)\bError\$\b", "Error()");
         source = Regex.Replace(source, @"(?im)^[ \t]*With\s+[A-Za-z_]\w*[ \t]*$", string.Empty);
         source = Regex.Replace(source, @"(?im)^[ \t]*End\s+With[ \t]*$", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)\.(?<member>[A-Za-z_]\w*)", "${indent}p.${member}");
@@ -78,7 +79,7 @@ internal static class AstExperimentalCompiler
                 symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types[..count], null, null, Enumerable.Repeat(false, count).ToArray()));
         }
         symbols.Declare(new VariableSymbol("BuildState", typeof(object), XpTypeSymbol.Variant));
-        foreach (var compatibilityName in new[] { "With", "GoSub", "Worker", "AfterWorker", "SkipLine", "ErrorHandler", "ErrorDone", "RetryHandler", "RetryDone", "ResumeTarget", "LabelHandler", "LabelDone" })
+        foreach (var compatibilityName in new[] { "With", "GoSub", "Worker", "AfterWorker", "SkipLine", "ErrorHandler", "ErrorDone", "RetryHandler", "RetryDone", "ResumeTarget", "LabelHandler", "LabelDone", "ProviderError" })
             symbols.Declare(new VariableSymbol(compatibilityName, typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new LocalSymbol("matrix", typeof(object), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$", RegexOptions.Multiline))
