@@ -505,6 +505,7 @@ internal static class Program
     public static string LCase(object? value) => (value?.ToString() ?? string.Empty).ToLowerInvariant();
     public static object? ArraySort(object? value) {
         if (value is not IEnumerable values) return value;
+        if (value is string[] strings) { var clone = (string[])strings.Clone(); System.Array.Sort(clone, StringComparer.OrdinalIgnoreCase); return clone; }
         var result = values.Cast<object?>().ToArray();
         if (result.Any(item => item is string))
             result = result.OrderBy(CStr, StringComparer.OrdinalIgnoreCase).ToArray();
