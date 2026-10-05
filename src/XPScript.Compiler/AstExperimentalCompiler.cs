@@ -54,6 +54,12 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("CLng", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("CBool", typeof(bool), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("Evaluate", typeof(object), [typeof(string), typeof(object)]));
+        symbols.Declare(new FunctionSymbol("Chr", typeof(string), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("Asc", typeof(long), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("Replace", typeof(string), [typeof(string), typeof(string), typeof(string)]));
+        symbols.Declare(new FunctionSymbol("Trim", typeof(string), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("LCase", typeof(string), [typeof(object)]));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
         var declarationParameters = sub?.Parameters ?? function!.Parameters;
@@ -111,6 +117,12 @@ internal static class Program
     public static long CLng(object value) => Convert.ToInt64(value);
     public static bool CBool(object value) => Convert.ToBoolean(value);
     public static object? Evaluate(string expression, object? value) => value;
+    public static string Chr(object value) => Convert.ToChar(value).ToString();
+    public static long Asc(object value) => Convert.ToChar(value);
+    public static string Replace(string value, string oldValue, string newValue) => value.Replace(oldValue, newValue, StringComparison.Ordinal);
+    public static string Trim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
+    public static string UCase(object? value) => (value?.ToString() ?? string.Empty).ToUpperInvariant();
+    public static string LCase(object? value) => (value?.ToString() ?? string.Empty).ToLowerInvariant();
     public static class XPScriptNullRuntime
     {
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
