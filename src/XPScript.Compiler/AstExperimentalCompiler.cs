@@ -132,7 +132,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("LenB", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("TypeName", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FileLen", typeof(long), [typeof(string)]));
-        foreach (var fileFunction in new[] { "ReadFile", "ReadLines", "ReadBytes", "FileHash", "Files", "Directories", "CopyFile", "MoveFile", "IsFile", "IsDir", "FileEquals", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "FileInfo", "MkDir" })
+        foreach (var fileFunction in new[] { "ReadFile", "ReadLines", "ReadBytes", "FileHash", "Files", "Directories", "CopyFile", "MoveFile", "IsFile", "IsDir", "FileEquals", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "FileInfo", "MkDir", "RmDir" })
             for (var parameterCount = 1; parameterCount <= 4; parameterCount++)
                 symbols.Declare(new FunctionSymbol(fileFunction, typeof(object), Enumerable.Repeat(typeof(object), parameterCount).ToArray(), XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, parameterCount).ToArray()));
         symbols.Declare(new FunctionSymbol("FreeFile", typeof(long), []));
@@ -377,6 +377,7 @@ internal static class Program
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
     public static long[] Array(long first, long second) => [first, second];
     public static object[] Array(object first, object second) => [first, second];
+    public static object[] Array(params object?[] values) => values!;
     public static long Len(object? value) => value is Array array ? array.Length : (value?.ToString()?.Length ?? 0);
     public static long LenB(object? value) => Len(value);
     public static string TypeName(object? value) => value?.GetType().Name ?? "Nothing";
@@ -398,6 +399,7 @@ internal static class Program
     public static object WriteBytes(params object?[] a) { System.IO.File.WriteAllBytes(CStr(a[0]), (byte[])a[1]!); return true; }
     public static object FileInfo(params object?[] a) => new System.IO.FileInfo(CStr(a[0]));
     public static object MkDir(params object?[] a) { System.IO.Directory.CreateDirectory(CStr(a[0])); return true; }
+    public static object RmDir(params object?[] a) { System.IO.Directory.Delete(CStr(a[0]), true); return true; }
     public static long FreeFile() => 1;
     public static long CInt(object value) => Convert.ToInt64(value);
     public static long CLng(object value) => Convert.ToInt64(value);
