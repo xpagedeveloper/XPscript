@@ -54,9 +54,22 @@ internal static class AstExperimentalCompiler
         foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Public\s+|Private\s+)?Class\s+(?<name>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new TypeSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.User(match.Groups["name"].Value)));
         foreach (var procedure in unit.Declarations.OfType<SubDeclarationSyntax>())
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray()));
+        {
+            var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types));
+            for (var count = types.Length - 1; count >= 0; count--)
+                symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types[..count]));
+        }
         foreach (var procedure in unit.Declarations.OfType<FunctionDeclarationSyntax>())
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, ResolveRuntimeType(procedure.ReturnType?.Identifier.Text), procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray()));
+        {
+            var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
+            var resultType = ResolveRuntimeType(procedure.ReturnType?.Identifier.Text);
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types));
+            for (var count = types.Length - 1; count >= 0; count--)
+                symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types[..count]));
+        }
+        foreach (Match match in Regex.Matches(fullSource, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$", RegexOptions.Multiline))
+            symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(long), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, ResolveRuntimeType(match.Groups["type"].Value), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase | RegexOptions.Multiline))
@@ -113,6 +126,8 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("ArraySort", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object), typeof(string)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CDate", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("StrConv", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("CType", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrComp", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Abs", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Int", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
@@ -263,6 +278,8 @@ internal static class Program
     public static object? ArraySort(object? value) => value;
     public static string Join(object? value, string separator) => value is System.Collections.IEnumerable items ? string.Join(separator, items.Cast<object?>()) : string.Empty;
     public static object CDate(object value) => Convert.ToDateTime(value);
+    public static string StrConv(object value, object style) => Convert.ToString(value) ?? string.Empty;
+    public static object CType(object value, object typeName) => typeName?.ToString()?.Equals("Integer", StringComparison.OrdinalIgnoreCase) == true ? Convert.ToInt64(value) : value;
     public static long StrComp(object? left, object? right) => string.Compare(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
     public static object Abs(object value) => Math.Abs(Convert.ToDouble(value));
     public static object Int(object value) => Math.Floor(Convert.ToDouble(value));
