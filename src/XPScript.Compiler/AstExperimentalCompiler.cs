@@ -18,7 +18,10 @@ internal static class AstExperimentalCompiler
         // `Set FunctionName = value` form. Lower that form to the AST return
         // statement for the matching Function declarations.
         foreach (Match functionMatch in Regex.Matches(source, @"(?im)^\s*Function\s+(?<name>[A-Za-z_]\w*)\b"))
+        {
             source = Regex.Replace(source, $@"(?im)^\s*Set\s+{Regex.Escape(functionMatch.Groups["name"].Value)}\s*=\s*", "Return ");
+            source = Regex.Replace(source, $@"(?im)^\s*{Regex.Escape(functionMatch.Groups["name"].Value)}\s*=\s*", "Return ");
+        }
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
         // XPscript Static locals have procedure lifetime. The AST path keeps
         // the declaration as a normal Variant local for now, while preserving
