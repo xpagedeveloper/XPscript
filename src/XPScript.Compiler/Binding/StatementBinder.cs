@@ -213,7 +213,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 $"ForAll requires an array collection, not {collection.SemanticType.Name}.", syntax.CollectionExpression.Span));
         }
-        else
+        else if (collection.Type.IsArray)
         {
             var elementType = collection.SemanticType.ElementType ?? XpTypeSymbol.FromClr(collection.Type.GetElementType()!);
             if (variable.Type != elementType.RuntimeType ||
