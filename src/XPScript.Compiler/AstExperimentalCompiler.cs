@@ -41,6 +41,7 @@ internal static class AstExperimentalCompiler
         source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
         source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>\s*)Sleep\s+(?<value>.+)$", "${indent}Sleep(${value})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)MkDir\s+(?<path>.+)$", "${indent}Call MkDir(${path})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Put\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>.+)$", "${indent}Call AstPut(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?<operation>Lock|Unlock)\s+#?(?<file>[^,\s]+)\s*,\s*(?<start>[^\s]+)\s+To\s+(?<end>.+)$", "${indent}Call Ast${operation}Bytes(${file}, ${start}, ${end})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Open\s+(?<path>.+?)\s+For\s+(?<mode>Input|Output|Append|Binary|Random)\s+As\s+#?(?<file>[^\s]+).*$", "${indent}Call AstOpen(${path}, \"${mode}\", ${file})");
@@ -131,7 +132,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("LenB", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("TypeName", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FileLen", typeof(long), [typeof(string)]));
-        foreach (var fileFunction in new[] { "ReadFile", "ReadLines", "ReadBytes", "FileHash", "Files", "Directories", "CopyFile", "MoveFile", "IsFile", "IsDir", "FileEquals", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "FileInfo" })
+        foreach (var fileFunction in new[] { "ReadFile", "ReadLines", "ReadBytes", "FileHash", "Files", "Directories", "CopyFile", "MoveFile", "IsFile", "IsDir", "FileEquals", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "FileInfo", "MkDir" })
             for (var parameterCount = 1; parameterCount <= 4; parameterCount++)
                 symbols.Declare(new FunctionSymbol(fileFunction, typeof(object), Enumerable.Repeat(typeof(object), parameterCount).ToArray(), XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, parameterCount).ToArray()));
         symbols.Declare(new FunctionSymbol("FreeFile", typeof(long), []));
@@ -391,11 +392,12 @@ internal static class Program
     public static object FileEquals(params object?[] a) => System.Linq.Enumerable.SequenceEqual(System.IO.File.ReadAllBytes(CStr(a[0])), System.IO.File.ReadAllBytes(CStr(a[1])));
     public static object CopyFile(params object?[] a) { System.IO.File.Copy(CStr(a[0]), CStr(a[1]), a.Length > 2 && Convert.ToInt32(a[2]) == 2); return true; }
     public static object MoveFile(params object?[] a) { System.IO.File.Move(CStr(a[0]), CStr(a[1]), a.Length > 2 && Convert.ToInt32(a[2]) == 2); return true; }
-    public static object WriteFile(params object?[] a) { System.IO.File.WriteAllText(CStr(a[0]), CStr(a[1])); return true; }
-    public static object AppendFile(params object?[] a) { System.IO.File.AppendAllText(CStr(a[0]), CStr(a[1])); return true; }
+    public static object WriteFile(params object?[] a) { var p = CStr(a[0]); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(p))!); System.IO.File.WriteAllText(p, CStr(a[1])); return true; }
+    public static object AppendFile(params object?[] a) { var p = CStr(a[0]); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(p))!); System.IO.File.AppendAllText(p, CStr(a[1])); return true; }
     public static object WriteLines(params object?[] a) { System.IO.File.WriteAllLines(CStr(a[0]), ((System.Collections.IEnumerable)a[1]!).Cast<object?>().Select(CStr)); return true; }
     public static object WriteBytes(params object?[] a) { System.IO.File.WriteAllBytes(CStr(a[0]), (byte[])a[1]!); return true; }
     public static object FileInfo(params object?[] a) => new System.IO.FileInfo(CStr(a[0]));
+    public static object MkDir(params object?[] a) { System.IO.Directory.CreateDirectory(CStr(a[0])); return true; }
     public static long FreeFile() => 1;
     public static long CInt(object value) => Convert.ToInt64(value);
     public static long CLng(object value) => Convert.ToInt64(value);
