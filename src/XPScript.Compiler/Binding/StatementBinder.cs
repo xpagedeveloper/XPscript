@@ -15,6 +15,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         BoundStatement? bound = syntax switch
         {
             AssignmentStatementSyntax assignment => BindAssignment(assignment.Target, assignment.Expression),
+            DimStatementSyntax dim => BindDim(dim),
             SetStatementSyntax set => BindAssignment(set.Target, set.Expression, isSet: true),
             ExpressionStatementSyntax expression => BindExpressionStatement(expression),
             CallStatementSyntax call => BindCallStatement(call),
@@ -66,6 +67,48 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     {
         var expression = BindExpression(syntax.Expression);
         return expression is null ? null : new BoundExpressionStatement(expression);
+    }
+
+    private BoundStatement? BindDim(DimStatementSyntax syntax)
+    {
+        var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text);
+        var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType);
+        if (!_symbols.TryDeclare(local, out var code, out var message))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(code ?? CompilerDiagnosticCodes.DuplicateOverload,
+                message ?? $"Symbol '{local.Name}' is already declared.", syntax.IdentifierToken.Span));
+            return null;
+        }
+
+        BoundExpression? initializer = null;
+        if (syntax.Initializer is not null)
+        {
+            initializer = BindExpression(syntax.Initializer);
+            if (initializer is null)
+                return null;
+            var conversion = Conversion.Classify(initializer.SemanticType, semanticType);
+            if (!conversion.IsImplicit)
+            {
+                _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
+                    $"Cannot assign {initializer.SemanticType.Name} to {semanticType.Name}.", syntax.Initializer.Span));
+                return null;
+            }
+            if (!conversion.IsIdentity)
+                initializer = new BoundConversionExpression(initializer, semanticType, conversion) { Span = initializer.Span };
+        }
+        return new BoundVariableDeclarationStatement(local, initializer);
+    }
+
+    private static (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name)
+    {
+        return name?.Trim().ToUpperInvariant() switch
+        {
+            "BOOLEAN" => (typeof(bool), XpTypeSymbol.FromClr(typeof(bool))),
+            "STRING" => (typeof(string), XpTypeSymbol.FromClr(typeof(string))),
+            "INTEGER" or "LONG" => (typeof(long), XpTypeSymbol.FromClr(typeof(long))),
+            "SINGLE" or "DOUBLE" or "CURRENCY" => (typeof(double), XpTypeSymbol.FromClr(typeof(double))),
+            _ => (typeof(object), XpTypeSymbol.Variant)
+        };
     }
 
     private BoundStatement? BindCallStatement(CallStatementSyntax syntax)

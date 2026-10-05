@@ -13,6 +13,7 @@ public enum BoundNodeKind
     UnaryExpression,
     BinaryExpression,
     AssignmentStatement,
+    VariableDeclarationStatement,
     ExpressionStatement,
     ReturnStatement,
     IfStatement,

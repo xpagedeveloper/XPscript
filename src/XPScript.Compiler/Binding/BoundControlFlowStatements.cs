@@ -10,6 +10,13 @@ public sealed class BoundAssignmentStatement(BoundExpression target, BoundExpres
     public override BoundNodeKind Kind => BoundNodeKind.AssignmentStatement;
 }
 
+public sealed class BoundVariableDeclarationStatement(LocalSymbol local, BoundExpression? initializer) : BoundStatement
+{
+    public LocalSymbol Local { get; } = local;
+    public BoundExpression? Initializer { get; } = initializer;
+    public override BoundNodeKind Kind => BoundNodeKind.VariableDeclarationStatement;
+}
+
 public sealed class BoundExpressionStatement(BoundExpression expression) : BoundStatement
 {
     public BoundExpression Expression { get; } = expression;

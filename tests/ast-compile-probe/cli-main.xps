@@ -1,3 +1,5 @@
 Sub Main()
-    Print "AST_XPS_PRINT_OK"
+    Dim message As String
+    message = "AST_XPS_PRINT_OK"
+    Print message
 End Sub

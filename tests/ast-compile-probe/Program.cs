@@ -5,12 +5,13 @@ using XPScript.Compiler.Binding;
 using XPScript.Compiler.Emission;
 using XPScript.Compiler.Syntax;
 
-const string source = "Sub Main()\nPrint \"AST_XPS_COMPILE_OK\"\nEnd Sub\n";
+const string source = "Sub Main()\nDim message As String\nmessage = \"AST_XPS_COMPILE_OK\"\nPrint message\nEnd Sub\n";
 var declaration = new DeclarationParser(source).ParseDeclaration();
 if (declaration is not SubDeclarationSyntax sub || declaration is null)
     throw new InvalidOperationException("AST declaration parser did not produce a Sub.");
-if (sub.Statements.Count != 1 || sub.Statements[0] is not RuntimeFileStatementSyntax)
-    throw new InvalidOperationException("AST declaration parser did not retain the call statement.");
+if (sub.Statements.Count != 3 || sub.Statements[0] is not DimStatementSyntax ||
+    sub.Statements[1] is not AssignmentStatementSyntax || sub.Statements[2] is not RuntimeFileStatementSyntax)
+    throw new InvalidOperationException("AST declaration parser did not retain the declaration, assignment and Print statements.");
 
 var symbols = new SymbolTable();
 var binder = new StatementBinder(symbols);

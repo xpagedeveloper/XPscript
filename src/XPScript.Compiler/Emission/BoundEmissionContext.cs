@@ -59,6 +59,7 @@ internal sealed class BoundEmissionContext(IReadOnlyList<BoundStatement> stateme
     private static IEnumerable<BoundNode> Children(BoundNode node) => node switch
     {
         BoundAssignmentStatement value => [value.Target, value.Expression],
+        BoundVariableDeclarationStatement value => value.Initializer is null ? [] : [value.Initializer],
         BoundExpressionStatement value => [value.Expression],
         BoundPrintStatement value => [value.Expression],
         BoundReturnStatement value => value.Expression is null ? [] : [value.Expression],

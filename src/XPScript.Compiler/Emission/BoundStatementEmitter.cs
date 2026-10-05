@@ -39,6 +39,11 @@ public sealed class BoundStatementEmitter
             case BoundExpressionStatement expression:
                 Line($"{_expressions.Emit(expression.Expression)};");
                 break;
+            case BoundVariableDeclarationStatement declaration:
+                var type = CSharpType(declaration.Local.Type);
+                var initializer = declaration.Initializer is null ? $"default({type})" : _expressions.Emit(declaration.Initializer);
+                Line($"{type} {declaration.Local.Name} = {initializer};");
+                break;
             case BoundPrintStatement print:
                 Line($"Console.WriteLine(XPScriptRuntime.PrintText({_expressions.Emit(print.Expression)}));");
                 break;
@@ -111,6 +116,13 @@ public sealed class BoundStatementEmitter
     private string Condition(BoundExpression expression) => expression.Type == typeof(bool)
         ? _expressions.Emit(expression)
         : $"XPScriptNullRuntime.ConditionValue({_expressions.Emit(expression)})";
+
+    private static string CSharpType(Type type) => type == typeof(long) ? "long"
+        : type == typeof(double) ? "double"
+        : type == typeof(bool) ? "bool"
+        : type == typeof(string) ? "string"
+        : type == typeof(void) ? "void"
+        : "object";
 
     private string CaseCondition(string selector, BoundCaseClause clause) => clause.CaseKind switch
     {
