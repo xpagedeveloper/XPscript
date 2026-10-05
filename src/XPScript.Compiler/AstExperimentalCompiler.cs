@@ -441,6 +441,7 @@ internal static class Program
         public static long Loc(object? _) => 0;
         public static string Error(object? _) => string.Empty;
         public static string Error() => string.Empty;
+        public static string ErrorValue() => string.Empty;
         public static long CInt(object value) => Convert.ToInt32(value);
         public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";
         public static IEnumerable<long> Range(long from, long to, long step)
@@ -461,7 +462,6 @@ internal static class Program
 {{entryPoint}}
 }
 """;
-        generated = Regex.Replace(generated, @"(?<!string )\bEnviron\(", "Program.Environ(");
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
         var nativeHttp = NativeHttpRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal).Replace("Program.XPScriptRuntime.CInt(", "Convert.ToInt32(", StringComparison.Ordinal);
         generated += Environment.NewLine + "public sealed class XPScriptRuntimeException : Exception { public int ErrorCode { get; } public XPScriptRuntimeException(int code, string message) : base(message) { ErrorCode = code; } }" + Environment.NewLine + "internal sealed class XPScriptTlsValidationState { public string Mode { get; set; } = \"strict\"; public string LastError { get; private set; } = string.Empty; public void Reset() { LastError = string.Empty; } public Exception Failure(string context) => new XPScriptRuntimeException(1201, context + \" failed: \" + LastError); public bool Validate(object sender, System.Security.Cryptography.X509Certificates.X509Certificate? c, System.Security.Cryptography.X509Certificates.X509Chain? chain, System.Net.Security.SslPolicyErrors errors) => true; }" + Environment.NewLine + nativeHttp;
