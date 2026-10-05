@@ -99,6 +99,7 @@ internal static class AstExperimentalCompiler
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
         foreach (var typeName in new[] { "XPJson", "XPJsonDocument", "XPJsonSchema", "XPJsonArray", "XPJsonObject" })
             symbols.Declare(new VariableSymbol(typeName, typeof(object), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("Console", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"\bForAll\s+(?<name>[A-Za-z_]\w*)\s+In\b", RegexOptions.IgnoreCase))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
@@ -107,7 +108,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LBound", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("UBound", typeof(long), [typeof(object)]));
-        symbols.Declare(new FunctionSymbol("Base64DecodeBinary", typeof(byte[]), [typeof(string)]));
+        symbols.Declare(new FunctionSymbol("Base64DecodeBinary", typeof(object), [typeof(string)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Len", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LenB", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("TypeName", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
@@ -313,6 +314,7 @@ internal static class Program
 {
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
     public static dynamic Application = new ExpandoObject();
+    public static dynamic Console = new ExpandoObject();
     public static dynamic Debugger = new ExpandoObject();
     public static dynamic Process = new ExpandoObject();
     public static dynamic Session = new ExpandoObject();
@@ -335,7 +337,7 @@ internal static class Program
     public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
     public static long LBound(object value) => 0;
     public static long UBound(object value) => value is Array array ? array.Length - 1 : -1;
-    public static byte[] Base64DecodeBinary(string value) => Convert.FromBase64String(value);
+    public static object Base64DecodeBinary(string value) => Convert.FromBase64String(value);
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
     public static long[] Array(long first, long second) => [first, second];
     public static long Len(object? value) => value is Array array ? array.Length : (value?.ToString()?.Length ?? 0);
