@@ -180,7 +180,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
         var functions = _symbols.LookupAll(name).OfType<FunctionSymbol>().ToArray();
         if (functions.Length == 0)
+        {
+            if (_allowDynamicMembers && syntax.Arguments.Count == 0)
+                return new BoundNameExpression(new LocalSymbol(name, typeof(object), XpTypeSymbol.Variant));
             return Error(nameSyntax.IdentifierToken, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined function '{name}'.");
+        }
         return BindOverloadSet(syntax, target, name, functions);
     }
 
