@@ -105,6 +105,8 @@ Array-consuming operations normalize an object reference whose value is `Nothing
 | `UBound` | `UBound(array [, dimension])` | array and optional dimension. | Returns upper bound. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `Array` | `Array(value1, value2, ...)` | values. | Creates Variant array. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `Join` | `Join(array [, delimiter])` | array and optional delimiter. | Joins array values into text. | [operators-arrays.xps](../samples/operators-arrays.xps) |
+| `Implode` | `Implode(array [, delimiter])` | array and optional delimiter. | Alias for Join. | [operators-arrays.xps](../samples/operators-arrays.xps) |
+| `Split` | `Split(text [, delimiter [, count [, compMethod]]])` | text, optional delimiter, count, and comparison mode. | Splits text into an array. | [compatibility.xps](../samples/compatibility.xps) |
 | `Explode` | `Explode(text [, delimiter])` | text and optional delimiter. | Splits text into array. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `ArrayAppend` | `ArrayAppend(array, value)` | array and value. | Appends a value using array helper semantics. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `ArrayGetIndex` | `ArrayGetIndex(array, value)` | array and search value. | Finds matching index. | [operators-arrays.xps](../samples/operators-arrays.xps) |
@@ -156,6 +158,7 @@ Array-consuming operations normalize an object reference whose value is `Nothing
 | `LeftB` | `LeftB(text, count)` | text and byte count. | Returns left byte-oriented substring. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `RightB` | `RightB(text, count)` | text and byte count. | Returns right byte-oriented substring. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `MidB` | `MidB(text, start [, count])` | text, one-based byte start, optional byte count. | Returns byte-oriented substring. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
+| `MidBP` | `MidBP(text, start [, count])` | text, one-based byte start, optional byte count. | Returns byte-position substring. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `Replace` | `Replace(text, find, replacement)` | source text, find text, replacement. | Replaces matching text. | [compatibility.xps](../samples/compatibility.xps) |
 | `LCase` | `LCase(text)` | text. | Converts to lower case. | [reference-runtime-batch1.xps](../samples/reference-runtime-batch1.xps) |
 | `UCase` | `UCase(text)` | text. | Converts to upper case. | [hello.xps](../demo/console/hello.xps) |
