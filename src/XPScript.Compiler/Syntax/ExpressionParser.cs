@@ -212,6 +212,7 @@ public sealed class ExpressionParser
         SyntaxKind.FunctionKeyword or
         SyntaxKind.SetKeyword or
         SyntaxKind.GetKeyword or
+        SyntaxKind.IsKeyword or
         SyntaxKind.MeKeyword;
 
     private SyntaxToken Match(SyntaxKind kind)
