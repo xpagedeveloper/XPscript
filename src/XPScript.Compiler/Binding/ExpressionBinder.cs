@@ -150,7 +150,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (memberSymbols.Count == 0 && _allowDynamicMembers && receiver.Type == typeof(object))
             {
                 var arguments = syntax.Arguments.Select(Bind).ToArray();
-                var dynamicFunction = new FunctionSymbol(name, typeof(object), arguments.Select(argument => argument.Type).ToArray());
+                var dynamicFunction = new FunctionSymbol(name, typeof(object), arguments.Select(argument => argument.Type).ToArray(), XpTypeSymbol.Variant);
                 target = new BoundMemberAccessExpression(receiver, name, typeof(object), XpTypeSymbol.Variant);
                 return new BoundCallExpression(target, dynamicFunction, arguments);
             }
@@ -295,6 +295,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         if (syntax.OperatorToken.Kind is SyntaxKind.PlusToken or SyntaxKind.MinusToken &&
             (operand.Type == typeof(long) || operand.Type == typeof(double)))
             return new BoundUnaryExpression(syntax.OperatorToken.Kind, operand, operand.Type);
+        if (_allowDynamicMembers && operand.SemanticType.IsVariant)
+            return new BoundUnaryExpression(syntax.OperatorToken.Kind, operand, typeof(object));
         return Error(syntax, CompilerDiagnosticCodes.TypeMismatch, $"Unary operator {syntax.OperatorToken.Text} is not defined for {operand.SemanticType.Name}.");
     }
 
@@ -316,6 +318,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return new BoundBinaryExpression(left, op, right, typeof(bool));
         if (op is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken && left.Type == right.Type)
             return new BoundBinaryExpression(left, op, right, typeof(bool));
+        if (_allowDynamicMembers && (left.SemanticType.IsVariant || right.SemanticType.IsVariant))
+            return new BoundBinaryExpression(left, op, right, typeof(object));
 
         return Error(syntax, CompilerDiagnosticCodes.TypeMismatch, $"Binary operator {syntax.OperatorToken.Text} is not defined for {left.SemanticType.Name} and {right.SemanticType.Name}.");
     }

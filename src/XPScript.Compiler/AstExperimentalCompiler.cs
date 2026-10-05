@@ -63,6 +63,10 @@ internal static class Program
     public static dynamic Application = new ExpandoObject();
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
     public static long[] Array(long first, long second) => [first, second];
+    public static class XPScriptNullRuntime
+    {
+        public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
+    }
     public static class XPScriptRuntime
     {
         public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";
@@ -73,6 +77,7 @@ internal static class Program
             else for (var value = from; value >= to; value += step) yield return value;
         }
         public static long CLng(object value) => Convert.ToInt64(value);
+        public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
     }
 {{body}}
 }
