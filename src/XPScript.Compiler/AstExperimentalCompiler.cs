@@ -191,6 +191,13 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("StrCompare", typeof(long), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrComp", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrComp", typeof(long), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        foreach (var dialog in new[] { "ShowDialog", "LoadFileDialog", "OpenFileDialog", "SaveFileDialog" })
+        {
+            symbols.Declare(new FunctionSymbol(dialog, typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+            symbols.Declare(new FunctionSymbol(dialog, typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+            symbols.Declare(new FunctionSymbol(dialog, typeof(string), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+            symbols.Declare(new FunctionSymbol(dialog, typeof(string), [typeof(object), typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        }
         symbols.Declare(new FunctionSymbol("Abs", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Int", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Fix", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
@@ -525,6 +532,10 @@ internal static class Program
         public static string Error(object? _) => string.Empty;
         public static string Error() => string.Empty;
         public static string ErrorValue() => string.Empty;
+        public static string ShowDialog(object? message, object? title = null, object? kind = null, object? values = null) => string.Empty;
+        public static string LoadFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
+        public static string OpenFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
+        public static string SaveFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
         public static long CInt(object value) => Convert.ToInt32(value);
         public static bool CBool(object value) => Convert.ToBoolean(value);
         public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";

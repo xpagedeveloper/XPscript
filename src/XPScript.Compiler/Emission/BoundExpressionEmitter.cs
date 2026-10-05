@@ -40,7 +40,7 @@ public sealed class BoundExpressionEmitter
             return (byRef ? "ref " : "") + Emit(argument);
         });
         var functionName = call.Function.Name.Equals("Input$", StringComparison.OrdinalIgnoreCase) ? "Input" : call.Function.Name;
-        if (functionName.Equals("Error", StringComparison.OrdinalIgnoreCase) || functionName.Equals("GetTickCount", StringComparison.OrdinalIgnoreCase) || functionName.Equals("Loc", StringComparison.OrdinalIgnoreCase) || functionName.Equals("ProcedureCounter", StringComparison.OrdinalIgnoreCase))
+        if (functionName.Equals("Error", StringComparison.OrdinalIgnoreCase) || functionName.Equals("GetTickCount", StringComparison.OrdinalIgnoreCase) || functionName.Equals("Loc", StringComparison.OrdinalIgnoreCase) || functionName.Equals("ProcedureCounter", StringComparison.OrdinalIgnoreCase) || functionName.Equals("ShowDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("LoadFileDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("OpenFileDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("SaveFileDialog", StringComparison.OrdinalIgnoreCase))
             functionName = "XPScriptRuntime." + functionName;
         return $"{(call.Target is null ? functionName : Emit(call.Target))}({string.Join(", ", arguments)})";
     }
