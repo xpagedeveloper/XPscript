@@ -395,6 +395,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return new BoundBinaryExpression(left, op, right, typeof(bool));
         if (_allowDynamicMembers && (left.SemanticType.IsVariant || right.SemanticType.IsVariant || left.Type == typeof(object) || right.Type == typeof(object)))
             return new BoundBinaryExpression(left, op, right, typeof(object));
+        if (_allowDynamicMembers && (left.Type == typeof(long) || left.Type == typeof(double)) && (right.Type == typeof(long) || right.Type == typeof(double)))
+            return new BoundBinaryExpression(left, op, right, typeof(object));
 
         return Error(syntax, CompilerDiagnosticCodes.TypeMismatch, $"Binary operator {syntax.OperatorToken.Text} is not defined for {left.SemanticType.Name} and {right.SemanticType.Name}.");
     }
