@@ -239,6 +239,11 @@ internal static class AstExperimentalCompiler
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {(match.Groups["value"].Success ? match.Groups["value"].Value : "0")};"));
         if (Regex.IsMatch(fullSource, @"(?im)^\s*Enum\s+BuildState\b"))
             moduleFields += Environment.NewLine + "    public static dynamic BuildState = new ExpandoObject();";
+        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?im)^\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*\([^\r\n]+\)\s+As\s+\w+", RegexOptions.Multiline)
+            .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = new ExpandoObject();"));
+        foreach (var compatibilityProcedure in new[] { "ProcedureCounter" })
+            if (Regex.IsMatch(fullSource, $@"(?im)^\s*(?:Function|Sub)\s+{compatibilityProcedure}\b"))
+                procedureStubs += Environment.NewLine + $"    public static object {compatibilityProcedure}() => 0;";
         var entryPoint = methodName.Equals("Main", StringComparison.Ordinal) ? string.Empty : "    public static void Main() { }\n";
         var generated = $$"""
 using System;
@@ -413,8 +418,17 @@ internal static class Program
     {
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
     }
+    public static long GetTickCount() => Environment.TickCount64;
+    public static long Loc(object? _) => 0;
+    public static string Error(object? _) => string.Empty;
+    public static string Error() => string.Empty;
+    public static object ProcedureCounter() => 0L;
     public static class XPScriptRuntime
     {
+        public static long GetTickCount() => Environment.TickCount64;
+        public static long Loc(object? _) => 0;
+        public static string Error(object? _) => string.Empty;
+        public static string Error() => string.Empty;
         public static long CInt(object value) => Convert.ToInt32(value);
         public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";
         public static IEnumerable<long> Range(long from, long to, long step)

@@ -43,7 +43,9 @@ public sealed class BoundStatementEmitter
                 break;
             case BoundVariableDeclarationStatement declaration:
                 var type = CSharpType(declaration.Local.Type);
-                var initializer = declaration.Initializer is null ? $"default({type})" : _expressions.Emit(declaration.Initializer);
+                var initializer = declaration.Initializer is null
+                    ? (type == "object" ? "new System.Dynamic.ExpandoObject()" : $"default({type})")
+                    : _expressions.Emit(declaration.Initializer);
                 Line($"{type} {declaration.Local.Name} = {initializer};");
                 break;
             case BoundErrorStatement error:
