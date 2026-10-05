@@ -141,7 +141,12 @@ public sealed class StatementParser
         var thenKeyword = NextToken();
 
         if (Current.Kind != SyntaxKind.NewLineToken)
-            return new IfStatementSyntax(ifKeyword, condition, thenKeyword, ParseExpressionStatement());
+        {
+            var inlineStatement = Current.Kind == SyntaxKind.ErrorKeyword
+                ? ParseErrorStatement()
+                : ParseExpressionStatement();
+            return new IfStatementSyntax(ifKeyword, condition, thenKeyword, inlineStatement);
+        }
 
         NextToken();
 

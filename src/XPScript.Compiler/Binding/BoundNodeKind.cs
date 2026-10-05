@@ -14,6 +14,7 @@ public enum BoundNodeKind
     BinaryExpression,
     AssignmentStatement,
     VariableDeclarationStatement,
+    ErrorStatement,
     ExpressionStatement,
     ReturnStatement,
     IfStatement,

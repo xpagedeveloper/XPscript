@@ -60,6 +60,7 @@ internal sealed class BoundEmissionContext(IReadOnlyList<BoundStatement> stateme
     {
         BoundAssignmentStatement value => [value.Target, value.Expression],
         BoundVariableDeclarationStatement value => value.Initializer is null ? [] : [value.Initializer],
+        BoundErrorStatement value => value.Description is null ? [value.Number] : [value.Number, value.Description],
         BoundExpressionStatement value => [value.Expression],
         BoundPrintStatement value => [value.Expression],
         BoundReturnStatement value => value.Expression is null ? [] : [value.Expression],

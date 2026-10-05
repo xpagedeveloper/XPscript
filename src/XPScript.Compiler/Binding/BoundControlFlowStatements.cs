@@ -17,6 +17,13 @@ public sealed class BoundVariableDeclarationStatement(LocalSymbol local, BoundEx
     public override BoundNodeKind Kind => BoundNodeKind.VariableDeclarationStatement;
 }
 
+public sealed class BoundErrorStatement(BoundExpression number, BoundExpression? description) : BoundStatement
+{
+    public BoundExpression Number { get; } = number;
+    public BoundExpression? Description { get; } = description;
+    public override BoundNodeKind Kind => BoundNodeKind.ErrorStatement;
+}
+
 public sealed class BoundExpressionStatement(BoundExpression expression) : BoundStatement
 {
     public BoundExpression Expression { get; } = expression;

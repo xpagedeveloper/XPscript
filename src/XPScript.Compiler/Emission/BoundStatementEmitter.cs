@@ -44,6 +44,10 @@ public sealed class BoundStatementEmitter
                 var initializer = declaration.Initializer is null ? $"default({type})" : _expressions.Emit(declaration.Initializer);
                 Line($"{type} {declaration.Local.Name} = {initializer};");
                 break;
+            case BoundErrorStatement error:
+                var description = error.Description is null ? "\"XPscript Error\"" : _expressions.Emit(error.Description);
+                Line($"throw new Exception($\"XPscript Error {{Convert.ToInt32({_expressions.Emit(error.Number)})}}: {{{description}}}\");");
+                break;
             case BoundPrintStatement print:
                 Line($"Console.WriteLine(XPScriptRuntime.PrintText({_expressions.Emit(print.Expression)}));");
                 break;

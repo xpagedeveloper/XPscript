@@ -22,6 +22,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             RuntimeFileStatementSyntax runtime => BindRuntimeStatement(runtime),
             ReturnStatementSyntax @return => BindReturn(@return),
             ExitStatementSyntax exit => BindExit(exit),
+            ErrorStatementSyntax error => BindError(error),
             IfStatementSyntax @if => BindIf(@if),
             ForStatementSyntax @for => BindFor(@for),
             ForAllStatementSyntax forAll => BindForAll(forAll),
@@ -312,6 +313,14 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         if (syntax.TargetKeyword.Kind is not (SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword))
             return BindUnsupported(syntax);
         return new BoundReturnStatement(null);
+    }
+
+    private BoundStatement? BindError(ErrorStatementSyntax syntax)
+    {
+        var number = BindExpression(syntax.NumberExpression);
+        var description = syntax.DescriptionExpression is null ? null : BindExpression(syntax.DescriptionExpression);
+        return number is null || (syntax.DescriptionExpression is not null && description is null)
+            ? null : new BoundErrorStatement(number, description);
     }
 
     private BoundStatement? BindAssignment(ExpressionSyntax targetSyntax, ExpressionSyntax valueSyntax, bool isSet = false)
