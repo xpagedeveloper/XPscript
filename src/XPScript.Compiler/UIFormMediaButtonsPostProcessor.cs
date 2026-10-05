@@ -130,6 +130,10 @@ internal sealed class UIFormMediaButtonsPostProcessor
         var text = XPScriptRuntime.CStr(value).Trim();
         if (text.Length is < 1 or > 4096) throw new XPScriptRuntimeException(5, $"UIForm {kind} source must contain between 1 and 4096 characters.");
         if (text.Any(char.IsControl)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source contains a control character.");
+        var allowLocalPaths = {{allowLocalFileUris.ToString().ToLowerInvariant()}};
+        var isRootedPath = System.IO.Path.IsPathRooted(text) ||
+            (text.Length >= 3 && char.IsLetter(text[0]) && text[1] == ':' && (text[2] == '\\' || text[2] == '/'));
+        if (allowLocalPaths && isRootedPath) return text;
         if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri)) throw new XPScriptRuntimeException(5, $"UIForm {kind} source is invalid.");
         if (uri.IsAbsoluteUri)
         {
@@ -143,7 +147,7 @@ internal sealed class UIFormMediaButtonsPostProcessor
             return text;
         }
         var hasParentSegment = text.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == "..");
-        if (hasParentSegment || text.StartsWith("/", StringComparison.Ordinal) || text.StartsWith("\\", StringComparison.Ordinal))
+        if (hasParentSegment || isRootedPath)
             throw new XPScriptRuntimeException(5, $"UIForm {kind} relative source must stay within the application asset root.");
         var normalized = text.Replace('\\', '/');
         if (!normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
