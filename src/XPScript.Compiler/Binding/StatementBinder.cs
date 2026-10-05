@@ -208,7 +208,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 "ForAll loop variable must be writable.", syntax.IdentifierToken.Span));
 
-        if (!collection.Type.IsArray)
+        if (!collection.Type.IsArray && !(_allowDynamicMembers && (collection.SemanticType.IsVariant || collection.Type == typeof(object))))
         {
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 $"ForAll requires an array collection, not {collection.SemanticType.Name}.", syntax.CollectionExpression.Span));
