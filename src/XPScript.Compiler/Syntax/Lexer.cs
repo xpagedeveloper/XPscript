@@ -104,10 +104,10 @@ public sealed class Lexer
             return new SyntaxToken(SyntaxKind.StringToken, text, value.ToString(), Span(start, text.Length));
         }
 
-        if (char.IsLetter(Current) || Current == '_')
+        if (char.IsLetter(Current) || Current is '_' or '$')
         {
             _position++;
-            while (char.IsLetterOrDigit(Current) || Current == '_')
+            while (char.IsLetterOrDigit(Current) || Current is '_' or '$')
                 _position++;
             var text = _text[start.._position];
             return new SyntaxToken(KeywordKind(text), text, null, Span(start, text.Length));
