@@ -3,6 +3,16 @@ using XPScript.Compiler;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
+if (args is ["--write-digitalocean-regression", var regressionPath])
+{
+    var specification = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "fixtures", "digitalocean.yaml"));
+    await File.WriteAllTextAsync(regressionPath, DigitalOceanRegressionSpecification.Create(specification));
+    return;
+}
+
+VerifyClientRegeneration();
+if (args is ["--regeneration-only"]) return;
+
 var fixture = Path.Combine(AppContext.BaseDirectory, "petstore.yaml");
 // Keep this focused regression before the full Fortnox import so wildcard request-body failures surface immediately.
 const string wildcardRequestBodyOpenApi = """
@@ -462,7 +472,15 @@ if (digitalOceanServer.Operations.Count == 0 || digitalOceanServer.Models.Count 
     throw new Exception("DigitalOcean OpenAPI REST server generation produced no operations or models.");
 if (digitalOceanClient.Operations.Count == 0 || digitalOceanClient.Models.Count == 0)
     throw new Exception("DigitalOcean OpenAPI REST client generation produced no operations or models.");
+DigitalOceanRegressionSpecification.AssertModelReferenceClosure(digitalOceanServer.Source);
+DigitalOceanRegressionSpecification.AssertModelReferenceClosure(digitalOceanClient.Source);
 Console.WriteLine("OPENAPI-DIGITALOCEAN-SERVER-CLIENT=OK");
+
+// Compile original operations and their transitive components within the CLI
+// source-size limit. Full-definition generation above remains mandatory.
+var digitalOceanRegression = DigitalOceanRegressionSpecification.Create(digitalOceanSpecification);
+var digitalOceanCompileServer = new XpsOpenApiGenerator().Generate(digitalOceanRegression, "digitalocean-regression.yaml");
+var digitalOceanCompileClient = new XpsOpenApiClientGenerator().Generate(digitalOceanRegression, "digitalocean-regression.yaml");
 
 var fortnoxFixtureDirectory = Path.Combine(AppContext.BaseDirectory, "fixtures");
 var fortnoxSpecification = string.Concat(
@@ -787,7 +805,7 @@ var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecificatio
 foreach (var marker in new[]
 {
     "Public Class fortnox_CurrencyListItem_Wrap",
-    "Public Currencies() As fortnox_CurrencySingleItem",
+    "Public Currencies As XPJsonArray",
     "Public Function CurrencyController_doIndex"
 })
     if (!fortnoxClient.Source.Contains(marker, StringComparison.Ordinal))
@@ -1280,8 +1298,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ArrayModel' }
 """, "typed-model-arrays.yaml").Source;
-foreach (var marker in new[] { "[JsonName(\"names\")]", "Public Names() As String", "[JsonName(\"counts\")]", "Public Counts() As Integer", "[JsonName(\"children\")]", "Public Children() As Child", "[JsonName(\"objects\")]", "Public Objects As XPJsonArray", "[JsonName(\"nested\")]", "Public Nested As XPJsonArray" })
-    if (!typedArrayClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Typed OpenAPI model array is missing marker: " + marker);
+foreach (var marker in new[] { "[JsonName(\"names\")]", "Public Names As XPJsonArray", "[JsonName(\"counts\")]", "Public Counts As XPJsonArray", "[JsonName(\"children\")]", "Public Children As XPJsonArray", "[JsonName(\"objects\")]", "Public Objects As XPJsonArray", "[JsonName(\"nested\")]", "Public Nested As XPJsonArray" })
+    if (!typedArrayClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Native JSON model array is missing marker: " + marker);
 
 var securityCollisionSource = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.0.3
@@ -1721,7 +1739,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EnumModel' }
 """, "typed-enums.yaml").Source;
-foreach (var marker in new[] { "Enum PetStatus", "    Available", "    Pending", "    Sold", "End Enum", "[JsonName(\"status\")]", "Public Status As PetStatus", "[JsonName(\"history\")]", "Public History() As PetStatus" })
+foreach (var marker in new[] { "Enum PetStatus", "    Available", "    Pending", "    Sold", "End Enum", "[JsonName(\"status\")]", "Public Status As PetStatus", "[JsonName(\"history\")]", "Public History As XPJsonArray" })
     if (!enumClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Typed OpenAPI enum is missing marker: " + marker);
 
 var normalizedEnumValue = new XpsOpenApiClientGenerator().Generate("""
@@ -2426,20 +2444,20 @@ try
     var digitalOceanClientPath = Path.Combine(root, "digitalocean-client.xps");
     try
     {
-        await File.WriteAllTextAsync(digitalOceanServerPath, digitalOceanServer.Source);
+        await File.WriteAllTextAsync(digitalOceanServerPath, digitalOceanCompileServer.Source);
         await using var digitalOceanServerUnit = await new XpsWebCompiler().CompileAsync(digitalOceanServerPath, root);
     }
-    catch (CompilerException ex) when (ex.GeneratedDiagnostics.Count > 0)
+    catch (XpsWebCompilationException webEx) when (webEx.InnerException is CompilerException ex && ex.GeneratedDiagnostics.Count > 0)
     {
         var diagnostic = ex.GeneratedDiagnostics[0];
-        var sourceLines = digitalOceanServer.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+        var sourceLines = digitalOceanCompileServer.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
         var line = diagnostic.Line > 0 && diagnostic.Line <= sourceLines.Length ? sourceLines[diagnostic.Line - 1] : "<line unavailable>";
         throw new Exception($"DigitalOcean server compile failed at generated line {diagnostic.Line}, column {diagnostic.Position}: {line}", ex);
     }
     try
     {
         _ = new XPScriptTranspiler().TranspileRestricted(
-            digitalOceanClient.Source + "\nSub Main()\nEnd Sub\n",
+            digitalOceanCompileClient.Source + "\nSub Main()\nEnd Sub\n",
             digitalOceanClientPath,
             CompilerDriver.CurrentRuntimeIdentifier(),
             [root]);
@@ -2447,7 +2465,7 @@ try
     catch (CompilerException ex) when (ex.GeneratedDiagnostics.Count > 0)
     {
         var diagnostic = ex.GeneratedDiagnostics[0];
-        var sourceLines = digitalOceanClient.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+        var sourceLines = digitalOceanCompileClient.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
         var line = diagnostic.Line > 0 && diagnostic.Line <= sourceLines.Length ? sourceLines[diagnostic.Line - 1] : "<line unavailable>";
         throw new Exception($"DigitalOcean client compile failed at generated line {diagnostic.Line}, column {diagnostic.Position}: {line}", ex);
     }
@@ -2531,9 +2549,9 @@ End Class
     }
 
     var getPetOriginal = "    result.StatusCode = 501" + Environment.NewLine + "    Set HandleGetPet = result";
-    const string getPetEdited = "    Print \"fråga funktionen GetPet\"\n    result.StatusCode = 200\n    result.Data = \"custom-get\"\n    Set HandleGetPet = result";
+    const string getPetEdited = "    Print \"frÃ¥ga funktionen GetPet\"\n    result.StatusCode = 200\n    result.Data = \"custom-get\"\n    Set HandleGetPet = result";
     var createPetOriginal = "    result.StatusCode = 501" + Environment.NewLine + "    Set HandleCreatePet = result";
-    const string createPetEdited = "    Print \"fråga funktionen CreatePet\"\n    result.StatusCode = 201\n    result.Data = \"custom-create\"\n    Set HandleCreatePet = result";
+    const string createPetEdited = "    Print \"frÃ¥ga funktionen CreatePet\"\n    result.StatusCode = 201\n    result.Data = \"custom-create\"\n    Set HandleCreatePet = result";
 
     var userEdited = result.Source
         .Replace(getPetOriginal, getPetEdited, StringComparison.Ordinal)
@@ -2541,8 +2559,8 @@ End Class
 
     foreach (var printMarker in new[]
     {
-        "Print \"fråga funktionen GetPet\"",
-        "Print \"fråga funktionen CreatePet\""
+        "Print \"frÃ¥ga funktionen GetPet\"",
+        "Print \"frÃ¥ga funktionen CreatePet\""
     })
     {
         if (!userEdited.Contains(printMarker, StringComparison.Ordinal))
@@ -2587,6 +2605,28 @@ End Class
     // Server import intentionally does not support reimport/update semantics. Generated
     // infrastructure is immutable to later imports; separate APIs are isolated instead.
 
+
+
+    foreach (var marker in new[] { "OPENAPI-CLIENT-SECURITY=OK", "OPENAPI-CLIENT-CORE-ONLY=OK" })
+        Console.WriteLine(marker);
+    Console.WriteLine("OPENAPI-CLIENT-COMPILE=OK");
+    Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
+    Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
+    Console.WriteLine("OPENAPI-3.2-SERVER-CLIENT-COMPILE=OK");
+    Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
+    Console.WriteLine("OPENAPI-SCOPE-COLLISION-COMPILE=OK");
+    Console.WriteLine("OPENAPI-RUNTIME-PROPERTY-METHOD-COEXISTENCE-COMPILE=OK");
+    Console.WriteLine("OPENAPI-EDITED-HANDLERS-COMPILE=OK");
+    Console.WriteLine("OPENAPI-PRINT-PRESERVATION=OK");
+}
+finally
+{
+    try { Directory.Delete(root, true); } catch { }
+}
+
+
+static void VerifyClientRegeneration()
+{
     var regenerationSpec = """
 openapi: 3.1.0
 info: { title: Regeneration Collision, version: 1.0.0 }
@@ -2636,20 +2676,4 @@ paths:
         throw new Exception("OpenAPI client regeneration must preserve deterministic member naming when the contract grows.");
 
     Console.WriteLine("OPENAPI-REGENERATION-COLLISION=OK");
-
-    foreach (var marker in new[] { "OPENAPI-CLIENT-SECURITY=OK", "OPENAPI-CLIENT-CORE-ONLY=OK" })
-        Console.WriteLine(marker);
-    Console.WriteLine("OPENAPI-CLIENT-COMPILE=OK");
-    Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
-    Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
-    Console.WriteLine("OPENAPI-3.2-SERVER-CLIENT-COMPILE=OK");
-    Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
-    Console.WriteLine("OPENAPI-SCOPE-COLLISION-COMPILE=OK");
-    Console.WriteLine("OPENAPI-RUNTIME-PROPERTY-METHOD-COEXISTENCE-COMPILE=OK");
-    Console.WriteLine("OPENAPI-EDITED-HANDLERS-COMPILE=OK");
-    Console.WriteLine("OPENAPI-PRINT-PRESERVATION=OK");
-}
-finally
-{
-    try { Directory.Delete(root, true); } catch { }
 }

@@ -7,7 +7,9 @@ namespace XPScript.Compiler;
 public sealed class CompilerDriver
 {
     private const string MimeKitVersion = "4.17.0";
-    private const long MaximumSourceBytes = 1024L * 1024L;
+    // Large generated API clients are still bounded, while allowing a complete
+    // OpenAPI definition to remain one compilable source unit.
+    private const long MaximumSourceBytes = 16L * 1024L * 1024L;
     private static readonly TimeSpan ValidationBuildTimeout = TimeSpan.FromMinutes(2);
     private const int MaximumBuildDiagnosticChars = 256 * 1024;
     private sealed record StagedManagedReference(string Name, string Path);
@@ -629,7 +631,7 @@ public sealed class CompilerDriver
         var diagnostic = new CompileDiagnostic
         {
             File = DiagnosticFileName(sourcePath),
-            Description = "XPScript source exceeds the 1 MiB compiler source-size limit.",
+            Description = "XPScript source exceeds the 16 MiB compiler source-size limit.",
             DiagnosticCode = CompilerDiagnosticCodes.SourceTooLarge,
             Severity = "error",
             Category = "input",

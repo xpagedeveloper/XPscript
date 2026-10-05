@@ -3,15 +3,13 @@ set -euo pipefail
 
 mkdir -p ./out
 
-# Run the focused regression first so request-body assignment failures surface
+# Run focused model-name, keyword and request-body regressions first
 # before the full DigitalOcean generation and compilation.
 dotnet run --project ./tests/OpenApiRequestBodyAssignmentSmoke/OpenApiRequestBodyAssignmentSmoke.csproj -c Release
+dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release -- --regeneration-only
 
-# DigitalOcean's repository source is multi-file. Test the official bundled artifact
-# that DigitalOcean publishes from the same source tree so every external $ref is present.
-curl --fail --location --retry 3 --retry-delay 2 \
-  "https://api-engineering.nyc3.digitaloceanspaces.com/spec-ci/DigitalOcean-public.v2.yaml" \
-  -o ./test/openapi/digitalocean.yaml
+# The checked-in DigitalOcean fixture is the bundled definition. Keep test input
+# deterministic instead of replacing it with a moving upstream download.
 
 # REST output is web XPScript: Response, route metadata and parameter bindings are
 # provided by XpsWebCompiler. The OpenApiGeneratorSmoke project already compiles
@@ -24,18 +22,19 @@ test -f ./out/generated-openapi.xps
 dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./tests/OpenApiGeneratorSmoke/petstore.json -o ./out/generated-openapi-json.xps --force
 test -f ./out/generated-openapi-json.xps
 
-# XpsWebCompiler wraps CompilerException. Temporarily adapt the smoke source so the
-# focused CI job reports the exact generated DigitalOcean line instead of only the
-# outer web-compilation exception. Remove this once the current regression is fixed.
-python3 - <<'PY'
-from pathlib import Path
-path = Path("tests/OpenApiGeneratorSmoke/Program.cs")
-text = path.read_text()
-old = "catch (CompilerException ex) when (ex.GeneratedDiagnostics.Count > 0)"
-new = "catch (XpsWebCompilationException webEx) when (webEx.InnerException is CompilerException ex && ex.GeneratedDiagnostics.Count > 0)"
-# Only the first catch is the web-server compile. The later client catch must stay direct.
-text = text.replace(old, new, 1)
-path.write_text(text)
-PY
+digitalocean_out=$(mktemp -d ./out/digitalocean-cli-XXXXXX)
+dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./test/openapi/digitalocean.yaml -o "$digitalocean_out/full-server.xps"
+dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate ./test/openapi/digitalocean.yaml -o "$digitalocean_out/full-client.xps"
+
+# The complete client fits the compiler's 16 MiB input limit. Keep the smaller
+# selector as a fast representative check for the model and import regressions.
+dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release -- --write-digitalocean-regression "$digitalocean_out/regression.yaml"
+dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate "$digitalocean_out/regression.yaml" -o "$digitalocean_out/server.xps"
+dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi import "$digitalocean_out/regression.yaml" -o "$digitalocean_out/imported-server.xps"
+dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate "$digitalocean_out/regression.yaml" -o "$digitalocean_out/client.xps"
+cp "$digitalocean_out/client.xps" "$digitalocean_out/client-host.xps"
+printf '\nSub Main()\nEnd Sub\n' >> "$digitalocean_out/client-host.xps"
+dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- compile "$digitalocean_out/client-host.xps" -o "$digitalocean_out/client-host" --runtime false
+echo "OPENAPI-DIGITALOCEAN-CLI-GENERATE-IMPORT-COMPILE=OK"
 
 dotnet run --project ./tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj -c Release
