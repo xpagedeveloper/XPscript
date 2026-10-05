@@ -211,7 +211,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             if (_allowDynamicMembers && syntax.Arguments.Count == 0)
                 return new BoundNameExpression(new LocalSymbol(name, typeof(object), XpTypeSymbol.Variant));
-            return Error(nameSyntax.IdentifierToken, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined function '{name}'.");
+        if (_allowDynamicMembers && syntax.Arguments.Count == 1)
+        {
+            var dynamicLocal = new LocalSymbol(name, typeof(object), XpTypeSymbol.Variant);
+            return new BoundIndexExpression(new BoundNameExpression(dynamicLocal), Bind(syntax.Arguments[0]), typeof(object), XpTypeSymbol.Variant);
+        }
+        return Error(nameSyntax.IdentifierToken, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined function '{name}'.");
         }
         return BindOverloadSet(syntax, target, name, functions);
     }
