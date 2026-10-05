@@ -100,7 +100,21 @@ public static class CompilerSymbolCatalog
             Define("XPDBSQLite.ReadOnly", "method", "XPDBSQLite.ReadOnly As Boolean", [], "Boolean", "api.XPDBSQLite.ReadOnly"),
             Define("XPDBSQLite.IsOpen", "method", "XPDBSQLite.IsOpen As Boolean", [], "Boolean", "api.XPDBSQLite.IsOpen"),
             Define("XPDBSQLite.InTransaction", "method", "XPDBSQLite.InTransaction As Boolean", [], "Boolean", "api.XPDBSQLite.InTransaction"),
-            Define("XPAi", "class", "XPAi", [], null, "api.XPAi")
+            Define("XPAi", "class", "XPAi", [], null, "api.XPAi"),
+            Define("XPAi.AddTool", "method", "XPAi.AddTool(tool As AITool)", [new("tool", "AITool")], null, "api.XPAi.AddTool"),
+            Define("XPAi.HasTool", "method", "XPAi.HasTool(name As String) As Boolean", [new("name", "String")], "Boolean", "api.XPAi.HasTool"),
+            Define("XPAi.GetTool", "method", "XPAi.GetTool(name As String) As AITool", [new("name", "String")], "AITool", "api.XPAi.GetTool"),
+            Define("XPAi.GetToolNames", "method", "XPAi.GetToolNames() As XPJsonArray", [], "XPJsonArray", "api.XPAi.GetToolNames"),
+            Define("XPAi.ToolCount", "method", "XPAi.ToolCount() As Integer", [], "Integer", "api.XPAi.ToolCount"),
+            Define("XPAi.RemoveTool", "method", "XPAi.RemoveTool(name As String) As Boolean", [new("name", "String")], "Boolean", "api.XPAi.RemoveTool"),
+            Define("XPAi.ClearTools", "method", "XPAi.ClearTools()", [], null, "api.XPAi.ClearTools"),
+            Define("XPAi.AutoExecuteTools", "property", "XPAi.AutoExecuteTools As Boolean", [], "Boolean", "api.XPAi.AutoExecuteTools"),
+            Define("XPAi.MaxToolIterations", "property", "XPAi.MaxToolIterations As Integer", [], "Integer", "api.XPAi.MaxToolIterations"),
+            Define("XPAi.SessionId", "property", "XPAi.SessionId As String", [], "String", "api.XPAi.SessionId"),
+            Define("XPAi.HasSession", "property", "XPAi.HasSession As Boolean", [], "Boolean", "api.XPAi.HasSession"),
+            Define("XPAi.SessionRequestProperty", "property", "XPAi.SessionRequestProperty As String", [], "String", "api.XPAi.SessionRequestProperty"),
+            Define("XPAi.ResetSession", "method", "XPAi.ResetSession()", [], null, "api.XPAi.ResetSession"),
+            Define("XPAi.NewRequest", "method", "XPAi.NewRequest() As XPAiRequest", [], "XPAiRequest", "api.XPAi.NewRequest")
         }.ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerSymbolDefinition? Find(string name)
