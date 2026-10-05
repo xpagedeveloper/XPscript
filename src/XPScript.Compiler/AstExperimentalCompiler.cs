@@ -14,6 +14,7 @@ internal static class AstExperimentalCompiler
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
+        source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
         var declarationStart = System.Text.RegularExpressions.Regex.Match(source, @"(?im)^\s*(Sub|Function|Class)\b");
         if (declarationStart.Success)
             source = source[declarationStart.Index..].TrimStart();
