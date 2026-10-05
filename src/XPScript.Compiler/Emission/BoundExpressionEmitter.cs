@@ -12,7 +12,7 @@ public sealed class BoundExpressionEmitter
         BoundLiteralExpression literal => EmitLiteral(literal),
         BoundConversionExpression conversion => EmitConversion(conversion),
         BoundNameExpression name => name.Symbol.Name,
-        BoundMemberAccessExpression member => $"{Emit(member.Receiver)}.{member.Name}",
+        BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundNewExpression @new => $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundIndexedPropertyExpression indexed => $"{Emit(indexed.Receiver)}.{indexed.Property.Name.Split('.').Last()}({string.Join(", ", indexed.Arguments.Select(Emit))})",
