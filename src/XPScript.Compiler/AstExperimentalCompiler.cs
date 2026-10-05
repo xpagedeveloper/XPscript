@@ -29,7 +29,7 @@ internal static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^[ \t]*[A-Za-z_]\w*:[ \t]*$", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?:GoTo|GoSub|Resume)(?:\s+[^\r\n]+)?$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)On\s+Error\s+.*$", "${indent}Call AstNoOp()");
-        source = Regex.Replace(source, @"(?im)\bError\$\b", "Error()");
+        source = Regex.Replace(source, @"(?im)\bError\$", "Error()");
         source = Regex.Replace(source, @"(?im)^[ \t]*With\s+[A-Za-z_]\w*[ \t]*$", string.Empty);
         source = Regex.Replace(source, @"(?im)^[ \t]*End\s+With[ \t]*$", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)\.(?<member>[A-Za-z_]\w*)", "${indent}p.${member}");
