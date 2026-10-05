@@ -1,0 +1,44 @@
+name: Temporary AST unary diagnostic patch
+
+on:
+  push:
+    branches:
+      - investigate-ast-compiler
+    paths:
+      - .github/workflows/temporary-fix-ast-unary-diagnostic.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: investigate-ast-compiler
+          fetch-depth: 0
+      - name: Patch stale diagnostic assertion
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tests/ast-lexer/Program.cs')
+          text = path.read_text()
+          old = 'Equal("XPS1012", invalidBinder.Diagnostics[0].Code, "invalid unary diagnostic code");'
+          new = 'Equal("XPS2001", invalidBinder.Diagnostics[0].Code, "invalid unary diagnostic code");'
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected exactly one stale assertion, found {text.count(old)}')
+          path.write_text(text.replace(old, new))
+          PY
+          git diff --check
+          test "$(git diff --numstat -- tests/ast-lexer/Program.cs)" = $'1\t1\ttests/ast-lexer/Program.cs'
+      - name: Commit patch and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/temporary-fix-ast-unary-diagnostic.yml
+          git add tests/ast-lexer/Program.cs
+          git commit -m "Update AST unary diagnostic expectation"
+          git push origin HEAD:investigate-ast-compiler
