@@ -50,6 +50,8 @@ if (Should-Run 'language') {
   if ($emission.Output -notmatch 'AST_EMISSION_OK') { throw 'Bound C# emission regression failed.' }
   $astCompile = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-compile-probe/AstCompileProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST XPscript compile probe'
   if ($astCompile.ExitCode -ne 0 -or $astCompile.Output -notmatch 'AST_XPS_COMPILE_OK') { throw 'AST XPscript compile probe failed.' }
+  $astCli = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') $compileTimeoutMilliseconds 'xpscriptc AST CLI compilation probe'
+  if ($astCli.ExitCode -ne 0 -or $astCli.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
   # Keep incompatible override signature regression first while inheritance semantics are active.
   $overrideBad = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/class-override-signature-error.xps','-o','./out/fulltest/class-override-signature-error','--runtime=false') $compileTimeoutMilliseconds 'incompatible class override diagnostic'
   if ($overrideBad.ExitCode -eq 0) { throw 'Incompatible class override unexpectedly compiled.' }

@@ -22,6 +22,9 @@ public static class XPScriptCompilerCommandLine
         if (args[0].Equals("compile", StringComparison.OrdinalIgnoreCase))
             return await CompileAsync(args[1..]).ConfigureAwait(false);
 
+        if (args[0].Equals("ast-compile", StringComparison.OrdinalIgnoreCase))
+            return await AstCompileAsync(args[1..]).ConfigureAwait(false);
+
         if (args[0].Equals("validate", StringComparison.OrdinalIgnoreCase))
             return await ValidateAsync(args[1..]).ConfigureAwait(false);
 
@@ -288,6 +291,37 @@ public static class XPScriptCompilerCommandLine
             var result = CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]);
             WriteResult(result, resultFormat is "json" or "xml" ? resultFormat : "text");
             return 1;
+        }
+    }
+
+    private static async Task<int> AstCompileAsync(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            Console.Error.WriteLine("ast-compile requires an .xps source file.");
+            return 1;
+        }
+
+        var sourcePath = Path.GetFullPath(args[0]);
+        var outputDirectory = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourcePath)!, "ast-output"));
+        for (var i = 1; i < args.Length; i++)
+        {
+            if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
+                outputDirectory = Path.GetFullPath(args[++i]);
+            else
+                throw new ArgumentException($"Unknown argument: {args[i]}");
+        }
+
+        try
+        {
+            var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory).ConfigureAwait(false);
+            Console.WriteLine($"AST compilation succeeded: {assemblyPath}");
+            return 0;
+        }
+        catch (CompilerException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return 2;
         }
     }
 

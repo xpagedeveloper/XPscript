@@ -1,0 +1,3 @@
+Sub Main()
+    Call AstPrint()
+End Sub
