@@ -86,6 +86,20 @@ public static class CompilerSymbolCatalog
             Define("XPJsonElement", "class", "XPJsonElement", [], null, "api.XPJsonElement"),
             Define("XPJsonElement.Type", "method", "XPJsonElement.Type As String", [], "String", "api.XPJsonElement.Type"),
             Define("XPJsonElement.Value", "method", "XPJsonElement.Value As Variant", [], "Variant", "api.XPJsonElement.Value"),
+            Define("XPDBSQLite", "class", "XPDBSQLite", [], null, "api.XPDBSQLite"),
+            Define("XPDBSQLite.Open", "method", "XPDBSQLite.Open()", [], null, "api.XPDBSQLite.Open"),
+            Define("XPDBSQLite.Close", "method", "XPDBSQLite.Close()", [], null, "api.XPDBSQLite.Close"),
+            Define("XPDBSQLite.Execute", "method", "XPDBSQLite.Execute(sql As String, parameters As XPJsonObject)", [new("sql", "String"), new("parameters", "XPJsonObject")], null, "api.XPDBSQLite.Execute"),
+            Define("XPDBSQLite.Query", "method", "XPDBSQLite.Query(sql As String, parameters As XPJsonObject) As XPJsonArray", [new("sql", "String"), new("parameters", "XPJsonObject")], "XPJsonArray", "api.XPDBSQLite.Query"),
+            Define("XPDBSQLite.Scalar", "method", "XPDBSQLite.Scalar(sql As String, parameters As XPJsonObject) As Variant", [new("sql", "String"), new("parameters", "XPJsonObject")], "Variant", "api.XPDBSQLite.Scalar"),
+            Define("XPDBSQLite.BeginTransaction", "method", "XPDBSQLite.BeginTransaction()", [], null, "api.XPDBSQLite.BeginTransaction"),
+            Define("XPDBSQLite.Commit", "method", "XPDBSQLite.Commit()", [], null, "api.XPDBSQLite.Commit"),
+            Define("XPDBSQLite.Rollback", "method", "XPDBSQLite.Rollback()", [], null, "api.XPDBSQLite.Rollback"),
+            Define("XPDBSQLite.LastInsertRowId", "method", "XPDBSQLite.LastInsertRowId As Long", [], "Long", "api.XPDBSQLite.LastInsertRowId"),
+            Define("XPDBSQLite.DatabasePath", "method", "XPDBSQLite.DatabasePath As String", [], "String", "api.XPDBSQLite.DatabasePath"),
+            Define("XPDBSQLite.ReadOnly", "method", "XPDBSQLite.ReadOnly As Boolean", [], "Boolean", "api.XPDBSQLite.ReadOnly"),
+            Define("XPDBSQLite.IsOpen", "method", "XPDBSQLite.IsOpen As Boolean", [], "Boolean", "api.XPDBSQLite.IsOpen"),
+            Define("XPDBSQLite.InTransaction", "method", "XPDBSQLite.InTransaction As Boolean", [], "Boolean", "api.XPDBSQLite.InTransaction"),
             Define("XPAi", "class", "XPAi", [], null, "api.XPAi")
         }.ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
