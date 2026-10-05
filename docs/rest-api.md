@@ -35,17 +35,38 @@ members receive an enum-name prefix and, if needed, a numeric suffix. Use the
 member names in the generated enum declaration. This avoids unqualified enum
 constants changing model, field or parameter identifiers during compilation.
 
-### Initial import
+### Endpointvis import och append
 
-Use `openapi import` for the first import of an OpenAPI specification into an XPScript REST server source file.
+Use `openapi import` to import en endpoint åt gången. `--operation` accepts an
+`operationId`, a path, or `METHOD path`. The generated source is compiled before
+it is written.
 
 ```text
 xpscript openapi import petstore.yaml -o ./generated/petstore.xps
+xpscript openapi import test/openapi/digitalocean.yaml -o ./generated/digitalocean.xps --operation actorLimits_get
+xpscript openapi import test/openapi/digitalocean.yaml -o ./generated/digitalocean.xps --operation connections_create
 ```
 
-The import is a one-time operation. If the destination does not exist, XPScript creates it from the OpenAPI specification and validates the generated REST web unit before placing it at the destination. An existing source file may receive its first OpenAPI import without overwriting existing user declarations.
+Den första körningen skapar filen. Nästa körning mot samma `.xps`-fil är additiv:
+nya request/response-klasser, modeller och endpoint-procedurer läggs till medan
+befintlig källkod bevaras. Importera därför flera endpoints till samma katalog
+och samma serverfil med separata kommandon. Använd `--status-file` för att följa
+fas och progress vid stora specifikationer.
 
-After OpenAPI-generated infrastructure has been imported, run neither a reimport nor an update against that file. Generate a new server source when the contract changes. `openapi import` does not accept `--force`.
+`openapi import` skriver inte över en befintlig serverfil. `--force` stöds inte
+för import eftersom importen alltid är additiv.
+
+Klientkällan genereras med samma endpointfilter:
+
+```text
+xpscript openapi client generate test/openapi/digitalocean.yaml -o ./generated/digitalocean.client.xps --operation actorLimits_get
+```
+
+Klientgeneratorn skapar en komplett klientkällfil för det valda urvalet. Om
+utdatafilen redan finns frågar CLI:t `Overwrite? [y/N]`; svara `y` för att ersätta
+den eller tryck Enter/svara `n` för att hoppa över. För flera klienturval kan du
+använda separata filer i samma katalog, exempelvis
+`digitalocean.actor-limits.client.xps` och `digitalocean.connections.client.xps`.
 
 A minimal OpenAPI source can look like this:
 

@@ -101,8 +101,11 @@ internal static class XpsOpenApiCommand
             Path.GetFileNameWithoutExtension(specificationPath) + ".client.xps");
         ValidateOutputPath(outputPath);
 
-        if (File.Exists(outputPath))
-            throw new IOException("Generated client output already exists. Choose a new output path or remove the existing generated file first: " + outputPath);
+        if (File.Exists(outputPath) && !ConfirmOverwrite(outputPath))
+        {
+            Console.WriteLine("Skipped existing output: " + outputPath);
+            return 0;
+        }
 
         var result = new XpsOpenApiClientGenerator().GenerateFile(specificationPath, className, new XpsOpenApiGenerationOptions(includedOperations));
         var directory = Path.GetDirectoryName(outputPath);
@@ -142,7 +145,7 @@ internal static class XpsOpenApiCommand
         }
         var existing = File.ReadAllText(outputPath);
         WriteStatus(statusPath, "importing", 10, 0, 0, null);
-        var result = new XpsOpenApiImporter().ImportFile(specificationPath, existing);
+        var result = new XpsOpenApiImporter().ImportFile(specificationPath, existing, new XpsOpenApiGenerationOptions(includedOperations));
         if (result.Changed) ValidateAndReplace(outputPath, result.Source, statusPath, result.AddedProcedures.Count, result.AddedClasses.Count);
         WriteStatus(statusPath, "completed", 100, result.AddedProcedures.Count, result.AddedClasses.Count, outputPath);
         Console.WriteLine($"OpenAPI {result.OpenApiVersion} additive import: {(result.Changed ? "updated" : "no additions")}");
@@ -180,6 +183,14 @@ internal static class XpsOpenApiCommand
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
         var payload = new { phase, progress, operations, models, output, updatedUtc = DateTimeOffset.UtcNow };
         File.WriteAllText(path, JsonSerializer.Serialize(payload) + Environment.NewLine);
+    }
+
+    private static bool ConfirmOverwrite(string outputPath)
+    {
+        Console.Write($"Output already exists: {outputPath}. Overwrite? [y/N] ");
+        var answer = Console.ReadLine();
+        return string.Equals(answer?.Trim(), "y", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(answer?.Trim(), "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string DefaultOutput(string specificationPath) => Path.Combine(
