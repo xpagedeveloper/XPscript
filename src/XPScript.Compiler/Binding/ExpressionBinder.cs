@@ -364,6 +364,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return new BoundBinaryExpression(left, op, right, left.Type);
         if (op == SyntaxKind.AmpersandToken && left.Type == typeof(string) && right.Type == typeof(string))
             return new BoundBinaryExpression(left, op, right, typeof(string));
+        if (op == SyntaxKind.LikeKeyword && left.Type == typeof(string) && right.Type == typeof(string))
+            return new BoundBinaryExpression(left, op, right, typeof(bool));
         if (_allowDynamicMembers && op == SyntaxKind.PlusToken && (left.Type == typeof(string) || right.Type == typeof(string)))
             return new BoundBinaryExpression(left, op, right, typeof(string));
         if (op is SyntaxKind.LessToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterToken or SyntaxKind.GreaterOrEqualsToken &&

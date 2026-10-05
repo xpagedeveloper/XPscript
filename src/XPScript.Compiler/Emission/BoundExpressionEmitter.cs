@@ -42,7 +42,9 @@ public sealed class BoundExpressionEmitter
         ? $"((dynamic)({Emit(binary.Left)}) {EmitBinaryOperator(binary.OperatorKind)} (dynamic)({Emit(binary.Right)}))"
         : binary.OperatorKind == SyntaxKind.PlusToken && binary.Type == typeof(string)
         ? $"(Convert.ToString({Emit(binary.Left)}) + Convert.ToString({Emit(binary.Right)}))"
-        : $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind)} {Emit(binary.Right)})";
+        : binary.OperatorKind == SyntaxKind.LikeKeyword
+            ? $"XPScriptRuntime.Like({Emit(binary.Left)}, {Emit(binary.Right)})"
+            : $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind)} {Emit(binary.Right)})";
 
     private static string EmitLiteral(BoundLiteralExpression expression) => expression.Value switch
     {

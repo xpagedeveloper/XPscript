@@ -263,6 +263,7 @@ public sealed class ExpressionParser
         SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.AmpersandToken => 4,
         SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken or SyntaxKind.LessToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterToken or SyntaxKind.GreaterOrEqualsToken => 3,
         SyntaxKind.AndKeyword => 2,
+        SyntaxKind.LikeKeyword => 3,
         SyntaxKind.OrKeyword => 1,
         _ => 0
     };

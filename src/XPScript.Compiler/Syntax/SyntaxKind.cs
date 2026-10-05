@@ -30,6 +30,7 @@ public enum SyntaxKind
     NotKeyword,
     AndKeyword,
     OrKeyword,
+    LikeKeyword,
     TrueKeyword,
     FalseKeyword,
     NullKeyword,

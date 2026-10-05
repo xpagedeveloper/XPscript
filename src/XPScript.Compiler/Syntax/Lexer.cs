@@ -165,6 +165,7 @@ public sealed class Lexer
         "NOT" => SyntaxKind.NotKeyword,
         "AND" => SyntaxKind.AndKeyword,
         "OR" => SyntaxKind.OrKeyword,
+        "LIKE" => SyntaxKind.LikeKeyword,
         "TRUE" => SyntaxKind.TrueKeyword,
         "FALSE" => SyntaxKind.FalseKeyword,
         "NULL" => SyntaxKind.NullKeyword,
