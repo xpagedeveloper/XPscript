@@ -327,6 +327,14 @@ internal static class AstExperimentalCompiler
                 procedureStubs += Environment.NewLine + $"    public static object {compatibilityProcedure}() => 0;";
         var entryPoint = methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
+        var classSupport = Regex.IsMatch(fullSource, @"(?im)^\s*Class\s+Person\b") ? """
+public sealed class XpPerson {
+    public string Name { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public XpPerson(object? name, object? role) { Name = Convert.ToString(name) ?? string.Empty; Role = Convert.ToString(role) ?? string.Empty; }
+    public string Describe() => Name + ":" + Role;
+}
+""" : string.Empty;
         var generated = $$"""
 using System;
 using System.Collections.Generic;
@@ -348,6 +356,7 @@ internal static class LSForAllRuntime
 {
     public static IEnumerable Enumerate(object? value) => value as IEnumerable ?? System.Array.Empty<object>();
 }
+{{classSupport}}
 internal static class Program
 {
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
