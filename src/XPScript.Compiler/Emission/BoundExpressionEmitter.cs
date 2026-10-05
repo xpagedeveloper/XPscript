@@ -23,6 +23,9 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateRequest()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Path", StringComparison.OrdinalIgnoreCase) => $"new XpPath({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Person", StringComparison.OrdinalIgnoreCase) => $"new XpPerson({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) => "new XpCsvDocument()",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase) => "new XpCsvRow()",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) => "new XpJsonArray()",
         BoundNewExpression @new => @new.Type == typeof(object)
             ? "new System.Dynamic.ExpandoObject()"
             : $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",

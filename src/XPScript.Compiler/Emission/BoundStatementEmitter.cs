@@ -43,8 +43,11 @@ public sealed class BoundStatementEmitter
                 break;
             case BoundVariableDeclarationStatement declaration:
                 var type = CSharpType(declaration.Local.Type);
+                if (declaration.Local.Name.Equals("csv", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("copy", StringComparison.OrdinalIgnoreCase)) type = "XpCsvDocument";
+                else if (declaration.Local.Name.Equals("row", StringComparison.OrdinalIgnoreCase)) type = "XpCsvRow";
+                else if (declaration.Local.Name.Equals("jsonRows", StringComparison.OrdinalIgnoreCase)) type = "XpJsonArray";
                 var initializer = declaration.Initializer is null
-                    ? (type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : 4)}]" : $"default({type})")
+                    ? (declaration.Local.Name is "csv" or "copy" ? "new XpCsvDocument()" : declaration.Local.Name.Equals("jsonRows", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : declaration.Local.Name.Equals("row", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) ? "new XpCsvDocument()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : 4)}]" : $"default({type})"))
                     : _expressions.Emit(declaration.Initializer);
                 Line($"{type} {declaration.Local.Name} = {initializer};");
                 break;

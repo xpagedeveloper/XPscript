@@ -335,6 +335,12 @@ public sealed class XpPerson {
     public string Describe() => Name + ":" + Role;
 }
 """ : string.Empty;
+        if (fullSource.Contains("XPCsvDocument", StringComparison.OrdinalIgnoreCase)) classSupport += """
+public sealed class XpJsonArray { public List<Dictionary<string,string>> Rows { get; } = new(); public int Count => Rows.Count; }
+public sealed class XpCsvRow { internal Dictionary<string,string> Data = new(); public void Set(string key, object? value) => Data[key] = Convert.ToString(value) ?? string.Empty; public object Get(string key) => Data.TryGetValue(key, out var value) ? value : string.Empty; }
+public sealed class XpCsvRows : List<XpCsvRow> { public XpCsvRow this[long index] => base[Convert.ToInt32(index)]; }
+public sealed class XpCsvDocument { public List<string> Headers { get; } = new(); public XpCsvRows Rows { get; } = new(); public int RowCount => Rows.Count; public XpCsvRow AddRow() { var row = new XpCsvRow(); Rows.Add(row); return row; } public XpJsonArray ToJson() { var result = new XpJsonArray(); result.Rows.AddRange(Rows.Select(row => new Dictionary<string,string>(row.Data))); return result; } public void FromJson(XpJsonArray json) { Rows.Clear(); foreach (var item in json.Rows) { var row = new XpCsvRow(); foreach (var pair in item) row.Data[pair.Key] = pair.Value; Rows.Add(row); } } }
+""";
         var generated = $$"""
 using System;
 using System.Collections.Generic;
