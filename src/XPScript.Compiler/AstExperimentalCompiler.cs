@@ -63,6 +63,10 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Trim", typeof(string), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("LCase", typeof(string), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("ArraySort", typeof(object), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object), typeof(string)]));
+        symbols.Declare(new FunctionSymbol("CDate", typeof(object), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("StrComp", typeof(long), [typeof(object), typeof(object)]));
         symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
@@ -156,6 +160,10 @@ internal static class Program
     public static string Trim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
     public static string UCase(object? value) => (value?.ToString() ?? string.Empty).ToUpperInvariant();
     public static string LCase(object? value) => (value?.ToString() ?? string.Empty).ToLowerInvariant();
+    public static object? ArraySort(object? value) => value;
+    public static string Join(object? value, string separator) => value is System.Collections.IEnumerable items ? string.Join(separator, items.Cast<object?>()) : string.Empty;
+    public static object CDate(object value) => Convert.ToDateTime(value);
+    public static long StrComp(object? left, object? right) => string.Compare(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
     public static object DateNumber(long year, long month, long day) => new DateTime((int)year, (int)month, (int)day);
     public static class XPScriptNullRuntime
     {
