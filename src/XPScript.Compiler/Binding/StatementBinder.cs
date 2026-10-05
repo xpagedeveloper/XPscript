@@ -131,7 +131,13 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindRuntimeStatement(RuntimeFileStatementSyntax syntax)
     {
-        if (!syntax.Command.Text.Equals("Print", StringComparison.OrdinalIgnoreCase) || syntax.Arguments.Count != 1)
+        if (!syntax.Command.Text.Equals("Print", StringComparison.OrdinalIgnoreCase))
+        {
+            var arguments = syntax.Arguments.Select(BindExpression).ToArray();
+            var function = new FunctionSymbol(syntax.Command.Text, typeof(object), arguments.Select(argument => argument.Type).ToArray(), XpTypeSymbol.Variant, arguments.Select(_ => XpTypeSymbol.Variant).ToArray());
+            return new BoundExpressionStatement(new BoundCallExpression(null, function, arguments));
+        }
+        if (syntax.Arguments.Count != 1)
             return BindUnsupported(syntax);
         var expression = BindExpression(syntax.Arguments[0]);
         return expression is null ? null : new BoundPrintStatement(expression);
