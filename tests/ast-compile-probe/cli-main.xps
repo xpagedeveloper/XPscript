@@ -2,4 +2,5 @@ Sub Main()
     Dim message As String
     message = "AST_XPS_PRINT_OK"
     Print message
+    Exit Sub
 End Sub

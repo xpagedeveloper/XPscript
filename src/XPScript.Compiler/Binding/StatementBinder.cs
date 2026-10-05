@@ -21,6 +21,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             CallStatementSyntax call => BindCallStatement(call),
             RuntimeFileStatementSyntax runtime => BindRuntimeStatement(runtime),
             ReturnStatementSyntax @return => BindReturn(@return),
+            ExitStatementSyntax exit => BindExit(exit),
             IfStatementSyntax @if => BindIf(@if),
             ForStatementSyntax @for => BindFor(@for),
             ForAllStatementSyntax forAll => BindForAll(forAll),
@@ -304,6 +305,13 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             value = new BoundConversionExpression(value, _returnType, conversion) { Span = value.Span };
 
         return new BoundReturnStatement(value);
+    }
+
+    private BoundStatement? BindExit(ExitStatementSyntax syntax)
+    {
+        if (syntax.TargetKeyword.Kind is not (SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword))
+            return BindUnsupported(syntax);
+        return new BoundReturnStatement(null);
     }
 
     private BoundStatement? BindAssignment(ExpressionSyntax targetSyntax, ExpressionSyntax valueSyntax, bool isSet = false)
