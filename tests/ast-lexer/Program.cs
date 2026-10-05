@@ -951,7 +951,7 @@ Equal(0, decimalBinder.Diagnostics.Count, "bound decimal arithmetic diagnostics"
 var invalidBinder = new ExpressionBinder();
 invalidBinder.Bind(new ExpressionParser("Not 1").ParseExpression());
 Equal(1, invalidBinder.Diagnostics.Count, "invalid unary diagnostic count");
-Equal("XPS1012", invalidBinder.Diagnostics[0].Code, "invalid unary diagnostic code");
+Equal("XPS2001", invalidBinder.Diagnostics[0].Code, "invalid unary diagnostic code");
 
 var emitter = new BoundExpressionEmitter();
 var newSymbols = new SymbolTable();
