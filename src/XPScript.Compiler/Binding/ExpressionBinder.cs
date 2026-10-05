@@ -115,7 +115,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     {
         var functions = _symbols.LookupAll(syntax.ArrayIdentifier.Text).OfType<FunctionSymbol>().ToArray();
         if (functions.Length == 0)
+        {
+            if (_allowDynamicMembers)
+                return new BoundNameExpression(new LocalSymbol(syntax.ArrayIdentifier.Text, typeof(object), XpTypeSymbol.Variant));
             return Error(syntax.ArrayIdentifier, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined function '{syntax.ArrayIdentifier.Text}'.");
+        }
 
         var arguments = syntax.Elements.Select(Bind).ToArray();
         var candidates = functions

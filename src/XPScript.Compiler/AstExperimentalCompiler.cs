@@ -31,9 +31,7 @@ internal static class AstExperimentalCompiler
         var symbols = SymbolTable.CreateWithCompilerCatalog();
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
-        symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(string)], XpTypeSymbol.FromClr(typeof(string))));
-        symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(long)], XpTypeSymbol.FromClr(typeof(string))));
-        symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(double)], XpTypeSymbol.FromClr(typeof(string))));
+        symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LBound", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("UBound", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("Base64DecodeBinary", typeof(byte[]), [typeof(string)]));
