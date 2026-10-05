@@ -56,18 +56,19 @@ internal static class AstExperimentalCompiler
         foreach (var procedure in unit.Declarations.OfType<SubDeclarationSyntax>())
         {
             var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types));
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types, null, null, types.Select(_ => false).ToArray()));
             for (var count = types.Length - 1; count >= 0; count--)
-                symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types[..count]));
+                symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types[..count], null, null, Enumerable.Repeat(false, count).ToArray()));
         }
         foreach (var procedure in unit.Declarations.OfType<FunctionDeclarationSyntax>())
         {
             var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
             var resultType = ResolveRuntimeType(procedure.ReturnType?.Identifier.Text);
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types));
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, null, null, types.Select(_ => false).ToArray()));
             for (var count = types.Length - 1; count >= 0; count--)
-                symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types[..count]));
+                symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types[..count], null, null, Enumerable.Repeat(false, count).ToArray()));
         }
+        symbols.Declare(new VariableSymbol("BuildState", typeof(object), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$", RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(long), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
