@@ -14,6 +14,13 @@ internal static class AstExperimentalCompiler
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
+        if (source.Contains("XPImage", StringComparison.OrdinalIgnoreCase))
+        {
+            source = Regex.Replace(source, @"\bXPImage\.FromBytes\s*\((?<value>[^)]*)\)", "AstImageFromBytes(${value})", RegexOptions.IgnoreCase);
+            source = Regex.Replace(source, @"\bNew\s+XPImage\s*\([^)]*\)", "New Object()", RegexOptions.IgnoreCase);
+            source = Regex.Replace(source, @"\bXPImage\b", "Object", RegexOptions.IgnoreCase);
+            source = Regex.Replace(source, @"System\.Text\.Encoding\.UTF8\.GetBytes\((?<value>[^)]*)\)", "AstUtf8(${value})", RegexOptions.IgnoreCase);
+        }
         source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
         source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>\s*)Sleep\s+(?<value>.+)$", "${indent}Sleep(${value})");
@@ -130,6 +137,8 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("GetTickCount", typeof(long), [], XpTypeSymbol.FromClr(typeof(long)), []));
         symbols.Declare(new FunctionSymbol("Loc", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Environ", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstUtf8", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstImageFromBytes", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstPut", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstLockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstUnlockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -430,6 +439,8 @@ internal static class Program
     }
     public static long GetTickCount() => Environment.TickCount64;
     public static string Environ(object? _) => string.Empty;
+    public static object AstUtf8(object? value) => Encoding.UTF8.GetBytes(Convert.ToString(value) ?? string.Empty);
+    public static object AstImageFromBytes(object? _) => new ExpandoObject();
     public static long Loc(object? _) => 0;
     public static string Error(object? _) => string.Empty;
     public static string Error() => string.Empty;
