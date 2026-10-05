@@ -36,18 +36,25 @@ public sealed class XpsOpenApiClientGenerator
         using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version); var apiName = ResolveClassName(root, sourceName, className); var modelSet = CollectModels(root); using var typeNameScope = XpsOpenApiSchema.UseReferenceTypeNames(modelSet.TypeNames); var models = modelSet.Models; var securitySchemes = CollectSecuritySchemes(root); var operations = CollectOperations(root); AssignGeneratedApiMemberNames(operations, securitySchemes);
         if (options?.IncludedOperations is { Count: > 0 } included)
         {
-            operations = operations.Where(operation => included.Contains(operation.Name) || included.Contains(operation.Method + " " + operation.Path) || included.Contains(operation.Path)).ToList();
+            operations = operations.Where(operation => included.Any(item => IsSelectedOperation(operation.Name, item)) || included.Contains(operation.Method + " " + operation.Path) || included.Contains(operation.Path)).ToList();
             models = SelectReferencedModels(root, modelSet, included);
         }
         if (operations.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI document does not contain any supported path operations.");
         var source = EmitSource(version, sourceName, apiName, ReadServerUrl(root), root, models, operations, securitySchemes);
         return new XpsOpenApiClientGenerationResult(version, apiName, source, operations.Select(y => y.Name).ToArray(), models.Keys.OrderBy(y => y, StringComparer.OrdinalIgnoreCase).ToArray());
     }
+    private static bool IsSelectedOperation(string generatedName, string requestedName)
+    {
+        var normalized = ToIdentifier(requestedName);
+        return generatedName.Equals(requestedName, StringComparison.OrdinalIgnoreCase)
+            || generatedName.Equals(normalized, StringComparison.OrdinalIgnoreCase)
+            || (generatedName.StartsWith(requestedName, StringComparison.OrdinalIgnoreCase) && int.TryParse(generatedName[requestedName.Length..], out _));
+    }
     private static Dictionary<string, JsonObject> SelectReferencedModels(JsonObject root, XpsOpenApiModelCatalog catalog, IReadOnlySet<string> included)
     {
         var selected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (root["paths"] is JsonObject paths) foreach (var path in paths) if (path.Value is JsonObject item) foreach (var method in HttpMethods)
-            if (item[method] is JsonObject operation && (included.Contains(path.Key) || included.Contains(method.ToUpperInvariant() + " " + path.Key) || (operation["operationId"] is JsonValue id && id.TryGetValue<string>(out var name) && included.Contains(name)))) CollectComponentReferences(root, operation, selected);
+            if (item[method] is JsonObject operation && (included.Contains(path.Key) || included.Contains(method.ToUpperInvariant() + " " + path.Key) || (operation["operationId"] is JsonValue id && id.TryGetValue<string>(out var name) && included.Any(item => IsSelectedOperation(ToIdentifier(name), item))))) CollectComponentReferences(root, operation, selected);
         var pending = new Queue<string>(selected);
         while (pending.Count > 0) { var wire = pending.Dequeue(); if (root["components"]?["schemas"] is not JsonObject schemas || schemas[wire] is not JsonObject schema) continue; var before = selected.Count; CollectReferences(schema, selected); if (selected.Count != before) foreach (var name in selected) if (!pending.Contains(name)) pending.Enqueue(name); }
         return catalog.Models.Where(pair => catalog.TypeNames.Any(type => type.Value.Equals(pair.Key, StringComparison.OrdinalIgnoreCase) && selected.Contains(type.Key))).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
