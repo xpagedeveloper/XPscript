@@ -12,6 +12,9 @@ internal static class AstExperimentalCompiler
     public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken = default)
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        var declarationStart = System.Text.RegularExpressions.Regex.Match(source, @"(?im)^\s*(Sub|Function|Class)\b");
+        if (declarationStart.Success)
+            source = source[declarationStart.Index..].TrimStart();
         var parser = new DeclarationParser(source);
         var declaration = parser.ParseDeclaration();
         if (parser.Diagnostics.Count > 0)
@@ -25,7 +28,7 @@ internal static class AstExperimentalCompiler
         if (declaration is not SubDeclarationSyntax sub || !sub.Identifier.Text.Equals("Main", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("AST experimental compilation currently requires a top-level Sub Main().", "XPS3001", "ast");
 
-        var symbols = new SymbolTable();
+        var symbols = SymbolTable.CreateWithCompilerCatalog();
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
         var binder = new StatementBinder(symbols);
