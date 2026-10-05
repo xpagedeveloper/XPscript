@@ -519,6 +519,7 @@ internal static class Program
         public static string Error() => string.Empty;
         public static string ErrorValue() => string.Empty;
         public static long CInt(object value) => Convert.ToInt32(value);
+        public static bool CBool(object value) => Convert.ToBoolean(value);
         public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";
         public static IEnumerable<long> Range(long from, long to, long step)
         {
