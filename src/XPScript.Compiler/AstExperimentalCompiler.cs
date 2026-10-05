@@ -305,7 +305,8 @@ internal static class AstExperimentalCompiler
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ToCSharpLiteral(match.Groups["value"].Value.Trim())};"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"\bForAll\s+(?<name>[A-Za-z_]\w*)\s+In\b", RegexOptions.IgnoreCase)
-            .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
+            .Cast<Match>().Select(match => match.Groups["name"].Value).Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(name => $"    public static dynamic {name} = null;"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?im)^\s*(?<name>BuildUnknown|BuildReady|BuildRunning|BuildDone)\s*(?:=\s*(?<value>-?\d+))?\s*$")
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {(match.Groups["value"].Success ? match.Groups["value"].Value : "0")};"));
         if (Regex.IsMatch(fullSource, @"(?im)^\s*Enum\s+BuildState\b"))
