@@ -45,6 +45,7 @@ it is written.
 xpscript openapi import petstore.yaml -o ./generated/petstore.xps
 xpscript openapi import test/openapi/digitalocean.yaml -o ./generated/digitalocean.xps --operation actorLimits_get
 xpscript openapi import test/openapi/digitalocean.yaml -o ./generated/digitalocean.xps --operation connections_create
+xpscript openapi import test/openapi/digitalocean.yaml -o ./generated/digitalocean.xps --operation actorLimits_get,actorLimits_delete,actorLimits_update,connections_create,connections_list
 ```
 
 Den första körningen skapar filen. Nästa körning mot samma `.xps`-fil är additiv:
@@ -52,6 +53,11 @@ nya request/response-klasser, modeller och endpoint-procedurer läggs till medan
 befintlig källkod bevaras. Importera därför flera endpoints till samma katalog
 och samma serverfil med separata kommandon. Använd `--status-file` för att följa
 fas och progress vid stora specifikationer.
+
+Listan kan innehålla många operationer, till exempel 50 kommaseparerade
+`operationId`-värden. Alla valda endpoints och deras transitiva modeller läggs
+till i samma import och filen kompileras en gång efter batchen. Samma syntax
+fungerar för `openapi client generate --operation`.
 
 `openapi import` skriver inte över en befintlig serverfil. `--force` stöds inte
 för import eftersom importen alltid är additiv.
