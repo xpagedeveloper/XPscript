@@ -140,6 +140,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
     private BoundExpression BindArray(ArrayExpressionSyntax syntax)
     {
+        if (_allowDynamicMembers && (syntax.ArrayIdentifier.Text.Equals("Files", StringComparison.OrdinalIgnoreCase) || syntax.ArrayIdentifier.Text.Equals("Directories", StringComparison.OrdinalIgnoreCase)))
+        {
+            var fileArguments = syntax.Elements.Select(Bind).ToArray();
+            var function = new FunctionSymbol(syntax.ArrayIdentifier.Text, typeof(object), fileArguments.Select(argument => argument.Type).ToArray(), XpTypeSymbol.Variant, fileArguments.Select(_ => XpTypeSymbol.Variant).ToArray());
+            return new BoundCallExpression(null, function, fileArguments);
+        }
         if (_allowDynamicMembers && syntax.Elements.Count >= 1 &&
             !_symbols.LookupAll(syntax.ArrayIdentifier.Text).OfType<FunctionSymbol>().Any())
         {

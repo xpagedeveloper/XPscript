@@ -111,7 +111,11 @@ public sealed class SymbolTable
             symbols.Add(symbol);
         else
         {
-            symbols.Clear();
+            // A local/field may legally shadow a callable name in XPscript
+            // (for example `Dim files As Variant` alongside `Files(...)`).
+            // Keep overload symbols available for call binding while the
+            // ordinary name lookup still resolves to the newest value symbol.
+            symbols.RemoveAll(existing => existing is not FunctionSymbol);
             symbols.Add(symbol);
         }
     }
