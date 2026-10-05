@@ -140,7 +140,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
     private BoundExpression BindArray(ArrayExpressionSyntax syntax)
     {
-        if (_allowDynamicMembers && syntax.Elements.Count >= 1)
+        if (_allowDynamicMembers && syntax.Elements.Count >= 1 &&
+            !_symbols.LookupAll(syntax.ArrayIdentifier.Text).OfType<FunctionSymbol>().Any())
         {
             var local = _symbols.TryLookup(syntax.ArrayIdentifier.Text, out var localSymbol) && localSymbol is LocalSymbol found && found.Type == typeof(object)
                 ? found
