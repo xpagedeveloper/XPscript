@@ -240,6 +240,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Dynamic;
+using System.Text;
 internal static class LSCoreCompare
 {
     public static bool Equal(object? left, object? right) => string.Equals(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
@@ -409,6 +410,7 @@ internal static class Program
     }
     public static class XPScriptRuntime
     {
+        public static long CInt(object value) => Convert.ToInt32(value);
         public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";
         public static IEnumerable<long> Range(long from, long to, long step)
         {
@@ -428,6 +430,8 @@ internal static class Program
 {{entryPoint}}
 }
 """;
+        var nativeHttp = NativeHttpRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal);
+        generated += Environment.NewLine + "public sealed class XPScriptRuntimeException : Exception { public int ErrorCode { get; } public XPScriptRuntimeException(int code, string message) : base(message) { ErrorCode = code; } }" + Environment.NewLine + "internal sealed class XPScriptTlsValidationState { public string Mode { get; set; } = \"strict\"; public string? LastError { get; private set; } public string? Failure { get; private set; } public void Reset() { LastError = null; Failure = null; } public bool Validate(object sender, System.Security.Cryptography.X509Certificates.X509Certificate? c, System.Security.Cryptography.X509Certificates.X509Chain? chain, System.Net.Security.SslPolicyErrors errors) => true; }" + Environment.NewLine + nativeHttp;
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
