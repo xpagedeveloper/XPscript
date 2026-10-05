@@ -63,10 +63,10 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Trim", typeof(string), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("LCase", typeof(string), [typeof(object)]));
-        symbols.Declare(new FunctionSymbol("ArraySort", typeof(object), [typeof(object)]));
-        symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object), typeof(string)]));
-        symbols.Declare(new FunctionSymbol("CDate", typeof(object), [typeof(object)]));
-        symbols.Declare(new FunctionSymbol("StrComp", typeof(long), [typeof(object), typeof(object)]));
+        symbols.Declare(new FunctionSymbol("ArraySort", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object), typeof(string)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("CDate", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("StrComp", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
