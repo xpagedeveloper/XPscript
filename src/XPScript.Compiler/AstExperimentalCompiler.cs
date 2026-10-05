@@ -1,5 +1,6 @@
 using System.Text;
 using System.Collections;
+using System.Text.RegularExpressions;
 using XPScript.Compiler.Binding;
 using XPScript.Compiler.Emission;
 using XPScript.Compiler.Syntax;

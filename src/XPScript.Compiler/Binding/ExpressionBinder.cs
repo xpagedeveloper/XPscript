@@ -82,6 +82,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         var type = typeEntry.Type;
 
         var arguments = syntax.Arguments.Select(Bind).ToArray();
+        if (_allowDynamicMembers && type == typeof(object))
+            return new BoundNewExpression(typeof(object), arguments, typeEntry.SemanticType ?? XpTypeSymbol.User(typeName));
         var constructors = type.GetConstructors();
         var constructor = constructors.FirstOrDefault(c =>
             c.GetParameters().Length == arguments.Length &&
