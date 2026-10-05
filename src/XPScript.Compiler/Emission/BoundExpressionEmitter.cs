@@ -13,7 +13,9 @@ public sealed class BoundExpressionEmitter
         BoundConversionExpression conversion => EmitConversion(conversion),
         BoundNameExpression name => name.Symbol.Name,
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
-        BoundIndexExpression index => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
+        BoundIndexExpression index => index.Expression.Type == typeof(object)
+            ? $"((dynamic){Emit(index.Expression)})[{Emit(index.Index)}]"
+            : $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundNewExpression @new => @new.Type == typeof(object)
             ? "new System.Dynamic.ExpandoObject()"
             : $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",

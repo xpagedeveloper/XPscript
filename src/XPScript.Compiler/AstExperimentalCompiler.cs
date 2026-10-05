@@ -57,8 +57,8 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("CInt", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("CLng", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("CBool", typeof(bool), [typeof(object)]));
-        symbols.Declare(new FunctionSymbol("Evaluate", typeof(object), [typeof(string), typeof(object)]));
-        symbols.Declare(new FunctionSymbol("Evaluate", typeof(object), [typeof(string), typeof(long)]));
+        symbols.Declare(new FunctionSymbol("Evaluate", typeof(object), [typeof(string), typeof(object)],
+            XpTypeSymbol.Variant, [XpTypeSymbol.FromClr(typeof(string)), XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Chr", typeof(string), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("Asc", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("Replace", typeof(string), [typeof(string), typeof(string), typeof(string)]));

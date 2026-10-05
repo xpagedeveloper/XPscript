@@ -166,6 +166,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             }
             if (_symbols.TryLookup(name, out indexedSymbol) && indexedSymbol is LocalSymbol arrayLocal && arrayLocal.Type.IsArray && syntax.Arguments.Count == 0)
                 return new BoundNameExpression(arrayLocal);
+            if (_allowDynamicMembers && _symbols.TryLookup(name, out var dynamicSymbol) && dynamicSymbol is LocalSymbol dynamicLocal && dynamicLocal.Type == typeof(object) && syntax.Arguments.Count == 1)
+            {
+                var index = Bind(syntax.Arguments[0]);
+                return new BoundIndexExpression(new BoundNameExpression(dynamicLocal), index, typeof(object), XpTypeSymbol.Variant);
+            }
         }
         else if (syntax.Target is MemberAccessExpressionSyntax memberSyntax)
         {
