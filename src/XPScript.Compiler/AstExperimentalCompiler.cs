@@ -17,6 +17,15 @@ internal static class AstExperimentalCompiler
         source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
         source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>\s*)Sleep\s+(?<value>.+)$", "${indent}Sleep(${value})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Put\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>.+)$", "${indent}Call AstPut(${file}, ${position}, ${value})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?<operation>Lock|Unlock)\s+#?(?<file>[^,\s]+)\s*,\s*(?<start>[^\s]+)\s+To\s+(?<end>.+)$", "${indent}Call Ast${operation}Bytes(${file}, ${start}, ${end})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Open\s+(?<path>.+?)\s+For\s+(?<mode>Input|Output|Append|Binary|Random)\s+As\s+#?(?<file>[^\s]+).*$", "${indent}Call AstOpen(${path}, \"${mode}\", ${file})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Close(?:\s+#?(?<file>[^\s]+))?\s*$", "${indent}Call AstClose(${file})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Print\s+#?(?<file>[^,\s]+)\s*,\s*(?<value>.+)$", "${indent}Call AstPrintFile(${file}, ${value})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Line\s+Input\s+#?(?<file>[^,\s]+)\s*,\s*(?<target>[A-Za-z_]\w*)\s*$", "${indent}${target} = AstLineInput(${file})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Kill\s+(?<path>.+)$", "${indent}Call AstKill(${path})");
+        source = Regex.Replace(source, @"(?<![\w.])Input\$\s*\(\s*(?<count>[^,()]+)\s*,\s*#\s*(?<file>[^)]+)\)", "AstInputChars(${count}, ${file})", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"(?<!\w)#\s*", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>\s*)ReDim\s+(?<preserve>Preserve\s+)?(?<name>[A-Za-z_]\w*)\s*\((?<bounds>[^)]*)\)\s*$", match =>
         {
             var bounds = match.Groups["bounds"].Value.Trim();
@@ -88,6 +97,16 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new VariableSymbol("Platform", typeof(string), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("CurDir", typeof(string), XpTypeSymbol.Variant));
         symbols.Declare(new FunctionSymbol("Sleep", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstPut", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstLockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstUnlockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstOpen", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstClose", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstClose", typeof(void), []));
+        symbols.Declare(new FunctionSymbol("AstPrintFile", typeof(void), [typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstLineInput", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstKill", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstInputChars", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Trim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
@@ -288,6 +307,16 @@ internal static class Program
     public static string Input$(object? count) => string.Empty;
     public static string Input$(object? count, object? file) => string.Empty;
     public static void Sleep(object? milliseconds) => System.Threading.Thread.Sleep(Math.Max(0, Convert.ToInt32(milliseconds)));
+    public static void AstPut(object? file, object? position, object? value) => LSFileRuntime.Put(Convert.ToInt32(file), position, value, "String");
+    public static void AstLockBytes(object? file, object? start, object? end) => XPScriptFileIO.LockBytes(file, start, end);
+    public static void AstUnlockBytes(object? file, object? start, object? end) => XPScriptFileIO.UnlockBytes(file, start, end);
+    public static void AstOpen(object? path, object? mode, object? file) => LSFileRuntime.Open(path, mode, Convert.ToInt32(file));
+    public static void AstClose(object? file) { if (file is null) LSFileRuntime.Close(); else LSFileRuntime.Close(Convert.ToInt32(file)); }
+    public static void AstClose() => LSFileRuntime.Close();
+    public static void AstPrintFile(object? file, object? value) => LSFileRuntime.PrintFile(Convert.ToInt32(file), value);
+    public static string AstLineInput(object? file) => LSFileRuntime.LineInput(Convert.ToInt32(file));
+    public static void AstKill(object? path) => File.Delete(CStr(path));
+    public static string AstInputChars(object? count, object? file) => XPScriptFileIO.InputChars(count, file);
     public static object DateNumber(long year, long month, long day) => new DateTime((int)year, (int)month, (int)day);
     public static class XPScriptNullRuntime
     {
