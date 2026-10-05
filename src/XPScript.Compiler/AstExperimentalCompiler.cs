@@ -39,6 +39,8 @@ internal static class AstExperimentalCompiler
             symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray()));
         foreach (var procedure in unit.Declarations.OfType<FunctionDeclarationSyntax>())
             symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, ResolveRuntimeType(procedure.ReturnType?.Identifier.Text), procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray()));
+        foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
+            symbols.Declare(new VariableSymbol(match.Groups["name"].Value, ResolveRuntimeType(match.Groups["type"].Value), XpTypeSymbol.Variant));
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
         symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
@@ -95,6 +97,8 @@ internal static class AstExperimentalCompiler
                 FunctionDeclarationSyntax procedure => $"    public static {CSharpType(ResolveRuntimeType(procedure.ReturnType?.Identifier.Text))} {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select(p => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {p.Identifier.Text}"))}) => default;",
                 _ => string.Empty
             }));
+        var moduleFields = string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
+            .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
         var entryPoint = methodName.Equals("Main", StringComparison.Ordinal) ? string.Empty : "    public static void Main() { }\n";
         var generated = $$"""
 using System;
@@ -167,6 +171,7 @@ internal static class Program
         public static object? CObj(object? value) => value;
     }
 {{procedureStubs}}
+{{moduleFields}}
 {{body}}
 {{entryPoint}}
 }
