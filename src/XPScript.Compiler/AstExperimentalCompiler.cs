@@ -66,6 +66,8 @@ internal static class AstExperimentalCompiler
             throw new CompilerException("AST experimental compilation currently requires a Sub declaration.", "XPS3001", "ast");
 
         var symbols = SymbolTable.CreateWithCompilerCatalog();
+        symbols.Declare(new TypeSymbol("Object", typeof(object), XpTypeSymbol.Object));
+        symbols.Declare(new VariableSymbol("Object", typeof(object), XpTypeSymbol.Object));
         foreach (var classDeclaration in unit.Declarations.OfType<ClassDeclarationSyntax>())
             symbols.Declare(new TypeSymbol(classDeclaration.Identifier.Text, typeof(object), XpTypeSymbol.User(classDeclaration.Identifier.Text)));
         foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Public\s+|Private\s+)?Class\s+(?<name>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
