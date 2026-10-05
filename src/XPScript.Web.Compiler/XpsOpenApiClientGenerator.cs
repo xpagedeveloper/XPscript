@@ -188,7 +188,10 @@ public sealed class XpsOpenApiClientGenerator
         if (properties.Count == 0) b.AppendLine(resolved.ContainsKey("additionalProperties") ? "    Public Value As XPJsonObject" : "    Public Value As Variant");
         else
         {
-            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // A member cannot have the same name as its enclosing type in the
+            // generated C# bridge. Reserve the model name before normalizing
+            // OpenAPI property names.
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { name };
             foreach (var property in properties)
             {
                 var memberName = UniqueIdentifier(ToIdentifier(property.Key), used, avoidKeywords: true);
