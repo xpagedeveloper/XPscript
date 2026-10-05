@@ -691,6 +691,7 @@ public sealed class CompilerDriver
     <AssemblyName>{EscapeXml(assemblyName)}</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Features>$(Features);experimental-data-section-string-literals=100</Features>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <NuGetAudit>{(ApplicationSecurityModeContext.Current != ApplicationSecurityMode.Off).ToString().ToLowerInvariant()}</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
