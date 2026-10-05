@@ -25,6 +25,16 @@ foreach ($line in Get-Content $language) {
 $implemented = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 foreach ($line in Get-Content $compiler) {
     if ($line -match 'new FunctionSymbol\("([^"]+)"') { [void]$implemented.Add($Matches[1]) }
+    if ($line -match 'new\[\]\s*\{(?<names>[^}]*)\}') {
+        foreach ($nameMatch in [regex]::Matches($Matches['names'].Value, '"([^"]+)"')) {
+            [void]$implemented.Add($nameMatch.Groups[1].Value)
+        }
+    }
+    if ($line -match 'foreach\s*\(var\s+builtin\s+in\s+new\[\]') {
+        foreach ($nameMatch in [regex]::Matches($line, '"([^"]+)"')) {
+            [void]$implemented.Add($nameMatch.Groups[1].Value)
+        }
+    }
 }
 
 $missing = @($documented | Where-Object { -not $implemented.Contains($_) } | Sort-Object)
