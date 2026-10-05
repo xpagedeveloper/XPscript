@@ -349,7 +349,8 @@ internal static class Program
     public static bool True = true;
     public static bool False = false;
     public static dynamic Application = new ExpandoObject();
-    public static dynamic Console = new ExpandoObject();
+    public static dynamic Console = CreateConsole();
+    private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.WriteLine = (Action<object?>)(value => System.Console.WriteLine(value)); return console; }
     public static dynamic Debugger = new ExpandoObject();
     public static dynamic Process = new ExpandoObject();
     public static dynamic Session = new ExpandoObject();
