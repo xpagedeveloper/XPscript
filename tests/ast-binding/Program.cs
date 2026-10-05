@@ -31,7 +31,7 @@ if (scalarIndexBinder.Diagnostics.Count != 1 || scalarIndexBinder.Diagnostics[0]
     throw new InvalidOperationException("Indexing a scalar must produce exactly one XPS2001 diagnostic.");
 
 var wrongIndexTypeBinder = new ExpressionBinder(indexSymbols);
-_ = wrongIndexTypeBinder.Bind(Parse("values["wrong"]"));
+_ = wrongIndexTypeBinder.Bind(Parse("values[\"wrong\"]"));
 if (wrongIndexTypeBinder.Diagnostics.Count != 1 || wrongIndexTypeBinder.Diagnostics[0].Code != "XPS2003")
     throw new InvalidOperationException("A non-integer array index must produce exactly one XPS2003 diagnostic.");
 
