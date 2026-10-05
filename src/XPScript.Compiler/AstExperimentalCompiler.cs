@@ -86,6 +86,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Input$", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new VariableSymbol("Command", typeof(string), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Platform", typeof(string), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("CurDir", typeof(string), XpTypeSymbol.Variant));
         symbols.Declare(new FunctionSymbol("Sleep", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Trim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
@@ -210,6 +211,7 @@ internal static class Program
     public static dynamic SEARCH_DEPTH = 0L;
     public static dynamic Command = string.Empty;
     public static dynamic Platform = string.Empty;
+    public static dynamic CurDir = ".";
     public static dynamic XPJson = new ExpandoObject();
     public static dynamic XPJsonDocument = new ExpandoObject();
     public static dynamic XPJsonSchema = new ExpandoObject();
