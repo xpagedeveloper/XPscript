@@ -162,7 +162,10 @@ internal static class AstExperimentalCompiler
             symbols.Declare(new FunctionSymbol(builtin, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrConv", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CType", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("StrCompare", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("StrCompare", typeof(long), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrComp", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("StrComp", typeof(long), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Abs", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Int", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Fix", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
@@ -366,6 +369,7 @@ internal static class Program
     public static object RSet(object value, object width) => CStr(value).PadLeft(Convert.ToInt32(width));
     public static object Space(object value) => new string(' ', Math.Max(0, Convert.ToInt32(value)));
     public static object StrCompare(object left, object right) => StrComp(left, right);
+    public static object StrCompare(object left, object right, object compare) => StrComp(left, right, compare);
     public static object String(object count, object value) => new string(CStr(value).FirstOrDefault(), Math.Max(0, Convert.ToInt32(count)));
     public static object StrLeft(object value, object count) => Left(value, count);
     public static object StrLeftBack(object value, object count) => Left(value, count);
@@ -380,6 +384,7 @@ internal static class Program
     public static string StrConv(object value, object style) => Convert.ToString(value) ?? string.Empty;
     public static object CType(object value, object typeName) => typeName?.ToString()?.Equals("Integer", StringComparison.OrdinalIgnoreCase) == true ? Convert.ToInt64(value) : value;
     public static long StrComp(object? left, object? right) => string.Compare(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
+    public static long StrComp(object? left, object? right, object? compare) => string.Compare(left?.ToString(), right?.ToString(), Convert.ToInt32(compare) == 1 ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     public static object Abs(object value) => Math.Abs(Convert.ToDouble(value));
     public static object Int(object value) => Math.Floor(Convert.ToDouble(value));
     public static object Fix(object value) => Math.Truncate(Convert.ToDouble(value));
