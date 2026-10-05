@@ -337,6 +337,15 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindAssignment(ExpressionSyntax targetSyntax, ExpressionSyntax valueSyntax, bool isSet = false)
     {
+        if (_allowDynamicMembers && targetSyntax is CallExpressionSyntax dynamicIndex
+            && dynamicIndex.Target is MemberAccessExpressionSyntax dynamicMember
+            && dynamicIndex.Arguments.Count == 1)
+        {
+            var receiver = BindExpression(dynamicMember.Expression);
+            var index = BindExpression(dynamicIndex.Arguments[0]);
+            if (receiver is not null && index is not null && receiver.Type == typeof(object))
+                return BindBoundAssignment(new BoundIndexExpression(new BoundMemberAccessExpression(receiver, dynamicMember.NameToken.Text, typeof(object), XpTypeSymbol.Variant), index, typeof(object), XpTypeSymbol.Variant), valueSyntax, isSet, targetSyntax);
+        }
         var target = BindExpression(targetSyntax);
         if (target is null)
             return null;
@@ -347,6 +356,11 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             target = new BoundIndexExpression(new BoundNameExpression(local), indexedCall.Arguments[0], local.Type.GetElementType()!, XpTypeSymbol.FromClr(local.Type.GetElementType()!));
         }
 
+        return BindBoundAssignment(target, valueSyntax, isSet, targetSyntax);
+    }
+
+    private BoundStatement? BindBoundAssignment(BoundExpression target, ExpressionSyntax valueSyntax, bool isSet, ExpressionSyntax targetSyntax)
+    {
         if (!IsWritable(target))
         {
             _diagnostics.Add(new SyntaxDiagnostic(
