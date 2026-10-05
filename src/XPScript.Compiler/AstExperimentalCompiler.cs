@@ -26,6 +26,18 @@ internal static class AstExperimentalCompiler
         var body = new BoundMethodEmitter().Emit("Main", typeof(void), bound);
         var generated = $$"""
 using System;
+using System.Collections.Generic;
+internal static class LSCoreCompare
+{
+    public static bool Equal(object? left, object? right) => string.Equals(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
+    public static bool Between(object? value, object? low, object? high) => Convert.ToDouble(value) >= Convert.ToDouble(low) && Convert.ToDouble(value) <= Convert.ToDouble(high);
+    public static bool Rel(object? value, string op, object? other) => op switch
+    {
+        "=" => Equal(value, other), "<>" => !Equal(value, other),
+        ">" => Convert.ToDouble(value) > Convert.ToDouble(other), ">=" => Convert.ToDouble(value) >= Convert.ToDouble(other),
+        "<" => Convert.ToDouble(value) < Convert.ToDouble(other), "<=" => Convert.ToDouble(value) <= Convert.ToDouble(other), _ => false
+    };
+}
 internal static class Program
 {
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");

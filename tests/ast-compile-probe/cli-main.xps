@@ -13,5 +13,14 @@ Sub Main()
         i = i + 1
         Print i
     Wend
+    Do
+        i = i + 1
+    Loop While i < 6
+    Select Case i
+        Case 6
+            Print "AST_XPS_SELECT_OK"
+        Case Else
+            Print "AST_XPS_SELECT_FAIL"
+    End Select
     Exit Sub
 End Sub
