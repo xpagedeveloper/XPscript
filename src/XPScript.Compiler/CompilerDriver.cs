@@ -9,7 +9,10 @@ public sealed class CompilerDriver
     private const string MimeKitVersion = "4.17.0";
     // Large generated API clients are still bounded, while allowing a complete
     // OpenAPI definition to remain one compilable source unit.
-    private const long MaximumSourceBytes = 16L * 1024L * 1024L;
+    // OpenAPI clients can legitimately contain thousands of transitively
+    // referenced model skeletons. Keep a generous file limit while retaining
+    // a guard against accidentally feeding unbounded input to the compiler.
+    private const long MaximumSourceBytes = 64L * 1024L * 1024L;
     private static readonly TimeSpan ValidationBuildTimeout = TimeSpan.FromMinutes(2);
     private const int MaximumBuildDiagnosticChars = 256 * 1024;
     private sealed record StagedManagedReference(string Name, string Path);
@@ -631,7 +634,7 @@ public sealed class CompilerDriver
         var diagnostic = new CompileDiagnostic
         {
             File = DiagnosticFileName(sourcePath),
-            Description = "XPScript source exceeds the 16 MiB compiler source-size limit.",
+            Description = "XPScript source exceeds the 64 MiB compiler source-size limit.",
             DiagnosticCode = CompilerDiagnosticCodes.SourceTooLarge,
             Severity = "error",
             Category = "input",
