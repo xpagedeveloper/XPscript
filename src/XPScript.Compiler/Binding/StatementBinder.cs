@@ -2,11 +2,12 @@ using XPScript.Compiler.Syntax;
 
 namespace XPScript.Compiler.Binding;
 
-public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false)
+public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false, bool allowDynamicMembers = false)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly XpTypeSymbol? _returnType = returnType;
     private readonly bool _allowsReturnValue = allowsReturnValue;
+    private readonly bool _allowDynamicMembers = allowDynamicMembers;
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
@@ -47,7 +48,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundExpression? BindExpression(ExpressionSyntax syntax)
     {
-        var binder = new ExpressionBinder(_symbols);
+        var binder = new ExpressionBinder(_symbols, _allowDynamicMembers);
         var expression = binder.Bind(syntax);
         _diagnostics.AddRange(binder.Diagnostics);
         return binder.Diagnostics.Count == 0 ? expression : null;

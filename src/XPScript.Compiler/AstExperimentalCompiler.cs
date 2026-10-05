@@ -31,7 +31,8 @@ internal static class AstExperimentalCompiler
         var symbols = SymbolTable.CreateWithCompilerCatalog();
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
-        var binder = new StatementBinder(symbols);
+        symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
+        var binder = new StatementBinder(symbols, allowDynamicMembers: true);
         var bound = sub.Statements.Select(binder.Bind).OfType<BoundStatement>().ToArray();
         if (binder.Diagnostics.Count > 0)
             throw new CompilerException(string.Join(Environment.NewLine, binder.Diagnostics.Select(d => d.Message)), binder.Diagnostics[0].Code, "semantic");
@@ -41,6 +42,7 @@ internal static class AstExperimentalCompiler
 using System;
 using System.Collections.Generic;
 using System.Collections;
+using System.Dynamic;
 internal static class LSCoreCompare
 {
     public static bool Equal(object? left, object? right) => string.Equals(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
@@ -58,6 +60,7 @@ internal static class LSForAllRuntime
 }
 internal static class Program
 {
+    public static dynamic Application = new ExpandoObject();
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
     public static long[] Array(long first, long second) => [first, second];
     public static class XPScriptRuntime

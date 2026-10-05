@@ -2,9 +2,10 @@ using XPScript.Compiler.Syntax;
 
 namespace XPScript.Compiler.Binding;
 
-public sealed class ExpressionBinder(SymbolTable? symbols = null)
+public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDynamicMembers = false)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
+    private readonly bool _allowDynamicMembers = allowDynamicMembers;
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
@@ -105,7 +106,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             if (symbol is FunctionSymbol function)
                 return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType, function.SemanticReturnType);
         }
-        return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.SemanticType.Name}'.");
+        return _allowDynamicMembers && receiver.Type == typeof(object)
+            ? new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, typeof(object), XpTypeSymbol.Variant)
+            : Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.SemanticType.Name}'.");
     }
 
     private BoundExpression BindArray(ArrayExpressionSyntax syntax)
@@ -144,6 +147,13 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             name = memberSyntax.NameToken.Text;
             var memberKey = receiver.SemanticType.Name + "." + name;
             var memberSymbols = _symbols.LookupMembers(receiver.SemanticType, name);
+            if (memberSymbols.Count == 0 && _allowDynamicMembers && receiver.Type == typeof(object))
+            {
+                var arguments = syntax.Arguments.Select(Bind).ToArray();
+                var dynamicFunction = new FunctionSymbol(name, typeof(object), arguments.Select(argument => argument.Type).ToArray());
+                target = new BoundMemberAccessExpression(receiver, name, typeof(object), XpTypeSymbol.Variant);
+                return new BoundCallExpression(target, dynamicFunction, arguments);
+            }
             if (memberSymbols.Count == 0)
                 return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{name}' on '{receiver.SemanticType.Name}'.");
             var indexedProperty = memberSymbols.OfType<IndexedPropertySymbol>().LastOrDefault();
