@@ -119,6 +119,7 @@ internal static class AstExperimentalCompiler
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
+        symbols.Declare(new FunctionSymbol("Array", typeof(object[]), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LBound", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("UBound", typeof(long), [typeof(object)]));
@@ -367,6 +368,7 @@ internal static class Program
     public static object Base64DecodeBinary(object value) => Convert.FromBase64String(CStr(value));
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
     public static long[] Array(long first, long second) => [first, second];
+    public static object[] Array(object first, object second) => [first, second];
     public static long Len(object? value) => value is Array array ? array.Length : (value?.ToString()?.Length ?? 0);
     public static long LenB(object? value) => Len(value);
     public static string TypeName(object? value) => value?.GetType().Name ?? "Nothing";
