@@ -105,6 +105,9 @@ internal static class Program
 {
     public static dynamic Application = new ExpandoObject();
     public static dynamic Debugger = new ExpandoObject();
+    public static dynamic Process = new ExpandoObject();
+    public static dynamic Session = new ExpandoObject();
+    public static dynamic Request = new ExpandoObject();
     public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
     public static long LBound(object value) => 0;
     public static long UBound(object value) => value is Array array ? array.Length - 1 : -1;
