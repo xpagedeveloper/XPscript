@@ -29,7 +29,6 @@ internal static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^[ \t]*[A-Za-z_]\w*:[ \t]*$", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?:GoTo|GoSub|Resume)(?:\s+[^\r\n]+)?$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)On\s+Error\s+.*$", "${indent}Call AstNoOp()");
-        source = Regex.Replace(source, @"(?im)\bError\$", "Error()");
         source = Regex.Replace(source, @"(?im)^[ \t]*With\s+[A-Za-z_]\w*[ \t]*$", string.Empty);
         source = Regex.Replace(source, @"(?im)^[ \t]*End\s+With[ \t]*$", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)\.(?<member>[A-Za-z_]\w*)", "${indent}p.${member}");
@@ -128,6 +127,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Error", typeof(string), [], XpTypeSymbol.FromClr(typeof(string)), []));
         symbols.Declare(new FunctionSymbol("GetTickCount", typeof(long), [], XpTypeSymbol.FromClr(typeof(long)), []));
         symbols.Declare(new FunctionSymbol("Loc", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Environ", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstPut", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstLockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstUnlockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -427,6 +427,7 @@ internal static class Program
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
     }
     public static long GetTickCount() => Environment.TickCount64;
+    public static string Environ(object? _) => string.Empty;
     public static long Loc(object? _) => 0;
     public static string Error(object? _) => string.Empty;
     public static string Error() => string.Empty;
@@ -457,6 +458,8 @@ internal static class Program
 {{entryPoint}}
 }
 """;
+        generated = Regex.Replace(generated, @"(?<!string )\bEnviron\(", "Program.Environ(");
+        generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
         var nativeHttp = NativeHttpRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal).Replace("Program.XPScriptRuntime.CInt(", "Convert.ToInt32(", StringComparison.Ordinal);
         generated += Environment.NewLine + "public sealed class XPScriptRuntimeException : Exception { public int ErrorCode { get; } public XPScriptRuntimeException(int code, string message) : base(message) { ErrorCode = code; } }" + Environment.NewLine + "internal sealed class XPScriptTlsValidationState { public string Mode { get; set; } = \"strict\"; public string LastError { get; private set; } = string.Empty; public void Reset() { LastError = string.Empty; } public Exception Failure(string context) => new XPScriptRuntimeException(1201, context + \" failed: \" + LastError); public bool Validate(object sender, System.Security.Cryptography.X509Certificates.X509Certificate? c, System.Security.Cryptography.X509Certificates.X509Chain? chain, System.Net.Security.SslPolicyErrors errors) => true; }" + Environment.NewLine + nativeHttp;
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -469,4 +472,3 @@ internal static class Program
     };
     private static string CSharpType(Type type) => type == typeof(void) ? "void" : type == typeof(long) ? "long" : type == typeof(double) ? "double" : type == typeof(bool) ? "bool" : type == typeof(string) ? "string" : "object";
 }
-
