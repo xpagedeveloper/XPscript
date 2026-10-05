@@ -61,6 +61,8 @@ jobs:
         run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
       - name: Run bound C# emission regression
         run: dotnet run --project ./tests/ast-emission/AstEmissionProbe.csproj -c Release
+      - name: Run AST XPscript compile probe
+        run: dotnet run --project ./tests/ast-compile-probe/AstCompileProbe.csproj -c Release
       - name: Run focused AST unknown-symbol binder test
         run: dotnet run --project ./tests/ast-binding/AstBindingProbe.csproj -c Release
       - name: Run deterministic AST compatibility tests first
