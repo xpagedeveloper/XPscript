@@ -63,7 +63,9 @@ public sealed class SymbolTable
     {
         if (_symbols.TryGetValue(symbol.Name, out var existing) && existing.Count > 0)
         {
-            var duplicate = symbol is FunctionSymbol function
+            var duplicate = symbol is LocalSymbol
+                ? existing.OfType<LocalSymbol>().Any()
+                : symbol is FunctionSymbol function
                 ? existing.OfType<FunctionSymbol>().Any(candidate => SameParameterSignature(candidate, function))
                 : true;
 
