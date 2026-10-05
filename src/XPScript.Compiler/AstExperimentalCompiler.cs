@@ -185,7 +185,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CDate", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
-        foreach (var builtin in new[] { "Base64Decode", "Base64Encode", "CByte", "CCur", "CSng", "CVar", "DataType", "DateAdd", "DateDiff", "Day", "FromBase64", "InstrB", "IsArray", "IsDate", "IsElement", "IsEmpty", "IsObject", "IsScalar", "LeftB", "ListTag", "LSet", "Month", "RegexValidate", "RightB", "RSet", "Space", "String", "StrLeft", "StrLeftBack", "StrReverse", "StrRight", "StrRightBack", "StrToken", "TimeNumber", "ToBase64", "UrlDecode", "UrlEncode" })
+        foreach (var builtin in new[] { "Base64Decode", "Base64Encode", "CByte", "CCur", "CSng", "CVar", "DataType", "DateAdd", "DateDiff", "Day", "FromBase64", "InstrB", "IsArray", "IsDate", "IsElement", "IsEmpty", "IsObject", "IsScalar", "LeftB", "ListTag", "LSet", "Month", "RegexValidate", "RightB", "RSet", "Space", "String", "StrLeft", "StrLeftBack", "StrReverse", "StrRight", "StrRightBack", "StrToken", "TimeNumber", "ToBase64", "UrlDecode", "UrlEncode", "MD5", "SHA1", "SHA256", "SHA384", "SHA512", "HMACSHA256", "HMACSHA384", "HMACSHA512" })
             symbols.Declare(new FunctionSymbol(builtin, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Mid", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Mid", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -394,6 +394,28 @@ internal static class Program
         };
         return Convert.ToHexString(h.ComputeHash(System.IO.File.ReadAllBytes(CStr(a[0])))).ToLowerInvariant();
     }
+    private static string Digest(string algorithm, object? value) {
+        using System.Security.Cryptography.HashAlgorithm hash = algorithm switch {
+            "MD5" => System.Security.Cryptography.MD5.Create(), "SHA1" => System.Security.Cryptography.SHA1.Create(),
+            "SHA256" => System.Security.Cryptography.SHA256.Create(), "SHA384" => System.Security.Cryptography.SHA384.Create(),
+            _ => System.Security.Cryptography.SHA512.Create() };
+        return Convert.ToHexString(hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(CStr(value)))).ToLowerInvariant();
+    }
+    public static object MD5(object? value) => Digest("MD5", value);
+    public static object SHA1(object? value) => Digest("SHA1", value);
+    public static object SHA256(object? value) => Digest("SHA256", value);
+    public static object SHA384(object? value) => Digest("SHA384", value);
+    public static object SHA512(object? value) => Digest("SHA512", value);
+    private static string Hmac(string algorithm, object? value, object? key) {
+        using System.Security.Cryptography.HMAC h = algorithm switch {
+            "SHA256" => new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(CStr(key))),
+            "SHA384" => new System.Security.Cryptography.HMACSHA384(System.Text.Encoding.UTF8.GetBytes(CStr(key))),
+            _ => new System.Security.Cryptography.HMACSHA512(System.Text.Encoding.UTF8.GetBytes(CStr(key))) };
+        return Convert.ToHexString(h.ComputeHash(System.Text.Encoding.UTF8.GetBytes(CStr(value)))).ToLowerInvariant();
+    }
+    public static object HMACSHA256(object? value, object? key) => Hmac("SHA256", value, key);
+    public static object HMACSHA384(object? value, object? key) => Hmac("SHA384", value, key);
+    public static object HMACSHA512(object? value, object? key) => Hmac("SHA512", value, key);
     public static object Files(params object?[] a) => System.IO.Directory.GetFiles(CStr(a[0]), a.Length > 1 ? CStr(a[1]) : "*", a.Length > 2 && Convert.ToBoolean(a[2]) ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly);
     public static object Directories(params object?[] a) => System.IO.Directory.GetDirectories(CStr(a[0]));
     public static object IsFile(params object?[] a) => System.IO.File.Exists(CStr(a[0]));
