@@ -9,14 +9,22 @@ internal sealed record XpsOpenApiSchemaPlan(
     string TypeName,
     JsonObject Schema,
     bool IsEnum,
-    IReadOnlyDictionary<string, string> PropertyNames);
+    IReadOnlyDictionary<string, XpsOpenApiPropertyPlan> Properties);
+
+internal sealed record XpsOpenApiPropertyPlan(
+    string WireName,
+    string GeneratedName,
+    JsonObject Schema);
 
 internal sealed record XpsOpenApiOperationPlan(
     string Method,
     string Path,
     string? WireOperationId,
     JsonObject Operation,
-    JsonObject PathItem);
+    JsonObject PathItem,
+    IReadOnlyList<JsonObject> Parameters,
+    JsonObject? RequestBody,
+    JsonObject? Responses);
 
 internal sealed class XpsOpenApiGenerationPlan
 {
@@ -40,19 +48,22 @@ internal sealed class XpsOpenApiGenerationPlan
                 throw new XpsOpenApiGenerationException($"components.schemas.{pair.Key} must be an object.");
             var typeName = allocateName(pair.Key, usedTypes);
             var resolved = XpsOpenApiSchema.Resolve(root, schema, $"schema '{pair.Key}'");
-            var propertyNames = new Dictionary<string, string>(StringComparer.Ordinal);
+            var propertiesPlan = new Dictionary<string, XpsOpenApiPropertyPlan>(StringComparer.Ordinal);
             if (resolved["properties"] is JsonObject properties)
             {
                 var usedProperties = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var property in properties)
-                    propertyNames[property.Key] = AllocatePropertyName(property.Key, usedProperties);
+                {
+                    var generatedName = AllocatePropertyName(property.Key, usedProperties);
+                    propertiesPlan[property.Key] = new XpsOpenApiPropertyPlan(generatedName == property.Key ? property.Key : property.Key, generatedName, property.Value as JsonObject ?? new JsonObject());
+                }
             }
             var schemaPlan = new XpsOpenApiSchemaPlan(
                 pair.Key,
                 typeName,
                 schema,
                 resolved["enum"] is JsonArray,
-                propertyNames);
+                propertiesPlan);
             plan.Schemas.Add(typeName, schemaPlan);
             plan.ReferenceTypeNames.Add(pair.Key, typeName);
         }
@@ -70,7 +81,16 @@ internal sealed class XpsOpenApiGenerationPlan
             {
                 if (pathItem[method] is not JsonObject operation) continue;
                 var wireOperationId = operation["operationId"] is JsonValue value && value.TryGetValue<string>(out var id) ? id : null;
-                plan.Operations.Add(new XpsOpenApiOperationPlan(method.ToUpperInvariant(), pathPair.Key, wireOperationId, operation, pathItem));
+                var parameters = new List<JsonObject>();
+                if (pathItem["parameters"] is JsonArray inherited)
+                    parameters.AddRange(inherited.OfType<JsonObject>());
+                if (operation["parameters"] is JsonArray local)
+                    parameters.AddRange(local.OfType<JsonObject>());
+                plan.Operations.Add(new XpsOpenApiOperationPlan(
+                    method.ToUpperInvariant(), pathPair.Key, wireOperationId, operation, pathItem,
+                    parameters,
+                    operation["requestBody"] as JsonObject,
+                    operation["responses"] as JsonObject));
             }
         }
     }
