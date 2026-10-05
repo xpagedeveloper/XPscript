@@ -338,8 +338,8 @@ public sealed class XpPerson {
         if (fullSource.Contains("XPCsvDocument", StringComparison.OrdinalIgnoreCase) || fullSource.Contains("XPJson", StringComparison.OrdinalIgnoreCase)) classSupport += """
 public sealed class XpJsonElement { public string Type { get; set; } = "String"; public object? Value { get; set; } }
 public sealed class XpJsonDocument { public XpJsonElement Root { get; } = new(); public static XpJsonDocument Parse(object? text) => new(); public string Stringify() => Root.Value?.ToString() ?? "{}"; public object ToObject(object target) => target; }
-public sealed class XpJsonObject { private readonly Dictionary<string,object?> Data = new(); public int Count => Data.Count; public void Set(string key, object? value) => Data[key] = value; public object? Get(string key) => Data.TryGetValue(key, out var value) ? value : null; public bool Contains(string key) => Data.ContainsKey(key); public void Remove(string key) => Data.Remove(key); }
-public sealed class XpJsonArray { private readonly List<object?> Data = new(); public int Count => Data.Count; public void Add(object? value) => Data.Add(value); public void Set(long index, object? value) => Data[Convert.ToInt32(index)] = value; public object? Get(long index) => Data[Convert.ToInt32(index)]; public void RemoveAt(long index) => Data.RemoveAt(Convert.ToInt32(index)); }
+public sealed class XpJsonObject { internal readonly Dictionary<string,object?> Data = new(); public int Count => Data.Count; public void Set(string key, object? value) => Data[key] = value; public object? Get(string key) => Data.TryGetValue(key, out var value) ? value : null; public bool Contains(string key) => Data.ContainsKey(key); public void Remove(string key) => Data.Remove(key); }
+public sealed class XpJsonArray { internal readonly List<object?> Data = new(); public int Count => Data.Count; public void Add(object? value) => Data.Add(value); public void Set(long index, object? value) => Data[Convert.ToInt32(index)] = value; public object? Get(long index) => Data[Convert.ToInt32(index)]; public void RemoveAt(long index) => Data.RemoveAt(Convert.ToInt32(index)); }
 public sealed class XpCsvJsonArray { public List<Dictionary<string,string>> Rows { get; } = new(); public int Count => Rows.Count; }
 public sealed class XpCsvRow { internal Dictionary<string,string> Data = new(); public void Set(string key, object? value) => Data[key] = Convert.ToString(value) ?? string.Empty; public object Get(string key) => Data.TryGetValue(key, out var value) ? value : string.Empty; }
 public sealed class XpCsvRows : List<XpCsvRow> { public XpCsvRow this[long index] => base[Convert.ToInt32(index)]; }
@@ -701,7 +701,11 @@ internal static class Program
     public static object ChDrive(object? drive) => true;
     public static object Erase(object? value) => true;
     public static object JsonParse(object? value) => XpJsonDocument.Parse(value);
-    public static object JsonStringify(object? value) => value is XpJsonDocument document ? document.Stringify() : value?.ToString() ?? "null";
+    public static object JsonStringify(object? value) => value switch {
+        XpJsonDocument document => document.Stringify(),
+        XpJsonObject obj => System.Text.Json.JsonSerializer.Serialize(obj.Data),
+        XpJsonArray array => System.Text.Json.JsonSerializer.Serialize(array.Data),
+        _ => value?.ToString() ?? "null" };
     public static class XPScriptNullRuntime
     {
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
