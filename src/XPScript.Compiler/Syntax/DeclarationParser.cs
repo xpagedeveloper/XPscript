@@ -259,7 +259,7 @@ public sealed class DeclarationParser
         var isConstructor = _classMemberContext && hasNewName;
         var identifier = hasNewName
             ? header[position++]
-            : Take(header, ref position, SyntaxKind.IdentifierToken);
+            : TakeMemberIdentifier(header, ref position);
         var (openParen, parameters, commas, closeParen) = ParseParameters(header, ref position);
         var (statements, endKeyword, endTarget) = ParseBody(lines, SyntaxKind.SubKeyword, "Sub");
 
@@ -279,7 +279,7 @@ public sealed class DeclarationParser
     private FunctionDeclarationSyntax ParseFunction(IReadOnlyList<SourceLine> lines, SyntaxToken[] header, ref int position, SyntaxToken? visibility)
     {
         var functionKeyword = Take(header, ref position, SyntaxKind.FunctionKeyword);
-        var identifier = Take(header, ref position, SyntaxKind.IdentifierToken);
+        var identifier = TakeMemberIdentifier(header, ref position);
         var (openParen, parameters, commas, closeParen) = ParseParameters(header, ref position);
 
         SyntaxToken? asKeyword = null;
@@ -390,6 +390,16 @@ public sealed class DeclarationParser
         foreach (var diagnostic in diagnostics)
             _diagnostics.Add(new SyntaxDiagnostic(diagnostic.Code, diagnostic.Message, diagnostic.Span));
     }
+
+    private SyntaxToken TakeMemberIdentifier(SyntaxToken[] tokens, ref int position)
+    {
+        var token = Peek(tokens, position);
+        if (token.Kind == SyntaxKind.IdentifierToken || ExpressionParserContextual(token.Kind))
+            return new SyntaxToken(SyntaxKind.IdentifierToken, tokens[position++].Text, tokens[position - 1].Value, token.Span);
+        return Take(tokens, ref position, SyntaxKind.IdentifierToken);
+    }
+
+    private static bool ExpressionParserContextual(SyntaxKind kind) => kind is SyntaxKind.AppendKeyword or SyntaxKind.SetKeyword or SyntaxKind.GetKeyword or SyntaxKind.OpenKeyword or SyntaxKind.CloseKeyword;
 
     private SyntaxToken Take(SyntaxToken[] tokens, ref int position, SyntaxKind expected)
     {
