@@ -116,6 +116,11 @@ public sealed class StatementParser
             return ParseReturnStatement();
         if (Current.Kind == SyntaxKind.ExitKeyword)
             return ParseExitStatement();
+        if (IsIdentifier("Delete"))
+        {
+            NextToken();
+            return new ExpressionStatementSyntax(ParseExpressionUntilLineEnd());
+        }
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
