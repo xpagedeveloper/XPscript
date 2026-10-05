@@ -74,6 +74,9 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Replace", typeof(string), [typeof(string), typeof(string), typeof(string)]));
         symbols.Declare(new FunctionSymbol("InStr", typeof(long), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("InStr", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("JsonStringify", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("JsonEncode", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("JsonDecode", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Trim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
@@ -190,6 +193,11 @@ internal static class Program
     public static dynamic Document = new ExpandoObject();
     public static dynamic Err = new ExpandoObject();
     public static dynamic Response = new ExpandoObject();
+    public static dynamic XPJson = new ExpandoObject();
+    public static dynamic XPJsonDocument = new ExpandoObject();
+    public static dynamic XPJsonSchema = new ExpandoObject();
+    public static dynamic XPJsonArray = new ExpandoObject();
+    public static dynamic XPJsonObject = new ExpandoObject();
     public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
     public static long LBound(object value) => 0;
     public static long UBound(object value) => value is Array array ? array.Length - 1 : -1;
@@ -255,6 +263,9 @@ internal static class Program
     public static object ArrayResize(object? value, object? upper, object? preserve) { var length = Math.Max(0, Convert.ToInt32(upper) + 1); var result = new object?[length]; if (Convert.ToBoolean(preserve) && value is System.Collections.IEnumerable values) values.Cast<object?>().Take(length).ToArray().CopyTo(result, 0); return result; }
     public static object Explode(object? value, object? separator) => (value?.ToString() ?? string.Empty).Split(separator?.ToString() ?? ",");
     public static string FullTrim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
+    public static object JsonStringify(object? value) => System.Text.Json.JsonSerializer.Serialize(value);
+    public static object JsonEncode(object? value) => System.Text.Json.JsonSerializer.Serialize(value);
+    public static object JsonDecode(object? value) => value?.ToString() ?? string.Empty;
     public static object DateNumber(long year, long month, long day) => new DateTime((int)year, (int)month, (int)day);
     public static class XPScriptNullRuntime
     {
