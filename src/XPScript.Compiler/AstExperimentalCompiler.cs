@@ -254,6 +254,11 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Explode", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FullTrim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
+        foreach (var name in new[] { "Date", "Date$", "Format", "Format$", "InputBox", "MsgBox", "ChDrive" })
+            symbols.Declare(new FunctionSymbol(name, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Date", typeof(object), [], XpTypeSymbol.Variant, []));
+        symbols.Declare(new FunctionSymbol("Date$", typeof(object), [], XpTypeSymbol.Variant, []));
+        symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [], XpTypeSymbol.Variant, []));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Process", typeof(object), XpTypeSymbol.Variant));
@@ -637,6 +642,11 @@ internal static class Program
     public static string AstInputChars(object? count, object? file) => string.Empty;
     public static void AstNoOp() { }
     public static object DateNumber(long year, long month, long day) => new DateTime((int)year, (int)month, (int)day);
+    public static object Date() => DateTime.Today;
+    public static object Format(object? value, object? pattern = null) => pattern is null ? CStr(value) : Convert.ToDateTime(value).ToString(CStr(pattern), System.Globalization.CultureInfo.InvariantCulture);
+    public static object InputBox(object? prompt = null) => string.Empty;
+    public static object MsgBox(object? prompt = null) { Console.WriteLine(CStr(prompt)); return 0L; }
+    public static object ChDrive(object? drive) => true;
     public static class XPScriptNullRuntime
     {
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
