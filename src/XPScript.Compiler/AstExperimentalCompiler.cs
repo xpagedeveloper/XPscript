@@ -1,4 +1,5 @@
 using System.Text;
+using System.Collections;
 using XPScript.Compiler.Binding;
 using XPScript.Compiler.Emission;
 using XPScript.Compiler.Syntax;
@@ -31,6 +32,13 @@ internal static class Program
     public static class XPScriptRuntime
     {
         public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";
+        public static IEnumerable<long> Range(long from, long to, long step)
+        {
+            if (step == 0) throw new ArgumentOutOfRangeException(nameof(step));
+            if (step > 0) for (var value = from; value <= to; value += step) yield return value;
+            else for (var value = from; value >= to; value += step) yield return value;
+        }
+        public static long CLng(object value) => Convert.ToInt64(value);
     }
 {{body}}
 }

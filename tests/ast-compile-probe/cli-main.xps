@@ -2,5 +2,12 @@ Sub Main()
     Dim message As String
     message = "AST_XPS_PRINT_OK"
     Print message
+    If message = "AST_XPS_PRINT_OK" Then
+        Print "AST_XPS_IF_OK"
+    End If
+    Dim i As Long
+    For i = 1 To 2
+        Print i
+    Next
     Exit Sub
 End Sub
