@@ -289,7 +289,7 @@ internal static class AstExperimentalCompiler
         foreach (var compatibilityProcedure in new[] { "ProcedureCounter" })
             if (Regex.IsMatch(fullSource, $@"(?im)^\s*(?:Function|Sub)\s+{compatibilityProcedure}\b"))
                 procedureStubs += Environment.NewLine + $"    public static object {compatibilityProcedure}() => 0;";
-        var entryPoint = methodName.Equals("Main", StringComparison.Ordinal) ? string.Empty : "    public static void Main() { }\n";
+        var entryPoint = methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
         var generated = $$"""
 using System;
