@@ -67,6 +67,23 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object), typeof(string)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CDate", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrComp", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Abs", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Int", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Fix", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Round", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Sqr", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Sgn", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Sin", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Cos", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Tan", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Hex", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Bin", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Left", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Right", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("LTrim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("RTrim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Val", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Str", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
@@ -164,6 +181,23 @@ internal static class Program
     public static string Join(object? value, string separator) => value is System.Collections.IEnumerable items ? string.Join(separator, items.Cast<object?>()) : string.Empty;
     public static object CDate(object value) => Convert.ToDateTime(value);
     public static long StrComp(object? left, object? right) => string.Compare(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
+    public static object Abs(object value) => Math.Abs(Convert.ToDouble(value));
+    public static object Int(object value) => Math.Floor(Convert.ToDouble(value));
+    public static object Fix(object value) => Math.Truncate(Convert.ToDouble(value));
+    public static object Round(object value) => Math.Round(Convert.ToDouble(value));
+    public static object Sqr(object value) => Math.Sqrt(Convert.ToDouble(value));
+    public static object Sgn(object value) => Math.Sign(Convert.ToDouble(value));
+    public static object Sin(object value) => Math.Sin(Convert.ToDouble(value));
+    public static object Cos(object value) => Math.Cos(Convert.ToDouble(value));
+    public static object Tan(object value) => Math.Tan(Convert.ToDouble(value));
+    public static string Hex(object value) => Convert.ToInt64(value).ToString("X");
+    public static string Bin(object value) => Convert.ToString(Convert.ToInt64(value), 2) ?? "0";
+    public static string Left(object value, object count) => (value?.ToString() ?? string.Empty)[..Math.Clamp(Convert.ToInt32(count), 0, value?.ToString()?.Length ?? 0)];
+    public static string Right(object value, object count) { var text = value?.ToString() ?? string.Empty; var length = Math.Clamp(Convert.ToInt32(count), 0, text.Length); return text[^length..]; }
+    public static string LTrim(object? value) => value?.ToString()?.TrimStart() ?? string.Empty;
+    public static string RTrim(object? value) => value?.ToString()?.TrimEnd() ?? string.Empty;
+    public static object Val(object value) => double.TryParse(value?.ToString(), out var result) ? result : 0d;
+    public static string Str(object value) => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
     public static object DateNumber(long year, long month, long day) => new DateTime((int)year, (int)month, (int)day);
     public static class XPScriptNullRuntime
     {
