@@ -2,6 +2,7 @@ namespace XPScript.Compiler.Syntax;
 
 public enum SyntaxKind
 {
+    CompilationUnit,
     BadToken,
     EndOfFileToken,
     NewLineToken,

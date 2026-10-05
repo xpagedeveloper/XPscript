@@ -18,6 +18,29 @@ public sealed class DeclarationParser
 
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
+    public CompilationUnitSyntax ParseCompilationUnit()
+    {
+        var lines = GetLines();
+        var declarations = new List<SyntaxNode>();
+        for (var i = 0; i < lines.Count;)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i].Text) || lines[i].Text.TrimStart().StartsWith("'", StringComparison.Ordinal)) { i++; continue; }
+            var match = System.Text.RegularExpressions.Regex.Match(lines[i].Text, @"^\s*(?:Public\s+|Private\s+|Static\s+)*(Sub|Function|Class)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!match.Success) { i++; continue; }
+            var end = i + 1;
+            var terminator = match.Groups[1].Value.Equals("Class", StringComparison.OrdinalIgnoreCase) ? "End Class" : match.Groups[1].Value.Equals("Function", StringComparison.OrdinalIgnoreCase) ? "End Function" : "End Sub";
+            while (end < lines.Count && !lines[end].Text.Trim().StartsWith(terminator, StringComparison.OrdinalIgnoreCase)) end++;
+            if (end < lines.Count) end++;
+            var startOffset = lines[i].Start;
+            var endOffset = end < lines.Count ? lines[end].Start : _text.Length;
+            var parser = new DeclarationParser(_text[startOffset..endOffset], _baseOffset + startOffset);
+            declarations.Add(parser.ParseDeclaration());
+            _diagnostics.AddRange(parser.Diagnostics);
+            i = Math.Max(end, i + 1);
+        }
+        return new CompilationUnitSyntax(declarations);
+    }
+
     public SyntaxNode ParseDeclaration()
     {
         var lines = GetLines();
