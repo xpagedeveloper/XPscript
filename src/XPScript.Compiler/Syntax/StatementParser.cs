@@ -633,8 +633,12 @@ public sealed class StatementParser
         var dimKeyword = NextToken();
         var identifier = Match(SyntaxKind.IdentifierToken);
         // XPscript permits collection qualifiers such as `Dim values List As Variant`.
+        var isList = false;
         if (Current.Kind == SyntaxKind.IdentifierToken && Current.Text.Equals("List", StringComparison.OrdinalIgnoreCase))
+        {
+            isList = true;
             NextToken();
+        }
         var isArray = false;
         int? arrayLength = null;
         if (Current.Kind == SyntaxKind.OpenParenToken)
@@ -707,6 +711,7 @@ public sealed class StatementParser
             equalsToken,
             initializer,
             isArray,
+            isList,
             arrayLength);
     }
 

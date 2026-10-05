@@ -16,6 +16,8 @@ public sealed class BoundExpressionEmitter
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index => index.Expression.Type == typeof(object)
             ? $"((dynamic){Emit(index.Expression)})[{Emit(index.Index)}]"
+            : index.Expression.Type == typeof(Dictionary<string, object?>)
+                ? $"{Emit(index.Expression)}[Convert.ToString({Emit(index.Index)}) ?? string.Empty]"
             : $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateClient()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateRequest()",

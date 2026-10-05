@@ -551,7 +551,7 @@ internal static class Program
     public static object IsObject(object value) => value is not null;
     public static object IsScalar(object value) => value is not System.Collections.IEnumerable;
     public static object LeftB(object value, object count) => Left(value, count);
-    public static object ListTag(object value) => string.Empty;
+    public static object ListTag(object value) => value is System.Collections.DictionaryEntry entry ? CStr(entry.Key) : value.GetType().GetProperty("Key")?.GetValue(value)?.ToString() ?? string.Empty;
     public static object LSet(object value, object width) => CStr(value).PadRight(Convert.ToInt32(width));
     public static object Mid(object value, object start, object? count = null)
     {
