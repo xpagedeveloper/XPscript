@@ -38,7 +38,9 @@ public sealed class BoundExpressionEmitter
         return $"{(call.Target is null ? call.Function.Name : Emit(call.Target))}({string.Join(", ", arguments)})";
     }
 
-    private string EmitBinary(BoundBinaryExpression binary) => binary.OperatorKind == SyntaxKind.PlusToken && binary.Type == typeof(string)
+    private string EmitBinary(BoundBinaryExpression binary) => binary.Type == typeof(object)
+        ? $"((dynamic)({Emit(binary.Left)}) {EmitBinaryOperator(binary.OperatorKind)} (dynamic)({Emit(binary.Right)}))"
+        : binary.OperatorKind == SyntaxKind.PlusToken && binary.Type == typeof(string)
         ? $"(Convert.ToString({Emit(binary.Left)}) + Convert.ToString({Emit(binary.Right)}))"
         : $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind)} {Emit(binary.Right)})";
 
