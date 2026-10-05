@@ -385,7 +385,14 @@ internal static class Program
     public static object ReadFile(params object?[] a) => System.IO.File.ReadAllText(CStr(a[0]));
     public static object ReadLines(params object?[] a) => System.IO.File.ReadAllLines(CStr(a[0]));
     public static object ReadBytes(params object?[] a) => System.IO.File.ReadAllBytes(CStr(a[0]));
-    public static object FileHash(params object?[] a) { using var h = System.Security.Cryptography.SHA256.Create(); return Convert.ToHexString(h.ComputeHash(System.IO.File.ReadAllBytes(CStr(a[0])))).ToLowerInvariant(); }
+    public static object FileHash(params object?[] a) {
+        using System.Security.Cryptography.HashAlgorithm h = (a.Length > 1 ? CStr(a[1]).ToUpperInvariant() : "SHA256") switch {
+            "SHA384" => System.Security.Cryptography.SHA384.Create(),
+            "SHA512" => System.Security.Cryptography.SHA512.Create(),
+            _ => System.Security.Cryptography.SHA256.Create()
+        };
+        return Convert.ToHexString(h.ComputeHash(System.IO.File.ReadAllBytes(CStr(a[0])))).ToLowerInvariant();
+    }
     public static object Files(params object?[] a) => System.IO.Directory.GetFiles(CStr(a[0]), a.Length > 1 ? CStr(a[1]) : "*", a.Length > 2 && Convert.ToBoolean(a[2]) ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly);
     public static object Directories(params object?[] a) => System.IO.Directory.GetDirectories(CStr(a[0]));
     public static object IsFile(params object?[] a) => System.IO.File.Exists(CStr(a[0]));
@@ -397,7 +404,34 @@ internal static class Program
     public static object AppendFile(params object?[] a) { var p = CStr(a[0]); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(p))!); System.IO.File.AppendAllText(p, CStr(a[1])); return true; }
     public static object WriteLines(params object?[] a) { System.IO.File.WriteAllLines(CStr(a[0]), ((System.Collections.IEnumerable)a[1]!).Cast<object?>().Select(CStr)); return true; }
     public static object WriteBytes(params object?[] a) { System.IO.File.WriteAllBytes(CStr(a[0]), (byte[])a[1]!); return true; }
-    public static object FileInfo(params object?[] a) => new System.IO.FileInfo(CStr(a[0]));
+    public sealed class XpFileInfo {
+        public string Name { get; init; } = string.Empty;
+        public string FullPath { get; init; } = string.Empty;
+        public string Extension { get; init; } = string.Empty;
+        public long Length { get; init; }
+        public bool IsFile { get; init; }
+        public bool IsDirectory { get; init; }
+        public bool IsLink { get; init; }
+        public long Attributes { get; init; }
+        public DateTime Created { get; init; }
+        public DateTime Modified { get; init; }
+        public DateTime Accessed { get; init; }
+    }
+    public static object FileInfo(params object?[] a) {
+        var path = CStr(a[0]);
+        if (System.IO.Directory.Exists(path)) {
+            var directory = new System.IO.DirectoryInfo(path);
+            return new XpFileInfo { Name = directory.Name, FullPath = directory.FullName, Extension = string.Empty,
+                Length = 0, IsFile = false, IsDirectory = true, IsLink = directory.LinkTarget is not null,
+                Attributes = (long)directory.Attributes, Created = directory.CreationTime,
+                Modified = directory.LastWriteTime, Accessed = directory.LastAccessTime };
+        }
+        var info = new System.IO.FileInfo(path);
+        return new XpFileInfo { Name = info.Name, FullPath = info.FullName, Extension = info.Extension,
+            Length = info.Exists ? info.Length : 0, IsFile = info.Exists, IsDirectory = false,
+            IsLink = info.LinkTarget is not null, Attributes = (long)info.Attributes,
+            Created = info.CreationTime, Modified = info.LastWriteTime, Accessed = info.LastAccessTime };
+    }
     public static object MkDir(params object?[] a) { System.IO.Directory.CreateDirectory(CStr(a[0])); return true; }
     public static object RmDir(params object?[] a) { System.IO.Directory.Delete(CStr(a[0]), true); return true; }
     public static long FreeFile() => 1;

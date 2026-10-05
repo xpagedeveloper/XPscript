@@ -1050,7 +1050,7 @@ public sealed class StatementParser
         var arguments = new List<ExpressionSyntax>();
         while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
         {
-            var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
+            var commaIndex = FindTopLevelTokenOnCurrentLine(SyntaxKind.CommaToken);
             var end = commaIndex >= 0 ? commaIndex : FindLineEndIndex(_position);
             arguments.Add(ParseExpressionRange(_position, end, _tokens[end].Span.Start));
             _position = end;
@@ -1097,7 +1097,7 @@ public sealed class StatementParser
         var arguments = new List<ExpressionSyntax>();
         while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
         {
-            var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
+            var commaIndex = FindTopLevelTokenOnCurrentLine(SyntaxKind.CommaToken);
             var end = commaIndex >= 0 ? commaIndex : FindLineEndIndex(_position);
             arguments.Add(ParseExpressionRange(_position, end, _tokens[end].Span.Start));
             _position = end;
