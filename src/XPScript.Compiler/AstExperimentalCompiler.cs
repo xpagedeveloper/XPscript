@@ -339,13 +339,13 @@ internal static class Program
     public static string Input(object? count) => string.Empty;
     public static string Input(object? count, object? file) => string.Empty;
     public static void Sleep(object? milliseconds) => System.Threading.Thread.Sleep(Math.Max(0, Convert.ToInt32(milliseconds)));
-    public static void AstPut(object? file, object? position, object? value) {{ }}
-    public static void AstLockBytes(object? file, object? start, object? end) {{ }}
-    public static void AstUnlockBytes(object? file, object? start, object? end) {{ }}
-    public static void AstOpen(object? path, object? mode, object? file) {{ }}
-    public static void AstClose(object? file) {{ }}
-    public static void AstClose() {{ }}
-    public static void AstPrintFile(object? file, object? value) {{ }}
+    public static void AstPut(object? file, object? position, object? value) { }
+    public static void AstLockBytes(object? file, object? start, object? end) { }
+    public static void AstUnlockBytes(object? file, object? start, object? end) { }
+    public static void AstOpen(object? path, object? mode, object? file) { }
+    public static void AstClose(object? file) { }
+    public static void AstClose() { }
+    public static void AstPrintFile(object? file, object? value) { }
     public static string AstLineInput(object? file) => string.Empty;
     public static void AstKill(object? path) => File.Delete(CStr(path));
     public static string AstInputChars(object? count, object? file) => string.Empty;
