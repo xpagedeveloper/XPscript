@@ -40,6 +40,7 @@ public sealed class BoundStatementEmitter
                 var expressionText = _expressions.Emit(assignment.Expression).Replace("((object)(new XpJsonDocument()))", "new XpJsonDocument()", StringComparison.Ordinal);
                 if (targetText is "http.TimeoutSec" or "http.MaxRedirects" or "http.ResponseCode") expressionText = $"Convert.ToInt64({expressionText})";
                 if (targetText.EndsWith(".Timeout", StringComparison.OrdinalIgnoreCase)) expressionText = $"Convert.ToInt64({expressionText})";
+                if (targetText.Equals("ai", StringComparison.OrdinalIgnoreCase)) expressionText = $"(XpAi){expressionText}";
                 if (targetText is "http.PreferStrings" or "http.PreferJSONNavigator") expressionText = $"Convert.ToBoolean({expressionText})";
                 Line($"{targetText} = {expressionText};");
                 break;
