@@ -27,6 +27,7 @@ void Equal(object? expected, object? actual)
 // Verify C# literal types as well as their values through Roslyn.
 var escaped = "quote\" slash\\ line\nreturn\rtab\tzero\0";
 var statements = new BoundStatementEmitter();
+var methods = new BoundMethodEmitter();
 var symbols = new SymbolTable();
 symbols.Declare(new VariableSymbol("number", typeof(long)));
 var parser = new StatementParser("If False Then\nnumber = 9\nElseIf True Then\nnumber = 2\nElse\nnumber = 8\nEnd If");
@@ -65,6 +66,9 @@ var selectClause = new BoundCaseClause(SelectCaseKind.Value, null, new BoundLite
 var select = statements.Emit([new BoundSelectStatement(name, [selectClause])]);
 if (!select.Contains("LSCoreCompare.Equal", StringComparison.Ordinal))
     throw new InvalidOperationException("Select Case emission did not use the shared comparison runtime helper.");
+var method = methods.Emit("GeneratedValue", typeof(long), [new BoundReturnStatement(new BoundLiteralExpression(42L, typeof(long))) ]);
+if (!method.Contains("public static long GeneratedValue()", StringComparison.Ordinal) || !method.Contains("return 42L;", StringComparison.Ordinal))
+    throw new InvalidOperationException("Bound method emission did not produce a complete C# method.");
 var mapped = statements.EmitWithSourceMap([boundIf], "If True Then\nnumber = 1\nEnd If", "flow.xps");
 if (!mapped.Code.Contains("#line 1 \"flow.xps\"", StringComparison.Ordinal) || mapped.SourceMappings.Count == 0)
     throw new InvalidOperationException("Bound statement emission did not preserve source mapping.");
