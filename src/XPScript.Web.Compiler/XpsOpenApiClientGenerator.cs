@@ -61,6 +61,7 @@ public sealed class XpsOpenApiClientGenerator
     {
         try
         {
+            specification = Regex.Replace(specification, @"\\\r?\n\s*", string.Empty, RegexOptions.CultureInvariant);
             var trimmed = specification.AsSpan().TrimStart();
             if (!trimmed.IsEmpty && trimmed[0] == '{')
                 return JsonNode.Parse(specification) as JsonObject ?? throw new XpsOpenApiGenerationException("OpenAPI JSON root must be an object.");
