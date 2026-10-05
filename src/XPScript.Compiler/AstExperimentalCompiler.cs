@@ -68,6 +68,8 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Chr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Asc", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Replace", typeof(string), [typeof(string), typeof(string), typeof(string)]));
+        symbols.Declare(new FunctionSymbol("InStr", typeof(long), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("InStr", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Trim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
@@ -203,6 +205,8 @@ internal static class Program
     public static string Chr(object value) => Convert.ToChar(value).ToString();
     public static long Asc(object value) => Convert.ToChar(value);
     public static string Replace(string value, string oldValue, string newValue) => value.Replace(oldValue, newValue, StringComparison.Ordinal);
+    public static long InStr(object? start, object? value, object? search) { var source = value?.ToString() ?? string.Empty; var needle = search?.ToString() ?? string.Empty; var offset = Math.Max(0, Convert.ToInt32(start) - 1); var index = source.IndexOf(needle, offset, StringComparison.OrdinalIgnoreCase); return index < 0 ? 0 : index + 1; }
+    public static long InStr(object? value, object? search) => InStr(1L, value, search);
     public static string Trim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
     public static string UCase(object? value) => (value?.ToString() ?? string.Empty).ToUpperInvariant();
     public static string LCase(object? value) => (value?.ToString() ?? string.Empty).ToLowerInvariant();
