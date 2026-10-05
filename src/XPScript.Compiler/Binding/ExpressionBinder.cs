@@ -240,7 +240,15 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             .ToArray();
 
         if (candidates.Length == 0)
+        {
+            if (_allowDynamicMembers)
+            {
+                var dynamicFunction = new FunctionSymbol(name, typeof(object), arguments.Select(argument => argument.Type).ToArray(), XpTypeSymbol.Variant,
+                    arguments.Select(_ => XpTypeSymbol.Variant).ToArray(), arguments.Select(_ => false).ToArray());
+                return new BoundCallExpression(target, dynamicFunction, arguments);
+            }
             return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching overload for function '{name}'.");
+        }
         if (candidates.Length > 1)
             return Error(syntax, CompilerDiagnosticCodes.AmbiguousOverload, $"Call to function '{name}' is ambiguous.");
 
