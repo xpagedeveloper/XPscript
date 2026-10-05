@@ -1,4 +1,5 @@
 using XPScript.Web.Compiler;
+using System.Text.Json;
 
 namespace XPScript.Cli;
 
@@ -22,6 +23,8 @@ internal static class XpsOpenApiCommand
 
         var specificationPath = Path.GetFullPath(args[1]);
         string? outputPath = null;
+        string? statusPath = null;
+        var includedOperations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var force = false;
 
         for (var i = 2; i < args.Length; i++)
@@ -38,6 +41,14 @@ internal static class XpsOpenApiCommand
                     break;
                 case "--force":
                     throw new ArgumentException("openapi import is additive and does not accept --force.");
+                case "--operation" when command == "import":
+                    if (++i >= args.Length) throw new ArgumentException("--operation requires an operationId, path, or METHOD path.");
+                    foreach (var item in args[i].Split(",", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) includedOperations.Add(item);
+                    break;
+                case "--status-file" when command == "import":
+                    if (++i >= args.Length) throw new ArgumentException("--status-file requires a JSON path.");
+                    statusPath = Path.GetFullPath(args[i]);
+                    break;
                 default:
                     throw new ArgumentException($"Unknown openapi {command} argument: " + args[i]);
             }
@@ -49,7 +60,7 @@ internal static class XpsOpenApiCommand
 
         return command == "generate"
             ? Generate(specificationPath, outputPath, force)
-            : Import(specificationPath, outputPath);
+            : Import(specificationPath, outputPath, statusPath, includedOperations);
     }
 
     private static int RunClient(string[] args)
@@ -110,19 +121,25 @@ internal static class XpsOpenApiCommand
         return 0;
     }
 
-    private static int Import(string specificationPath, string outputPath)
+    private static int Import(string specificationPath, string outputPath, string? statusPath, IReadOnlySet<string> includedOperations)
     {
+        WriteStatus(statusPath, "reading", 0, 0, 0, null);
         if (!File.Exists(outputPath))
         {
-            var generated = new XpsOpenApiGenerator().GenerateFile(specificationPath);
-            ValidateAndReplace(outputPath, generated.Source);
+            WriteStatus(statusPath, "generating", 10, 0, 0, null);
+            var generated = new XpsOpenApiGenerator().GenerateFile(specificationPath, new XpsOpenApiGenerationOptions(includedOperations));
+            WriteStatus(statusPath, "generated", 55, generated.Operations.Count, generated.Models.Count, null);
+            ValidateAndReplace(outputPath, generated.Source, statusPath, generated.Operations.Count, generated.Models.Count);
+            WriteStatus(statusPath, "completed", 100, generated.Operations.Count, generated.Models.Count, outputPath);
             Console.WriteLine($"Imported {outputPath}");
             Console.WriteLine($"OpenAPI {generated.OpenApiVersion}: created new file with {generated.Operations.Count} endpoint(s), {generated.Models.Count} model(s)");
             return 0;
         }
         var existing = File.ReadAllText(outputPath);
+        WriteStatus(statusPath, "importing", 10, 0, 0, null);
         var result = new XpsOpenApiImporter().ImportFile(specificationPath, existing);
-        if (result.Changed) ValidateAndReplace(outputPath, result.Source);
+        if (result.Changed) ValidateAndReplace(outputPath, result.Source, statusPath, result.AddedProcedures.Count, result.AddedClasses.Count);
+        WriteStatus(statusPath, "completed", 100, result.AddedProcedures.Count, result.AddedClasses.Count, outputPath);
         Console.WriteLine($"OpenAPI {result.OpenApiVersion} additive import: {(result.Changed ? "updated" : "no additions")}");
         Console.WriteLine($"Added: {result.AddedClasses.Count} class(es), {result.AddedProperties.Count} class property/properties, {result.AddedProcedures.Count} procedure(s)");
         foreach (var item in result.AddedClasses) Console.WriteLine("  + class " + item);
@@ -133,7 +150,7 @@ internal static class XpsOpenApiCommand
         return 0;
     }
 
-    private static void ValidateAndReplace(string outputPath, string source)
+    private static void ValidateAndReplace(string outputPath, string source, string? statusPath = null, int operations = 0, int models = 0)
     {
         var directory = Path.GetDirectoryName(outputPath);
         if (string.IsNullOrWhiteSpace(directory)) directory = Environment.CurrentDirectory;
@@ -142,12 +159,22 @@ internal static class XpsOpenApiCommand
         try
         {
             File.WriteAllText(tempPath, source);
+            WriteStatus(statusPath, "compiling", 70, operations, models, null);
             var unit = new XpsWebCompiler().CompileAsync(tempPath, directory).GetAwaiter().GetResult();
             try { }
             finally { unit.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
             File.Move(tempPath, outputPath, overwrite: true);
         }
         finally { try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { } }
+    }
+
+    private static void WriteStatus(string? path, string phase, int progress, int operations, int models, string? output)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+        var payload = new { phase, progress, operations, models, output, updatedUtc = DateTimeOffset.UtcNow };
+        File.WriteAllText(path, JsonSerializer.Serialize(payload) + Environment.NewLine);
     }
 
     private static string DefaultOutput(string specificationPath) => Path.Combine(
@@ -174,7 +201,7 @@ internal static class XpsOpenApiCommand
         Console.WriteLine("""
 Usage:
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
-  xpscript openapi import <spec.yaml|spec.yml|spec.json> [-o output.xps]
+  xpscript openapi import <spec.yaml|spec.yml|spec.json> [-o output.xps] [--operation operationId|path] [--status-file status.json]
   xpscript openapi client generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--class ApiClass]
 
 `generate` and `import` retain their existing REST server behavior.
