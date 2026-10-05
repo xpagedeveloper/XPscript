@@ -254,6 +254,8 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Explode", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FullTrim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
+        foreach (var (name, value) in new[] { ("Jsonelem_type_object", 1L), ("Jsonelem_type_array", 2L), ("Jsonelem_type_string", 3L), ("Jsonelem_type_number", 4L), ("Jsonelem_type_boolean", 5L), ("Jsonelem_type_utf8_bytearray", 6L), ("Jsonelem_type_empty", 64L) })
+            symbols.Declare(new VariableSymbol(name, typeof(long), XpTypeSymbol.FromClr(typeof(long))));
         foreach (var name in new[] { "Date", "Date$", "Format", "Format$", "InputBox", "MsgBox", "ChDrive", "Erase", "JsonParse" })
             symbols.Declare(new FunctionSymbol(name, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Date", typeof(object), [], XpTypeSymbol.Variant, []));
@@ -322,6 +324,7 @@ internal static class AstExperimentalCompiler
             moduleFields += Environment.NewLine + "    public static dynamic BuildState = new ExpandoObject();";
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?im)^\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*\([^\r\n]+\)\s+As\s+\w+", RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = new ExpandoObject();"));
+        moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
         foreach (var compatibilityProcedure in new[] { "ProcedureCounter" })
             if (Regex.IsMatch(fullSource, $@"(?im)^\s*(?:Function|Sub)\s+{compatibilityProcedure}\b"))
                 procedureStubs += Environment.NewLine + $"    public static object {compatibilityProcedure}() => 0;";
@@ -335,7 +338,7 @@ public sealed class XpPerson {
     public string Describe() => Name + ":" + Role;
 }
 """ : string.Empty;
-        if (fullSource.Contains("XPCsvDocument", StringComparison.OrdinalIgnoreCase) || fullSource.Contains("XPJson", StringComparison.OrdinalIgnoreCase)) classSupport += """
+        if (fullSource.Contains("XPCsvDocument", StringComparison.OrdinalIgnoreCase) || fullSource.Contains("XPJson", StringComparison.OrdinalIgnoreCase) || fullSource.Contains("NotesJSON", StringComparison.OrdinalIgnoreCase)) classSupport += """
 public sealed class XpJsonElement { public string Type { get; set; } = "String"; public object? Value { get; set; } }
 public sealed class XpJsonDocument { public XpJsonElement Root { get; } = new(); public static XpJsonDocument Parse(object? text) => new(); public string Stringify() => Root.Value?.ToString() ?? "{}"; public object ToObject(object target) => target; }
 public sealed class XpJsonObject { internal readonly Dictionary<string,object?> Data = new(); public int Count => Data.Count; public void Set(string key, object? value) => Data[key] = value; public object? Get(string key) => Data.TryGetValue(key, out var value) ? value : null; public bool Contains(string key) => Data.ContainsKey(key); public void Remove(string key) => Data.Remove(key); }
