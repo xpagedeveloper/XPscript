@@ -17,9 +17,13 @@ internal static class AstExperimentalCompiler
         if (source.Contains("XPImage", StringComparison.OrdinalIgnoreCase))
         {
             source = Regex.Replace(source, @"\bXPImage\.FromBytes\s*\((?<value>[^)]*)\)", "AstImageFromBytes(${value})", RegexOptions.IgnoreCase);
+            source = Regex.Replace(source, @"\bXPImage\.(?:FromBase64|Load)\s*\([^)]*\)", "New Object()", RegexOptions.IgnoreCase);
             source = Regex.Replace(source, @"\bNew\s+XPImage\s*\([^)]*\)", "New Object()", RegexOptions.IgnoreCase);
             source = Regex.Replace(source, @"\bXPImage\b", "Object", RegexOptions.IgnoreCase);
             source = Regex.Replace(source, @"System\.Text\.Encoding\.UTF8\.GetBytes\((?<value>[^)]*)\)", "AstUtf8(${value})", RegexOptions.IgnoreCase);
+            source = Regex.Replace(source, @"System\.Text\.Encoding\.UTF8\.GetString\((?<value>[^)]*)\)", "CStr(${value})", RegexOptions.IgnoreCase);
+            source = Regex.Replace(source, @"System\.Convert\.ToBase64String\((?<value>[^)]*)\)", "ToBase64(${value})", RegexOptions.IgnoreCase);
+            source = Regex.Replace(source, @"\bObject\.(?:FromBase64|Load)\s*\([^)]*\)", "New Object()", RegexOptions.IgnoreCase);
         }
         source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
         source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);
