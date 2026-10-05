@@ -4,8 +4,17 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- This probe is also used while compiler samples are running. Keep its
+         project-reference build single threaded so it never races the shared
+         compiler output directory. -->
+    <BuildInParallel>false</BuildInParallel>
+    <BuildProjectReferences>true</BuildProjectReferences>
+    <UseSharedCompilation>false</UseSharedCompilation>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/XPScript.Compiler/XPScript.Compiler.csproj" />
+    <!-- The solution builds XPScript.Compiler before this probe. Do not
+         rebuild that project as a project-reference here: the probe is often
+         launched while compiler processes are still loading its output DLL. -->
+    <ProjectReference Include="../../src/XPScript.Compiler/XPScript.Compiler.csproj" BuildReference="false" ReferenceOutputAssembly="true" />
   </ItemGroup>
 </Project>
