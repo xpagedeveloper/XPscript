@@ -9,5 +9,9 @@ Sub Main()
     For i = 1 To 2
         Print i
     Next
+    While i < 4
+        i = i + 1
+        Print i
+    Wend
     Exit Sub
 End Sub
