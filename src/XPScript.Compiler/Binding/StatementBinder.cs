@@ -362,7 +362,9 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         }
 
         var conversion = Conversion.Classify(value.SemanticType, target.SemanticType);
-        if (!conversion.IsImplicit)
+        if (!conversion.IsImplicit && _allowDynamicMembers)
+            value = new BoundConversionExpression(value, target.SemanticType, new Conversion(ConversionKind.FromVariant)) { Span = value.Span };
+        else if (!conversion.IsImplicit)
             _diagnostics.Add(new SyntaxDiagnostic(
                 CompilerDiagnosticCodes.TypeMismatch,
                 $"Cannot assign {value.SemanticType.Name} to {target.SemanticType.Name}.",

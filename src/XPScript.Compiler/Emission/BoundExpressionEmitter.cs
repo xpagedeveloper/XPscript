@@ -18,7 +18,7 @@ public sealed class BoundExpressionEmitter
         BoundIndexedPropertyExpression indexed => $"{Emit(indexed.Receiver)}.{indexed.Property.Name.Split('.').Last()}({string.Join(", ", indexed.Arguments.Select(Emit))})",
         BoundCallExpression call => EmitCall(call),
         BoundUnaryExpression unary => $"({EmitUnaryOperator(unary.OperatorKind)}{Emit(unary.Operand)})",
-        BoundBinaryExpression binary => $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind)} {Emit(binary.Right)})",
+        BoundBinaryExpression binary => EmitBinary(binary),
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
 
@@ -33,6 +33,10 @@ public sealed class BoundExpressionEmitter
         });
         return $"{(call.Target is null ? call.Function.Name : Emit(call.Target))}({string.Join(", ", arguments)})";
     }
+
+    private string EmitBinary(BoundBinaryExpression binary) => binary.OperatorKind == SyntaxKind.PlusToken && binary.Type == typeof(string)
+        ? $"(Convert.ToString({Emit(binary.Left)}) + Convert.ToString({Emit(binary.Right)}))"
+        : $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind)} {Emit(binary.Right)})";
 
     private static string EmitLiteral(BoundLiteralExpression expression) => expression.Value switch
     {
