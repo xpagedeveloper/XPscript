@@ -16,7 +16,7 @@ internal static class AstExperimentalCompiler
         if (declarationStart.Success)
             source = source[declarationStart.Index..].TrimStart();
         var parser = new DeclarationParser(source);
-        var declaration = parser.ParseDeclaration();
+        var unit = parser.ParseCompilationUnit();
         if (parser.Diagnostics.Count > 0)
         {
             var diagnostic = parser.Diagnostics[0];
@@ -25,6 +25,8 @@ internal static class AstExperimentalCompiler
                 diagnostic.Code,
                 "syntax");
         }
+        var declaration = unit.Declarations.FirstOrDefault(item => item is SubDeclarationSyntax candidate && candidate.Identifier.Text.Equals("Main", StringComparison.OrdinalIgnoreCase))
+            ?? unit.Declarations.FirstOrDefault(item => item is SubDeclarationSyntax or FunctionDeclarationSyntax);
         var sub = declaration as SubDeclarationSyntax;
         var function = declaration as FunctionDeclarationSyntax;
         if (sub is null && function is null)
