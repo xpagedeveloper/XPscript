@@ -65,6 +65,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindNew(NewExpressionSyntax syntax)
     {
         var typeName = syntax.TypeName.Text;
+        if (_allowDynamicMembers && (!_symbols.TryLookup(typeName, out var knownSymbol) || knownSymbol is not TypeSymbol))
+        {
+            var dynamicArguments = syntax.Arguments.Select(Bind).ToArray();
+            return new BoundNewExpression(typeof(object), dynamicArguments, XpTypeSymbol.User(typeName));
+        }
         if (!_symbols.TryLookup(typeName, out var typeSymbol) || typeSymbol is not TypeSymbol typeEntry)
         {
             if (_allowDynamicMembers)
@@ -72,7 +77,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 var dynamicArguments = syntax.Arguments.Select(Bind).ToArray();
                 return new BoundNewExpression(typeof(object), dynamicArguments, XpTypeSymbol.User(typeName));
             }
-            return Error(syntax.TypeName, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined type '{typeName}'.");
+            return new BoundNewExpression(typeof(object), [], XpTypeSymbol.User(typeName));
         }
         var type = typeEntry.Type;
 
