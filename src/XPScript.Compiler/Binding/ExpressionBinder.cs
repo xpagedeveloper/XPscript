@@ -127,6 +127,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
     private BoundExpression BindArray(ArrayExpressionSyntax syntax)
     {
+        if (_allowDynamicMembers && syntax.Elements.Count == 1 && _symbols.TryLookup(syntax.ArrayIdentifier.Text, out var localSymbol) && localSymbol is LocalSymbol local && local.Type == typeof(object))
+        {
+            var index = Bind(syntax.Elements[0]);
+            return new BoundIndexExpression(new BoundNameExpression(local), index, typeof(object), XpTypeSymbol.Variant);
+        }
         var functions = _symbols.LookupAll(syntax.ArrayIdentifier.Text).OfType<FunctionSymbol>().ToArray();
         if (functions.Length == 0)
         {
@@ -166,7 +171,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             }
             if (_symbols.TryLookup(name, out indexedSymbol) && indexedSymbol is LocalSymbol arrayLocal && arrayLocal.Type.IsArray && syntax.Arguments.Count == 0)
                 return new BoundNameExpression(arrayLocal);
-            if (_allowDynamicMembers && _symbols.TryLookup(name, out var dynamicSymbol) && dynamicSymbol is LocalSymbol dynamicLocal && dynamicLocal.Type == typeof(object) && syntax.Arguments.Count == 1)
+            if (_allowDynamicMembers && _symbols.TryLookup(name, out var dynamicSymbol) && dynamicSymbol is LocalSymbol dynamicLocal && dynamicLocal.Type == typeof(object) && dynamicLocal.SemanticType?.IsVariant == true && syntax.Arguments.Count == 1)
             {
                 var index = Bind(syntax.Arguments[0]);
                 return new BoundIndexExpression(new BoundNameExpression(dynamicLocal), index, typeof(object), XpTypeSymbol.Variant);
