@@ -1237,6 +1237,7 @@ public sealed class StatementParser
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("RmDir", StringComparison.OrdinalIgnoreCase)
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("ChDir", StringComparison.OrdinalIgnoreCase)
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("SetFileAttr", StringComparison.OrdinalIgnoreCase)
+            || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("Erase", StringComparison.OrdinalIgnoreCase)
         || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("ChDrive", StringComparison.OrdinalIgnoreCase);
 
     private ExpressionSyntax MissingExpression()

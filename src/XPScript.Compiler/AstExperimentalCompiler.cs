@@ -254,7 +254,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Explode", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FullTrim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
-        foreach (var name in new[] { "Date", "Date$", "Format", "Format$", "InputBox", "MsgBox", "ChDrive" })
+        foreach (var name in new[] { "Date", "Date$", "Format", "Format$", "InputBox", "MsgBox", "ChDrive", "Erase" })
             symbols.Declare(new FunctionSymbol(name, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Date", typeof(object), [], XpTypeSymbol.Variant, []));
         symbols.Declare(new FunctionSymbol("Date$", typeof(object), [], XpTypeSymbol.Variant, []));
@@ -681,6 +681,7 @@ internal static class Program
     public static object InputBox(object? prompt = null) => string.Empty;
     public static object MsgBox(object? prompt = null) { Console.WriteLine(CStr(prompt)); return 0L; }
     public static object ChDrive(object? drive) => true;
+    public static object Erase(object? value) => true;
     public static class XPScriptNullRuntime
     {
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
