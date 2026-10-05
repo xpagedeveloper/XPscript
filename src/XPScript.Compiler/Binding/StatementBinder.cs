@@ -17,6 +17,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             AssignmentStatementSyntax assignment => BindAssignment(assignment.Target, assignment.Expression),
             SetStatementSyntax set => BindAssignment(set.Target, set.Expression, isSet: true),
             ExpressionStatementSyntax expression => BindExpressionStatement(expression),
+            CallStatementSyntax call => BindCallStatement(call),
             ReturnStatementSyntax @return => BindReturn(@return),
             IfStatementSyntax @if => BindIf(@if),
             ForStatementSyntax @for => BindFor(@for),
@@ -61,6 +62,12 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     }
 
     private BoundStatement? BindExpressionStatement(ExpressionStatementSyntax syntax)
+    {
+        var expression = BindExpression(syntax.Expression);
+        return expression is null ? null : new BoundExpressionStatement(expression);
+    }
+
+    private BoundStatement? BindCallStatement(CallStatementSyntax syntax)
     {
         var expression = BindExpression(syntax.Expression);
         return expression is null ? null : new BoundExpressionStatement(expression);

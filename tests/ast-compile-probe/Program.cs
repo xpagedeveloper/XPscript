@@ -5,11 +5,11 @@ using XPScript.Compiler.Binding;
 using XPScript.Compiler.Emission;
 using XPScript.Compiler.Syntax;
 
-const string source = "Sub Main()\nAstPrint()\nEnd Sub\n";
+const string source = "Sub Main()\nCall AstPrint()\nEnd Sub\n";
 var declaration = new DeclarationParser(source).ParseDeclaration();
 if (declaration is not SubDeclarationSyntax sub || declaration is null)
     throw new InvalidOperationException("AST declaration parser did not produce a Sub.");
-if (sub.Statements.Count != 1 || sub.Statements[0] is not ExpressionStatementSyntax)
+if (sub.Statements.Count != 1 || sub.Statements[0] is not CallStatementSyntax)
     throw new InvalidOperationException("AST declaration parser did not retain the call statement.");
 
 var symbols = new SymbolTable();
