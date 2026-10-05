@@ -39,6 +39,10 @@ internal static class AstExperimentalCompiler
             symbols.Declare(new TypeSymbol(classDeclaration.Identifier.Text, typeof(object), XpTypeSymbol.User(classDeclaration.Identifier.Text)));
         foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Public\s+|Private\s+)?Class\s+(?<name>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new TypeSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.User(match.Groups["name"].Value)));
+        foreach (var procedure in unit.Declarations.OfType<SubDeclarationSyntax>())
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray()));
+        foreach (var procedure in unit.Declarations.OfType<FunctionDeclarationSyntax>())
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, ResolveRuntimeType(procedure.ReturnType?.Identifier.Text), procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray()));
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
         symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
