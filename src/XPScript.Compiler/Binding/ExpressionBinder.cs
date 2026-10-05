@@ -136,7 +136,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
     private BoundExpression BindArray(ArrayExpressionSyntax syntax)
     {
-        if (_allowDynamicMembers && syntax.Elements.Count == 1 && _symbols.TryLookup(syntax.ArrayIdentifier.Text, out var localSymbol) && localSymbol is LocalSymbol local && local.Type == typeof(object))
+        if (_allowDynamicMembers && syntax.Elements.Count >= 1 && _symbols.TryLookup(syntax.ArrayIdentifier.Text, out var localSymbol) && localSymbol is LocalSymbol local && local.Type == typeof(object))
         {
             var index = Bind(syntax.Elements[0]);
             return new BoundIndexExpression(new BoundNameExpression(local), index, typeof(object), XpTypeSymbol.Variant);
