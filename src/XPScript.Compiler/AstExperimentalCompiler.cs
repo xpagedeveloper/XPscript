@@ -203,6 +203,18 @@ internal static class AstExperimentalCompiler
                 FunctionDeclarationSyntax procedure => $"    public static {CSharpType(ResolveRuntimeType(procedure.ReturnType?.Identifier.Text))} {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select(p => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {p.Identifier.Text}"))}) => default;",
                 _ => string.Empty
             }));
+        foreach (Match optional in Regex.Matches(fullSource, @"(?im)^\s*(?<kind>Sub|Function)\s+(?<name>[A-Za-z_]\w*)\s*\((?<parameters>[^)]*Optional[^)]*)\)", RegexOptions.Multiline))
+        {
+            var parametersText = optional.Groups["parameters"].Value;
+            var required = parametersText.Split(',').Select(p => p.Trim()).Where(p => !p.StartsWith("Optional ", StringComparison.OrdinalIgnoreCase)).ToArray();
+            var signature = string.Join(", ", required.Select(p =>
+            {
+                var parts = Regex.Split(p, @"\s+As\s+", RegexOptions.IgnoreCase);
+                return $"{CSharpType(ResolveRuntimeType(parts.Length > 1 ? parts[1] : null))} {parts[0].Trim()}";
+            }));
+            var returnTypeText = optional.Groups["kind"].Value.Equals("Function", StringComparison.OrdinalIgnoreCase) ? "object" : "void";
+            procedureStubs += Environment.NewLine + $"    public static {returnTypeText} {optional.Groups["name"].Value}({signature}) => default;";
+        }
         var moduleFields = string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
