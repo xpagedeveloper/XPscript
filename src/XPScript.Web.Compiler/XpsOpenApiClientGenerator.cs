@@ -555,7 +555,8 @@ public sealed class XpsOpenApiClientGenerator
         if (string.IsNullOrWhiteSpace(value))
             throw new XpsOpenApiGenerationException("OpenAPI schema has an empty identifier.");
         var trimmed = value.Trim();
-        return ToIdentifier(trimmed);
+        var identifier = ToIdentifier(trimmed);
+        return IsDeclarationReserved(identifier) ? "OpenApi" + identifier : identifier;
     }
     private static string ToIdentifier(string value) { var parts = Regex.Split(value.Trim(), "[^A-Za-z0-9_]+").Where(y => y.Length > 0).ToArray(); if (parts.Length == 0) throw new XpsOpenApiGenerationException($"'{value}' cannot be converted to an XPScript identifier."); var result = string.Concat(parts.Select(y => char.ToUpperInvariant(y[0]) + y[1..])); if (char.IsDigit(result[0])) result = "Api" + result; return result; }
     private static string EscapeXps(string value) => value.Replace("\"", "\"\""); private static string? ReadString(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<string>(out var teyt) ? teyt : null; private static bool ReadBool(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<bool>(out var result) && result;
