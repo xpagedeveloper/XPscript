@@ -129,14 +129,14 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [ ] Verify XPImage can load packaged application assets on Android.
 - [ ] Verify application asset file reads work on Android and asset mutation attempts fail with runtime error 5.
 - [x] Build and run a debug APK on Android 11 / API 30. (Verified in CI on an Android 11 / API 30 x86_64 emulator: generated APK installed, launched and the expected XPScript log output was observed.)
-- [ ] Allow `UIForm.BootImage` and Image controls to use an `XPImage` source consistently on desktop, Android, server-web and Browser-WASM UIForm paths.
-- [ ] Preserve platform-appropriate UIForm media sources alongside assets: desktop Windows/Linux/macOS may load local filesystem images and HTTP/HTTPS; Android may load accessible local files and HTTP/HTTPS; server-web and Browser-WASM may load web assets and HTTP/HTTPS without exposing arbitrary server/user filesystem paths.
+- [x] Allow `UIForm.BootImage` and Image controls to use an `XPImage` source consistently on desktop, Android, server-web and Browser-WASM UIForm paths. A focused cross-target transpilation regression compiles live XPImage sources for desktop, Android and Browser-WASM and verifies the shared data-image conversion plus server-web guards.
+- [x] Preserve platform-appropriate UIForm media sources alongside assets: desktop Windows/Linux/macOS may load local filesystem images and HTTP/HTTPS; Android may load accessible local files and HTTP/HTTPS; server-web and Browser-WASM may load web assets and HTTP/HTTPS without exposing arbitrary server/user filesystem paths. The focused target-policy regression verifies HTTP/HTTPS/data-image handling, native file URI/rooted-path support, Browser-WASM rejection and server-web local-path guards.
 - [ ] Allow `XPImage.Load` and every supported read-only file operation (input/binary reads, existence/length/date/attributes, enumeration and other file-inspection APIs) to read packaged application assets on every platform where that operation is supported.
 - [ ] Enforce application assets as read-only for file mutation APIs and `XPImage.Save`, with a clear runtime error.
 - [ ] Extend XPImage source loading so desktop apps can load local filesystem images, all supported app targets can load packaged `assets/...`, base64/data:image sources and HTTP/HTTPS where networking is supported.
 - [ ] Add instance-based XPImage `Src` and `IsLoaded` lifecycle: assigning a new source clears the loaded state/image first; `IsLoaded` becomes true only after the source has been fully fetched/decoded and validated as an image; failed loads remain false and surface the load error.
 - [ ] Keep existing XPImage constructors/factories deterministic: newly created canvas images and successful `Load`/`FromBase64`/`FromBytes` results are immediately `IsLoaded = true`.
-- [ ] Support `data:image/...;base64,...` for UIForm BootImage and Image controls on every UIForm platform that supports image rendering.
+- [x] Support `data:image/...;base64,...` for UIForm BootImage and Image controls on every UIForm platform that supports image rendering. The shared media normalizer accepts image data URIs, server-web enforces the image media type, and the cross-target XPImage regression verifies the generated data-image path.
 - [ ] Add focused cross-platform regression coverage for XPImage-backed UIForm media and read-only asset I/O.
 - [x] Add Android UIForm regression samples. `samples/android-uiform-regression.xps` is compiler-guarded and built as an Android UIForm APK in Android CI.
 - [x] Add non-device compiler/packaging regression coverage for Android UIForm. `AndroidCompilerProbe` guards the generated host/project contract and Android CI publishes both a focused direct Avalonia Android project and the compiler-generated minimal UIForm APK.
@@ -178,61 +178,34 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 - [ ] Prefer platform-supported maintained APIs or maintained libraries over custom camera stack implementation.
 - [ ] Define an XPScript API for taking a photo.
 - [ ] Define an XPScript API for selecting/capturing image output as file path and/or bytes.
-- [ ] Handle runtime camera permission requests.
-- [ ] Handle unavailable camera hardware.
-- [ ] Handle user cancellation.
-- [ ] Verify lifecycle behavior while the camera activity is active.
-- [ ] Add focused camera capability tests that do not require hardware where possible.
-- [ ] Add optional physical-device camera integration tests.
+- [ ] Define image format, orientation and metadata behavior.
+- [ ] Handle runtime camera permission requests and denial.
+- [ ] Handle devices without a usable camera.
+- [ ] Add focused compiler/runtime tests with a fake platform adapter before device tests.
+- [ ] Add opt-in physical-device camera integration tests.
 
-### Location and GPS
+### Location / GPS
 
 - [ ] Investigate Android location APIs suitable for XPScript.
-- [ ] Define an XPScript API for a one-shot location request.
-- [ ] Return latitude, longitude, accuracy and timestamp at minimum.
-- [ ] Consider altitude, speed and heading where supported.
-- [ ] Handle coarse versus precise location permission.
-- [ ] Handle disabled location services.
-- [ ] Define timeout and cancellation semantics.
-- [ ] Avoid background location support until a concrete use case and permission model are defined.
-- [ ] Add focused non-device tests around adapters and result mapping.
-- [ ] Add optional physical-device GPS integration tests.
+- [ ] Define an XPScript API for one-shot current location.
+- [ ] Define whether continuous location updates are required and, if so, cancellation/lifecycle behavior.
+- [ ] Define latitude, longitude, accuracy, altitude, speed and timestamp representation.
+- [ ] Handle foreground/background permission differences explicitly.
+- [ ] Handle location services being disabled.
+- [ ] Handle timeout and unavailable-fix behavior deterministically.
+- [ ] Add focused compiler/runtime tests with a fake location provider before device tests.
+- [ ] Add opt-in physical-device GPS integration tests.
 
-### Additional mobile capabilities to evaluate
-
-Investigate these individually. Do not add them merely because Android exposes them.
+### Additional mobile capabilities to investigate
 
 - [ ] File/document picker.
 - [ ] Photo/media picker.
-- [ ] Clipboard integration.
 - [ ] Share sheet.
-- [ ] Open URI / deep links.
-- [ ] Device information and screen metrics.
-- [ ] Network/connectivity status.
-- [ ] Haptics/vibration.
-- [ ] Accelerometer.
-- [ ] Gyroscope.
-- [ ] Compass.
-- [ ] Battery status.
+- [ ] Clipboard integration.
+- [ ] Vibration/haptics.
+- [ ] Network/connectivity state.
+- [ ] Battery state.
+- [ ] Device/app information.
+- [ ] Open URI / app links.
 - [ ] Notifications.
-- [ ] Secure local storage for application secrets.
-- [ ] Biometric authentication.
-- [ ] Contacts, only if a concrete use case justifies the privacy surface.
-- [ ] Microphone/audio capture, only after permissions and lifecycle behavior are defined.
-
-## Stage 6: security, privacy and release hardening
-
-- [ ] Document every Android permission requested by XPScript applications.
-- [ ] Request permissions only when the application uses the corresponding capability.
-- [ ] Keep camera, location, microphone, contacts and similar permissions opt-in.
-- [ ] Verify application data storage locations and backup behavior.
-- [ ] Verify no debug logging exposes secrets or sensitive captured data.
-- [ ] Define release signing flow.
-- [ ] Add AAB build support.
-- [ ] Verify trimming/AOT compatibility for the supported Android runtime path.
-- [ ] Verify dependency license and security checks cover Android-specific packages.
-- [ ] Document supported Android versions, API levels and ABIs based on tested evidence.
-
-## CLI platform selection
-
-- [x] Reuse the existing `--platform` option for Android target RID selection instead of introducing an Android-specific `--rid` option.
+- [ ] Sensors such as accelerometer/gyroscope if there is a concrete XPScript use case.
