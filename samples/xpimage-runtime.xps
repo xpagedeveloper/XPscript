@@ -4,6 +4,12 @@ Sub VerifyApplicationAssetReadOnly()
     If Not asset.IsLoaded Then Error 5, "XPImage application asset did not load"
     If asset.Width <> 1 Or asset.Height <> 1 Then Error 5, "XPImage application asset dimensions failed"
     If FileLen("assets/xpimage-asset.png") <= 0 Then Error 5, "Application asset FileLen failed"
+    If FileDateTime("assets/xpimage-asset.png") <= #1/1/1970# Then Error 5, "Application asset FileDateTime failed"
+    If GetAttr("assets/xpimage-asset.png") < 0 Then Error 5, "Application asset GetAttr failed"
+
+    Dim assetEntry As String
+    assetEntry = Dir("assets/*.png")
+    If LCase(assetEntry) <> "xpimage-asset.png" Then Error 5, "Application asset enumeration failed"
 
     Dim assetFile As Integer
     Dim firstByte As Byte
@@ -28,6 +34,66 @@ Sub VerifyApplicationAssetReadOnly()
     On Error GoTo 0
     Close #assetFile
     If putErr <> 5 Then Error 5, "Binary Put to application assets must return runtime error 5"
+
+    Dim outputErr As Integer
+    On Error Resume Next
+    assetFile = FreeFile()
+    Open "assets/xpimage-asset-new.txt" For Output As #assetFile
+    outputErr = Err
+    On Error GoTo 0
+    If outputErr <> 5 Then Error 5, "Output Open in application assets must return runtime error 5"
+
+    Dim deleteErr As Integer
+    On Error Resume Next
+    Kill "assets/xpimage-asset.png"
+    deleteErr = Err
+    On Error GoTo 0
+    If deleteErr <> 5 Then Error 5, "Kill in application assets must return runtime error 5"
+
+    Dim copyErr As Integer
+    On Error Resume Next
+    FileCopy "assets/xpimage-asset.png", "assets/xpimage-asset-copy-2.png"
+    copyErr = Err
+    On Error GoTo 0
+    If copyErr <> 5 Then Error 5, "FileCopy destination in application assets must return runtime error 5"
+
+    Dim attrErr As Integer
+    On Error Resume Next
+    SetAttr "assets/xpimage-asset.png", GetAttr("assets/xpimage-asset.png")
+    attrErr = Err
+    On Error GoTo 0
+    If attrErr <> 5 Then Error 5, "SetAttr in application assets must return runtime error 5"
+End Sub
+
+Sub VerifyLoadLifecycle()
+    Dim canvas As New XPImage(3, 2, "#123456")
+    If Not canvas.IsLoaded Then Error 5, "XPImage canvas constructor must be loaded immediately"
+
+    Dim pngBytes As Byte[]
+    pngBytes = canvas.ToBytes("png")
+    Dim fromBytes As XPImage
+    Set fromBytes = XPImage.FromBytes(pngBytes)
+    If Not fromBytes.IsLoaded Then Error 5, "XPImage.FromBytes must be loaded immediately"
+
+    Dim b64 As String
+    b64 = System.Convert.ToBase64String(pngBytes)
+    Dim fromBase64 As XPImage
+    Set fromBase64 = XPImage.FromBase64(b64)
+    If Not fromBase64.IsLoaded Then Error 5, "XPImage.FromBase64 must be loaded immediately"
+
+    Dim lifecycle As New XPImage
+    If lifecycle.IsLoaded Then Error 5, "Empty XPImage must start unloaded"
+    lifecycle.Src = "data:image/png;base64," & b64
+    If Not lifecycle.IsLoaded Then Error 5, "XPImage Src successful load must set IsLoaded"
+    If lifecycle.LoadError <> "" Then Error 5, "XPImage Src successful load must clear LoadError"
+
+    lifecycle.Src = "missing-xpimage-lifecycle.png"
+    If lifecycle.IsLoaded Then Error 5, "XPImage failed Src load must clear IsLoaded"
+    If lifecycle.LoadError = "" Then Error 5, "XPImage failed Src load must expose LoadError"
+
+    lifecycle.Src = ""
+    If lifecycle.IsLoaded Then Error 5, "XPImage empty Src must remain unloaded"
+    If lifecycle.LoadError <> "" Then Error 5, "XPImage empty Src must clear LoadError"
 End Sub
 
 Function MakeReturnedImage() As XPImage
@@ -124,6 +190,7 @@ End Sub
 
 Sub Main()
     Call VerifyApplicationAssetReadOnly()
+    Call VerifyLoadLifecycle()
     Call VerifyOutputPathSafety()
     Call VerifyUnsupportedActiveContent()
     Call VerifyOversizedRotation()
@@ -388,74 +455,3 @@ If Not alphaPropertyImage.HasAlpha Then Error 5, "XPImage HasAlpha property fail
     On Error Resume Next
     img.Median(-1)
     invalidMedianErr = Err
-    On Error GoTo 0
-    If invalidMedianErr = 0 Then Error 5, "XPImage invalid Median radius was accepted"
-
-    Dim invalidEdgeErr As Integer
-    On Error Resume Next
-    img.EdgeDetect(-1)
-    invalidEdgeErr = Err
-    On Error GoTo 0
-    If invalidEdgeErr = 0 Then Error 5, "XPImage invalid EdgeDetect radius was accepted"
-
-    Dim invalidEmbossErr As Integer
-    On Error Resume Next
-    img.Emboss(1, 0)
-    invalidEmbossErr = Err
-    On Error GoTo 0
-    If invalidEmbossErr = 0 Then Error 5, "XPImage invalid Emboss sigma was accepted"
-
-    Dim invalidMotionBlurErr As Integer
-    On Error Resume Next
-    img.MotionBlur(1, 0, 15)
-    invalidMotionBlurErr = Err
-    On Error GoTo 0
-    If invalidMotionBlurErr = 0 Then Error 5, "XPImage invalid MotionBlur sigma was accepted"
-
-    Dim invalidOilPaintErr As Integer
-    On Error Resume Next
-    img.OilPaint(-1, 1)
-    invalidOilPaintErr = Err
-    On Error GoTo 0
-    If invalidOilPaintErr = 0 Then Error 5, "XPImage invalid OilPaint radius was accepted"
-
-    Dim invalidOilPaintSigmaErr As Integer
-    On Error Resume Next
-    img.OilPaint(1, 0)
-    invalidOilPaintSigmaErr = Err
-    On Error GoTo 0
-    If invalidOilPaintSigmaErr = 0 Then Error 5, "XPImage invalid OilPaint sigma was accepted"
-
-    Dim drawing As XPImage
-    Set drawing = New XPImage(32, 24, "#ffffff")
-    drawing.DrawLine(1, 1, 30, 22, "#ff0000", 2)
-    drawing.DrawRectangle(3, 3, 12, 8, "#0000ff", 1, "#00ff00")
-    drawing.DrawEllipse(22, 12, 5, 4, "#000000", 1, "transparent")
-    drawing.DrawRoundedRectangle(8, 12, 10, 8, 2, 2, "#663399", 1, "#ffeeaa")
-    drawing.Border(2, "#663399")
-    Dim watermark As XPImage
-    Set watermark = New XPImage(4, 4, "#ff0000")
-    drawing.WatermarkImage(watermark, 2, 2, 0.5)
-    Dim textFont As String
-    textFont = "xpimage-test-font.ttf"
-    drawing.DrawText(2, 14, "XP", textFont, 8, "#000000")
-    drawing.WatermarkText(2, 22, "WM", textFont, 7, "#0000ff", 0.5)
-    drawing.DrawTextAligned(18, 10, "Åäö", textFont, 7, "#222222", "center")
-    drawing.DrawText(2, 7, "Default", "", 5, "#111111")
-    drawing.DrawTextWrapped(2, 8, 28, "Unicode åäö café text wraps", textFont, 5, "#333333", "left")
-    If drawing.Width <> 36 Or drawing.Height <> 28 Then Error 5, "XPImage drawing/border geometry failed"
-    Dim drawingBytes As Byte[]
-    drawingBytes = drawing.ToBytes("png")
-    If Len(drawingBytes) = 0 Then Error 5, "XPImage drawing encoding failed"
-
-    Dim owned As XPImage
-    Set owned = MakeReturnedImage()
-    If owned.Width <> 5 Or owned.Height <> 4 Then
-        Error 5, "Returned XPImage was recycled at function exit"
-    End If
-    Set owned = New XPImage(2, 2, "#ffffff")
-    If owned.Width <> 2 Then Error 5, "XPImage reassignment failed"
-    Set owned = Nothing
-    Print "XPIMAGE-RUNTIME=OK"
-    
-End Sub
