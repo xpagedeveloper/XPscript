@@ -8,7 +8,7 @@ New-Item -ItemType Directory -Force -Path $output | Out-Null
 Remove-Item -LiteralPath $report -Force -ErrorAction SilentlyContinue
 $failures = [System.Collections.Generic.List[string]]::new()
 foreach ($file in Get-ChildItem $samples -Recurse -Filter '*.xps' | Sort-Object FullName) {
-    $relative = [IO.Path]::GetRelativePath($samples, $file.FullName)
+    $relative = $file.FullName.Substring($samples.Length).TrimStart('\','/')
     $safe = ($relative -replace '[\\/: ]', '_') -replace '\.xps$', ''
     $target = Join-Path $output $safe
     New-Item -ItemType Directory -Force -Path $target | Out-Null
@@ -19,4 +19,5 @@ foreach ($file in Get-ChildItem $samples -Recurse -Filter '*.xps' | Sort-Object 
 }
 if ($failures.Count -gt 0) { throw "$($failures.Count) sample files failed AST compilation. See $report" }
 Write-Host "All sample files compiled through the AST compiler."
+
 
