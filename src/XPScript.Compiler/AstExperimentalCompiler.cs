@@ -398,8 +398,18 @@ internal static class Program
     public static object IsFile(params object?[] a) => System.IO.File.Exists(CStr(a[0]));
     public static object IsDir(params object?[] a) => System.IO.Directory.Exists(CStr(a[0]));
     public static object FileEquals(params object?[] a) => System.Linq.Enumerable.SequenceEqual(System.IO.File.ReadAllBytes(CStr(a[0])), System.IO.File.ReadAllBytes(CStr(a[1])));
-    public static object CopyFile(params object?[] a) { System.IO.File.Copy(CStr(a[0]), CStr(a[1]), a.Length > 2 && Convert.ToInt32(a[2]) == 2); return true; }
-    public static object MoveFile(params object?[] a) { System.IO.File.Move(CStr(a[0]), CStr(a[1]), a.Length > 2 && Convert.ToInt32(a[2]) == 2); return true; }
+    public static object CopyFile(params object?[] a) {
+        var source = CStr(a[0]); var target = CStr(a[1]); var action = a.Length > 2 ? Convert.ToInt32(a[2]) : 1;
+        if (System.IO.File.Exists(target)) { if (action == 3) return false; if (action != 2) return false; }
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(target))!);
+        System.IO.File.Copy(source, target, action == 2); return true;
+    }
+    public static object MoveFile(params object?[] a) {
+        var source = CStr(a[0]); var target = CStr(a[1]); var action = a.Length > 2 ? Convert.ToInt32(a[2]) : 1;
+        if (System.IO.File.Exists(target)) { if (action == 3) return false; if (action != 2) return false; }
+        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(target))!);
+        System.IO.File.Move(source, target, action == 2); return true;
+    }
     public static object WriteFile(params object?[] a) { var p = CStr(a[0]); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(p))!); System.IO.File.WriteAllText(p, CStr(a[1])); return true; }
     public static object AppendFile(params object?[] a) { var p = CStr(a[0]); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(p))!); System.IO.File.AppendAllText(p, CStr(a[1])); return true; }
     public static object WriteLines(params object?[] a) { System.IO.File.WriteAllLines(CStr(a[0]), ((System.Collections.IEnumerable)a[1]!).Cast<object?>().Select(CStr)); return true; }
