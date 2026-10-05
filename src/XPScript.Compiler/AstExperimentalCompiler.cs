@@ -507,6 +507,7 @@ internal static class Program
         if (value is not IEnumerable values) return value;
         if (value is string[] strings) { var clone = (string[])strings.Clone(); System.Array.Sort(clone, StringComparer.OrdinalIgnoreCase); return clone; }
         var result = values.Cast<object?>().ToArray();
+        result = result.Where(item => item is not null).ToArray();
         if (result.Any(item => item is string))
             result = result.OrderBy(CStr, StringComparer.OrdinalIgnoreCase).ToArray();
         else if (result.All(item => item is IConvertible))
@@ -519,7 +520,7 @@ internal static class Program
         }
         return result;
     }
-    public static string Join(object? value, object? separator = null) => value is System.Collections.IEnumerable items ? string.Join(separator is null ? " " : CStr(separator), items.Cast<object?>()) : string.Empty;
+    public static string Join(object? value, object? separator = null) => value is System.Collections.IEnumerable items ? string.Join(separator is null ? " " : CStr(separator), items.Cast<object?>().Where(item => item is not null).Select(CStr)) : string.Empty;
     public static string Implode(object? value, object? separator = null) => Join(value, separator);
     public static object CDate(object value) => Convert.ToDateTime(value);
     public static object Base64Decode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.FromBase64String(CStr(values[0]));
