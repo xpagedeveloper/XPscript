@@ -168,6 +168,12 @@ public sealed class ExpressionParser
             return new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, token.Text, token.Value, token.Span));
         }
 
+        if (Current.Kind is SyntaxKind.ByValKeyword or SyntaxKind.ByRefKeyword)
+        {
+            NextToken();
+            return ParsePrimaryExpression();
+        }
+
         // Statement keywords remain contextual where expressions allow identifiers.
         if (IsContextualIdentifier(Current.Kind))
         {
