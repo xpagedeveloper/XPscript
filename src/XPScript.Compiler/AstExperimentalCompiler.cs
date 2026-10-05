@@ -14,6 +14,10 @@ internal static class AstExperimentalCompiler
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
+        // XPscript Static locals have procedure lifetime. The AST path keeps
+        // the declaration as a normal Variant local for now, while preserving
+        // the declaration and its Empty initialization semantics.
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Static\s+", "${indent}Dim ");
         if (source.Contains("XPImage", StringComparison.OrdinalIgnoreCase))
         {
             source = Regex.Replace(source, @"\bXPImage\.FromBytes\s*\((?<value>[^)]*)\)", "AstImageFromBytes(${value})", RegexOptions.IgnoreCase);
