@@ -64,6 +64,7 @@ public sealed class BoundExpressionEmitter
             ConversionKind.Identity or ConversionKind.EmptyToVariant or ConversionKind.NullToVariant or ConversionKind.NothingToObject => value,
             ConversionKind.NumericWidening => $"((double)({value}))",
             ConversionKind.ToVariant or ConversionKind.ToObject => $"((object)({value}))",
+            ConversionKind.FromVariant when expression.Type.IsArray => $"({expression.Type.Name})({value})",
             ConversionKind.FromVariant => $"XPScriptRuntime.{ConversionMethod(expression.Type)}({value})",
             _ => throw new NotSupportedException($"Conversion {expression.Conversion.Kind} is not supported.")
         };
@@ -73,7 +74,7 @@ public sealed class BoundExpressionEmitter
         : type == typeof(long) ? "CLng"
         : type == typeof(double) ? "CDbl"
         : type == typeof(bool) ? "CBool"
-        : type == typeof(object) || type.IsArray ? "CObj"
+        : type == typeof(object) ? "CObj"
         : throw new NotSupportedException($"Variant conversion to {type} is not supported.");
 
     private static string EmitUnaryOperator(SyntaxKind kind, Type type) => kind switch
