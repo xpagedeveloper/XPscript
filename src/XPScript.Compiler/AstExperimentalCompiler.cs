@@ -89,6 +89,14 @@ internal static class AstExperimentalCompiler
         var declarationName = sub?.Identifier.Text ?? function!.Identifier.Text;
         var methodName = declarationName.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0 ? "Main" : declarationName;
         var body = new BoundMethodEmitter().Emit(methodName, returnType, parameters, bound);
+        var procedureStubs = string.Join(Environment.NewLine, unit.Declarations
+            .Where(item => item is SubDeclarationSyntax or FunctionDeclarationSyntax)
+            .Select(item => item switch
+            {
+                SubDeclarationSyntax procedure => $"    public static void {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select(p => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {p.Identifier.Text}"))}) {{ }}",
+                FunctionDeclarationSyntax procedure => $"    public static {CSharpType(ResolveRuntimeType(procedure.ReturnType?.Identifier.Text))} {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select(p => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {p.Identifier.Text}"))}) => default;",
+                _ => string.Empty
+            }));
         var entryPoint = methodName.Equals("Main", StringComparison.Ordinal) ? string.Empty : "    public static void Main() { }\n";
         var generated = $$"""
 using System;
@@ -159,6 +167,7 @@ internal static class Program
         public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
         public static object? CObj(object? value) => value;
     }
+{{procedureStubs}}
 {{body}}
 {{entryPoint}}
 }
@@ -171,4 +180,6 @@ internal static class Program
         "BOOLEAN" => typeof(bool), "STRING" => typeof(string), "INTEGER" or "LONG" => typeof(long),
         "SINGLE" or "DOUBLE" or "CURRENCY" => typeof(double), _ => typeof(object)
     };
+    private static string CSharpType(Type type) => type == typeof(void) ? "void" : type == typeof(long) ? "long" : type == typeof(double) ? "double" : type == typeof(bool) ? "bool" : type == typeof(string) ? "string" : "object";
 }
+
