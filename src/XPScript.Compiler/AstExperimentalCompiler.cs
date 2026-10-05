@@ -341,7 +341,7 @@ internal static class Program
     public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
     public static long LBound(object value) => 0;
     public static long UBound(object value) => value is Array array ? array.Length - 1 : -1;
-    public static object Base64DecodeBinary(string value) => Convert.FromBase64String(value);
+    public static object Base64DecodeBinary(object value) => Convert.FromBase64String(CStr(value));
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
     public static long[] Array(long first, long second) => [first, second];
     public static long Len(object? value) => value is Array array ? array.Length : (value?.ToString()?.Length ?? 0);
