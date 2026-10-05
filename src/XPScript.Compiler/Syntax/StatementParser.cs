@@ -625,6 +625,22 @@ public sealed class StatementParser
     {
         var dimKeyword = NextToken();
         var identifier = Match(SyntaxKind.IdentifierToken);
+        var isArray = false;
+        int? arrayLength = null;
+        if (Current.Kind == SyntaxKind.OpenParenToken)
+        {
+            isArray = true;
+            NextToken();
+            if (Current.Kind == SyntaxKind.NumberToken && long.TryParse(Current.Text, out var upperBound))
+            {
+                arrayLength = checked((int)upperBound + 1);
+                NextToken();
+                if (Current.Kind == SyntaxKind.ToKeyword) NextToken();
+                if (Current.Kind == SyntaxKind.NumberToken) NextToken();
+            }
+            while (Current.Kind is not SyntaxKind.CloseParenToken and not SyntaxKind.EndOfFileToken and not SyntaxKind.NewLineToken) NextToken();
+            Match(SyntaxKind.CloseParenToken);
+        }
 
         SyntaxToken? asKeyword = null;
         SyntaxToken? typeName = null;
@@ -632,6 +648,12 @@ public sealed class StatementParser
         {
             asKeyword = NextToken();
             typeName = Match(SyntaxKind.IdentifierToken);
+            if (Current.Kind == SyntaxKind.OpenBracketToken)
+            {
+                isArray = true;
+                NextToken();
+                Match(SyntaxKind.CloseBracketToken);
+            }
         }
 
         SyntaxToken? equalsToken = null;
@@ -656,7 +678,9 @@ public sealed class StatementParser
             asKeyword,
             typeName,
             equalsToken,
-            initializer);
+            initializer,
+            isArray,
+            arrayLength);
     }
 
     private StatementSyntax ParseAssignmentStatement(int equalsIndex)

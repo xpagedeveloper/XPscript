@@ -6,7 +6,9 @@ public sealed class DimStatementSyntax(
     SyntaxToken? asKeyword,
     SyntaxToken? typeNameToken,
     SyntaxToken? equalsToken,
-    ExpressionSyntax? initializer) : StatementSyntax
+    ExpressionSyntax? initializer,
+    bool isArray = false,
+    int? arrayLength = null) : StatementSyntax
 {
     public SyntaxToken DimKeyword { get; } = dimKeyword;
     public SyntaxToken IdentifierToken { get; } = identifierToken;
@@ -14,6 +16,8 @@ public sealed class DimStatementSyntax(
     public SyntaxToken? TypeNameToken { get; } = typeNameToken;
     public SyntaxToken? EqualsToken { get; } = equalsToken;
     public ExpressionSyntax? Initializer { get; } = initializer;
+    public bool IsArray { get; } = isArray;
+    public int? ArrayLength { get; } = arrayLength;
 
     public override SyntaxKind Kind => SyntaxKind.DimStatement;
 

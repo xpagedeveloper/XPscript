@@ -74,7 +74,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindDim(DimStatementSyntax syntax)
     {
-        var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text);
+        var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text, syntax.IsArray, syntax.ArrayLength);
         var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType);
         if (!_symbols.TryDeclare(local, out var code, out var message))
         {
@@ -102,9 +102,9 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         return new BoundVariableDeclarationStatement(local, initializer);
     }
 
-    private static (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name)
+    private static (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name, bool isArray = false, int? arrayLength = null)
     {
-        return name?.Trim().ToUpperInvariant() switch
+        var result = name?.Trim().ToUpperInvariant() switch
         {
             "BOOLEAN" => (typeof(bool), XpTypeSymbol.FromClr(typeof(bool))),
             "STRING" => (typeof(string), XpTypeSymbol.FromClr(typeof(string))),
@@ -112,6 +112,9 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             "SINGLE" or "DOUBLE" or "CURRENCY" => (typeof(double), XpTypeSymbol.FromClr(typeof(double))),
             _ => (typeof(object), XpTypeSymbol.Variant)
         };
+        if (!isArray) return result;
+        var arrayType = result.Item1.MakeArrayType();
+        return (arrayType, XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(result.Item1)));
     }
 
     private BoundStatement? BindCallStatement(CallStatementSyntax syntax)
