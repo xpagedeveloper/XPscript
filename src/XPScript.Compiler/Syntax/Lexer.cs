@@ -104,6 +104,30 @@ public sealed class Lexer
             return new SyntaxToken(SyntaxKind.StringToken, text, value.ToString(), Span(start, text.Length));
         }
 
+        if (Current is '{' or '|')
+        {
+            var delimiter = Current;
+            _position++;
+            var value = new System.Text.StringBuilder();
+            while (_position < _text.Length)
+            {
+                if (delimiter == '|' && Current == '|' && Peek(1) == '|')
+                {
+                    value.Append('|');
+                    _position += 2;
+                    continue;
+                }
+                if (Current == (delimiter == '{' ? '}' : '|'))
+                {
+                    _position++;
+                    break;
+                }
+                value.Append(Current);
+                _position++;
+            }
+            return new SyntaxToken(SyntaxKind.StringToken, _text[start.._position], value.ToString().Replace("\"", "", StringComparison.Ordinal), Span(start, _position - start));
+        }
+
         if (char.IsLetter(Current) || Current is '_' or '$')
         {
             _position++;
