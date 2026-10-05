@@ -91,6 +91,7 @@ internal static class AstExperimentalCompiler
         var body = new BoundMethodEmitter().Emit(methodName, returnType, parameters, bound);
         var procedureStubs = string.Join(Environment.NewLine, unit.Declarations
             .Where(item => item is SubDeclarationSyntax or FunctionDeclarationSyntax)
+            .Where(item => !string.Equals(item switch { SubDeclarationSyntax subDeclaration => subDeclaration.Identifier.Text, FunctionDeclarationSyntax functionDeclaration => functionDeclaration.Identifier.Text, _ => string.Empty }, declarationName, StringComparison.OrdinalIgnoreCase))
             .Select(item => item switch
             {
                 SubDeclarationSyntax procedure => $"    public static void {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select(p => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {p.Identifier.Text}"))}) {{ }}",
