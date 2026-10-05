@@ -245,6 +245,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new VariableSymbol("Process", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Session", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Request", typeof(object), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("RequestScope", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("NotesSession", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("UIForm", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Database", typeof(object), XpTypeSymbol.Variant));
@@ -338,6 +339,7 @@ internal static class Program
     public static dynamic Process = new ExpandoObject();
     public static dynamic Session = new ExpandoObject();
     public static dynamic Request = new ExpandoObject();
+    public static dynamic RequestScope = new ExpandoObject();
     public static dynamic NotesSession = new ExpandoObject();
     public static dynamic UIForm = new ExpandoObject();
     public static dynamic Database = new ExpandoObject();
