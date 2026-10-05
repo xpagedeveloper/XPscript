@@ -73,7 +73,7 @@ public sealed class BoundExpressionEmitter
         : type == typeof(long) ? "CLng"
         : type == typeof(double) ? "CDbl"
         : type == typeof(bool) ? "CBool"
-        : type == typeof(object) ? "CObj"
+        : type == typeof(object) || type.IsArray ? "CObj"
         : throw new NotSupportedException($"Variant conversion to {type} is not supported.");
 
     private static string EmitUnaryOperator(SyntaxKind kind, Type type) => kind switch
