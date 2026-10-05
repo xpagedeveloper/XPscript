@@ -156,10 +156,25 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("ArraySort", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
-        symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object), typeof(string)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CDate", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
-        foreach (var builtin in new[] { "Base64Decode", "Base64Encode", "CByte", "CCur", "CSng", "CVar", "DataType", "DateAdd", "DateDiff", "Day", "FromBase64", "InstrB", "IsArray", "IsDate", "IsElement", "IsEmpty", "IsObject", "IsScalar", "LeftB", "ListTag", "LSet", "Mid", "MidB", "Month", "RegexValidate", "RightB", "Rnd", "RSet", "Space", "StrCompare", "String", "StrLeft", "StrLeftBack", "StrReverse", "StrRight", "StrRightBack", "StrToken", "TimeNumber", "ToBase64", "UrlDecode", "UrlEncode" })
+        foreach (var builtin in new[] { "Base64Decode", "Base64Encode", "CByte", "CCur", "CSng", "CVar", "DataType", "DateAdd", "DateDiff", "Day", "FromBase64", "InstrB", "IsArray", "IsDate", "IsElement", "IsEmpty", "IsObject", "IsScalar", "LeftB", "ListTag", "LSet", "Month", "RegexValidate", "RightB", "RSet", "Space", "String", "StrLeft", "StrLeftBack", "StrReverse", "StrRight", "StrRightBack", "StrToken", "TimeNumber", "ToBase64", "UrlDecode", "UrlEncode" })
             symbols.Declare(new FunctionSymbol(builtin, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Mid", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Mid", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("MidB", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("MidB", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("MidBP", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("MidBP", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Split", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Split", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Split", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Split", typeof(object), [typeof(object), typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Implode", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Implode", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Rnd", typeof(object), [], XpTypeSymbol.Variant));
+        symbols.Declare(new FunctionSymbol("Rnd", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrConv", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CType", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrCompare", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -339,7 +354,8 @@ internal static class Program
     public static string UCase(object? value) => (value?.ToString() ?? string.Empty).ToUpperInvariant();
     public static string LCase(object? value) => (value?.ToString() ?? string.Empty).ToLowerInvariant();
     public static object? ArraySort(object? value) => value;
-    public static string Join(object? value, object? separator) => value is System.Collections.IEnumerable items ? string.Join(CStr(separator), items.Cast<object?>()) : string.Empty;
+    public static string Join(object? value, object? separator = null) => value is System.Collections.IEnumerable items ? string.Join(separator is null ? " " : CStr(separator), items.Cast<object?>()) : string.Empty;
+    public static string Implode(object? value, object? separator = null) => Join(value, separator);
     public static object CDate(object value) => Convert.ToDateTime(value);
     public static object Base64Decode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.FromBase64String(CStr(values[0]));
     public static object Base64Encode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(CStr(values[0])));
@@ -362,12 +378,27 @@ internal static class Program
     public static object LeftB(object value, object count) => Left(value, count);
     public static object ListTag(object value) => string.Empty;
     public static object LSet(object value, object width) => CStr(value).PadRight(Convert.ToInt32(width));
-    public static object Mid(object value, object start, object count) => CStr(value).Substring(Math.Max(0, Convert.ToInt32(start) - 1), Math.Min(Convert.ToInt32(count), CStr(value).Length));
-    public static object MidB(object value, object start, object count) => Mid(value, start, count);
+    public static object Mid(object value, object start, object? count = null)
+    {
+        var text = CStr(value);
+        var offset = Math.Clamp(Convert.ToInt32(start) - 1, 0, text.Length);
+        var length = count is null ? text.Length - offset : Math.Clamp(Convert.ToInt32(count), 0, text.Length - offset);
+        return text.Substring(offset, length);
+    }
+    public static object MidB(object value, object start, object? count = null) => Mid(value, start, count);
+    public static object MidBP(object value, object start, object? count = null) => Mid(value, start, count);
     public static object Month(object value) => Convert.ToDateTime(value).Month;
     public static object RegexValidate(object value, object pattern) => System.Text.RegularExpressions.Regex.IsMatch(CStr(value), CStr(pattern));
     public static object RightB(object value, object count) => Right(value, count);
-    public static object Rnd(object value) => Random.Shared.NextDouble();
+    public static object Rnd(object? value = null) => Random.Shared.NextDouble();
+    public static string[] Split(object? value, object? delimiter = null, object? count = null, object? compare = null)
+    {
+        var text = CStr(value);
+        var separator = delimiter is null ? " " : CStr(delimiter);
+        var parts = text.Split(separator, StringSplitOptions.None);
+        var limit = count is null ? -1 : Convert.ToInt32(count);
+        return limit > 0 ? parts.Take(limit).ToArray() : parts;
+    }
     public static object RSet(object value, object width) => CStr(value).PadLeft(Convert.ToInt32(width));
     public static object Space(object value) => new string(' ', Math.Max(0, Convert.ToInt32(value)));
     public static object StrCompare(object left, object right, object? compare = null) => StrComp(left, right, compare);
