@@ -254,7 +254,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Explode", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FullTrim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
-        foreach (var name in new[] { "Date", "Date$", "Format", "Format$", "InputBox", "MsgBox", "ChDrive", "Erase" })
+        foreach (var name in new[] { "Date", "Date$", "Format", "Format$", "InputBox", "MsgBox", "ChDrive", "Erase", "JsonParse" })
             symbols.Declare(new FunctionSymbol(name, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Date", typeof(object), [], XpTypeSymbol.Variant, []));
         symbols.Declare(new FunctionSymbol("Date$", typeof(object), [], XpTypeSymbol.Variant, []));
@@ -335,11 +335,15 @@ public sealed class XpPerson {
     public string Describe() => Name + ":" + Role;
 }
 """ : string.Empty;
-        if (fullSource.Contains("XPCsvDocument", StringComparison.OrdinalIgnoreCase)) classSupport += """
-public sealed class XpJsonArray { public List<Dictionary<string,string>> Rows { get; } = new(); public int Count => Rows.Count; }
+        if (fullSource.Contains("XPCsvDocument", StringComparison.OrdinalIgnoreCase) || fullSource.Contains("XPJson", StringComparison.OrdinalIgnoreCase)) classSupport += """
+public sealed class XpJsonElement { public string Type { get; set; } = "String"; public object? Value { get; set; } }
+public sealed class XpJsonDocument { public XpJsonElement Root { get; } = new(); public static XpJsonDocument Parse(object? text) => new(); public string Stringify() => Root.Value?.ToString() ?? "{}"; public object ToObject(object target) => target; }
+public sealed class XpJsonObject { private readonly Dictionary<string,object?> Data = new(); public int Count => Data.Count; public void Set(string key, object? value) => Data[key] = value; public object? Get(string key) => Data.TryGetValue(key, out var value) ? value : null; public bool Contains(string key) => Data.ContainsKey(key); public void Remove(string key) => Data.Remove(key); }
+public sealed class XpJsonArray { private readonly List<object?> Data = new(); public int Count => Data.Count; public void Add(object? value) => Data.Add(value); public void Set(long index, object? value) => Data[Convert.ToInt32(index)] = value; public object? Get(long index) => Data[Convert.ToInt32(index)]; public void RemoveAt(long index) => Data.RemoveAt(Convert.ToInt32(index)); }
+public sealed class XpCsvJsonArray { public List<Dictionary<string,string>> Rows { get; } = new(); public int Count => Rows.Count; }
 public sealed class XpCsvRow { internal Dictionary<string,string> Data = new(); public void Set(string key, object? value) => Data[key] = Convert.ToString(value) ?? string.Empty; public object Get(string key) => Data.TryGetValue(key, out var value) ? value : string.Empty; }
 public sealed class XpCsvRows : List<XpCsvRow> { public XpCsvRow this[long index] => base[Convert.ToInt32(index)]; }
-public sealed class XpCsvDocument { public List<string> Headers { get; } = new(); public XpCsvRows Rows { get; } = new(); public int RowCount => Rows.Count; public XpCsvRow AddRow() { var row = new XpCsvRow(); Rows.Add(row); return row; } public XpJsonArray ToJson() { var result = new XpJsonArray(); result.Rows.AddRange(Rows.Select(row => new Dictionary<string,string>(row.Data))); return result; } public void FromJson(XpJsonArray json) { Rows.Clear(); foreach (var item in json.Rows) { var row = new XpCsvRow(); foreach (var pair in item) row.Data[pair.Key] = pair.Value; Rows.Add(row); } } }
+public sealed class XpCsvDocument { public List<string> Headers { get; } = new(); public XpCsvRows Rows { get; } = new(); public int RowCount => Rows.Count; public XpCsvRow AddRow() { var row = new XpCsvRow(); Rows.Add(row); return row; } public XpCsvJsonArray ToJson() { var result = new XpCsvJsonArray(); result.Rows.AddRange(Rows.Select(row => new Dictionary<string,string>(row.Data))); return result; } public void FromJson(XpCsvJsonArray json) { Rows.Clear(); foreach (var item in json.Rows) { var row = new XpCsvRow(); foreach (var pair in item) row.Data[pair.Key] = pair.Value; Rows.Add(row); } } }
 """;
         var generated = $$"""
 using System;
@@ -653,7 +657,6 @@ internal static class Program
     public static object ArrayResize(object? value, object? upper, object? preserve) { var length = Math.Max(0, Convert.ToInt32(upper) + 1); var result = new object?[length]; if (Convert.ToBoolean(preserve) && value is System.Collections.IEnumerable values) values.Cast<object?>().Take(length).ToArray().CopyTo(result, 0); return result; }
     public static object Explode(object? value, object? separator) => (value?.ToString() ?? string.Empty).Split(separator?.ToString() ?? ",");
     public static string FullTrim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
-    public static object JsonStringify(object? value) => System.Text.Json.JsonSerializer.Serialize(value);
     public static object JsonEncode(object? value) => System.Text.Json.JsonSerializer.Serialize(value);
     public static object JsonDecode(object? value) => value?.ToString() ?? string.Empty;
     public static string Input(object? count) => string.Empty;
@@ -697,6 +700,8 @@ internal static class Program
     public static object MsgBox(object? prompt = null) { Console.WriteLine(CStr(prompt)); return 0L; }
     public static object ChDrive(object? drive) => true;
     public static object Erase(object? value) => true;
+    public static object JsonParse(object? value) => XpJsonDocument.Parse(value);
+    public static object JsonStringify(object? value) => value is XpJsonDocument document ? document.Stringify() : value?.ToString() ?? "null";
     public static class XPScriptNullRuntime
     {
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
