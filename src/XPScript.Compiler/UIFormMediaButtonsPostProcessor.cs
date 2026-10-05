@@ -159,9 +159,14 @@ internal sealed class UIFormMediaButtonsPostProcessor
         {
             if (uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
                 throw new XPScriptRuntimeException(5, $"UIForm {kind} source cannot expose a local filesystem path through server-web rendering.");
+            if (uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!text.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+                    throw new XPScriptRuntimeException(5, "UIForm server-web data URI must use an image media type.");
+                return text;
+            }
             if (uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
-                uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
-                (kind.Equals("image", StringComparison.OrdinalIgnoreCase) && uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase)))
+                uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
                 return text;
             throw new XPScriptRuntimeException(5, $"UIForm {kind} source uses an unsupported URI scheme for server-web rendering.");
         }
