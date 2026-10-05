@@ -641,9 +641,27 @@ internal static class Program
     public static void AstKill(object? path) => File.Delete(CStr(path));
     public static string AstInputChars(object? count, object? file) => string.Empty;
     public static void AstNoOp() { }
-    public static object DateNumber(long year, long month, long day) => new DateTime((int)year, (int)month, (int)day);
-    public static object Date() => DateTime.Today;
-    public static object Format(object? value, object? pattern = null) => pattern is null ? CStr(value) : Convert.ToDateTime(value).ToString(CStr(pattern), System.Globalization.CultureInfo.InvariantCulture);
+    public sealed class XpDate : IComparable<XpDate> {
+        public DateTime Value { get; }
+        public XpDate(DateTime value) { Value = value; }
+        public XpDate Adjust(long years, long months, long days, long hours, long minutes, long seconds) => new(Value.AddYears((int)years).AddMonths((int)months).AddDays(days).AddHours(hours).AddMinutes(minutes).AddSeconds(seconds));
+        public double Difference(object? other) => (other as XpDate)?.Value is DateTime date ? (date - Value).TotalSeconds : 0;
+        public string OSDateFormatting => "yyyy-MM-dd";
+        public string OSTimeFormatting => "HH:mm:ss";
+        public int CompareTo(XpDate? other) => other is null ? 1 : Value.CompareTo(other.Value);
+        public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        public static bool operator >(XpDate a, XpDate b) => a.Value > b.Value;
+        public static bool operator >=(XpDate a, XpDate b) => a.Value >= b.Value;
+        public static bool operator <(XpDate a, XpDate b) => a.Value < b.Value;
+        public static bool operator <=(XpDate a, XpDate b) => a.Value <= b.Value;
+        public static bool operator ==(XpDate? a, XpDate? b) => Equals(a?.Value, b?.Value);
+        public static bool operator !=(XpDate? a, XpDate? b) => !(a == b);
+        public override bool Equals(object? obj) => obj is XpDate other && Value == other.Value;
+        public override int GetHashCode() => Value.GetHashCode();
+    }
+    public static object DateNumber(long year, long month, long day) => new XpDate(new DateTime((int)year, (int)month, (int)day));
+    public static object Date() => new XpDate(DateTime.Today);
+    public static object Format(object? value, object? pattern = null) => pattern is null ? CStr(value) : (value is XpDate date ? date.Value : Convert.ToDateTime(value)).ToString(CStr(pattern), System.Globalization.CultureInfo.InvariantCulture);
     public static object InputBox(object? prompt = null) => string.Empty;
     public static object MsgBox(object? prompt = null) { Console.WriteLine(CStr(prompt)); return 0L; }
     public static object ChDrive(object? drive) => true;
