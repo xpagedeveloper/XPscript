@@ -80,6 +80,8 @@ public sealed class BoundExpressionEmitter
     private string EmitConversion(BoundConversionExpression expression)
     {
         var value = Emit(expression.Expression);
+        if (expression.Expression is BoundNewExpression && expression.Type != typeof(object))
+            return value;
         return expression.Conversion.Kind switch
         {
             ConversionKind.Identity or ConversionKind.EmptyToVariant or ConversionKind.NullToVariant or ConversionKind.NothingToObject => value,

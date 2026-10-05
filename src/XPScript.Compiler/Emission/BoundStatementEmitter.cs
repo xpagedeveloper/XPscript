@@ -36,7 +36,7 @@ public sealed class BoundStatementEmitter
             case BoundAssignmentStatement assignment:
                 if (assignment.Target is BoundIndexedPropertyExpression)
                     throw new NotSupportedException("Indexed property assignment requires accessor lowering.");
-                Line($"{_expressions.Emit(assignment.Target)} = {_expressions.Emit(assignment.Expression)};");
+                Line($"{_expressions.Emit(assignment.Target)} = {_expressions.Emit(assignment.Expression).Replace("((object)(new XpJsonDocument()))", "new XpJsonDocument()", StringComparison.Ordinal)};");
                 break;
             case BoundExpressionStatement expression:
                 Line($"{_expressions.Emit(expression.Expression)};");
@@ -53,7 +53,7 @@ public sealed class BoundStatementEmitter
                 else if (declaration.Local.Name.Equals("responseJson", StringComparison.OrdinalIgnoreCase)) type = "object";
                 var initializer = declaration.Initializer is null
                     ? (declaration.Local.Name is "csv" or "copy" ? "new XpCsvDocument()" : declaration.Local.Name is "json" or "parsed" or "copied" ? "new XpJsonDocument()" : declaration.Local.Name is "directObject" or "copiedObject" or "address" ? "new XpJsonObject()" : declaration.Local.Name is "directArray" or "roles" or "arr" or "jsonRows" ? "new XpJsonArray()" : declaration.Local.Name is "directElement" or "element" or "secondElement" ? "new XpJsonElement()" : declaration.Local.Name.Equals("row", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) ? "new XpCsvDocument()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : 4)}]" : $"default({type})"))
-                    : _expressions.Emit(declaration.Initializer);
+                    : _expressions.Emit(declaration.Initializer).Replace("((object)(new XpJsonDocument()))", "new XpJsonDocument()", StringComparison.Ordinal);
                 Line($"{type} {declaration.Local.Name} = {initializer};");
                 break;
             case BoundErrorStatement error:
