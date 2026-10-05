@@ -21,7 +21,7 @@ public sealed class BoundExpressionEmitter
             : $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundIndexedPropertyExpression indexed => $"{Emit(indexed.Receiver)}.{indexed.Property.Name.Split('.').Last()}({string.Join(", ", indexed.Arguments.Select(Emit))})",
         BoundCallExpression call => EmitCall(call),
-        BoundUnaryExpression unary => $"({EmitUnaryOperator(unary.OperatorKind)}{Emit(unary.Operand)})",
+        BoundUnaryExpression unary => $"({EmitUnaryOperator(unary.OperatorKind, unary.Type)}{Emit(unary.Operand)})",
         BoundBinaryExpression binary => EmitBinary(binary),
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
@@ -74,9 +74,9 @@ public sealed class BoundExpressionEmitter
         : type == typeof(object) ? "CObj"
         : throw new NotSupportedException($"Variant conversion to {type} is not supported.");
 
-    private static string EmitUnaryOperator(SyntaxKind kind) => kind switch
+    private static string EmitUnaryOperator(SyntaxKind kind, Type type) => kind switch
     {
-        SyntaxKind.NotKeyword => "!",
+        SyntaxKind.NotKeyword => type == typeof(long) ? "~" : "!",
         SyntaxKind.PlusToken => "+",
         SyntaxKind.MinusToken => "-",
         _ => throw new NotSupportedException($"Unary operator {kind} is not supported.")
@@ -93,8 +93,8 @@ public sealed class BoundExpressionEmitter
         SyntaxKind.LessOrEqualsToken => "<=",
         SyntaxKind.GreaterToken => ">",
         SyntaxKind.GreaterOrEqualsToken => ">=",
-        SyntaxKind.AndKeyword => "&&",
-        SyntaxKind.OrKeyword => "||",
+        SyntaxKind.AndKeyword => "&",
+        SyntaxKind.OrKeyword => "|",
         SyntaxKind.EqualsToken => "==",
         SyntaxKind.LessGreaterToken => "!=",
         _ => throw new NotSupportedException($"Binary operator {kind} is not supported.")

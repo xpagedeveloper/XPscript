@@ -329,6 +329,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         var operand = Bind(syntax.Operand);
         if (syntax.OperatorToken.Kind == SyntaxKind.NotKeyword && operand.Type == typeof(bool))
             return new BoundUnaryExpression(syntax.OperatorToken.Kind, operand, typeof(bool));
+        if (syntax.OperatorToken.Kind == SyntaxKind.NotKeyword && operand.Type == typeof(long))
+            return new BoundUnaryExpression(syntax.OperatorToken.Kind, operand, typeof(long));
         if (syntax.OperatorToken.Kind is SyntaxKind.PlusToken or SyntaxKind.MinusToken &&
             (operand.Type == typeof(long) || operand.Type == typeof(double)))
             return new BoundUnaryExpression(syntax.OperatorToken.Kind, operand, operand.Type);
@@ -345,6 +347,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
         if (op is SyntaxKind.AndKeyword or SyntaxKind.OrKeyword && left.Type == typeof(bool) && right.Type == typeof(bool))
             return new BoundBinaryExpression(left, op, right, typeof(bool));
+        if (op is SyntaxKind.AndKeyword or SyntaxKind.OrKeyword && left.Type == typeof(long) && right.Type == typeof(long))
+            return new BoundBinaryExpression(left, op, right, typeof(long));
         if (op is SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.StarToken or SyntaxKind.SlashToken &&
             left.Type == right.Type && (left.Type == typeof(long) || left.Type == typeof(double)))
             return new BoundBinaryExpression(left, op, right, left.Type);
