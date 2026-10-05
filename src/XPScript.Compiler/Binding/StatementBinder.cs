@@ -133,7 +133,10 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     {
         if (!syntax.Command.Text.Equals("Print", StringComparison.OrdinalIgnoreCase))
         {
-            var arguments = syntax.Arguments.Select(BindExpression).ToArray();
+            var argumentResults = syntax.Arguments.Select(BindExpression).ToArray();
+            if (argumentResults.Any(argument => argument is null))
+                return null;
+            var arguments = argumentResults.Select(argument => argument!).ToArray();
             var function = new FunctionSymbol(syntax.Command.Text, typeof(object), arguments.Select(argument => argument.Type).ToArray(), XpTypeSymbol.Variant, arguments.Select(_ => XpTypeSymbol.Variant).ToArray());
             return new BoundExpressionStatement(new BoundCallExpression(null, function, arguments));
         }
