@@ -82,6 +82,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType);
         if (!_symbols.TryDeclare(local, out var code, out var message))
         {
+            if (_allowDynamicMembers && _symbols.TryLookup(local.Name, out _))
+                return new BoundNoOpStatement();
             _diagnostics.Add(new SyntaxDiagnostic(code ?? CompilerDiagnosticCodes.DuplicateOverload,
                 message ?? $"Symbol '{local.Name}' is already declared.", syntax.IdentifierToken.Span));
             return null;

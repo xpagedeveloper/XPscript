@@ -61,6 +61,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Trim", typeof(string), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("LCase", typeof(string), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Process", typeof(object), XpTypeSymbol.Variant));
@@ -147,6 +148,7 @@ internal static class Program
     public static string Trim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
     public static string UCase(object? value) => (value?.ToString() ?? string.Empty).ToUpperInvariant();
     public static string LCase(object? value) => (value?.ToString() ?? string.Empty).ToLowerInvariant();
+    public static object DateNumber(long year, long month, long day) => new DateTime((int)year, (int)month, (int)day);
     public static class XPScriptNullRuntime
     {
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
