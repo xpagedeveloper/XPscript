@@ -147,7 +147,9 @@ public sealed class StatementParser
 
         if (Current.Kind != SyntaxKind.NewLineToken)
         {
-            var inlineStatement = Current.Kind == SyntaxKind.ErrorKeyword
+            var inlineStatement = IsRuntimeFileCommand(Current)
+                ? ParseRuntimeFileStatement()
+                : Current.Kind == SyntaxKind.ErrorKeyword
                 ? ParseErrorStatement()
                 : ParseExpressionStatement();
             return new IfStatementSyntax(ifKeyword, condition, thenKeyword, inlineStatement);
