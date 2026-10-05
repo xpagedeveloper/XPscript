@@ -434,7 +434,7 @@ internal static class Program
         public string FileNameWithoutExtension() => System.IO.Path.GetFileNameWithoutExtension(_path);
         public string Extension() => System.IO.Path.GetExtension(_path);
         public string Directory() => System.IO.Path.GetDirectoryName(_path) ?? string.Empty;
-        public string Root() => System.IO.Path.GetPathRoot(_path) ?? string.Empty;
+        public string Root() => System.IO.Path.GetPathRoot(System.IO.Path.GetFullPath(_path)) ?? string.Empty;
         public bool Exists() => System.IO.File.Exists(_path) || System.IO.Directory.Exists(_path);
         public string Parent() => System.IO.Path.GetDirectoryName(_path) ?? string.Empty;
         public string Absolute() => System.IO.Path.GetFullPath(_path);
