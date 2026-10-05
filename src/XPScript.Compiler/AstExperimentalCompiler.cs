@@ -12,6 +12,7 @@ internal static class AstExperimentalCompiler
     public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken = default)
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        var fullSource = source;
         var declarationStart = System.Text.RegularExpressions.Regex.Match(source, @"(?im)^\s*(Sub|Function|Class)\b");
         if (declarationStart.Success)
             source = source[declarationStart.Index..].TrimStart();
@@ -33,6 +34,10 @@ internal static class AstExperimentalCompiler
             throw new CompilerException("AST experimental compilation currently requires a Sub declaration.", "XPS3001", "ast");
 
         var symbols = SymbolTable.CreateWithCompilerCatalog();
+        foreach (var classDeclaration in unit.Declarations.OfType<ClassDeclarationSyntax>())
+            symbols.Declare(new TypeSymbol(classDeclaration.Identifier.Text, typeof(object), XpTypeSymbol.User(classDeclaration.Identifier.Text)));
+        foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Public\s+|Private\s+)?Class\s+(?<name>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
+            symbols.Declare(new TypeSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.User(match.Groups["name"].Value)));
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
         symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));

@@ -33,11 +33,6 @@ public sealed class DeclarationParser
             if (end < lines.Count) end++;
             var startOffset = lines[i].Start;
             var endOffset = end < lines.Count ? lines[end].Start : _text.Length;
-            if (match.Groups[1].Value.Equals("Class", StringComparison.OrdinalIgnoreCase))
-            {
-                i = Math.Max(end, i + 1);
-                continue;
-            }
             var parser = new DeclarationParser(_text[startOffset..endOffset].TrimStart(), _baseOffset + startOffset);
             try
             {

@@ -14,7 +14,9 @@ public sealed class BoundExpressionEmitter
         BoundNameExpression name => name.Symbol.Name,
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
-        BoundNewExpression @new => $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new => @new.Type == typeof(object)
+            ? "new System.Dynamic.ExpandoObject()"
+            : $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundIndexedPropertyExpression indexed => $"{Emit(indexed.Receiver)}.{indexed.Property.Name.Split('.').Last()}({string.Join(", ", indexed.Arguments.Select(Emit))})",
         BoundCallExpression call => EmitCall(call),
         BoundUnaryExpression unary => $"({EmitUnaryOperator(unary.OperatorKind)}{Emit(unary.Operand)})",

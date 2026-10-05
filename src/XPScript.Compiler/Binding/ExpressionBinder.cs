@@ -66,7 +66,14 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     {
         var typeName = syntax.TypeName.Text;
         if (!_symbols.TryLookup(typeName, out var typeSymbol) || typeSymbol is not TypeSymbol typeEntry)
+        {
+            if (_allowDynamicMembers)
+            {
+                var dynamicArguments = syntax.Arguments.Select(Bind).ToArray();
+                return new BoundNewExpression(typeof(object), dynamicArguments, XpTypeSymbol.User(typeName));
+            }
             return Error(syntax.TypeName, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined type '{typeName}'.");
+        }
         var type = typeEntry.Type;
 
         var arguments = syntax.Arguments.Select(Bind).ToArray();
