@@ -73,6 +73,7 @@ internal static class XpsOpenApiCommand
         var specificationPath = Path.GetFullPath(args[1]);
         string? outputPath = null;
         string? className = null;
+        var includedOperations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var i = 2; i < args.Length; i++)
         {
             switch (args[i])
@@ -85,6 +86,10 @@ internal static class XpsOpenApiCommand
                 case "--class":
                     if (++i >= args.Length) throw new ArgumentException("--class requires an XPScript class name.");
                     className = args[i];
+                    break;
+                case "--operation":
+                    if (++i >= args.Length) throw new ArgumentException("--operation requires an operationId, path, or METHOD path.");
+                    foreach (var item in args[i].Split(",", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) includedOperations.Add(item);
                     break;
                 default:
                     throw new ArgumentException($"Unknown openapi client {command} argument: " + args[i]);
@@ -99,7 +104,7 @@ internal static class XpsOpenApiCommand
         if (File.Exists(outputPath))
             throw new IOException("Generated client output already exists. Choose a new output path or remove the existing generated file first: " + outputPath);
 
-        var result = new XpsOpenApiClientGenerator().GenerateFile(specificationPath, className);
+        var result = new XpsOpenApiClientGenerator().GenerateFile(specificationPath, className, new XpsOpenApiGenerationOptions(includedOperations));
         var directory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
         File.WriteAllText(outputPath, result.Source);

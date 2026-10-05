@@ -21,11 +21,21 @@ public sealed class XpsOpenApiClientGenerator
         if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI specification file was not found.", fullPath);
         return Generate(File.ReadAllText(fullPath), Path.GetFileName(fullPath), className);
     }
+    public XpsOpenApiClientGenerationResult GenerateFile(string specificationPath, string? className, XpsOpenApiGenerationOptions options)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(specificationPath); var fullPath = Path.GetFullPath(specificationPath);
+        if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI specification file was not found.", fullPath);
+        return Generate(File.ReadAllText(fullPath), Path.GetFileName(fullPath), className, options);
+    }
     public XpsOpenApiClientGenerationResult Generate(string specification, string? sourceName = null, string? className = null)
+        => Generate(specification, sourceName, className, null);
+    public XpsOpenApiClientGenerationResult Generate(string specification, string? sourceName, string? className, XpsOpenApiGenerationOptions? options)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(specification); XpsOpenApiSchema.ValidateExternalReferences(specification, sourceName); var root = ParseDocument(specification);
         var normalized = XpsOpenApiSchema.NormalizeDocument(root); var version = normalized.Version;
         using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version); var apiName = ResolveClassName(root, sourceName, className); var modelSet = CollectModels(root); using var typeNameScope = XpsOpenApiSchema.UseReferenceTypeNames(modelSet.TypeNames); var models = modelSet.Models; var securitySchemes = CollectSecuritySchemes(root); var operations = CollectOperations(root); AssignGeneratedApiMemberNames(operations, securitySchemes);
+        if (options?.IncludedOperations is { Count: > 0 } included)
+            operations = operations.Where(operation => included.Contains(operation.Name) || included.Contains(operation.Method + " " + operation.Path) || included.Contains(operation.Path)).ToList();
         if (operations.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI document does not contain any supported path operations.");
         var source = EmitSource(version, sourceName, apiName, ReadServerUrl(root), root, models, operations, securitySchemes);
         return new XpsOpenApiClientGenerationResult(version, apiName, source, operations.Select(y => y.Name).ToArray(), models.Keys.OrderBy(y => y, StringComparer.OrdinalIgnoreCase).ToArray());
