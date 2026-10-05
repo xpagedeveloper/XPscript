@@ -15,6 +15,7 @@ internal static class AstExperimentalCompiler
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
         source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
+        source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);
         source = Regex.Replace(source, @"(?im)^(?<indent>\s*)ReDim\s+(?<preserve>Preserve\s+)?(?<name>[A-Za-z_]\w*)\s*\((?<bounds>[^)]*)\)\s*$", match =>
         {
             var bounds = match.Groups["bounds"].Value.Trim();
@@ -159,6 +160,8 @@ internal static class AstExperimentalCompiler
             }));
         var moduleFields = string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
+        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
+            .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {match.Groups["value"].Value.Trim()};"));
         var entryPoint = methodName.Equals("Main", StringComparison.Ordinal) ? string.Empty : "    public static void Main() { }\n";
         var generated = $$"""
 using System;
