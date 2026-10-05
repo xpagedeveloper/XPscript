@@ -68,6 +68,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return new BoundNameExpression(symbol);
         if (_symbols.LookupAll(name).OfType<FunctionSymbol>().FirstOrDefault(function => function.ParameterTypes.Count == 0) is { } zeroArgumentFunction)
             return new BoundCallExpression(null, zeroArgumentFunction, []);
+        if (_allowDynamicMembers && name.Equals("Object", StringComparison.OrdinalIgnoreCase))
+            return new BoundLiteralExpression(null, typeof(object));
         return Error(syntax.IdentifierToken, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined variable '{name}'.");
     }
 
