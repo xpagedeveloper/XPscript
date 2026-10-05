@@ -12,6 +12,7 @@ public sealed class BoundExpressionEmitter
         BoundLiteralExpression literal => EmitLiteral(literal),
         BoundConversionExpression conversion => EmitConversion(conversion),
         BoundNameExpression name => name.Symbol.Name,
+        BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("Console", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("WriteLine", StringComparison.OrdinalIgnoreCase) => "System.Console.WriteLine",
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index => index.Expression.Type == typeof(object)
             ? $"((dynamic){Emit(index.Expression)})[{Emit(index.Index)}]"
