@@ -127,7 +127,7 @@ public sealed class BoundStatementEmitter
         ? _expressions.Emit(expression)
         : $"XPScriptNullRuntime.ConditionValue({_expressions.Emit(expression)})";
 
-    private static string CSharpType(Type type) => type == typeof(long) ? "long"
+    private static string CSharpType(Type type) => type.IsArray ? $"{CSharpType(type.GetElementType()!)}[]" : type == typeof(long) ? "long"
         : type == typeof(double) ? "double"
         : type == typeof(bool) ? "bool"
         : type == typeof(string) ? "string"

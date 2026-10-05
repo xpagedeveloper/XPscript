@@ -692,7 +692,8 @@ public sealed class StatementParser
 
         if (target.Kind is not SyntaxKind.NameExpression
             and not SyntaxKind.MemberAccessExpression
-            and not SyntaxKind.IndexExpression)
+            and not SyntaxKind.IndexExpression
+            and not SyntaxKind.CallExpression)
         {
             _diagnostics.Add(new SyntaxDiagnostic(
                 "XPS1012",

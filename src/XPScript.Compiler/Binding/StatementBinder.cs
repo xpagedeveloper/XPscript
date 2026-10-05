@@ -333,11 +333,17 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         if (target is null)
             return null;
 
+        if (target is BoundCallExpression indexedCall && indexedCall.Target is null && indexedCall.Function.Name is var indexedName && indexedCall.Arguments.Count == 1 &&
+            _symbols.TryLookup(indexedName, out var indexedSymbol) && indexedSymbol is LocalSymbol local && local.Type.IsArray)
+        {
+            target = new BoundIndexExpression(new BoundNameExpression(local), indexedCall.Arguments[0], local.Type.GetElementType()!, XpTypeSymbol.FromClr(local.Type.GetElementType()!));
+        }
+
         if (!IsWritable(target))
         {
             _diagnostics.Add(new SyntaxDiagnostic(
                 CompilerDiagnosticCodes.TypeMismatch,
-                "Assignment target is not writable.",
+                $"Assignment target is not writable ({target.Kind}).",
                 targetSyntax.Span));
             return null;
         }
