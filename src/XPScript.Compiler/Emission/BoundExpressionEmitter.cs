@@ -84,7 +84,9 @@ public sealed class BoundExpressionEmitter
         {
             ConversionKind.Identity or ConversionKind.EmptyToVariant or ConversionKind.NullToVariant or ConversionKind.NothingToObject => value,
             ConversionKind.NumericWidening => $"((double)({value}))",
-            ConversionKind.ToVariant or ConversionKind.ToObject => $"((object)({value}))",
+            ConversionKind.ToVariant => $"((object)({value}))",
+            ConversionKind.ToObject when expression.Type != typeof(object) => value,
+            ConversionKind.ToObject => $"((object)({value}))",
             ConversionKind.FromVariant when expression.Type.IsArray => $"({expression.Type.Name})({value})",
             ConversionKind.FromVariant => $"XPScriptRuntime.{ConversionMethod(expression.Type)}({value})",
             _ => throw new NotSupportedException($"Conversion {expression.Conversion.Kind} is not supported.")
