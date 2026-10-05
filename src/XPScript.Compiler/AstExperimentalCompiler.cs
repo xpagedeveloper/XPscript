@@ -293,8 +293,8 @@ internal static class AstExperimentalCompiler
             .Where(item => !string.Equals(item switch { SubDeclarationSyntax subDeclaration => subDeclaration.Identifier.Text, FunctionDeclarationSyntax functionDeclaration => functionDeclaration.Identifier.Text, _ => string.Empty }, declarationName, StringComparison.OrdinalIgnoreCase))
             .Select(item => item switch
             {
-                SubDeclarationSyntax procedure => $"    public static void {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select(p => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {p.Identifier.Text}"))}) {{ }}",
-                FunctionDeclarationSyntax procedure => $"    public static {CSharpType(ResolveRuntimeType(procedure.ReturnType?.Identifier.Text))} {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select(p => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {p.Identifier.Text}"))}) => default;",
+                SubDeclarationSyntax procedure => $"    public static void {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select((p, i) => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {(string.IsNullOrWhiteSpace(p.Identifier.Text) ? $"arg{i}" : p.Identifier.Text)}"))}) {{ }}",
+                FunctionDeclarationSyntax procedure => $"    public static {CSharpType(ResolveRuntimeType(procedure.ReturnType?.Identifier.Text))} {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select((p, i) => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {(string.IsNullOrWhiteSpace(p.Identifier.Text) ? $"arg{i}" : p.Identifier.Text)}"))}) => default;",
                 _ => string.Empty
             }));
         foreach (Match optional in Regex.Matches(fullSource, @"(?im)^\s*(?<kind>Sub|Function)\s+(?<name>[A-Za-z_]\w*)\s*\((?<parameters>[^)]*Optional[^)]*)\)", RegexOptions.Multiline))
