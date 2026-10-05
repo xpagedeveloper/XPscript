@@ -287,7 +287,12 @@ public sealed class XpsOpenApiClientGenerator
                         result[property.Key] = new JsonObject { ["x-xpscript-conflicting-allof-model"] = true };
                         continue;
                     }
-                    throw new XpsOpenApiGenerationException($"Schema '{modelName}' allOf property '{property.Key}' has conflicting XPScript types '{eyistingType}' and '{incomingType}'.");
+                    // OpenAPI allOf branches may describe the same wire
+                    // property with incompatible schemas. Preserve the
+                    // property in the generated model as Variant so the
+                    // client remains usable and the JSON contract is kept.
+                    result[property.Key] = new JsonObject { ["x-xpscript-conflicting-allof-model"] = true };
+                    continue;
                 }
                 continue;
             }
