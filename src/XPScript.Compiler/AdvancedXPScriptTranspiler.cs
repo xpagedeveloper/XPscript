@@ -1112,6 +1112,20 @@ internal static class LSForAllRuntime
 
     private string TransformNonStringExpression(string text)
     {
+        text = Regex.Replace(text, @"(?<![\w.])(\d+)\s*(kb|mb|gb)\b", match =>
+        {
+            var multiplier = match.Groups[2].Value.ToLowerInvariant() switch
+            {
+                "kb" => 1024L,
+                "mb" => 1024L * 1024L,
+                "gb" => 1024L * 1024L * 1024L,
+                _ => 1L
+            };
+            if (!long.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var value))
+                throw new CompilerException("Size literal is outside the supported range.");
+            try { return checked(value * multiplier).ToString(System.Globalization.CultureInfo.InvariantCulture) + "L"; }
+            catch (OverflowException) { throw new CompilerException("Size literal is outside the supported range."); }
+        }, RegexOptions.IgnoreCase);
         text = text.Replace("<>", "!=", StringComparison.Ordinal);
         text = Regex.Replace(text, @"(?<![<>=!])=(?![=>])", "==");
         text = text.Replace("__LS_BYREF_ASSIGN__", "=", StringComparison.Ordinal);

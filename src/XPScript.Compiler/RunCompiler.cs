@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -345,14 +346,49 @@ internal static class RunCompiler
                 // Native libraries are resolved from the application's base directory
                 // by the run fast path. Also flatten the native asset for the current
                 // process RID so DllImport("libSkiaSharp") can find it directly.
-                if (relative.Contains(Path.DirectorySeparatorChar + "native" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                if (IsCurrentRuntimeNativeAsset(relative))
                 {
                     var flatTarget = Path.Combine(outputRoot, Path.GetFileName(source));
-                    CompilerSecureFileCopy.CopyValidatedRegularFile(source, flatTarget, "Desktop UI native runtime dependency");
-                    CompilerPathSecurity.HardenTemporaryFile(flatTarget);
+                    if (!File.Exists(flatTarget))
+                    {
+                        CompilerSecureFileCopy.CopyValidatedRegularFile(source, flatTarget, "Desktop UI native runtime dependency");
+                        CompilerPathSecurity.HardenTemporaryFile(flatTarget);
+                    }
                 }
             }
         }
+    }
+
+    private static bool IsCurrentRuntimeNativeAsset(string relativePath)
+    {
+        var parts = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (parts.Length < 3 || !parts[1].Equals("native", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var rid = parts[0];
+        if (OperatingSystem.IsLinux())
+            return rid.Equals(RuntimeInformation.ProcessArchitecture switch
+            {
+                Architecture.Arm64 => "linux-arm64",
+                Architecture.X64 => "linux-x64",
+                _ => string.Empty
+            }, StringComparison.OrdinalIgnoreCase);
+        if (OperatingSystem.IsWindows())
+            return rid.Equals(RuntimeInformation.ProcessArchitecture switch
+            {
+                Architecture.Arm64 => "win-arm64",
+                Architecture.X64 => "win-x64",
+                Architecture.X86 => "win-x86",
+                _ => string.Empty
+            }, StringComparison.OrdinalIgnoreCase);
+        if (OperatingSystem.IsMacOS())
+            return rid.Equals(RuntimeInformation.ProcessArchitecture switch
+            {
+                Architecture.Arm64 => "osx-arm64",
+                Architecture.X64 => "osx-x64",
+                _ => string.Empty
+            }, StringComparison.OrdinalIgnoreCase);
+        return false;
     }
 
     private static void StageMimeKit(string outputRoot)

@@ -293,7 +293,7 @@ public static class XPScriptCompilerCommandLine
 
     public static async Task<int> ValidateAsync(string[] args)
     {
-        const int MaxStdinSourceChars = 1_048_576;
+        const int MaxStdinSourceChars = 16 * 1024 * 1024;
         var resultFormat = "text";
         var debug = false;
         string? stdinRoot = null;

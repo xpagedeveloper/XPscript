@@ -3,8 +3,847 @@ using XPScript.Compiler;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
+if (args is ["--write-digitalocean-regression", var regressionPath])
+{
+    var specification = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "fixtures", "digitalocean.yaml"));
+    await File.WriteAllTextAsync(regressionPath, DigitalOceanRegressionSpecification.Create(specification));
+    return;
+}
+
+VerifyClientRegeneration();
+if (args is ["--regeneration-only"]) return;
+
 var fixture = Path.Combine(AppContext.BaseDirectory, "petstore.yaml");
+// Keep this focused regression before the full Fortnox import so wildcard request-body failures surface immediately.
+const string wildcardRequestBodyOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Wildcard request body regression", "version": "1.0" },
+  "paths": {
+    "/3/absencetransactions": {
+      "post": {
+        "operationId": "AbsenceTransactionsController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": { "$ref": "#/components/schemas/Payload" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Payload": {
+        "type": "object",
+        "properties": { "EmployeeId": { "type": "string" } }
+      }
+    }
+  }
+}
+""";
+var wildcardImport = new XpsOpenApiImporter().Import(wildcardRequestBodyOpenApi, "", "wildcard-request-body.json");
+if (!wildcardImport.Source.Contains("Public Class Payload", StringComparison.Ordinal) ||
+    !wildcardImport.Source.Contains("Sub EndpointAbsenceTransactionsController_doCreate", StringComparison.Ordinal))
+    throw new Exception("OpenAPI wildcard request-body regression failed.");
+Console.WriteLine("OPENAPI-WILDCARD-REQUEST-BODY=OK");
+
+const string multipartRequestBodyOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Multipart request body regression", "version": "1.0" },
+  "paths": {
+    "/3/archive": {
+      "post": {
+        "operationId": "ArchiveController_doCreate",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": { "file": { "type": "object" } }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    }
+  }
+}
+""";
+var multipartImport = new XpsOpenApiImporter().Import(multipartRequestBodyOpenApi, "", "multipart-request-body.json");
+if (!multipartImport.Source.Contains("Public Class ArchiveController_doCreateBody", StringComparison.Ordinal) ||
+    !multipartImport.Source.Contains("Sub EndpointArchiveController_doCreate", StringComparison.Ordinal))
+    throw new Exception("OpenAPI multipart request-body regression failed.");
+Console.WriteLine("OPENAPI-MULTIPART-REQUEST-BODY=OK");
+
+const string validOpenApiIdentifier = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Valid identifier regression", "version": "1.0" },
+  "paths": {
+    "/currencies": {
+      "get": {
+        "operationId": "CurrencyController_doIndex",
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "fortnox_CurrencyListItem_Wrap": {
+        "type": "object",
+        "properties": { "Currencies": { "type": "array", "items": { "type": "string" } } }
+      }
+    }
+  }
+}
+""";
+var validIdentifierImport = new XpsOpenApiImporter().Import(validOpenApiIdentifier, "", "valid-identifier.json");
+if (!validIdentifierImport.Source.Contains("Public Class fortnox_CurrencyListItem_Wrap", StringComparison.Ordinal) ||
+    !validIdentifierImport.AddedClasses.Contains("fortnox_CurrencyListItem_Wrap", StringComparer.Ordinal))
+    throw new Exception("OpenAPI valid identifier preservation regression failed.");
+Console.WriteLine("OPENAPI-VALID-IDENTIFIER-PRESERVATION=OK");
+
+const string reservedModelMemberOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Reserved model member regression", "version": "1.0" },
+  "paths": {
+    "/activity": {
+      "get": {
+        "operationId": "BureauActivityController_doIndex",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Bureau_Activity" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Bureau_Activity": {
+        "type": "object",
+        "properties": { "date": { "type": "string", "format": "date" } }
+      }
+    }
+  }
+}
+""";
+var reservedMemberImport = new XpsOpenApiImporter().Import(reservedModelMemberOpenApi, "", "reserved-model-member.json");
+if (!reservedMemberImport.Source.Contains("' OpenAPI property: date", StringComparison.Ordinal) ||
+    !reservedMemberImport.Source.Contains("Public ApiDate As Date", StringComparison.Ordinal))
+    throw new Exception("OpenAPI reserved model-member regression failed.");
+Console.WriteLine("OPENAPI-RESERVED-MODEL-MEMBER=OK");
+
+const string externalOperationReferenceDiagnostic = """
+openapi: 3.0.3
+info:
+  title: External operation reference diagnostic
+  version: 1.0.0
+paths:
+  /limits:
+    get:
+      $ref: "resources/limits_get.yml"
+""";
+foreach (var generate in new Func<string, object>[]
+{
+    spec => new XpsOpenApiGenerator().Generate(spec, "external-operation-ref.yaml"),
+    spec => new XpsOpenApiClientGenerator().Generate(spec, "external-operation-ref.yaml")
+})
+{
+    try
+    {
+        _ = generate(externalOperationReferenceDiagnostic);
+        throw new Exception("External OpenAPI operation $ref must fail with an actionable diagnostic.");
+    }
+    catch (XpsOpenApiGenerationException ex)
+    {
+        if (!ex.Message.Contains("line 8", StringComparison.OrdinalIgnoreCase) ||
+            !ex.Message.Contains("$ref", StringComparison.Ordinal) ||
+            !ex.Message.Contains("resources/limits_get.yml", StringComparison.Ordinal))
+            throw new Exception("External OpenAPI $ref diagnostic must identify line, property and reference.", ex);
+    }
+}
+Console.WriteLine("OPENAPI-EXTERNAL-REF-DIAGNOSTIC=OK");
+
+const string foldedLocalReference = """
+openapi: 3.0.3
+info:
+  title: Folded local reference
+  version: 1.0.0
+paths:
+  /items:
+    get:
+      operationId: listItems
+      responses:
+        '200':
+          description: OK
+components:
+  schemas:
+    Item:
+      type: object
+    ItemAlias:
+      $ref: >-
+        #/components/schemas/Item
+""";
+_ = new XpsOpenApiGenerator().Generate(foldedLocalReference, "folded-local-ref.yaml");
+_ = new XpsOpenApiClientGenerator().Generate(foldedLocalReference, "folded-local-ref.yaml");
+Console.WriteLine("OPENAPI-FOLDED-LOCAL-REF=OK");
+
+const string primitiveReferenceServerOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Primitive reference parameter regression", "version": "1.0" },
+  "paths": {
+    "/providers/{provider}": {
+      "get": {
+        "operationId": "getProvider",
+        "parameters": [
+          { "name": "provider", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/provider" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "provider": { "type": "string" }
+    }
+  }
+}
+""";
+var primitiveReferenceServer = new XpsOpenApiGenerator().Generate(primitiveReferenceServerOpenApi, "primitive-reference-server.json");
+if (!primitiveReferenceServer.Source.Contains("Public Provider As String", StringComparison.Ordinal))
+    throw new Exception("Primitive OpenAPI schema references must use the resolved primitive request type.");
+if (!primitiveReferenceServer.Source.Contains("pProvider As String", StringComparison.Ordinal))
+    throw new Exception("Primitive OpenAPI schema references must use the resolved primitive wrapper type.");
+if (primitiveReferenceServer.Source.Contains("Set request.Provider =", StringComparison.Ordinal))
+    throw new Exception("Primitive OpenAPI schema references must not use Set assignment.");
+var primitiveReferenceRoot = Path.Combine(Path.GetTempPath(), "xps-openapi-primitive-reference-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(primitiveReferenceRoot);
+try
+{
+    var primitiveReferencePath = Path.Combine(primitiveReferenceRoot, "primitive-reference-server.xps");
+    File.WriteAllText(primitiveReferencePath, primitiveReferenceServer.Source);
+    await using var primitiveReferenceUnit = await new XpsWebCompiler().CompileAsync(primitiveReferencePath, primitiveReferenceRoot);
+    if (!primitiveReferenceUnit.Routes.ContainsKey("EndpointGetProvider"))
+        throw new Exception("Primitive OpenAPI schema reference regression did not compile the generated endpoint.");
+}
+finally
+{
+    try { Directory.Delete(primitiveReferenceRoot, true); } catch { }
+}
+Console.WriteLine("OPENAPI-SERVER-PRIMITIVE-REFERENCE=OK");
+
+const string referencedParameterServerOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Referenced primitive parameter regression", "version": "1.0" },
+  "paths": {
+    "/providers/{provider}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/provider" }
+      ],
+      "get": {
+        "operationId": "getReferencedProvider",
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "provider": {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "schema": { "$ref": "#/components/schemas/provider" }
+      }
+    },
+    "schemas": {
+      "provider": { "type": "string" }
+    }
+  }
+}
+""";
+var referencedParameterServer = new XpsOpenApiGenerator().Generate(referencedParameterServerOpenApi, "referenced-primitive-parameter-server.json");
+if (!referencedParameterServer.Source.Contains("pProvider As String", StringComparison.Ordinal) ||
+    referencedParameterServer.Source.Contains("Set request.Provider =", StringComparison.Ordinal))
+    throw new Exception("Referenced primitive OpenAPI parameters must use scalar assignment.");
+var referencedParameterPath = Path.Combine(Path.GetTempPath(), "xps-openapi-referenced-parameter-" + Guid.NewGuid().ToString("N") + ".xps");
+await File.WriteAllTextAsync(referencedParameterPath, referencedParameterServer.Source);
+await using (var referencedParameterUnit = await new XpsWebCompiler().CompileAsync(referencedParameterPath, Path.GetDirectoryName(referencedParameterPath)!))
+{
+    if (!referencedParameterUnit.Routes.ContainsKey("EndpointGetReferencedProvider"))
+        throw new Exception("Referenced primitive OpenAPI parameter regression did not compile its route.");
+}
+File.Delete(referencedParameterPath);
+Console.WriteLine("OPENAPI-SERVER-REFERENCED-PRIMITIVE-PARAMETER=OK");
+
+
+
+
+const string runtimeReservedServerOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Runtime reserved identifier regression", "version": "1.0" },
+  "paths": {
+    "/reserved": {
+      "post": {
+        "operationId": "reservedNames",
+        "parameters": [
+          { "name": "application", "in": "query", "schema": { "type": "string" } },
+          { "name": "body", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  }
+}
+""";
+var runtimeReservedServer = new XpsOpenApiGenerator().Generate(runtimeReservedServerOpenApi, "runtime-reserved-server.json");
+var runtimeReservedRoot = Path.Combine(Path.GetTempPath(), "xps-openapi-runtime-reserved-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(runtimeReservedRoot);
+try
+{
+    var runtimeReservedPath = Path.Combine(runtimeReservedRoot, "runtime-reserved-server.xps");
+    File.WriteAllText(runtimeReservedPath, runtimeReservedServer.Source);
+    await using var runtimeReservedUnit = await new XpsWebCompiler().CompileAsync(runtimeReservedPath, runtimeReservedRoot);
+    if (!runtimeReservedUnit.Routes.ContainsKey("EndpointReservedNames"))
+        throw new Exception("OpenAPI server runtime-reserved identifier regression did not compile the generated endpoint.");
+}
+finally
+{
+    try { Directory.Delete(runtimeReservedRoot, true); } catch { }
+}
+Console.WriteLine("OPENAPI-SERVER-RUNTIME-RESERVED-IDENTIFIERS=OK");
+
+const string routePlaceholderServerOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Route placeholder regression", "version": "1.0" },
+  "paths": {
+    "/v2/action-gateway/toolbelts/{name}/providers/{provider}/tools": {
+      "get": {
+        "operationId": "getProviderTools",
+        "parameters": [
+          { "name": "name", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "provider", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  }
+}
+""";
+var routePlaceholderServer = new XpsOpenApiGenerator().Generate(routePlaceholderServerOpenApi, "route-placeholder-server.json");
+if (!routePlaceholderServer.Source.Contains("[Route:/v2/action-gateway/toolbelts/{name}/providers/{provider}/tools]", StringComparison.Ordinal))
+    throw new Exception("OpenAPI server route placeholder regression must preserve route placeholders.");
+var routePlaceholderRoot = Path.Combine(Path.GetTempPath(), "xps-openapi-route-placeholder-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(routePlaceholderRoot);
+try
+{
+    var routePlaceholderPath = Path.Combine(routePlaceholderRoot, "route-placeholder-server.xps");
+    File.WriteAllText(routePlaceholderPath, routePlaceholderServer.Source);
+    await using var routePlaceholderUnit = await new XpsWebCompiler().CompileAsync(routePlaceholderPath, routePlaceholderRoot);
+    if (!routePlaceholderUnit.Routes.ContainsKey("EndpointGetProviderTools"))
+        throw new Exception("OpenAPI server route placeholder regression did not compile the generated endpoint.");
+}
+finally
+{
+    try { Directory.Delete(routePlaceholderRoot, true); } catch { }
+}
+Console.WriteLine("OPENAPI-SERVER-ROUTE-PLACEHOLDERS=OK");
+
+const string modelVariantConflictAllOfClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Model variant allOf client regression", "version": "1.0" },
+  "paths": {
+    "/alert-rule": {
+      "post": {
+        "operationId": "createAlertRule",
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlertRuleSpec": { "type": "object", "properties": { "window": { "type": "string" } } },
+      "AlertRuleBase": {
+        "type": "object",
+        "properties": { "spec": { "$ref": "#/components/schemas/AlertRuleSpec" } }
+      },
+      "AlertRuleCreateRequest": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AlertRuleBase" },
+          { "type": "object", "properties": { "spec": {} } }
+        ]
+      }
+    }
+  }
+}
+""";
+var modelVariantConflictAllOfClient = new XpsOpenApiClientGenerator().Generate(modelVariantConflictAllOfClientOpenApi, "model-variant-conflict-allof-client.json");
+if (!modelVariantConflictAllOfClient.Source.Contains("Public Spec As Variant", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client model/Variant allOf regression must fall back to Variant.");
+Console.WriteLine("OPENAPI-CLIENT-MODEL-VARIANT-ALLOF=OK");
+
+const string responseSchemaQuotedTextClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Response schema quote regression", "version": "1.0" },
+  "paths": {
+    "/quoted": {
+      "get": {
+        "operationId": "getQuoted",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "string", "description": "Value may contain \"quoted\" text." }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+""";
+var responseSchemaQuotedTextClient = new XpsOpenApiClientGenerator().Generate(responseSchemaQuotedTextClientOpenApi, "response-schema-quoted-text-client.json");
+if (!responseSchemaQuotedTextClient.Source.Contains(@"\u0022quoted\u0022", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client response validation must encode JSON escaped quotes safely for XPScript.");
+var responseSchemaQuotedTextPath = Path.Combine(Path.GetTempPath(), "response-schema-quoted-text-client.xps");
+_ = new XPScriptTranspiler().Transpile(
+    responseSchemaQuotedTextClient.Source + "\nSub Main()\nEnd Sub\n",
+    responseSchemaQuotedTextPath,
+    CompilerDriver.CurrentRuntimeIdentifier());
+Console.WriteLine("OPENAPI-CLIENT-RESPONSE-SCHEMA-QUOTED-TEXT=OK");
+
+const string responseSchemaReachabilityClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Response schema reachability regression", "version": "1.0" },
+  "paths": {
+    "/item": {
+      "get": {
+        "operationId": "getItem",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Item": { "type": "object", "properties": { "child": { "$ref": "#/components/schemas/Child" } } },
+      "Child": { "type": "object", "properties": { "name": { "type": "string" } } },
+      "Unrelated": { "type": "object", "description": "UNRELATED_RESPONSE_SCHEMA_SENTINEL" }
+    }
+  }
+}
+""";
+var responseSchemaReachabilityClient = new XpsOpenApiClientGenerator().Generate(responseSchemaReachabilityClientOpenApi, "response-schema-reachability-client.json");
+if (responseSchemaReachabilityClient.Source.Contains("UNRELATED_RESPONSE_SCHEMA_SENTINEL", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client response validation must not embed unrelated component schemas.");
+if (!responseSchemaReachabilityClient.Source.Contains("#/$defs/Child", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client response validation must retain transitively referenced component schemas.");
+Console.WriteLine("OPENAPI-CLIENT-RESPONSE-SCHEMA-REACHABILITY=OK");
+
+var digitalOceanPath = Path.Combine(AppContext.BaseDirectory, "fixtures", "digitalocean.yaml");
+var digitalOceanSpecification = File.ReadAllText(digitalOceanPath);
+var digitalOceanServer = new XpsOpenApiGenerator().Generate(digitalOceanSpecification, "digitalocean.yaml");
+var digitalOceanClient = new XpsOpenApiClientGenerator().Generate(digitalOceanSpecification, "digitalocean.yaml");
+if (digitalOceanServer.Operations.Count == 0 || digitalOceanServer.Models.Count == 0)
+    throw new Exception("DigitalOcean OpenAPI REST server generation produced no operations or models.");
+if (digitalOceanClient.Operations.Count == 0 || digitalOceanClient.Models.Count == 0)
+    throw new Exception("DigitalOcean OpenAPI REST client generation produced no operations or models.");
+DigitalOceanRegressionSpecification.AssertModelReferenceClosure(digitalOceanServer.Source);
+DigitalOceanRegressionSpecification.AssertModelReferenceClosure(digitalOceanClient.Source);
+Console.WriteLine("OPENAPI-DIGITALOCEAN-SERVER-CLIENT=OK");
+
+// Compile original operations and their transitive components within the CLI
+// source-size limit. Full-definition generation above remains mandatory.
+var digitalOceanRegression = DigitalOceanRegressionSpecification.Create(digitalOceanSpecification);
+var digitalOceanCompileServer = new XpsOpenApiGenerator().Generate(digitalOceanRegression, "digitalocean-regression.yaml");
+var digitalOceanCompileClient = new XpsOpenApiClientGenerator().Generate(digitalOceanRegression, "digitalocean-regression.yaml");
+
+var fortnoxFixtureDirectory = Path.Combine(AppContext.BaseDirectory, "fixtures");
+var fortnoxSpecification = string.Concat(
+    Directory.GetFiles(fortnoxFixtureDirectory, "fortnoxapi.part*.json")
+        .OrderBy(path => path, StringComparer.Ordinal)
+        .Select(File.ReadAllText));
+
+var importSkeleton = new XpsOpenApiImporter().Import(fortnoxSpecification, """
+' Existing handwritten XPscript source must survive the import.
+Sub ExistingProcedure()
+    Print "existing"
+End Sub
+""", "fortnoxapi.json");
+
+foreach (var marker in new[]
+{
+    "Public Class fortnox_CurrencyListItem_Wrap",
+    "Public Currencies As ",
+    "Sub EndpointCurrencyController_doIndex",
+    "Function HandleCurrencyController_doIndex",
+    "Sub ExistingProcedure()",
+    "Print \"existing\""
+})
+    if (!importSkeleton.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("Fortnox OpenAPI import skeleton smoke is missing marker: " + marker);
+
+if (!importSkeleton.AddedClasses.Contains("fortnox_CurrencyListItem_Wrap", StringComparer.Ordinal) ||
+    !importSkeleton.AddedProcedures.Any(item => item.Contains("CurrencyController_doIndex", StringComparison.Ordinal)))
+    throw new Exception("Fortnox OpenAPI import did not report the generated currency class and endpoint procedures.");
+
+Console.WriteLine("OPENAPI-IMPORT-FORTNOX-CLASS-SKELETON=OK");
+
+const string wildcardClientRequestBodyOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Wildcard client request body regression", "version": "1.0" },
+  "paths": {
+    "/3/absencetransactions": {
+      "post": {
+        "operationId": "AbsenceTransactionsController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": { "schema": { "$ref": "#/components/schemas/Payload" } }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Payload": { "type": "object", "properties": { "value": { "type": "string" } } }
+    }
+  }
+}
+""";
+var wildcardClientRequestBody = new XpsOpenApiClientGenerator().Generate(wildcardClientRequestBodyOpenApi, "wildcard-client-request-body.json");
+if (!wildcardClientRequestBody.Source.Contains("Public Class Payload", StringComparison.Ordinal) ||
+    !wildcardClientRequestBody.Source.Contains("Public Function AbsenceTransactionsController_doCreate", StringComparison.Ordinal))
+    throw new Exception("OpenAPI wildcard client request-body regression failed.");
+Console.WriteLine("OPENAPI-CLIENT-WILDCARD-REQUEST-BODY=OK");
+
+const string multipartClientRequestBodyOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Multipart client request body regression", "version": "1.0" },
+  "paths": {
+    "/3/archive": {
+      "post": {
+        "operationId": "ArchiveController_doCreate",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": { "file": { "type": "object" } }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Created" } }
+      }
+    }
+  }
+}
+""";
+var multipartClientRequestBody = new XpsOpenApiClientGenerator().Generate(multipartClientRequestBodyOpenApi, "multipart-client-request-body.json");
+if (!multipartClientRequestBody.Source.Contains("Public Function ArchiveController_doCreate", StringComparison.Ordinal))
+    throw new Exception("OpenAPI multipart client request-body regression failed.");
+Console.WriteLine("OPENAPI-CLIENT-MULTIPART-REQUEST-BODY=OK");
+
+var multipartFileClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.0.3
+info: { title: Multipart File Client, version: 1.0.0 }
+paths:
+  /upload:
+    post:
+      operationId: uploadFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: object }
+      responses:
+        '200': { description: ok }
+""", "multipart-file-client.yaml");
+if (!multipartFileClient.Source.Contains("AddMultipartFile(\"file\"", StringComparison.Ordinal))
+    throw new Exception("Multipart file OpenAPI client must emit XPHttpRequest.AddMultipartFile.");
+Console.WriteLine("OPENAPI-CLIENT-MULTIPART-FILE=OK");
+
+const string numericAllOfClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Numeric allOf client regression", "version": "1.0" },
+  "paths": {
+    "/bundle": {
+      "get": {
+        "operationId": "getBundle",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Combined" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Base": { "type": "object", "properties": { "Vat": { "type": "number", "format": "double" } } },
+      "Combined": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Base" },
+          { "type": "object", "properties": { "Vat": { "type": "number", "format": "float" } } }
+        ]
+      }
+    }
+  }
+}
+""";
+var numericAllOfClient = new XpsOpenApiClientGenerator().Generate(numericAllOfClientOpenApi, "numeric-allof-client.json");
+if (!numericAllOfClient.Source.Contains("Public Vat As Double", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client numeric allOf regression must widen Single/Double to Double.");
+Console.WriteLine("OPENAPI-CLIENT-NUMERIC-ALLOF=OK");
+
+const string modelConflictAllOfClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Model conflict allOf client regression", "version": "1.0" },
+  "paths": {
+    "/recurring": {
+      "get": {
+        "operationId": "getRecurring",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PartialRecurring" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RecurringCustomer": { "type": "object", "properties": { "name": { "type": "string" } } },
+      "PartialRecurringCustomer": { "type": "object", "properties": { "id": { "type": "integer" } } },
+      "Recurring": {
+        "type": "object",
+        "properties": { "customer": { "$ref": "#/components/schemas/RecurringCustomer" } }
+      },
+      "PartialRecurring": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Recurring" },
+          { "type": "object", "properties": { "customer": { "$ref": "#/components/schemas/PartialRecurringCustomer" } } }
+        ]
+      }
+    }
+  }
+}
+""";
+var modelConflictAllOfClient = new XpsOpenApiClientGenerator().Generate(modelConflictAllOfClientOpenApi, "model-conflict-allof-client.json");
+if (!modelConflictAllOfClient.Source.Contains("Public Customer As Variant", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client model-conflict allOf regression must fall back to Variant.");
+Console.WriteLine("OPENAPI-CLIENT-MODEL-CONFLICT-ALLOF=OK");
+
+const string reservedEnumClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Reserved enum client regression", "version": "1.0" },
+  "paths": {
+    "/direction": {
+      "get": {
+        "operationId": "getDirection",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Direction" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Direction": { "type": "string", "enum": ["in", "out"] }
+    }
+  }
+}
+""";
+var reservedEnumClient = new XpsOpenApiClientGenerator().Generate(reservedEnumClientOpenApi, "reserved-enum-client.json");
+if (!reservedEnumClient.Source.Contains("    ApiIn", StringComparison.Ordinal) ||
+    !reservedEnumClient.Source.Contains("    out", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client reserved enum regression must normalize reserved enum identifiers.");
+Console.WriteLine("OPENAPI-CLIENT-RESERVED-ENUM=OK");
+
+const string punctuatedEnumClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Punctuated enum client regression", "version": "1.0" },
+  "paths": {
+    "/reference-type": {
+      "get": {
+        "operationId": "getReferenceType",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReferenceType" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ReferenceType": { "type": "string", "enum": ["end-to-end-id"] }
+    }
+  }
+}
+""";
+var punctuatedEnumClient = new XpsOpenApiClientGenerator().Generate(punctuatedEnumClientOpenApi, "punctuated-enum-client.json");
+if (!punctuatedEnumClient.Source.Contains("    EndToEndId", StringComparison.Ordinal))
+    throw new Exception("OpenAPI client punctuated enum regression must normalize enum values to XPScript identifiers.");
+Console.WriteLine("OPENAPI-CLIENT-PUNCTUATED-ENUM=OK");
+
+const string validIdentifierClientOpenApi = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Valid schema identifier client regression", "version": "1.0" },
+  "paths": {
+    "/model": {
+      "get": {
+        "operationId": "getModel",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/fortnox_Test_Wrap" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "fortnox_Test_Wrap": { "type": "object", "properties": { "value": { "type": "string" } } }
+    }
+  }
+}
+""";
+var validIdentifierClient = new XpsOpenApiClientGenerator().Generate(validIdentifierClientOpenApi, "valid-identifier-client.json");
+if (!validIdentifierClient.Source.Contains("Public Class fortnox_Test_Wrap", StringComparison.Ordinal) ||
+    !validIdentifierClient.Models.Contains("fortnox_Test_Wrap", StringComparer.Ordinal))
+    throw new Exception("OpenAPI client valid schema identifier regression must preserve the original identifier.");
+Console.WriteLine("OPENAPI-CLIENT-VALID-IDENTIFIER-PRESERVATION=OK");
+
+var runtimeReservedClient = new XpsOpenApiClientGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Runtime Reserved Names, version: 1.0.0 }
+components:
+  schemas:
+    RuntimeReservedModel:
+      type: object
+      properties:
+        body: { type: string }
+        application: { type: string }
+paths:
+  /reserved:
+    get:
+      operationId: runtimeReserved
+      parameters:
+        - { name: body, in: query, required: false, schema: { type: string } }
+        - { name: application, in: query, required: false, schema: { type: string } }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RuntimeReservedModel' }
+""", "runtime-reserved-client.yaml");
+foreach (var marker in new[] { "Public ApiBody As String", "Public ApiApplication As String", "Optional ApiBody As Variant", "Optional ApiApplication As Variant" })
+    if (!runtimeReservedClient.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("OpenAPI client runtime-reserved identifier regression is missing marker: " + marker);
+Console.WriteLine("OPENAPI-CLIENT-RUNTIME-RESERVED-IDENTIFIERS=OK");
+
+var runtimeReservedClientPath = Path.Combine(Path.GetTempPath(), "xpscript-openapi-runtime-reserved-" + Guid.NewGuid().ToString("N") + ".xps");
+try
+{
+    _ = new XPScriptTranspiler().Transpile(
+        runtimeReservedClient.Source + "\nSub Main()\nEnd Sub\n",
+        runtimeReservedClientPath,
+        CompilerDriver.CurrentRuntimeIdentifier());
+}
+finally
+{
+    if (File.Exists(runtimeReservedClientPath)) File.Delete(runtimeReservedClientPath);
+}
+Console.WriteLine("OPENAPI-CLIENT-RUNTIME-RESERVED-COMPILE=OK");
+
+var fortnoxClient = new XpsOpenApiClientGenerator().Generate(fortnoxSpecification, "fortnoxapi.json");
+foreach (var marker in new[]
+{
+    "Public Class fortnox_CurrencyListItem_Wrap",
+    "Public Currencies As XPJsonArray",
+    "Public Function CurrencyController_doIndex"
+})
+    if (!fortnoxClient.Source.Contains(marker, StringComparison.Ordinal))
+        throw new Exception("Fortnox OpenAPI REST client smoke is missing marker: " + marker);
+if (!fortnoxClient.Models.Contains("fortnox_CurrencyListItem_Wrap", StringComparer.Ordinal) ||
+    !fortnoxClient.Operations.Contains("CurrencyController_doIndex", StringComparer.Ordinal))
+    throw new Exception("Fortnox OpenAPI REST client did not report the generated currency model and operation.");
+Console.WriteLine("OPENAPI-FORTNOX-REST-CLIENT=OK");
+
 var generator = new XpsOpenApiGenerator();
+const string arrayProviderParameterOpenApi = """
+openapi: 3.0.3
+info: { title: Array provider parameter regression, version: 1.0.0 }
+paths:
+  /models:
+    get:
+      operationId: listModelsByProvider
+      parameters:
+        - name: provider
+          in: query
+          required: false
+          schema:
+            type: array
+            items: { type: string }
+      responses:
+        '200': { description: ok }
+""";
+var arrayProviderParameterServer = generator.Generate(arrayProviderParameterOpenApi, "array-provider-parameter.yaml");
+if (!arrayProviderParameterServer.Source.Contains("Public Provider As XPJsonArray", StringComparison.Ordinal) ||
+    !arrayProviderParameterServer.Source.Contains("pProvider As XPJsonArray", StringComparison.Ordinal))
+    throw new Exception("Array OpenAPI parameter must remain XPJsonArray in generated server request and wrapper.");
+var arrayProviderParameterPath = Path.Combine(Path.GetTempPath(), "array-provider-parameter-server.xps");
+await File.WriteAllTextAsync(arrayProviderParameterPath, arrayProviderParameterServer.Source);
+await using (var arrayProviderParameterUnit = await new XpsWebCompiler().CompileAsync(arrayProviderParameterPath, Path.GetTempPath()))
+{
+}
+Console.WriteLine("OPENAPI-SERVER-ARRAY-PARAMETER=OK");
+
 var result = generator.GenerateFile(fixture);
 var clientResult = new XpsOpenApiClientGenerator().GenerateFile(fixture);
 var securityClient = new XpsOpenApiClientGenerator().Generate("""
@@ -459,8 +1298,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ArrayModel' }
 """, "typed-model-arrays.yaml").Source;
-foreach (var marker in new[] { "[JsonName(\"names\")]", "Public Names() As String", "[JsonName(\"counts\")]", "Public Counts() As Integer", "[JsonName(\"children\")]", "Public Children() As Child", "[JsonName(\"objects\")]", "Public Objects As XPJsonArray", "[JsonName(\"nested\")]", "Public Nested As XPJsonArray" })
-    if (!typedArrayClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Typed OpenAPI model array is missing marker: " + marker);
+foreach (var marker in new[] { "[JsonName(\"names\")]", "Public Names As XPJsonArray", "[JsonName(\"counts\")]", "Public Counts As XPJsonArray", "[JsonName(\"children\")]", "Public Children As XPJsonArray", "[JsonName(\"objects\")]", "Public Objects As XPJsonArray", "[JsonName(\"nested\")]", "Public Nested As XPJsonArray" })
+    if (!typedArrayClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Native JSON model array is missing marker: " + marker);
 
 var securityCollisionSource = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.0.3
@@ -492,8 +1331,7 @@ if (securityCollisionSource.Split("Sub ApiSetHeader(", StringSplitOptions.None).
     !securityCollisionSource.Contains("Function SetHeader(", StringComparison.Ordinal))
     throw new Exception("OpenAPI operation names must be preserved, same-name method overloads with different parameter signatures must remain valid, and true same-scope helper collisions must be deterministic. Generated source:\n" + securityCollisionSource);
 
-var keywordEnumMemberRejected = false;
-try { _ = new XpsOpenApiClientGenerator().Generate("""
+var keywordEnumClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Keyword Enum, version: 1.0.0 }
 components:
@@ -511,8 +1349,10 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/State' }
-""", "keyword-enum.yaml"); } catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("reserved XPScript keyword", StringComparison.OrdinalIgnoreCase) && ex.Message.Contains("Class", StringComparison.OrdinalIgnoreCase)) { keywordEnumMemberRejected = true; }
-if (!keywordEnumMemberRejected) throw new Exception("OpenAPI enum members that map to XPScript keywords must be rejected.");
+""", "keyword-enum.yaml");
+if (!keywordEnumClient.Source.Contains("    Ready", StringComparison.Ordinal) ||
+    !keywordEnumClient.Source.Contains("    ApiClass", StringComparison.Ordinal))
+    throw new Exception("OpenAPI enum members that map to XPScript keywords must be normalized to valid identifiers.");
 
 var keywordComponentClient = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
@@ -899,13 +1739,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EnumModel' }
 """, "typed-enums.yaml").Source;
-foreach (var marker in new[] { "Enum PetStatus", "    Available", "    Pending", "    Sold", "End Enum", "[JsonName(\"status\")]", "Public Status As PetStatus", "[JsonName(\"history\")]", "Public History() As PetStatus" })
+foreach (var marker in new[] { "Enum PetStatus", "    Available", "    Pending", "    Sold", "End Enum", "[JsonName(\"status\")]", "Public Status As PetStatus", "[JsonName(\"history\")]", "Public History As XPJsonArray" })
     if (!enumClient.Contains(marker, StringComparison.Ordinal)) throw new Exception("Typed OpenAPI enum is missing marker: " + marker);
 
-var badEnumValue = false;
-try { _ = new XpsOpenApiClientGenerator().Generate("""
+var normalizedEnumValue = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
-info: { title: Bad Enum, version: 1.0.0 }
+info: { title: Normalized Enum, version: 1.0.0 }
 components:
   schemas:
     BadStatus:
@@ -921,8 +1760,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/BadStatus' }
-"""); } catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("cannot be represented losslessly", StringComparison.OrdinalIgnoreCase)) { badEnumValue = true; }
-if (!badEnumValue) throw new Exception("String enum values that cannot be represented losslessly must be rejected.");
+""").Source;
+if (!normalizedEnumValue.Contains("    InProgress", StringComparison.Ordinal))
+    throw new Exception("String enum values with punctuation must be normalized to valid XPScript enum identifiers.");
 
 var badNumericEnum = false;
 try { _ = new XpsOpenApiClientGenerator().Generate("""
@@ -1583,8 +2423,54 @@ if (openApi32Client.OpenApiVersion != "3.2.0" || !openApi32Client.Operations.Con
 
 var root = Path.Combine(Path.GetTempPath(), "xps-openapi-generator-smoke-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
+
+var sizeLiteralSource = """
+Sub Main()
+    Dim http As New XPHttpClient
+    http.MaxRequestBodyBytes = 100mb
+    Dim kilobytes As Long
+    Dim gigabytes As Long
+    kilobytes = 2kb
+    gigabytes = 3gb
+End Sub
+""";
+var sizeLiteralPath = Path.Combine(root, "size-literals.xps");
+_ = new XPScriptTranspiler().TranspileRestricted(sizeLiteralSource, sizeLiteralPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
+Console.WriteLine("SIZE-LITERALS=OK");
+
 try
 {
+    var digitalOceanServerPath = Path.Combine(root, "digitalocean-server.xps");
+    var digitalOceanClientPath = Path.Combine(root, "digitalocean-client.xps");
+    try
+    {
+        await File.WriteAllTextAsync(digitalOceanServerPath, digitalOceanCompileServer.Source);
+        await using var digitalOceanServerUnit = await new XpsWebCompiler().CompileAsync(digitalOceanServerPath, root);
+    }
+    catch (XpsWebCompilationException webEx) when (webEx.InnerException is CompilerException ex && ex.GeneratedDiagnostics.Count > 0)
+    {
+        var diagnostic = ex.GeneratedDiagnostics[0];
+        var sourceLines = digitalOceanCompileServer.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+        var line = diagnostic.Line > 0 && diagnostic.Line <= sourceLines.Length ? sourceLines[diagnostic.Line - 1] : "<line unavailable>";
+        throw new Exception($"DigitalOcean server compile failed at generated line {diagnostic.Line}, column {diagnostic.Position}: {line}", ex);
+    }
+    try
+    {
+        _ = new XPScriptTranspiler().TranspileRestricted(
+            digitalOceanCompileClient.Source + "\nSub Main()\nEnd Sub\n",
+            digitalOceanClientPath,
+            CompilerDriver.CurrentRuntimeIdentifier(),
+            [root]);
+    }
+    catch (CompilerException ex) when (ex.GeneratedDiagnostics.Count > 0)
+    {
+        var diagnostic = ex.GeneratedDiagnostics[0];
+        var sourceLines = digitalOceanCompileClient.Source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+        var line = diagnostic.Line > 0 && diagnostic.Line <= sourceLines.Length ? sourceLines[diagnostic.Line - 1] : "<line unavailable>";
+        throw new Exception($"DigitalOcean client compile failed at generated line {diagnostic.Line}, column {diagnostic.Position}: {line}", ex);
+    }
+    Console.WriteLine("OPENAPI-DIGITALOCEAN-SERVER-CLIENT-COMPILE=OK");
+
     var openApi32ServerPath = Path.Combine(root, "openapi32-server.xps");
     await File.WriteAllTextAsync(openApi32ServerPath, openApi32Server.Source);
     var openApi32ClientPath = Path.Combine(root, "openapi32-client.xps");
@@ -1663,9 +2549,9 @@ End Class
     }
 
     var getPetOriginal = "    result.StatusCode = 501" + Environment.NewLine + "    Set HandleGetPet = result";
-    const string getPetEdited = "    Print \"fråga funktionen GetPet\"\n    result.StatusCode = 200\n    result.Data = \"custom-get\"\n    Set HandleGetPet = result";
+    const string getPetEdited = "    Print \"frÃ¥ga funktionen GetPet\"\n    result.StatusCode = 200\n    result.Data = \"custom-get\"\n    Set HandleGetPet = result";
     var createPetOriginal = "    result.StatusCode = 501" + Environment.NewLine + "    Set HandleCreatePet = result";
-    const string createPetEdited = "    Print \"fråga funktionen CreatePet\"\n    result.StatusCode = 201\n    result.Data = \"custom-create\"\n    Set HandleCreatePet = result";
+    const string createPetEdited = "    Print \"frÃ¥ga funktionen CreatePet\"\n    result.StatusCode = 201\n    result.Data = \"custom-create\"\n    Set HandleCreatePet = result";
 
     var userEdited = result.Source
         .Replace(getPetOriginal, getPetEdited, StringComparison.Ordinal)
@@ -1673,8 +2559,8 @@ End Class
 
     foreach (var printMarker in new[]
     {
-        "Print \"fråga funktionen GetPet\"",
-        "Print \"fråga funktionen CreatePet\""
+        "Print \"frÃ¥ga funktionen GetPet\"",
+        "Print \"frÃ¥ga funktionen CreatePet\""
     })
     {
         if (!userEdited.Contains(printMarker, StringComparison.Ordinal))
@@ -1719,6 +2605,28 @@ End Class
     // Server import intentionally does not support reimport/update semantics. Generated
     // infrastructure is immutable to later imports; separate APIs are isolated instead.
 
+
+
+    foreach (var marker in new[] { "OPENAPI-CLIENT-SECURITY=OK", "OPENAPI-CLIENT-CORE-ONLY=OK" })
+        Console.WriteLine(marker);
+    Console.WriteLine("OPENAPI-CLIENT-COMPILE=OK");
+    Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
+    Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
+    Console.WriteLine("OPENAPI-3.2-SERVER-CLIENT-COMPILE=OK");
+    Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
+    Console.WriteLine("OPENAPI-SCOPE-COLLISION-COMPILE=OK");
+    Console.WriteLine("OPENAPI-RUNTIME-PROPERTY-METHOD-COEXISTENCE-COMPILE=OK");
+    Console.WriteLine("OPENAPI-EDITED-HANDLERS-COMPILE=OK");
+    Console.WriteLine("OPENAPI-PRINT-PRESERVATION=OK");
+}
+finally
+{
+    try { Directory.Delete(root, true); } catch { }
+}
+
+
+static void VerifyClientRegeneration()
+{
     var regenerationSpec = """
 openapi: 3.1.0
 info: { title: Regeneration Collision, version: 1.0.0 }
@@ -1768,20 +2676,4 @@ paths:
         throw new Exception("OpenAPI client regeneration must preserve deterministic member naming when the contract grows.");
 
     Console.WriteLine("OPENAPI-REGENERATION-COLLISION=OK");
-
-    foreach (var marker in new[] { "OPENAPI-CLIENT-SECURITY=OK", "OPENAPI-CLIENT-CORE-ONLY=OK" })
-        Console.WriteLine(marker);
-    Console.WriteLine("OPENAPI-CLIENT-COMPILE=OK");
-    Console.WriteLine("OPENAPI-3.0-GENERATOR=OK");
-    Console.WriteLine("OPENAPI-3.1-YAML-GENERATOR=OK");
-    Console.WriteLine("OPENAPI-3.2-SERVER-CLIENT-COMPILE=OK");
-    Console.WriteLine("OPENAPI-GENERATED-XPS-COMPILE=OK");
-    Console.WriteLine("OPENAPI-SCOPE-COLLISION-COMPILE=OK");
-    Console.WriteLine("OPENAPI-RUNTIME-PROPERTY-METHOD-COEXISTENCE-COMPILE=OK");
-    Console.WriteLine("OPENAPI-EDITED-HANDLERS-COMPILE=OK");
-    Console.WriteLine("OPENAPI-PRINT-PRESERVATION=OK");
-}
-finally
-{
-    try { Directory.Delete(root, true); } catch { }
 }

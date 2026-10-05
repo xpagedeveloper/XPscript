@@ -1,0 +1,4996 @@
+            "in": "path",
+            "name": "EmployeeId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Lon_EmployeeSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update employee"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_EmployeeSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update employee response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Employee not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update employee",
+        "tags": [
+          "fortnox_Employees"
+        ],
+        "x-codegen-request-body-name": "employee",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/euvatlimitregulation": {
+      "get": {
+        "description": "Get eu vat limit regulations",
+        "operationId": "EUVatLimitRegulationController_doIndex",
+        "parameters": [
+          {
+            "description": "eu vat limit regulation for year, if not provided than this will be set to current year",
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_EUVatLimitRegulationResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful list eu vat limit regulations response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve details about eu vat limit",
+        "tags": [
+          "fortnox_EUVatLimitRegulation"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/expenses": {
+      "get": {
+        "description": "Retrieve expense codes.",
+        "operationId": "ExpensesController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_ExpensesListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list expenses response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve expenses",
+        "tags": [
+          "fortnox_Expenses"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create an expense",
+        "operationId": "ExpensesController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Lon_ExpensesSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create expense"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_ExpensesSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create expense response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Expense not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an expense",
+        "tags": [
+          "fortnox_Expenses"
+        ],
+        "x-codegen-request-body-name": "expense",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/expenses/{ExpenseCode}": {
+      "get": {
+        "description": "Retrieves expense information for specified expense.",
+        "operationId": "ExpensesController_doShow",
+        "parameters": [
+          {
+            "description": "expenseCode",
+            "in": "path",
+            "name": "ExpenseCode",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_ExpensesSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show expense response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Expense not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve an expense",
+        "tags": [
+          "fortnox_Expenses"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/financialyears": {
+      "get": {
+        "description": "Add the query param to filter on specific date.",
+        "operationId": "FinancialYearController_doIndex",
+        "parameters": [
+          {
+            "description": "date to filter on, for example 2020-06-30",
+            "in": "query",
+            "name": "Date",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_FinancialYearListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list financial years response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of financial years",
+        "tags": [
+          "fortnox_FinancialYears"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create a financial year",
+        "operationId": "FinancialYearController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Bf_FinancialYearSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create financial year"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_FinancialYearSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create financial year response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a financial year",
+        "tags": [
+          "fortnox_FinancialYears"
+        ],
+        "x-codegen-request-body-name": "financialYear",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/financialyears/{Id}": {
+      "get": {
+        "description": "Retrieve a financial year",
+        "operationId": "FinancialYearController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the year",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_FinancialYearSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show financial year response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Financial year not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve financial year by id",
+        "tags": [
+          "fortnox_FinancialYears"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/inbox": {
+      "get": {
+        "description": "Get folders",
+        "operationId": "InboxController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_InboxFolderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful list folders response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve the root folder containing files and folders",
+        "tags": [
+          "fortnox_Inbox"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Upload a file to a specific subdirectory.",
+        "operationId": "InboxController_doCreate",
+        "parameters": [
+          {
+            "description": "folder id",
+            "in": "query",
+            "name": "folderId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "path",
+            "in": "query",
+            "name": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "file",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Request body for create folder"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_InboxFileResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful create folder response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Upload a file",
+        "tags": [
+          "fortnox_Inbox"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/inbox/{Id}": {
+      "delete": {
+        "description": "Delete a folder",
+        "operationId": "InboxController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the file to remove",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete folder response with no content"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Folder not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove a file or folder",
+        "tags": [
+          "fortnox_Inbox"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve a folder",
+        "operationId": "InboxController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the folder",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_InboxFolderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show folder response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Folder not found"
+          },
+          "default": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single file",
+        "tags": [
+          "fortnox_Inbox"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoiceaccruals": {
+      "get": {
+        "description": "The invoice accruals register can return a list of records or a single record. By specifying a InvoiceNumber in the URL, a single record will be returned. Not specifying a InvoiceNumber will return a list of records.",
+        "operationId": "InvoiceAccrualController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceAccrualListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list invoice accruals response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of invoice accruals",
+        "tags": [
+          "fortnox_InvoiceAccruals"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create an invoice accrual",
+        "operationId": "InvoiceAccrualController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoiceAccrualSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create invoice accrual"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceAccrualSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create invoice accrual response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an invoice accrual",
+        "tags": [
+          "fortnox_InvoiceAccruals"
+        ],
+        "x-codegen-request-body-name": "invoiceAccrual",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoiceaccruals/{InvoiceNumber}": {
+      "delete": {
+        "description": "Delete an invoice accrual",
+        "operationId": "InvoiceAccrualController_doDelete",
+        "parameters": [
+          {
+            "description": "Invoice number of invoice accrual to delete",
+            "in": "path",
+            "name": "InvoiceNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete invoice accrual response with no content"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice accrual not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove an invoice accrual",
+        "tags": [
+          "fortnox_InvoiceAccruals"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve an invoice accrual",
+        "operationId": "InvoiceAccrualController_doShow",
+        "parameters": [
+          {
+            "description": "Invoice number of invoice accrual to show",
+            "in": "path",
+            "name": "InvoiceNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceAccrualSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show invoice accrual response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice accrual not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single invoice accrual",
+        "tags": [
+          "fortnox_InvoiceAccruals"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update an invoice accrual",
+        "operationId": "InvoiceAccrualController_doUpdate",
+        "parameters": [
+          {
+            "description": "Invoice number of invoice accrual to update",
+            "in": "path",
+            "name": "InvoiceNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoiceAccrualSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update invoice accrual"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceAccrualSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update invoice accrual response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice accrual not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update an invoice accrual",
+        "tags": [
+          "fortnox_InvoiceAccruals"
+        ],
+        "x-codegen-request-body-name": "invoiceAccrual",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoicepayments": {
+      "get": {
+        "description": "Get invoice payments",
+        "operationId": "InvoicePaymentController_doIndex",
+        "parameters": [
+          {
+            "description": "field to sort returned list on",
+            "in": "query",
+            "name": "sortby",
+            "schema": {
+              "enum": [
+                "paymentdate"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by invoice number",
+            "in": "query",
+            "name": "invoicenumber",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }          },
+          {
+            "description": "filter by last modified",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoicePaymentListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list invoice payments response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of invoice payments",
+        "tags": [
+          "fortnox_InvoicePayments"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create an invoice payment",
+        "operationId": "InvoicePaymentController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoicePaymentSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create invoice payment"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoicePaymentSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create invoice payment response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an invoice payment",
+        "tags": [
+          "fortnox_InvoicePayments"
+        ],
+        "x-codegen-request-body-name": "invoicePayment",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoicepayments/{Number}": {
+      "delete": {
+        "description": "Delete an invoice payment",
+        "operationId": "InvoicePaymentController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the invoice payment",
+            "in": "path",
+            "name": "Number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete invoice payment response with no content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice payment not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove an invoice payment",
+        "tags": [
+          "fortnox_InvoicePayments"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve an invoice payment",
+        "operationId": "InvoicePaymentController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the invoice payment",
+            "in": "path",
+            "name": "Number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoicePaymentSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show invoice payment response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice payment not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single invoice payment",
+        "tags": [
+          "fortnox_InvoicePayments"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update an invoice payment",
+        "operationId": "InvoicePaymentController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the invoice payment",
+            "in": "path",
+            "name": "Number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoicePaymentSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update invoice payment"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoicePaymentSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update invoice payment response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice payment not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update an invoice payment",
+        "tags": [
+          "fortnox_InvoicePayments"
+        ],
+        "x-codegen-request-body-name": "invoicePayment",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoicepayments/{Number}/bookkeep": {
+      "put": {
+        "description": "Update an invoice payment",
+        "operationId": "InvoicePaymentController_doUpdateAndBookkeep",
+        "parameters": [
+          {
+            "description": "identifies the invoice payment",
+            "in": "path",
+            "name": "Number",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoicePaymentSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update invoice payment"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoicePaymentSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update invoice payment response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice payment not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Bookkeep an invoice payment",
+        "tags": [
+          "fortnox_InvoicePayments"
+        ],
+        "x-codegen-request-body-name": "invoicePayment",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices": {
+      "get": {
+        "description": "Get invoices",
+        "operationId": "InvoiceController_doIndex",
+        "parameters": [
+          {
+            "description": "Tofinalpaydate of invoices to list",
+            "in": "query",
+            "name": "tofinalpaydate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Fromfinalpaydate of invoices to list",
+            "in": "query",
+            "name": "fromfinalpaydate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "possibility to filter invoices",
+            "in": "query",
+            "name": "filter",
+            "schema": {
+              "enum": [
+                "cancelled",
+                "fullypaid",
+                "unpaid",
+                "unpaidoverdue",
+                "unbooked"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "field to sort returned list on",
+            "in": "query",
+            "name": "sortby",
+            "schema": {
+              "enum": [
+                "customername",
+                "customernumber",
+                "documentnumber",
+                "invoicedate",
+                "ocr",
+                "total"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Costcenter of invoices to list",
+            "in": "query",
+            "name": "costcenter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Customername of invoices to list",
+            "in": "query",
+            "name": "customername",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Customernumber of invoices to list",
+            "in": "query",
+            "name": "customernumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Label of invoices to list",
+            "in": "query",
+            "name": "label",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Documentnumber of invoices to list",
+            "in": "query",
+            "name": "documentnumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Fromdate of invoices to list",
+            "in": "query",
+            "name": "fromdate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Todate of invoices to list",
+            "in": "query",
+            "name": "todate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Lastmodified of invoices to list",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Notcompleted of invoices to list",
+            "in": "query",
+            "name": "notcompleted",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Ocr of invoices to list",
+            "in": "query",
+            "name": "ocr",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Ourreference of invoices to list",
+            "in": "query",
+            "name": "ourreference",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Project of invoices to list",
+            "in": "query",
+            "name": "project",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sent of invoices to list",
+            "in": "query",
+            "name": "sent",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Externalinvoicereference1 of invoices to list",
+            "in": "query",
+            "name": "externalinvoicereference1",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Externalinvoicereference2 of invoices to list",
+            "in": "query",
+            "name": "externalinvoicereference2",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Yourreference of invoices to list",
+            "in": "query",
+            "name": "yourreference",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Invoicetype of invoices to list",
+            "in": "query",
+            "name": "invoicetype",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Articlenumber of invoices to list",
+            "in": "query",
+            "name": "articlenumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Articledescription of invoices to list",
+            "in": "query",
+            "name": "articledescription",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Currency of invoices to list",
+            "in": "query",
+            "name": "currency",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Accountnumberfrom of invoices to list",
+            "in": "query",
+            "name": "accountnumberfrom",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Accountnumberto of invoices to list",
+            "in": "query",
+            "name": "accountnumberto",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Yourordernumber of invoices to list",
+            "in": "query",
+            "name": "yourordernumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Credit of invoices to list",
+            "in": "query",
+            "name": "credit",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceListResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful list invoices response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of invoices",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "An endpoint for creating an invoice. While it is possible to create an invoice without rows, we encourage you to add them if you can.\n Omitted values in the payload will be supplied by Predefined values which can be edited in the Fortnox account settings.\n Note that Predefined values will always be overwritten by values provided through the API.\n\n Should you have EasyVat enabled, it is mandatory to provide an account in the request should you use a custom VAT rate.\n\n This endpoint can produce errors, some of which may only be relevant for EasyVat. Refer to the table below.\n <table>\n <caption>Errors that can be raised by this endpoint.</caption>\n \t\t<tr>\n \t\t\t<th>Error Code</th>\n \t\t\t<th>HTTP Code</th>\n \t\t\t<th>Description</th>\n \t\t\t<th>Solution</th>\n \t\t</tr>\n \t\t<tr>\n \t\t\t<td>2004167</td>\n \t\t\t<td>400</td>\n \t\t\t<td>An account must be provided when using a custom VAT rate and EasyVat has been enabled.</td>\n \t\t\t<td>Supply each row which has a custom VAT rate with an account.</td>\n \t\t</tr>\n </table>\n\n Note: The <b>EuQuarterlyReport</b> property will become obsolete at 2021-12-01.\n This property is currently used by the <b>Quarterly</b> report as one of the conditions that determine if an invoice\n should be included in the report or not.\n A new version of the <b>Quarterly</b> report is released at 2021-12-01. In the new report, this property will not be\n used when determining if an invoice should be included in the report or not, with one exception: if the invoice\n is created before 2021-12-01, and this property is false, the invoice will be excluded from the report.\n For invoices created 2021-12-01 and later, this property will have no effect.",
+        "operationId": "InvoiceController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoiceSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create invoice"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful create invoice response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an invoice",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-codegen-request-body-name": "invoicePayload",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}": {
+      "get": {
+        "description": "Retrieve an invoice",
+        "operationId": "InvoiceController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single invoice",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Note that there are two approaches for updating the rows on an invoice.\n\n If RowId is not specified on any row, the rows will be mapped and updated in the order in which they are set in the array. All rows that should remain on the invoice needs to be provided.\n\n If RowId is specified on one or more rows the following goes: Corresponding row with that id will be updated. The rows without RowId will be interpreted as new rows. If a row should not be updated but remain on the invoice then specify only RowId like { \"RowId\": 123 }, otherwise it will be removed. Note that new RowIds are generated for all rows every time an invoice is updated.\n\n Note: The <b>EuQuarterlyReport</b> property will become obsolete at 2021-12-01.\n This property is currently used by the <b>Quarterly</b> report as one of the conditions that determine if an invoice\n should be included in the report or not.\n A new version of the <b>Quarterly</b> report is released at 2021-12-01. In the new report, this property will not be\n used when determining if an invoice should be included in the report or not, with one exception: if the invoice\n is created before 2021-12-01, and this property is false, the invoice will be excluded from the report.\n For invoices created 2021-12-01 and later, this property will have no effect.",
+        "operationId": "InvoiceController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoiceSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update an invoice",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-codegen-request-body-name": "invoicePayload",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/bookkeep": {
+      "put": {
+        "description": "Update an invoice",
+        "operationId": "InvoiceController_doUpdateAndBookkeep",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoiceSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Bookkeep an invoice",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/cancel": {
+      "put": {
+        "description": "Update an invoice",
+        "operationId": "InvoiceController_doUpdateAndCancel",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoiceSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Cancel an invoice",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/credit": {
+      "put": {
+        "description": "The created credit invoice will be referenced in the property CreditInvoiceReference.",
+        "operationId": "InvoiceController_doUpdateAndCredit",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoiceSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Credit an invoice",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/einvoice": {
+      "get": {
+        "description": "Retrieve an invoice",
+        "operationId": "InvoiceController_doShowAndEinvoice",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },        "summary": "Send an invoice as e-invoice",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/email": {
+      "get": {
+        "description": "You can use the properties in the EmailInformation to customize the e-mail message on each invoice.",
+        "operationId": "InvoiceController_doShowAndEmail",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Send an invoice as email",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/eprint": {
+      "get": {
+        "description": "Retrieve an invoice",
+        "operationId": "InvoiceController_doShowAndEprint",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Send an invoice as e-print",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/externalprint": {
+      "put": {
+        "description": "Use this endpoint to set invoice as sent, without generating an invoice.",
+        "operationId": "InvoiceController_doUpdateAndExternalPrint",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoiceSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Set an invoice as sent",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/preview": {
+      "get": {
+        "description": "The difference between this and the print-endpoint is that property Sent is not set to TRUE.",
+        "operationId": "InvoiceController_doShowAndPreview",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Preview an invoice",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/print": {
+      "get": {
+        "description": "Retrieve an invoice",
+        "operationId": "InvoiceController_doShowAndPrint",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Print an invoice",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/printreminder": {
+      "get": {
+        "description": "Retrieve an invoice",
+        "operationId": "InvoiceController_doShowAndPrintReminder",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Print an invoice as reminder",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/invoices/{DocumentNumber}/warehouseready": {
+      "put": {
+        "description": "Used for marking a document as ready in the warehouse module. DeliveryState needs to be set to &quot;delivery&quot;.",
+        "operationId": "InvoiceController_doUpdateAndWarehouseReady",
+        "parameters": [
+          {
+            "description": "identifies the invoice",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_InvoiceSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_InvoiceResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update invoice response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Invoice not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Set an invoice as done",
+        "tags": [
+          "fortnox_Invoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/labels": {
+      "get": {
+        "description": "Get labels",
+        "operationId": "DocumentTagController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_DocumentTagListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list labels response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of labels",
+        "tags": [
+          "fortnox_Labels"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "The created label will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "DocumentTagController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_DocumentTagSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create label"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_DocumentTagSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create label response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a label",
+        "tags": [
+          "fortnox_Labels"
+        ],
+        "x-codegen-request-body-name": "label",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/labels/{Id}": {
+      "delete": {
+        "description": "Deletes the label and its connection to documents permanently.\n You need to supply the unique label id that was returned when the label was created or retrieved from the list of labels.",
+        "operationId": "DocumentTagController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the label",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete label response with no content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Delete a label",
+        "tags": [
+          "fortnox_Labels"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Updates the specified label with the values provided in the properties. Any property not provided will be left unchanged.",
+        "operationId": "DocumentTagController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the label",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_DocumentTagSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update label"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_DocumentTagSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update label response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Label not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a label",
+        "tags": [
+          "fortnox_Labels"
+        ],
+        "x-codegen-request-body-name": "label",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/me": {
+      "get": {
+        "description": "Retrieve a me",
+        "operationId": "MeController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_MeSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show me response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve user information\n Use this endpoint to retrieve user information related to the used access token",
+        "tags": [
+          "fortnox_Me"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/modesofpayments": {
+      "get": {
+        "description": "The modes of payments register can return a list of records or a single record. By specifying a Code in the URL, a single record will be returned. Not specifying a Code will return a list of records.",
+        "operationId": "ModeOfPaymentController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ModeOfPaymentListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list modes of payments response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of modes of payments",
+        "tags": [
+          "fortnox_ModesOfPayments"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create a mode of payment",
+        "operationId": "ModeOfPaymentController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ModeOfPaymentSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create mode of payment"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ModeOfPaymentSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create mode of payment response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a mode of payment",
+        "tags": [
+          "fortnox_ModesOfPayments"
+        ],
+        "x-codegen-request-body-name": "modeOfPayment",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/modesofpayments/{Code}": {
+      "delete": {
+        "description": "Delete a mode of payment",
+        "operationId": "ModeOfPaymentController_doDelete",
+        "parameters": [
+          {
+            "description": "Code of mode of payment to delete",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete mode of payment response with no content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Mode of payment not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove a mode of payment",
+        "tags": [
+          "fortnox_ModesOfPayments"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve a mode of payment",
+        "operationId": "ModeOfPaymentController_doShow",
+        "parameters": [
+          {
+            "description": "Code of mode of payment to show",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ModeOfPaymentSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show mode of payment response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Mode of payment not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single mode of payment",
+        "tags": [
+          "fortnox_ModesOfPayments"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update a mode of payment",
+        "operationId": "ModeOfPaymentController_doUpdate",
+        "parameters": [
+          {
+            "description": "Code of mode of payment to update",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ModeOfPaymentSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update mode of payment"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ModeOfPaymentSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update mode of payment response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Mode of payment not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a mode of payment",
+        "tags": [
+          "fortnox_ModesOfPayments"
+        ],
+        "x-codegen-request-body-name": "unit",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/noxfinansinvoices": {
+      "post": {
+        "description": "<p>\n When sending an invoice with Fortnox Finans you will get the invoice status returned if everything succeeded,\n if there were any problems, an error will be returned.\n <p>\n Please note that it can take 1 min to several hours before you will get back status, OCR number and link to\n PDF document, meanwhile the invoice will have status UNKNOWN or NOT_AUTHORIZED.\n <p>\n Fortnox Finans is currently only accepting invoices in SEK\n <p>\n <i>Parameters in the body:</i>\n <ul>\n     <li><b>InvoiceNumber</b>: the invoice number for the invoice which should be sent with Fortnox Finans</li>\n     <li><b>SendMethod</b>: how to send the invoice; EMAIL, LETTER, EINVOICE or NONE</li>\n     <li><b>Service</b>: which service to use; LEDGERBASE or REMINDER</li>\n </ul>\n <p>",
+        "operationId": "NoxInvoiceController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceCreatePayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create nox finans invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create nox finans invoice response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Send an invoice with Fortnox Finans",
+        "tags": [
+          "fortnox_FinanceInvoices"
+        ],
+        "x-codegen-request-body-name": "payload",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/noxfinansinvoices/{InvoiceNumber}": {
+      "get": {
+        "description": "<p>\n Retrieves the status and balance of an invoice sent to Fortnox Finans.\n You need to supply the invoice number in Fortox to retrieve the invoice.\n <p>\n <b>Note that</b> invoices sent with the old &quot;Noxbox&quot; platform will not have the &quot;ServiceName&quot;\n property in the response. This new property is added to the response if the invoice is\n sent with the new finance service.\n <p>\n Response explanation for <b>Service</b> and <b>ServiceName</b>\n <p>\n <b>Service:</b>\n <ul>\n     <li><b>LEDGERBASE</b>: if the invoice is sent by using the old &quot;Noxbox&quot; platform, or the new finance service with the subtypes &quot;Service Full&quot; or &quot;Service Light&quot;. These services are explained above in the &quot;Fortnox Finans services&quot; section</li>\n     <li><b>REMINDER</b>: If the invoice is sent by the new finance service, with the service Reminder Service</li>\n </ul>\n <p>\n <b>ServiceName</b> (only provided for <u>new finance service</u> invoices):\n <ul>\n     <li><b>SERVICE_FULL</b>: Ledgerbase service <u>with</u> automatic reminders is used</li>\n     <li><b>SERVICE_LIGHT</b>: Ledgerbase service <u>without</u> automatic reminders is used.</li>\n     <li><b>REMINDER_SERVICE</b>: Reminder service is used</li>\n </ul>",
+        "operationId": "NoxInvoiceController_doShow",
+        "parameters": [
+          {
+            "description": "The Fortnox invoice number",
+            "in": "path",
+            "name": "InvoiceNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show nox finans invoice response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single invoice payment",
+        "tags": [
+          "fortnox_FinanceInvoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/noxfinansinvoices/{InvoiceNumber}/pause": {
+      "put": {
+        "description": "<p>\n Pauses an invoice for up to 60 days. Pause means that Fortnox Finans reminder process will stop for the invoice. All invoices which have the status OPEN can be paused.\n <p>\n <b>Note:</b> this action is <b>not</b> available for invoices sent by the old Noxbox platform\n <p>\n <i>Parameters in the body:</i>\n <ul>\n     <li><b>PausedUntilDate</b>: the invoice will be paused to and including this date.</li>\n </ul>\n <p>",
+        "operationId": "NoxInvoiceController_doUpdateAndPause",
+        "parameters": [
+          {
+            "description": "The Fortnox invoice number",
+            "in": "path",
+            "name": "InvoiceNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceUpdateAndPausePayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update nox finans invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update nox finans invoice response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Action Pause",
+        "tags": [
+          "fortnox_FinanceInvoices"
+        ],
+        "x-codegen-request-body-name": "payload",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/noxfinansinvoices/{InvoiceNumber}/report-payment": {
+      "put": {
+        "description": "<p>\n If a customer has paid some or all of the capital on an invoice directly to the client, this can be reported\n for bookkeeping purposes and reported to Fortnox Finans to actually deduct the paid amount from the invoice.\n <p>\n <b>Note:</b> this action is <b>not</b> available for invoices sent by the old Noxbox platform\n <p>\n <i>Parameters in the body:</i>\n <ul>\n     <li><b>PaymentAmount</b>: a decimal field with the amount to report.</li>\n     <li><b>PaymentMethodCode</b>: a string with the method code (e.g. BG, PG or other). Could be omitted if BookkeepPaymentInFortnox is false.</li>\n     <li><b>PaymentMethodAccount</b>: an integer with the account number to bookkeep the payment on (e.g. 1920 or other). Could be omitted if BookkeepPaymentInFortnox is false.</li>\n     <li><b>ClientTakesFees</b>: a boolean indicating if the client should take the customer fees or not.</li>\n     <li><b>BookkeepPaymentInFortnox</b>: a boolean indicating if the payment should be bookkept in Fortnox or not. Usually the payment should be bookkept.</li>\n     <li><b>ReportToFinance</b>: a boolean indicating if the payment should be reported to Fortnox Finans or not. Usually the payment should be reported.</li>\n </ul>\n <p>",
+        "operationId": "NoxInvoiceController_doUpdateAndRepostPayment",
+        "parameters": [
+          {
+            "description": "The Fortnox invoice number",
+            "in": "path",
+            "name": "InvoiceNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceUpdateAndRepostPaymentPayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update nox finans invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update nox finans invoice response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Action Report Payment",
+        "tags": [
+          "fortnox_FinanceInvoices"
+        ],
+        "x-codegen-request-body-name": "payload",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/noxfinansinvoices/{InvoiceNumber}/stop": {
+      "put": {
+        "description": "<p>\n Removes the invoice from Fortnox Finans process. The invoice can still be handled manually, but no further automatic process will be applied\n <p>\n <b>Note:</b> this action is <b>not</b> available for invoices sent by the old Noxbox platform",
+        "operationId": "NoxInvoiceController_doUpdateAndStop",
+        "parameters": [
+          {
+            "description": "The Fortnox invoice number",
+            "in": "path",
+            "name": "InvoiceNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceUpdateAndStopPayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update nox finans invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update nox finans invoice response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Action Stop",
+        "tags": [
+          "fortnox_FinanceInvoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/noxfinansinvoices/{InvoiceNumber}/take-fees": {
+      "put": {
+        "description": "<p>\n If fees have been added to an invoice, e.g. reminder fees, the client can choose to pay those fees instead of letting the customer pay.\n <p>\n <b>Note:</b> this action is <b>not</b> available for invoices sent by the old Noxbox platform",
+        "operationId": "NoxInvoiceController_doUpdateAndTakeFees",
+        "parameters": [
+          {
+            "description": "The Fortnox invoice number",
+            "in": "path",
+            "name": "InvoiceNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceUpdateAndTakeFeesPayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update nox finans invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update nox finans invoice response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Action Take Fees",
+        "tags": [
+          "fortnox_FinanceInvoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/noxfinansinvoices/{InvoiceNumber}/unpause": {
+      "put": {
+        "description": "<p>\n Unpauses a paused invoice. If the invoice is manually paused, then this action will remove the pause status immediately. Invoices which are paused by the system cannot be unpaused.\n <p>\n <b>Note:</b> this action is <b>not</b> available for invoices sent by the old Noxbox platform",
+        "operationId": "NoxInvoiceController_doUpdateAndUnpause",
+        "parameters": [
+          {
+            "description": "The Fortnox invoice number",
+            "in": "path",
+            "name": "InvoiceNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceUpdateAndUnpausePayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update nox finans invoice"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_NoxInvoiceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update nox finans invoice response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Action Unpause",
+        "tags": [
+          "fortnox_FinanceInvoices"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/offers": {
+      "get": {
+        "description": "Get offers",
+        "operationId": "OfferController_doIndex",
+        "parameters": [
+          {
+            "description": "filter by to date",
+            "in": "query",
+            "name": "todate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by from date",
+            "in": "query",
+            "name": "fromdate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "possibility to filter offers",
+            "in": "query",
+            "name": "filter",
+            "schema": {
+              "enum": [
+                "cancelled",
+                "expired",
+                "completed",
+                "notcompleted",
+                "ordercreated",
+                "ordernotcreated"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "sort returned list of offers",
+            "in": "query",
+            "name": "sortby",
+            "schema": {
+              "enum": [
+                "customerName",
+                "id",
+                "transactionDate",
+                "total"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by customer name",
+            "in": "query",
+            "name": "customername",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by customer number",
+            "in": "query",
+            "name": "customernumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by document number",
+            "in": "query",
+            "name": "documentnumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by cost center",
+            "in": "query",
+            "name": "costcenter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by label",
+            "in": "query",
+            "name": "label",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by project",
+            "in": "query",
+            "name": "project",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by sent",
+            "in": "query",
+            "name": "sent",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "filter by not completed",
+            "in": "query",
+            "name": "notcompleted",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "filter by our reference",
+            "in": "query",
+            "name": "ourreference",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by your reference",
+            "in": "query",
+            "name": "yourreference",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by last modified",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferListResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful list offers response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of offers",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "An endpoint for creating an offer.\n\n Should you have EasyVat enabled, it is mandatory to provide an account in the request should you use a custom VAT rate.\n\n This endpoint can produce errors, some of which may only be relevant for EasyVat. Refer to the table below.\n <table>\n <caption>Errors that can be raised by this endpoint.</caption>\n \t\t<tr>\n \t\t\t<th>Error Code</th>\n \t\t\t<th>HTTP Code</th>\n \t\t\t<th>Description</th>\n \t\t\t<th>Solution</th>\n \t\t</tr>\n \t\t<tr>\n \t\t\t<td>2004167</td>\n \t\t\t<td>400</td>\n \t\t\t<td>An account must be provided when using a custom VAT rate and EasyVat has been enabled.</td>\n \t\t\t<td>Supply each row which has a custom VAT rate with an account.</td>\n \t\t</tr>\n </table>",
+        "operationId": "OfferController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Offer_OfferSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create offer"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful create offer response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an offer",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-codegen-request-body-name": "offer",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/offers/{DocumentNumber}": {
+      "get": {
+        "description": "Retrieve an offer",
+        "operationId": "OfferController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the offer",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show offer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Offer not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single offer",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Note that there are two approaches for updating the rows on an offer.\n\n If RowId is not specified on any row, the rows will be mapped and updated in the order in which they are set in the array. All rows that should remain on the offer needs to be provided.\n\n If RowId is specified on one or more rows the following goes: Corresponding row with that id will be updated. The rows without RowId will be interpreted as new rows. If a row should not be updated but remain on the offer then specify only RowId like { \"RowId\": 123 }, otherwise it will be removed. Note that new RowIds are generated for all rows every time an offer is updated.",
+        "operationId": "OfferController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the offer",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Offer_OfferSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update offer"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update offer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Offer not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update an offer",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-codegen-request-body-name": "offer",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/offers/{DocumentNumber}/cancel": {
+      "put": {
+        "description": "Update an offer",
+        "operationId": "OfferController_doUpdateAndCancel",
+        "parameters": [
+          {
+            "description": "identifies the offer",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Offer_OfferSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update offer"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update offer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Offer not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Cancels given offer",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/offers/{DocumentNumber}/createinvoice": {
+      "put": {
+        "description": "Update an offer",
+        "operationId": "OfferController_doUpdateAndCreateInvoice",
+        "parameters": [
+          {
+            "description": "identifies the offer",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Offer_OfferSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update offer"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update offer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Offer not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create invoice out of given offer",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/offers/{DocumentNumber}/createorder": {
+      "put": {
+        "description": "Update an offer",
+        "operationId": "OfferController_doUpdateAndCreateOrder",
+        "parameters": [
+          {
+            "description": "identifies the offer",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Offer_OfferSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update offer"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update offer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Offer not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create order out of given offer",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/offers/{DocumentNumber}/email": {
+      "get": {
+        "description": "You can use the properties in the EmailInformation to customize the e-mail message on each offer.",
+        "operationId": "OfferController_doShowAndEmail",
+        "parameters": [
+          {
+            "description": "identifies the offer",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show offer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Offer not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Send given offer as email",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/offers/{DocumentNumber}/externalprint": {
+      "put": {
+        "description": "Use this endpoint to set offer as sent, without generating an offer.",
+        "operationId": "OfferController_doUpdateAndExternalPrint",
+        "parameters": [
+          {
+            "description": "identifies the offer",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Offer_OfferSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update offer"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update offer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Offer not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Set given offer as sent",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/offers/{DocumentNumber}/preview": {
+      "get": {
+        "description": "The difference between this and the print-endpoint is that property Sent is not set to TRUE.",
+        "operationId": "OfferController_doShowAndPreview",
+        "parameters": [
+          {
+            "description": "identifies the offer",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show offer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Offer not found"
+          },
+          "default": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Preview given offer",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/offers/{DocumentNumber}/print": {
+      "get": {
+        "description": "Retrieve an offer",
+        "operationId": "OfferController_doShowAndPrint",
+        "parameters": [
+          {
+            "description": "identifies the offer",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Offer_OfferResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show offer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Offer not found"
+          },
+          "default": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Print given offer",
+        "tags": [
+          "fortnox_Offers"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/orders": {
+      "get": {
+        "description": "Get orders",
+        "operationId": "OrderController_doIndex",
+        "parameters": [
+          {
+            "description": "filter by to date",
+            "in": "query",
+            "name": "todate",
+            "schema": {
+              "type": "string"
+            }          },
+          {
+            "description": "filter by from date",
+            "in": "query",
+            "name": "fromdate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "possibility to filter orders",
+            "in": "query",
+            "name": "filter",
+            "schema": {
+              "enum": [
+                "cancelled",
+                "expired",
+                "invoicecreated",
+                "invoicenotcreated"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "field to sort returned list",
+            "in": "query",
+            "name": "sortby",
+            "schema": {
+              "enum": [
+                "customername",
+                "customernumber",
+                "orderdate",
+                "documentnumber",
+                "total"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by customer name",
+            "in": "query",
+            "name": "customername",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by customer number",
+            "in": "query",
+            "name": "customernumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by label",
+            "in": "query",
+            "name": "label",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by document number",
+            "in": "query",
+            "name": "documentnumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by external invoice reference 1",
+            "in": "query",
+            "name": "externalinvoicereference1",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by external invoice reference 2",
+            "in": "query",
+            "name": "externalinvoicereference2",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by cost center",
+            "in": "query",
+            "name": "costcenter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by project",
+            "in": "query",
+            "name": "project",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by sent",
+            "in": "query",
+            "name": "sent",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "filter by not completed",
+            "in": "query",
+            "name": "notcompleted",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "filter by ourreference",
+            "in": "query",
+            "name": "ourreference",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by your reference",
+            "in": "query",
+            "name": "yourreference",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by lastmodified",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by order type",
+            "in": "query",
+            "name": "ordertype",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Order_OrderListResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful list orders response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of orders",
+        "tags": [
+          "fortnox_Orders"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "An endpoint for creating an order.\n\n Should you have EasyVat enabled, it is mandatory to provide an account in the request should you use a custom VAT rate.\n\n This endpoint can produce errors, some of which may only be relevant for EasyVat. Refer to the table below.\n <table>\n <caption>Errors that can be raised by this endpoint.</caption>\n \t\t<tr>\n \t\t\t<th>Error Code</th>\n \t\t\t<th>HTTP Code</th>\n \t\t\t<th>Description</th>\n \t\t\t<th>Solution</th>\n \t\t</tr>\n \t\t<tr>\n \t\t\t<td>2004167</td>\n \t\t\t<td>400</td>\n \t\t\t<td>An account must be provided when using a custom VAT rate and EasyVat has been enabled.</td>\n \t\t\t<td>Supply each row which has a custom VAT rate with an account.</td>\n \t\t</tr>\n </table>",
+        "operationId": "OrderController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Order_OrderSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create order"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Order_OrderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful create order response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a new order",
+        "tags": [
+          "fortnox_Orders"
+        ],
+        "x-codegen-request-body-name": "order",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/orders/{DocumentNumber}": {
+      "get": {
+        "description": "Retrieve an order",
+        "operationId": "OrderController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the order",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Order_OrderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show order response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Order not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single order",
+        "tags": [
+          "fortnox_Orders"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Note that there are two approaches for updating the rows on an order.\n\n If RowId is not specified on any row, the rows will be mapped and updated in the order in which they are set in the array. All rows that should remain on the order needs to be provided.\n\n If RowId is specified on one or more rows the following goes: Corresponding row with that id will be updated. The rows without RowId will be interpreted as new rows. If a row should not be updated but remain on the order then specify only RowId like { \"RowId\": 123 }, otherwise it will be removed. Note that new RowIds are generated for all rows every time an order is updated.",
+        "operationId": "OrderController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the order",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Order_OrderSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update order"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Order_OrderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update order response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Order not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update an order",
+        "tags": [
+          "fortnox_Orders"
+        ],
+        "x-codegen-request-body-name": "order",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/orders/{DocumentNumber}/cancel": {
+      "put": {
+        "description": "Update an order",
+        "operationId": "OrderController_doUpdateAndCancel",
+        "parameters": [
+          {
+            "description": "identifies the order",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Order_OrderSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update order"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Order_OrderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update order response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Order not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Cancels given order",
+        "tags": [
+          "fortnox_Orders"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/orders/{DocumentNumber}/createinvoice": {
+      "put": {
+        "description": "Update an order",
+        "operationId": "OrderController_doUpdateAndCreateOrder",
+        "parameters": [
+          {
+            "description": "identifies the order",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Order_OrderSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update order"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Order_OrderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update order response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Order not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create invoice out of given order",
+        "tags": [
+          "fortnox_Orders"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/orders/{DocumentNumber}/email": {
+      "get": {
+        "description": "You can use the properties in the EmailInformation to customize the e-mail message on each order.",
+        "operationId": "OrderController_doShowAndEmail",
+        "parameters": [
+          {
+            "description": "identifies the order",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Order_OrderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show order response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Order not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Send given order as email",
+        "tags": [
+          "fortnox_Orders"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/orders/{DocumentNumber}/externalprint": {
+      "put": {
+        "description": "Use this endpoint to set order as sent, without generating an order.",
+        "operationId": "OrderController_doUpdateAndExternalPrint",
+        "parameters": [
+          {
+            "description": "identifies the order",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Order_OrderSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update order"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Order_OrderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update order response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Order not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Set given order as sent",
+        "tags": [
+          "fortnox_Orders"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/orders/{DocumentNumber}/preview": {
+      "get": {
+        "description": "The difference between this and the print-endpoint is that property Sent is not set to TRUE.",
+        "operationId": "OrderController_doShowAndPreview",
+        "parameters": [
+          {
+            "description": "identifies the offer",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Order_OrderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show order response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Order not found"
+          },
+          "default": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Preview given offer",
+        "tags": [
+          "fortnox_Orders"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/orders/{DocumentNumber}/print": {
+      "get": {
+        "description": "Retrieve an order",
+        "operationId": "OrderController_doShowAndPrint",
+        "parameters": [
+          {
+            "description": "identifies the order",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Order_OrderResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show order response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Order not found"
+          },
+          "default": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Print given order",
+        "tags": [
+          "fortnox_Orders"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/predefinedaccounts": {
+      "get": {
+        "description": "Get pre defined accounts",
+        "operationId": "PreDefinedAccountController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_PreDefinedAccountListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list pre defined accounts response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of all predefined accounts",
+        "tags": [
+          "fortnox_PredefinedAccounts"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/predefinedaccounts/{name}": {
+      "get": {
+        "description": "Retrieve a pre defined account",
+        "operationId": "PreDefinedAccountController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the predefined account",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_PreDefinedAccountSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show pre defined account response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Pre defined account not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve information for a specific account type",
+        "tags": [
+          "fortnox_PredefinedAccounts"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "An endpoint for updating a Predefined Account. Predefined Accounts are identified by their <em>name</em>-field, and as such must be unique.\n Some Predefined Accounts distinguish between Goods and Services.\n In this case, the former retains the original name whereas the latter ends with a 2. Such as <em>SALES</em> and <em>SALES2</em>.\n Accounts are chosen from the Account Registry, and if you have EasyVat enabled then the new EasyVat Predefined Accounts (<em>SALES_25_SE</em>, etc.) have certain restrictions on the accounts that can be selected.\n Refer to the table below.\n\n <table>\n     <caption>Account restrictions when EasyVat has been enabled.</caption>\n     <tr>\n         <th>Name</th>\n         <th>VAT Code</th>\n         <th>Restrictions</th>\n     </tr>\n     <tr>\n         <td>SALES_25_SE</td>\n         <td>MP1</td>\n         <td>Must have a compatible VAT Code.</td>\n     </tr>\n     <tr>\n         <td>SALES_12_SE</td>\n         <td>MP2</td>\n         <td>Must have a compatible VAT Code.</td>\n     </tr>\n     <tr>\n         <td>SALES_6_SE</td>\n         <td>MP3</td>\n         <td>Must have a compatible VAT Code.</td>\n     </tr>\n     <tr>\n         <td>SALES_0_SE</td>\n         <td>MF</td>\n         <td>Must have a compatible VAT Code.</td>\n     </tr>\n </table>\n\n This endpoint can produce errors, some of which may only be relevant for EasyVat. Refer to the table below.\n <table>\n     <caption>Errors that can be raised by this endpoint.</caption>\n     <tr>\n         <th>Error Code</th>\n         <th>HTTP Code</th>\n         <th>Description</th>\n         <th>Solution</th>\n     </tr>\n     <tr>\n         <td>2001265</td>\n         <td>400</td>\n         <td>The provided account is invalid. It either has not been provided, does not exist, or is inactive.</td>\n         <td>Verify that an account has been provided and that it exists and is active.</td>\n     </tr>\n     <tr>\n         <td>2002462</td>\n         <td>400</td>\n         <td>The account is not in a valid format.</td>\n         <td>Verify that the format of the account is correct. It has to consist of 4 digits.</td>\n     </tr>\n     <tr>\n         <td>2000729</td>\n         <td>400</td>\n         <td>A Predefined Account has not been provided.</td>\n         <td>Verify that a valid Predefined Account has been provided as a PATH-parameter.</td>\n     </tr>\n     <tr>\n         <td>2004052</td>\n         <td>400</td>\n         <td>The provided account has an incompatible VAT Code. Only applies if EasyVat has been enabled.</td>\n         <td>Verify that the provided account has a VAT Code that is compatible with the selected Predefined Account. Refer to the table above for more information about compatibility.</td>\n     </tr>\n </table>\n\n If you have activated EasyVat, you can read more about how to use the new Predefined Accounts with your documents in their respective api documentation.",
+        "operationId": "PreDefinedAccountController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the predefined account",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_PreDefinedAccountSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update pre defined account"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_PreDefinedAccountSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update pre defined account response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a Predefined Account",
+        "tags": [
+          "fortnox_PredefinedAccounts"
+        ],
+        "x-codegen-request-body-name": "predefinedAccount",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/predefinedvoucherseries": {
+      "get": {
+        "description": "Get pre defined voucher series collection",
+        "operationId": "PreDefinedVoucherSeriesController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_PreDefinedVoucherSeriesListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list pre defined voucher series collection response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of predefined voucher series",
+        "tags": [
+          "fortnox_PredefinedVoucherSeries"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/predefinedvoucherseries/{Name}": {
+      "get": {
+        "description": "Retrieve a pre defined voucher series",
+        "operationId": "PreDefinedVoucherSeriesController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the predefined voucher series",
+            "in": "path",
+            "name": "Name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_PreDefinedVoucherSeriesSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show pre defined voucher series response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Pre defined voucher series not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a specific predefined voucher series",
+        "tags": [
+          "fortnox_PredefinedVoucherSeries"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update a pre defined voucher series",
+        "operationId": "PreDefinedVoucherSeriesController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the predefined voucher series",
+            "in": "path",
+            "name": "Name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Bf_PreDefinedVoucherSeriesSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update pre defined voucher series"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_PreDefinedVoucherSeriesSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update pre defined voucher series response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Pre defined voucher series not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a predefined voucher series",
+        "tags": [
+          "fortnox_PredefinedVoucherSeries"
+        ],
+        "x-codegen-request-body-name": "predefinedVoucherSeries",
