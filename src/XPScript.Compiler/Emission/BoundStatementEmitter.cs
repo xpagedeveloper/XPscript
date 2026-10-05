@@ -36,7 +36,11 @@ public sealed class BoundStatementEmitter
             case BoundAssignmentStatement assignment:
                 if (assignment.Target is BoundIndexedPropertyExpression)
                     throw new NotSupportedException("Indexed property assignment requires accessor lowering.");
-                Line($"{_expressions.Emit(assignment.Target)} = {_expressions.Emit(assignment.Expression).Replace("((object)(new XpJsonDocument()))", "new XpJsonDocument()", StringComparison.Ordinal)};");
+                var targetText = _expressions.Emit(assignment.Target);
+                var expressionText = _expressions.Emit(assignment.Expression).Replace("((object)(new XpJsonDocument()))", "new XpJsonDocument()", StringComparison.Ordinal);
+                if (targetText is "http.TimeoutSec" or "http.MaxRedirects" or "http.ResponseCode") expressionText = $"Convert.ToInt64({expressionText})";
+                if (targetText is "http.PreferStrings" or "http.PreferJSONNavigator") expressionText = $"Convert.ToBoolean({expressionText})";
+                Line($"{targetText} = {expressionText};");
                 break;
             case BoundExpressionStatement expression:
                 Line($"{_expressions.Emit(expression.Expression)};");
