@@ -45,6 +45,11 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("LBound", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("UBound", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("Base64DecodeBinary", typeof(byte[]), [typeof(string)]));
+        symbols.Declare(new FunctionSymbol("Len", typeof(long), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("LenB", typeof(long), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("TypeName", typeof(string), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("FileLen", typeof(long), [typeof(string)]));
+        symbols.Declare(new FunctionSymbol("FreeFile", typeof(long), []));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
         var declarationParameters = sub?.Parameters ?? function!.Parameters;
@@ -93,6 +98,11 @@ internal static class Program
     public static byte[] Base64DecodeBinary(string value) => Convert.FromBase64String(value);
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
     public static long[] Array(long first, long second) => [first, second];
+    public static long Len(object? value) => value is Array array ? array.Length : (value?.ToString()?.Length ?? 0);
+    public static long LenB(object? value) => Len(value);
+    public static string TypeName(object? value) => value?.GetType().Name ?? "Nothing";
+    public static long FileLen(string path) => new FileInfo(path).Length;
+    public static long FreeFile() => 1;
     public static class XPScriptNullRuntime
     {
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
