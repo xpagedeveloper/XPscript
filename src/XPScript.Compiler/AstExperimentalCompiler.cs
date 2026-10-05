@@ -12,7 +12,16 @@ internal static class AstExperimentalCompiler
     public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken = default)
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
-        var declaration = new DeclarationParser(source).ParseDeclaration();
+        var parser = new DeclarationParser(source);
+        var declaration = parser.ParseDeclaration();
+        if (parser.Diagnostics.Count > 0)
+        {
+            var diagnostic = parser.Diagnostics[0];
+            throw new CompilerException(
+                string.Join(Environment.NewLine, parser.Diagnostics.Select(item => item.Message)),
+                diagnostic.Code,
+                "syntax");
+        }
         if (declaration is not SubDeclarationSyntax sub || !sub.Identifier.Text.Equals("Main", StringComparison.OrdinalIgnoreCase))
             throw new CompilerException("AST experimental compilation currently requires a top-level Sub Main().", "XPS3001", "ast");
 
