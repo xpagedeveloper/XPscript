@@ -647,12 +647,29 @@ public sealed class StatementParser
         if (Current.Kind == SyntaxKind.AsKeyword)
         {
             asKeyword = NextToken();
+            // `As New TypeName` is a declaration form where New is part of
+            // the type construction syntax rather than the type name.
+            if (Current.Kind == SyntaxKind.NewKeyword)
+                NextToken();
             typeName = Match(SyntaxKind.IdentifierToken);
             if (Current.Kind == SyntaxKind.OpenBracketToken)
             {
                 isArray = true;
                 NextToken();
                 Match(SyntaxKind.CloseBracketToken);
+            }
+            // Constructor arguments in `Dim x As New Type(args)` are
+            // currently emitted dynamically. Consume them here so they do
+            // not become stray statement tokens.
+            if (Current.Kind == SyntaxKind.OpenParenToken)
+            {
+                var depth = 0;
+                do
+                {
+                    if (Current.Kind == SyntaxKind.OpenParenToken) depth++;
+                    else if (Current.Kind == SyntaxKind.CloseParenToken) depth--;
+                    NextToken();
+                } while (depth > 0 && Current.Kind != SyntaxKind.EndOfFileToken);
             }
         }
 
