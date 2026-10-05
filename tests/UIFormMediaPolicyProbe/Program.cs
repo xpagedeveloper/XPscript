@@ -3,7 +3,10 @@ using XPScript.Compiler;
 const string source = """
 Sub Main()
     Dim form As New UIForm("MediaPolicy")
-    Call form.AddImage("Preview", "assets/test.png")
+    Dim runtimeImage As XPImage
+    Set runtimeImage = New XPImage(8, 8, "#336699")
+    form.BootImage = runtimeImage
+    Call form.AddImage("Preview", runtimeImage)
 End Sub
 """;
 
@@ -28,6 +31,8 @@ const string webDataImageError = "UIForm server-web data URI must use an image m
 const string rootedPathCheck = "System.IO.Path.IsPathRooted(text)";
 const string windowsRootedPathCheck = "text.Length >= 3 && char.IsLetter(text[0]) && text[1] == ':'";
 const string rootedPathReturn = "if (allowLocalPaths && isRootedPath) return text;";
+const string xpImageCheck = "value.GetType().Name.Equals(\"XPImage\", StringComparison.Ordinal)";
+const string xpImageDataImage = "return \"data:image/png;base64,\" + Convert.ToBase64String(bytes);";
 
 foreach (var generated in new[] { desktop, android, browser })
 {
@@ -48,6 +53,9 @@ foreach (var generated in new[] { desktop, android, browser })
         !generated.Contains(windowsRootedPathCheck, StringComparison.Ordinal) ||
         !generated.Contains(rootedPathReturn, StringComparison.Ordinal))
         throw new Exception("Generated UIForm media policy must explicitly handle rooted local filesystem image paths.");
+    if (!generated.Contains(xpImageCheck, StringComparison.Ordinal) ||
+        !generated.Contains(xpImageDataImage, StringComparison.Ordinal))
+        throw new Exception("Generated UIForm media policy must normalize XPImage sources to data-image content on every target.");
 }
 
 if (!desktop.Contains("true && " + fileClause, StringComparison.Ordinal))
