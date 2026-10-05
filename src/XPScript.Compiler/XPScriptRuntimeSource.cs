@@ -250,8 +250,19 @@ internal static class XPScriptRuntime
         var text = CStr(value);
         var sep = delimiter is null ? " " : CStr(delimiter);
         if (count == 0) return [];
-        if (count < 0) return text.Split([sep], StringSplitOptions.None);
-        return text.Split([sep], count, StringSplitOptions.None);
+        if (sep.Length == 0) return [text];
+        var comparison = compare is 1 or 5 ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var parts = new List<string>();
+        var position = 0;
+        while (position <= text.Length && (count < 0 || parts.Count < count - 1))
+        {
+            var found = text.IndexOf(sep, position, comparison);
+            if (found < 0) break;
+            parts.Add(text[position..found]);
+            position = found + sep.Length;
+        }
+        parts.Add(text[position..]);
+        return parts.ToArray();
     }
 
     public static string Join(object? values, object? delimiter = null)

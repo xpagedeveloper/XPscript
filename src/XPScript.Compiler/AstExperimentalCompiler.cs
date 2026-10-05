@@ -395,9 +395,22 @@ internal static class Program
     {
         var text = CStr(value);
         var separator = delimiter is null ? " " : CStr(delimiter);
-        var parts = text.Split(separator, StringSplitOptions.None);
         var limit = count is null ? -1 : Convert.ToInt32(count);
-        return limit > 0 ? parts.Take(limit).ToArray() : parts;
+        if (limit == 0) return [];
+        var comparisonMode = compare is null ? 0 : Convert.ToInt32(compare);
+        var comparison = comparisonMode is 1 or 5 ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (separator.Length == 0) return limit < 0 ? [text] : [text];
+        var parts = new List<string>();
+        var position = 0;
+        while (position <= text.Length && (limit < 0 || parts.Count < limit - 1))
+        {
+            var found = text.IndexOf(separator, position, comparison);
+            if (found < 0) break;
+            parts.Add(text[position..found]);
+            position = found + separator.Length;
+        }
+        parts.Add(text[position..]);
+        return parts.ToArray();
     }
     public static object RSet(object value, object width) => CStr(value).PadLeft(Convert.ToInt32(width));
     public static object Space(object value) => new string(' ', Math.Max(0, Convert.ToInt32(value)));
