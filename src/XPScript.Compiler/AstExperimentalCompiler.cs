@@ -506,9 +506,12 @@ internal static class Program
     public static object? ArraySort(object? value) {
         if (value is not IEnumerable values) return value;
         var result = values.Cast<object?>().ToArray();
-        System.Array.Sort(result, (left, right) => left is string || right is string
-            ? StringComparer.OrdinalIgnoreCase.Compare(CStr(left), CStr(right))
-            : left is IComparable comparable ? comparable.CompareTo(right) : StringComparer.OrdinalIgnoreCase.Compare(CStr(left), CStr(right)));
+        if (result.Any(item => item is string))
+            result = result.OrderBy(CStr, StringComparer.OrdinalIgnoreCase).ToArray();
+        else if (result.All(item => item is IConvertible))
+            result = result.OrderBy(item => Convert.ToDouble(item, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+        else
+            System.Array.Sort(result, Comparer<object?>.Create((left, right) => left is IComparable comparable ? comparable.CompareTo(right) : 0));
         if (value.GetType().IsArray) {
             var typed = System.Array.CreateInstance(value.GetType().GetElementType()!, result.Length);
             result.CopyTo(typed, 0); return typed;
