@@ -267,6 +267,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private void ValidateSameNumericType(BoundExpression variable, BoundExpression value, TextSpan span, string description)
     {
+        if (_allowDynamicMembers && value.Type == typeof(object))
+            return;
         if (!IsNumeric(value.Type) || variable.Type != value.Type ||
             !string.Equals(variable.SemanticType.Name, value.SemanticType.Name, StringComparison.OrdinalIgnoreCase))
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,

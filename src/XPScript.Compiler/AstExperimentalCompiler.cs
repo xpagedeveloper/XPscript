@@ -62,6 +62,9 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("LCase", typeof(string), [typeof(object)]));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("Process", typeof(object), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("Session", typeof(object), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("Request", typeof(object), XpTypeSymbol.Variant));
         var declarationParameters = sub?.Parameters ?? function!.Parameters;
         var parameters = declarationParameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
             ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef, XpTypeSymbol.FromClr(ResolveRuntimeType(parameter.Type?.Identifier.Text)))).ToArray();
