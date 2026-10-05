@@ -146,6 +146,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 var index = Bind(syntax.Arguments[0]);
                 return new BoundIndexExpression(array, index, local.Type.GetElementType()!, XpTypeSymbol.FromClr(local.Type.GetElementType()!));
             }
+            if (_symbols.TryLookup(name, out indexedSymbol) && indexedSymbol is LocalSymbol arrayLocal && arrayLocal.Type.IsArray && syntax.Arguments.Count == 0)
+                return new BoundNameExpression(arrayLocal);
         }
         else if (syntax.Target is MemberAccessExpressionSyntax memberSyntax)
         {

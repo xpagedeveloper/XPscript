@@ -32,6 +32,9 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
         symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string))));
+        symbols.Declare(new FunctionSymbol("LBound", typeof(long), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("UBound", typeof(long), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("Base64DecodeBinary", typeof(byte[]), [typeof(string)]));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
         var binder = new StatementBinder(symbols, allowDynamicMembers: true);
@@ -64,6 +67,9 @@ internal static class Program
 {
     public static dynamic Application = new ExpandoObject();
     public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
+    public static long LBound(object value) => 0;
+    public static long UBound(object value) => value is Array array ? array.Length - 1 : -1;
+    public static byte[] Base64DecodeBinary(string value) => Convert.FromBase64String(value);
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
     public static long[] Array(long first, long second) => [first, second];
     public static class XPScriptNullRuntime
