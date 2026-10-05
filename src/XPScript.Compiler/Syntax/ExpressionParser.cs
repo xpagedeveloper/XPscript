@@ -218,6 +218,7 @@ public sealed class ExpressionParser
         SyntaxKind.FunctionKeyword or
         SyntaxKind.SetKeyword or
         SyntaxKind.GetKeyword or
+        SyntaxKind.NewKeyword or
         SyntaxKind.IsKeyword or
         SyntaxKind.ByValKeyword or
         SyntaxKind.ByRefKeyword or
