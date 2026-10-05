@@ -50,8 +50,8 @@ internal static class AstExperimentalCompiler
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, ResolveRuntimeType(match.Groups["type"].Value), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
-        foreach (var typeName in new[] { "XPJson", "XPJsonDocument", "XPJsonSchema", "XPJsonArray" })
-            symbols.Declare(new TypeSymbol(typeName, typeof(object), XpTypeSymbol.User(typeName)));
+        foreach (var typeName in new[] { "XPJson", "XPJsonDocument", "XPJsonSchema", "XPJsonArray", "XPJsonObject" })
+            symbols.Declare(new VariableSymbol(typeName, typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
         symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
