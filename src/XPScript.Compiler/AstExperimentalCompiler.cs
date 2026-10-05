@@ -510,7 +510,7 @@ internal static class Program
         result = result.Where(item => item is not null).ToArray();
         if (result.Any(item => item is string))
             result = result.OrderBy(CStr, StringComparer.OrdinalIgnoreCase).ToArray();
-        else if (result.All(item => item is IConvertible))
+        else if (result.All(item => item is IConvertible && item is not DateTime && item is not XpDate))
             result = result.OrderBy(item => Convert.ToDouble(item, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
         else
             System.Array.Sort(result, Comparer<object?>.Create((left, right) => left is IComparable comparable ? comparable.CompareTo(right) : 0));
