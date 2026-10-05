@@ -197,6 +197,7 @@ internal static class Program
     public static dynamic Document = new ExpandoObject();
     public static dynamic Err = new ExpandoObject();
     public static dynamic Response = new ExpandoObject();
+    public static dynamic SEARCH_DEPTH = 0L;
     public static dynamic XPJson = new ExpandoObject();
     public static dynamic XPJsonDocument = new ExpandoObject();
     public static dynamic XPJsonSchema = new ExpandoObject();

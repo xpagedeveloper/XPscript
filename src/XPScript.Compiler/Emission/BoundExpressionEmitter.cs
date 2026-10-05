@@ -21,7 +21,9 @@ public sealed class BoundExpressionEmitter
             : $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundIndexedPropertyExpression indexed => $"{Emit(indexed.Receiver)}.{indexed.Property.Name.Split('.').Last()}({string.Join(", ", indexed.Arguments.Select(Emit))})",
         BoundCallExpression call => EmitCall(call),
-        BoundUnaryExpression unary => $"({EmitUnaryOperator(unary.OperatorKind, unary.Type)}{Emit(unary.Operand)})",
+        BoundUnaryExpression unary => unary.OperatorKind == SyntaxKind.NotKeyword && unary.Type == typeof(object)
+            ? $"(!Convert.ToBoolean({Emit(unary.Operand)}))"
+            : $"({EmitUnaryOperator(unary.OperatorKind, unary.Type)}{Emit(unary.Operand)})",
         BoundBinaryExpression binary => EmitBinary(binary),
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
