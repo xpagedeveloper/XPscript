@@ -29,7 +29,9 @@ public sealed class XpsOpenApiGenerator
                 if (path.Value is JsonObject item)
                     foreach (var method in HttpMethods)
                         if (item[method] is JsonObject operation && (included.Contains(path.Key) || included.Contains(method.ToUpperInvariant() + " " + path.Key) || (operation["operationId"] is JsonValue id && id.TryGetValue<string>(out var name) && included.Contains(name))))
-                            CollectReferences(operation, selected);
+                        {
+                            CollectComponentReferences(root, operation, selected);
+                        }
         var pending = new Queue<string>(selected);
         while (pending.Count > 0)
         {
@@ -49,6 +51,20 @@ public sealed class XpsOpenApiGenerator
             foreach (var child in obj.Select(pair => pair.Value)) CollectReferences(child, selected);
         }
         else if (node is JsonArray array) foreach (var child in array) CollectReferences(child, selected);
+    }
+    private static void CollectComponentReferences(JsonObject root, JsonNode? node, HashSet<string> selected)
+    {
+        if (node is JsonObject obj)
+        {
+            if (obj["$ref"] is JsonValue value && value.TryGetValue<string>(out var reference) && reference.StartsWith("#/components/", StringComparison.Ordinal))
+            {
+                var parts = reference["#/components/".Length..].Split('/', 2);
+                if (parts.Length == 2 && parts[0].Equals("schemas", StringComparison.OrdinalIgnoreCase)) selected.Add(parts[1]);
+                else if (parts.Length == 2 && root["components"]?[parts[0]]?[parts[1]] is JsonNode component) CollectComponentReferences(root, component, selected);
+            }
+            foreach (var child in obj.Select(pair => pair.Value)) CollectComponentReferences(root, child, selected);
+        }
+        else if (node is JsonArray array) foreach (var child in array) CollectComponentReferences(root, child, selected);
     }
     private static JsonObject ParseDocument(string specification, string? sourceName) { try { var trimmed = specification.AsSpan().TrimStart(); if (!trimmed.IsEmpty && (trimmed[0] == '{' || trimmed[0] == '[')) return JsonNode.Parse(specification) as JsonObject ?? throw new XpsOpenApiGenerationException("OpenAPI JSON root must be an object."); var stream = new YamlStream(); stream.Load(new StringReader(specification)); if (stream.Documents.Count != 1) throw new XpsOpenApiGenerationException("OpenAPI YAML must contain exactly one document."); return ConvertYamlNode(stream.Documents[0].RootNode) as JsonObject ?? throw new XpsOpenApiGenerationException("OpenAPI YAML root must be a mapping/object."); } catch (XpsOpenApiGenerationException) { throw; } catch (Exception ex) when (ex is JsonException or YamlException or FormatException) { throw new XpsOpenApiGenerationException($"Unable to parse OpenAPI specification{FormatSourceName(sourceName)} at {(ex is YamlException yaml ? $"line {yaml.Start.Line}, column {yaml.Start.Column}: " : string.Empty)}{ex.Message}", ex); } }
     private static JsonNode? ConvertYamlNode(YamlNode node) { switch (node) { case YamlMappingNode mapping: { var result = new JsonObject(); foreach (var entry in mapping.Children) { if (entry.Key is not YamlScalarNode key || string.IsNullOrWhiteSpace(key.Value)) throw new XpsOpenApiGenerationException("OpenAPI YAML mapping keys must be non-empty scalar strings."); if (result.ContainsKey(key.Value)) throw new XpsOpenApiGenerationException($"OpenAPI YAML contains duplicate key '{key.Value}'."); result[key.Value] = ConvertYamlNode(entry.Value); } return result; } case YamlSequenceNode sequence: { var result = new JsonArray(); foreach (var child in sequence.Children) result.Add(ConvertYamlNode(child)); return result; } case YamlScalarNode scalar: return ConvertYamlScalar(scalar); default: throw new XpsOpenApiGenerationException($"Unsupported YAML node type '{node.NodeType}'."); } }

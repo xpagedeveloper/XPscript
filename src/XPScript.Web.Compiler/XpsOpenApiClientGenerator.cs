@@ -47,12 +47,25 @@ public sealed class XpsOpenApiClientGenerator
     {
         var selected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (root["paths"] is JsonObject paths) foreach (var path in paths) if (path.Value is JsonObject item) foreach (var method in HttpMethods)
-            if (item[method] is JsonObject operation && (included.Contains(path.Key) || included.Contains(method.ToUpperInvariant() + " " + path.Key) || (operation["operationId"] is JsonValue id && id.TryGetValue<string>(out var name) && included.Contains(name)))) CollectReferences(operation, selected);
+            if (item[method] is JsonObject operation && (included.Contains(path.Key) || included.Contains(method.ToUpperInvariant() + " " + path.Key) || (operation["operationId"] is JsonValue id && id.TryGetValue<string>(out var name) && included.Contains(name)))) CollectComponentReferences(root, operation, selected);
         var pending = new Queue<string>(selected);
         while (pending.Count > 0) { var wire = pending.Dequeue(); if (root["components"]?["schemas"] is not JsonObject schemas || schemas[wire] is not JsonObject schema) continue; var before = selected.Count; CollectReferences(schema, selected); if (selected.Count != before) foreach (var name in selected) if (!pending.Contains(name)) pending.Enqueue(name); }
         return catalog.Models.Where(pair => catalog.TypeNames.Any(type => type.Value.Equals(pair.Key, StringComparison.OrdinalIgnoreCase) && selected.Contains(type.Key))).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
     }
-    private static void CollectReferences(JsonNode? node, HashSet<string> selected)
+    private static void CollectComponentReferences(JsonObject root, JsonNode? node, HashSet<string> selected)
+    {
+        if (node is JsonObject obj)
+        {
+            if (obj["$ref"] is JsonValue value && value.TryGetValue<string>(out var reference) && reference.StartsWith("#/components/", StringComparison.Ordinal))
+            {
+                var parts = reference["#/components/".Length..].Split('/', 2);
+                if (parts.Length == 2 && parts[0].Equals("schemas", StringComparison.OrdinalIgnoreCase)) selected.Add(parts[1]);
+                else if (parts.Length == 2 && root["components"]?[parts[0]]?[parts[1]] is JsonNode component) CollectComponentReferences(root, component, selected);
+            }
+            foreach (var child in obj.Select(pair => pair.Value)) CollectComponentReferences(root, child, selected);
+        }
+        else if (node is JsonArray array) foreach (var child in array) CollectComponentReferences(root, child, selected);
+    }    private static void CollectReferences(JsonNode? node, HashSet<string> selected)
     {
         if (node is JsonObject obj) { if (obj["$ref"] is JsonValue value && value.TryGetValue<string>(out var reference) && reference.StartsWith("#/components/schemas/", StringComparison.Ordinal)) selected.Add(reference["#/components/schemas/".Length..]); foreach (var child in obj.Select(pair => pair.Value)) CollectReferences(child, selected); }
         else if (node is JsonArray array) foreach (var child in array) CollectReferences(child, selected);
