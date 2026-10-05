@@ -25,9 +25,8 @@ internal static class AstExperimentalCompiler
                 diagnostic.Code,
                 "syntax");
         }
-        if (declaration is not SubDeclarationSyntax sub ||
-            (!sub.Identifier.Text.Equals("Main", StringComparison.OrdinalIgnoreCase) && sub.Parameters.Count > 0))
-            throw new CompilerException("AST experimental compilation requires a parameterless Sub declaration.", "XPS3001", "ast");
+        if (declaration is not SubDeclarationSyntax sub)
+            throw new CompilerException("AST experimental compilation currently requires a Sub declaration.", "XPS3001", "ast");
 
         var symbols = SymbolTable.CreateWithCompilerCatalog();
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
@@ -38,12 +37,17 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Base64DecodeBinary", typeof(byte[]), [typeof(string)]));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
+        var parameters = sub.Parameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
+            ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef, XpTypeSymbol.FromClr(ResolveRuntimeType(parameter.Type?.Identifier.Text)))).ToArray();
+        foreach (var parameter in parameters) symbols.Declare(parameter);
         var binder = new StatementBinder(symbols, allowDynamicMembers: true);
         var bound = sub.Statements.Select(binder.Bind).OfType<BoundStatement>().ToArray();
         if (binder.Diagnostics.Count > 0)
             throw new CompilerException(string.Join(Environment.NewLine, binder.Diagnostics.Select(d => d.Message)), binder.Diagnostics[0].Code, "semantic");
 
-        var body = new BoundMethodEmitter().Emit("Main", typeof(void), bound);
+        var methodName = sub.Identifier.Text.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0 ? "Main" : sub.Identifier.Text;
+        var body = new BoundMethodEmitter().Emit(methodName, typeof(void), parameters, bound);
+        var entryPoint = methodName.Equals("Main", StringComparison.Ordinal) ? string.Empty : "    public static void Main() { }\n";
         var generated = $$"""
 using System;
 using System.Collections.Generic;
@@ -91,8 +95,15 @@ internal static class Program
         public static object? CObj(object? value) => value;
     }
 {{body}}
+{{entryPoint}}
 }
 """;
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
+
+    private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch
+    {
+        "BOOLEAN" => typeof(bool), "STRING" => typeof(string), "INTEGER" or "LONG" => typeof(long),
+        "SINGLE" or "DOUBLE" or "CURRENCY" => typeof(double), _ => typeof(object)
+    };
 }
