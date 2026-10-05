@@ -82,6 +82,9 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("JsonEncode", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("JsonDecode", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Input$", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Input$", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new VariableSymbol("Command", typeof(string), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("Platform", typeof(string), XpTypeSymbol.Variant));
         symbols.Declare(new FunctionSymbol("Sleep", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Trim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
@@ -280,6 +283,7 @@ internal static class Program
     public static object JsonEncode(object? value) => System.Text.Json.JsonSerializer.Serialize(value);
     public static object JsonDecode(object? value) => value?.ToString() ?? string.Empty;
     public static string Input$(object? count) => string.Empty;
+    public static string Input$(object? count, object? file) => string.Empty;
     public static void Sleep(object? milliseconds) => System.Threading.Thread.Sleep(Math.Max(0, Convert.ToInt32(milliseconds)));
     public static object DateNumber(long year, long month, long day) => new DateTime((int)year, (int)month, (int)day);
     public static class XPScriptNullRuntime
