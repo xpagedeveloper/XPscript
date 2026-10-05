@@ -259,7 +259,7 @@ Class-oriented language patterns:
 - [x] Define Object semantics explicitly.
 - [x] Define Null/Empty behavior needed by XPscript.
 - [x] Define array/list typing behavior.
-- [ ] Move applicable type diagnostics from Roslyn-derived failures into XPscript semantic diagnostics.
+- [x] Move applicable type diagnostics from Roslyn-derived failures into XPscript semantic diagnostics.
 
 ## Phase 8: C# emitter
 
