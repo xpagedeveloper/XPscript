@@ -6,7 +6,7 @@ Phase 8 begins with an experimental method-body emitter. It consumes bound nodes
 
 `BoundStatementEmitter` supports ordinary assignment, calls, return, If/ElseIf/Else, For, ForAll, While, pre-test/post-test Do While/Until and Select Case value, range and relational clauses. For loops use `XPScriptRuntime.Range`; ForAll uses `LSForAllRuntime.Enumerate`; Select Case uses the existing `LSCoreCompare` helpers. Variant conditions use the existing generated `XPScriptNullRuntime.ConditionValue` helper. Indexed property assignments are still pending lowering.
 
-`BoundMethodEmitter` wraps an already emitted body in a deterministic static C# method declaration. It is the first integration boundary for a future declaration and compilation-unit emitter; it does not parse names, infer types or select runtime helpers.
+`BoundMethodEmitter` wraps an already emitted body in a deterministic static C# method declaration and emits typed parameters with `ref` for ByRef symbols. It is the first integration boundary for a future declaration and compilation-unit emitter; it does not parse names, infer types or select runtime helpers.
 
 The caller currently supplies declarations, runtime helpers, entry points and the surrounding C# compilation unit. This emitter is not connected to production compilation. Bound nodes now retain syntax spans, and `EmitWithSourceMap` produces `#line` directives plus generated-to-source mapping records. Target-specific generation and complete runtime integration remain open.
 

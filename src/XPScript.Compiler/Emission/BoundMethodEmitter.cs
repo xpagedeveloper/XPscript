@@ -9,19 +9,31 @@ public sealed class BoundMethodEmitter
     private readonly BoundStatementEmitter _statements = new();
 
     public string Emit(string methodName, Type returnType, IReadOnlyList<BoundStatement> statements)
+        => Emit(methodName, returnType, [], statements);
+
+    public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
         ArgumentNullException.ThrowIfNull(returnType);
         ArgumentNullException.ThrowIfNull(statements);
+        ArgumentNullException.ThrowIfNull(parameters);
 
         var body = _statements.Emit(statements);
         var output = new StringBuilder();
         output.Append("public static ").Append(CSharpType(returnType)).Append(' ')
-            .Append(methodName).Append("()\n{\n");
+            .Append(methodName).Append('(')
+            .Append(string.Join(", ", parameters.Select(Parameter)))
+            .Append(")\n{\n");
         foreach (var line in body.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             output.Append("    ").Append(line).Append('\n');
         output.Append("}\n");
         return output.ToString();
+    }
+
+    private static string Parameter(ParameterSymbol parameter)
+    {
+        var mode = parameter.IsByRef ? "ref " : string.Empty;
+        return mode + CSharpType(parameter.Type) + " " + parameter.Name;
     }
 
     private static string CSharpType(Type type) => type == typeof(void) ? "void"

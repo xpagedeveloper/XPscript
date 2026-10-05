@@ -69,6 +69,11 @@ if (!select.Contains("LSCoreCompare.Equal", StringComparison.Ordinal))
 var method = methods.Emit("GeneratedValue", typeof(long), [new BoundReturnStatement(new BoundLiteralExpression(42L, typeof(long))) ]);
 if (!method.Contains("public static long GeneratedValue()", StringComparison.Ordinal) || !method.Contains("return 42L;", StringComparison.Ordinal))
     throw new InvalidOperationException("Bound method emission did not produce a complete C# method.");
+var parameter = new ParameterSymbol("value", typeof(long), IsByRef: false);
+var byRefParameter = new ParameterSymbol("result", typeof(long), IsByRef: true);
+var parameterMethod = methods.Emit("AddInto", typeof(void), [parameter, byRefParameter], [new BoundAssignmentStatement(new BoundNameExpression(byRefParameter), new BoundBinaryExpression(new BoundNameExpression(parameter), SyntaxKind.PlusToken, new BoundLiteralExpression(1L, typeof(long)), typeof(long)), false)]);
+if (!parameterMethod.Contains("public static void AddInto(long value, ref long result)", StringComparison.Ordinal) || !parameterMethod.Contains("result = (value + 1L);", StringComparison.Ordinal))
+    throw new InvalidOperationException("Bound method parameter emission did not preserve ByRef semantics.");
 var mapped = statements.EmitWithSourceMap([boundIf], "If True Then\nnumber = 1\nEnd If", "flow.xps");
 if (!mapped.Code.Contains("#line 1 \"flow.xps\"", StringComparison.Ordinal) || mapped.SourceMappings.Count == 0)
     throw new InvalidOperationException("Bound statement emission did not preserve source mapping.");
@@ -107,6 +112,7 @@ public static class Probe
         {{selectBody}}
         return number;
     }
+    {{parameterMethod}}
 }
 """;
 var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator).Select(path => MetadataReference.CreateFromFile(path));
@@ -129,4 +135,8 @@ Equal(double.PositiveInfinity, Invoke("Infinity"));
 Equal(5L, Invoke("Flow"));
 Equal(6L, Invoke("ForAllFlow"));
 Equal(9L, Invoke("SelectFlow"));
+// Reflection boxes ref arguments and writes the updated value back into the array.
+var refArgs = new object?[] { 3L, 0L };
+type.GetMethod("AddInto")!.Invoke(null, refArgs);
+Equal(4L, refArgs[1]);
 Console.WriteLine("AST_EMISSION_OK");
