@@ -31,6 +31,8 @@ public sealed class BoundStatementEmitter
         void Line(string text) => output.Write(text, indent, statement.Span);
         switch (statement)
         {
+            case BoundNoOpStatement:
+                break;
             case BoundAssignmentStatement assignment:
                 if (assignment.Target is BoundIndexedPropertyExpression)
                     throw new NotSupportedException("Indexed property assignment requires accessor lowering.");

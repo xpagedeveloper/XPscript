@@ -30,6 +30,11 @@ public sealed class BoundExpressionStatement(BoundExpression expression) : Bound
     public override BoundNodeKind Kind => BoundNodeKind.ExpressionStatement;
 }
 
+public sealed class BoundNoOpStatement : BoundStatement
+{
+    public override BoundNodeKind Kind => BoundNodeKind.NoOpStatement;
+}
+
 public sealed class BoundReturnStatement(BoundExpression? expression) : BoundStatement
 {
     public BoundExpression? Expression { get; } = expression;

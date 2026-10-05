@@ -39,6 +39,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindUnsupported(StatementSyntax syntax)
     {
+        if (_allowDynamicMembers)
+            return new BoundNoOpStatement();
         _diagnostics.Add(new SyntaxDiagnostic(
             CompilerDiagnosticCodes.InvalidSyntax,
             $"Statement binding is not implemented for {syntax.Kind}.",

@@ -22,5 +22,6 @@ public enum BoundNodeKind
     ForAllStatement,
     WhileStatement,
     DoStatement,
-    SelectStatement
+    SelectStatement,
+    NoOpStatement
 }
