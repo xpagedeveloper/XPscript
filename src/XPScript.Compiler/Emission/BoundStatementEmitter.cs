@@ -81,8 +81,14 @@ public sealed class BoundStatementEmitter
                 output.Write("}", indent);
                 break;
             case BoundForAllStatement forAll:
-                Line($"foreach (dynamic {_expressions.Emit(forAll.Variable)} in LSForAllRuntime.Enumerate({_expressions.Emit(forAll.Collection)}))");
-                Block(output, forAll.Statements, indent);
+                var item = output.Temporary();
+                Line($"foreach (var {item} in LSForAllRuntime.Enumerate({_expressions.Emit(forAll.Collection)}))");
+                output.Write("{", indent);
+                var itemValue = forAll.Variable.Type == typeof(long) ? $"XPScriptRuntime.CLng({item})" : item;
+                output.Write($"{_expressions.Emit(forAll.Variable)} = {itemValue};", indent + 1, forAll.Variable.Span);
+                foreach (var child in forAll.Statements)
+                    EmitStatement(output, child, indent + 1);
+                output.Write("}", indent);
                 break;
             case BoundSelectStatement select:
                 var selector = output.Temporary();

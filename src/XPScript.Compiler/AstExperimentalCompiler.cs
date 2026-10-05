@@ -18,6 +18,7 @@ internal static class AstExperimentalCompiler
 
         var symbols = new SymbolTable();
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
+        symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
         var binder = new StatementBinder(symbols);
         var bound = sub.Statements.Select(binder.Bind).OfType<BoundStatement>().ToArray();
         if (binder.Diagnostics.Count > 0)
@@ -27,6 +28,7 @@ internal static class AstExperimentalCompiler
         var generated = $$"""
 using System;
 using System.Collections.Generic;
+using System.Collections;
 internal static class LSCoreCompare
 {
     public static bool Equal(object? left, object? right) => string.Equals(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
@@ -38,9 +40,14 @@ internal static class LSCoreCompare
         "<" => Convert.ToDouble(value) < Convert.ToDouble(other), "<=" => Convert.ToDouble(value) <= Convert.ToDouble(other), _ => false
     };
 }
+internal static class LSForAllRuntime
+{
+    public static IEnumerable Enumerate(object? value) => value as IEnumerable ?? Array.Empty<object>();
+}
 internal static class Program
 {
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
+    public static long[] Array(long first, long second) => [first, second];
     public static class XPScriptRuntime
     {
         public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";

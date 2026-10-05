@@ -23,5 +23,9 @@ Sub Main()
         Case Else
             Print "AST_XPS_SELECT_FAIL"
     End Select
+    Dim item As Long
+    ForAll item In Array(7, 8)
+        Print item
+    End ForAll
     Exit Sub
 End Sub
