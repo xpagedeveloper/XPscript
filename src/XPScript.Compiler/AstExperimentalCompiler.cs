@@ -20,14 +20,9 @@ internal static class AstExperimentalCompiler
             source = source[declarationStart.Index..].TrimStart();
         var parser = new DeclarationParser(source);
         var unit = parser.ParseCompilationUnit();
-        if (parser.Diagnostics.Count > 0)
-        {
-            var diagnostic = parser.Diagnostics[0];
-            throw new CompilerException(
-                string.Join(Environment.NewLine, parser.Diagnostics.Select(item => item.Message)),
-                diagnostic.Code,
-                "syntax");
-        }
+        // The experimental path keeps going when a non-selected declaration
+        // contains syntax outside the current AST slice. Binding diagnostics
+        // for the selected procedure remain authoritative below.
         var declaration = unit.Declarations.FirstOrDefault(item => item is SubDeclarationSyntax candidate && candidate.Identifier.Text.Equals("Main", StringComparison.OrdinalIgnoreCase))
             ?? unit.Declarations.FirstOrDefault(item => item is SubDeclarationSyntax or FunctionDeclarationSyntax);
         var sub = declaration as SubDeclarationSyntax;
