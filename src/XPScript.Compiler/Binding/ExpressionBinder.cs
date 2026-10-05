@@ -118,6 +118,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 index,
                 expression.SemanticType.ElementType.RuntimeType,
                 expression.SemanticType.ElementType);
+        if (_allowDynamicMembers && (expression.Type == typeof(object) || expression.SemanticType.IsVariant))
+            return new BoundIndexExpression(expression, index, typeof(object), XpTypeSymbol.Variant);
         return Error(syntax, CompilerDiagnosticCodes.TypeMismatch, $"Indexing is not defined for {expression.SemanticType.Name}.");
     }
 
