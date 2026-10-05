@@ -19,8 +19,9 @@ const string httpClause = "uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison
 const string httpsClause = "uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)";
 const string dataClause = "uri.Scheme.Equals(\"data\", StringComparison.OrdinalIgnoreCase)";
 const string unsupported = "source uses an unsupported URI scheme";
-const string webGuard = "NormalizeWebMediaSource";
-const string webFileError = "UIForm web media source cannot expose a local filesystem path.";
+const string webGuard = "EnsureWebSafeMediaSource";
+const string webFileError = "source cannot expose a local filesystem path through server-web rendering.";
+const string imageWebGuard = "EnsureWebSafeMediaSource(field.ImageSource, \"image\")";
 
 foreach (var generated in new[] { desktop, android, browser })
 {
@@ -30,7 +31,8 @@ foreach (var generated in new[] { desktop, android, browser })
         !generated.Contains(unsupported, StringComparison.Ordinal))
         throw new Exception("Generated UIForm media policy is missing the shared HTTP/HTTPS/data-image scheme guard.");
     if (!generated.Contains(webGuard, StringComparison.Ordinal) ||
-        !generated.Contains(webFileError, StringComparison.Ordinal))
+        !generated.Contains(webFileError, StringComparison.Ordinal) ||
+        !generated.Contains(imageWebGuard, StringComparison.Ordinal))
         throw new Exception("Generated UIForm media policy must guard server-web rendering from local filesystem sources.");
 }
 
