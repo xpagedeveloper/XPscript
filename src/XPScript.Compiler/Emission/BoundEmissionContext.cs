@@ -60,6 +60,7 @@ internal sealed class BoundEmissionContext(IReadOnlyList<BoundStatement> stateme
     {
         BoundAssignmentStatement value => [value.Target, value.Expression],
         BoundExpressionStatement value => [value.Expression],
+        BoundPrintStatement value => [value.Expression],
         BoundReturnStatement value => value.Expression is null ? [] : [value.Expression],
         BoundIfStatement value => new BoundNode[] { value.Condition }.Concat(value.ThenStatements).Concat(value.ElseIfClauses.SelectMany(clause => new BoundNode[] { clause.Condition }.Concat(clause.Statements))).Concat(value.ElseStatements),
         BoundForStatement value => new BoundNode[] { value.Variable, value.FromExpression, value.ToExpression }.Concat(value.StepExpression is null ? [] : [value.StepExpression]).Concat(value.Statements),

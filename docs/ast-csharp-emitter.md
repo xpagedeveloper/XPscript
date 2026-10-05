@@ -14,4 +14,4 @@ The caller currently supplies declarations, runtime helpers, entry points and th
 
 `tests/ast-compile-probe` now drives an XPscript `Sub Main` through `DeclarationParser`, `StatementBinder` and `BoundMethodEmitter`, then compiles and invokes the generated C# with Roslyn. It is the first executable end-to-end AST compilation path and runs before the language FullTest.
 
-The `xpscriptc ast-compile <file.xps> -o <directory>` command exposes that same experimental slice through the compiler CLI. It produces `Generated.dll`, which can be run with `dotnet`. The current slice requires `Sub Main()` and supports the `Call AstPrint()` probe while the remaining runtime catalog and declaration lowering are migrated.
+The `xpscriptc ast-compile <file.xps> -o <directory>` command exposes that same experimental slice through the compiler CLI. It produces `Generated.dll`, which can be run with `dotnet`. The current slice requires `Sub Main()` and supports `Print` plus the earlier `Call AstPrint()` probe while the remaining runtime catalog and declaration lowering are migrated.

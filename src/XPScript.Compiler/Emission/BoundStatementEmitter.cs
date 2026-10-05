@@ -39,6 +39,9 @@ public sealed class BoundStatementEmitter
             case BoundExpressionStatement expression:
                 Line($"{_expressions.Emit(expression.Expression)};");
                 break;
+            case BoundPrintStatement print:
+                Line($"Console.WriteLine(XPScriptRuntime.PrintText({_expressions.Emit(print.Expression)}));");
+                break;
             case BoundReturnStatement @return:
                 Line(@return.Expression is null ? "return;" : $"return {_expressions.Emit(@return.Expression)};");
                 break;

@@ -18,6 +18,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             SetStatementSyntax set => BindAssignment(set.Target, set.Expression, isSet: true),
             ExpressionStatementSyntax expression => BindExpressionStatement(expression),
             CallStatementSyntax call => BindCallStatement(call),
+            RuntimeFileStatementSyntax runtime => BindRuntimeStatement(runtime),
             ReturnStatementSyntax @return => BindReturn(@return),
             IfStatementSyntax @if => BindIf(@if),
             ForStatementSyntax @for => BindFor(@for),
@@ -71,6 +72,14 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     {
         var expression = BindExpression(syntax.Expression);
         return expression is null ? null : new BoundExpressionStatement(expression);
+    }
+
+    private BoundStatement? BindRuntimeStatement(RuntimeFileStatementSyntax syntax)
+    {
+        if (!syntax.Command.Text.Equals("Print", StringComparison.OrdinalIgnoreCase) || syntax.Arguments.Count != 1)
+            return BindUnsupported(syntax);
+        var expression = BindExpression(syntax.Arguments[0]);
+        return expression is null ? null : new BoundPrintStatement(expression);
     }
 
     private BoundStatement? BindIf(IfStatementSyntax syntax)

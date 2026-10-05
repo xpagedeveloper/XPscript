@@ -28,6 +28,10 @@ using System;
 internal static class Program
 {
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
+    public static class XPScriptRuntime
+    {
+        public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";
+    }
 {{body}}
 }
 """;

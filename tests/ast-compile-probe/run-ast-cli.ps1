@@ -8,5 +8,5 @@ dotnet $compiler ast-compile $source -o $output
 if ($LASTEXITCODE -ne 0) { throw 'AST CLI compilation failed.' }
 $assembly = Join-Path $output 'Generated.dll'
 $result = dotnet $assembly
-if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -notmatch 'AST_XPS_COMPILE_OK') { throw 'AST CLI generated assembly did not run successfully.' }
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -notmatch 'AST_XPS_PRINT_OK') { throw 'AST CLI generated assembly did not run successfully.' }
 Write-Host 'AST CLI compilation probe passed.'
