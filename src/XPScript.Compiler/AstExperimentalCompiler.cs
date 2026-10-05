@@ -744,10 +744,10 @@ internal static class Program
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch
     {
-        "BOOLEAN" => typeof(bool), "STRING" => typeof(string), "INTEGER" or "LONG" => typeof(long),
+        "BOOLEAN" => typeof(bool), "BYTE" => typeof(byte), "STRING" => typeof(string), "INTEGER" or "LONG" => typeof(long),
         "SINGLE" or "DOUBLE" or "CURRENCY" => typeof(double), _ => typeof(object)
     };
-    private static string CSharpType(Type type) => type == typeof(void) ? "void" : type == typeof(long) ? "long" : type == typeof(double) ? "double" : type == typeof(bool) ? "bool" : type == typeof(string) ? "string" : "object";
+    private static string CSharpType(Type type) => type == typeof(void) ? "void" : type == typeof(byte) ? "byte" : type == typeof(long) ? "long" : type == typeof(double) ? "double" : type == typeof(bool) ? "bool" : type == typeof(string) ? "string" : "object";
     private static string ToCSharpLiteral(string value)
     {
         if (value.Equals("True", StringComparison.OrdinalIgnoreCase)) return "true";

@@ -105,7 +105,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             if (!conversion.IsIdentity)
                 initializer = new BoundConversionExpression(initializer, semanticType, conversion) { Span = initializer.Span };
         }
-        return new BoundVariableDeclarationStatement(local, initializer);
+        return new BoundVariableDeclarationStatement(local, initializer, syntax.IsArray && syntax.ArrayLength is null);
     }
 
     private static (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name, bool isArray = false, int? arrayLength = null, bool isList = false)
@@ -113,6 +113,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         var result = name?.Trim().ToUpperInvariant() switch
         {
             "BOOLEAN" => (typeof(bool), XpTypeSymbol.FromClr(typeof(bool))),
+            "BYTE" => (typeof(byte), XpTypeSymbol.FromClr(typeof(byte))),
             "STRING" => (typeof(string), XpTypeSymbol.FromClr(typeof(string))),
             "INTEGER" or "LONG" => (typeof(long), XpTypeSymbol.FromClr(typeof(long))),
             "SINGLE" or "DOUBLE" or "CURRENCY" => (typeof(double), XpTypeSymbol.FromClr(typeof(double))),

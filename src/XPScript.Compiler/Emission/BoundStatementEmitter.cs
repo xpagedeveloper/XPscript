@@ -44,7 +44,7 @@ public sealed class BoundStatementEmitter
             case BoundVariableDeclarationStatement declaration:
                 var type = CSharpType(declaration.Local.Type);
                 var initializer = declaration.Initializer is null
-                    ? (type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[4]" : $"default({type})")
+                    ? (type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : 4)}]" : $"default({type})")
                     : _expressions.Emit(declaration.Initializer);
                 Line($"{type} {declaration.Local.Name} = {initializer};");
                 break;
@@ -131,7 +131,7 @@ public sealed class BoundStatementEmitter
         ? _expressions.Emit(expression)
         : $"XPScriptNullRuntime.ConditionValue({_expressions.Emit(expression)})";
 
-    private static string CSharpType(Type type) => type.IsArray ? $"{CSharpType(type.GetElementType()!)}[]" : type == typeof(Dictionary<string, object?>) ? "System.Collections.Generic.Dictionary<string, object?>" : type == typeof(long) ? "long"
+    private static string CSharpType(Type type) => type.IsArray ? $"{CSharpType(type.GetElementType()!)}[]" : type == typeof(Dictionary<string, object?>) ? "System.Collections.Generic.Dictionary<string, object?>" : type == typeof(byte) ? "byte" : type == typeof(long) ? "long"
         : type == typeof(double) ? "double"
         : type == typeof(bool) ? "bool"
         : type == typeof(string) ? "string"
