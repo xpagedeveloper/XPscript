@@ -23,7 +23,8 @@ const string webGuard = "EnsureWebSafeMediaSource";
 const string webFileError = "source cannot expose a local filesystem path through server-web rendering.";
 const string imageWebGuard = "EnsureWebSafeMediaSource(field.ImageSource, \"image\")";
 const string bootImageWebGuard = "EnsureWebSafeMediaSource(_bootImage, \"boot image\")";
-const string webDataImageError = "server-web image data URI must use an image media type.";
+const string webDataImageCheck = "!text.StartsWith(\"data:image/\", StringComparison.OrdinalIgnoreCase)";
+const string webDataImageError = "UIForm server-web data URI must use an image media type.";
 
 foreach (var generated in new[] { desktop, android, browser })
 {
@@ -37,7 +38,8 @@ foreach (var generated in new[] { desktop, android, browser })
         !generated.Contains(imageWebGuard, StringComparison.Ordinal) ||
         !generated.Contains(bootImageWebGuard, StringComparison.Ordinal))
         throw new Exception("Generated UIForm media policy must guard Image and BootImage server-web rendering from local filesystem sources.");
-    if (!generated.Contains(webDataImageError, StringComparison.Ordinal))
+    if (!generated.Contains(webDataImageCheck, StringComparison.Ordinal) ||
+        !generated.Contains(webDataImageError, StringComparison.Ordinal))
         throw new Exception("Generated UIForm server-web media policy must reject non-image data URIs.");
 }
 
