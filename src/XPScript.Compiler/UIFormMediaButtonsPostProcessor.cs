@@ -151,6 +151,30 @@ internal sealed class UIFormMediaButtonsPostProcessor
         return normalized;
     }
 
+    private static string EnsureWebSafeMediaSource(string source, string kind)
+    {
+        var text = (source ?? string.Empty).Trim();
+        if (text.Length == 0) return text;
+        if (Uri.TryCreate(text, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
+        {
+            if (uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
+                throw new XPScriptRuntimeException(5, $"UIForm {kind} source cannot expose a local filesystem path through server-web rendering.");
+            if (uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+                uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+                (kind.Equals("image", StringComparison.OrdinalIgnoreCase) && uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase)))
+                return text;
+            throw new XPScriptRuntimeException(5, $"UIForm {kind} source uses an unsupported URI scheme for server-web rendering.");
+        }
+        if (System.IO.Path.IsPathRooted(text) ||
+            (text.Length >= 3 && char.IsLetter(text[0]) && text[1] == ':' && (text[2] == '\\' || text[2] == '/')))
+            throw new XPScriptRuntimeException(5, $"UIForm {kind} source cannot expose a local filesystem path through server-web rendering.");
+        var normalized = text.Replace('\\', '/');
+        if (!normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
+            throw new XPScriptRuntimeException(5, $"UIForm {kind} server-web source must stay within the application asset root.");
+        return normalized;
+    }
+
     private static string NormalizeMediaText(object? value, string kind, int maximumLength)
     {
         var text = XPScriptRuntime.CStr(value);
@@ -175,7 +199,7 @@ internal sealed class UIFormMediaButtonsPostProcessor
             {
                 case "Image":
                     html.Append("<img id=\"xps_").Append(name).Append("\" class=\"img-fluid xpscript-uiform-image\" src=\"")
-                        .Append(System.Net.WebUtility.HtmlEncode(field.ImageSource)).Append("\" alt=\"")
+                        .Append(System.Net.WebUtility.HtmlEncode(EnsureWebSafeMediaSource(field.ImageSource, "image"))).Append("\" alt=\"")
                         .Append(System.Net.WebUtility.HtmlEncode(field.ImageAltText)).Append("\"").Append(required).Append(">");
                     break;
                 case "WebView":
@@ -191,10 +215,20 @@ internal sealed class UIFormMediaButtonsPostProcessor
                 "web-media-rendering");
         }
 
+        generated = EnsureBootImageWebSafety(generated);
         generated = EnsureAccessibilityRuntime(generated);
         generated = ReplacePostHandling(generated);
         generated = ReplaceDefaultButtonRendering(generated);
         return string.IsNullOrWhiteSpace(sourcePath) ? generated : UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);
+    }
+
+    private static string EnsureBootImageWebSafety(string generated)
+    {
+        const string safeMarker = "HtmlEncode(EnsureWebSafeMediaSource(_bootImage, \"boot image\"))";
+        if (generated.Contains(safeMarker, StringComparison.Ordinal)) return generated;
+        const string marker = "System.Net.WebUtility.HtmlEncode(_bootImage)";
+        if (!generated.Contains(marker, StringComparison.Ordinal)) return generated;
+        return generated.Replace(marker, "System.Net.WebUtility.HtmlEncode(EnsureWebSafeMediaSource(_bootImage, \"boot image\"))", StringComparison.Ordinal);
     }
 
     private static string EnsureAccessibilityRuntime(string generated)
