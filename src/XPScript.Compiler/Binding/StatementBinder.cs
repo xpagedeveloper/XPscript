@@ -260,7 +260,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         var condition = BindExpression(syntax);
         if (condition is null)
             return null;
-        if (condition.Type != typeof(bool) && !(_allowDynamicMembers && (condition.SemanticType.IsVariant || condition.Type == typeof(object))))
+        if (condition.Type != typeof(bool) && !_allowDynamicMembers)
         {
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 $"{construct} condition must be Boolean, not {condition.SemanticType.Name}.", syntax.Span));
