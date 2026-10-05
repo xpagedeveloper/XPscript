@@ -25,8 +25,9 @@ internal static class AstExperimentalCompiler
                 diagnostic.Code,
                 "syntax");
         }
-        if (declaration is not SubDeclarationSyntax sub || !sub.Identifier.Text.Equals("Main", StringComparison.OrdinalIgnoreCase))
-            throw new CompilerException("AST experimental compilation currently requires a top-level Sub Main().", "XPS3001", "ast");
+        if (declaration is not SubDeclarationSyntax sub ||
+            (!sub.Identifier.Text.Equals("Main", StringComparison.OrdinalIgnoreCase) && sub.Parameters.Count > 0))
+            throw new CompilerException("AST experimental compilation requires a parameterless Sub declaration.", "XPS3001", "ast");
 
         var symbols = SymbolTable.CreateWithCompilerCatalog();
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
