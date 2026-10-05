@@ -25,6 +25,9 @@ const string imageWebGuard = "EnsureWebSafeMediaSource(field.ImageSource, \"imag
 const string bootImageWebGuard = "EnsureWebSafeMediaSource(_bootImage, \"boot image\")";
 const string webDataImageCheck = "!text.StartsWith(\"data:image/\", StringComparison.OrdinalIgnoreCase)";
 const string webDataImageError = "UIForm server-web data URI must use an image media type.";
+const string rootedPathCheck = "System.IO.Path.IsPathRooted(text)";
+const string windowsRootedPathCheck = "text.Length >= 3 && char.IsLetter(text[0]) && text[1] == ':'";
+const string rootedPathReturn = "if (allowLocalPaths && isRootedPath) return text;";
 
 foreach (var generated in new[] { desktop, android, browser })
 {
@@ -41,6 +44,10 @@ foreach (var generated in new[] { desktop, android, browser })
     if (!generated.Contains(webDataImageCheck, StringComparison.Ordinal) ||
         !generated.Contains(webDataImageError, StringComparison.Ordinal))
         throw new Exception("Generated UIForm server-web media policy must reject non-image data URIs.");
+    if (!generated.Contains(rootedPathCheck, StringComparison.Ordinal) ||
+        !generated.Contains(windowsRootedPathCheck, StringComparison.Ordinal) ||
+        !generated.Contains(rootedPathReturn, StringComparison.Ordinal))
+        throw new Exception("Generated UIForm media policy must explicitly handle rooted local filesystem image paths.");
 }
 
 if (!desktop.Contains("true && " + fileClause, StringComparison.Ordinal))
