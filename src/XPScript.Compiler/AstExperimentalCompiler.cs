@@ -269,6 +269,7 @@ internal static class AstExperimentalCompiler
             if (Regex.IsMatch(fullSource, $@"(?im)^\s*(?:Function|Sub)\s+{compatibilityProcedure}\b"))
                 procedureStubs += Environment.NewLine + $"    public static object {compatibilityProcedure}() => 0;";
         var entryPoint = methodName.Equals("Main", StringComparison.Ordinal) ? string.Empty : "    public static void Main() { }\n";
+        var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
         var generated = $$"""
 using System;
 using System.Collections.Generic;
@@ -292,6 +293,7 @@ internal static class LSForAllRuntime
 }
 internal static class Program
 {
+    private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
     public static dynamic Application = new ExpandoObject();
     public static dynamic Debugger = new ExpandoObject();
     public static dynamic Process = new ExpandoObject();
@@ -337,7 +339,7 @@ internal static class Program
     public static string UCase(object? value) => (value?.ToString() ?? string.Empty).ToUpperInvariant();
     public static string LCase(object? value) => (value?.ToString() ?? string.Empty).ToLowerInvariant();
     public static object? ArraySort(object? value) => value;
-    public static string Join(object? value, string separator) => value is System.Collections.IEnumerable items ? string.Join(separator, items.Cast<object?>()) : string.Empty;
+    public static string Join(object? value, object? separator) => value is System.Collections.IEnumerable items ? string.Join(CStr(separator), items.Cast<object?>()) : string.Empty;
     public static object CDate(object value) => Convert.ToDateTime(value);
     public static object Base64Decode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.FromBase64String(CStr(values[0]));
     public static object Base64Encode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(CStr(values[0])));
@@ -368,8 +370,7 @@ internal static class Program
     public static object Rnd(object value) => Random.Shared.NextDouble();
     public static object RSet(object value, object width) => CStr(value).PadLeft(Convert.ToInt32(width));
     public static object Space(object value) => new string(' ', Math.Max(0, Convert.ToInt32(value)));
-    public static object StrCompare(object left, object right) => StrComp(left, right);
-    public static object StrCompare(object left, object right, object compare) => StrComp(left, right, compare);
+    public static object StrCompare(object left, object right, object? compare = null) => StrComp(left, right, compare);
     public static object String(object count, object value) => new string(CStr(value).FirstOrDefault(), Math.Max(0, Convert.ToInt32(count)));
     public static object StrLeft(object value, object count) => Left(value, count);
     public static object StrLeftBack(object value, object count) => Left(value, count);
@@ -383,8 +384,12 @@ internal static class Program
     public static object UrlEncode(object value) => Uri.EscapeDataString(CStr(value));
     public static string StrConv(object value, object style) => Convert.ToString(value) ?? string.Empty;
     public static object CType(object value, object typeName) => typeName?.ToString()?.Equals("Integer", StringComparison.OrdinalIgnoreCase) == true ? Convert.ToInt64(value) : value;
-    public static long StrComp(object? left, object? right) => string.Compare(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
-    public static long StrComp(object? left, object? right, object? compare) => string.Compare(left?.ToString(), right?.ToString(), Convert.ToInt32(compare) == 1 ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    public static long StrComp(object? left, object? right, object? compare = null)
+    {
+        var mode = compare is null ? (OptionCompareNoCase ? 1 : 0) : Convert.ToInt32(compare);
+        var comparison = mode is 1 or 5 ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        return Math.Sign(string.Compare(left?.ToString(), right?.ToString(), comparison));
+    }
     public static object Abs(object value) => Math.Abs(Convert.ToDouble(value));
     public static object Int(object value) => Math.Floor(Convert.ToDouble(value));
     public static object Fix(object value) => Math.Truncate(Convert.ToDouble(value));
