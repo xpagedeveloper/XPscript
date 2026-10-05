@@ -136,8 +136,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
     private BoundExpression BindArray(ArrayExpressionSyntax syntax)
     {
-        if (_allowDynamicMembers && syntax.Elements.Count >= 1 && _symbols.TryLookup(syntax.ArrayIdentifier.Text, out var localSymbol) && localSymbol is LocalSymbol local && local.Type == typeof(object))
+        if (_allowDynamicMembers && syntax.Elements.Count >= 1)
         {
+            var local = _symbols.TryLookup(syntax.ArrayIdentifier.Text, out var localSymbol) && localSymbol is LocalSymbol found && found.Type == typeof(object)
+                ? found
+                : new LocalSymbol(syntax.ArrayIdentifier.Text, typeof(object), XpTypeSymbol.Variant);
             var index = Bind(syntax.Elements[0]);
             return new BoundIndexExpression(new BoundNameExpression(local), index, typeof(object), XpTypeSymbol.Variant);
         }
@@ -220,7 +223,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             if (_allowDynamicMembers && syntax.Arguments.Count == 0)
                 return new BoundNameExpression(new LocalSymbol(name, typeof(object), XpTypeSymbol.Variant));
-        if (_allowDynamicMembers && syntax.Arguments.Count == 1)
+        if (_allowDynamicMembers && syntax.Arguments.Count >= 1)
         {
             var dynamicLocal = new LocalSymbol(name, typeof(object), XpTypeSymbol.Variant);
             return new BoundIndexExpression(new BoundNameExpression(dynamicLocal), Bind(syntax.Arguments[0]), typeof(object), XpTypeSymbol.Variant);
