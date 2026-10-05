@@ -71,7 +71,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     private BoundStatement? BindExpressionStatement(ExpressionStatementSyntax syntax)
     {
         var expression = BindExpression(syntax.Expression);
-        if (_allowDynamicMembers && expression is BoundNameExpression)
+        if (_allowDynamicMembers && expression is BoundNameExpression or BoundLiteralExpression)
             return new BoundNoOpStatement();
         return expression is null ? null : new BoundExpressionStatement(expression);
     }
