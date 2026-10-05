@@ -957,7 +957,7 @@ public sealed class StatementParser
         {
             if (Current.Kind == SyntaxKind.HashToken)
                 NextToken();
-            var commaIndex = FindTokenOnCurrentLine(SyntaxKind.CommaToken);
+            var commaIndex = FindTopLevelTokenOnCurrentLine(SyntaxKind.CommaToken);
             var end = commaIndex >= 0 ? commaIndex : FindLineEndIndex(_position);
             fileNumbers.Add(ParseExpressionRange(_position, end, _tokens[end].Span.Start));
             _position = end;
@@ -1185,6 +1185,24 @@ public sealed class StatementParser
                 return i;
         }
 
+        return -1;
+    }
+
+    private int FindTopLevelTokenOnCurrentLine(SyntaxKind kind)
+    {
+        var parenDepth = 0;
+        var bracketDepth = 0;
+        for (var i = _position; i < _tokens.Length; i++)
+        {
+            var token = _tokens[i];
+            if (token.Kind is SyntaxKind.NewLineToken or SyntaxKind.EndOfFileToken)
+                return -1;
+            if (token.Kind == SyntaxKind.OpenParenToken) parenDepth++;
+            else if (token.Kind == SyntaxKind.CloseParenToken) parenDepth--;
+            else if (token.Kind == SyntaxKind.OpenBracketToken) bracketDepth++;
+            else if (token.Kind == SyntaxKind.CloseBracketToken) bracketDepth--;
+            else if (token.Kind == kind && parenDepth == 0 && bracketDepth == 0) return i;
+        }
         return -1;
     }
 
