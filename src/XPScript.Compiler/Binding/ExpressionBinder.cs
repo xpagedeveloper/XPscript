@@ -56,6 +56,13 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindName(NameExpressionSyntax syntax)
     {
         var name = syntax.IdentifierToken.Text;
+        // Statement-specific parsers can recover an omitted optional argument
+        // with a zero-width identifier. Dynamic AST compilation must preserve
+        // the surrounding statement and let its runtime helper supply the
+        // default, rather than reporting a second synthetic unknown-variable
+        // error for the recovery token.
+        if (_allowDynamicMembers && string.IsNullOrEmpty(name))
+            return new BoundLiteralExpression(null, typeof(object));
         if (_symbols.TryLookup(name, out var symbol) &&
             symbol is VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol)
             return new BoundNameExpression(symbol);
