@@ -74,6 +74,7 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new VariableSymbol("Database", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Document", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Err", typeof(object), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("Response", typeof(object), XpTypeSymbol.Variant));
         var declarationParameters = sub?.Parameters ?? function!.Parameters;
         var parameters = declarationParameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
             ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef, XpTypeSymbol.FromClr(ResolveRuntimeType(parameter.Type?.Identifier.Text)))).ToArray();
@@ -133,6 +134,7 @@ internal static class Program
     public static dynamic Database = new ExpandoObject();
     public static dynamic Document = new ExpandoObject();
     public static dynamic Err = new ExpandoObject();
+    public static dynamic Response = new ExpandoObject();
     public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
     public static long LBound(object value) => 0;
     public static long UBound(object value) => value is Array array ? array.Length - 1 : -1;
