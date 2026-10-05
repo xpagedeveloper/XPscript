@@ -270,6 +270,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 : XpTypeSymbol.FromClr(function.ParameterTypes[i]);
             var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
             var isByRef = function.ByRefParameters is not null && function.ByRefParameters[i];
+            if (targetType.IsVariant)
+                continue;
             if (!conversion.IsImplicit || isByRef && !conversion.IsIdentity)
                 return false;
         }
