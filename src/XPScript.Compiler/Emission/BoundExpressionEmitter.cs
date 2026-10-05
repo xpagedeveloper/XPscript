@@ -63,6 +63,7 @@ public sealed class BoundExpressionEmitter
         : type == typeof(long) ? "CLng"
         : type == typeof(double) ? "CDbl"
         : type == typeof(bool) ? "CBool"
+        : type == typeof(object) ? "CObj"
         : throw new NotSupportedException($"Variant conversion to {type} is not supported.");
 
     private static string EmitUnaryOperator(SyntaxKind kind) => kind switch

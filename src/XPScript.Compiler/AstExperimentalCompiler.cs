@@ -31,7 +31,9 @@ internal static class AstExperimentalCompiler
         var symbols = SymbolTable.CreateWithCompilerCatalog();
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
+        symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string))));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
         var binder = new StatementBinder(symbols, allowDynamicMembers: true);
         var bound = sub.Statements.Select(binder.Bind).OfType<BoundStatement>().ToArray();
         if (binder.Diagnostics.Count > 0)
@@ -61,6 +63,7 @@ internal static class LSForAllRuntime
 internal static class Program
 {
     public static dynamic Application = new ExpandoObject();
+    public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
     public static long[] Array(long first, long second) => [first, second];
     public static class XPScriptNullRuntime
@@ -78,6 +81,7 @@ internal static class Program
         }
         public static long CLng(object value) => Convert.ToInt64(value);
         public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
+        public static object? CObj(object? value) => value;
     }
 {{body}}
 }
