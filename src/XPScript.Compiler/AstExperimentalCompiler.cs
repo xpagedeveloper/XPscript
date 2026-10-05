@@ -131,6 +131,9 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("LenB", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("TypeName", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FileLen", typeof(long), [typeof(string)]));
+        foreach (var fileFunction in new[] { "ReadFile", "ReadLines", "ReadBytes", "FileHash", "Files", "Directories", "CopyFile", "MoveFile", "IsFile", "IsDir", "FileEquals", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "FileInfo" })
+            for (var parameterCount = 1; parameterCount <= 4; parameterCount++)
+                symbols.Declare(new FunctionSymbol(fileFunction, typeof(object), Enumerable.Repeat(typeof(object), parameterCount).ToArray(), XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, parameterCount).ToArray()));
         symbols.Declare(new FunctionSymbol("FreeFile", typeof(long), []));
         symbols.Declare(new FunctionSymbol("CInt", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("CLng", typeof(long), [typeof(object)]));
@@ -376,7 +379,23 @@ internal static class Program
     public static long Len(object? value) => value is Array array ? array.Length : (value?.ToString()?.Length ?? 0);
     public static long LenB(object? value) => Len(value);
     public static string TypeName(object? value) => value?.GetType().Name ?? "Nothing";
-    public static long FileLen(string path) => new FileInfo(path).Length;
+    public static long FileLen(string path) => new System.IO.FileInfo(path).Length;
+    public static object ReadFile(params object?[] a) => System.IO.File.ReadAllText(CStr(a[0]));
+    public static object ReadLines(params object?[] a) => System.IO.File.ReadAllLines(CStr(a[0]));
+    public static object ReadBytes(params object?[] a) => System.IO.File.ReadAllBytes(CStr(a[0]));
+    public static object FileHash(params object?[] a) { using var h = System.Security.Cryptography.SHA256.Create(); return Convert.ToHexString(h.ComputeHash(System.IO.File.ReadAllBytes(CStr(a[0])))).ToLowerInvariant(); }
+    public static object Files(params object?[] a) => System.IO.Directory.GetFiles(CStr(a[0]), a.Length > 1 ? CStr(a[1]) : "*", a.Length > 2 && Convert.ToBoolean(a[2]) ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly);
+    public static object Directories(params object?[] a) => System.IO.Directory.GetDirectories(CStr(a[0]));
+    public static object IsFile(params object?[] a) => System.IO.File.Exists(CStr(a[0]));
+    public static object IsDir(params object?[] a) => System.IO.Directory.Exists(CStr(a[0]));
+    public static object FileEquals(params object?[] a) => System.Linq.Enumerable.SequenceEqual(System.IO.File.ReadAllBytes(CStr(a[0])), System.IO.File.ReadAllBytes(CStr(a[1])));
+    public static object CopyFile(params object?[] a) { System.IO.File.Copy(CStr(a[0]), CStr(a[1]), a.Length > 2 && Convert.ToInt32(a[2]) == 2); return true; }
+    public static object MoveFile(params object?[] a) { System.IO.File.Move(CStr(a[0]), CStr(a[1]), a.Length > 2 && Convert.ToInt32(a[2]) == 2); return true; }
+    public static object WriteFile(params object?[] a) { System.IO.File.WriteAllText(CStr(a[0]), CStr(a[1])); return true; }
+    public static object AppendFile(params object?[] a) { System.IO.File.AppendAllText(CStr(a[0]), CStr(a[1])); return true; }
+    public static object WriteLines(params object?[] a) { System.IO.File.WriteAllLines(CStr(a[0]), ((System.Collections.IEnumerable)a[1]!).Cast<object?>().Select(CStr)); return true; }
+    public static object WriteBytes(params object?[] a) { System.IO.File.WriteAllBytes(CStr(a[0]), (byte[])a[1]!); return true; }
+    public static object FileInfo(params object?[] a) => new System.IO.FileInfo(CStr(a[0]));
     public static long FreeFile() => 1;
     public static long CInt(object value) => Convert.ToInt64(value);
     public static long CLng(object value) => Convert.ToInt64(value);
