@@ -10,6 +10,33 @@ static ExpressionSyntax Parse(string text)
     return syntax;
 }
 
+// Type diagnostics run first so semantic type regressions fail before the broader binder probe.
+var invalidUnaryBinder = new ExpressionBinder();
+_ = invalidUnaryBinder.Bind(Parse("Not 1"));
+if (invalidUnaryBinder.Diagnostics.Count != 1 || invalidUnaryBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Invalid unary operands must produce exactly one XPS2001 diagnostic.");
+
+var invalidBinaryBinder = new ExpressionBinder();
+_ = invalidBinaryBinder.Bind(Parse("True + False"));
+if (invalidBinaryBinder.Diagnostics.Count != 1 || invalidBinaryBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Invalid binary operands must produce exactly one XPS2001 diagnostic.");
+
+var indexSymbols = new SymbolTable();
+indexSymbols.Declare(new VariableSymbol("scalar", typeof(long)));
+indexSymbols.Declare(new VariableSymbol("values", typeof(string[]), XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(typeof(string)))));
+
+var scalarIndexBinder = new ExpressionBinder(indexSymbols);
+_ = scalarIndexBinder.Bind(Parse("scalar[0]"));
+if (scalarIndexBinder.Diagnostics.Count != 1 || scalarIndexBinder.Diagnostics[0].Code != "XPS2001")
+    throw new InvalidOperationException("Indexing a scalar must produce exactly one XPS2001 diagnostic.");
+
+var wrongIndexTypeBinder = new ExpressionBinder(indexSymbols);
+_ = wrongIndexTypeBinder.Bind(Parse("values["wrong"]"));
+if (wrongIndexTypeBinder.Diagnostics.Count != 1 || wrongIndexTypeBinder.Diagnostics[0].Code != "XPS2003")
+    throw new InvalidOperationException("A non-integer array index must produce exactly one XPS2003 diagnostic.");
+
+Console.WriteLine("AST_BINDING_TYPE_DIAGNOSTICS_OK");
+
 // Collection typing runs first because failures here should be isolated before the broader binder probe.
 var stringType = XpTypeSymbol.FromClr(typeof(string));
 var stringArrayType = XpTypeSymbol.ArrayOf(stringType);
@@ -310,9 +337,12 @@ if (wideningReturnBinder.Diagnostics.Count != 0 ||
     throw new InvalidOperationException("Integer-to-Double Function return must bind through an explicit widening conversion.");
 
 var wideningCallBinder = new ExpressionBinder(conversionSymbols);
-_ = wideningCallBinder.Bind(Parse("TakeDouble(1)"));
+var wideningCall = wideningCallBinder.Bind(Parse("TakeDouble(1)"));
 if (wideningCallBinder.Diagnostics.Count != 0)
     throw new InvalidOperationException("ByVal calls must allow defined implicit widening conversions.");
+if (wideningCall is not BoundCallExpression { Arguments.Count: 1 } typedWideningCall ||
+    typedWideningCall.Arguments[0] is not BoundConversionExpression { Conversion.Kind: ConversionKind.NumericWidening })
+    throw new InvalidOperationException("ByVal widening calls must materialize an explicit bound numeric conversion.");
 
 var byRefWideningBinder = new ExpressionBinder(conversionSymbols);
 _ = byRefWideningBinder.Bind(Parse("TouchDouble(narrow)"));
