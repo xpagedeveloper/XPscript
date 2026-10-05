@@ -262,6 +262,7 @@ internal static class Program
             else for (var value = from; value >= to; value += step) yield return value;
         }
         public static long CLng(object value) => Convert.ToInt64(value);
+        public static double CDbl(object value) => Convert.ToDouble(value);
         public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
         public static object? CObj(object? value) => value;
         public static bool Like(string value, string pattern) => System.Text.RegularExpressions.Regex.IsMatch(value ?? string.Empty, "^" + System.Text.RegularExpressions.Regex.Escape(pattern ?? string.Empty).Replace("\\\\*", ".*").Replace("\\\\?", ".") + "$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
