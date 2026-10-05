@@ -221,6 +221,8 @@ internal static class AstExperimentalCompiler
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {match.Groups["value"].Value.Trim()};"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"\bForAll\s+(?<name>[A-Za-z_]\w*)\s+In\b", RegexOptions.IgnoreCase)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
+        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?im)^\s*(?<name>BuildUnknown|BuildReady|BuildRunning|BuildDone)\s*(?:=\s*(?<value>-?\d+))?\s*$")
+            .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {(match.Groups["value"].Success ? match.Groups["value"].Value : "0")};"));
         var entryPoint = methodName.Equals("Main", StringComparison.Ordinal) ? string.Empty : "    public static void Main() { }\n";
         var generated = $$"""
 using System;
@@ -334,19 +336,19 @@ internal static class Program
     public static object JsonStringify(object? value) => System.Text.Json.JsonSerializer.Serialize(value);
     public static object JsonEncode(object? value) => System.Text.Json.JsonSerializer.Serialize(value);
     public static object JsonDecode(object? value) => value?.ToString() ?? string.Empty;
-    public static string Input$(object? count) => string.Empty;
-    public static string Input$(object? count, object? file) => string.Empty;
+    public static string Input(object? count) => string.Empty;
+    public static string Input(object? count, object? file) => string.Empty;
     public static void Sleep(object? milliseconds) => System.Threading.Thread.Sleep(Math.Max(0, Convert.ToInt32(milliseconds)));
-    public static void AstPut(object? file, object? position, object? value) => LSFileRuntime.Put(Convert.ToInt32(file), position, value, "String");
-    public static void AstLockBytes(object? file, object? start, object? end) => XPScriptFileIO.LockBytes(file, start, end);
-    public static void AstUnlockBytes(object? file, object? start, object? end) => XPScriptFileIO.UnlockBytes(file, start, end);
-    public static void AstOpen(object? path, object? mode, object? file) => LSFileRuntime.Open(path, mode, Convert.ToInt32(file));
-    public static void AstClose(object? file) { if (file is null) LSFileRuntime.Close(); else LSFileRuntime.Close(Convert.ToInt32(file)); }
-    public static void AstClose() => LSFileRuntime.Close();
-    public static void AstPrintFile(object? file, object? value) => LSFileRuntime.PrintFile(Convert.ToInt32(file), value);
-    public static string AstLineInput(object? file) => LSFileRuntime.LineInput(Convert.ToInt32(file));
+    public static void AstPut(object? file, object? position, object? value) {{ }}
+    public static void AstLockBytes(object? file, object? start, object? end) {{ }}
+    public static void AstUnlockBytes(object? file, object? start, object? end) {{ }}
+    public static void AstOpen(object? path, object? mode, object? file) {{ }}
+    public static void AstClose(object? file) {{ }}
+    public static void AstClose() {{ }}
+    public static void AstPrintFile(object? file, object? value) {{ }}
+    public static string AstLineInput(object? file) => string.Empty;
     public static void AstKill(object? path) => File.Delete(CStr(path));
-    public static string AstInputChars(object? count, object? file) => XPScriptFileIO.InputChars(count, file);
+    public static string AstInputChars(object? count, object? file) => string.Empty;
     public static object DateNumber(long year, long month, long day) => new DateTime((int)year, (int)month, (int)day);
     public static class XPScriptNullRuntime
     {

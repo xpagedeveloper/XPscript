@@ -37,7 +37,8 @@ public sealed class BoundExpressionEmitter
                 throw new NotSupportedException("ByRef conversion requires temporary and copy-back lowering.");
             return (byRef ? "ref " : "") + Emit(argument);
         });
-        return $"{(call.Target is null ? call.Function.Name : Emit(call.Target))}({string.Join(", ", arguments)})";
+        var functionName = call.Function.Name.Equals("Input$", StringComparison.OrdinalIgnoreCase) ? "Input" : call.Function.Name;
+        return $"{(call.Target is null ? functionName : Emit(call.Target))}({string.Join(", ", arguments)})";
     }
 
     private string EmitBinary(BoundBinaryExpression binary) => binary.Type == typeof(object)
