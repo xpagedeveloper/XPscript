@@ -1210,7 +1210,9 @@ public sealed class StatementParser
     }
 
     private static bool IsRuntimeFileCommand(SyntaxToken token) =>
-        token.Kind == SyntaxKind.IdentifierToken
+        token.Kind == SyntaxKind.PrintKeyword
+        || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("Print", StringComparison.OrdinalIgnoreCase)
+        || token.Kind == SyntaxKind.IdentifierToken
         && token.Text.Equals("FileCopy", StringComparison.OrdinalIgnoreCase)
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("Kill", StringComparison.OrdinalIgnoreCase)
             || token.Kind == SyntaxKind.IdentifierToken && token.Text.Equals("MkDir", StringComparison.OrdinalIgnoreCase)
