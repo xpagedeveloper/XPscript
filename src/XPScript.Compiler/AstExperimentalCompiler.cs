@@ -148,6 +148,9 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("AstClose", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstClose", typeof(void), []));
         symbols.Declare(new FunctionSymbol("AstPrintFile", typeof(void), [typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstPrintFile", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("GetObject", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("GetObject", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstLineInput", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstKill", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstInputChars", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -483,7 +486,9 @@ internal static class Program
     public static void AstOpen(object? path, object? mode, object? file) { }
     public static void AstClose(object? file) { }
     public static void AstClose() { }
-    public static void AstPrintFile(object? file, object? value) { }
+    public static void AstPrintFile(object? file, object? value = null) { }
+    public static object GetObject(object? value) => new ExpandoObject();
+    public static object GetObject(object? value, object? context) => new ExpandoObject();
     public static string AstLineInput(object? file) => string.Empty;
     public static void AstKill(object? path) => File.Delete(CStr(path));
     public static string AstInputChars(object? count, object? file) => string.Empty;
