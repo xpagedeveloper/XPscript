@@ -33,7 +33,7 @@ public sealed class XpsOpenApiClientGenerator
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(specification); XpsOpenApiSchema.ValidateExternalReferences(specification, sourceName); var root = ParseDocument(specification);
         var normalized = XpsOpenApiSchema.NormalizeDocument(root); var version = normalized.Version;
-        using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version); var apiName = ResolveClassName(root, sourceName, className); var modelSet = CollectModels(root); using var typeNameScope = XpsOpenApiSchema.UseReferenceTypeNames(modelSet.TypeNames); var models = modelSet.Models; var securitySchemes = CollectSecuritySchemes(root); var operations = CollectOperations(root); AssignGeneratedApiMemberNames(operations, securitySchemes);
+        using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version); var apiName = ResolveClassName(root, sourceName, className); var modelSet = CollectModels(root, ResolvePackagePrefix(root, apiName)); using var typeNameScope = XpsOpenApiSchema.UseReferenceTypeNames(modelSet.TypeNames); var models = modelSet.Models; var securitySchemes = CollectSecuritySchemes(root); var operations = CollectOperations(root); AssignGeneratedApiMemberNames(operations, securitySchemes);
         if (options?.IncludedOperations is { Count: > 0 } included)
         {
             operations = operations.Where(operation => included.Any(item => IsSelectedOperation(operation.Name, item)) || included.Contains(operation.Method + " " + operation.Path) || included.Contains(operation.Path)).ToList();
@@ -100,9 +100,10 @@ public sealed class XpsOpenApiClientGenerator
     private static JsonObject ConvertMap(YamlMappingNode map) { var result = new JsonObject(); foreach (var pair in map.Children) { if (pair.Key is not YamlScalarNode key || string.IsNullOrWhiteSpace(key.Value)) throw new XpsOpenApiGenerationException("OpenAPI YAML mapping keys must be strings."); result[key.Value] = ConvertYaml(pair.Value); } return result; }
     private static JsonArray ConvertSequence(YamlSequenceNode sequence) { var result = new JsonArray(); foreach (var item in sequence.Children) result.Add(ConvertYaml(item)); return result; }
     private static JsonNode? ConvertScalar(YamlScalarNode scalar) { var value = scalar.Value ?? string.Empty; if (scalar.Style is not ScalarStyle.Plain) return JsonValue.Create(value); if (value is "~" || value.Equals("null", StringComparison.OrdinalIgnoreCase)) return null; if (bool.TryParse(value, out var b)) return JsonValue.Create(b); if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i)) return JsonValue.Create(i); if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) return JsonValue.Create(d); return JsonValue.Create(value); }
-    private static XpsOpenApiModelCatalog CollectModels(JsonObject root)
+    private static XpsOpenApiModelCatalog CollectModels(JsonObject root, string prefix)
         => XpsOpenApiModelCatalog.Collect(root, (rawName, used) =>
-            UniqueTypeIdentifier(ToSchemaIdentifier(rawName), used));
+            UniqueTypeIdentifier(prefix + "_" + ToSchemaIdentifier(rawName), used));
+    private static string ResolvePackagePrefix(JsonObject root, string apiName) { if (root["x-xpscript-package"] is JsonValue value && value.TryGetValue<string>(out var explicitName) && !string.IsNullOrWhiteSpace(explicitName)) return ToIdentifier(explicitName); return apiName.EndsWith("_API", StringComparison.OrdinalIgnoreCase) ? apiName[..^4] : apiName; }
     private static Dictionary<string, ClientSecurityScheme> CollectSecuritySchemes(JsonObject root)
     {
         var result = new Dictionary<string, ClientSecurityScheme>(StringComparer.OrdinalIgnoreCase);
@@ -581,6 +582,8 @@ public sealed class XpsOpenApiClientGenerator
     private static string EscapeXps(string value) => value.Replace("\"", "\"\""); private static string? ReadString(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<string>(out var teyt) ? teyt : null; private static bool ReadBool(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<bool>(out var result) && result;
     private sealed record ClientSecurityScheme(string Name, string Kind, string? Location, string? WireName, string GeneratedName = "", string SetterName = ""); private sealed record ClientParameter(string Name, string Location, string TypeName, bool Required, string GeneratedName = ""); private sealed record ClientBody(string TypeName, bool Required, string MediaType = "application/json", string? MultipartFileField = null); private sealed record ClientResponse(string Code, string? TypeName, JsonObject? Schema); private sealed record ClientOperation(string Method, string Path, string Name, IReadOnlyList<ClientParameter> Parameters, ClientBody? Body, IReadOnlyList<ClientResponse> Responses, IReadOnlyList<IReadOnlyList<string>> Security);
 }
+
+
 
 
 
