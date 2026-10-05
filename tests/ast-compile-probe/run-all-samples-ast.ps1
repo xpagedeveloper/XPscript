@@ -12,8 +12,14 @@ foreach ($file in Get-ChildItem $samples -Recurse -Filter '*.xps' | Sort-Object 
     $safe = ($relative -replace '[\\/: ]', '_') -replace '\.xps$', ''
     $target = Join-Path $output $safe
     New-Item -ItemType Directory -Force -Path $target | Out-Null
-    $message = (& dotnet $compiler ast-compile $file.FullName -o $target 2>&1 | Out-String).Trim()
-    $status = if ($LASTEXITCODE -eq 0) { 'OK' } else { 'FAIL'; $failures.Add($relative) }
+    try {
+        $message = (& dotnet $compiler ast-compile $file.FullName -o $target 2>&1 | Out-String).Trim()
+        $exitCode = $LASTEXITCODE
+    } catch {
+        $message = $_ | Out-String
+        $exitCode = 1
+    }
+    $status = if ($exitCode -eq 0) { 'OK' } else { 'FAIL'; $failures.Add($relative) }
     Add-Content -LiteralPath $report -Value ($status + "`t" + $relative + "`t" + ($message -replace "`r?`n", ' | '))
     Write-Host "$status $relative"
 }
