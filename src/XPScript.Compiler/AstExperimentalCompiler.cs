@@ -48,7 +48,7 @@ internal static class AstExperimentalCompiler
             var bounds = match.Groups["bounds"].Value.Trim();
             var upper = Regex.Match(bounds, @"(?i)\bTo\s+(?<upper>.+)$").Groups["upper"].Value;
             if (string.IsNullOrWhiteSpace(upper)) upper = bounds;
-            return $"{match.Groups["indent"].Value}{match.Groups["name"].Value} = ArrayResize({match.Groups["name"].Value}, {upper}, {(match.Groups["preserve"].Success ? "True" : "False")})";
+            return $"{match.Groups["indent"].Value}{match.Groups["name"].Value} = ArrayResize({match.Groups["name"].Value}, {upper}, {(match.Groups["preserve"].Success ? "true" : "false")})";
         });
         var declarationStart = System.Text.RegularExpressions.Regex.Match(source, @"(?im)^\s*(Sub|Function|Class)\b");
         if (declarationStart.Success)
@@ -313,6 +313,8 @@ internal static class LSForAllRuntime
 internal static class Program
 {
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
+    public static bool True = true;
+    public static bool False = false;
     public static dynamic Application = new ExpandoObject();
     public static dynamic Console = new ExpandoObject();
     public static dynamic Debugger = new ExpandoObject();
