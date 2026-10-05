@@ -1,4 +1,5 @@
 using System.Globalization;
+using SymbolDisplay = Microsoft.CodeAnalysis.CSharp.SymbolDisplay;
 using XPScript.Compiler.Binding;
 using XPScript.Compiler.Syntax;
 
@@ -9,25 +10,60 @@ public sealed class BoundExpressionEmitter
     public string Emit(BoundExpression expression) => expression switch
     {
         BoundLiteralExpression literal => EmitLiteral(literal),
+        BoundConversionExpression conversion => EmitConversion(conversion),
         BoundNameExpression name => name.Symbol.Name,
         BoundMemberAccessExpression member => $"{Emit(member.Receiver)}.{member.Name}",
         BoundIndexExpression index => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundNewExpression @new => $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundIndexedPropertyExpression indexed => $"{Emit(indexed.Receiver)}.{indexed.Property.Name.Split('.').Last()}({string.Join(", ", indexed.Arguments.Select(Emit))})",
-        BoundCallExpression call => $"{(call.Target is null ? call.Function.Name : Emit(call.Target))}({string.Join(", ", call.Arguments.Select(Emit))})",
+        BoundCallExpression call => EmitCall(call),
         BoundUnaryExpression unary => $"({EmitUnaryOperator(unary.OperatorKind)}{Emit(unary.Operand)})",
         BoundBinaryExpression binary => $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind)} {Emit(binary.Right)})",
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
 
+    private string EmitCall(BoundCallExpression call)
+    {
+        var arguments = call.Arguments.Select((argument, index) =>
+        {
+            var byRef = call.Function.ByRefParameters?[index] == true;
+            if (byRef && argument is not BoundNameExpression)
+                throw new NotSupportedException("ByRef conversion requires temporary and copy-back lowering.");
+            return (byRef ? "ref " : "") + Emit(argument);
+        });
+        return $"{(call.Target is null ? call.Function.Name : Emit(call.Target))}({string.Join(", ", arguments)})";
+    }
+
     private static string EmitLiteral(BoundLiteralExpression expression) => expression.Value switch
     {
         null => "null",
         bool value => value ? "true" : "false",
-        string value => $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"",
+        string value => SymbolDisplay.FormatLiteral(value, quote: true),
+        DBNull => "global::System.DBNull.Value",
+        long value => value == long.MinValue ? "global::System.Int64.MinValue" : value.ToString(CultureInfo.InvariantCulture) + "L",
+        double value => double.IsNaN(value) ? "global::System.Double.NaN" : double.IsPositiveInfinity(value) ? "global::System.Double.PositiveInfinity" : double.IsNegativeInfinity(value) ? "global::System.Double.NegativeInfinity" : value.ToString("R", CultureInfo.InvariantCulture) + "D",
         IFormattable value => value.ToString(null, CultureInfo.InvariantCulture),
         _ => expression.Value.ToString() ?? "null"
     };
+
+    private string EmitConversion(BoundConversionExpression expression)
+    {
+        var value = Emit(expression.Expression);
+        return expression.Conversion.Kind switch
+        {
+            ConversionKind.Identity or ConversionKind.EmptyToVariant or ConversionKind.NullToVariant or ConversionKind.NothingToObject => value,
+            ConversionKind.NumericWidening => $"((double)({value}))",
+            ConversionKind.ToVariant or ConversionKind.ToObject => $"((object)({value}))",
+            ConversionKind.FromVariant => $"XPScriptRuntime.{ConversionMethod(expression.Type)}({value})",
+            _ => throw new NotSupportedException($"Conversion {expression.Conversion.Kind} is not supported.")
+        };
+    }
+
+    private static string ConversionMethod(Type type) => type == typeof(string) ? "CStr"
+        : type == typeof(long) ? "CLng"
+        : type == typeof(double) ? "CDbl"
+        : type == typeof(bool) ? "CBool"
+        : throw new NotSupportedException($"Variant conversion to {type} is not supported.");
 
     private static string EmitUnaryOperator(SyntaxKind kind) => kind switch
     {

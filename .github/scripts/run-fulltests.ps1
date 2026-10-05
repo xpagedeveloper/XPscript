@@ -35,7 +35,7 @@ function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeou
     return [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $stdout + $stderr }
   } finally { $p.Dispose() }
 }
-function Compile-Xps([string] $source, [string] $name) { Write-Host "FULLTEST_COMPILE=$name"; $r = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',"./out/fulltest/$name",'--runtime=false') $compileTimeoutMilliseconds "compile $name"; if ($r.ExitCode -ne 0) { if ($name -eq 'archive-compressed-tar') { Write-Host 'FULLTEST_RETRY_DEBUG=archive-compressed-tar'; $debug = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',"./out/fulltest/$name-debug",'--runtime=false','--debug') $compileTimeoutMilliseconds "compile debug $name"; Write-Host $debug.Output }; exit $r.ExitCode } }
+function Compile-Xps([string] $source, [string] $name) { $outputPath = "./out/fulltest/$name"; if ($IsWindows) { $outputPath += ".exe" }; Write-Host "FULLTEST_COMPILE=$name"; $r = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',$outputPath,'--runtime=false') $compileTimeoutMilliseconds "compile $name"; if ($r.ExitCode -ne 0) { if ($name -eq 'archive-compressed-tar') { Write-Host 'FULLTEST_RETRY_DEBUG=archive-compressed-tar'; $debug = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',"./out/fulltest/$name-debug",'--runtime=false','--debug') $compileTimeoutMilliseconds "compile debug $name"; Write-Host $debug.Output }; exit $r.ExitCode } }
 function Get-XpsExe([string] $name) { $plain = "./out/fulltest/$name"; $win = "$plain.exe"; if (Test-Path $win -PathType Leaf) { return (Resolve-Path $win).Path }; if (Test-Path $plain -PathType Leaf) { return (Resolve-Path $plain).Path }; throw "Executable not found: $name" }
 function Run-Xps([string] $source, [string] $name, [string[]] $arguments = @()) { Compile-Xps $source $name; Write-Host "FULLTEST_RUN=$name"; $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "run $name"; if ($r.ExitCode -ne 0) { exit $r.ExitCode }; return $r }
 function Expect-XpsFailure([string] $name, [string[]] $arguments, [string] $label) { $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "security $label"; if ($r.ExitCode -eq 0) { throw "Security probe unexpectedly succeeded: $label" }; if ([string]::IsNullOrWhiteSpace($r.Output)) { throw "Security probe returned no diagnostic: $label" }; if ($r.Output -match 'SharpCompress') { throw "Security diagnostic exposed implementation detail: $label" } }
@@ -45,6 +45,9 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  $emission = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-emission/AstEmissionProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'bound C# emission'
+  if ($emission.ExitCode -ne 0) { exit $emission.ExitCode }
+  if ($emission.Output -notmatch 'AST_EMISSION_OK') { throw 'Bound C# emission regression failed.' }
   # Keep incompatible override signature regression first while inheritance semantics are active.
   $overrideBad = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/class-override-signature-error.xps','-o','./out/fulltest/class-override-signature-error','--runtime=false') $compileTimeoutMilliseconds 'incompatible class override diagnostic'
   if ($overrideBad.ExitCode -eq 0) { throw 'Incompatible class override unexpectedly compiled.' }

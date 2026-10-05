@@ -12,7 +12,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     public BoundStatement? Bind(StatementSyntax syntax)
     {
-        return syntax switch
+        BoundStatement? bound = syntax switch
         {
             AssignmentStatementSyntax assignment => BindAssignment(assignment.Target, assignment.Expression),
             SetStatementSyntax set => BindAssignment(set.Target, set.Expression, isSet: true),
@@ -26,6 +26,9 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             SelectStatementSyntax select => BindSelect(select),
             _ => BindUnsupported(syntax)
         };
+        if (bound is not null)
+            bound.Span = syntax.Span;
+        return bound;
     }
 
     private BoundStatement? BindUnsupported(StatementSyntax syntax)
@@ -73,7 +76,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             var elseIfCondition = BindBooleanCondition(clause.Condition, "ElseIf");
             var statements = BindStatements(clause.Statements);
             if (elseIfCondition is not null)
-                elseIfClauses.Add(new BoundElseIfClause(elseIfCondition, statements));
+                elseIfClauses.Add(new BoundElseIfClause(elseIfCondition, statements) { Span = clause.Span });
         }
         var elseStatements = BindStatements(syntax.ElseStatements);
         return condition is null ? null : new BoundIfStatement(condition, thenStatements, elseIfClauses, elseStatements);
@@ -175,7 +178,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                 clause.OperatorToken?.Kind,
                 lower,
                 upper,
-                BindStatements(clause.Statements)));
+                BindStatements(clause.Statements)) { Span = clause.Span });
         }
 
         return new BoundSelectStatement(selector, cases);
@@ -239,7 +242,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 $"Cannot return {value.SemanticType.Name} from a Function returning {_returnType.Name}.", syntax.Expression.Span));
         else if (!conversion.IsIdentity)
-            value = new BoundConversionExpression(value, _returnType, conversion);
+            value = new BoundConversionExpression(value, _returnType, conversion) { Span = value.Span };
 
         return new BoundReturnStatement(value);
     }
@@ -279,7 +282,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                 $"Cannot assign {value.SemanticType.Name} to {target.SemanticType.Name}.",
                 valueSyntax.Span));
         else if (!conversion.IsIdentity)
-            value = new BoundConversionExpression(value, target.SemanticType, conversion);
+            value = new BoundConversionExpression(value, target.SemanticType, conversion) { Span = value.Span };
 
         return new BoundAssignmentStatement(target, value, isSet);
     }

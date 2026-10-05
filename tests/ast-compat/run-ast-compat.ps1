@@ -24,6 +24,7 @@ foreach ($test in $tests) {
     Write-Host "=== AST compatibility baseline: $($test.Name) ==="
     $source = Join-Path $PSScriptRoot $test.File
     $output = Join-Path $outRoot $test.Name
+    if ($IsWindows) { $output += ".exe" }
     dotnet run --project $compiler -c Release --no-build -- $source -o $output --runtime=false
     if ($LASTEXITCODE -ne 0) { throw "Compilation failed: $($test.Name)" }
 

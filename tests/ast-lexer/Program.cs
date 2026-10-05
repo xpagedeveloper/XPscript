@@ -972,8 +972,8 @@ Equal("new StringBuilder(\"hello\")", emitter.Emit(boundNewWithArgs), "bound New
 
 
 Equal("((!false) || true)", emitter.Emit(boundBoolean), "bound boolean C# emission");
-Equal("(1 + (2 * 3))", emitter.Emit(boundArithmetic), "bound arithmetic C# emission");
-Equal("(10.5 + 2.25)", emitter.Emit(boundDecimal), "bound decimal C# emission");
+Equal("(1L + (2L * 3L))", emitter.Emit(boundArithmetic), "bound arithmetic C# emission");
+Equal("(10.5D + 2.25D)", emitter.Emit(boundDecimal), "bound decimal C# emission");
 
 var nestedNewParser = new ExpressionParser("New Person(\"Fredrik\", \"Admin\")");
 nestedNewParser.ParseExpression();
@@ -988,14 +988,14 @@ var boundParenthesized = parenthesizedBinder.Bind(new ExpressionParser("(1 + 2) 
 Equal(BoundNodeKind.BinaryExpression, boundParenthesized.Kind, "bound parenthesized arithmetic root");
 Equal(typeof(long), boundParenthesized.Type, "bound parenthesized arithmetic type");
 Equal(0, parenthesizedBinder.Diagnostics.Count, "bound parenthesized arithmetic diagnostics");
-Equal("((1 + 2) * 3)", emitter.Emit(boundParenthesized), "bound parenthesized arithmetic C# emission");
+Equal("((1L + 2L) * 3L)", emitter.Emit(boundParenthesized), "bound parenthesized arithmetic C# emission");
 
 var comparisonBinder = new ExpressionBinder();
 var boundComparison = comparisonBinder.Bind(new ExpressionParser("10.5 >= 2.25").ParseExpression());
 Equal(BoundNodeKind.BinaryExpression, boundComparison.Kind, "bound comparison root");
 Equal(typeof(bool), boundComparison.Type, "bound comparison type");
 Equal(0, comparisonBinder.Diagnostics.Count, "bound comparison diagnostics");
-Equal("(10.5 >= 2.25)", emitter.Emit(boundComparison), "bound comparison C# emission");
+Equal("(10.5D >= 2.25D)", emitter.Emit(boundComparison), "bound comparison C# emission");
 
 var concatBinder = new ExpressionBinder();
 var boundConcat = concatBinder.Bind(new ExpressionParser("\"XP\" & \"Script\"").ParseExpression());
@@ -1006,7 +1006,7 @@ Equal("(\"XP\" + \"Script\")", emitter.Emit(boundConcat), "bound concat C# emiss
 
 var equalityBinder = new ExpressionBinder();
 var boundEquality = equalityBinder.Bind(new ExpressionParser("1 + 2 = 3").ParseExpression());
-Equal("((1 + 2) == 3)", emitter.Emit(boundEquality), "bound equality C# emission");
+Equal("((1L + 2L) == 3L)", emitter.Emit(boundEquality), "bound equality C# emission");
 Equal(0, equalityBinder.Diagnostics.Count, "bound equality diagnostics");
 
 var overloadSymbols = new SymbolTable();
@@ -1048,7 +1048,7 @@ var boundIndex = indexBinder.Bind(new ExpressionParser("items[1]").ParseExpressi
 Equal(BoundNodeKind.IndexExpression, boundIndex.Kind, "bound index root");
 Equal(typeof(string), boundIndex.Type, "bound index result type");
 Equal(0, indexBinder.Diagnostics.Count, "bound index diagnostics");
-Equal("items[1]", emitter.Emit(boundIndex), "bound index C# emission");
+Equal("items[1L]", emitter.Emit(boundIndex), "bound index C# emission");
 
 var memberSymbols = new SymbolTable();
 memberSymbols.Declare(new VariableSymbol("text", typeof(string)));
@@ -1059,7 +1059,7 @@ var boundMemberCall = memberBinder.Bind(new ExpressionParser("text.Substring(1)"
 Equal(BoundNodeKind.CallExpression, boundMemberCall.Kind, "bound member call root");
 Equal(typeof(string), boundMemberCall.Type, "bound member call result type");
 Equal(0, memberBinder.Diagnostics.Count, "bound member call diagnostics");
-Equal("text.Substring(1)", emitter.Emit(boundMemberCall), "bound member call C# emission");
+Equal("text.Substring(1L)", emitter.Emit(boundMemberCall), "bound member call C# emission");
 
 memberSymbols.Declare(new PropertySymbol("Object.Name", typeof(string)));
 memberSymbols.Declare(new FunctionSymbol("Object.Describe", typeof(string), []));
@@ -1117,14 +1117,14 @@ var boundIndexedPropertyAccess = indexedPropertyAccessBinder.Bind(new Expression
 Equal(BoundNodeKind.IndexedPropertyExpression, boundIndexedPropertyAccess.Kind, "bound indexed property root");
 Equal(typeof(object), boundIndexedPropertyAccess.Type, "bound indexed property type");
 Equal(0, indexedPropertyAccessBinder.Diagnostics.Count, "bound indexed property diagnostics");
-Equal("store.Item(1)", emitter.Emit(boundIndexedPropertyAccess), "bound indexed property C# emission");
+Equal("store.Item(1L)", emitter.Emit(boundIndexedPropertyAccess), "bound indexed property C# emission");
 
 var chainedIndexedPropertyBinder = new ExpressionBinder(indexedSymbols);
 var boundChainedIndexedProperty = chainedIndexedPropertyBinder.Bind(new ExpressionParser("store.Item(1).Name").ParseExpression());
 Equal(BoundNodeKind.MemberAccessExpression, boundChainedIndexedProperty.Kind, "bound indexed property member root");
 Equal(typeof(string), boundChainedIndexedProperty.Type, "bound indexed property member type");
 Equal(0, chainedIndexedPropertyBinder.Diagnostics.Count, "bound indexed property member diagnostics");
-Equal("store.Item(1).Name", emitter.Emit(boundChainedIndexedProperty), "bound indexed property member C# emission");
+Equal("store.Item(1L).Name", emitter.Emit(boundChainedIndexedProperty), "bound indexed property member C# emission");
 
 var personSemanticType = XpTypeSymbol.User("Person");
 var boxSemanticType = XpTypeSymbol.User("Box");
@@ -1204,21 +1204,21 @@ var boundTypedIndexedPropertyMember = typedIndexedPropertyBinder.Bind(new Expres
 Equal(BoundNodeKind.MemberAccessExpression, boundTypedIndexedPropertyMember.Kind, "semantic indexed property member root");
 Equal(typeof(string), boundTypedIndexedPropertyMember.Type, "semantic indexed property member type");
 Equal(0, typedIndexedPropertyBinder.Diagnostics.Count, "semantic indexed property member diagnostics");
-Equal("typedStore.Item(1).Value", emitter.Emit(boundTypedIndexedPropertyMember), "semantic indexed property member C# emission");
+Equal("typedStore.Item(1L).Value", emitter.Emit(boundTypedIndexedPropertyMember), "semantic indexed property member C# emission");
 
 var indexedPropertyBinder = new ExpressionBinder(indexedSymbols);
 var boundIndexedProperty = indexedPropertyBinder.Bind(new ExpressionParser("people[1].Name").ParseExpression());
 Equal(BoundNodeKind.MemberAccessExpression, boundIndexedProperty.Kind, "bound indexed object property root");
 Equal(typeof(string), boundIndexedProperty.Type, "bound indexed object property type");
 Equal(0, indexedPropertyBinder.Diagnostics.Count, "bound indexed object property diagnostics");
-Equal("people[1].Name", emitter.Emit(boundIndexedProperty), "bound indexed object property C# emission");
+Equal("people[1L].Name", emitter.Emit(boundIndexedProperty), "bound indexed object property C# emission");
 
 var indexedMethodBinder = new ExpressionBinder(indexedSymbols);
 var boundIndexedMethod = indexedMethodBinder.Bind(new ExpressionParser("people[1].Describe()").ParseExpression());
 Equal(BoundNodeKind.CallExpression, boundIndexedMethod.Kind, "bound indexed object method root");
 Equal(typeof(string), boundIndexedMethod.Type, "bound indexed object method type");
 Equal(0, indexedMethodBinder.Diagnostics.Count, "bound indexed object method diagnostics");
-Equal("people[1].Describe()", emitter.Emit(boundIndexedMethod), "bound indexed object method C# emission");
+Equal("people[1L].Describe()", emitter.Emit(boundIndexedMethod), "bound indexed object method C# emission");
 
 var indexedChainBinder = new ExpressionBinder(indexedSymbols);
 var boundIndexedChain = indexedChainBinder.Bind(new ExpressionParser("people[1].Name").ParseExpression());
@@ -1262,6 +1262,8 @@ string CanonicalizeCSharpExpression(string value)
                 .WithArgumentList(invocation.ArgumentList.WithArguments(
                     CSharpSyntaxFactory.SeparatedList(
                         invocation.ArgumentList.Arguments.Select(a => a.WithExpression(RemoveRedundantParentheses(a.Expression)))))),
+            Microsoft.CodeAnalysis.CSharp.Syntax.LiteralExpressionSyntax literal when literal.Token.Value is long or double =>
+                CSharpSyntaxFactory.ParseExpression(Convert.ToString(literal.Token.Value, System.Globalization.CultureInfo.InvariantCulture)!),
             _ => expression
         };
     }

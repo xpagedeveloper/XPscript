@@ -22,7 +22,10 @@ public sealed class BoundReturnStatement(BoundExpression? expression) : BoundSta
     public override BoundNodeKind Kind => BoundNodeKind.ReturnStatement;
 }
 
-public sealed record BoundElseIfClause(BoundExpression Condition, IReadOnlyList<BoundStatement> Statements);
+public sealed record BoundElseIfClause(BoundExpression Condition, IReadOnlyList<BoundStatement> Statements)
+{
+    public TextSpan? Span { get; init; }
+}
 
 public sealed class BoundIfStatement(
     BoundExpression condition,
@@ -88,7 +91,10 @@ public sealed record BoundCaseClause(
     SyntaxKind? OperatorKind,
     BoundExpression? LowerExpression,
     BoundExpression? UpperExpression,
-    IReadOnlyList<BoundStatement> Statements);
+    IReadOnlyList<BoundStatement> Statements)
+{
+    public TextSpan? Span { get; init; }
+}
 
 public sealed class BoundSelectStatement(BoundExpression expression, IReadOnlyList<BoundCaseClause> cases) : BoundStatement
 {

@@ -8,8 +8,10 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
-    public BoundExpression Bind(ExpressionSyntax syntax) => syntax switch
+    public BoundExpression Bind(ExpressionSyntax syntax)
     {
+        BoundExpression bound = syntax switch
+        {
         LiteralExpressionSyntax literal => BindLiteral(literal),
         NameExpressionSyntax name => BindName(name),
         CallExpressionSyntax call => BindCall(call),
@@ -21,7 +23,10 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
         BinaryExpressionSyntax binary => BindBinary(binary),
         ParenthesizedExpressionSyntax parenthesized => Bind(parenthesized.Expression),
         _ => Error(syntax, $"Binding is not implemented for {syntax.Kind}.")
-    };
+        };
+        bound.Span = syntax.Span;
+        return bound;
+    }
 
     private BoundExpression BindLiteral(LiteralExpressionSyntax syntax)
     {
@@ -189,7 +194,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null)
             var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
             converted[i] = conversion.IsIdentity
                 ? arguments[i]
-                : new BoundConversionExpression(arguments[i], targetType, conversion);
+                : new BoundConversionExpression(arguments[i], targetType, conversion) { Span = arguments[i].Span };
         }
         return converted;
     }
