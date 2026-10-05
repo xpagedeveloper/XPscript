@@ -50,6 +50,10 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("TypeName", typeof(string), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("FileLen", typeof(long), [typeof(string)]));
         symbols.Declare(new FunctionSymbol("FreeFile", typeof(long), []));
+        symbols.Declare(new FunctionSymbol("CInt", typeof(long), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("CLng", typeof(long), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("CBool", typeof(bool), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("Evaluate", typeof(object), [typeof(string), typeof(object)]));
         symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
         var declarationParameters = sub?.Parameters ?? function!.Parameters;
@@ -103,6 +107,10 @@ internal static class Program
     public static string TypeName(object? value) => value?.GetType().Name ?? "Nothing";
     public static long FileLen(string path) => new FileInfo(path).Length;
     public static long FreeFile() => 1;
+    public static long CInt(object value) => Convert.ToInt64(value);
+    public static long CLng(object value) => Convert.ToInt64(value);
+    public static bool CBool(object value) => Convert.ToBoolean(value);
+    public static object? Evaluate(string expression, object? value) => value;
     public static class XPScriptNullRuntime
     {
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
