@@ -16,15 +16,26 @@ internal sealed record XpsOpenApiPropertyPlan(
     string GeneratedName,
     JsonObject Schema);
 
+internal sealed record XpsOpenApiParameterPlan(
+    string WireName,
+    string Location,
+    bool Required,
+    JsonObject Schema);
+
+internal sealed record XpsOpenApiResponsePlan(
+    string StatusCode,
+    JsonObject Response,
+    JsonObject? Schema);
+
 internal sealed record XpsOpenApiOperationPlan(
     string Method,
     string Path,
     string? WireOperationId,
     JsonObject Operation,
     JsonObject PathItem,
-    IReadOnlyList<JsonObject> Parameters,
+    IReadOnlyList<XpsOpenApiParameterPlan> Parameters,
     JsonObject? RequestBody,
-    JsonObject? Responses);
+    IReadOnlyList<XpsOpenApiResponsePlan> Responses);
 
 internal sealed class XpsOpenApiGenerationPlan
 {
@@ -81,18 +92,49 @@ internal sealed class XpsOpenApiGenerationPlan
             {
                 if (pathItem[method] is not JsonObject operation) continue;
                 var wireOperationId = operation["operationId"] is JsonValue value && value.TryGetValue<string>(out var id) ? id : null;
-                var parameters = new List<JsonObject>();
+                var parameters = new List<XpsOpenApiParameterPlan>();
                 if (pathItem["parameters"] is JsonArray inherited)
-                    parameters.AddRange(inherited.OfType<JsonObject>());
+                    AddParameters(inherited, parameters);
                 if (operation["parameters"] is JsonArray local)
-                    parameters.AddRange(local.OfType<JsonObject>());
+                    AddParameters(local, parameters);
+                var responses = new List<XpsOpenApiResponsePlan>();
+                if (operation["responses"] is JsonObject responseMap)
+                    foreach (var responsePair in responseMap)
+                    {
+                        if (responsePair.Value is not JsonObject response) continue;
+                        var resolvedResponse = XpsOpenApiSchema.Resolve(root, response, $"{method.ToUpperInvariant()} {pathPair.Key} response {responsePair.Key}");
+                        var schema = FindJsonSchema(resolvedResponse);
+                        responses.Add(new XpsOpenApiResponsePlan(responsePair.Key, response, schema));
+                    }
                 plan.Operations.Add(new XpsOpenApiOperationPlan(
                     method.ToUpperInvariant(), pathPair.Key, wireOperationId, operation, pathItem,
                     parameters,
                     operation["requestBody"] as JsonObject,
-                    operation["responses"] as JsonObject));
+                    responses));
             }
         }
+    }
+
+    private static void AddParameters(JsonArray source, List<XpsOpenApiParameterPlan> target)
+    {
+        foreach (var node in source.OfType<JsonObject>())
+        {
+            var parameter = node;
+            var wireName = parameter["name"] is JsonValue name && name.TryGetValue<string>(out var text) ? text : string.Empty;
+            var location = parameter["in"] is JsonValue locationValue && locationValue.TryGetValue<string>(out var locationText) ? locationText : string.Empty;
+            if (parameter["schema"] is JsonObject schema)
+                target.Add(new XpsOpenApiParameterPlan(wireName, location, parameter["required"]?.GetValue<bool>() == true, schema));
+        }
+    }
+
+    private static JsonObject? FindJsonSchema(JsonObject response)
+    {
+        if (response["content"] is not JsonObject content) return null;
+        if (content["application/json"] is JsonObject exact && exact["schema"] is JsonObject exactSchema) return exactSchema;
+        foreach (var item in content)
+            if (item.Value is JsonObject media && media["schema"] is JsonObject schema && item.Key.EndsWith("+json", StringComparison.OrdinalIgnoreCase))
+                return schema;
+        return null;
     }
 
     private static string AllocatePropertyName(string wireName, HashSet<string> used)
