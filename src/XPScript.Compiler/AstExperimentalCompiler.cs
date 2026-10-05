@@ -222,7 +222,9 @@ internal static class AstExperimentalCompiler
                 return $"{CSharpType(ResolveRuntimeType(parts.Length > 1 ? parts[1] : null))} {parts[0].Trim()}";
             }));
             var returnTypeText = optional.Groups["kind"].Value.Equals("Function", StringComparison.OrdinalIgnoreCase) ? "object" : "void";
-            procedureStubs += Environment.NewLine + $"    public static {returnTypeText} {optional.Groups["name"].Value}({signature}) => default;";
+            procedureStubs += Environment.NewLine + (returnTypeText == "void"
+                ? $"    public static void {optional.Groups["name"].Value}({signature}) {{ }}"
+                : $"    public static {returnTypeText} {optional.Groups["name"].Value}({signature}) => default;");
         }
         var moduleFields = string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
