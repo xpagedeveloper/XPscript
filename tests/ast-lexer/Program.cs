@@ -262,6 +262,12 @@ Equal(SyntaxKind.UnaryExpression, manualAst.Kind, "manual AST unary kind");
 Equal(new TextSpan(0, 14), manualAst.Span, "manual AST composed span");
 Equal(SyntaxKind.NameExpression, ((UnaryExpressionSyntax)manualAst).Operand.Kind, "manual AST operand kind");
 
+var dump = SyntaxTreeDumper.Dump(manualAst);
+if (!dump.Contains("UnaryExpression", StringComparison.Ordinal) ||
+    !dump.Contains("NameExpression", StringComparison.Ordinal) ||
+    !dump.Contains("(0..14)", StringComparison.Ordinal))
+    throw new InvalidOperationException("Syntax tree dump must include node kinds and source spans.");
+
 var one = new LiteralExpressionSyntax(new SyntaxToken(SyntaxKind.NumberToken, "1", 1L, new TextSpan(0, 1)));
 var two = new LiteralExpressionSyntax(new SyntaxToken(SyntaxKind.NumberToken, "2", 2L, new TextSpan(4, 1)));
 var binary = new BinaryExpressionSyntax(one, new SyntaxToken(SyntaxKind.PlusToken, "+", null, new TextSpan(2, 1)), two);
