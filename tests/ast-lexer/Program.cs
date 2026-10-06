@@ -265,7 +265,7 @@ Equal(SyntaxKind.NameExpression, ((UnaryExpressionSyntax)manualAst).Operand.Kind
 var dump = SyntaxTreeDumper.Dump(manualAst);
 if (!dump.Contains("UnaryExpression", StringComparison.Ordinal) ||
     !dump.Contains("NameExpression", StringComparison.Ordinal) ||
-    !dump.Contains("(0..14)", StringComparison.Ordinal))
+    !dump.Contains("Start = 0", StringComparison.Ordinal))
     throw new InvalidOperationException("Syntax tree dump must include node kinds and source spans.");
 
 var one = new LiteralExpressionSyntax(new SyntaxToken(SyntaxKind.NumberToken, "1", 1L, new TextSpan(0, 1)));
