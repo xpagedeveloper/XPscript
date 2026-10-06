@@ -2,7 +2,7 @@ name: XPImage FullTest
 
 on:
   push:
-    branches: [main]
+    branches: [main, android-runtime-uiform-mobile]
   pull_request:
   workflow_dispatch:
 
