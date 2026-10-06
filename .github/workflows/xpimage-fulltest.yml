@@ -62,11 +62,12 @@ jobs:
             (Join-Path (Resolve-Path './samples/assets').Path 'xpimage-asset.png'),
             [Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=')
           )
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -- compile ./samples/xpimage-runtime.xps -o ./out/xpimage
+          New-Item -ItemType Directory -Force ./out/xpimage | Out-Null
+          $xpImageOutputPath = if ($IsWindows) { './out/xpimage/xpimage-runtime.exe' } else { './out/xpimage/xpimage-runtime' }
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -- compile ./samples/xpimage-runtime.xps -o $xpImageOutputPath
           if ($LASTEXITCODE -ne 0) { throw "XPImage compile failed with exit code $LASTEXITCODE." }
-          $xpImageOutputPath = (Resolve-Path './out/xpimage').Path
           if (Test-Path $xpImageOutputPath -PathType Leaf) {
-            & $xpImageOutputPath
+            & (Resolve-Path $xpImageOutputPath).Path
           } else {
             $xpImageExe = Get-ChildItem $xpImageOutputPath -File |
               Where-Object {
