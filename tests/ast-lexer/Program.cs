@@ -1243,12 +1243,12 @@ var boundRunCommand = callBinder.Bind(new ExpressionParser("Not RunCommand(\"whe
 Equal(BoundNodeKind.UnaryExpression, boundRunCommand.Kind, "bound RunCommand root");
 Equal(typeof(bool), boundRunCommand.Type, "bound RunCommand result type");
 Equal(0, callBinder.Diagnostics.Count, "bound RunCommand diagnostics");
-Equal("(!RunCommand(\"where.exe\", Array(\"winget\")))", emitter.Emit(boundRunCommand), "bound RunCommand C# emission");
+Equal("(!RunCommand(\"where.exe\", (String[])(Array(\"winget\"))))", emitter.Emit(boundRunCommand), "bound RunCommand C# emission");
 var boundRunCommandFalse = callBinder.Bind(new ExpressionParser("RunCommand(\"where.exe\", Array(\"winget\")) = False").ParseExpression());
 Equal(BoundNodeKind.BinaryExpression, boundRunCommandFalse.Kind, "bound RunCommand equals false root");
 Equal(typeof(bool), boundRunCommandFalse.Type, "bound RunCommand equals false type");
 Equal(0, callBinder.Diagnostics.Count, "bound RunCommand equals false diagnostics");
-Equal("(RunCommand(\"where.exe\", Array(\"winget\")) == false)", emitter.Emit(boundRunCommandFalse), "bound RunCommand equals false C# emission");
+Equal("(RunCommand(\"where.exe\", (String[])(Array(\"winget\"))) == false)", emitter.Emit(boundRunCommandFalse), "bound RunCommand equals false C# emission");
 var legacyRunCommand = ExpressionCompatibilityProbe.EmitLegacy("Not RunCommand(\"where.exe\", Array(\"winget\"))");
 var astRunCommand = emitter.Emit(boundRunCommand);
 string CanonicalizeCSharpExpression(string value)
