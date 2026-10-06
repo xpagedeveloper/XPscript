@@ -75,7 +75,7 @@ jobs:
             & $xpImageExe.FullName
           } else {
             $xpImageDll = Get-ChildItem $xpImageOutput -File -Filter '*.dll' |
-              Where-Object { $_.Name -notlike '*.deps.dll' -and $_.Name -notlike '*.runtimeconfig.dll' } |
+              Where-Object { $_.Name -notlike '*.deps.json' -and $_.Name -notlike '*.runtimeconfig.json' } |
               Select-Object -First 1
             if (-not $xpImageDll) { throw "Could not locate the compiled XPImage application in $xpImageOutput." }
             dotnet $xpImageDll.FullName
