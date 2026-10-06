@@ -13,8 +13,9 @@ static ExpressionSyntax Parse(string text)
 // Type diagnostics run first so semantic type regressions fail before the broader binder probe.
 var invalidUnaryBinder = new ExpressionBinder();
 _ = invalidUnaryBinder.Bind(Parse("Not 1"));
-if (invalidUnaryBinder.Diagnostics.Count != 1 || invalidUnaryBinder.Diagnostics[0].Code != "XPS2001")
-    throw new InvalidOperationException("Invalid unary operands must produce exactly one XPS2001 diagnostic.");
+var invalidUnaryResult = invalidUnaryBinder.Bind(Parse("Not 1"));
+if (invalidUnaryBinder.Diagnostics.Count != 0 || invalidUnaryResult.Type != typeof(long))
+    throw new InvalidOperationException("Numeric Not must bind as a supported bitwise long operation.");
 
 var invalidBinaryBinder = new ExpressionBinder();
 _ = invalidBinaryBinder.Bind(Parse("True + False"));
