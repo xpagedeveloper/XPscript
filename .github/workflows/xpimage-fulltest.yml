@@ -71,8 +71,79 @@ jobs:
               else { [string]::IsNullOrEmpty($_.Extension) -and (($_.UnixFileMode -band [IO.UnixFileMode]::UserExecute) -ne 0) }
             } |
             Select-Object -First 1
+          if ($xpImageExe) {
+            & $xpImageExe.FullName
+          } else {
+            $xpImageDll = Get-ChildItem $xpImageOutput -File -Filter '*.dll' |
+              Where-Object { $_.Name -notmatch '\\.(deps|runtimeconfig)\\.json
+      - name: Verify concurrent XPImage instance isolation
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/XPImageConcurrencyProbe/XPImageConcurrencyProbe.csproj -c Release
+      - name: Verify non-XPImage app excludes Magick.NET
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -- compile ./samples/hello.xps -o ./out/hello-no-image
+          if ($LASTEXITCODE -ne 0) { throw "Non-XPImage compile failed with exit code $LASTEXITCODE." }
+          $deps = Get-Content ./out/hello-no-image/hello.deps.json -Raw
+          if ($deps -match 'Magick\.NET') { throw 'Non-XPImage app unexpectedly references Magick.NET.' }
+          $magickFiles = Get-ChildItem ./out/hello-no-image -Recurse -File | Where-Object { $_.Name -match '^Magick\.NET' }
+          if ($magickFiles) { throw "Non-XPImage app unexpectedly copied Magick.NET files: $($magickFiles.FullName -join ', ')" }
+      - name: Run XPImage on plain Kestrel web
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/XPImageWebHostProbe/XPImageWebHostProbe.csproj -c Release
+      - name: Install browser WASM workload
+        shell: pwsh
+        run: dotnet workload install wasm-tools
+      - name: Verify XPImage Browser-WASM ServerSide boundary
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/XPImageBrowserWasmProbe/XPImageBrowserWasmProbe.csproj -c Release
+      - name: Compile XPImage CLI desktop and web targets
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/XPImageCliTargetProbe/XPImageCliTargetProbe.csproj -c Release
+ -and
+              ($IsWindows -or $_.UnixFileMode -band [IO.UnixFileMode]::UserExecute)
+            } |
+            Select-Object -First 1
           if (-not $xpImageExe) { throw "Could not locate the compiled XPImage application in $xpImageOutput." }
           & $xpImageExe.FullName
+          if ($LASTEXITCODE -ne 0) { throw "XPImage runtime failed with exit code $LASTEXITCODE." }
+      - name: Verify concurrent XPImage instance isolation
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/XPImageConcurrencyProbe/XPImageConcurrencyProbe.csproj -c Release
+      - name: Verify non-XPImage app excludes Magick.NET
+        shell: pwsh
+        run: |
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -- compile ./samples/hello.xps -o ./out/hello-no-image
+          if ($LASTEXITCODE -ne 0) { throw "Non-XPImage compile failed with exit code $LASTEXITCODE." }
+          $deps = Get-Content ./out/hello-no-image/hello.deps.json -Raw
+          if ($deps -match 'Magick\.NET') { throw 'Non-XPImage app unexpectedly references Magick.NET.' }
+          $magickFiles = Get-ChildItem ./out/hello-no-image -Recurse -File | Where-Object { $_.Name -match '^Magick\.NET' }
+          if ($magickFiles) { throw "Non-XPImage app unexpectedly copied Magick.NET files: $($magickFiles.FullName -join ', ')" }
+      - name: Run XPImage on plain Kestrel web
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/XPImageWebHostProbe/XPImageWebHostProbe.csproj -c Release
+      - name: Install browser WASM workload
+        shell: pwsh
+        run: dotnet workload install wasm-tools
+      - name: Verify XPImage Browser-WASM ServerSide boundary
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/XPImageBrowserWasmProbe/XPImageBrowserWasmProbe.csproj -c Release
+      - name: Compile XPImage CLI desktop and web targets
+        shell: pwsh
+        run: |
+          dotnet run --project ./tests/XPImageCliTargetProbe/XPImageCliTargetProbe.csproj -c Release
+ } |
+              Select-Object -First 1
+            if (-not $xpImageDll) { throw "Could not locate the compiled XPImage application in $xpImageOutput." }
+            dotnet $xpImageDll.FullName
+          }
           if ($LASTEXITCODE -ne 0) { throw "XPImage runtime failed with exit code $LASTEXITCODE." }
       - name: Verify concurrent XPImage instance isolation
         shell: pwsh
