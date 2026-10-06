@@ -70,7 +70,7 @@ The existing runtime libraries, packaging, source mapping, web/desktop/mobile ta
 - [ ] Define parameter and argument syntax nodes.
 - [ ] Decide how comments/trivia are represented.
 - [x] Decide whether malformed/incomplete syntax is retained using missing tokens/error nodes.
-- [ ] Add syntax-tree debug/dump output for tests and diagnostics.
+- [x] Add syntax-tree debug/dump output for tests and diagnostics.
 
 Initial expression nodes should cover at least:
 
