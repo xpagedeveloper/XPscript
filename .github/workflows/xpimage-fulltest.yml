@@ -62,8 +62,11 @@ jobs:
             (Join-Path (Resolve-Path './samples/assets').Path 'xpimage-asset.png'),
             [Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=')
           )
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -- ./samples/xpimage-runtime.xps --profile default --output ./out/xpimage
-          ./out/xpimage/xpimage-runtime
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -- compile ./samples/xpimage-runtime.xps -o ./out/xpimage
+          if ($LASTEXITCODE -ne 0) { throw "XPImage compile failed with exit code $LASTEXITCODE." }
+          $xpImageExe = if ($IsWindows) { './out/xpimage/xpimage-runtime.exe' } else { './out/xpimage/xpimage-runtime' }
+          & $xpImageExe
+          if ($LASTEXITCODE -ne 0) { throw "XPImage runtime failed with exit code $LASTEXITCODE." }
       - name: Verify concurrent XPImage instance isolation
         shell: pwsh
         run: |
@@ -71,7 +74,8 @@ jobs:
       - name: Verify non-XPImage app excludes Magick.NET
         shell: pwsh
         run: |
-          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -- ./samples/hello.xps --profile default --output ./out/hello-no-image
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -- compile ./samples/hello.xps -o ./out/hello-no-image
+          if ($LASTEXITCODE -ne 0) { throw "Non-XPImage compile failed with exit code $LASTEXITCODE." }
           $deps = Get-Content ./out/hello-no-image/hello.deps.json -Raw
           if ($deps -match 'Magick\.NET') { throw 'Non-XPImage app unexpectedly references Magick.NET.' }
           $magickFiles = Get-ChildItem ./out/hello-no-image -Recurse -File | Where-Object { $_.Name -match '^Magick\.NET' }
