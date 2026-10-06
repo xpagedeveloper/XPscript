@@ -108,6 +108,21 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [ ] Implement `UIForm.Carousel` on Android using AndroidX `ViewPager2`, isolated behind the Android UIForm backend. AndroidX/ViewPager2 is Apache-2.0 licensed; include required third-party license/notice handling.
 - [ ] Reuse the UIForm image source policy for carousel items: `XPImage`, packaged `assets/...`, accessible local files, HTTP/HTTPS and `data:image` where supported.
 - [ ] Add focused cross-platform and Android regressions for `UIForm.Carousel`, including swipe/index changes, looping, automatic advance and source validation.
+- [ ] Add shared `UIForm.Audio` playback using the same media abstraction as Video where practical. Support `Src`, `Play()`, `Pause()`, `Stop()`, `Position`, `Duration`, `Volume`, `AutoPlay`, `Loop`, `Muted`, `PlaybackRate`, `IsPlaying` and playback/error events; use AndroidX Media3/ExoPlayer on Android.
+- [ ] Add shared media lifecycle/event semantics for Audio and Video: `OnPlay`, `OnPause`, `OnEnded`, `OnError`, position/duration state and deterministic cleanup on form/application lifecycle changes.
+- [ ] Add `UIForm.ProgressBar` and an indeterminate `UIForm.ActivityIndicator`/spinner, including dynamic progress/running state updates from callbacks.
+- [ ] Add a general-purpose `UIForm.Slider` control suitable for values such as volume or media position, distinct from form-specific validation semantics where needed.
+- [ ] Add a mobile-friendly `UIForm.Switch` boolean control with the same binding/action-state semantics as CheckBox.
+- [ ] Add a shared `UIForm.Icon` API with a portable built-in icon set/fallback strategy so common UI symbols do not require image assets.
+- [ ] Add `UIForm.Card`/`UIForm.Panel` containers for visually grouping controls, compatible with tabs, named grids, visibility/enabled state and responsive layout.
+- [ ] Add an explicit `UIForm.ScrollView` container for advanced nested/long layouts while preventing conflicting or unbounded nested scrolling behavior.
+- [ ] Add a dynamic `UIForm.ListView` control for data-driven rows (including `XPJsonArray`/object-backed items), selection, item-click events and efficient Android list virtualization.
+- [ ] Extend the existing Button API with optional `Icon`/`Image` content instead of introducing a separate ImageButton unless a distinct control proves necessary.
+- [ ] Add `UIForm.CameraPreview` integrated with the planned camera service so a live preview can be embedded in a form and captured frames/photos can be returned as `XPImage` and/or file/bytes.
+- [ ] Add a shared `UIForm.Map` control with center, zoom, markers and marker-click events, integrated with the planned location/GPS abstraction without leaking Android-specific map/location types.
+- [ ] Add a shared `UIForm.DocumentViewer`/PDF viewer with a portable API and platform-specific rendering strategy for Android, desktop and web.
+- [ ] Define source/security/lifecycle/accessibility behavior for all new media and rich-content controls consistently across Android, desktop, server-web and Browser-WASM where supported.
+- [ ] Add focused compiler/runtime/host regressions and executable samples for Audio, ProgressBar/ActivityIndicator, Slider, Switch, Icon, Card/Panel, ScrollView, ListView, Button image/icon content, CameraPreview, Map and DocumentViewer before marking each control complete.
 - [x] Add specialized Android controls for DateField, TimeField, DateTimeField, MonthField and ColorField instead of the current generic text fallback. Android now uses dedicated date/time controls plus composite DateTime, Month and Color editors with value roundtrip; guarded by AndroidCompilerProbe and verified by Android Build.
 - [x] Add Android WebView rendering with the shared UIForm WebView behavior. Android uses Avalonia NativeWebView, shared Source/Html/UserAgent/Background metadata and the existing WebViewCommand bridge; guarded by AndroidCompilerProbe and verified by Android Build.
 - [x] Complete Android Image parity for remote sources, application asset resolution, alt/accessibility metadata and certificate-validation policy. Android Image now supports packaged assets, HTTP/HTTPS, data images, alt/accessibility metadata and Strict/AllowSelfSigned/Insecure certificate policy; verified through focused probes and Android Build.
