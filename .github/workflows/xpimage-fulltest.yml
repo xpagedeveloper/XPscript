@@ -66,7 +66,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "XPImage compile failed with exit code $LASTEXITCODE." }
           $xpImageOutput = (Resolve-Path './out/xpimage').Path
           $xpImageExe = Get-ChildItem $xpImageOutput -File |
-            Where-Object { $IsWindows -or (($_.UnixFileMode -band [IO.UnixFileMode]::UserExecute) -ne 0) } |
+            Where-Object {
+              if ($IsWindows) { $_.Extension -ieq '.exe' }
+              else { [string]::IsNullOrEmpty($_.Extension) -and (($_.UnixFileMode -band [IO.UnixFileMode]::UserExecute) -ne 0) }
+            } |
             Select-Object -First 1
           if (-not $xpImageExe) { throw "Could not locate the compiled XPImage application in $xpImageOutput." }
           & $xpImageExe.FullName
