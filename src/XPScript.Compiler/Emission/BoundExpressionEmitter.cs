@@ -62,12 +62,12 @@ public sealed class BoundExpressionEmitter
     }
 
     private string EmitBinary(BoundBinaryExpression binary) => binary.Type == typeof(object)
-        ? $"((dynamic)({Emit(binary.Left)}) {EmitBinaryOperator(binary.OperatorKind)} (dynamic)({Emit(binary.Right)}))"
+        ? $"((dynamic)({Emit(binary.Left)}) {EmitBinaryOperator(binary.OperatorKind, binary.Type)} (dynamic)({Emit(binary.Right)}))"
         : binary.OperatorKind == SyntaxKind.PlusToken && binary.Type == typeof(string)
         ? $"(Convert.ToString({Emit(binary.Left)}) + Convert.ToString({Emit(binary.Right)}))"
         : binary.OperatorKind == SyntaxKind.LikeKeyword
             ? $"XPScriptRuntime.Like({Emit(binary.Left)}, {Emit(binary.Right)})"
-            : $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind)} {Emit(binary.Right)})";
+            : $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind, binary.Type)} {Emit(binary.Right)})";
 
     private static string EmitLiteral(BoundLiteralExpression expression) => expression.Value switch
     {
@@ -114,7 +114,7 @@ public sealed class BoundExpressionEmitter
         _ => throw new NotSupportedException($"Unary operator {kind} is not supported.")
     };
 
-    private static string EmitBinaryOperator(SyntaxKind kind) => kind switch
+    private static string EmitBinaryOperator(SyntaxKind kind, Type resultType) => kind switch
     {
         SyntaxKind.PlusToken => "+",
         SyntaxKind.MinusToken => "-",
@@ -125,8 +125,8 @@ public sealed class BoundExpressionEmitter
         SyntaxKind.LessOrEqualsToken => "<=",
         SyntaxKind.GreaterToken => ">",
         SyntaxKind.GreaterOrEqualsToken => ">=",
-        SyntaxKind.AndKeyword => "&",
-        SyntaxKind.OrKeyword => "|",
+        SyntaxKind.AndKeyword => resultType == typeof(bool) ? "&&" : "&",
+        SyntaxKind.OrKeyword => resultType == typeof(bool) ? "||" : "|",
         SyntaxKind.EqualsToken => "==",
         SyntaxKind.LessGreaterToken => "!=",
         _ => throw new NotSupportedException($"Binary operator {kind} is not supported.")
