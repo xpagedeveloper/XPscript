@@ -300,7 +300,7 @@ Equal(0, singleLineIfParser.Diagnostics.Count, "single-line If diagnostics");
 var singleLineIfSyntax = (IfStatementSyntax)singleLineIf;
 Equal(SyntaxKind.UnaryExpression, singleLineIfSyntax.Condition.Kind, "single-line If Not condition kind");
 Equal(new TextSpan(3, 44), singleLineIfSyntax.Condition.Span, "single-line If condition span");
-Equal(SyntaxKind.ExpressionStatement, singleLineIfSyntax.ThenStatement.Kind, "single-line If body kind");
+Equal(SyntaxKind.RuntimeFileStatement, singleLineIfSyntax.ThenStatement.Kind, "single-line If body kind");
 Equal(new TextSpan(53, 16), singleLineIfSyntax.ThenStatement.Span, "single-line If body span");
 
 var comparisonIfParser = new StatementParser("If RunCommand(\"where.exe\", Array(\"winget\")) = False Then Print(\"missing\")");
