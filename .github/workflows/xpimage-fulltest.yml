@@ -38,8 +38,11 @@ jobs:
         shell: pwsh
         run: |
           $runtimeSource = Get-Content ./src/XPScript.Compiler/XPImageRuntimeSource.cs -Raw
-          if ($runtimeSource -notmatch 'ProfileImage\(\s*"\*"\s*,\s*new MagickGeometry\(\s*64\s*,\s*64\s*\)') {
-            throw 'XPImage resource limits must keep the ImageMagick profile limit at 64 MiB.'
+          if ($runtimeSource -notmatch 'MaxProfileBytes\s*=\s*8\s*\*\s*1024\s*\*\s*1024') {
+            throw 'XPImage must keep its per-profile size limit at 8 MiB.'
+          }
+          if ($runtimeSource -notmatch 'ResourceLimits\.MaxProfileSize\s*=\s*\(ulong\)MaxProfileBytes') {
+            throw 'XPImage must apply MaxProfileBytes through ImageMagick ResourceLimits.MaxProfileSize.'
           }
       - name: Compile and run XPImage
         shell: pwsh
