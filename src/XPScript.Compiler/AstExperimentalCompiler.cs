@@ -596,7 +596,7 @@ internal static class Program
     public static object CDate(object value) => Convert.ToDateTime(value);
     public static object Base64Decode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.FromBase64String(CStr(values[0]));
     public static object Base64Encode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(CStr(values[0])));
-    public static object CByte(object value) => Convert.ToByte(value);
+    public static byte CByte(object value) => Convert.ToByte(value);
     public static object CCur(object value) => Convert.ToDecimal(value);
     public static object CSng(object value) => Convert.ToSingle(value);
     public static object CVar(object value) => value;

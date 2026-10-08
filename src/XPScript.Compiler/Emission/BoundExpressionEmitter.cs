@@ -122,7 +122,7 @@ public sealed class BoundExpressionEmitter
             ConversionKind.ToObject when expression.Type != typeof(object) => value,
             ConversionKind.ToObject => $"((object)({value}))",
             ConversionKind.FromVariant when expression.Type.IsArray => $"({expression.Type.Name})({value})",
-            ConversionKind.FromVariant => $"XPScriptRuntime.{ConversionMethod(expression.Type)}({value})",
+            ConversionKind.FromVariant => $"{(ConversionMethod(expression.Type).StartsWith("Program.", StringComparison.Ordinal) ? string.Empty : "XPScriptRuntime.")}{ConversionMethod(expression.Type)}({value})",
             _ => throw new NotSupportedException($"Conversion {expression.Conversion.Kind} is not supported.")
         };
     }
@@ -131,6 +131,7 @@ public sealed class BoundExpressionEmitter
         : type == typeof(long) ? "CLng"
         : type == typeof(double) ? "CDbl"
         : type == typeof(bool) ? "CBool"
+        : type == typeof(byte) ? "Program.CByte"
         : type == typeof(object) ? "CObj"
         : throw new NotSupportedException($"Variant conversion to {type} is not supported.");
 

@@ -64,6 +64,11 @@ $unsupportedImage = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpima
 if ($LASTEXITCODE -ne 2 -or ($unsupportedImage -join "`n") -notmatch 'AST XPImage runtime integration is not implemented') { throw 'AST silently substituted XPImage with Object.' }
 $unsupportedOptionBase = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'option-base-error.xps') -o (Join-Path $output 'option-base-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedOptionBase -join "`n") -notmatch 'AST Option Base semantics are not implemented') { throw 'AST silently assumed an unsupported Option Base.' }
+$byteOutput = Join-Path $output 'variant-byte-conversion'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'variant-byte-conversion.xps') -o $byteOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Variant-to-Byte conversion compilation failed.' }
+$byteResult = dotnet (Join-Path $byteOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($byteResult -join "`n") -ne '7') { throw 'AST Variant-to-Byte conversion execution failed.' }
 $nestedOutput = Join-Path $output 'nested-goto'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-goto.xps') -o $nestedOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nested GoTo compilation failed.' }
