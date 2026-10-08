@@ -19,6 +19,9 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'redim-array.xps') -o $red
 if ($LASTEXITCODE -ne 0) { throw 'AST dynamic array ReDim compilation failed.' }
 $redimResult = dotnet (Join-Path $redimOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($redimResult -join "`n") -ne "2`n9`n9") { throw 'AST ReDim type preservation or Preserve semantics differ from published main.' }
+$redimError = Join-Path $output 'redim-array-error'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'redim-array-error.xps') -o $redimError
+if ($LASTEXITCODE -ne 0) { throw 'AST dynamic Erase regression did not compile.' }
 $membershipOutput = Join-Path $output 'list-membership'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-membership.xps') -o $membershipOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST List membership compilation failed.' }
