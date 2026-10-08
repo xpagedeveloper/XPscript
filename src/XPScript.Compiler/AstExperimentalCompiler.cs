@@ -26,6 +26,10 @@ internal static class AstExperimentalCompiler
             throw new CompilerException(
                 "AST XPImage runtime integration is not implemented; image operations were not replaced with Object.",
                 CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+        if (Regex.IsMatch(source, @"(?im)^\s*Option\s+Base\b"))
+            throw new CompilerException(
+                "AST Option Base semantics are not implemented; array lower bounds were not assumed.",
+                CompilerDiagnosticCodes.InvalidSyntax, "semantic");
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
         source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);

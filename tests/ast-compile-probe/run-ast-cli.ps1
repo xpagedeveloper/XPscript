@@ -60,6 +60,8 @@ $unsupportedWith = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'with-e
 if ($LASTEXITCODE -ne 2 -or ($unsupportedWith -join "`n") -notmatch 'AST With and implicit member access are not implemented') { throw 'AST silently lowered unsupported With/member access.' }
 $unsupportedImage = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-error.xps') -o (Join-Path $output 'xpimage-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedImage -join "`n") -notmatch 'AST XPImage runtime integration is not implemented') { throw 'AST silently substituted XPImage with Object.' }
+$unsupportedOptionBase = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'option-base-error.xps') -o (Join-Path $output 'option-base-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($unsupportedOptionBase -join "`n") -notmatch 'AST Option Base semantics are not implemented') { throw 'AST silently assumed an unsupported Option Base.' }
 $nestedOutput = Join-Path $output 'nested-goto'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-goto.xps') -o $nestedOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nested GoTo compilation failed.' }
