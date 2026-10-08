@@ -147,12 +147,12 @@ public sealed class MainView : UserControl
 
 internal sealed class GeneratedAndroidMedia3Player : IDisposable
 {
-    private readonly ExoPlayer _player;
+    private readonly IExoPlayer _player;
     private bool _disposed;
 
     public GeneratedAndroidMedia3Player(Android.Content.Context context)
     {
-        _player = new ExoPlayer.Builder(context).Build();
+        _player = new ExoPlayerBuilder(context).Build();
     }
 
     public void Attach(PlayerView view)

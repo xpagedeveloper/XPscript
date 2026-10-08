@@ -10,13 +10,13 @@ namespace XPScript.UI.Android;
 /// </summary>
 public sealed class AndroidMedia3Player : IDisposable
 {
-    private readonly ExoPlayer _player;
+    private readonly IExoPlayer _player;
     private bool _disposed;
 
     public AndroidMedia3Player(Context context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        _player = new ExoPlayer.Builder(context).Build();
+        _player = new ExoPlayerBuilder(context).Build();
     }
 
     public bool IsPlaying => !_disposed && _player.IsPlaying;
