@@ -21,6 +21,8 @@ $membershipResult = dotnet (Join-Path $membershipOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($membershipResult -join "`n") -ne "True`nFalse`nTAG_EVALUATED`nTrue`n3") { throw 'AST List membership read a missing element or evaluated its tag more than once.' }
 $listInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-initializer-error.xps') -o (Join-Path $output 'list-initializer-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($listInvalid -join "`n") -notmatch 'AST List declarations with initializers are not implemented') { throw 'AST ignored an unsupported List initializer.' }
+$listByRef = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-error.xps') -o (Join-Path $output 'list-byref-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($listByRef -join "`n") -notmatch 'AST List element ByRef arguments are not implemented') { throw 'AST did not diagnose unsupported List ByRef copy-back.' }
 $listOutput = Join-Path $output 'forall-list'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-alias.xps') -o $listOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List alias compilation failed.' }

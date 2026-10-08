@@ -280,6 +280,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
         if (candidates.Length == 0)
         {
+            for (var i = 0; i < arguments.Length; i++)
+                if (arguments[i] is BoundIndexExpression { Expression.SemanticType.IsList: true } &&
+                    functions.Any(function => function.ParameterTypes.Count == arguments.Length && function.ByRefParameters?[i] == true))
+                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.InvalidSyntax,
+                        "AST List element ByRef arguments are not implemented; pass a scalar local or use an explicit copy-back pattern.");
             // This set contains declared signatures. Dynamic receivers are
             // handled before overload selection; fabricating a signature here
             // would suppress arity, argument-type and ByRef diagnostics.
