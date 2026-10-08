@@ -295,7 +295,7 @@ internal static class AstExperimentalCompiler
             if (duplicateLabel is not null)
                 throw new CompilerException($"Duplicate label '{duplicateLabel.Identifier.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
             foreach (var transfer in allProcedureStatements.OfType<GoToStatementSyntax>())
-                if (!labels.ContainsKey(transfer.Target.Text))
+                if (!labels.ContainsKey(transfer.Target.Text) && !Regex.IsMatch(fullSource, $@"(?im)^\s*{Regex.Escape(transfer.Target.Text)}\s*:\s*$"))
                     throw new CompilerException($"Unknown label '{transfer.Target.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
             var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType),
                 procedureFunction is not null, true, procedureFunction?.Identifier.Text, result);
