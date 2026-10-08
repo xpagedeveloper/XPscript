@@ -7,6 +7,8 @@ Sub Main()
     Set runtimeImage = New XPImage(8, 8, "#336699")
     form.BootImage = runtimeImage
     Call form.AddImage("Preview", runtimeImage)
+    Dim video = form.AddVideo("Intro", "Intro video")
+    video.Source = "https://example.com/intro.mp4"
 End Sub
 """;
 
