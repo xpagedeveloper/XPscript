@@ -86,6 +86,10 @@ XPscript is built on the [.NET platform](https://github.com/dotnet/runtime) and 
 
 The .NET runtime is supplied by the .NET distribution and is not source code copied into this repository. This notice does not grant rights to redistribute HCL Notes/Domino binaries, which remain subject to HCL's commercial product terms.
 
+## AndroidX Media3
+
+Android UIForm media support uses the `Xamarin.AndroidX.Media3.ExoPlayer` and `Xamarin.AndroidX.Media3.Ui` bindings. The underlying AndroidX Media3 libraries are distributed by the Android Open Source Project under the Apache License 2.0. The .NET bindings are distributed under their package license. Release packages must preserve the NuGet-generated license and notice files for these dependencies.
+
 ## Trademarks and third-party brands
 
 HCL, HCL Notes, HCL Domino, Notes, Domino, Domino Designer, LotusScript, and related product names and marks are trademarks or registered trademarks of their respective owners. References to these products and technologies are used to identify compatibility, interoperability, implementation references, or required external runtimes. XPscript is an independent project and is not affiliated with, sponsored by, certified by, or endorsed by HCL unless HCL explicitly states otherwise.
