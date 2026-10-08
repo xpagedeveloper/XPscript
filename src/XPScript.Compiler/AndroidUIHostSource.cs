@@ -7,10 +7,10 @@ internal static class AndroidUIHostSource
     public const string Code = """
 using System.Text.Json;
 using System.Collections.Concurrent;
-using Android.App;
-using Android.Content.PM;
-using Android.OS;
-using Android.Util;
+using global::Android.App;
+using global::Android.Content.PM;
+using global::Android.OS;
+using global::Android.Util;
 using AndroidX.Media3.Common;
 using AndroidX.Media3.ExoPlayer;
 using AndroidX.Media3.UI;
@@ -150,7 +150,7 @@ internal sealed class GeneratedAndroidMedia3Player : IDisposable
     private readonly IExoPlayer _player;
     private bool _disposed;
 
-    public GeneratedAndroidMedia3Player(Android.Content.Context context)
+    public GeneratedAndroidMedia3Player(global::Android.Content.Context context)
     {
         _player = new ExoPlayerBuilder(context).Build()
             ?? throw new InvalidOperationException("Media3 ExoPlayerBuilder returned no player.");
@@ -208,7 +208,7 @@ internal sealed class GeneratedAndroidVideoControl : NativeControlHost
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
-        var context = Android.App.Application.Context
+        var context = global::Android.App.Application.Context
             ?? throw new InvalidOperationException("Android application context is unavailable.");
         _mediaPlayer = new GeneratedAndroidMedia3Player(context);
         _playerView = new PlayerView(context);

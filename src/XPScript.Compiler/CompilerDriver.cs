@@ -815,8 +815,11 @@ public sealed class CompilerDriver
     <PackageReference Include="Avalonia.Android" Version="12.0.3" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
     <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.11.1" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.Ui" Version="1.11.1" />
   </ItemGroup>
 """;
+        project = project.Replace("    <NoWarn>CA1416;$(NoWarn)</NoWarn>", "    <NoWarn>CA1416;NU1608;$(NoWarn)</NoWarn>", StringComparison.Ordinal);
         return project.Replace("</Project>", packages + "</Project>", StringComparison.Ordinal);
     }
 
