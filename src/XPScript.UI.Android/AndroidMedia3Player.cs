@@ -1,5 +1,4 @@
 using Android.Content;
-using Android.Net;
 using AndroidX.Media3.Common;
 using AndroidX.Media3.Exoplayer;
 using AndroidX.Media3.Ui;
@@ -46,7 +45,7 @@ public sealed class AndroidMedia3Player : IDisposable
     {
         ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
-        if (!Uri.TryCreate(source.Trim(), UriKind.Absolute, out var uri) ||
+        if (!System.Uri.TryCreate(source.Trim(), System.UriKind.Absolute, out var uri) ||
             uri.Scheme is not ("http" or "https" or "file" or "content" or "android.resource"))
             throw new ArgumentException("Media3 source must be an absolute http, https, file, content or android.resource URI.", nameof(source));
 
