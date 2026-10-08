@@ -43,10 +43,9 @@ internal static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Kill\s+(?<path>.+)$", "${indent}Call AstKill(${path})");
         source = Regex.Replace(source, @"(?<![\w.])Input\$\s*\(\s*(?<count>[^,()]+)\s*,\s*#\s*(?<file>[^)]+)\)", "AstInputChars(${count}, ${file})", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"(?<!\w)#\s*", string.Empty);
-        // GoTo and labels now lower through the AST bound tree. GoSub and
-        // Resume remain on the compatibility gap list until their return/error
-        // state can be represented without discarding observable behavior.
-        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?:GoSub|Resume)(?:\s+[^\r\n]+)?$", "${indent}Call AstNoOp()");
+        // Control transfers now lower through the AST bound tree. Resume
+        // remains pending because it requires error-handler state.
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Resume(?:\s+[^\r\n]+)?$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)On\s+Error\s+.*$", "${indent}Call AstNoOp()");
         source = source.Replace("Error$", "ErrorValue()", StringComparison.OrdinalIgnoreCase);
         source = Regex.Replace(source, @"(?im)^[ \t]*With\s+[A-Za-z_]\w*[ \t]*$", string.Empty);
