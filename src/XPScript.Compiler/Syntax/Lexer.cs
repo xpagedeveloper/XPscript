@@ -144,6 +144,7 @@ public sealed class Lexer
             '(' => Token(SyntaxKind.OpenParenToken, start, 1),
             ')' => Token(SyntaxKind.CloseParenToken, start, 1),
             ',' => Token(SyntaxKind.CommaToken, start, 1),
+            ':' => Token(SyntaxKind.ColonToken, start, 1),
             '.' => Token(SyntaxKind.DotToken, start, 1),
             '[' => Token(SyntaxKind.OpenBracketToken, start, 1),
             ']' => Token(SyntaxKind.CloseBracketToken, start, 1),

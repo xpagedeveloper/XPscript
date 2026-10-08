@@ -13,6 +13,7 @@ public enum SyntaxKind
     OpenParenToken,
     CloseParenToken,
     CommaToken,
+    ColonToken,
     DotToken,
     OpenBracketToken,
     CloseBracketToken,
