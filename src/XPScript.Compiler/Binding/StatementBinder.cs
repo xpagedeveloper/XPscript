@@ -71,14 +71,6 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private IReadOnlyList<BoundStatement> BindStatements(IReadOnlyList<StatementSyntax> statements)
     {
-        var labels = statements.OfType<LabelStatementSyntax>()
-            .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-        foreach (var duplicate in statements.OfType<LabelStatementSyntax>().GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1).SelectMany(group => group.Skip(1)))
-            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax, $"Duplicate label '{duplicate.Identifier.Text}'.", duplicate.Identifier.Span));
-        foreach (var transfer in statements.OfType<GoToStatementSyntax>())
-            if (!labels.ContainsKey(transfer.Target.Text))
-                _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax, $"Unknown label '{transfer.Target.Text}'.", transfer.Target.Span));
         var result = new List<BoundStatement>(statements.Count);
         foreach (var statement in statements)
         {
