@@ -233,6 +233,7 @@ public sealed class Lexer
         "LEN" => SyntaxKind.LenKeyword,
         "ERROR" => SyntaxKind.ErrorKeyword,
         "GOTO" => SyntaxKind.GoToKeyword,
+        "GOSUB" => SyntaxKind.GoSubKeyword,
         "RESUME" => SyntaxKind.ResumeKeyword,
         "RETURN" => SyntaxKind.ReturnKeyword,
         "EXIT" => SyntaxKind.ExitKeyword,

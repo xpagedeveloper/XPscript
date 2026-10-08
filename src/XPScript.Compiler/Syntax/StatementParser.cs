@@ -52,6 +52,12 @@ public sealed class StatementParser
 
     private StatementSyntax ParseCurrentStatement()
     {
+        if (Current.Kind is SyntaxKind.GoToKeyword or SyntaxKind.GoSubKeyword)
+        {
+            var keyword = NextToken();
+            var target = Match(SyntaxKind.IdentifierToken);
+            return new GoToStatementSyntax(keyword, target);
+        }
         if (Current.Kind == SyntaxKind.IdentifierToken && PeekKind(1) == SyntaxKind.ColonToken)
         {
             var identifier = NextToken();
