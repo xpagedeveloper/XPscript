@@ -24,6 +24,8 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'redim-array-error.xps') -
 if ($LASTEXITCODE -ne 0) { throw 'AST dynamic Erase regression did not compile.' }
 $multiDimensional = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-array-error.xps') -o (Join-Path $output 'multidimensional-array-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($multiDimensional -join "`n") -notmatch 'AST arrays currently support one dimension only') { throw 'AST silently accepted a multidimensional array declaration.' }
+$nonzeroBound = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nonzero-bound-array-error.xps') -o (Join-Path $output 'nonzero-bound-array-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($nonzeroBound -join "`n") -notmatch 'AST arrays currently require a zero-based constant bound') { throw 'AST silently accepted a nonzero array lower bound.' }
 $membershipOutput = Join-Path $output 'list-membership'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-membership.xps') -o $membershipOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST List membership compilation failed.' }

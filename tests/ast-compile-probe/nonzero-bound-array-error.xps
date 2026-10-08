@@ -1,0 +1,5 @@
+Sub Main()
+    Dim values(1 To 3) As Long
+    values(1) = 7
+    Print LBound(values)
+End Sub
