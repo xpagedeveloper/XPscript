@@ -1,0 +1,7 @@
+Sub Main()
+    Dim form As New UIForm("Android Video API")
+    Dim video = form.AddVideo("intro", "Intro video")
+    video.Source = "assets/intro.mp4"
+    Call Application.Debug.Info("ANDROID-VIDEO-SOURCE=" & video.Source)
+    Print "ANDROID-VIDEO-API=ready"
+End Sub
