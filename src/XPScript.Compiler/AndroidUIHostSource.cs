@@ -152,7 +152,8 @@ internal sealed class GeneratedAndroidMedia3Player : IDisposable
 
     public GeneratedAndroidMedia3Player(Android.Content.Context context)
     {
-        _player = new ExoPlayerBuilder(context).Build();
+        _player = new ExoPlayerBuilder(context).Build()
+            ?? throw new InvalidOperationException("Media3 ExoPlayerBuilder returned no player.");
     }
 
     public void Attach(PlayerView view)
@@ -167,7 +168,7 @@ internal sealed class GeneratedAndroidMedia3Player : IDisposable
         if (!System.Uri.TryCreate(source, System.UriKind.Absolute, out var uri) ||
             uri.Scheme is not ("http" or "https" or "file" or "content" or "android.resource"))
             throw new InvalidOperationException("UIForm Video source must be an absolute supported media URI.");
-        _player.SetMediaItem(MediaItem.FromUri(Android.Net.Uri.Parse(uri.AbsoluteUri)));
+        _player.SetMediaItem(MediaItem.FromUri(global::Android.Net.Uri.Parse(uri.AbsoluteUri)));
         _player.Prepare();
     }
 
