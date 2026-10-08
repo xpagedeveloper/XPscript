@@ -400,6 +400,14 @@ foreach (var expected in new[] { "\"assets/\" + normalized", "UIForm WebView rel
 foreach (var expected in new[] { "Type is \"Video\" or \"Audio\"", "AddAudio(object? name)", "AddAudio(object? name, object? label)", "UIForm media Source uses an unsupported URI scheme" })
     if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm Audio API regression is missing: " + expected);
+foreach (var expected in new[] { "Position", "Duration", "Volume", "AutoPlay", "PlaybackRate", "IsPlaying", "void Play()", "void Pause()", "void Stop()" })
+    if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Shared UIForm media playback API regression is missing: " + expected);
+
+var androidHostSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "AndroidUIHostSource.cs"));
+foreach (var expected in new[] { "GeneratedAndroidAudioControl", "\"Audio\" => CreateAudio(field)", "UIForm media Source must be an absolute supported media URI" })
+    if (!androidHostSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Generated Android Audio host regression is missing: " + expected);
 
 var mediaSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormMediaButtonsPostProcessor.cs"));
 if (!mediaSource.Contains("normalized = \"assets/\" + normalized;", StringComparison.Ordinal))
