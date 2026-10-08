@@ -116,6 +116,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [ ] Reuse the UIForm image source policy for carousel items: `XPImage`, packaged `assets/...`, accessible local files, HTTP/HTTPS and `data:image` where supported.
 - [ ] Add focused cross-platform and Android regressions for `UIForm.Carousel`, including swipe/index changes, looping, automatic advance and source validation.
 - [ ] Add shared `UIForm.Audio` playback using the same media abstraction as Video where practical. Support `Src`, `Play()`, `Pause()`, `Stop()`, `Position`, `Duration`, `Volume`, `AutoPlay`, `Loop`, `Muted`, `PlaybackRate`, `IsPlaying` and playback/error events; use AndroidX Media3/ExoPlayer on Android.
+- [x] Add the shared `UIForm.Audio` field API surface for source, playback state, position, duration, volume, autoplay, looping, mute, playback rate and basic playback actions. Android Media3 wiring, lifecycle events and executable host regression remain open.
 - [ ] Add shared media lifecycle/event semantics for Audio and Video: `OnPlay`, `OnPause`, `OnEnded`, `OnError`, position/duration state and deterministic cleanup on form/application lifecycle changes.
 - [ ] Add `UIForm.ProgressBar` and an indeterminate `UIForm.ActivityIndicator`/spinner, including dynamic progress/running state updates from callbacks.
 - [ ] Add a general-purpose `UIForm.Slider` control suitable for values such as volume or media position, distinct from form-specific validation semantics where needed.

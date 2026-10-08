@@ -44,6 +44,14 @@ internal sealed class XPScriptUIField
     private string _webViewUserAgent = string.Empty;
     private string _webViewBackground = string.Empty;
     private string _mediaSource = string.Empty;
+    private long _mediaPosition;
+    private long _mediaDuration;
+    private double _mediaVolume = 1.0;
+    private bool _mediaAutoPlay;
+    private bool _mediaLoop;
+    private bool _mediaMuted;
+    private double _mediaPlaybackRate = 1.0;
+    private bool _mediaIsPlaying;
 
     internal XPScriptUIField(XPScriptUIForm owner, string name, string label, string type)
     {
@@ -73,13 +81,43 @@ internal sealed class XPScriptUIField
         }
         set
         {
-            if (Type is "Video" or "Audio") { _mediaSource = NormalizeMediaSource(value); return; }
+            if (Type is "Video" or "Audio")
+            {
+                _mediaSource = NormalizeMediaSource(value);
+                _mediaPosition = 0;
+                _mediaDuration = 0;
+                _mediaIsPlaying = false;
+                return;
+            }
             EnsureWebView();
             _webViewSource = NormalizeWebViewUrl(value);
             _webViewHtml = string.Empty;
             if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource);
         }
     }
+    public long Position
+    {
+        get { EnsureMedia(); return _mediaPosition; }
+        set { EnsureMedia(); _mediaPosition = Math.Max(0, value); }
+    }
+    public long Duration { get { EnsureMedia(); return _mediaDuration; } internal set { EnsureMedia(); _mediaDuration = Math.Max(0, value); } }
+    public double Volume
+    {
+        get { EnsureMedia(); return _mediaVolume; }
+        set { EnsureMedia(); if (value < 0 || value > 1) throw new XPScriptRuntimeException(5, "UIForm media Volume must be between 0 and 1."); _mediaVolume = value; }
+    }
+    public bool AutoPlay { get { EnsureMedia(); return _mediaAutoPlay; } set { EnsureMedia(); _mediaAutoPlay = value; } }
+    public bool Loop { get { EnsureMedia(); return _mediaLoop; } set { EnsureMedia(); _mediaLoop = value; } }
+    public bool Muted { get { EnsureMedia(); return _mediaMuted; } set { EnsureMedia(); _mediaMuted = value; } }
+    public double PlaybackRate
+    {
+        get { EnsureMedia(); return _mediaPlaybackRate; }
+        set { EnsureMedia(); if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm media PlaybackRate must be greater than zero."); _mediaPlaybackRate = value; }
+    }
+    public bool IsPlaying { get { EnsureMedia(); return _mediaIsPlaying; } }
+    public void Play() { EnsureMedia(); _mediaIsPlaying = true; }
+    public void Pause() { EnsureMedia(); _mediaIsPlaying = false; }
+    public void Stop() { EnsureMedia(); _mediaIsPlaying = false; _mediaPosition = 0; }
     public string Html
     {
         get { EnsureWebView(); return _webViewHtml; }
@@ -131,6 +169,7 @@ internal sealed class XPScriptUIField
         return XPScriptUIDesktopAdapter.WebViewCommand(_owner.InstanceId, Name, command, argument);
     }
     private void EnsureWebView() { if (Type != "WebView") throw new XPScriptRuntimeException(5, "This UIForm field is not a WebView."); }
+    private void EnsureMedia() { if (Type is not ("Video" or "Audio")) throw new XPScriptRuntimeException(5, "This UIForm field is not a media field."); }
     private static string NormalizeMediaSource(string? value)
     {
         var text = (value ?? string.Empty).Trim();
