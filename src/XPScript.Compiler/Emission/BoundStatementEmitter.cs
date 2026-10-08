@@ -11,9 +11,9 @@ public sealed class BoundStatementEmitter
 
     public string Emit(IReadOnlyList<BoundStatement> statements)
     {
-        _goSubIds = statements.OfType<BoundGoToStatement>().Where(x => x.IsGoSub).Select(x => x.Id).Distinct().OrderBy(x => x).ToArray();
+        _goSubIds = Collect(statements).Where(x => x.IsGoSub).Select(x => x.Id).Distinct().OrderBy(x => x).ToArray();
         var output = new BoundEmissionContext(statements);
-        if (statements.OfType<BoundGoToStatement>().Any(x => x.IsGoSub))
+        if (_goSubIds.Count > 0)
             output.Write("var __xps_gosub = new System.Collections.Generic.Stack<int>();", 0);
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
@@ -22,11 +22,11 @@ public sealed class BoundStatementEmitter
 
     public BoundEmissionResult EmitWithSourceMap(IReadOnlyList<BoundStatement> statements, string source, string sourcePath)
     {
-        _goSubIds = statements.OfType<BoundGoToStatement>().Where(x => x.IsGoSub).Select(x => x.Id).Distinct().OrderBy(x => x).ToArray();
+        _goSubIds = Collect(statements).Where(x => x.IsGoSub).Select(x => x.Id).Distinct().OrderBy(x => x).ToArray();
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var output = new BoundEmissionContext(statements, source, sourcePath);
-        if (statements.OfType<BoundGoToStatement>().Any(x => x.IsGoSub))
+        if (_goSubIds.Count > 0)
             output.Write("var __xps_gosub = new System.Collections.Generic.Stack<int>();", 0);
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
@@ -169,6 +169,20 @@ public sealed class BoundStatementEmitter
     }
 
     private static string Label(string name) => "__xps_label_" + string.Concat(name.Select(ch => char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_'));
+
+    private static IEnumerable<BoundGoToStatement> Collect(IEnumerable<BoundStatement> statements)
+    {
+        foreach (var statement in statements)
+        {
+            if (statement is BoundGoToStatement transfer)
+                yield return transfer;
+            foreach (var child in statement.GetType().GetProperties()
+                         .Where(property => typeof(IEnumerable<BoundStatement>).IsAssignableFrom(property.PropertyType))
+                         .SelectMany(property => (IEnumerable<BoundStatement>?)property.GetValue(statement) ?? []))
+                foreach (var nested in Collect([child]))
+                    yield return nested;
+        }
+    }
 
     private string Condition(BoundExpression expression) => expression.Type == typeof(bool)
         ? _expressions.Emit(expression)
