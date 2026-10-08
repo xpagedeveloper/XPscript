@@ -14,6 +14,10 @@ internal static class AstExperimentalCompiler
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
+        if (Regex.IsMatch(source, @"(?im)^\s*(?:On\s+Error\b|Resume\b)"))
+            throw new CompilerException(
+                "AST On Error and Resume semantics are not implemented; the source was not lowered silently.",
+                CompilerDiagnosticCodes.InvalidSyntax, "semantic");
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
         if (source.Contains("XPImage", StringComparison.OrdinalIgnoreCase))
         {
@@ -39,10 +43,6 @@ internal static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Kill\s+(?<path>.+)$", "${indent}Call AstKill(${path})");
         source = Regex.Replace(source, @"(?<![\w.])Input\$\s*\(\s*(?<count>[^,()]+)\s*,\s*#\s*(?<file>[^)]+)\)", "AstInputChars(${count}, ${file})", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"(?<!\w)#\s*", string.Empty);
-        // Control transfers now lower through the AST bound tree. Resume
-        // remains pending because it requires error-handler state.
-        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Resume(?:\s+[^\r\n]+)?$", "${indent}Call AstNoOp()");
-        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)On\s+Error\s+.*$", "${indent}Call AstNoOp()");
         source = source.Replace("Error$", "ErrorValue()", StringComparison.OrdinalIgnoreCase);
         source = Regex.Replace(source, @"(?im)^[ \t]*With\s+[A-Za-z_]\w*[ \t]*$", string.Empty);
         source = Regex.Replace(source, @"(?im)^[ \t]*End\s+With[ \t]*$", string.Empty);

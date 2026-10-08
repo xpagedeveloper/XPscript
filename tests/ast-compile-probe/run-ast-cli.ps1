@@ -44,6 +44,8 @@ $gotoResult = dotnet (Join-Path $gotoOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($gotoResult -join "`n") -ne "7`nGOTO_PROCEDURE_SCOPE_OK") { throw 'AST procedure-scoped GoTo execution failed.' }
 $unsupportedGoSub = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'unsupported-gosub.xps') -o (Join-Path $output 'unsupported-gosub') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedGoSub -join "`n") -notmatch 'GoSub is not implemented in the AST compiler') { throw 'AST GoSub was not explicitly rejected.' }
+$unsupportedErrorHandling = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'on-error-error.xps') -o (Join-Path $output 'on-error-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($unsupportedErrorHandling -join "`n") -notmatch 'AST On Error and Resume semantics are not implemented') { throw 'AST silently lowered unsupported error handling.' }
 $nestedOutput = Join-Path $output 'nested-goto'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-goto.xps') -o $nestedOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nested GoTo compilation failed.' }

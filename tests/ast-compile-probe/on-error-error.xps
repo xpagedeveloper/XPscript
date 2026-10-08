@@ -1,0 +1,5 @@
+Sub Main()
+    On Error Resume Next
+    Error 5
+    Print 7
+End Sub
