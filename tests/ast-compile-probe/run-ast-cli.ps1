@@ -4,6 +4,11 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$eraseOutput = Join-Path $output 'list-erase'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-erase.xps') -o $eraseOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST List Erase compilation failed.' }
+$eraseResult = dotnet (Join-Path $eraseOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($eraseResult -join "`n") -ne "False`nTrue`nFalse`nfirst`n1`nFalse`nFalse`nLIST_ERASE_OK") { throw 'AST List tag removal, clearing or removal during alias iteration failed.' }
 $membershipOutput = Join-Path $output 'list-membership'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-membership.xps') -o $membershipOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST List membership compilation failed.' }

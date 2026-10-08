@@ -68,6 +68,8 @@ For a declared List, `ForAll alias In values` exposes a writable element alias: 
 
 Use `IsElement(values(tag))` to test for a List tag before reading its value. The experimental AST path supports this for declared Lists and returns False for a missing tag; it evaluates the tag expression once. Dynamically supplied Lists and complete argument validation remain migration work.
 
+Use `Erase values(tag)` to remove one List entry or `Erase values` to clear all entries. Experimental AST supports these forms for declared Lists, including safe removal of a missing tag and removals during ForAll snapshot iteration. Array Erase and dynamically supplied Lists remain migration work.
+
 ```xpscript
 If value > 0 Then
     Print "positive"

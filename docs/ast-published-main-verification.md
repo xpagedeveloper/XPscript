@@ -67,3 +67,7 @@ A separate ByRef alias audit remains open: calling a Long ByRef Sub with the ali
 ## List membership
 
 Published main and corrected AST output `True`, `False` for `list-membership-baseline.xps`. Before correction AST read the missing entry first and threw KeyNotFoundException. The expanded `list-membership.xps` verifies that a function-valued tag prints its side-effect marker once and that the stored value remains 3. AST passes that expanded fixture; published main rejects its nested tag function call with unresolved IsElement/method-name diagnostics. Baseline parity therefore applies to the saved minimal fixture, with stronger expression evaluation covered in AST.
+
+## List Erase
+
+`list-erase.xps` compiles and executes in preserved published main with `False`, `True`, `False`, `first`, `1`, `False`, `False`, `LIST_ERASE_OK`. It covers a missing tag, single-tag removal, clearing and removal of current/future tags during iteration. AST previously returned `True`, `True`, `True` in the minimal audit because Erase was a no-op; it now calls the shared List runtime's Erase/Clear operations. Array Erase remains separate migration work.

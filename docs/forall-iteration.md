@@ -59,6 +59,8 @@ Lists participate in the common iteration model while retaining XPscript's exist
 
 Experimental AST compilation uses the shared List runtime for declared Lists: alias reads/writes, `ListTag`, nested loops with separate aliases and snapshot iteration are covered by `tests/ast-compile-probe/forall-list-alias.xps`. New entries added during an active iteration are visited on a subsequent iteration. ByRef alias copy-back, initialized List declarations and the complete List API are still migration work; see [AST emission](ast-csharp-emitter.md).
 
+`Erase list(tag)` removes a tag; `Erase list` clears all entries. Snapshot iteration skips tags removed before they are visited. Experimental AST verifies these declared-List forms with `tests/ast-compile-probe/list-erase.xps`.
+
 ## Arrays
 
 Only one-dimensional arrays are iterable with `ForAll`.

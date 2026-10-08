@@ -173,6 +173,25 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             if (argumentResults.Any(argument => argument is null))
                 return null;
             var arguments = argumentResults.Select(argument => argument!).ToArray();
+            if (syntax.Command.Text.Equals("Erase", StringComparison.OrdinalIgnoreCase) && arguments.Length == 1)
+            {
+                BoundExpression? list = null;
+                BoundExpression[] callArguments = [];
+                var method = "Clear";
+                if (arguments[0] is BoundIndexExpression index && index.Expression.SemanticType.IsList)
+                {
+                    // Erasing a tag must not read its value: a missing tag is
+                    // harmless, and removing an active alias preserves its Tag.
+                    list = index.Expression;
+                    callArguments = [index.Index];
+                    method = "Erase";
+                }
+                else if (arguments[0].SemanticType.IsList) list = arguments[0];
+                if (list is not null)
+                    return new BoundExpressionStatement(new BoundCallExpression(
+                        new BoundMemberAccessExpression(list, method, typeof(void)),
+                        new FunctionSymbol(method, typeof(void), callArguments.Select(argument => argument.Type).ToArray()), callArguments));
+            }
             var function = new FunctionSymbol(syntax.Command.Text, typeof(object), arguments.Select(argument => argument.Type).ToArray(), XpTypeSymbol.Variant, arguments.Select(_ => XpTypeSymbol.Variant).ToArray());
             return new BoundExpressionStatement(new BoundCallExpression(null, function, arguments));
         }
