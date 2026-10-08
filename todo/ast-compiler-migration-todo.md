@@ -263,6 +263,15 @@ Class-oriented language patterns:
 
 ## Phase 8: C# emitter
 
+Latest verification: the RunCommand array-conversion snapshot needed the legacy comparison updated as well. Exact AST conversion assertions are retained, and executable emission coverage verifies both boolean forms with true and false results. The AST CLI fixture runs first in Language FullTest, followed by the lexer/compatibility probe.
+
+Next increment implemented: a console compilation-unit emitter for already-bound method definitions, with a two-Sub parse/bind/emit/compile/run regression. This is an internal emission boundary; full declaration, runtime and CLI/MCP integration remain open below.
+
+- [x] Verify the latest RunCommand conversion fix with exact emission and executable true/false coverage.
+- [x] Introduce a bound-method console compilation-unit emitter and execute a cross-procedure call regression.
+- [x] Add these probes to the existing Language FullTest runner and pass the complete Windows Language FullTest.
+- [ ] Connect compilation-unit emission to the shared experimental CLI/machine compilation path with real procedure bodies and runtime integration.
+
 Initial implementation: expression conversions and a method-body emitter for assignment, calls, return, If, For, ForAll, While, Do and Select Case are covered by `tests/ast-emission`. Bound syntax spans and an opt-in `#line`/mapping result are also available. `tests/ast-compile-probe` drives a real XPscript `Sub Main` through declaration parsing, binding and C# compilation. See `docs/ast-csharp-emitter.md` for supported nodes and remaining integration work. The phase remains open until the full bound tree, mapping and targets are connected to production compilation.
 
 - [ ] Implement C# generation from bound nodes.

@@ -1,5 +1,9 @@
 # Bound C# emitter
 
+`BoundCompilationUnitEmitter` now emits a console `Program` compilation unit from a list of `BoundMethodDefinition` signatures and bodies. It delegates each body to `BoundMethodEmitter`; it does not parse source, bind symbols, synthesize runtime helpers or select an entry point. `tests/ast-compile-probe` parses and binds two Subs, emits them together, and compiles and invokes Main with Roslyn. Production CLI/MCP integration, runtime support, fields, classes and target-specific units remain pending.
+
+The emission regression also executes both `Not RunCommand(...)` and `RunCommand(...) = False` with the explicit bound String-array conversion and both possible command results. The Language FullTest runner executes the AST CLI fixture and lexer compatibility regression before the broader emission and compilation probes. The CLI fixture uses a Variant iterator for the untyped `Array(7, 8)` result; the typed-array emission fixture supplies its iterator declaration and runtime conversion helper explicitly.
+
 Phase 8 begins with an experimental method-body emitter. It consumes bound nodes and does not parse XPscript text. Production CLI and machine compilation continue using their existing shared compiler path.
 
 `BoundExpressionEmitter` emits literal CLR types explicitly, escapes C# strings with Roslyn, and preserves Null as `System.DBNull.Value`. Empty and Nothing retain their CLR null representation. It emits bound conversions, using existing `XPScriptRuntime` conversion functions for Variant to String, Long, Double and Boolean. Other Variant targets are rejected until their lowering is implemented.

@@ -8,6 +8,18 @@ using SyntaxKind = XPScript.Compiler.Syntax.SyntaxKind;
 using Conversion = XPScript.Compiler.Binding.Conversion;
 
 var expressions = new BoundExpressionEmitter();
+var commandSymbols = new SymbolTable();
+commandSymbols.Declare(new FunctionSymbol("RunCommand", typeof(bool), [typeof(string), typeof(string[])]));
+commandSymbols.Declare(new FunctionSymbol("Array", typeof(object), [typeof(string)]));
+string EmitCommand(string text)
+{
+    var binder = new ExpressionBinder(commandSymbols);
+    var bound = binder.Bind(new ExpressionParser(text).ParseExpression());
+    if (binder.Diagnostics.Count != 0) throw new InvalidOperationException("RunCommand failed to bind.");
+    return expressions.Emit(bound);
+}
+var notCommand = EmitCommand("Not RunCommand(\"where.exe\", Array(\"winget\"))");
+var falseCommand = EmitCommand("RunCommand(\"where.exe\", Array(\"winget\")) = False");
 string EmitExpression(string text)
 {
     var parser = new ExpressionParser(text);
@@ -79,8 +91,19 @@ if (!mapped.Code.Contains("#line 1 \"flow.xps\"", StringComparison.Ordinal) || m
     throw new InvalidOperationException("Bound statement emission did not preserve source mapping.");
 var selectBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(sum, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
 var source = $$"""
+using System;
 public static class Probe
 {
+    public static bool CommandResult;
+    public static object Array(string value) => new string[] { value };
+    public static bool RunCommand(string command, string[] args)
+    {
+        if (command != "where.exe" || args.Length != 1 || args[0] != "winget")
+            throw new System.Exception("RunCommand arguments changed.");
+        return CommandResult;
+    }
+    public static bool NotCommand() => {{notCommand}};
+    public static bool FalseCommand() => {{falseCommand}};
     public static class LSForAllRuntime
     {
         public static System.Collections.IEnumerable Enumerate(object? value) => (System.Collections.IEnumerable)value!;
@@ -88,6 +111,10 @@ public static class Probe
     public static class LSCoreCompare
     {
         public static bool Equal(object? left, object? right) => Equals(left, right);
+    }
+    public static class XPScriptRuntime
+    {
+        public static long CLng(object value) => Convert.ToInt64(value);
     }
     public static object Integer() => {{EmitExpression("1")}};
     public static object Floating() => {{EmitExpression("1.0")}};
@@ -102,6 +129,7 @@ public static class Probe
     public static long ForAllFlow()
     {
         long number = 0;
+        long item = 0;
         long[] values = [1L, 2L, 3L];
         {{statements.Emit([new BoundForAllStatement(item, values, [new BoundAssignmentStatement(sum, new BoundBinaryExpression(sum, SyntaxKind.PlusToken, item, typeof(long)), false)])])}}
         return number;
@@ -123,6 +151,12 @@ if (!result.Success)
     throw new InvalidOperationException(string.Join("\n", result.Diagnostics) + "\n" + source);
 var type = Assembly.Load(stream.ToArray()).GetType("Probe")!;
 object? Invoke(string method) => type.GetMethod(method)!.Invoke(null, null);
+foreach (var commandResult in new[] { false, true })
+{
+    type.GetField("CommandResult")!.SetValue(null, commandResult);
+    Equal(!commandResult, Invoke("NotCommand"));
+    Equal(!commandResult, Invoke("FalseCommand"));
+}
 Equal(typeof(long), Invoke("Integer")!.GetType());
 Equal(typeof(double), Invoke("Floating")!.GetType());
 Equal(DBNull.Value, Invoke("Null"));

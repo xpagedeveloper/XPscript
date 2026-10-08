@@ -40,3 +40,29 @@ if (!emit.Success)
     throw new InvalidOperationException(string.Join("\n", emit.Diagnostics));
 var program = Assembly.Load(stream.ToArray()).GetType("Program")!;
 program.GetMethod("Main")!.Invoke(null, null);
+
+const string unitSource = "Sub Main()\nCall Worker()\nEnd Sub\nSub Worker()\nExit Sub\nEnd Sub\n";
+var unitParser = new DeclarationParser(unitSource);
+var unit = unitParser.ParseCompilationUnit();
+if (unitParser.Diagnostics.Count != 0 || unit.Declarations.Count != 2)
+    throw new InvalidOperationException("Compilation-unit declarations failed to parse.");
+var unitSymbols = new SymbolTable();
+foreach (var procedure in unit.Declarations.OfType<SubDeclarationSyntax>())
+    unitSymbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), []));
+var definitions = new List<BoundMethodDefinition>();
+foreach (var procedure in unit.Declarations.OfType<SubDeclarationSyntax>())
+{
+    var procedureBinder = new StatementBinder(unitSymbols);
+    var body = procedure.Statements.Select(procedureBinder.Bind).OfType<BoundStatement>().ToArray();
+    if (procedureBinder.Diagnostics.Count != 0)
+        throw new InvalidOperationException(string.Join("; ", procedureBinder.Diagnostics.Select(d => d.Message)));
+    definitions.Add(new BoundMethodDefinition(procedure.Identifier.Text, typeof(void), [], body));
+}
+var unitCode = new BoundCompilationUnitEmitter().Emit(definitions);
+var unitCompilation = CSharpCompilation.Create("AstCompilationUnitProbe", [CSharpSyntaxTree.ParseText(unitCode)], references,
+    new CSharpCompilationOptions(OutputKind.ConsoleApplication, mainTypeName: "Program"));
+using var unitStream = new MemoryStream();
+var unitEmit = unitCompilation.Emit(unitStream);
+if (!unitEmit.Success) throw new InvalidOperationException(string.Join("\n", unitEmit.Diagnostics));
+Assembly.Load(unitStream.ToArray()).GetType("Program")!.GetMethod("Main")!.Invoke(null, null);
+Console.WriteLine("AST_COMPILATION_UNIT_OK");

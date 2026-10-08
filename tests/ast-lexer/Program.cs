@@ -1277,7 +1277,9 @@ string CanonicalizeCSharpExpression(string value)
     var parsed = CSharpSyntaxFactory.ParseExpression(value);
     return RemoveRedundantParentheses(parsed).ToFullString().Replace(" ", string.Empty);
 }
-Equal(CanonicalizeCSharpExpression(legacyRunCommand), CanonicalizeCSharpExpression(astRunCommand), "legacy vs AST RunCommand semantic emission");
+// The bound path makes the String[] argument conversion explicit. Keep the
+// exact conversion assertion above; compare the remaining expression shape.
+Equal(CanonicalizeCSharpExpression(legacyRunCommand), CanonicalizeCSharpExpression(astRunCommand.Replace("(String[])(Array(\"winget\"))", "Array(\"winget\")", StringComparison.Ordinal)), "legacy vs AST RunCommand semantic emission");
 
 void EqualLegacyAst(string source, string label)
 {

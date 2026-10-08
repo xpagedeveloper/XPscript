@@ -45,13 +45,17 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  # Run the latest failing AST CLI fixture before the broader probes.
+  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') $compileTimeoutMilliseconds 'AST CLI ForAll regression first'
+  if ($astCliFirst.ExitCode -ne 0 -or $astCliFirst.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
+  $astLexer = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-lexer/AstLexerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST lexer and compatibility regression'
+  if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
   $emission = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-emission/AstEmissionProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'bound C# emission'
   if ($emission.ExitCode -ne 0) { exit $emission.ExitCode }
   if ($emission.Output -notmatch 'AST_EMISSION_OK') { throw 'Bound C# emission regression failed.' }
   $astCompile = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-compile-probe/AstCompileProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST XPscript compile probe'
   if ($astCompile.ExitCode -ne 0 -or $astCompile.Output -notmatch 'AST_XPS_COMPILE_OK') { throw 'AST XPscript compile probe failed.' }
-  $astCli = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') $compileTimeoutMilliseconds 'xpscriptc AST CLI compilation probe'
-  if ($astCli.ExitCode -ne 0 -or $astCli.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
+  if ($astCompile.Output -notmatch 'AST_COMPILATION_UNIT_OK') { throw 'AST compilation-unit regression failed.' }
   # Keep incompatible override signature regression first while inheritance semantics are active.
   $overrideBad = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/class-override-signature-error.xps','-o','./out/fulltest/class-override-signature-error','--runtime=false') $compileTimeoutMilliseconds 'incompatible class override diagnostic'
   if ($overrideBad.ExitCode -eq 0) { throw 'Incompatible class override unexpectedly compiled.' }
