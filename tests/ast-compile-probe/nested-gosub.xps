@@ -1,0 +1,10 @@
+Sub Main()
+    If True Then
+        GoSub worker
+    End If
+    Print "after"
+    Exit Sub
+worker:
+    Print "worker"
+    Return
+End Sub
