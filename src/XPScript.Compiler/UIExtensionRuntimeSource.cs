@@ -68,12 +68,12 @@ internal sealed class XPScriptUIField
         get
         {
             if (Type == "WebView") return _owner.Visible ? WebViewCommand("source", null) : _webViewSource;
-            if (Type == "Video") return _mediaSource;
-            throw new XPScriptRuntimeException(5, "Source is only supported for WebView and Video fields.");
+            if (Type is "Video" or "Audio") return _mediaSource;
+            throw new XPScriptRuntimeException(5, "Source is only supported for WebView, Video and Audio fields.");
         }
         set
         {
-            if (Type == "Video") { _mediaSource = NormalizeMediaSource(value); return; }
+            if (Type is "Video" or "Audio") { _mediaSource = NormalizeMediaSource(value); return; }
             EnsureWebView();
             _webViewSource = NormalizeWebViewUrl(value);
             _webViewHtml = string.Empty;
@@ -136,16 +136,16 @@ internal sealed class XPScriptUIField
         var text = (value ?? string.Empty).Trim();
         if (text.Length == 0) return string.Empty;
         if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri))
-            throw new XPScriptRuntimeException(5, "UIForm Video Source is invalid.");
+            throw new XPScriptRuntimeException(5, "UIForm media Source is invalid.");
         if (uri.IsAbsoluteUri)
         {
             if (uri.Scheme is not ("http" or "https" or "file" or "content" or "android.resource"))
-                throw new XPScriptRuntimeException(5, "UIForm Video Source uses an unsupported URI scheme.");
+                throw new XPScriptRuntimeException(5, "UIForm media Source uses an unsupported URI scheme.");
             return uri.AbsoluteUri;
         }
         var normalized = text.Replace('\\', '/');
         if (normalized.StartsWith("/", StringComparison.Ordinal) || normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
-            throw new XPScriptRuntimeException(5, "UIForm Video relative Source must stay within the application asset root.");
+            throw new XPScriptRuntimeException(5, "UIForm media relative Source must stay within the application asset root.");
         return normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? normalized : "assets/" + normalized;
     }
 
@@ -297,6 +297,8 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddWebView(object? name) => AddField(name, string.Empty, "WebView");
     public XPScriptUIField AddVideo(object? name) => AddField(name, name, "Video");
     public XPScriptUIField AddVideo(object? name, object? label) => AddField(name, label, "Video");
+    public XPScriptUIField AddAudio(object? name) => AddField(name, name, "Audio");
+    public XPScriptUIField AddAudio(object? name, object? label) => AddField(name, label, "Audio");
     public XPScriptUIField AddWebView(object? name, object? label) => AddField(name, label, "WebView");
 
     public void AddOption(object? name, object? value)
