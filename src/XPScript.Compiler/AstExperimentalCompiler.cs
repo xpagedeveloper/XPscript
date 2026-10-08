@@ -285,15 +285,16 @@ internal static class AstExperimentalCompiler
             var returnType = procedureFunction is null ? typeof(void) : ResolveRuntimeType(procedureFunction.ReturnType?.Identifier.Text);
             var result = procedureFunction is null ? null : new LocalSymbol(resultName, returnType, XpTypeSymbol.FromClr(returnType));
             var procedureStatements = procedureSub?.Statements ?? procedureFunction!.Statements;
-            var labels = procedureStatements.OfType<LabelStatementSyntax>()
+            var allProcedureStatements = FlattenStatements(procedureStatements).ToArray();
+            var labels = allProcedureStatements.OfType<LabelStatementSyntax>()
                 .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-            var duplicateLabel = procedureStatements.OfType<LabelStatementSyntax>()
+            var duplicateLabel = allProcedureStatements.OfType<LabelStatementSyntax>()
                 .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault(group => group.Count() > 1)?.Skip(1).FirstOrDefault();
             if (duplicateLabel is not null)
                 throw new CompilerException($"Duplicate label '{duplicateLabel.Identifier.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
-            foreach (var transfer in procedureStatements.OfType<GoToStatementSyntax>())
+            foreach (var transfer in allProcedureStatements.OfType<GoToStatementSyntax>())
                 if (!labels.ContainsKey(transfer.Target.Text))
                     throw new CompilerException($"Unknown label '{transfer.Target.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
             var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType),
@@ -448,6 +449,19 @@ internal static class Program
             _ => System.Security.Cryptography.SHA256.Create()
         };
         return Convert.ToHexString(h.ComputeHash(System.IO.File.ReadAllBytes(CStr(a[0])))).ToLowerInvariant();
+    }
+
+    private static IEnumerable<StatementSyntax> FlattenStatements(IEnumerable<StatementSyntax> statements)
+    {
+        foreach (var statement in statements)
+        {
+            yield return statement;
+            foreach (var child in statement.GetType().GetProperties()
+                         .Where(property => typeof(IEnumerable<StatementSyntax>).IsAssignableFrom(property.PropertyType))
+                         .SelectMany(property => (IEnumerable<StatementSyntax>?)property.GetValue(statement) ?? []))
+                foreach (var nested in FlattenStatements([child]))
+                    yield return nested;
+        }
     }
     private static string Digest(string algorithm, object? value) {
         using System.Security.Cryptography.HashAlgorithm hash = algorithm switch {
