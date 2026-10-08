@@ -43,6 +43,7 @@ internal sealed class XPScriptUIField
     private string _webViewHtml = string.Empty;
     private string _webViewUserAgent = string.Empty;
     private string _webViewBackground = string.Empty;
+    private string _mediaSource = string.Empty;
 
     internal XPScriptUIField(XPScriptUIForm owner, string name, string label, string type)
     {
@@ -64,8 +65,20 @@ internal sealed class XPScriptUIField
 
     public string Source
     {
-        get => Type == "WebView" && _owner.Visible ? WebViewCommand("source", null) : _webViewSource;
-        set { EnsureWebView(); _webViewSource = NormalizeWebViewUrl(value); _webViewHtml = string.Empty; if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource); }
+        get
+        {
+            if (Type == "WebView") return _owner.Visible ? WebViewCommand("source", null) : _webViewSource;
+            if (Type == "Video") return _mediaSource;
+            throw new XPScriptRuntimeException(5, "Source is only supported for WebView and Video fields.");
+        }
+        set
+        {
+            if (Type == "Video") { _mediaSource = NormalizeMediaSource(value); return; }
+            EnsureWebView();
+            _webViewSource = NormalizeWebViewUrl(value);
+            _webViewHtml = string.Empty;
+            if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource);
+        }
     }
     public string Html
     {
@@ -118,6 +131,24 @@ internal sealed class XPScriptUIField
         return XPScriptUIDesktopAdapter.WebViewCommand(_owner.InstanceId, Name, command, argument);
     }
     private void EnsureWebView() { if (Type != "WebView") throw new XPScriptRuntimeException(5, "This UIForm field is not a WebView."); }
+    private static string NormalizeMediaSource(string? value)
+    {
+        var text = (value ?? string.Empty).Trim();
+        if (text.Length == 0) return string.Empty;
+        if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri))
+            throw new XPScriptRuntimeException(5, "UIForm Video Source is invalid.");
+        if (uri.IsAbsoluteUri)
+        {
+            if (uri.Scheme is not ("http" or "https" or "file" or "content" or "android.resource"))
+                throw new XPScriptRuntimeException(5, "UIForm Video Source uses an unsupported URI scheme.");
+            return uri.AbsoluteUri;
+        }
+        var normalized = text.Replace('\\\\', '/');
+        if (normalized.StartsWith("/", StringComparison.Ordinal) || normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
+            throw new XPScriptRuntimeException(5, "UIForm Video relative Source must stay within the application asset root.");
+        return normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? normalized : "assets/" + normalized;
+    }
+
     private static string NormalizeWebViewUrl(string? value)
     {
         var text = (value ?? string.Empty).Trim();
@@ -264,6 +295,8 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddRadioGroup(object? name, object? label) => AddField(name, label, "RadioGroup");
     public XPScriptUIField AddHiddenField(object? name) => AddField(name, string.Empty, "HiddenField");
     public XPScriptUIField AddWebView(object? name) => AddField(name, string.Empty, "WebView");
+    public XPScriptUIField AddVideo(object? name) => AddField(name, name, "Video");
+    public XPScriptUIField AddVideo(object? name, object? label) => AddField(name, label, "Video");
     public XPScriptUIField AddWebView(object? name, object? label) => AddField(name, label, "WebView");
 
     public void AddOption(object? name, object? value)
