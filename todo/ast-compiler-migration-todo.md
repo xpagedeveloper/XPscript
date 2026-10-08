@@ -68,8 +68,8 @@ Release gate: when the AST compiler becomes the supported production compilation
 - [ ] Define declaration node hierarchy.
 - [x] Define statement node hierarchy.
 - [x] Define expression node hierarchy.
-- [ ] Define type syntax nodes.
-- [ ] Define parameter and argument syntax nodes.
+- [x] Define type syntax nodes; `TypeSyntax` preserves the declared type token and span.
+- [x] Define parameter syntax nodes; `ParameterSyntax` preserves Optional/ByRef/ByVal/default metadata. Call arguments are represented by expression lists with source spans.
 - [ ] Decide how comments/trivia are represented.
 - [x] Decide whether malformed/incomplete syntax is retained using missing tokens/error nodes.
 - [x] Add syntax-tree debug/dump output for tests and diagnostics.
