@@ -124,6 +124,35 @@ jobs:
       - name: Build Android UIForm manual test APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-manual-test.xps -o ./out/android-uiform-manual-test --runtime=false --platform android-x64 --debug
 
+      - name: Run Android x86_64 emulator smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: Pixel_5
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            adb wait-for-device
+            adb shell getprop ro.build.version.sdk
+            apk="$(find ./out/android-debug-print-x64 -type f -name '*.apk' -print -quit)"
+            test -n "$apk"
+            adb install -r "$apk"
+            adb logcat -c
+            adb shell monkey -p eu.xpscript.app 1
+            for attempt in $(seq 1 12); do
+              if adb logcat -d -s XPScript:D '*:S' | grep -q 'XPSCRIPT-EXIT=0'; then
+                echo 'Android emulator smoke test passed.'
+                exit 0
+              fi
+              sleep 2
+            done
+            adb logcat -d -s XPScript:D '*:S'
+            echo 'Android emulator smoke test did not observe XPSCRIPT-EXIT=0.' >&2
+            exit 1
+
       - name: Verify debug APKs exist
         shell: bash
         run: |
