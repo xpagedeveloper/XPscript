@@ -2,7 +2,8 @@ using XPScript.Compiler.Syntax;
 
 namespace XPScript.Compiler.Binding;
 
-public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDynamicMembers = false)
+public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDynamicMembers = false,
+    string? functionName = null, LocalSymbol? functionResult = null)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly bool _allowDynamicMembers = allowDynamicMembers;
@@ -56,6 +57,10 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindName(NameExpressionSyntax syntax)
     {
         var name = syntax.IdentifierToken.Text;
+        // A bare function name denotes its result slot; a call still resolves
+        // the procedure signature, so recursion is unaffected.
+        if (functionResult is not null && name.Equals(functionName, StringComparison.OrdinalIgnoreCase))
+            return new BoundNameExpression(functionResult);
         // Statement-specific parsers can recover an omitted optional argument
         // with a zero-width identifier. Dynamic AST compilation must preserve
         // the surrounding statement and let its runtime helper supply the

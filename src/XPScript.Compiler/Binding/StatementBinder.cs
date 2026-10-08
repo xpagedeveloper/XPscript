@@ -2,7 +2,8 @@ using XPScript.Compiler.Syntax;
 
 namespace XPScript.Compiler.Binding;
 
-public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false, bool allowDynamicMembers = false)
+public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false,
+    bool allowDynamicMembers = false, string? functionName = null, LocalSymbol? functionResult = null)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly XpTypeSymbol? _returnType = returnType;
@@ -50,7 +51,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundExpression? BindExpression(ExpressionSyntax syntax)
     {
-        var binder = new ExpressionBinder(_symbols, _allowDynamicMembers);
+        var binder = new ExpressionBinder(_symbols, _allowDynamicMembers, functionName, functionResult);
         var expression = binder.Bind(syntax);
         _diagnostics.AddRange(binder.Diagnostics);
         return binder.Diagnostics.Count == 0 ? expression : null;
@@ -336,7 +337,9 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     {
         if (syntax.TargetKeyword.Kind is not (SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword))
             return BindUnsupported(syntax);
-        return new BoundReturnStatement(null);
+        // Exit Function returns the current slot, including its default value.
+        return new BoundReturnStatement(syntax.TargetKeyword.Kind == SyntaxKind.FunctionKeyword && functionResult is not null
+            ? new BoundNameExpression(functionResult) : null);
     }
 
     private BoundStatement? BindError(ErrorStatementSyntax syntax)

@@ -40,6 +40,8 @@ Use `Sub ... End Sub` for procedures without a result and `Function ... End Func
 
 Functions return values by assigning to the function name:
 
+That assignment stores the current result and execution continues. `Exit Function` returns the stored result immediately; reaching `End Function` also returns it. Do not treat assigning the function name as an early return.
+
 ```xpscript
 Function Add(a As Integer, b As Integer) As Integer
     Add = a + b

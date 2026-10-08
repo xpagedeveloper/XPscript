@@ -1,4 +1,7 @@
 Sub Main()
+    If Accumulate(3) = 7 And DefaultNumber() = 0 And Factorial(4) = 24 Then
+        Print "AST_FUNCTION_RESULT_OK"
+    End If
     Dim result As Long
     result = AddOne(41)
     Call Increase(result)
@@ -33,6 +36,28 @@ Sub Main()
     End ForAll
     Exit Sub
 End Sub
+
+Function Accumulate(ByVal count As Long) As Long
+    Dim __xpsFunctionResult As Long
+    __xpsFunctionResult = 1
+    Accumulate = __xpsFunctionResult
+    Dim i As Long
+    For i = 1 To count
+        Accumulate = Accumulate + i
+    Next
+    Exit Function
+End Function
+
+Function DefaultNumber() As Long
+End Function
+
+Function Factorial(ByVal value As Long) As Long
+    If value <= 1 Then
+        Factorial = 1
+    Else
+        Factorial = value * Factorial(value - 1)
+    End If
+End Function
 
 Function AddOne(ByVal value As Long) As Long
     Dim message As Long

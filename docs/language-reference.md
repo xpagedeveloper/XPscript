@@ -43,7 +43,7 @@ This distinction also applies to properties, methods, parameters, locals, enum m
 | `Function` | `Function Name(parameters) As Type ... End Function` | name, parameters, return type. | Declares a value-returning procedure. | [functions.xps](../samples/functions.xps) |
 | `Call` | `Call Procedure(arguments)` | procedure arguments. | Calls a procedure and discards a return value. | [functions.xps](../samples/functions.xps) |
 | `Exit Sub` | `Exit Sub` | none | Returns immediately from the current Sub. | [statement-layout-audit.xps](../samples/statement-layout-audit.xps) |
-| `Exit Function` | `Exit Function` | none | Returns immediately from the current Function using its current return value. | [statement-layout-audit.xps](../samples/statement-layout-audit.xps) |
+| `Exit Function` | `Exit Function` | none | Returns immediately from the current Function using its current return value. Assigning to the function name stores that value and continues execution; reaching `End Function` returns it too. | [statement-layout-audit.xps](../samples/statement-layout-audit.xps) |
 | `ByRef` | `ByRef name As Type` | parameter name/type. | Passes the parameter by reference. | [functions.xps](../samples/functions.xps) |
 | `ByVal` | `ByVal name As Type` | parameter name/type. | Passes the parameter by value/copy semantics. | [byval-copy-semantics.xps](../samples/byval-copy-semantics.xps) |
 | `Optional` | `Optional name As Type = value` | parameter and default value. | Declares an optional procedure parameter. | [functions.xps](../samples/functions.xps) |

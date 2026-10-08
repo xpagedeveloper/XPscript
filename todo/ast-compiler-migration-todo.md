@@ -277,7 +277,7 @@ Next increment implemented: a console compilation-unit emitter for already-bound
 - [x] Emit actual top-level Sub/Function bodies in the experimental CLI, with procedure-local scopes, forward calls and declared ByRef modes; remove fabricated reduced-arity procedure overloads.
 - [ ] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics.
 - [ ] Model Optional defaults in syntax/binding/emission instead of generating no-op overloads.
-- [ ] Replace regex-based function-result rewriting with structural return-local lowering, preserving execution after result assignments.
+- [x] Replace regex-based function-result rewriting with structural return-local lowering, preserving execution after result assignments; cover Exit Function, fall-through, recursion and generated-name collisions in the experimental CLI.
 - [ ] Reject unsupported syntax rather than ignoring parser diagnostics or lowering statements to no-ops.
 - [ ] Restrict dynamic call fallback to genuinely dynamic receivers; invalid calls to declared procedures must produce binder overload diagnostics.
 - [ ] Replace experimental runtime placeholders (including HTTP/TLS, image, UI, error and environment helpers) with existing runtime implementations before claiming sample compatibility.

@@ -14,14 +14,6 @@ internal static class AstExperimentalCompiler
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
-        // Web handlers commonly assign their return value with LotusScript's
-        // `Set FunctionName = value` form. Lower that form to the AST return
-        // statement for the matching Function declarations.
-        foreach (Match functionMatch in Regex.Matches(source, @"(?im)^\s*Function\s+(?<name>[A-Za-z_]\w*)\b"))
-        {
-            source = Regex.Replace(source, $@"(?im)^\s*Set\s+{Regex.Escape(functionMatch.Groups["name"].Value)}\s*=\s*", "Return ");
-            source = Regex.Replace(source, $@"(?im)^\s*{Regex.Escape(functionMatch.Groups["name"].Value)}\s*=\s*", "Return ");
-        }
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
         // XPscript Static locals have procedure lifetime. The AST path keeps
         // the declaration as a normal Variant local for now, while preserving
@@ -272,6 +264,11 @@ internal static class AstExperimentalCompiler
         // Bind every procedure in its own scope; declarations are registered
         // before bodies so forward calls and recursion see real signatures.
         var methods = new List<BoundMethodDefinition>();
+        // Reserve a generated result name against every source identifier,
+        // including parameters and declarations not yet bound.
+        var identifiers = new Lexer(source).Lex().Select(token => token.Text).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var resultName = "__xpsFunctionResult";
+        while (identifiers.Contains(resultName)) resultName += "_";
         foreach (var item in unit.Declarations.Where(item => item is SubDeclarationSyntax or FunctionDeclarationSyntax))
         {
             var procedureSub = item as SubDeclarationSyntax;
@@ -283,10 +280,19 @@ internal static class AstExperimentalCompiler
                 XpTypeSymbol.FromClr(ResolveRuntimeType(parameter.Type?.Identifier.Text)))).ToArray();
             foreach (var parameter in parameters) scope.Declare(parameter);
             var returnType = procedureFunction is null ? typeof(void) : ResolveRuntimeType(procedureFunction.ReturnType?.Identifier.Text);
-            var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType), procedureFunction is not null, true);
-            var bound = (procedureSub?.Statements ?? procedureFunction!.Statements).Select(binder.Bind).OfType<BoundStatement>().ToArray();
+            var result = procedureFunction is null ? null : new LocalSymbol(resultName, returnType, XpTypeSymbol.FromClr(returnType));
+            var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType),
+                procedureFunction is not null, true, procedureFunction?.Identifier.Text, result);
+            var bound = (procedureSub?.Statements ?? procedureFunction!.Statements).Select(binder.Bind).OfType<BoundStatement>().ToList();
             if (binder.Diagnostics.Count > 0)
                 throw new CompilerException(string.Join(Environment.NewLine, binder.Diagnostics.Select(d => d.Message)), binder.Diagnostics[0].Code, "semantic");
+            if (result is not null)
+            {
+                // Function-name assignment is ordinary state mutation, never
+                // an early return. Fall-through returns the same slot as Exit.
+                bound.Insert(0, new BoundVariableDeclarationStatement(result, null));
+                bound.Add(new BoundReturnStatement(new BoundNameExpression(result)));
+            }
             var name = procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text;
             // Roslyn's console entry point is case-sensitive; XPscript is not.
             if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0)
