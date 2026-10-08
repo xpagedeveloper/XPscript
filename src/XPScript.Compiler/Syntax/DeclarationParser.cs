@@ -307,6 +307,9 @@ public sealed class DeclarationParser
 
         while (Peek(tokens, position).Kind is not SyntaxKind.CloseParenToken and not SyntaxKind.EndOfFileToken)
         {
+            SyntaxToken? optionalKeyword = null;
+            if (Peek(tokens, position).Text.Equals("Optional", StringComparison.OrdinalIgnoreCase))
+                optionalKeyword = tokens[position++];
             SyntaxToken? modifier = null;
             if (Peek(tokens, position).Kind is SyntaxKind.ByRefKeyword or SyntaxKind.ByValKeyword)
                 modifier = tokens[position++];
@@ -320,7 +323,29 @@ public sealed class DeclarationParser
                 type = new TypeSyntax(Take(tokens, ref position, SyntaxKind.IdentifierToken));
             }
 
-            parameters.Add(new ParameterSyntax(modifier, identifier, asKeyword, type));
+            SyntaxToken? equalsToken = null;
+            ExpressionSyntax? defaultValue = null;
+            if (Peek(tokens, position).Kind == SyntaxKind.EqualsToken)
+            {
+                equalsToken = tokens[position++];
+                var start = position;
+                var depth = 0;
+                // A comma inside a nested expression is not a parameter separator.
+                while (Peek(tokens, position).Kind != SyntaxKind.EndOfFileToken)
+                {
+                    var kind = Peek(tokens, position).Kind;
+                    if (depth == 0 && kind is SyntaxKind.CommaToken or SyntaxKind.CloseParenToken) break;
+                    if (kind is SyntaxKind.OpenParenToken or SyntaxKind.OpenBracketToken) depth++;
+                    if (kind is SyntaxKind.CloseParenToken or SyntaxKind.CloseBracketToken) depth--;
+                    position++;
+                }
+                var end = Peek(tokens, position).Span.Start;
+                var expressionTokens = tokens[start..position].Append(new SyntaxToken(SyntaxKind.EndOfFileToken, "", null, new TextSpan(end, 0)));
+                var parser = new ExpressionParser(expressionTokens);
+                defaultValue = parser.ParseExpression();
+                _diagnostics.AddRange(parser.Diagnostics);
+            }
+            parameters.Add(new ParameterSyntax(modifier, identifier, asKeyword, type, optionalKeyword, equalsToken, defaultValue));
             if (Peek(tokens, position).Kind != SyntaxKind.CommaToken)
                 break;
             commas.Add(tokens[position++]);

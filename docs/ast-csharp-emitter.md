@@ -1,5 +1,7 @@
 # Bound C# emitter
 
+`ParameterSyntax` now retains Optional tokens, default expressions and full source spans. Declaration parsing preserves nested commas inside a default expression. This is syntax support; default validation, optional overload selection and omitted-argument/ByRef lowering remain open, so it does not yet make Optional calls executable through the experimental CLI.
+
 Unresolved member properties and method calls now fall back dynamically only for a Variant receiver. An object-backed declared user type retains its semantic identity and reports `XPS2009` at the unknown member span. The permanent binder regression covers both cases with dynamic member support enabled.
 
 Declared overload sets now produce `XPS2004` when arity, argument type or ByRef mode does not match, even with dynamic member support enabled. The binder no longer invents an overload to defer those errors to Roslyn. Variant receiver member calls remain dynamic. The permanent binder probe covers both paths and preserves failing call spans; object-backed user types retain unknown-member diagnostics as described above.

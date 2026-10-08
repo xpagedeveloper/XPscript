@@ -269,6 +269,8 @@ Latest verification: the RunCommand array-conversion snapshot needed the legacy 
 
 Next increment implemented: a console compilation-unit emitter for already-bound method definitions, with a two-Sub parse/bind/emit/compile/run regression. This is an internal emission boundary; full declaration, runtime and CLI/MCP integration remain open below.
 
+Reverification on 2026-10-08 of the five most recently completed implementation items before the Optional syntax increment: real procedure bodies/ByRef and structural function results passed the executable `tests/ast-compile-probe/run-ast-cli.ps1` regression; restricted dynamic call fallback, XPS2004 overload diagnostics and XPS2009 typed-receiver member diagnostics passed `tests/ast-binding`. The latter checks retain Variant calls and assert diagnostic source spans. Optional declaration syntax also passed `tests/ast-lexer`. These results cover the implemented experimental AST slice; shared machine integration and complete Optional semantics remain open.
+
 - [x] Verify the latest RunCommand conversion fix with exact emission and executable true/false coverage.
 - [x] Introduce a bound-method console compilation-unit emitter and execute a cross-procedure call regression.
 - [x] Add these probes to the existing Language FullTest runner and pass the complete Windows Language FullTest.
@@ -277,6 +279,8 @@ Next increment implemented: a console compilation-unit emitter for already-bound
 - [x] Emit actual top-level Sub/Function bodies in the experimental CLI, with procedure-local scopes, forward calls and declared ByRef modes; remove fabricated reduced-arity procedure overloads.
 - [ ] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics.
 - [ ] Model Optional defaults in syntax/binding/emission instead of generating no-op overloads.
+- [x] Preserve Optional flags, parameter modes and default-expression syntax with absolute spans; handle nested default-expression commas in declaration parsing.
+- [ ] Validate Optional ordering, default types/constant rules and supplied/omitted arguments in the binder; lower omitted ByRef defaults through temporary locals.
 - [x] Replace regex-based function-result rewriting with structural return-local lowering, preserving execution after result assignments; cover Exit Function, fall-through, recursion and generated-name collisions in the experimental CLI.
 - [ ] Reject unsupported syntax rather than ignoring parser diagnostics or lowering statements to no-ops.
 - [x] Restrict dynamic call fallback to genuinely dynamic receivers; invalid calls to declared procedures must produce binder overload diagnostics.

@@ -19,6 +19,20 @@ static void Equal<T>(T expected, T actual, string message)
 static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
+var optionalParser = new DeclarationParser("Sub Greeting(Optional ByVal prefix As String = \"Hello\", Optional count As Long = 2)\nEnd Sub");
+var optionalSub = (SubDeclarationSyntax)optionalParser.ParseDeclaration();
+Equal(0, optionalParser.Diagnostics.Count, "Optional parameter diagnostics");
+Equal(2, optionalSub.Parameters.Count, "Optional parameter count");
+Equal(true, optionalSub.Parameters[0].IsOptional, "Optional flag");
+Equal(true, optionalSub.Parameters[0].IsByVal, "Optional ByVal mode");
+Equal("Hello", ((LiteralExpressionSyntax)optionalSub.Parameters[0].DefaultValue!).Value, "Optional string default");
+Equal(2L, ((LiteralExpressionSyntax)optionalSub.Parameters[1].DefaultValue!).Value, "Optional numeric default");
+var nestedOptionalParser = new DeclarationParser("Sub Values(Optional value As Variant = Array(1, 2), ByVal last As Long)\nEnd Sub", 100);
+var nestedOptional = (SubDeclarationSyntax)nestedOptionalParser.ParseDeclaration();
+Equal(0, nestedOptionalParser.Diagnostics.Count, "Nested optional expression diagnostics");
+Equal(2, nestedOptional.Parameters.Count, "Nested default comma separation");
+Equal(111, nestedOptional.Parameters[0].Span.Start, "Optional absolute start span");
+Equal(nestedOptional.Parameters[0].DefaultValue!.Span.End, nestedOptional.Parameters[0].Span.End, "Default included in parameter span");
 
 var moduleMeParser = new DeclarationParser("Sub Main()\nPrint Me.Name\nEnd Sub");
 _ = moduleMeParser.ParseDeclaration();
