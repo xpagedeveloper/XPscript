@@ -110,7 +110,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Add the Avalonia `AndroidVideoControl` host bridge for Media3 `PlayerView` and exclude Video controls from submitted editor state.
 - [x] Wire an equivalent isolated Media3 Video host into the compiler-generated Android host. Emulator playback verification remains open.
 - [ ] Support the Android video source policy for packaged `assets/...`, accessible local files and HTTP/HTTPS sources, with deterministic runtime errors for unsupported sources.
-- [ ] Add focused compiler/host regressions for Android `UIForm.Video`, plus an executable Android integration test when runtime media playback testing is practical.
+- [x] Add focused compiler/host regressions for Android `UIForm.Video`. `AndroidCompilerProbe` now guards the generated Media3 dependency layer, binding namespaces, isolated player adapter and compiler-generated Video host; executable emulator playback integration remains open until runtime media playback testing is practical.
 - [ ] Add a shared `UIForm.Carousel` slideshow control rather than exposing Android `ViewPager2` directly. Support multiple image sources, current item/index, swipe navigation, optional looping, optional automatic advance interval, indicator dots and a current-item-changed event.
 - [ ] Implement `UIForm.Carousel` on Android using AndroidX `ViewPager2`, isolated behind the Android UIForm backend. AndroidX/ViewPager2 is Apache-2.0 licensed; include required third-party license/notice handling.
 - [ ] Reuse the UIForm image source policy for carousel items: `XPImage`, packaged `assets/...`, accessible local files, HTTP/HTTPS and `data:image` where supported.
