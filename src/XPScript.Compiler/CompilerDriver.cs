@@ -763,9 +763,6 @@ public sealed class CompilerDriver
         }
 
         var isAndroid = IsAndroidRuntime(runtimeIdentifier);
-        var androidMedia3Packages = isAndroid
-            ? "  <ItemGroup>\n    <PackageReference Include=\"Xamarin.AndroidX.Media3.ExoPlayer\" Version=\"1.11.1\" />\n    <PackageReference Include=\"Xamarin.AndroidX.Media3.Ui\" Version=\"1.11.1\" />\n  </ItemGroup>\n"
-            : string.Empty;
         var publishProperties = publishSingleFile && !isAndroid
             ? $"""
     <PublishSingleFile>true</PublishSingleFile>
@@ -802,7 +799,6 @@ public sealed class CompilerDriver
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
     <UseAppHost>true</UseAppHost>
 {androidProperties}{publishProperties}  </PropertyGroup>
-{androidMedia3Packages}
 {itemGroup}</Project>
 """;
     }
@@ -819,6 +815,8 @@ public sealed class CompilerDriver
     <PackageReference Include="Avalonia.Android" Version="12.0.3" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
     <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.11.1" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.Ui" Version="1.11.1" />
   </ItemGroup>
 """;
         project = project.Replace("    <NoWarn>CA1416;$(NoWarn)</NoWarn>", "    <NoWarn>CA1416;NU1608;$(NoWarn)</NoWarn>", StringComparison.Ordinal);
