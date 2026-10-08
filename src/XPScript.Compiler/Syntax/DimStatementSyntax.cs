@@ -12,6 +12,7 @@ public sealed class DimStatementSyntax(
     int? arrayLength = null) : StatementSyntax
 {
     public SyntaxToken DimKeyword { get; } = dimKeyword;
+    public bool IsStatic => DimKeyword.Text.Equals("Static", StringComparison.OrdinalIgnoreCase);
     public SyntaxToken IdentifierToken { get; } = identifierToken;
     public SyntaxToken? AsKeyword { get; } = asKeyword;
     public SyntaxToken? TypeNameToken { get; } = typeNameToken;

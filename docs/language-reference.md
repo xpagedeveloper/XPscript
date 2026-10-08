@@ -36,7 +36,7 @@ This distinction also applies to properties, methods, parameters, locals, enum m
 | `Option Base` | `Option Base 0` or `Option Base 1` | `0` or `1`: default lower array bound. | Sets the implicit lower bound for arrays. | [type-array-option-base.xps](../samples/type-array-option-base.xps) |
 | `DefInt` | `DefInt A-Z` | letter range. | Sets default Integer typing for matching undeclared type suffix/name ranges. | [core-language.xps](../samples/core-language.xps) |
 | `Dim` | `Dim name As Type` | variable `name` and `Type`. | Declares a variable. | [hello.xps](../demo/console/hello.xps) |
-| `Static` | `Static name As Type` | local variable name/type. | Declares procedure-local persistent state. | [language-extensions.xps](../samples/language-extensions.xps) |
+| `Static` | `Static name As Type` | local variable name/type. | Declares procedure-local persistent state. Experimental AST currently supports scalar declarations without initializers; see [AST emission](ast-csharp-emitter.md). | [language-extensions.xps](../samples/language-extensions.xps) |
 | `Public` | `Public name As Type` | module variable name/type. | Declares module-visible state. | [module-object-references.xps](../samples/module-object-references.xps) |
 | `Private` | `Private name As Type` | module variable name/type. | Declares module-private state. | [xpai.xps](../samples/xpai.xps) |
 | `Sub` | `Sub Name(parameters) ... End Sub` | procedure name and parameters. | Declares a procedure with no return value. | [functions.xps](../samples/functions.xps) |

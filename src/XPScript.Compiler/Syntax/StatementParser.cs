@@ -74,7 +74,8 @@ public sealed class StatementParser
             return ParseIfStatement();
         if (Current.Kind == SyntaxKind.SetKeyword)
             return ParseSetStatement();
-        if (Current.Kind == SyntaxKind.DimKeyword)
+        if (Current.Kind == SyntaxKind.DimKeyword ||
+            Current.Kind == SyntaxKind.IdentifierToken && Current.Text.Equals("Static", StringComparison.OrdinalIgnoreCase))
             return ParseDimStatement();
         if (Current.Kind == SyntaxKind.WhileKeyword)
             return ParseWhileStatement();

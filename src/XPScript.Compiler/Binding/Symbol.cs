@@ -26,6 +26,8 @@ public sealed record VariableSymbol(string Name, Type Type, XpTypeSymbol? Semant
 
 public sealed record LocalSymbol(string Name, Type Type, XpTypeSymbol? SemanticType = null) : Symbol(Name)
 {
+    /// <summary>Compiler-owned field backing a persistent procedure-local value.</summary>
+    public string? StaticStorageName { get; init; }
     public override SymbolKind Kind => SymbolKind.Local;
 }
 

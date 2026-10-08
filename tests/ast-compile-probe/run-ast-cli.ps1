@@ -4,6 +4,13 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$staticInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-initializer-error.xps') -o (Join-Path $output 'static-initializer-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($staticInvalid -join "`n") -notmatch 'AST Static currently requires a scalar declaration without an initializer') { throw 'AST unsupported Static initializer was not explicitly rejected.' }
+$staticOutput = Join-Path $output 'static-local'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-local-lifetime.xps') -o $staticOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Static local compilation failed.' }
+$staticResult = dotnet (Join-Path $staticOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($staticResult -join "`n") -ne "1`n10`n2`n20`n1`n10`n2`n20`nSTATIC_DEFAULTS_OK`nSTATIC_RETAINED_OK`n1`n2") { throw 'AST Static lifetime, procedure/overload isolation, defaults or ByRef mutation failed.' }
 $crossProcedure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-cross-procedure-error.xps') -o (Join-Path $output 'cross-procedure') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($crossProcedure -join "`n") -notmatch "Unknown label 'outside'") { throw 'AST GoTo accepted a label from another procedure.' }
 $gotoOutput = Join-Path $output 'goto-scope'

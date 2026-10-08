@@ -35,7 +35,24 @@ function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeou
     return [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $stdout + $stderr }
   } finally { $p.Dispose() }
 }
-function Compile-Xps([string] $source, [string] $name) { $outputPath = "./out/fulltest/$name"; if ($IsWindows) { $outputPath += ".exe" }; Write-Host "FULLTEST_COMPILE=$name"; $r = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',$outputPath,'--runtime=false') $compileTimeoutMilliseconds "compile $name"; if ($r.ExitCode -ne 0) { if ($name -eq 'archive-compressed-tar') { Write-Host 'FULLTEST_RETRY_DEBUG=archive-compressed-tar'; $debug = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',"./out/fulltest/$name-debug",'--runtime=false','--debug') $compileTimeoutMilliseconds "compile debug $name"; Write-Host $debug.Output }; exit $r.ExitCode } }
+function Compile-Xps([string] $source, [string] $name) {
+  $outputPath = "./out/fulltest/$name"
+  if ($IsWindows) { $outputPath += ".exe" }
+  Write-Host "FULLTEST_COMPILE=$name"
+  $compileArguments = @($compilerDll,$source,'-o',$outputPath,'--runtime=false')
+  # Language checks exercise compiler/runtime semantics. Single-file packaging
+  # has separate compile workflows and can exceed the semantic test deadline.
+  if ($Suite -eq 'language') { $compileArguments += '--single-file=false' }
+  $r = Invoke-Bounded 'dotnet' $compileArguments $compileTimeoutMilliseconds "compile $name"
+  if ($r.ExitCode -ne 0) {
+    if ($name -eq 'archive-compressed-tar') {
+      Write-Host 'FULLTEST_RETRY_DEBUG=archive-compressed-tar'
+      $debug = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',"./out/fulltest/$name-debug",'--runtime=false','--debug') $compileTimeoutMilliseconds "compile debug $name"
+      Write-Host $debug.Output
+    }
+    exit $r.ExitCode
+  }
+}
 function Get-XpsExe([string] $name) { $plain = "./out/fulltest/$name"; $win = "$plain.exe"; if (Test-Path $win -PathType Leaf) { return (Resolve-Path $win).Path }; if (Test-Path $plain -PathType Leaf) { return (Resolve-Path $plain).Path }; throw "Executable not found: $name" }
 function Run-Xps([string] $source, [string] $name, [string[]] $arguments = @()) { Compile-Xps $source $name; Write-Host "FULLTEST_RUN=$name"; $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "run $name"; if ($r.ExitCode -ne 0) { exit $r.ExitCode }; return $r }
 function Expect-XpsFailure([string] $name, [string[]] $arguments, [string] $label) { $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "security $label"; if ($r.ExitCode -eq 0) { throw "Security probe unexpectedly succeeded: $label" }; if ([string]::IsNullOrWhiteSpace($r.Output)) { throw "Security probe returned no diagnostic: $label" }; if ($r.Output -match 'SharpCompress') { throw "Security diagnostic exposed implementation detail: $label" } }
@@ -46,7 +63,7 @@ Write-Host "FULLTEST_SUITE=$Suite"
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
   # Run the latest failing AST CLI fixture before the broader probes.
-  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') $compileTimeoutMilliseconds 'AST CLI GoTo scope, GoSub rejection, Optional, function-result and ForAll regressions first'
+  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') $compileTimeoutMilliseconds 'AST CLI Static lifetime, GoTo scope, GoSub rejection, Optional and function-result regressions first'
   if ($astCliFirst.ExitCode -ne 0 -or $astCliFirst.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
   $astLexer = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-lexer/AstLexerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST lexer and compatibility regression'
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }

@@ -1,0 +1,4 @@
+Sub Main()
+    Static visits As Long = 3
+    Print visits
+End Sub

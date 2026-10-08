@@ -21,6 +21,14 @@ public sealed class BoundCompilationUnitEmitter
     {
         ArgumentNullException.ThrowIfNull(methods);
         var output = new StringBuilder();
+        foreach (var declaration in methods.SelectMany(method => BoundStatementTraversal.Descendants(method.Statements))
+                     .OfType<BoundVariableDeclarationStatement>().Where(declaration => declaration.Local.StaticStorageName is not null))
+        {
+            var type = BoundMethodEmitter.CSharpType(declaration.Local.Type);
+            var initialValue = declaration.Local.Type == typeof(string) ? "string.Empty" : $"default({type})";
+            output.Append("private static ").Append(type).Append(' ').Append(declaration.Local.StaticStorageName)
+                .Append(" = ").Append(initialValue).Append(";\n");
+        }
         var emitter = new BoundMethodEmitter();
         foreach (var method in methods)
             output.Append(emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements));

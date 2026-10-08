@@ -36,7 +36,7 @@ public sealed class BoundMethodEmitter
         return mode + CSharpType(parameter.Type) + " " + parameter.Name;
     }
 
-    private static string CSharpType(Type type) => type == typeof(void) ? "void"
+    internal static string CSharpType(Type type) => type == typeof(void) ? "void"
         : type == typeof(long) ? "long"
         : type == typeof(double) ? "double"
         : type == typeof(bool) ? "bool"

@@ -25,6 +25,6 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
-      - name: Run Language FullTest, GoTo scope and GoSub rejection first
+      - name: Run Language FullTest, Static lifetime and GoTo regressions first
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite language

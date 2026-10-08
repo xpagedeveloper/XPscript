@@ -61,6 +61,9 @@ public sealed class BoundStatementEmitter
             case BoundExpressionStatement expression:
                 Line($"{_expressions.Emit(expression.Expression)};");
                 break;
+            case BoundVariableDeclarationStatement { Local.StaticStorageName: not null }:
+                // Storage is initialized once in the compilation unit, not on entry.
+                break;
             case BoundVariableDeclarationStatement declaration:
                 var type = CSharpType(declaration.Local.Type);
                 if (declaration.Local.Name.Equals("csv", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("copy", StringComparison.OrdinalIgnoreCase)) type = "XpCsvDocument";
@@ -164,26 +167,7 @@ public sealed class BoundStatementEmitter
     private static string Label(string name) => "__xps_label_" + name.ToUpperInvariant();
 
     private static IEnumerable<BoundGoToStatement> Collect(IEnumerable<BoundStatement> statements)
-    {
-        foreach (var statement in statements)
-        {
-            if (statement is BoundGoToStatement transfer)
-                yield return transfer;
-            IEnumerable<BoundStatement> children = statement switch
-            {
-                BoundIfStatement value => value.ThenStatements.Concat(value.ElseIfClauses.SelectMany(clause => clause.Statements)).Concat(value.ElseStatements),
-                BoundWhileStatement value => value.Statements,
-                BoundDoStatement value => value.Statements,
-                BoundForStatement value => value.Statements,
-                BoundForAllStatement value => value.Statements,
-                BoundSelectStatement value => value.Cases.SelectMany(clause => clause.Statements),
-                _ => []
-            };
-            foreach (var child in children)
-                foreach (var nested in Collect([child]))
-                    yield return nested;
-        }
-    }
+        => BoundStatementTraversal.Descendants(statements).OfType<BoundGoToStatement>();
 
     private bool EmitFlatControlFlow(BoundEmissionContext output, BoundStatement statement, int indent)
     {

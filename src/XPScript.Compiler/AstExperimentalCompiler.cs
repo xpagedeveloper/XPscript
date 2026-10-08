@@ -15,10 +15,6 @@ internal static class AstExperimentalCompiler
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
-        // XPscript Static locals have procedure lifetime. The AST path keeps
-        // the declaration as a normal Variant local for now, while preserving
-        // the declaration and its Empty initialization semantics.
-        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Static\s+", "${indent}Dim ");
         if (source.Contains("XPImage", StringComparison.OrdinalIgnoreCase))
         {
             source = Regex.Replace(source, @"\bXPImage\.FromBytes\s*\((?<value>[^)]*)\)", "AstImageFromBytes(${value})", RegexOptions.IgnoreCase);
@@ -298,7 +294,9 @@ internal static class AstExperimentalCompiler
                 if (!labels.ContainsKey(transfer.Target.Text))
                     throw new CompilerException($"Unknown label '{transfer.Target.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
             var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType),
-                procedureFunction is not null, true, procedureFunction?.Identifier.Text, result);
+                procedureFunction is not null, true, procedureFunction?.Identifier.Text, result,
+                (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
+                "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName)) + ")");
             var bound = procedureStatements.Select(binder.Bind).OfType<BoundStatement>().ToList();
             if (binder.Diagnostics.Count > 0)
                 throw new CompilerException(string.Join(Environment.NewLine, binder.Diagnostics.Select(d => d.Message)), binder.Diagnostics[0].Code, "semantic");

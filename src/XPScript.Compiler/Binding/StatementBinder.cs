@@ -3,7 +3,8 @@ using XPScript.Compiler.Syntax;
 namespace XPScript.Compiler.Binding;
 
 public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false,
-    bool allowDynamicMembers = false, string? functionName = null, LocalSymbol? functionResult = null)
+    bool allowDynamicMembers = false, string? functionName = null, LocalSymbol? functionResult = null,
+    string? procedureIdentity = null)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly XpTypeSymbol? _returnType = returnType;
@@ -92,6 +93,21 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     {
         var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text, syntax.IsArray, syntax.ArrayLength, syntax.IsList);
         var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType);
+        if (syntax.IsStatic)
+        {
+            if (procedureIdentity is null || syntax.Initializer is not null || syntax.IsArray || syntax.IsList ||
+                type != typeof(long) && type != typeof(double) && type != typeof(bool) && type != typeof(string) && type != typeof(byte))
+            {
+                _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
+                    "AST Static currently requires a scalar declaration without an initializer in a named procedure.", syntax.Span));
+                return null;
+            }
+            // Include the complete procedure signature so overloads cannot share
+            // storage. Hashing keeps generated names valid and deterministic.
+            var identity = System.Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(procedureIdentity)));
+            local = local with { StaticStorageName = $"__xpsStatic_{identity}_{local.Name}" };
+        }
         if (!_symbols.TryDeclare(local, out var code, out var message))
         {
             if (_allowDynamicMembers && _symbols.TryLookup(local.Name, out _))

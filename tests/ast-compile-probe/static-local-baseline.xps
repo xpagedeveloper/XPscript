@@ -1,0 +1,10 @@
+Sub Count()
+    Static visits As Long
+    visits = visits + 1
+    Print visits
+End Sub
+
+Sub Main()
+    Call Count()
+    Call Count()
+End Sub
