@@ -50,14 +50,18 @@ public static class AndroidFormHost
                 {
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
                     "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120 },
+                    "Video" => new AndroidVideoControl { MinHeight = 180 },
                     _ => new TextBox()
                 };
 
                 if (field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
                     SetEditorValue(editor, value);
+                if (editor is AndroidVideoControl video && field.TryGetProperty("source", out var source) && source.ValueKind == JsonValueKind.String)
+                    video.Source = source.GetString() ?? string.Empty;
 
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
-                editors[name] = editor;
+                if (type is not "Video" and not "Separator" and not "Spacer" and not "Image")
+                    editors[name] = editor;
                 panel.Children.Add(editor);
 
                 var validationError = field.TryGetProperty("validationError", out var validationValue) ? validationValue.GetString() ?? string.Empty : string.Empty;
