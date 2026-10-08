@@ -18,6 +18,10 @@ internal static class AstExperimentalCompiler
             throw new CompilerException(
                 "AST On Error and Resume semantics are not implemented; the source was not lowered silently.",
                 CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+        if (Regex.IsMatch(source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]"))
+            throw new CompilerException(
+                "AST With and implicit member access are not implemented; the source was not lowered silently.",
+                CompilerDiagnosticCodes.InvalidSyntax, "semantic");
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
         if (source.Contains("XPImage", StringComparison.OrdinalIgnoreCase))
         {
@@ -44,10 +48,6 @@ internal static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?<![\w.])Input\$\s*\(\s*(?<count>[^,()]+)\s*,\s*#\s*(?<file>[^)]+)\)", "AstInputChars(${count}, ${file})", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"(?<!\w)#\s*", string.Empty);
         source = source.Replace("Error$", "ErrorValue()", StringComparison.OrdinalIgnoreCase);
-        source = Regex.Replace(source, @"(?im)^[ \t]*With\s+[A-Za-z_]\w*[ \t]*$", string.Empty);
-        source = Regex.Replace(source, @"(?im)^[ \t]*End\s+With[ \t]*$", string.Empty);
-        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)\.(?<member>[A-Za-z_]\w*)", "${indent}p.${member}");
-        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Print\s+\.[A-Za-z_]\w*\s*$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)p\.[A-Za-z_]\w*(?:\s*=.*)?$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Print\s+p\.[A-Za-z_]\w*\s*$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)ReDim\s+(?<preserve>Preserve\s+)?(?<name>[A-Za-z_]\w*)\s*\((?<bounds>[^)]*)\)(?:\s+As\s+[A-Za-z_]\w*)?\s*$", match =>

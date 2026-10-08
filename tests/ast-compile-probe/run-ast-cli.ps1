@@ -46,6 +46,8 @@ $unsupportedGoSub = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'unsup
 if ($LASTEXITCODE -ne 2 -or ($unsupportedGoSub -join "`n") -notmatch 'GoSub is not implemented in the AST compiler') { throw 'AST GoSub was not explicitly rejected.' }
 $unsupportedErrorHandling = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'on-error-error.xps') -o (Join-Path $output 'on-error-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedErrorHandling -join "`n") -notmatch 'AST On Error and Resume semantics are not implemented') { throw 'AST silently lowered unsupported error handling.' }
+$unsupportedWith = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'with-error.xps') -o (Join-Path $output 'with-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($unsupportedWith -join "`n") -notmatch 'AST With and implicit member access are not implemented') { throw 'AST silently lowered unsupported With/member access.' }
 $nestedOutput = Join-Path $output 'nested-goto'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-goto.xps') -o $nestedOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nested GoTo compilation failed.' }

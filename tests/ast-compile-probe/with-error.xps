@@ -1,0 +1,5 @@
+Sub Main()
+    With value
+        Print .Name
+    End With
+End Sub
