@@ -52,6 +52,12 @@ public sealed class StatementParser
 
     private StatementSyntax ParseCurrentStatement()
     {
+        if (Current.Kind == SyntaxKind.IdentifierToken && PeekKind(1) == SyntaxKind.ColonToken)
+        {
+            var identifier = NextToken();
+            var colon = Match(SyntaxKind.ColonToken);
+            return new LabelStatementSyntax(identifier, colon);
+        }
         if (Current.Kind == SyntaxKind.ClassKeyword)
         {
             var classKeyword = NextToken();

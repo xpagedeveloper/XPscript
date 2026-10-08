@@ -119,6 +119,7 @@ public enum SyntaxKind
     ResumeStatement,
     ErrorStatement,
     ReturnStatement,
+    LabelStatement,
     ExitStatement,
     IfStatement,
     AssignmentStatement,
