@@ -15,6 +15,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  solution-build:
+    name: Visual Studio solution build (${{ matrix.configuration }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build complete solution before runtime tests
+        run: dotnet build ./XPScriptCompiler.slnx -c ${{ matrix.configuration }} --nologo
+
   openapi-branch-smoke:
     name: OpenAPI branch smoke (${{ matrix.name }})
     if: github.event_name == 'push' && github.ref == 'refs/heads/openapi-client-v2'
