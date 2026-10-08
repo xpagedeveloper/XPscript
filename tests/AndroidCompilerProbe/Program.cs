@@ -442,6 +442,19 @@ if (!browserWasmSource.Contains("UIFormAppAssets.CopyAssetsToDirectory(sourcePat
 var compilerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerDriver.cs"));
 if (!compilerSource.Contains("<PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"12.0.1\" />", StringComparison.Ordinal))
     throw new Exception("Android UIForm generated project must include Avalonia.Controls.WebView for shared WebView support.");
+if (!compilerSource.Contains("<PackageReference Include=\"Xamarin.AndroidX.Media3.ExoPlayer\" Version=\"1.11.1\" />", StringComparison.Ordinal) ||
+    !compilerSource.Contains("<PackageReference Include=\"Xamarin.AndroidX.Media3.Ui\" Version=\"1.11.1\" />", StringComparison.Ordinal))
+    throw new Exception("Android UIForm generated project must include the synchronized Media3 dependencies.");
+
+var androidMedia3Source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidMedia3Player.cs"));
+foreach (var expected in new[] { "AndroidX.Media3.ExoPlayer", "AndroidX.Media3.UI", "IExoPlayer", "ExoPlayerBuilder", "global::Android.Net.Uri", "Media3 source must be an absolute" })
+    if (!androidMedia3Source.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android Media3 player regression is missing: " + expected);
+
+var generatedVideoHost = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "AndroidUIHostSource.cs"));
+foreach (var expected in new[] { "AndroidX.Media3.ExoPlayer", "AndroidX.Media3.UI", "GeneratedAndroidMedia3Player", "GeneratedAndroidVideoControl", "global::Android.Net.Uri" })
+    if (!generatedVideoHost.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Generated Android Video host regression is missing: " + expected);
 
 if (!compilerSource.Contains("outputPath += \".apk\";", StringComparison.Ordinal))
     throw new Exception("Android compiler output is not normalized to an .apk path.");

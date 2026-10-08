@@ -66,6 +66,8 @@ The emulator must be listed as `device`, not `offline`. Use `android-x64` when c
 
 The repository's Android CI and local emulator smoke path use an x86_64 API 30 emulator. An emulator proves packaging, installation, launch and log output. It does not replace physical-device testing for USB, camera or hardware-specific behavior.
 
+The Android GitHub Actions workflow is intentionally manual-only. Start `Android Build` with `workflow_dispatch` after selecting the branch to verify; ordinary pushes and pull requests do not start it automatically.
+
 ## Prepare a physical Android device
 
 1. Open Settings > About phone and enable Developer options by tapping Build number repeatedly.
