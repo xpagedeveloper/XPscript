@@ -227,6 +227,42 @@ internal sealed class GeneratedAndroidVideoControl : NativeControlHost
     }
 }
 
+internal sealed class GeneratedAndroidAudioControl : Control, IDisposable
+{
+    private readonly GeneratedAndroidMedia3Player _mediaPlayer;
+    private string _source = string.Empty;
+    private bool _disposed;
+
+    public GeneratedAndroidAudioControl()
+    {
+        var context = global::Android.App.Application.Context
+            ?? throw new InvalidOperationException("Android application context is unavailable.");
+        _mediaPlayer = new GeneratedAndroidMedia3Player(context);
+        IsVisible = false;
+        Width = 0;
+        Height = 0;
+    }
+
+    public string Source
+    {
+        get => _source;
+        set
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _source = value ?? string.Empty;
+            if (_source.Length > 0) _mediaPlayer.SetSource(_source);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _mediaPlayer.Dispose();
+        GC.SuppressFinalize(this);
+    }
+}
+
 public static class AndroidFormHost
 {
     private static readonly ConcurrentDictionary<string, Avalonia.Controls.NativeWebView> WebViews = new(StringComparer.Ordinal);
@@ -351,6 +387,7 @@ public static class AndroidFormHost
                 {
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
                     "Video" => CreateVideo(field),
+            "Audio" => CreateAudio(field),
                     "WebView" => CreateWebView(field, instanceId, name),
                     "DateField" => new Avalonia.Controls.DatePicker(),
                     "TimeField" => new Avalonia.Controls.TimePicker(),
@@ -631,6 +668,14 @@ public static class AndroidFormHost
         if (field.TryGetProperty("source", out var source) && source.ValueKind == JsonValueKind.String)
             view.Source = source.GetString() ?? string.Empty;
         return view;
+    }
+
+    private static Control CreateAudio(JsonElement field)
+    {
+        var audio = new GeneratedAndroidAudioControl();
+        if (field.TryGetProperty("source", out var source) && source.ValueKind == JsonValueKind.String)
+            audio.Source = source.GetString() ?? string.Empty;
+        return audio;
     }
 
     private static Control CreateRadioGroup(IReadOnlyList<string> options)
