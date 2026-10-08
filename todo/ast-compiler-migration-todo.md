@@ -39,7 +39,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 - [x] Map existing source-map behavior and requirements in `docs/ast-source-mapping.md`.
 - [x] Map compiler diagnostics and machine/MCP diagnostic contracts in `docs/ast-diagnostic-contract.md`.
 - [x] Inventory compiler tests by language feature and compiler phase in `docs/ast-test-coverage-map.md`.
-- [ ] Document syntax that is intentionally compatible with LotusScript/VB-like semantics.
+- [x] Document syntax that is intentionally compatible with LotusScript/VB-like semantics in `docs/ast-language-compatibility-rules.md`.
 - [ ] Produce a migration-risk list before replacing any production parsing path.
 
 ## Migration rules
