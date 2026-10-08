@@ -60,6 +60,8 @@ End Function
 
 Use block control flow unless a repository sample proves a shorter form is supported:
 
+`GoTo label` targets a case-insensitive label in the same Sub or Function. Experimental `ast-compile` rejects GoSub as unimplemented; use `Call routine(...)` for a Sub or a Function expression instead, passing required values as parameters. GoTo coverage includes If/ElseIf/Else, While, Do and Select; transfers involving For/ForAll remain migration work. See `docs/ast-csharp-emitter.md` and the executable GoTo fixtures in `tests/ast-compile-probe`.
+
 ```xpscript
 If value > 0 Then
     Print "positive"

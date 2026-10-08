@@ -5,8 +5,6 @@ namespace XPScript.Compiler.Binding;
 public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false,
     bool allowDynamicMembers = false, string? functionName = null, LocalSymbol? functionResult = null)
 {
-    private int _nextGoSubId;
-    private bool _hasGoSub;
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly XpTypeSymbol? _returnType = returnType;
     private readonly bool _allowsReturnValue = allowsReturnValue;
@@ -42,12 +40,13 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         return bound;
     }
 
-    private BoundStatement BindTransfer(GoToStatementSyntax syntax)
+    private BoundStatement? BindTransfer(GoToStatementSyntax syntax)
     {
         if (!syntax.IsGoSub)
-            return new BoundGoToStatement(syntax.Target.Text, false);
-        _hasGoSub = true;
-        return new BoundGoToStatement(syntax.Target.Text, true, ++_nextGoSubId);
+            return new BoundGoToStatement(syntax.Target.Text);
+        _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
+            "GoSub is not implemented in the AST compiler. Use a Sub or Function instead.", syntax.Span));
+        return null;
     }
 
     private BoundStatement? BindUnsupported(StatementSyntax syntax)
@@ -314,8 +313,6 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement BindReturn(ReturnStatementSyntax syntax)
     {
-        if (!_allowsReturnValue && syntax.Expression is null && _hasGoSub)
-            return new BoundGoSubReturnStatement();
         if (!_allowsReturnValue)
         {
             BoundExpression? expression = null;

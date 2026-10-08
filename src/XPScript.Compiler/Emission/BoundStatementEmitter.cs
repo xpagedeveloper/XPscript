@@ -7,14 +7,12 @@ namespace XPScript.Compiler.Emission;
 public sealed class BoundStatementEmitter
 {
     private readonly BoundExpressionEmitter _expressions = new();
-    private IReadOnlyList<int> _goSubIds = [];
+    private bool _flatControlFlow;
 
     public string Emit(IReadOnlyList<BoundStatement> statements)
     {
-        _goSubIds = Collect(statements).Where(x => x.IsGoSub).Select(x => x.Id).Distinct().OrderBy(x => x).ToArray();
+        _flatControlFlow = Collect(statements).Any();
         var output = new BoundEmissionContext(statements);
-        if (_goSubIds.Count > 0)
-            output.Write("var __xps_gosub = new System.Collections.Generic.Stack<int>();", 0);
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
         return output.Finish().Code;
@@ -22,12 +20,10 @@ public sealed class BoundStatementEmitter
 
     public BoundEmissionResult EmitWithSourceMap(IReadOnlyList<BoundStatement> statements, string source, string sourcePath)
     {
-        _goSubIds = Collect(statements).Where(x => x.IsGoSub).Select(x => x.Id).Distinct().OrderBy(x => x).ToArray();
+        _flatControlFlow = Collect(statements).Any();
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var output = new BoundEmissionContext(statements, source, sourcePath);
-        if (_goSubIds.Count > 0)
-            output.Write("var __xps_gosub = new System.Collections.Generic.Stack<int>();", 0);
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
         return output.Finish();
@@ -36,20 +32,17 @@ public sealed class BoundStatementEmitter
     private void EmitStatement(BoundEmissionContext output, BoundStatement statement, int indent)
     {
         void Line(string text) => output.Write(text, indent, statement.Span);
+        // XPscript labels have procedure scope. Keep continuation labels outside
+        // C# blocks so GoTo can target labels in any branch of this procedure.
+        if (_flatControlFlow && EmitFlatControlFlow(output, statement, indent))
+            return;
         switch (statement)
         {
             case BoundLabelStatement label:
                 Line($"{Label(label.Name)}:;");
                 break;
-            case BoundGoToStatement transfer when !transfer.IsGoSub:
-                Line($"goto {Label(transfer.Target)};");
-                break;
             case BoundGoToStatement transfer:
-                Line($"__xps_gosub.Push({transfer.Id}); goto {Label(transfer.Target)}; __xps_gosub_return_{transfer.Id}:;");
-                break;
-            case BoundGoSubReturnStatement:
-                var cases = string.Join(" ", _goSubIds.Select(id => $"case {id}: goto __xps_gosub_return_{id};"));
-                Line($"switch (__xps_gosub.Pop()) {{ {cases} default: return; }}");
+                Line($"goto {Label(transfer.Target)};");
                 break;
             case BoundNoOpStatement:
                 break;
@@ -168,7 +161,7 @@ public sealed class BoundStatementEmitter
         }
     }
 
-    private static string Label(string name) => "__xps_label_" + string.Concat(name.Select(ch => char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_'));
+    private static string Label(string name) => "__xps_label_" + name.ToUpperInvariant();
 
     private static IEnumerable<BoundGoToStatement> Collect(IEnumerable<BoundStatement> statements)
     {
@@ -176,11 +169,82 @@ public sealed class BoundStatementEmitter
         {
             if (statement is BoundGoToStatement transfer)
                 yield return transfer;
-            foreach (var child in statement.GetType().GetProperties()
-                         .Where(property => typeof(IEnumerable<BoundStatement>).IsAssignableFrom(property.PropertyType))
-                         .SelectMany(property => (IEnumerable<BoundStatement>?)property.GetValue(statement) ?? []))
+            IEnumerable<BoundStatement> children = statement switch
+            {
+                BoundIfStatement value => value.ThenStatements.Concat(value.ElseIfClauses.SelectMany(clause => clause.Statements)).Concat(value.ElseStatements),
+                BoundWhileStatement value => value.Statements,
+                BoundDoStatement value => value.Statements,
+                BoundForStatement value => value.Statements,
+                BoundForAllStatement value => value.Statements,
+                BoundSelectStatement value => value.Cases.SelectMany(clause => clause.Statements),
+                _ => []
+            };
+            foreach (var child in children)
                 foreach (var nested in Collect([child]))
                     yield return nested;
+        }
+    }
+
+    private bool EmitFlatControlFlow(BoundEmissionContext output, BoundStatement statement, int indent)
+    {
+        void Line(string text, TextSpan? span = null) => output.Write(text, indent, span ?? statement.Span);
+        void Body(IEnumerable<BoundStatement> body)
+        {
+            foreach (var child in body) EmitStatement(output, child, indent);
+        }
+        switch (statement)
+        {
+            case BoundIfStatement value:
+                var end = output.Temporary();
+                var branches = new[] { new BoundElseIfClause(value.Condition, value.ThenStatements) { Span = value.Span } }.Concat(value.ElseIfClauses);
+                foreach (var branch in branches)
+                {
+                    var next = output.Temporary();
+                    Line($"if (!({Condition(branch.Condition)})) goto {next};", branch.Span);
+                    Body(branch.Statements);
+                    Line($"goto {end};");
+                    Line($"{next}:;");
+                }
+                Body(value.ElseStatements);
+                Line($"{end}:;");
+                return true;
+            case BoundWhileStatement value:
+                var start = output.Temporary();
+                var exit = output.Temporary();
+                Line($"{start}:;");
+                Line($"if (!({Condition(value.Condition)})) goto {exit};");
+                Body(value.Statements);
+                Line($"goto {start};");
+                Line($"{exit}:;");
+                return true;
+            case BoundDoStatement value:
+                var loop = output.Temporary();
+                var done = output.Temporary();
+                var condition = value.Condition is null ? "true" : Condition(value.Condition);
+                if (value.ConditionKind == SyntaxKind.UntilKeyword) condition = $"!({condition})";
+                Line($"{loop}:;");
+                if (!value.IsPostTest) Line($"if (!({condition})) goto {done};");
+                Body(value.Statements);
+                Line(value.IsPostTest ? $"if ({condition}) goto {loop};" : $"goto {loop};");
+                Line($"{done}:;");
+                return true;
+            case BoundSelectStatement value:
+                var selector = output.Temporary();
+                var selectEnd = output.Temporary();
+                Line($"var {selector} = {_expressions.Emit(value.Expression)};");
+                foreach (var clause in value.Cases)
+                {
+                    var nextCase = output.Temporary();
+                    if (clause.CaseKind != SelectCaseKind.Else)
+                        Line($"if (!({CaseCondition(selector, clause)})) goto {nextCase};", clause.Span);
+                    Body(clause.Statements);
+                    Line($"goto {selectEnd};");
+                    Line($"{nextCase}:;");
+                }
+                Line($"{selectEnd}:;");
+                return true;
+            default:
+                return false;
         }
     }
 

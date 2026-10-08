@@ -42,8 +42,14 @@ The print-parentheses-literal.xps follow-up is fixed: published main and AST bot
 
 The reserved-compiler-identifier.xps fixture now produces the same reserved-identifier rejection through AST CLI and MCP as the legacy rule for `__xps` user names. The published executable remains unchanged.
 
-For `unsupported-goto.xps`, published main compiles and runs with output `done`. AST GoTo/GoSub lowering remains open and is tracked as a required compatibility task; the fixture must become a passing AST regression when that lowering is implemented.
+For `unsupported-goto.xps`, published main compiles and runs with output `done`. AST now emits real GoTo transfers. GoSub has been excluded from AST support by user decision; see below.
+
+This GoTo comparison was repeated after removing GoSub: both preserved published main (framework-dependent output) and AST compiled and executed the fixture with exit code 0 and output `done`.
 
 The broader audit identified additional AST-only semantic loss: Resume/On Error and implicit member statements are rewritten to no-op calls, while XPImage operations are replaced with object construction. These are recorded as separate open parity tasks rather than treated as equivalent behavior.
 
-The concrete `gosub-parity-audit.xps` comparison produces `worker` then `after` with published main; the current AST output is only `after`, confirming that GoSub is silently discarded rather than merely diagnosed.
+The original `gosub-parity-audit.xps` comparison produced `worker` then `after` with published main and only `after` with AST. AST now explicitly rejects GoSub instead of silently discarding it.
+
+## Nested GoSub continuations
+
+During the 2026-10-08 investigation, a temporary six-call GoSub fixture (ElseIf, While, post-test Do and Select, followed by a nested GoTo) failed compilation with the preserved published executable: CS0159 reported missing `__ls_gosub_return_*` labels and CS0163 reported case fall-through. Flat AST branches passed that fixture and an expanded ten-call version. The user subsequently chose to remove GoSub support and use Sub/Function calls instead. The final implementation removes the experimental GoSub stack and continuations, explicitly rejects GoSub and retains flat branches for procedure-scoped GoTo. The temporary GoSub execution fixture was replaced by a permanent rejection fixture. The published executable's SHA-256 remains unchanged.

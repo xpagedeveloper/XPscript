@@ -65,7 +65,7 @@ This distinction also applies to properties, methods, parameters, locals, enum m
 | `Do Until` | `Do Until condition ... Loop` | loop condition. | Repeats until condition becomes true. | [statement-layout-audit.xps](../samples/statement-layout-audit.xps) |
 | `While` / `Wend` | `While condition ... Wend` | loop condition. | Legacy-style while loop. | [statement-layout-audit.xps](../samples/statement-layout-audit.xps) |
 | `GoTo` | `GoTo label` | label in current procedure. | Jumps to a label. | [core-language.xps](../samples/core-language.xps) |
-| `GoSub` | `GoSub label` | label in current procedure. | Calls a label block and returns with `Return`. | [core-language.xps](../samples/core-language.xps) |
+| `GoSub` | `GoSub label` | label in current procedure. | Legacy compiler: calls a label block and returns with `Return`. Experimental AST rejects GoSub; use a Sub or Function call instead. See [AST emission](ast-csharp-emitter.md). | [core-language.xps](../samples/core-language.xps) |
 | `Return` | `Return` | none | Returns from a GoSub label block to the calling statement. | [core-language.xps](../samples/core-language.xps) |
 | `On Error GoTo` | `On Error GoTo label` | error-handler label. | Installs procedure error handler. | [core-language.xps](../samples/core-language.xps) |
 | `On Error Resume Next` | `On Error Resume Next` | none | Continues at the next statement after runtime errors. | [nested-resume-targets.xps](../samples/nested-resume-targets.xps) |

@@ -1,0 +1,17 @@
+Function Result() As Integer
+    GoTo finished
+    If False Then
+        Print "wrong"
+    Else
+finished:
+        Result = 7
+    End If
+End Function
+
+Sub Main()
+    Print Result()
+    GoTo FINISHED
+    Print "wrong"
+finished:
+    Print "GOTO_PROCEDURE_SCOPE_OK"
+End Sub

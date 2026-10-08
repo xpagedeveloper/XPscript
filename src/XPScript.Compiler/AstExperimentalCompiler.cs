@@ -294,8 +294,8 @@ internal static class AstExperimentalCompiler
                 .FirstOrDefault(group => group.Count() > 1)?.Skip(1).FirstOrDefault();
             if (duplicateLabel is not null)
                 throw new CompilerException($"Duplicate label '{duplicateLabel.Identifier.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
-            foreach (var transfer in allProcedureStatements.OfType<GoToStatementSyntax>())
-                if (!labels.ContainsKey(transfer.Target.Text) && !Regex.IsMatch(fullSource, $@"(?im)^\s*{Regex.Escape(transfer.Target.Text)}\s*:\s*$"))
+            foreach (var transfer in allProcedureStatements.OfType<GoToStatementSyntax>().Where(transfer => !transfer.IsGoSub))
+                if (!labels.ContainsKey(transfer.Target.Text))
                     throw new CompilerException($"Unknown label '{transfer.Target.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
             var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType),
                 procedureFunction is not null, true, procedureFunction?.Identifier.Text, result);
@@ -794,9 +794,19 @@ internal static class Program
         foreach (var statement in statements)
         {
             yield return statement;
-            foreach (var child in statement.GetType().GetProperties()
-                         .Where(property => typeof(IEnumerable<StatementSyntax>).IsAssignableFrom(property.PropertyType))
-                         .SelectMany(property => (IEnumerable<StatementSyntax>?)property.GetValue(statement) ?? []))
+            // Labels belong to this procedure, including branch clauses that are
+            // not themselves statements. Never search the full source for targets.
+            IEnumerable<StatementSyntax> children = statement switch
+            {
+                IfStatementSyntax value => value.ThenStatements.Concat(value.ElseIfClauses.SelectMany(clause => clause.Statements)).Concat(value.ElseStatements),
+                WhileStatementSyntax value => value.Statements,
+                DoStatementSyntax value => value.Statements,
+                ForStatementSyntax value => value.Statements,
+                ForAllStatementSyntax value => value.Statements,
+                SelectStatementSyntax value => value.Cases.SelectMany(clause => clause.Statements),
+                _ => []
+            };
+            foreach (var child in children)
                 foreach (var nested in FlattenStatements([child]))
                     yield return nested;
         }
