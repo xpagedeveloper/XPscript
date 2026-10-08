@@ -400,7 +400,7 @@ foreach (var expected in new[] { "\"assets/\" + normalized", "UIForm WebView rel
 foreach (var expected in new[] { "Type is \"Video\" or \"Audio\"", "AddAudio(object? name)", "AddAudio(object? name, object? label)", "UIForm media Source uses an unsupported URI scheme" })
     if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm Audio API regression is missing: " + expected);
-foreach (var expected in new[] { "Position", "Duration", "Volume", "AutoPlay", "PlaybackRate", "IsPlaying", "void Play()", "void Pause()", "void Stop()" })
+foreach (var expected in new[] { "Position", "Duration", "Volume", "AutoPlay", "PlaybackRate", "IsPlaying", "void Play()", "void Pause()", "public bool Stop()" })
     if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm media playback API regression is missing: " + expected);
 var callbackModelSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormCallbackModelPostProcessor.cs"));

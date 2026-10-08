@@ -117,7 +117,6 @@ internal sealed class XPScriptUIField
     public bool IsPlaying { get { EnsureMedia(); return _mediaIsPlaying; } }
     public void Play() { EnsureMedia(); _mediaIsPlaying = true; }
     public void Pause() { EnsureMedia(); _mediaIsPlaying = false; }
-    public void Stop() { EnsureMedia(); _mediaIsPlaying = false; _mediaPosition = 0; }
     public string Html
     {
         get { EnsureWebView(); return _webViewHtml; }
@@ -144,7 +143,17 @@ internal sealed class XPScriptUIField
     public bool GoBack() { EnsureWebView(); return WebViewCommand("back", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
     public bool GoForward() { EnsureWebView(); return WebViewCommand("forward", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
     public bool Refresh() { EnsureWebView(); return WebViewCommand("refresh", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
-    public bool Stop() { EnsureWebView(); return WebViewCommand("stop", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
+    public bool Stop()
+    {
+        if (Type is "Video" or "Audio")
+        {
+            _mediaIsPlaying = false;
+            _mediaPosition = 0;
+            return true;
+        }
+        EnsureWebView();
+        return WebViewCommand("stop", null).Equals("true", StringComparison.OrdinalIgnoreCase);
+    }
     public void ShowPrintUI() { EnsureWebView(); _ = WebViewCommand("print", null); }
     public void PrintToPdf(object? path) { EnsureWebView(); _ = WebViewCommand("pdf", XPScriptRuntime.CStr(path)); }
     public void Copy() { EnsureWebView(); _ = WebViewCommand("copy", null); }

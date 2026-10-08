@@ -102,7 +102,7 @@ internal sealed class UIFormMediaButtonsPostProcessor
                 "image-api");
         }
 
-        if (!generated.Contains("private static string NormalizeMediaSource", StringComparison.Ordinal))
+        if (!generated.Contains("private static string NormalizeMediaSource(object? value, string kind)", StringComparison.Ordinal))
         {
             var allowLocalFileUris = !_runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase);
             generated = ReplaceOnce(generated,
