@@ -17,6 +17,8 @@ public enum BoundNodeKind
     ErrorStatement,
     ExpressionStatement,
     ReturnStatement,
+    LabelStatement,
+    GoToStatement,
     IfStatement,
     ForStatement,
     ForAllStatement,

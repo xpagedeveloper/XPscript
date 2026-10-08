@@ -31,6 +31,14 @@ public sealed class BoundStatementEmitter
         void Line(string text) => output.Write(text, indent, statement.Span);
         switch (statement)
         {
+            case BoundLabelStatement label:
+                Line($"{Label(label.Name)}:;");
+                break;
+            case BoundGoToStatement transfer when !transfer.IsGoSub:
+                Line($"goto {Label(transfer.Target)};");
+                break;
+            case BoundGoToStatement:
+                throw new NotSupportedException("GoSub requires structured return-stack lowering.");
             case BoundNoOpStatement:
                 break;
             case BoundAssignmentStatement assignment:
@@ -147,6 +155,8 @@ public sealed class BoundStatementEmitter
                 throw new NotSupportedException($"Statement emission is not implemented for {statement.Kind}.");
         }
     }
+
+    private static string Label(string name) => "__xps_label_" + string.Concat(name.Select(ch => char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_'));
 
     private string Condition(BoundExpression expression) => expression.Type == typeof(bool)
         ? _expressions.Emit(expression)
