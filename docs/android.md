@@ -20,6 +20,36 @@ Run `Android/setup-android-dev.xps` on Windows to install or verify the .NET SDK
 
 If Android Studio's SDK Manager has not initialized the SDK yet, open it and install the SDK Platform, Platform-Tools, Build-Tools, Emulator and one x86_64 system image. Accept the Android SDK licenses before building.
 
+## Linux command-line setup
+
+The local .NET 10 Android build also requires a complete JDK, not only a JRE. The current verified layout is:
+
+- .NET SDK and Android workload: `/workspace/.dotnet` and `android`.
+- JDK 21: `/workspace/jdk21` (`JAVA_HOME` must point there).
+- Android SDK: `/workspace/android-sdk`.
+- Android Platform 36 and Build-Tools 36.0.0 for .NET Android compilation.
+- Android Platform 30, Build-Tools 35.0.0, Platform-Tools, Emulator and the Google APIs API 30 x86_64 image for the emulator test.
+- AVD: `Pixel_5` under `$ANDROID_USER_HOME/avd`.
+
+For this layout, configure the shell before building:
+
+```bash
+export HOME=/workspace
+export DOTNET_ROOT=/workspace/.dotnet
+export DOTNET_CLI_HOME=/workspace
+export JAVA_HOME=/workspace/jdk21
+export ANDROID_SDK_ROOT=/workspace/android-sdk
+export ANDROID_HOME=/workspace/android-sdk
+export ANDROID_USER_HOME=/workspace/.android
+export PATH="$DOTNET_ROOT:$JAVA_HOME/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$PATH"
+```
+
+The verified local dependency build is:
+
+```bash
+dotnet build src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release -r android-x64 -p:JavaSdkDirectory="$JAVA_HOME"
+```
+
 ## Configure an emulator
 
 1. Open Android Studio and start Device Manager.
