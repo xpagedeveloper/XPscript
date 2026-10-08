@@ -50,6 +50,8 @@ End Function
 
 Optional parameters are supported:
 
+For the experimental `ast-compile` path, omitted trailing Optional parameters execute real procedure bodies with fresh storage for omitted ByRef defaults. Explicit empty argument slots and complete constant/default validation remain pending; see `docs/ast-csharp-emitter.md`. Do not assume full Optional compatibility from this experimental subset.
+
 ```xpscript
 Function Greeting(name As String, Optional prefix As String = "Hello") As String
     Greeting = prefix & " " & name

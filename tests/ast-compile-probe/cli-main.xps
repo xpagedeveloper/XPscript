@@ -1,4 +1,14 @@
 Sub Main()
+    Dim optionalValue As Long
+    optionalValue = 10
+    Call OptionalIncrease(optionalValue)
+    Dim explicitDefault As Long
+    explicitDefault = 8
+    Dim fullSum As Long
+    fullSum = OptionalSum(4, explicitDefault)
+    If OptionalSum() = 5 And OptionalSum(4) = 7 And OptionalSum() = 5 And optionalValue = 12 And fullSum = 12 And explicitDefault = 12 And OptionalText() = "Hello" And OptionalZero() = 0 And OptionalCollision(4) = 7 Then
+        Print "AST_OPTIONAL_CALL_OK"
+    End If
     If Accumulate(3) = 7 And DefaultNumber() = 0 And Factorial(4) = 24 Then
         Print "AST_FUNCTION_RESULT_OK"
     End If
@@ -35,6 +45,27 @@ Sub Main()
         Print item
     End ForAll
     Exit Sub
+End Sub
+
+Function OptionalText(Optional ByVal text As String = "Hello") As String
+    OptionalText = text
+End Function
+
+Function OptionalZero(Optional ByRef value As Long) As Long
+    OptionalZero = value
+End Function
+
+Function OptionalCollision(ByVal __xpsOptional1 As Long, Optional ByRef other As Long = 3) As Long
+    OptionalCollision = __xpsOptional1 + other
+End Function
+
+Function OptionalSum(Optional ByVal first As Long = 2, Optional ByRef second As Long = 3) As Long
+    second = second + first
+    OptionalSum = second
+End Function
+
+Sub OptionalIncrease(ByRef value As Long, Optional ByRef increment As Long = 2)
+    value = value + increment
 End Sub
 
 Function Accumulate(ByVal count As Long) As Long

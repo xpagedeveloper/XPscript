@@ -1,0 +1,10 @@
+Sub Main()
+    Dim value As Long
+    value = 10
+    Call IncreaseOptional(value)
+    If value = 12 Then Print "OPTIONAL_BYREF_COMPATIBILITY_OK"
+End Sub
+
+Sub IncreaseOptional(ByRef value As Long, Optional ByRef increment As Long = 2)
+    value = value + increment
+End Sub

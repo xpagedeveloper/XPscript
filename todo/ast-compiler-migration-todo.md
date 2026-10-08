@@ -281,8 +281,12 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [ ] Model Optional defaults in syntax/binding/emission instead of generating no-op overloads.
 - [x] Preserve Optional flags, parameter modes and default-expression syntax with absolute spans; handle nested default-expression commas in declaration parsing.
 - [ ] Validate Optional ordering, default types/constant rules and supplied/omitted arguments in the binder; lower omitted ByRef defaults through temporary locals.
+- [x] Execute omitted trailing Optional arguments through bound forwarding bodies and fresh typed locals; preserve supplied ByRef aliases and Function results, with repeat-call and generated-name collision regressions.
+- [ ] Complete Optional declaration validation and explicit empty argument slots, constant/default-name binding, overload conflicts and diagnostic source mapping; verify legacy and machine-interface parity before closing Optional migration.
+- [ ] Fix the legacy Optional/ByRef runtime comparison failure (`'long' does not contain a definition for 'Value'`), isolated in `tests/ast-compile-probe/optional-byref-compatibility.xps`; compile succeeds but executing the legacy output fails, while AST execution passes. ByVal Optional comparison passed both paths. Resolve parity before claiming full migration.
 - [x] Replace regex-based function-result rewriting with structural return-local lowering, preserving execution after result assignments; cover Exit Function, fall-through, recursion and generated-name collisions in the experimental CLI.
 - [ ] Reject unsupported syntax rather than ignoring parser diagnostics or lowering statements to no-ops.
+- [ ] Apply production reserved-identifier validation in the AST path: legacy rejects user identifiers beginning with compiler-owned `__xps`, while the experimental path currently accepts them. Keep internal name-collision coverage at the lowering boundary.
 - [x] Restrict dynamic call fallback to genuinely dynamic receivers; invalid calls to declared procedures must produce binder overload diagnostics.
 - [x] Reject unmatched declared overloads with XPS2004 even when dynamic member binding is enabled; regress arity, argument type, ByRef mode and source span while retaining Variant member calls.
 - [x] Restrict unresolved member fallback to Variant receivers rather than every object-backed user type; regress both properties and calls with XPS2009 and member source spans.

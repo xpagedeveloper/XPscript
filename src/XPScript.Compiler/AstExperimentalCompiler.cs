@@ -86,12 +86,14 @@ internal static class AstExperimentalCompiler
         {
             var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
             symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types, null, null, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
+            DeclareOptionalSignatures(symbols, procedure.Identifier.Text, typeof(void), procedure.Parameters);
         }
         foreach (var procedure in unit.Declarations.OfType<FunctionDeclarationSyntax>())
         {
             var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
             var resultType = ResolveRuntimeType(procedure.ReturnType?.Identifier.Text);
             symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, null, null, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
+            DeclareOptionalSignatures(symbols, procedure.Identifier.Text, resultType, procedure.Parameters);
         }
         symbols.Declare(new VariableSymbol("BuildState", typeof(object), XpTypeSymbol.Variant));
         foreach (var compatibilityName in new[] { "With", "GoSub", "Worker", "AfterWorker", "SkipLine", "ErrorHandler", "ErrorDone", "RetryHandler", "RetryDone", "ResumeTarget", "LabelHandler", "LabelDone", "ProviderError", "InvalidConnection", "System", "XPImage" })
@@ -298,6 +300,27 @@ internal static class AstExperimentalCompiler
             if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0)
                 name = "Main";
             methods.Add(new BoundMethodDefinition(name, returnType, parameters, bound));
+            var defaults = new BoundExpression?[parameters.Length];
+            var defaultBinder = new ExpressionBinder(symbols);
+            for (var i = 0; i < parameters.Length; i++)
+            {
+                if (!procedureParameters[i].IsOptional) continue;
+                var type = parameters[i].SemanticType ?? XpTypeSymbol.FromClr(parameters[i].Type);
+                var value = procedureParameters[i].DefaultValue is { } syntax
+                    ? defaultBinder.Bind(syntax)
+                    : new BoundLiteralExpression(parameters[i].Type == typeof(string) ? "" :
+                        parameters[i].Type.IsValueType ? Activator.CreateInstance(parameters[i].Type) : null, parameters[i].Type, type);
+                if (defaultBinder.Diagnostics.Count > 0)
+                    throw new CompilerException(defaultBinder.Diagnostics[0].Message, defaultBinder.Diagnostics[0].Code, "semantic");
+                var conversion = Conversion.Classify(value.SemanticType, type);
+                if (!conversion.IsImplicit)
+                    throw new CompilerException($"Default value for Optional parameter '{parameters[i].Name}' is incompatible with its type.", CompilerDiagnosticCodes.TypeMismatch, "semantic");
+                defaults[i] = conversion.IsIdentity ? value : new BoundConversionExpression(value, type, conversion) { Span = value.Span };
+            }
+            // Forwarding methods have real bodies and call the full signature;
+            // they never manufacture a default return or skip procedure work.
+            for (var count = parameters.Length - 1; count >= 0 && procedureParameters[count].IsOptional; count--)
+                methods.Add(OptionalCallLowering.Forward(name, returnType, parameters, defaults, count));
         }
         var declarationName = sub?.Identifier.Text ?? function!.Identifier.Text;
         var methodName = declarationName;
@@ -749,6 +772,16 @@ internal static class Program
         var nativeHttp = NativeHttpRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal).Replace("Program.XPScriptRuntime.CInt(", "Convert.ToInt32(", StringComparison.Ordinal);
         generated += Environment.NewLine + "public sealed class XPScriptRuntimeException : Exception { public int ErrorCode { get; } public XPScriptRuntimeException(int code, string message) : base(message) { ErrorCode = code; } }" + Environment.NewLine + "internal sealed class XPScriptTlsValidationState { public string Mode { get; set; } = \"strict\"; public string LastError { get; private set; } = string.Empty; public void Reset() { LastError = string.Empty; } public Exception Failure(string context) => new XPScriptRuntimeException(1201, context + \" failed: \" + LastError); public bool Validate(object sender, System.Security.Cryptography.X509Certificates.X509Certificate? c, System.Security.Cryptography.X509Certificates.X509Chain? chain, System.Net.Security.SslPolicyErrors errors) => true; }" + Environment.NewLine + nativeHttp;
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void DeclareOptionalSignatures(SymbolTable symbols, string name, Type returnType, IReadOnlyList<ParameterSyntax> parameters)
+    {
+        // Only a trailing Optional suffix can be omitted by a shorter call.
+        // Explicit empty argument slots require separate call-syntax lowering.
+        for (var count = parameters.Count - 1; count >= 0 && parameters[count].IsOptional; count--)
+            symbols.Declare(new FunctionSymbol(name, returnType,
+                parameters.Take(count).Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
+                null, null, parameters.Take(count).Select(p => p.IsByRef).ToArray()));
     }
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch
