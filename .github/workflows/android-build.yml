@@ -1,6 +1,9 @@
 name: Android Build
 
 on:
+  push:
+    branches:
+      - android-runtime-uiform-mobile
   workflow_dispatch:
 
 permissions:
