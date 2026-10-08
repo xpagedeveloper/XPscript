@@ -20,6 +20,7 @@ using Avalonia.Android;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
+using Avalonia.Platform;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Controls.Primitives;
