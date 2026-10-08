@@ -7,9 +7,11 @@ namespace XPScript.Compiler.Emission;
 public sealed class BoundStatementEmitter
 {
     private readonly BoundExpressionEmitter _expressions = new();
+    private IReadOnlyList<int> _goSubIds = [];
 
     public string Emit(IReadOnlyList<BoundStatement> statements)
     {
+        _goSubIds = statements.OfType<BoundGoToStatement>().Where(x => x.IsGoSub).Select(x => x.Id).Distinct().OrderBy(x => x).ToArray();
         var output = new BoundEmissionContext(statements);
         if (statements.OfType<BoundGoToStatement>().Any(x => x.IsGoSub))
             output.Write("var __xps_gosub = new System.Collections.Generic.Stack<int>();", 0);
@@ -20,6 +22,7 @@ public sealed class BoundStatementEmitter
 
     public BoundEmissionResult EmitWithSourceMap(IReadOnlyList<BoundStatement> statements, string source, string sourcePath)
     {
+        _goSubIds = statements.OfType<BoundGoToStatement>().Where(x => x.IsGoSub).Select(x => x.Id).Distinct().OrderBy(x => x).ToArray();
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var output = new BoundEmissionContext(statements, source, sourcePath);
@@ -45,7 +48,8 @@ public sealed class BoundStatementEmitter
                 Line($"__xps_gosub.Push({transfer.Id}); goto {Label(transfer.Target)}; __xps_gosub_return_{transfer.Id}:;");
                 break;
             case BoundGoSubReturnStatement:
-                Line("switch (__xps_gosub.Pop()) { case 1: goto __xps_gosub_return_1; default: return; }");
+                var cases = string.Join(" ", _goSubIds.Select(id => $"case {id}: goto __xps_gosub_return_{id};"));
+                Line($"switch (__xps_gosub.Pop()) {{ {cases} default: return; }}");
                 break;
             case BoundNoOpStatement:
                 break;

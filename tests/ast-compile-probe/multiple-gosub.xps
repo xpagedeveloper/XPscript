@@ -1,0 +1,12 @@
+Sub Main()
+    GoSub first
+    GoSub second
+    Print "after"
+    Exit Sub
+first:
+    Print "one"
+    Return
+second:
+    Print "two"
+    Return
+End Sub
