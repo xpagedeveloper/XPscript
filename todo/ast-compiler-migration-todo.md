@@ -34,7 +34,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 - [x] Inventory parsing responsibilities currently implemented by `AdvancedXPScriptTranspiler` in `docs/ast-parser-responsibility-map.md`.
 - [x] Inventory regex-based syntax recognition and string rewriting in the compiler in `docs/ast-regex-rewrite-inventory.md`.
 - [x] Identify places where parsing, semantic analysis and C# emission are currently mixed in `docs/ast-phase-boundaries.md`.
-- [ ] Identify syntax validation currently delegated to generated C# / Roslyn.
+- [x] Identify syntax validation currently delegated to generated C# / Roslyn in `docs/ast-roslyn-validation-boundary.md`.
 - [ ] Identify type and symbol validation currently delegated to generated C# / Roslyn.
 - [ ] Map existing source-map behavior and requirements.
 - [ ] Map compiler diagnostics and machine/MCP diagnostic contracts that must remain compatible.
