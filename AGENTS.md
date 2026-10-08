@@ -18,6 +18,12 @@ The permanent FullTest workflow files are `.github/workflows/language-fulltest.y
 
 During migrations, keep the old focused workflow running until equivalent coverage in the destination FullTest is green. Compile, documentation, IntelliSense API documentation, security/placeholder guards, release, cleanup, and other build/meta workflows are not part of this consolidation rule.
 
+## Codex Cloud Android setup
+
+On branch `android-runtime-uiform-mobile`, the push workflow `.github/workflows/android-build.yml` uses .NET SDK 10 and installs the .NET Android workload. Configure that Codex Cloud environment's Install script to run `bash ./.codex/install-android-environment.sh`, then publish or republish the environment. The script also ensures JDK 17 is present.
+
+The workflow's emulator smoke test requires an Android emulator. If the cloud VM cannot run an emulator, run the compiler probes and APK build checks there and treat emulator execution as unavailable.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
