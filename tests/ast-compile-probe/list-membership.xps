@@ -1,0 +1,13 @@
+Function NextTag() As String
+    Print "TAG_EVALUATED"
+    NextTag = "present"
+End Function
+
+Sub Main()
+    Dim values List As Long
+    values("present") = 3
+    Print IsElement(values("present"))
+    Print IsElement(values("missing"))
+    Print IsElement(values(NextTag()))
+    Print values("present")
+End Sub

@@ -1,0 +1,6 @@
+Sub Main()
+    Dim values List As Long
+    values("present") = 3
+    Print IsElement(values("present"))
+    Print IsElement(values("missing"))
+End Sub

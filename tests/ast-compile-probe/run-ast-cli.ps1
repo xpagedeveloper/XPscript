@@ -4,6 +4,11 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$membershipOutput = Join-Path $output 'list-membership'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-membership.xps') -o $membershipOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST List membership compilation failed.' }
+$membershipResult = dotnet (Join-Path $membershipOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($membershipResult -join "`n") -ne "True`nFalse`nTAG_EVALUATED`nTrue`n3") { throw 'AST List membership read a missing element or evaluated its tag more than once.' }
 $listInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-initializer-error.xps') -o (Join-Path $output 'list-initializer-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($listInvalid -join "`n") -notmatch 'AST List declarations with initializers are not implemented') { throw 'AST ignored an unsupported List initializer.' }
 $listOutput = Join-Path $output 'forall-list'

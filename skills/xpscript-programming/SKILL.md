@@ -66,6 +66,8 @@ Use block control flow unless a repository sample proves a shorter form is suppo
 
 For a declared List, `ForAll alias In values` exposes a writable element alias: assignment to the alias updates the List, and `ListTag(alias)` returns its tag. Prefer different alias names in nested loops for legacy compatibility. Experimental AST covers typed List declarations without initializers, alias reads/writes, tags and iteration snapshots; ByRef alias copy-back and the complete List API remain pending. See `docs/forall-iteration.md` and `tests/ast-compile-probe/forall-list-alias.xps`.
 
+Use `IsElement(values(tag))` to test for a List tag before reading its value. The experimental AST path supports this for declared Lists and returns False for a missing tag; it evaluates the tag expression once. Dynamically supplied Lists and complete argument validation remain migration work.
+
 ```xpscript
 If value > 0 Then
     Print "positive"

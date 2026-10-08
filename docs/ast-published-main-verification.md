@@ -63,3 +63,7 @@ During the 2026-10-08 investigation, a temporary six-call GoSub fixture (ElseIf,
 `forall-list-alias.xps` now compiles and executes with matching output in published main and AST: `a`, `b`, `11`, `12`, `one:BLUE`, `two:GREEN`, `a`, `a`, `b`, `b`, `12`, `13`, `5`, `1`, `2`, `2`. It exercises typed write-through aliases, ListTag, nested aliases and insertion during snapshot iteration. Before this fix AST passed KeyValuePair values into arithmetic and threw a RuntimeBinderException.
 
 A separate ByRef alias audit remains open: calling a Long ByRef Sub with the alias is rejected by AST-generated C# because Value is a property. Published main compiles that audit but prints the unchanged value `1`, losing the intended mutation to `11`. This is distinct from assignment directly to a List alias, which matches the baseline regression above. Published main also rejects reuse of the same alias name in nested loops; the permanent comparison fixture uses different names.
+
+## List membership
+
+Published main and corrected AST output `True`, `False` for `list-membership-baseline.xps`. Before correction AST read the missing entry first and threw KeyNotFoundException. The expanded `list-membership.xps` verifies that a function-valued tag prints its side-effect marker once and that the stored value remains 3. AST passes that expanded fixture; published main rejects its nested tag function call with unresolved IsElement/method-name diagnostics. Baseline parity therefore applies to the saved minimal fixture, with stronger expression evaluation covered in AST.

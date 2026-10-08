@@ -67,6 +67,11 @@ public sealed class BoundExpressionEmitter
     {
         var tagArgument = call.Arguments.Count == 1 ? call.Arguments[0] : null;
         if (tagArgument is BoundConversionExpression conversion) tagArgument = conversion.Expression;
+        // IsElement inspects the tag, not the indexed value: reading a missing
+        // element first would throw instead of returning False.
+        if (call.Target is null && call.Function.Name.Equals("IsElement", StringComparison.OrdinalIgnoreCase) &&
+            tagArgument is BoundIndexExpression index && index.Expression.SemanticType.IsList)
+            return $"{Emit(index.Expression)}.ContainsTag({Emit(index.Index)})";
         if (call.Target is null && call.Function.Name.Equals("ListTag", StringComparison.OrdinalIgnoreCase) &&
             tagArgument is BoundNameExpression name && _aliases.TryGetValue(name.Symbol, out var alias))
             return alias.Tag;

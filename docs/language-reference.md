@@ -113,8 +113,8 @@ Array-consuming operations normalize an object reference whose value is `Nothing
 | `ArrayUnique` | `ArrayUnique(array)` | array. | Returns values without duplicates. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `ArraySlice` | `ArraySlice(array, start [, count])` | array, start, optional count. | Returns slice. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `ArraySplice` | `ArraySplice(array, start, count [, replacement])` | array, range, optional replacement. | Removes/replaces range. | [operators-arrays.xps](../samples/operators-arrays.xps) |
-| `IsElement` | `IsElement(list(tag))` | keyed list element. | Tests whether list element exists. | [lists-classes.xps](../samples/lists-classes.xps) |
-| `ListTag` | `ListTag(list)` | list. | Returns list tags. | [lists-classes.xps](../samples/lists-classes.xps) |
+| `IsElement` | `IsElement(list(tag))` | keyed list element. | Tests whether a List tag exists without reading its value. Experimental AST supports declared Lists; see [AST emission](ast-csharp-emitter.md). | [lists-classes.xps](../samples/lists-classes.xps) |
+| `ListTag` | `ListTag(alias)` | ForAll List alias. | Returns the current element's tag. | [lists-classes.xps](../samples/lists-classes.xps) |
 
 ## Conversion and inspection
 
