@@ -30,13 +30,13 @@ const string rootedPathReturn = "if (allowLocalPaths && isRootedPath) return tex
 const string xpImageCheck = "value.GetType().Name.Equals(\"XPImage\", StringComparison.Ordinal)";
 const string xpImageDataImage = "return \"data:image/png;base64,\" + Convert.ToBase64String(bytes);";
 
-foreach (var generated in new[] { desktop, android, browser })
+foreach (var (target, generated) in new[] { ("desktop", desktop), ("android", android), ("browser", browser) })
 {
     if (!generated.Contains(webGuard, StringComparison.Ordinal) ||
         !generated.Contains(webFileError, StringComparison.Ordinal) ||
         !generated.Contains(imageWebGuard, StringComparison.Ordinal) ||
         !generated.Contains(bootImageWebGuard, StringComparison.Ordinal))
-        throw new Exception("Generated UIForm media policy must guard Image and BootImage server-web rendering from local filesystem sources.");
+        throw new Exception($"Generated UIForm media policy must guard Image and BootImage server-web rendering for {target}: web={generated.Contains(webGuard, StringComparison.Ordinal)}, fileError={generated.Contains(webFileError, StringComparison.Ordinal)}, image={generated.Contains(imageWebGuard, StringComparison.Ordinal)}, boot={generated.Contains(bootImageWebGuard, StringComparison.Ordinal)}.");
     if (!generated.Contains(webDataImageCheck, StringComparison.Ordinal) ||
         !generated.Contains(webDataImageError, StringComparison.Ordinal))
         throw new Exception("Generated UIForm server-web media policy must reject non-image data URIs.");
