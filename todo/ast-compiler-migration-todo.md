@@ -30,7 +30,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 ## Current architecture investigation
 
 - [x] Document the complete current compiler pipeline from source input to generated assembly in `docs/ast-pipeline.md`.
-- [ ] Map all source preprocessors that run before `AdvancedXPScriptTranspiler`.
+- [x] Map all source preprocessors that run before `AdvancedXPScriptTranspiler` in `docs/ast-preprocessor-inventory.md`.
 - [ ] Inventory parsing responsibilities currently implemented by `AdvancedXPScriptTranspiler`.
 - [ ] Inventory regex-based syntax recognition and string rewriting in the compiler.
 - [ ] Identify places where parsing, semantic analysis and C# emission are currently mixed.
