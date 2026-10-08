@@ -288,6 +288,11 @@ internal static class AstExperimentalCompiler
             var labels = procedureStatements.OfType<LabelStatementSyntax>()
                 .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+            var duplicateLabel = procedureStatements.OfType<LabelStatementSyntax>()
+                .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(group => group.Count() > 1)?.Skip(1).FirstOrDefault();
+            if (duplicateLabel is not null)
+                throw new CompilerException($"Duplicate label '{duplicateLabel.Identifier.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
             foreach (var transfer in procedureStatements.OfType<GoToStatementSyntax>())
                 if (!labels.ContainsKey(transfer.Target.Text))
                     throw new CompilerException($"Unknown label '{transfer.Target.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
