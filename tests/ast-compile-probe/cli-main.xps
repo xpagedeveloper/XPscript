@@ -1,4 +1,8 @@
 Sub Main()
+    Dim result As Long
+    result = AddOne(41)
+    Call Increase(result)
+    Print result
     Call AstPrint()
     Dim message As String
     message = "AST_XPS_PRINT_OK"
@@ -28,4 +32,14 @@ Sub Main()
         Print item
     End ForAll
     Exit Sub
+End Sub
+
+Function AddOne(ByVal value As Long) As Long
+    Dim message As Long
+    message = value + 1
+    AddOne = message
+End Function
+
+Sub Increase(ByRef value As Long)
+    value = value + 1
 End Sub

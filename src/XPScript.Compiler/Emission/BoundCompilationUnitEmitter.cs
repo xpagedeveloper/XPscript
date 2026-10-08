@@ -13,10 +13,17 @@ public sealed class BoundCompilationUnitEmitter
     public string Emit(IReadOnlyList<BoundMethodDefinition> methods)
     {
         ArgumentNullException.ThrowIfNull(methods);
-        var output = new StringBuilder("using System;\npublic static class Program\n{\n");
+        return "using System;\npublic static class Program\n{\n" + EmitMembers(methods) + "}\n";
+    }
+
+    /// <summary>Allows target hosts to supply runtime support around the same bound procedures.</summary>
+    public string EmitMembers(IReadOnlyList<BoundMethodDefinition> methods)
+    {
+        ArgumentNullException.ThrowIfNull(methods);
+        var output = new StringBuilder();
         var emitter = new BoundMethodEmitter();
         foreach (var method in methods)
             output.Append(emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements));
-        return output.Append("}\n").ToString();
+        return output.ToString();
     }
 }

@@ -93,17 +93,13 @@ internal static class AstExperimentalCompiler
         foreach (var procedure in unit.Declarations.OfType<SubDeclarationSyntax>())
         {
             var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types, null, null, types.Select(_ => false).ToArray()));
-            for (var count = types.Length - 1; count >= 0; count--)
-                symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types[..count], null, null, Enumerable.Repeat(false, count).ToArray()));
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types, null, null, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
         }
         foreach (var procedure in unit.Declarations.OfType<FunctionDeclarationSyntax>())
         {
             var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
             var resultType = ResolveRuntimeType(procedure.ReturnType?.Identifier.Text);
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, null, null, types.Select(_ => false).ToArray()));
-            for (var count = types.Length - 1; count >= 0; count--)
-                symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types[..count], null, null, Enumerable.Repeat(false, count).ToArray()));
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, null, null, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
         }
         symbols.Declare(new VariableSymbol("BuildState", typeof(object), XpTypeSymbol.Variant));
         foreach (var compatibilityName in new[] { "With", "GoSub", "Worker", "AfterWorker", "SkipLine", "ErrorHandler", "ErrorDone", "RetryHandler", "RetryDone", "ResumeTarget", "LabelHandler", "LabelDone", "ProviderError", "InvalidConnection", "System", "XPImage" })
@@ -273,44 +269,33 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new VariableSymbol("Document", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Err", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Response", typeof(object), XpTypeSymbol.Variant));
-        var declarationParameters = sub?.Parameters ?? function!.Parameters;
-        var parameters = declarationParameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
-            ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef, XpTypeSymbol.FromClr(ResolveRuntimeType(parameter.Type?.Identifier.Text)))).ToArray();
-        foreach (var parameter in parameters) symbols.Declare(parameter);
-        var returnType = function is null ? typeof(void) : ResolveRuntimeType(function.ReturnType?.Identifier.Text);
-        if (function is not null) symbols.Declare(new LocalSymbol(function.Identifier.Text, returnType, XpTypeSymbol.FromClr(returnType)));
-        var binder = new StatementBinder(symbols, function is null ? null : XpTypeSymbol.FromClr(returnType), function is not null, true);
-        var statements = sub?.Statements ?? function!.Statements;
-        var bound = statements.Select(binder.Bind).OfType<BoundStatement>().ToArray();
-        if (binder.Diagnostics.Count > 0)
-            throw new CompilerException(string.Join(Environment.NewLine, binder.Diagnostics.Select(d => d.Message)), binder.Diagnostics[0].Code, "semantic");
-
-        var declarationName = sub?.Identifier.Text ?? function!.Identifier.Text;
-        var methodName = declarationName.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0 ? "Main" : declarationName;
-        var body = new BoundMethodEmitter().Emit(methodName, returnType, parameters, bound);
-        var procedureStubs = string.Join(Environment.NewLine, unit.Declarations
-            .Where(item => item is SubDeclarationSyntax or FunctionDeclarationSyntax)
-            .Where(item => !string.Equals(item switch { SubDeclarationSyntax subDeclaration => subDeclaration.Identifier.Text, FunctionDeclarationSyntax functionDeclaration => functionDeclaration.Identifier.Text, _ => string.Empty }, declarationName, StringComparison.OrdinalIgnoreCase))
-            .Select(item => item switch
-            {
-                SubDeclarationSyntax procedure => $"    public static void {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select((p, i) => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {(string.IsNullOrWhiteSpace(p.Identifier.Text) ? $"arg{i}" : p.Identifier.Text)}"))}) {{ }}",
-                FunctionDeclarationSyntax procedure => $"    public static {CSharpType(ResolveRuntimeType(procedure.ReturnType?.Identifier.Text))} {procedure.Identifier.Text}({string.Join(", ", procedure.Parameters.Select((p, i) => $"{CSharpType(ResolveRuntimeType(p.Type?.Identifier.Text))} {(string.IsNullOrWhiteSpace(p.Identifier.Text) ? $"arg{i}" : p.Identifier.Text)}"))}) => default;",
-                _ => string.Empty
-            }));
-        foreach (Match optional in Regex.Matches(fullSource, @"(?im)^\s*(?<kind>Sub|Function)\s+(?<name>[A-Za-z_]\w*)\s*\((?<parameters>[^)]*Optional[^)]*)\)", RegexOptions.Multiline))
+        // Bind every procedure in its own scope; declarations are registered
+        // before bodies so forward calls and recursion see real signatures.
+        var methods = new List<BoundMethodDefinition>();
+        foreach (var item in unit.Declarations.Where(item => item is SubDeclarationSyntax or FunctionDeclarationSyntax))
         {
-            var parametersText = optional.Groups["parameters"].Value;
-            var required = parametersText.Split(',').Select(p => p.Trim()).Where(p => !p.StartsWith("Optional ", StringComparison.OrdinalIgnoreCase)).ToArray();
-            var signature = string.Join(", ", required.Select(p =>
-            {
-                var parts = Regex.Split(p, @"\s+As\s+", RegexOptions.IgnoreCase);
-                return $"{CSharpType(ResolveRuntimeType(parts.Length > 1 ? parts[1] : null))} {parts[0].Trim()}";
-            }));
-            var returnTypeText = optional.Groups["kind"].Value.Equals("Function", StringComparison.OrdinalIgnoreCase) ? "object" : "void";
-            procedureStubs += Environment.NewLine + (returnTypeText == "void"
-                ? $"    public static void {optional.Groups["name"].Value}({signature}) {{ }}"
-                : $"    public static {returnTypeText} {optional.Groups["name"].Value}({signature}) => default;");
+            var procedureSub = item as SubDeclarationSyntax;
+            var procedureFunction = item as FunctionDeclarationSyntax;
+            var procedureParameters = procedureSub?.Parameters ?? procedureFunction!.Parameters;
+            var scope = symbols.CreateChildScope();
+            var parameters = procedureParameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
+                ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef,
+                XpTypeSymbol.FromClr(ResolveRuntimeType(parameter.Type?.Identifier.Text)))).ToArray();
+            foreach (var parameter in parameters) scope.Declare(parameter);
+            var returnType = procedureFunction is null ? typeof(void) : ResolveRuntimeType(procedureFunction.ReturnType?.Identifier.Text);
+            var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType), procedureFunction is not null, true);
+            var bound = (procedureSub?.Statements ?? procedureFunction!.Statements).Select(binder.Bind).OfType<BoundStatement>().ToArray();
+            if (binder.Diagnostics.Count > 0)
+                throw new CompilerException(string.Join(Environment.NewLine, binder.Diagnostics.Select(d => d.Message)), binder.Diagnostics[0].Code, "semantic");
+            var name = procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text;
+            // Roslyn's console entry point is case-sensitive; XPscript is not.
+            if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0)
+                name = "Main";
+            methods.Add(new BoundMethodDefinition(name, returnType, parameters, bound));
         }
+        var declarationName = sub?.Identifier.Text ?? function!.Identifier.Text;
+        var methodName = declarationName;
+        var body = new BoundCompilationUnitEmitter().EmitMembers(methods);
         var moduleFields = string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
@@ -325,9 +310,6 @@ internal static class AstExperimentalCompiler
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?im)^\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*\([^\r\n]+\)\s+As\s+\w+", RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = new ExpandoObject();"));
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
-        foreach (var compatibilityProcedure in new[] { "ProcedureCounter" })
-            if (Regex.IsMatch(fullSource, $@"(?im)^\s*(?:Function|Sub)\s+{compatibilityProcedure}\b"))
-                procedureStubs += Environment.NewLine + $"    public static object {compatibilityProcedure}() => 0;";
         var entryPoint = methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
         var classSupport = Regex.IsMatch(fullSource, @"(?im)^\s*Class\s+Person\b") ? """
@@ -752,7 +734,6 @@ internal static class Program
         public static object? CObj(object? value) => value;
         public static bool Like(string value, string pattern) => System.Text.RegularExpressions.Regex.IsMatch(value ?? string.Empty, "^" + System.Text.RegularExpressions.Regex.Escape(pattern ?? string.Empty).Replace("\\\\*", ".*").Replace("\\\\?", ".") + "$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
-{{procedureStubs}}
 {{moduleFields}}
 {{body}}
 {{entryPoint}}

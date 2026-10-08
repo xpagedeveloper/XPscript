@@ -274,6 +274,16 @@ Next increment implemented: a console compilation-unit emitter for already-bound
 - [x] Add these probes to the existing Language FullTest runner and pass the complete Windows Language FullTest.
 - [ ] Connect compilation-unit emission to the shared experimental CLI/machine compilation path with real procedure bodies and runtime integration.
 
+- [x] Emit actual top-level Sub/Function bodies in the experimental CLI, with procedure-local scopes, forward calls and declared ByRef modes; remove fabricated reduced-arity procedure overloads.
+- [ ] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics.
+- [ ] Model Optional defaults in syntax/binding/emission instead of generating no-op overloads.
+- [ ] Replace regex-based function-result rewriting with structural return-local lowering, preserving execution after result assignments.
+- [ ] Reject unsupported syntax rather than ignoring parser diagnostics or lowering statements to no-ops.
+- [ ] Restrict dynamic call fallback to genuinely dynamic receivers; invalid calls to declared procedures must produce binder overload diagnostics.
+- [ ] Replace experimental runtime placeholders (including HTTP/TLS, image, UI, error and environment helpers) with existing runtime implementations before claiming sample compatibility.
+- [ ] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding.
+- [ ] Preserve original source spans through all preprocessing and map parser/binder errors through the shared diagnostic contract.
+
 Initial implementation: expression conversions and a method-body emitter for assignment, calls, return, If, For, ForAll, While, Do and Select Case are covered by `tests/ast-emission`. Bound syntax spans and an opt-in `#line`/mapping result are also available. `tests/ast-compile-probe` drives a real XPscript `Sub Main` through declaration parsing, binding and C# compilation. See `docs/ast-csharp-emitter.md` for supported nodes and remaining integration work. The phase remains open until the full bound tree, mapping and targets are connected to production compilation.
 
 - [ ] Implement C# generation from bound nodes.
