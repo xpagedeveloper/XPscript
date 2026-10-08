@@ -143,7 +143,7 @@ internal sealed class XPScriptUIField
                 throw new XPScriptRuntimeException(5, "UIForm Video Source uses an unsupported URI scheme.");
             return uri.AbsoluteUri;
         }
-        var normalized = text.Replace('\\\\', '/');
+        var normalized = text.Replace('\\', '/');
         if (normalized.StartsWith("/", StringComparison.Ordinal) || normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
             throw new XPScriptRuntimeException(5, "UIForm Video relative Source must stay within the application asset root.");
         return normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? normalized : "assets/" + normalized;
