@@ -11,6 +11,28 @@ static ExpressionSyntax Parse(string text)
 }
 
 // Type diagnostics run first so semantic type regressions fail before the broader binder probe.
+var declaredCallSymbols = new SymbolTable();
+declaredCallSymbols.Declare(new FunctionSymbol("Required", typeof(void), [typeof(long)], ByRefParameters: [false]));
+var declaredCallBinder = new ExpressionBinder(declaredCallSymbols, allowDynamicMembers: true);
+_ = declaredCallBinder.Bind(Parse("Required()"));
+if (declaredCallBinder.Diagnostics.Count != 1 || declaredCallBinder.Diagnostics[0].Code != "XPS2004")
+    throw new InvalidOperationException("Dynamic member support must not hide a declared procedure arity error.");
+declaredCallSymbols.Declare(new FunctionSymbol("RequiredRef", typeof(void), [typeof(long)], ByRefParameters: [true]));
+foreach (var text in new[] { "Required(\"wrong\")", "RequiredRef(1)" })
+{
+    var binder = new ExpressionBinder(declaredCallSymbols, allowDynamicMembers: true);
+    var syntax = Parse(text);
+    _ = binder.Bind(syntax);
+    if (binder.Diagnostics.Count != 1 || binder.Diagnostics[0].Code != "XPS2004" || binder.Diagnostics[0].Span != syntax.Span)
+        throw new InvalidOperationException("Declared argument type/mode errors must preserve the call span.");
+}
+declaredCallSymbols.Declare(new VariableSymbol("dynamicValue", typeof(object), XpTypeSymbol.Variant));
+var dynamicCallBinder = new ExpressionBinder(declaredCallSymbols, allowDynamicMembers: true);
+var dynamicCall = dynamicCallBinder.Bind(Parse("dynamicValue.Render(1)"));
+if (dynamicCallBinder.Diagnostics.Count != 0 || dynamicCall is not BoundCallExpression)
+    throw new InvalidOperationException("An unknown member on a Variant must retain dynamic call binding.");
+Console.WriteLine("AST_BINDING_DECLARED_CALL_DIAGNOSTICS_OK");
+
 var invalidUnaryBinder = new ExpressionBinder();
 _ = invalidUnaryBinder.Bind(Parse("Not 1"));
 var invalidUnaryResult = invalidUnaryBinder.Bind(Parse("Not 1"));

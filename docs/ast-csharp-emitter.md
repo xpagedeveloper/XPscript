@@ -1,5 +1,7 @@
 # Bound C# emitter
 
+Declared overload sets now produce `XPS2004` when arity, argument type or ByRef mode does not match, even with dynamic member support enabled. The binder no longer invents an overload to defer those errors to Roslyn. Variant receiver member calls remain dynamic. The permanent binder probe covers both paths and preserves failing call spans; unresolved member handling for object-backed user types remains pending.
+
 Function results in the experimental CLI are now lowered structurally: a collision-free local stores assignments and reads of the function name, while recursive calls still bind to the procedure. `Exit Function` and fall-through return the stored value. The CLI regression covers accumulation after result assignment, an empty numeric function, recursion, and a source local colliding with the generated-name prefix. The old regex replacement of function-name assignments with `Return` has been removed.
 
 The experimental CLI now binds every parsed top-level Sub/Function in a separate child scope and emits actual bodies through `BoundCompilationUnitEmitter.EmitMembers`. Signatures retain declared ByRef modes; arbitrary shortened overloads and empty procedure stubs are no longer generated. The CLI regression verifies a forward Function call and a ByRef Sub mutation producing 43. Optional defaults, structural function-result handling, original source mapping and machine/MCP integration remain pending; runtime placeholders and unsupported-syntax handling still prevent claiming general AST compatibility.

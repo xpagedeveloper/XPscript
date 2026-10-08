@@ -212,7 +212,7 @@ jobs:
         run: |
           dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      # Language includes AST compatibility, stored function results, recursion, ByRef and binder/emitter probes.
+      # Language includes AST compatibility, stored results, recursion and declared-call diagnostics with dynamic binding enabled.
       - name: Run Windows ${{ matrix.name }} FullTest
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite ${{ matrix.suite }}

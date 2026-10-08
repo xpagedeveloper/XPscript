@@ -280,6 +280,8 @@ Next increment implemented: a console compilation-unit emitter for already-bound
 - [x] Replace regex-based function-result rewriting with structural return-local lowering, preserving execution after result assignments; cover Exit Function, fall-through, recursion and generated-name collisions in the experimental CLI.
 - [ ] Reject unsupported syntax rather than ignoring parser diagnostics or lowering statements to no-ops.
 - [ ] Restrict dynamic call fallback to genuinely dynamic receivers; invalid calls to declared procedures must produce binder overload diagnostics.
+- [x] Reject unmatched declared overloads with XPS2004 even when dynamic member binding is enabled; regress arity, argument type, ByRef mode and source span while retaining Variant member calls.
+- [ ] Restrict unresolved member fallback to Variant receivers rather than every object-backed user type.
 - [ ] Replace experimental runtime placeholders (including HTTP/TLS, image, UI, error and environment helpers) with existing runtime implementations before claiming sample compatibility.
 - [ ] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding.
 - [ ] Preserve original source spans through all preprocessing and map parser/binder errors through the shared diagnostic contract.

@@ -266,12 +266,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
         if (candidates.Length == 0)
         {
-            if (_allowDynamicMembers)
-            {
-                var dynamicFunction = new FunctionSymbol(name, typeof(object), arguments.Select(argument => argument.Type).ToArray(), XpTypeSymbol.Variant,
-                    arguments.Select(_ => XpTypeSymbol.Variant).ToArray(), arguments.Select(_ => false).ToArray());
-                return new BoundCallExpression(target, dynamicFunction, arguments);
-            }
+            // This set contains declared signatures. Dynamic receivers are
+            // handled before overload selection; fabricating a signature here
+            // would suppress arity, argument-type and ByRef diagnostics.
             return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching overload for function '{name}'.");
         }
         if (candidates.Length > 1)
