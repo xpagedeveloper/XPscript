@@ -695,7 +695,16 @@ internal static class Program
     public static object ArraySplice(object? value, object? start, object? count) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Where((_, index) => index < Convert.ToInt32(start) || index >= Convert.ToInt32(start) + Convert.ToInt32(count)).ToArray() : System.Array.Empty<object?>();
     public static object ArraySplice(object? value, object? start, object? count, object? replacement) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Where((_, index) => index < Convert.ToInt32(start) || index >= Convert.ToInt32(start) + Convert.ToInt32(count)).Append(replacement).ToArray() : new[] { replacement };
     public static object ArraySplice(object? value, object? start, object? count, object? first, object? second) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Where((_, index) => index < Convert.ToInt32(start) || index >= Convert.ToInt32(start) + Convert.ToInt32(count)).Concat(new[] { first, second }).ToArray() : new[] { first, second };
-    public static object ArrayResize(object? value, object? upper, object? preserve) { var length = Math.Max(0, Convert.ToInt32(upper) + 1); var result = new object?[length]; if (Convert.ToBoolean(preserve) && value is System.Collections.IEnumerable values) values.Cast<object?>().Take(length).ToArray().CopyTo(result, 0); return result; }
+    public static object ArrayResize(object? value, object? upper, object? preserve)
+    {
+        var length = Math.Max(0, Convert.ToInt32(upper) + 1);
+        var source = value as System.Array;
+        var elementType = source?.GetType().GetElementType() ?? typeof(object);
+        var result = System.Array.CreateInstance(elementType, length);
+        if (Convert.ToBoolean(preserve) && source is not null)
+            System.Array.Copy(source, result, Math.Min(source.Length, result.Length));
+        return result;
+    }
     public static object Explode(object? value, object? separator) => (value?.ToString() ?? string.Empty).Split(separator?.ToString() ?? ",");
     public static string FullTrim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
     public static object JsonEncode(object? value) => System.Text.Json.JsonSerializer.Serialize(value);

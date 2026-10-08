@@ -14,6 +14,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage.xps') -o $a
 if ($LASTEXITCODE -ne 0) { throw 'AST array declaration compilation failed.' }
 $arrayResult = dotnet (Join-Path $arrayOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($arrayResult -join "`n") -ne "1`n0`n1`nTrue`nTrue") { throw 'AST array bounds, string defaults or Erase semantics differ from published main.' }
+$redimOutput = Join-Path $output 'redim-array'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'redim-array.xps') -o $redimOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST dynamic array ReDim compilation failed.' }
+$redimResult = dotnet (Join-Path $redimOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($redimResult -join "`n") -ne "2`n9`n9") { throw 'AST ReDim type preservation or Preserve semantics differ from published main.' }
 $membershipOutput = Join-Path $output 'list-membership'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-membership.xps') -o $membershipOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST List membership compilation failed.' }

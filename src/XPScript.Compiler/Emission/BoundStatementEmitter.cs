@@ -59,7 +59,13 @@ public sealed class BoundStatementEmitter
                 Line($"{targetText} = {expressionText};");
                 break;
             case BoundExpressionStatement expression:
-                if (expression.Expression is BoundCallExpression { Function.Name: "EraseArray" } erase && erase.Arguments.Count == 1)
+                if (expression.Expression is BoundCallExpression { Function.Name: "EraseDynamicArray" } dynamicErase && dynamicErase.Arguments.Count == 1)
+                {
+                    var array = _expressions.Emit(dynamicErase.Arguments[0]);
+                    var arrayType = CSharpType(dynamicErase.Arguments[0].Type);
+                    Line($"{array} = ({arrayType})ArrayResize({array}, -1, false);");
+                }
+                else if (expression.Expression is BoundCallExpression { Function.Name: "EraseArray" } erase && erase.Arguments.Count == 1)
                 {
                     var array = _expressions.Emit(erase.Arguments[0]);
                     var element = erase.Arguments[0].SemanticType.ElementType?.RuntimeType;

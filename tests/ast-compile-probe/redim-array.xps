@@ -1,0 +1,10 @@
+Sub Main()
+    Dim values() As Long
+    ReDim values(2)
+    values(2) = 9
+    Print UBound(values)
+    Print values(2)
+    ReDim Preserve values(4)
+    Print values(2)
+    Erase values
+End Sub

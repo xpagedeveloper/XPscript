@@ -98,7 +98,10 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             return null;
         }
         var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text, syntax.IsArray, syntax.ArrayLength, syntax.IsList);
-        var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType);
+        var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType)
+        {
+            IsDynamicArray = syntax.IsArray && syntax.ArrayLength is null
+        };
         if (syntax.IsStatic)
         {
             if (procedureIdentity is null || syntax.Initializer is not null || syntax.IsArray || syntax.IsList ||
@@ -188,7 +191,11 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                 }
                 else if (arguments[0].SemanticType.IsList) list = arguments[0];
                 else if (arguments[0].SemanticType.IsArray)
-                    return new BoundExpressionStatement(new BoundCallExpression(null, new FunctionSymbol("EraseArray", typeof(void), [arguments[0].Type]), arguments));
+                {
+                    var dynamic = arguments[0] is BoundNameExpression { Symbol: LocalSymbol { IsDynamicArray: true } };
+                    return new BoundExpressionStatement(new BoundCallExpression(null,
+                        new FunctionSymbol(dynamic ? "EraseDynamicArray" : "EraseArray", typeof(void), [arguments[0].Type]), arguments));
+                }
                 if (list is not null)
                     return new BoundExpressionStatement(new BoundCallExpression(
                         new BoundMemberAccessExpression(list, method, typeof(void)),
