@@ -16,7 +16,8 @@ public sealed class AndroidMedia3Player : IDisposable
     public AndroidMedia3Player(Context context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        _player = new ExoPlayerBuilder(context).Build();
+        _player = new ExoPlayerBuilder(context).Build()
+            ?? throw new InvalidOperationException("Media3 ExoPlayerBuilder returned no player.");
     }
 
     public bool IsPlaying => !_disposed && _player.IsPlaying;
@@ -49,7 +50,7 @@ public sealed class AndroidMedia3Player : IDisposable
             uri.Scheme is not ("http" or "https" or "file" or "content" or "android.resource"))
             throw new ArgumentException("Media3 source must be an absolute http, https, file, content or android.resource URI.", nameof(source));
 
-        var mediaItem = MediaItem.FromUri(Android.Net.Uri.Parse(uri.AbsoluteUri));
+        var mediaItem = MediaItem.FromUri(global::Android.Net.Uri.Parse(uri.AbsoluteUri));
         _player.SetMediaItem(mediaItem);
         _player.Prepare();
     }
