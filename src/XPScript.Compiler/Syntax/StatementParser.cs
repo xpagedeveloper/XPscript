@@ -678,7 +678,15 @@ public sealed class StatementParser
                 else
                     arrayLength = checked((int)upperBound + 1);
             }
-            while (Current.Kind is not SyntaxKind.CloseParenToken and not SyntaxKind.EndOfFileToken and not SyntaxKind.NewLineToken) NextToken();
+            var hasMultipleDimensions = false;
+            while (Current.Kind is not SyntaxKind.CloseParenToken and not SyntaxKind.EndOfFileToken and not SyntaxKind.NewLineToken)
+            {
+                hasMultipleDimensions |= Current.Kind == SyntaxKind.CommaToken;
+                NextToken();
+            }
+            if (hasMultipleDimensions)
+                _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
+                    "AST arrays currently support one dimension only.", identifier.Span));
             Match(SyntaxKind.CloseParenToken);
         }
 

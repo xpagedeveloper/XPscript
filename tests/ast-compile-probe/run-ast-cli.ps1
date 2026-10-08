@@ -22,6 +22,8 @@ if ($LASTEXITCODE -ne 0 -or ($redimResult -join "`n") -ne "2`n9`n9") { throw 'AS
 $redimError = Join-Path $output 'redim-array-error'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'redim-array-error.xps') -o $redimError
 if ($LASTEXITCODE -ne 0) { throw 'AST dynamic Erase regression did not compile.' }
+$multiDimensional = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-array-error.xps') -o (Join-Path $output 'multidimensional-array-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($multiDimensional -join "`n") -notmatch 'AST arrays currently support one dimension only') { throw 'AST silently accepted a multidimensional array declaration.' }
 $membershipOutput = Join-Path $output 'list-membership'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-membership.xps') -o $membershipOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST List membership compilation failed.' }
