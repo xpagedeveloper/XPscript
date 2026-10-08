@@ -11,6 +11,9 @@ using Android.App;
 using Android.Content.PM;
 using Android.OS;
 using Android.Util;
+using AndroidX.Media3.Common;
+using AndroidX.Media3.Exoplayer;
+using AndroidX.Media3.Ui;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Android;
@@ -140,6 +143,88 @@ public sealed class MainView : UserControl
     private static Control HomeContent() => new Grid();
 }
 
+
+internal sealed class GeneratedAndroidMedia3Player : IDisposable
+{
+    private readonly ExoPlayer _player;
+    private bool _disposed;
+
+    public GeneratedAndroidMedia3Player(Android.Content.Context context)
+    {
+        _player = new ExoPlayer.Builder(context).Build();
+    }
+
+    public void Attach(PlayerView view)
+    {
+        ThrowIfDisposed();
+        view.Player = _player;
+    }
+
+    public void SetSource(string source)
+    {
+        ThrowIfDisposed();
+        if (!System.Uri.TryCreate(source, System.UriKind.Absolute, out var uri) ||
+            uri.Scheme is not ("http" or "https" or "file" or "content" or "android.resource"))
+            throw new InvalidOperationException("UIForm Video source must be an absolute supported media URI.");
+        _player.SetMediaItem(MediaItem.FromUri(Android.Net.Uri.Parse(uri.AbsoluteUri)));
+        _player.Prepare();
+    }
+
+    public void Play() { ThrowIfDisposed(); _player.Play(); }
+    public void Pause() { ThrowIfDisposed(); _player.Pause(); }
+    public void Stop() { ThrowIfDisposed(); _player.Stop(); }
+    public bool IsPlaying => !_disposed && _player.IsPlaying;
+    public long Position => _disposed ? 0 : Math.Max(0, _player.CurrentPosition);
+    public long Duration => _disposed ? 0 : Math.Max(0, _player.Duration);
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _player.Release();
+    }
+
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
+}
+
+internal sealed class GeneratedAndroidVideoControl : NativeControlHost
+{
+    private GeneratedAndroidMedia3Player? _mediaPlayer;
+    private PlayerView? _playerView;
+    private string _source = string.Empty;
+
+    public string Source
+    {
+        get => _source;
+        set
+        {
+            _source = value ?? string.Empty;
+            if (_mediaPlayer is not null && _source.Length > 0)
+                _mediaPlayer.SetSource(_source);
+        }
+    }
+
+    protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
+    {
+        var context = Android.App.Application.Context
+            ?? throw new InvalidOperationException("Android application context is unavailable.");
+        _mediaPlayer = new GeneratedAndroidMedia3Player(context);
+        _playerView = new PlayerView(context);
+        _mediaPlayer.Attach(_playerView);
+        if (_source.Length > 0) _mediaPlayer.SetSource(_source);
+        return new PlatformHandle(_playerView.Handle, "Android.Media3.PlayerView");
+    }
+
+    protected override void DestroyNativeControlCore(IPlatformHandle control)
+    {
+        _mediaPlayer?.Dispose();
+        _mediaPlayer = null;
+        _playerView?.Dispose();
+        _playerView = null;
+        base.DestroyNativeControlCore(control);
+    }
+}
+
 public static class AndroidFormHost
 {
     private static readonly ConcurrentDictionary<string, Avalonia.Controls.NativeWebView> WebViews = new(StringComparer.Ordinal);
@@ -263,6 +348,7 @@ public static class AndroidFormHost
                 Control editor = type switch
                 {
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
+                    "Video" => CreateVideo(field),
                     "WebView" => CreateWebView(field, instanceId, name),
                     "DateField" => new Avalonia.Controls.DatePicker(),
                     "TimeField" => new Avalonia.Controls.TimePicker(),
@@ -530,6 +616,19 @@ public static class AndroidFormHost
         Grid.SetColumnSpan(container, columnSpan);
         Grid.SetRowSpan(container, rowSpan);
         targetGrid.Children.Add(container);
+    }
+
+    private static Control CreateVideo(JsonElement field)
+    {
+        var view = new GeneratedAndroidVideoControl
+        {
+            MinHeight = 180,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch
+        };
+        if (field.TryGetProperty("source", out var source) && source.ValueKind == JsonValueKind.String)
+            view.Source = source.GetString() ?? string.Empty;
+        return view;
     }
 
     private static Control CreateRadioGroup(IReadOnlyList<string> options)
