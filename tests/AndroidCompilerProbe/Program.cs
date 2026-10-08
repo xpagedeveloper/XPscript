@@ -403,6 +403,14 @@ foreach (var expected in new[] { "Type is \"Video\" or \"Audio\"", "AddAudio(obj
 foreach (var expected in new[] { "Position", "Duration", "Volume", "AutoPlay", "PlaybackRate", "IsPlaying", "void Play()", "void Pause()", "void Stop()" })
     if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm media playback API regression is missing: " + expected);
+var callbackModelSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormCallbackModelPostProcessor.cs"));
+foreach (var expected in new[] { "SetOnPlay", "SetOnPause", "SetOnEnded", "SetOnError", "SetMediaHandler" })
+    if (!callbackModelSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Shared UIForm media event API regression is missing: " + expected);
+var dispatcherSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormEventDispatcherPostProcessor.cs"));
+foreach (var expected in new[] { "kind.Equals(\"play\"", "kind.Equals(\"pause\"", "kind.Equals(\"ended\"", "kind.Equals(\"error\"" })
+    if (!dispatcherSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Shared UIForm media event dispatcher regression is missing: " + expected);
 
 var androidHostSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "AndroidUIHostSource.cs"));
 foreach (var expected in new[] { "GeneratedAndroidAudioControl", "\"Audio\" => CreateAudio(field)", "UIForm media Source must be an absolute supported media URI" })

@@ -110,6 +110,26 @@ internal sealed class UIFormEventDispatcherPostProcessor
             if (useEventCallback)
                 callbackEvent = new XPScriptUIFormEvent(this, "button", button.Name, null, Array.Empty<string>());
         }
+        else if (kind.Equals("play", StringComparison.OrdinalIgnoreCase) ||
+                 kind.Equals("pause", StringComparison.OrdinalIgnoreCase) ||
+                 kind.Equals("ended", StringComparison.OrdinalIgnoreCase) ||
+                 kind.Equals("error", StringComparison.OrdinalIgnoreCase))
+        {
+            var field = FindField(controlName);
+            if (field.Type is not ("Audio" or "Video"))
+                throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is not a media field.");
+            handlerName = kind.ToLowerInvariant() switch
+            {
+                "play" => field.OnPlayHandler,
+                "pause" => field.OnPauseHandler,
+                "ended" => field.OnEndedHandler,
+                "error" => field.OnErrorHandler,
+                _ => string.Empty
+            };
+            if (handlerName.Length == 0)
+                throw new XPScriptRuntimeException(5, $"UIForm media field '{field.Name}' has no registered {kind} handler.");
+            callbackEvent = new XPScriptUIFormEvent(this, kind.ToLowerInvariant(), field.Name, submittedValue, Array.Empty<string>());
+        }
         else
         {
             throw new XPScriptRuntimeException(5, "UIForm event type is unsupported.");
