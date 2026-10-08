@@ -106,9 +106,9 @@ Initial declaration nodes should cover at least:
 - [x] SubDeclarationSyntax; parsed and bound through the AST compile probe.
 - [x] FunctionDeclarationSyntax; parsed and bound through the AST compile probe.
 - [x] ClassDeclarationSyntax; parsed by `DeclarationParser` and covered by declaration/inheritance tests.
-- [ ] FieldDeclarationSyntax
-- [ ] PropertyDeclarationSyntax
-- [ ] Constructor/Destructor declarations
+- [x] FieldDeclarationSyntax; parsed as class members.
+- [x] PropertyDeclarationSyntax; parsed with accessor, parameters and body.
+- [x] Constructor/Destructor declarations; parsed as class members with bodies.
 
 ## Phase 2: Lexer
 
