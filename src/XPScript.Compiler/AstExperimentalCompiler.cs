@@ -451,18 +451,6 @@ internal static class Program
         return Convert.ToHexString(h.ComputeHash(System.IO.File.ReadAllBytes(CStr(a[0])))).ToLowerInvariant();
     }
 
-    private static IEnumerable<StatementSyntax> FlattenStatements(IEnumerable<StatementSyntax> statements)
-    {
-        foreach (var statement in statements)
-        {
-            yield return statement;
-            foreach (var child in statement.GetType().GetProperties()
-                         .Where(property => typeof(IEnumerable<StatementSyntax>).IsAssignableFrom(property.PropertyType))
-                         .SelectMany(property => (IEnumerable<StatementSyntax>?)property.GetValue(statement) ?? []))
-                foreach (var nested in FlattenStatements([child]))
-                    yield return nested;
-        }
-    }
     private static string Digest(string algorithm, object? value) {
         using System.Security.Cryptography.HashAlgorithm hash = algorithm switch {
             "MD5" => System.Security.Cryptography.MD5.Create(), "SHA1" => System.Security.Cryptography.SHA1.Create(),
@@ -799,6 +787,19 @@ internal static class Program
         var nativeHttp = NativeHttpRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal).Replace("Program.XPScriptRuntime.CInt(", "Convert.ToInt32(", StringComparison.Ordinal);
         generated += Environment.NewLine + "public sealed class XPScriptRuntimeException : Exception { public int ErrorCode { get; } public XPScriptRuntimeException(int code, string message) : base(message) { ErrorCode = code; } }" + Environment.NewLine + "internal sealed class XPScriptTlsValidationState { public string Mode { get; set; } = \"strict\"; public string LastError { get; private set; } = string.Empty; public void Reset() { LastError = string.Empty; } public Exception Failure(string context) => new XPScriptRuntimeException(1201, context + \" failed: \" + LastError); public bool Validate(object sender, System.Security.Cryptography.X509Certificates.X509Certificate? c, System.Security.Cryptography.X509Certificates.X509Chain? chain, System.Net.Security.SslPolicyErrors errors) => true; }" + Environment.NewLine + nativeHttp;
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private static IEnumerable<StatementSyntax> FlattenStatements(IEnumerable<StatementSyntax> statements)
+    {
+        foreach (var statement in statements)
+        {
+            yield return statement;
+            foreach (var child in statement.GetType().GetProperties()
+                         .Where(property => typeof(IEnumerable<StatementSyntax>).IsAssignableFrom(property.PropertyType))
+                         .SelectMany(property => (IEnumerable<StatementSyntax>?)property.GetValue(statement) ?? []))
+                foreach (var nested in FlattenStatements([child]))
+                    yield return nested;
+        }
     }
 
     private static void DeclareOptionalSignatures(SymbolTable symbols, string name, Type returnType, IReadOnlyList<ParameterSyntax> parameters)
