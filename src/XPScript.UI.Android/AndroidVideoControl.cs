@@ -2,7 +2,7 @@ using Android.App;
 using Android.Views;
 using Avalonia.Controls;
 using Avalonia.Platform;
-using Xamarin.Android;
+using AndroidX.Media3.Ui;
 
 namespace XPScript.UI.Android;
 
