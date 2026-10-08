@@ -11,6 +11,35 @@ static ExpressionSyntax Parse(string text)
 }
 
 // Type diagnostics run first so semantic type regressions fail before the broader binder probe.
+var receiverSymbols = new SymbolTable();
+receiverSymbols.Declare(new VariableSymbol("widget", typeof(object), XpTypeSymbol.User("Widget")));
+receiverSymbols.Declare(new VariableSymbol("variant", typeof(object), XpTypeSymbol.Variant));
+receiverSymbols.Declare(new PropertySymbol("Widget.Title", typeof(string)));
+receiverSymbols.Declare(new FunctionSymbol("Widget.Describe", typeof(string), []));
+foreach (var text in new[] { "widget.Title", "widget.Describe()" })
+{
+    var binder = new ExpressionBinder(receiverSymbols, allowDynamicMembers: true);
+    var bound = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 0 || bound.Type != typeof(string))
+        throw new InvalidOperationException("Declared user members must retain their bound types.");
+}
+foreach (var text in new[] { "widget.Missing", "widget.Missing()" })
+{
+    var binder = new ExpressionBinder(receiverSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 1 || binder.Diagnostics[0].Code != "XPS2009" ||
+        binder.Diagnostics[0].Span != new TextSpan(text.IndexOf("Missing", StringComparison.Ordinal), 7))
+        throw new InvalidOperationException("Object-backed user types must report unknown members before Roslyn.");
+}
+foreach (var text in new[] { "variant.Missing", "variant.Missing()" })
+{
+    var binder = new ExpressionBinder(receiverSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 0)
+        throw new InvalidOperationException("Variant receivers must retain dynamic member access and calls.");
+}
+Console.WriteLine("AST_BINDING_RECEIVER_DIAGNOSTICS_OK");
+
 var declaredCallSymbols = new SymbolTable();
 declaredCallSymbols.Declare(new FunctionSymbol("Required", typeof(void), [typeof(long)], ByRefParameters: [false]));
 var declaredCallBinder = new ExpressionBinder(declaredCallSymbols, allowDynamicMembers: true);

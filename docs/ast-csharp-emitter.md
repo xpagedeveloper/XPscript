@@ -1,6 +1,8 @@
 # Bound C# emitter
 
-Declared overload sets now produce `XPS2004` when arity, argument type or ByRef mode does not match, even with dynamic member support enabled. The binder no longer invents an overload to defer those errors to Roslyn. Variant receiver member calls remain dynamic. The permanent binder probe covers both paths and preserves failing call spans; unresolved member handling for object-backed user types remains pending.
+Unresolved member properties and method calls now fall back dynamically only for a Variant receiver. An object-backed declared user type retains its semantic identity and reports `XPS2009` at the unknown member span. The permanent binder regression covers both cases with dynamic member support enabled.
+
+Declared overload sets now produce `XPS2004` when arity, argument type or ByRef mode does not match, even with dynamic member support enabled. The binder no longer invents an overload to defer those errors to Roslyn. Variant receiver member calls remain dynamic. The permanent binder probe covers both paths and preserves failing call spans; object-backed user types retain unknown-member diagnostics as described above.
 
 Function results in the experimental CLI are now lowered structurally: a collision-free local stores assignments and reads of the function name, while recursive calls still bind to the procedure. `Exit Function` and fall-through return the stored value. The CLI regression covers accumulation after result assignment, an empty numeric function, recursion, and a source local colliding with the generated-name prefix. The old regex replacement of function-name assignments with `Return` has been removed.
 

@@ -138,7 +138,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (symbol is FunctionSymbol function)
                 return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType, function.SemanticReturnType);
         }
-        return _allowDynamicMembers && receiver.Type == typeof(object)
+        // CLR object storage also backs declared user types. Only the XPscript
+        // Variant semantic type authorizes unresolved dynamic member lookup.
+        return _allowDynamicMembers && receiver.SemanticType.IsVariant
             ? new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, typeof(object), XpTypeSymbol.Variant)
             : Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.SemanticType.Name}'.");
     }
@@ -217,7 +219,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             name = memberSyntax.NameToken.Text;
             var memberKey = receiver.SemanticType.Name + "." + name;
             var memberSymbols = _symbols.LookupMembers(receiver.SemanticType, name);
-            if (memberSymbols.Count == 0 && _allowDynamicMembers && receiver.Type == typeof(object))
+            if (memberSymbols.Count == 0 && _allowDynamicMembers && receiver.SemanticType.IsVariant)
             {
                 var arguments = syntax.Arguments.Select(Bind).ToArray();
                 var dynamicFunction = new FunctionSymbol(name, typeof(object), arguments.Select(argument => argument.Type).ToArray(), XpTypeSymbol.Variant);
