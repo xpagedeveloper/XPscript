@@ -25,6 +25,8 @@ XPscript source
 
 The existing runtime libraries, packaging, source mapping, web/desktop/mobile targets and Roslyn backend should be reused where practical.
 
+Release gate: when the AST compiler becomes the supported production compilation path and the migration definition of done is satisfied, release the compiler as `0.9.4 Beta`. Keep published `0.9.3 Beta` binaries unchanged for compatibility verification until that gate is reached.
+
 ## Current architecture investigation
 
 - [ ] Document the complete current compiler pipeline from source input to generated assembly.
@@ -280,13 +282,19 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [ ] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics.
 - [ ] Model Optional defaults in syntax/binding/emission instead of generating no-op overloads.
 - [x] Preserve Optional flags, parameter modes and default-expression syntax with absolute spans; handle nested default-expression commas in declaration parsing.
-- [ ] Validate Optional ordering, default types/constant rules and supplied/omitted arguments in the binder; lower omitted ByRef defaults through temporary locals.
-- [x] Execute omitted trailing Optional arguments through bound forwarding bodies and fresh typed locals; preserve supplied ByRef aliases and Function results, with repeat-call and generated-name collision regressions.
-- [ ] Complete Optional declaration validation and explicit empty argument slots, constant/default-name binding, overload conflicts and diagnostic source mapping; verify legacy and machine-interface parity before closing Optional migration.
-- [ ] Fix the legacy Optional/ByRef runtime comparison failure (`'long' does not contain a definition for 'Value'`), isolated in `tests/ast-compile-probe/optional-byref-compatibility.xps`; compile succeeds but executing the legacy output fails, while AST execution passes. ByVal Optional comparison passed both paths. Resolve parity before claiming full migration.
+- [ ] Validate Optional ordering, default types/expression rules and supplied/omitted arguments in the binder; lower omitted ByRef defaults through temporary locals.
+- [x] Execute omitted trailing Optional arguments through bound forwarding bodies and fresh writable storage; preserve supplied ByRef aliases and Function results, with repeat-call and generated-name collision regressions.
+- [x] Retain explicit empty argument slots as distinct syntax nodes with absolute spans; bind positional omissions only to declared Optional parameters and emit only the forwarding shapes actually used. Verify leading, middle, trailing and all-empty slots, required parameters following Optional parameters, supplied ByRef aliases and XPS2004 call spans against executable legacy/AST coverage and published main.
+- [x] Verify positional default-expression evaluation and side effects against published main. Named default evaluators run at omitted argument positions before later supplied arguments; forwarding parameters give omitted ByRef values fresh writable storage. The executable optional-default-order fixture covers earlier/later side effects, explicit suppression and nested defaults. Further declaration/default-name validation remains open; executable defaults are supported, so do not impose C# constant-only rules.
+- [ ] Complete Optional declaration validation, default-name binding, overload conflicts and diagnostic source mapping; verify legacy and machine-interface parity before closing Optional migration.
+- [x] Fix the legacy Optional/ByRef runtime comparison failure (`'long' does not contain a definition for 'Value'`): literal defaults receive fresh compatibility-reference storage, and the generic ByRef postprocessor preserves those wrappers instead of nesting them. The saved fixture verifies supplied aliases, repeated defaults, string and Boolean values in legacy and AST execution.
+- [ ] Include the published main executable under `publish/xpscript/win-x64` in compatibility verification. The 2026-10-08 binary reproduces the Optional/ByRef runtime failure; the corrected branch and AST path pass. Baseline SHA-256 and observed results are recorded in `docs/ast-published-main-verification.md`; repeat against subsequent migrated behavior and distinguish baseline defects from migration regressions.
 - [x] Replace regex-based function-result rewriting with structural return-local lowering, preserving execution after result assignments; cover Exit Function, fall-through, recursion and generated-name collisions in the experimental CLI.
-- [ ] Reject unsupported syntax rather than ignoring parser diagnostics or lowering statements to no-ops.
-- [ ] Apply production reserved-identifier validation in the AST path: legacy rejects user identifiers beginning with compiler-owned `__xps`, while the experimental path currently accepts them. Keep internal name-collision coverage at the lowering boundary.
+- [ ] Implement supported GoTo and GoSub semantics in the AST bound tree, including labels, branch targets, GoSub return flow and source-mapped diagnostics. Do not lower these constructs to `AstNoOp`; `unsupported-goto.xps` is the executable compatibility reference and published main outputs `done`.
+- [ ] Preserve legacy Resume and On Error semantics in the AST bound tree. The current compatibility preprocessor lowers both to `AstNoOp`; verify each syntax against a published-main fixture before changing behavior.
+- [ ] Preserve implicit With/member statement semantics in the AST path. The current rewrites of `Print .member` and `p.member` to `AstNoOp` discard observable reads/writes; compare valid legacy samples before lowering.
+- [ ] Replace AST XPImage/Object substitutions with the existing image runtime implementation. `XPImage.FromBytes`, `FromBase64`, `Load` and `New XPImage(...)` currently become `New Object()` and lose behavior.
+- [x] Apply production reserved-identifier validation in the AST path. Legacy and AST reject user identifiers beginning with compiler-owned `__xps`; the focused fixture verifies the diagnostic, source span and MCP rejection while valid lowering names remain covered by the CLI probe.
 - [x] Restrict dynamic call fallback to genuinely dynamic receivers; invalid calls to declared procedures must produce binder overload diagnostics.
 - [x] Reject unmatched declared overloads with XPS2004 even when dynamic member binding is enabled; regress arity, argument type, ByRef mode and source span while retaining Variant member calls.
 - [x] Restrict unresolved member fallback to Variant receivers rather than every object-backed user type; regress both properties and calls with XPS2009 and member source spans.
@@ -409,3 +417,15 @@ The first AST proof of concept is complete when:
 - [ ] Normal compiler and machine/MCP interfaces use the same AST/binder implementation and report consistent diagnostics.
 - [ ] Legacy parser/transpiler implementation is removed or reduced to explicitly justified compatibility code.
 - [ ] Compiler architecture and extension guidance are documented.
+- [ ] Update the compiler/package version to `0.9.4 Beta` only after all AST migration gates above pass and published `0.9.3 Beta` compatibility verification is recorded.
+
+## Additional compatibility regressions discovered during reverification
+
+- [x] Fix legacy Optional preprocessing for nested supplied calls using AST lexer token boundaries rather than a flat-parenthesis regex. The executable fixture covers nested same-procedure calls, inner commas, repeated calls, and unchanged strings/comments; legacy and AST produce 123, 1333, 246 and the original literal. Published main still reproduces missing-argument/generated-expression errors.
+- [x] Reject a bare procedure name where a scalar argument is required before AST execution. Remove the regex global-symbol scaffolding that treated function-result assignments as globals, preserve XPS2003 in AST CLI and MCP, and retain the optional-bare-procedure-argument.xps parity regression against published main.
+
+Reverification scope on 2026-10-08: the last five completed implementation increments by commit order are typed-receiver fallback (6c1a9553), Optional declaration syntax (17089047), trailing Optional forwarding (e22b27c9), legacy Optional ByRef storage (cf5181b7), and explicit Optional slots (df7ffa5d). These are exercised by the binder, lexer and executable CLI probes in Language FullTest. The new side-effect regression extends this audit beyond the earlier literal-only defaults.
+Audit result: all five scoped increments passed their focused probes and the complete Windows Language FullTest. MCP protocol validation also passed, including executable default expressions; this remains production-path validation rather than experimental AST exposure.
+
+- [x] Replace the AST Print file-output regex with lexer token boundaries so commas inside string literals are not misclassified. The print-parentheses-literal fixture now matches published main output.
+Nested-call verification completed: focused legacy/AST execution, production MCP validation and the complete Windows Language FullTest passed. Published main reproduces the original compile failure; its SHA-256 remains unchanged.

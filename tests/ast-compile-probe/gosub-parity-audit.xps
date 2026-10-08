@@ -1,0 +1,8 @@
+Sub Main()
+    GoSub worker
+    Print "after"
+    Exit Sub
+worker:
+    Print "worker"
+    Return
+End Sub
