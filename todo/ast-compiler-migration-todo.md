@@ -103,9 +103,9 @@ Initial statement nodes should cover at least:
 
 Initial declaration nodes should cover at least:
 
-- [ ] SubDeclarationSyntax
-- [ ] FunctionDeclarationSyntax
-- [ ] ClassDeclarationSyntax
+- [x] SubDeclarationSyntax; parsed and bound through the AST compile probe.
+- [x] FunctionDeclarationSyntax; parsed and bound through the AST compile probe.
+- [x] ClassDeclarationSyntax; parsed by `DeclarationParser` and covered by declaration/inheritance tests.
 - [ ] FieldDeclarationSyntax
 - [ ] PropertyDeclarationSyntax
 - [ ] Constructor/Destructor declarations
