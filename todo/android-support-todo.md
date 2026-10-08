@@ -43,6 +43,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 - [x] Add an `android-x64` target for x86_64 Android emulators.
 - [x] Build both ARM64 device and x64 emulator APKs in Android CI.
 - [x] Add an x86_64 emulator smoke test that installs, launches and verifies the XPScript log output locally on Windows. (Verified on Windows with Pixel_5 API 30 and android-x64.)
+- [x] Run the x86_64 API 30 emulator smoke test in Android CI, including APK installation, launch and `XPSCRIPT-EXIT=0` log verification.
 - [x] Package an installable debug APK.
 - [x] Install/update and launch it through adb.
 - [x] Route XPScript `Print` output to Android logging.
