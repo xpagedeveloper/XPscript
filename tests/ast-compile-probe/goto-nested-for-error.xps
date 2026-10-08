@@ -1,0 +1,11 @@
+Sub Main()
+    Dim total As Long
+    Dim i As Long
+    GoTo inside
+    For i = 1 To 2
+        total = total + 100
+inside:
+        total = total + 1
+    Next
+    Print total
+End Sub

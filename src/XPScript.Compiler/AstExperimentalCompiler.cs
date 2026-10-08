@@ -293,6 +293,7 @@ internal static class AstExperimentalCompiler
             foreach (var transfer in allProcedureStatements.OfType<GoToStatementSyntax>().Where(transfer => !transfer.IsGoSub))
                 if (!labels.ContainsKey(transfer.Target.Text))
                     throw new CompilerException($"Unknown label '{transfer.Target.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+            ValidateLoopEntryTransfers(procedureStatements, labels);
             var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType),
                 procedureFunction is not null, true, procedureFunction?.Identifier.Text, result,
                 (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
@@ -825,6 +826,29 @@ internal static class Program
                     yield return nested;
         }
     }
+
+    private static void ValidateLoopEntryTransfers(IEnumerable<StatementSyntax> statements,
+        IReadOnlyDictionary<string, LabelStatementSyntax> labels)
+    {
+        var scopes = FlattenStatements(statements)
+            .Where(statement => statement is ForStatementSyntax or ForAllStatementSyntax)
+            .ToArray();
+        foreach (var transfer in FlattenStatements(statements).OfType<GoToStatementSyntax>().Where(item => !item.IsGoSub))
+        {
+            if (!labels.TryGetValue(transfer.Target.Text, out var label)) continue;
+            var sourceScope = InnermostContaining(scopes, transfer.Span);
+            var targetScope = InnermostContaining(scopes, label.Span);
+            if (targetScope is not null && !ReferenceEquals(sourceScope, targetScope) &&
+                targetScope.Span.Start > transfer.Span.Start && targetScope.Span.End >= label.Span.End)
+                throw new CompilerException(
+                    $"GoTo cannot enter a For or ForAll block at label '{label.Identifier.Text}'. Move the label outside the loop or use structured control flow.",
+                    CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+        }
+    }
+
+    private static StatementSyntax? InnermostContaining(IEnumerable<StatementSyntax> scopes, TextSpan span)
+        => scopes.Where(scope => scope.Span.Start <= span.Start && scope.Span.End >= span.End)
+            .OrderBy(scope => scope.Span.Length).FirstOrDefault();
 
     private static void DeclareOptionalSignatures(SymbolTable symbols, string name, Type returnType, IReadOnlyList<ParameterSyntax> parameters)
     {
