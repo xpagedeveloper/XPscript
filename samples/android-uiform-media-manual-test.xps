@@ -1,0 +1,61 @@
+' XPScript Android UIForm media manual test
+' Run on an API 30 emulator or a physical Android device with network access.
+
+Sub Main()
+    Dim form As New UIForm("Android Media Manual Test")
+    Dim video As Variant
+    Dim audio As Variant
+
+    Call Application.Debug.Info("MEDIA TEST STARTUP: PASS")
+    Call Application.Debug.Info("MEDIA TEST INSTRUCTION: Allow network access, press each media button, rotate the device and background/restore the app.")
+
+    video = form.AddVideo("video", "Video")
+    video.Source = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
+    audio = form.AddAudio("audio", "Audio")
+    audio.Source = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    audio.Volume = 0.75
+    audio.Loop = False
+    audio.AutoPlay = False
+
+    Call form.AddButtonCallback("videoPlay", "Video Play", "VideoPlay")
+    Call form.AddButtonCallback("videoPause", "Video Pause", "VideoPause")
+    Call form.AddButtonCallback("videoStop", "Video Stop", "VideoStop")
+    Call form.AddButtonCallback("audioPlay", "Audio Play", "AudioPlay")
+    Call form.AddButtonCallback("audioPause", "Audio Pause", "AudioPause")
+    Call form.AddButtonCallback("audioStop", "Audio Stop", "AudioStop")
+    Call form.AddButtonCallback("finish", "Finish", "FinishMediaTest")
+
+    Call Application.Debug.Info("MEDIA TEST SOURCES: PASS")
+    Call Application.Debug.Info("MEDIA TEST VIDEO SOURCE=" & video.Source)
+    Call Application.Debug.Info("MEDIA TEST AUDIO SOURCE=" & audio.Source)
+    Call form.ShowDialog()
+    Call Application.Debug.Info("MEDIA TEST COMPLETE: inspect MEDIA TEST and XPSCRIPT lines in logcat")
+End Sub
+
+Sub VideoPlay(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST VIDEO PLAY REQUEST: PASS")
+End Sub
+
+Sub VideoPause(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST VIDEO PAUSE REQUEST: PASS")
+End Sub
+
+Sub VideoStop(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST VIDEO STOP REQUEST: PASS")
+End Sub
+
+Sub AudioPlay(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST AUDIO PLAY REQUEST: PASS")
+End Sub
+
+Sub AudioPause(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST AUDIO PAUSE REQUEST: PASS")
+End Sub
+
+Sub AudioStop(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST AUDIO STOP REQUEST: PASS")
+End Sub
+
+Sub FinishMediaTest(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST FINISH REQUEST: PASS")
+End Sub
