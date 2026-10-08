@@ -1,7 +1,7 @@
 using Android.Content;
 using AndroidX.Media3.Common;
-using AndroidX.Media3.Exoplayer;
-using AndroidX.Media3.Ui;
+using AndroidX.Media3.ExoPlayer;
+using AndroidX.Media3.UI;
 
 namespace XPScript.UI.Android;
 
