@@ -57,6 +57,8 @@ Class construction still follows the normal XPscript rule: class instances are c
 
 Lists participate in the common iteration model while retaining XPscript's existing List alias semantics. A `ForAll` alias over a List still supports list-specific behavior such as `ListTag(alias)` and assignment through the alias where supported.
 
+Experimental AST compilation uses the shared List runtime for declared Lists: alias reads/writes, `ListTag`, nested loops with separate aliases and snapshot iteration are covered by `tests/ast-compile-probe/forall-list-alias.xps`. New entries added during an active iteration are visited on a subsequent iteration. ByRef alias copy-back, initialized List declarations and the complete List API are still migration work; see [AST emission](ast-csharp-emitter.md).
+
 ## Arrays
 
 Only one-dimensional arrays are iterable with `ForAll`.

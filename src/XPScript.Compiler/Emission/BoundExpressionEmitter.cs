@@ -7,15 +7,33 @@ namespace XPScript.Compiler.Emission;
 
 public sealed class BoundExpressionEmitter
 {
+    private readonly Dictionary<Symbol, (string Value, string Tag)> _aliases = [];
+
+    // Alias substitution is lexical: nested ForAll blocks restore the outer
+    // binding even when body emission fails.
+    internal void WithListAlias(Symbol symbol, string value, string tag, Action emitBody)
+    {
+        var hadPrevious = _aliases.TryGetValue(symbol, out var previous);
+        _aliases[symbol] = (value, tag);
+        try { emitBody(); }
+        finally
+        {
+            if (hadPrevious) _aliases[symbol] = previous;
+            else _aliases.Remove(symbol);
+        }
+    }
+
     public string Emit(BoundExpression expression) => expression switch
     {
         BoundLiteralExpression literal => EmitLiteral(literal),
         BoundConversionExpression conversion => EmitConversion(conversion),
-        BoundNameExpression name => name.Symbol is LocalSymbol { StaticStorageName: { } storage } ? storage : name.Symbol.Name,
+        BoundNameExpression name => _aliases.TryGetValue(name.Symbol, out var alias) ? alias.Value
+            : name.Symbol is LocalSymbol { StaticStorageName: { } storage } ? storage : name.Symbol.Name,
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("Console", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("WriteLine", StringComparison.OrdinalIgnoreCase) => "System.Console.WriteLine",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("Parse", StringComparison.OrdinalIgnoreCase) => "XpJsonDocument.Parse",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("http", StringComparison.OrdinalIgnoreCase) && member.Receiver.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"http.{member.Name}",
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
+        BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundIndexExpression index => index.Expression.Type == typeof(object)
             ? $"((dynamic){Emit(index.Expression)})[{Emit(index.Index)}]"
             : index.Expression.Type == typeof(Dictionary<string, object?>)
@@ -47,6 +65,11 @@ public sealed class BoundExpressionEmitter
 
     private string EmitCall(BoundCallExpression call)
     {
+        var tagArgument = call.Arguments.Count == 1 ? call.Arguments[0] : null;
+        if (tagArgument is BoundConversionExpression conversion) tagArgument = conversion.Expression;
+        if (call.Target is null && call.Function.Name.Equals("ListTag", StringComparison.OrdinalIgnoreCase) &&
+            tagArgument is BoundNameExpression name && _aliases.TryGetValue(name.Symbol, out var alias))
+            return alias.Tag;
         var arguments = call.Arguments.Select((argument, index) =>
         {
             var byRef = call.Function.ByRefParameters?[index] == true;

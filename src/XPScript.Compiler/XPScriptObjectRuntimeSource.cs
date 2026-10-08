@@ -2,12 +2,13 @@ namespace XPScript.Compiler;
 
 public static class XPScriptObjectRuntimeSource
 {
-    public const string Code = """
+    public const string IterableContract = """
 internal interface IXPScriptIterable
 {
     System.Collections.IEnumerable XPScriptItems();
 }
-
+""";
+    public const string Code = IterableContract + """
 [System.Text.Json.Serialization.JsonConverter(typeof(LSObjectJsonConverterFactory))]
 internal abstract class LSObjectBase : IXPScriptIterable
 {

@@ -57,3 +57,9 @@ During the 2026-10-08 investigation, a temporary six-call GoSub fixture (ElseIf,
 ## Static procedure-local lifetime
 
 `static-local-baseline.xps` calls the same Sub twice. Published main compiles and executes it with output `1`, `2`; AST previously produced `1`, `1` because preprocessing changed Static to Dim. Structural scalar Static binding and persistent fields now produce `1`, `2` with exit code 0. The expanded `static-local-lifetime.xps` also passes AST execution with independent procedures/overloads, string/Boolean defaults and ByRef mutation. Published main rejects that expanded fixture's numeric overload calls with XPS2003 (it selects the String overload); this limits the baseline comparison to the minimal fixture, not the expanded overload regression. Static collections, objects and explicit initialization remain open.
+
+## ForAll List aliases
+
+`forall-list-alias.xps` now compiles and executes with matching output in published main and AST: `a`, `b`, `11`, `12`, `one:BLUE`, `two:GREEN`, `a`, `a`, `b`, `b`, `12`, `13`, `5`, `1`, `2`, `2`. It exercises typed write-through aliases, ListTag, nested aliases and insertion during snapshot iteration. Before this fix AST passed KeyValuePair values into arithmetic and threw a RuntimeBinderException.
+
+A separate ByRef alias audit remains open: calling a Long ByRef Sub with the alias is rejected by AST-generated C# because Value is a property. Published main compiles that audit but prints the unchanged value `1`, losing the intended mutation to `11`. This is distinct from assignment directly to a List alias, which matches the baseline regression above. Published main also rejects reuse of the same alias name in nested loops; the permanent comparison fixture uses different names.

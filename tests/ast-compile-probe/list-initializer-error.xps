@@ -1,0 +1,4 @@
+Sub Main()
+    Dim original List As Long
+    Dim copy List As Long = original
+End Sub

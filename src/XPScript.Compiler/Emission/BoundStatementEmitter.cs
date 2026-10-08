@@ -64,6 +64,9 @@ public sealed class BoundStatementEmitter
             case BoundVariableDeclarationStatement { Local.StaticStorageName: not null }:
                 // Storage is initialized once in the compilation unit, not on entry.
                 break;
+            case BoundVariableDeclarationStatement { Local.SemanticType.IsList: true } list:
+                Line($"LSList<{CSharpType(list.Local.SemanticType!.ElementType!.RuntimeType)}> {list.Local.Name} = new();");
+                break;
             case BoundVariableDeclarationStatement declaration:
                 var type = CSharpType(declaration.Local.Type);
                 if (declaration.Local.Name.Equals("csv", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("copy", StringComparison.OrdinalIgnoreCase)) type = "XpCsvDocument";
@@ -127,6 +130,17 @@ public sealed class BoundStatementEmitter
                 break;
             case BoundForAllStatement forAll:
                 var item = output.Temporary();
+                if (forAll.Collection.SemanticType.IsList)
+                {
+                    Line($"foreach (var {item} in {_expressions.Emit(forAll.Collection)}.Aliases())");
+                    output.Write("{", indent);
+                    _expressions.WithListAlias(forAll.Variable.Symbol, $"{item}.Value", $"{item}.Tag", () =>
+                    {
+                        foreach (var child in forAll.Statements) EmitStatement(output, child, indent + 1);
+                    });
+                    output.Write("}", indent);
+                    break;
+                }
                 Line($"foreach (var {item} in LSForAllRuntime.Enumerate({_expressions.Emit(forAll.Collection)}))");
                 output.Write("{", indent);
                 var itemValue = forAll.Variable.Type == typeof(long) ? $"XPScriptRuntime.CLng({item})" : item;

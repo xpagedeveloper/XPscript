@@ -381,6 +381,9 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Dynamic;
 using System.Text;
+using System.Globalization;
+{{XPScriptObjectRuntimeSource.IterableContract}}
+{{XPScriptListRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.", StringComparison.Ordinal)}}
 internal static class LSCoreCompare
 {
     public static bool Equal(object? left, object? right) => string.Equals(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
@@ -426,6 +429,19 @@ internal static class Program
     public static dynamic XPJsonArray = new ExpandoObject();
     public static dynamic XPJsonObject = new ExpandoObject();
     public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
+    // The shared List runtime requires the date coercion entry point too.
+    // Preserve existing XPscript date wrappers and numeric OLE date values.
+    public static DateTime CDat(object? value)
+    {
+        if (value is XpDate date) return date.Value;
+        if (value is DateTime dateTime) return dateTime;
+        if (value is null) return new DateTime(1899, 12, 30);
+        if (value is IConvertible && value is not string)
+            return DateTime.FromOADate(Convert.ToDouble(value, CultureInfo.CurrentCulture));
+        var text = CStr(value).Trim();
+        return double.TryParse(text, System.Globalization.NumberStyles.Any, CultureInfo.CurrentCulture, out var number)
+            ? DateTime.FromOADate(number) : DateTime.Parse(text, CultureInfo.CurrentCulture);
+    }
     public static long LBound(object value) => 0;
     public static long UBound(object value) => value is Array array ? array.Length - 1 : -1;
     public static object Base64DecodeBinary(object value) => Convert.FromBase64String(CStr(value));

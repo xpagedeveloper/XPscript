@@ -91,6 +91,12 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindDim(DimStatementSyntax syntax)
     {
+        if (syntax.IsList && syntax.Initializer is not null)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
+                "AST List declarations with initializers are not implemented.", syntax.Span));
+            return null;
+        }
         var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text, syntax.IsArray, syntax.ArrayLength, syntax.IsList);
         var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType);
         if (syntax.IsStatic)
@@ -147,7 +153,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             "SINGLE" or "DOUBLE" or "CURRENCY" => (typeof(double), XpTypeSymbol.FromClr(typeof(double))),
             _ => (typeof(object), XpTypeSymbol.Variant)
         };
-        if (isList) return (typeof(Dictionary<string, object?>), XpTypeSymbol.Variant);
+        if (isList) return (typeof(object), XpTypeSymbol.ListOf(result.Item2));
         if (!isArray) return result;
         var arrayType = result.Item1.MakeArrayType();
         return (arrayType, XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(result.Item1)));
@@ -238,8 +244,22 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindForAll(ForAllStatementSyntax syntax)
     {
-        var variableExpression = BindExpression(new NameExpressionSyntax(syntax.IdentifierToken));
         var collection = BindExpression(syntax.CollectionExpression);
+        if (collection is null) return null;
+        if (collection.SemanticType is { IsList: true, ElementType: { } element })
+        {
+            // A List alias is a typed view of its entry, not a copied Variant.
+            // Bind it in a child scope so nested aliases restore outer names.
+            var scope = _symbols.CreateChildScope();
+            var alias = new LocalSymbol(syntax.IdentifierToken.Text, element.RuntimeType, element);
+            scope.Declare(alias);
+            var binder = new StatementBinder(scope, _returnType, _allowsReturnValue, _allowDynamicMembers,
+                functionName, functionResult, procedureIdentity);
+            var body = syntax.Statements.Select(binder.Bind).OfType<BoundStatement>().ToArray();
+            _diagnostics.AddRange(binder.Diagnostics);
+            return new BoundForAllStatement(new BoundNameExpression(alias), collection, body);
+        }
+        var variableExpression = BindExpression(new NameExpressionSyntax(syntax.IdentifierToken));
         if (variableExpression is not BoundNameExpression variable || collection is null)
             return null;
 
@@ -247,7 +267,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 "ForAll loop variable must be writable.", syntax.IdentifierToken.Span));
 
-        if (!collection.Type.IsArray && collection.Type != typeof(string) && !(_allowDynamicMembers && (collection.SemanticType.IsVariant || collection.Type == typeof(object))))
+        if (!collection.SemanticType.IsList && !collection.Type.IsArray && collection.Type != typeof(string) && !(_allowDynamicMembers && (collection.SemanticType.IsVariant || collection.Type == typeof(object))))
         {
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 $"ForAll requires an array collection, not {collection.SemanticType.Name}.", syntax.CollectionExpression.Span));

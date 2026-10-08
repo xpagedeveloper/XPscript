@@ -115,6 +115,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     {
         var expression = Bind(syntax.Expression);
         var index = Bind(syntax.Index);
+        if (expression.SemanticType is { IsList: true, ElementType: { } element })
+            return new BoundIndexExpression(expression, index, element.RuntimeType, element);
         if (index.Type != typeof(long))
             return Error(syntax.Index, CompilerDiagnosticCodes.ArgumentTypeMismatch, "Array index must be an integer.");
         if (expression.SemanticType.IsArray && expression.SemanticType.ElementType is not null)
@@ -147,6 +149,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
     private BoundExpression BindArray(ArrayExpressionSyntax syntax)
     {
+        if (_symbols.TryLookup(syntax.ArrayIdentifier.Text, out var symbol) && symbol is LocalSymbol { SemanticType.IsList: true } list && syntax.Elements.Count == 1)
+        {
+            var element = list.SemanticType!.ElementType!;
+            return new BoundIndexExpression(new BoundNameExpression(list), Bind(syntax.Elements[0]), element.RuntimeType, element);
+        }
         if (syntax.ArrayIdentifier.Text.Equals("Array", StringComparison.OrdinalIgnoreCase))
         {
             var arrayArguments = syntax.Elements.Select(Bind).ToArray();
@@ -199,6 +206,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             target = null;
             name = nameSyntax.IdentifierToken.Text;
+            if (_symbols.TryLookup(name, out var listSymbol) && listSymbol is LocalSymbol { SemanticType.IsList: true } list && syntax.Arguments.Count == 1)
+            {
+                var element = list.SemanticType!.ElementType!;
+                return new BoundIndexExpression(new BoundNameExpression(list), Bind(syntax.Arguments[0]), element.RuntimeType, element);
+            }
             if (_symbols.TryLookup(name, out var indexedSymbol) && indexedSymbol is LocalSymbol local && local.Type.IsArray && syntax.Arguments.Count == 1)
             {
                 var array = new BoundNameExpression(local);

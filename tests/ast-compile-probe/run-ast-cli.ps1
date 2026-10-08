@@ -4,6 +4,13 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$listInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-initializer-error.xps') -o (Join-Path $output 'list-initializer-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($listInvalid -join "`n") -notmatch 'AST List declarations with initializers are not implemented') { throw 'AST ignored an unsupported List initializer.' }
+$listOutput = Join-Path $output 'forall-list'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-alias.xps') -o $listOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List alias compilation failed.' }
+$listResult = dotnet (Join-Path $listOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listResult -join "`n") -ne "a`nb`n11`n12`none:BLUE`ntwo:GREEN`na`na`nb`nb`n12`n13`n5`n1`n2`n2") { throw 'AST ForAll List write-through, ListTag, nested alias scope or snapshot semantics failed.' }
 $staticInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-initializer-error.xps') -o (Join-Path $output 'static-initializer-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($staticInvalid -join "`n") -notmatch 'AST Static currently requires a scalar declaration without an initializer') { throw 'AST unsupported Static initializer was not explicitly rejected.' }
 $staticOutput = Join-Path $output 'static-local'
