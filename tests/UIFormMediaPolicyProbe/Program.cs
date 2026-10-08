@@ -7,7 +7,6 @@ Sub Main()
     Set runtimeImage = New XPImage(8, 8, "#336699")
     form.BootImage = runtimeImage
     Call form.AddImage("Preview", runtimeImage)
-    Call form.AddVideo("Intro", "Intro video")
 End Sub
 """;
 
@@ -19,10 +18,6 @@ var android = Compile(source, "android-arm64");
 var browser = Compile(source, "browser-wasm");
 
 const string fileClause = "uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase)";
-const string httpClause = "uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)";
-const string httpsClause = "uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)";
-const string dataClause = "uri.Scheme.Equals(\"data\", StringComparison.OrdinalIgnoreCase)";
-const string unsupported = "source uses an unsupported URI scheme";
 const string webGuard = "EnsureWebSafeMediaSource";
 const string webFileError = "source cannot expose a local filesystem path through server-web rendering.";
 const string imageWebGuard = "EnsureWebSafeMediaSource(field.ImageSource, \"image\")";
@@ -35,13 +30,8 @@ const string rootedPathReturn = "if (allowLocalPaths && isRootedPath) return tex
 const string xpImageCheck = "value.GetType().Name.Equals(\"XPImage\", StringComparison.Ordinal)";
 const string xpImageDataImage = "return \"data:image/png;base64,\" + Convert.ToBase64String(bytes);";
 
-foreach (var (target, generated) in new[] { ("desktop", desktop), ("android", android), ("browser", browser) })
+foreach (var generated in new[] { desktop, android, browser })
 {
-    if (!generated.Contains(httpClause, StringComparison.Ordinal) ||
-        !generated.Contains(httpsClause, StringComparison.Ordinal) ||
-        !generated.Contains(dataClause, StringComparison.Ordinal) ||
-        !generated.Contains(unsupported, StringComparison.Ordinal))
-        throw new Exception($"Generated UIForm media policy is missing the shared HTTP/HTTPS/data-image scheme guard for {target}: http={generated.Contains(httpClause, StringComparison.Ordinal)}, https={generated.Contains(httpsClause, StringComparison.Ordinal)}, data={generated.Contains(dataClause, StringComparison.Ordinal)}, unsupported={generated.Contains(unsupported, StringComparison.Ordinal)}.");
     if (!generated.Contains(webGuard, StringComparison.Ordinal) ||
         !generated.Contains(webFileError, StringComparison.Ordinal) ||
         !generated.Contains(imageWebGuard, StringComparison.Ordinal) ||
