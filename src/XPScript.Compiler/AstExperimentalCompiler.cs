@@ -284,9 +284,16 @@ internal static class AstExperimentalCompiler
             foreach (var parameter in parameters) scope.Declare(parameter);
             var returnType = procedureFunction is null ? typeof(void) : ResolveRuntimeType(procedureFunction.ReturnType?.Identifier.Text);
             var result = procedureFunction is null ? null : new LocalSymbol(resultName, returnType, XpTypeSymbol.FromClr(returnType));
+            var procedureStatements = procedureSub?.Statements ?? procedureFunction!.Statements;
+            var labels = procedureStatements.OfType<LabelStatementSyntax>()
+                .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+            foreach (var transfer in procedureStatements.OfType<GoToStatementSyntax>())
+                if (!labels.ContainsKey(transfer.Target.Text))
+                    throw new CompilerException($"Unknown label '{transfer.Target.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
             var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType),
                 procedureFunction is not null, true, procedureFunction?.Identifier.Text, result);
-            var bound = (procedureSub?.Statements ?? procedureFunction!.Statements).Select(binder.Bind).OfType<BoundStatement>().ToList();
+            var bound = procedureStatements.Select(binder.Bind).OfType<BoundStatement>().ToList();
             if (binder.Diagnostics.Count > 0)
                 throw new CompilerException(string.Join(Environment.NewLine, binder.Diagnostics.Select(d => d.Message)), binder.Diagnostics[0].Code, "semantic");
             if (result is not null)
