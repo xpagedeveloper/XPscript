@@ -245,6 +245,8 @@ Class-oriented language patterns:
 
 ## Phase 7: Bound tree and types
 
+Reverification on 2026-10-08: the five completed items at the end of this phase (Variant/dynamic, Object, Null/Empty, array/list typing and binder type diagnostics) passed `tests/ast-binding`; the lexer/compatibility and executable emission probes also passed. The binder probe is now included in the permanent Language FullTest runner, with completion markers required for all five areas. The complete Windows Language FullTest passed with this coverage enabled. This verifies the current AST semantic slice, not the still-pending production CLI/MCP integration.
+
 - [x] Define `BoundNode` hierarchy separate from syntax.
 - [x] Bind literals to XPscript types.
 - [x] Bind names to symbols.

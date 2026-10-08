@@ -212,7 +212,7 @@ jobs:
         run: |
           dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
-      # Language includes AST compatibility, executable emission and compilation-unit probes.
+      # Language includes AST compatibility, semantic binding, executable emission and compilation-unit probes.
       - name: Run Windows ${{ matrix.name }} FullTest
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite ${{ matrix.suite }}
