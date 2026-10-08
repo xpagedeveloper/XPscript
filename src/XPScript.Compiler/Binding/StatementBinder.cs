@@ -139,7 +139,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             if (!conversion.IsIdentity)
                 initializer = new BoundConversionExpression(initializer, semanticType, conversion) { Span = initializer.Span };
         }
-        return new BoundVariableDeclarationStatement(local, initializer, syntax.IsArray && syntax.ArrayLength is null);
+        return new BoundVariableDeclarationStatement(local, initializer, syntax.IsArray && syntax.ArrayLength is null, syntax.ArrayLength);
     }
 
     private static (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name, bool isArray = false, int? arrayLength = null, bool isList = false)
@@ -187,6 +187,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                     method = "Erase";
                 }
                 else if (arguments[0].SemanticType.IsList) list = arguments[0];
+                else if (arguments[0].SemanticType.IsArray)
+                    return new BoundExpressionStatement(new BoundCallExpression(null, new FunctionSymbol("EraseArray", typeof(void), [arguments[0].Type]), arguments));
                 if (list is not null)
                     return new BoundExpressionStatement(new BoundCallExpression(
                         new BoundMemberAccessExpression(list, method, typeof(void)),

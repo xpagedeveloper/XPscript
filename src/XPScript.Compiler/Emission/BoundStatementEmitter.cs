@@ -59,7 +59,17 @@ public sealed class BoundStatementEmitter
                 Line($"{targetText} = {expressionText};");
                 break;
             case BoundExpressionStatement expression:
-                Line($"{_expressions.Emit(expression.Expression)};");
+                if (expression.Expression is BoundCallExpression { Function.Name: "EraseArray" } erase && erase.Arguments.Count == 1)
+                {
+                    var array = _expressions.Emit(erase.Arguments[0]);
+                    var element = erase.Arguments[0].SemanticType.ElementType?.RuntimeType;
+                    if (element == typeof(string))
+                        Line($"System.Array.Fill((string[]){array}, string.Empty);");
+                    else
+                        Line($"System.Array.Clear((System.Array){array}, 0, ((System.Array){array}).Length);");
+                }
+                else
+                    Line($"{_expressions.Emit(expression.Expression)};");
                 break;
             case BoundVariableDeclarationStatement { Local.StaticStorageName: not null }:
                 // Storage is initialized once in the compilation unit, not on entry.
@@ -84,9 +94,11 @@ public sealed class BoundStatementEmitter
                 else if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase)) type = "XpAiTool";
                 else if (declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase)) type = "XpAiTool";
                 var initializer = declaration.Initializer is null
-                    ? ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ? "new XpNotesHttp()" : declaration.Local.Name.Equals("http", StringComparison.OrdinalIgnoreCase) ? "new XpHttpClientStub()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase) ? "new XpAi(\"\", \"\")" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase) ? "new XpAiTool(\"\")" : declaration.Local.Name is "csv" or "copy" ? "new XpCsvDocument()" : declaration.Local.Name is "json" or "parsed" or "copied" ? "new XpJsonDocument()" : declaration.Local.Name is "directObject" or "copiedObject" or "address" ? "new XpJsonObject()" : declaration.Local.Name is "directArray" or "roles" or "arr" or "jsonRows" ? "new XpJsonArray()" : declaration.Local.Name is "directElement" or "element" or "secondElement" ? "new XpJsonElement()" : declaration.Local.Name.Equals("row", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) ? "new XpCsvDocument()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : 4)}]" : $"default({type})"))
+                    ? ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ? "new XpNotesHttp()" : declaration.Local.Name.Equals("http", StringComparison.OrdinalIgnoreCase) ? "new XpHttpClientStub()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase) ? "new XpAi(\"\", \"\")" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase) ? "new XpAiTool(\"\")" : declaration.Local.Name is "csv" or "copy" ? "new XpCsvDocument()" : declaration.Local.Name is "json" or "parsed" or "copied" ? "new XpJsonDocument()" : declaration.Local.Name is "directObject" or "copiedObject" or "address" ? "new XpJsonObject()" : declaration.Local.Name is "directArray" or "roles" or "arr" or "jsonRows" ? "new XpJsonArray()" : declaration.Local.Name is "directElement" or "element" or "secondElement" ? "new XpJsonElement()" : declaration.Local.Name.Equals("row", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) ? "new XpCsvDocument()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : declaration.ArrayLength ?? 0)}]" : $"default({type})"))
                     : _expressions.Emit(declaration.Initializer).Replace("((object)(new XpJsonDocument()))", "new XpJsonDocument()", StringComparison.Ordinal);
                 Line($"{type} {declaration.Local.Name} = {initializer};");
+                if (declaration.Local.Type.IsArray && declaration.Initializer is null && declaration.Local.Type.GetElementType() == typeof(string) && !declaration.EmptyArray)
+                    Line($"System.Array.Fill((string[]){declaration.Local.Name}, string.Empty);");
                 break;
             case BoundErrorStatement error:
                 var description = error.Description is null ? "\"XPscript Error\"" : _expressions.Emit(error.Description);

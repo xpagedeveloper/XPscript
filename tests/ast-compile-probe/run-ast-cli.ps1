@@ -9,6 +9,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-erase.xps') -o $eras
 if ($LASTEXITCODE -ne 0) { throw 'AST List Erase compilation failed.' }
 $eraseResult = dotnet (Join-Path $eraseOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($eraseResult -join "`n") -ne "False`nTrue`nFalse`nfirst`n1`nFalse`nFalse`nLIST_ERASE_OK") { throw 'AST List tag removal, clearing or removal during alias iteration failed.' }
+$arrayOutput = Join-Path $output 'array-storage'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage.xps') -o $arrayOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST array declaration compilation failed.' }
+$arrayResult = dotnet (Join-Path $arrayOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($arrayResult -join "`n") -ne "1`n0`n1`nTrue`nTrue") { throw 'AST array bounds, string defaults or Erase semantics differ from published main.' }
 $membershipOutput = Join-Path $output 'list-membership'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-membership.xps') -o $membershipOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST List membership compilation failed.' }

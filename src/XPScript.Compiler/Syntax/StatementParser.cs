@@ -658,12 +658,25 @@ public sealed class StatementParser
         {
             isArray = true;
             NextToken();
-            if (Current.Kind == SyntaxKind.NumberToken && long.TryParse(Current.Text, out var upperBound))
+            if (Current.Kind == SyntaxKind.NumberToken && long.TryParse(Current.Text, out var firstBound))
             {
-                arrayLength = checked((int)upperBound + 1);
+                var upperBound = firstBound;
+                var hasExplicitLowerBound = false;
                 NextToken();
-                if (Current.Kind == SyntaxKind.ToKeyword) NextToken();
-                if (Current.Kind == SyntaxKind.NumberToken) NextToken();
+                if (Current.Kind == SyntaxKind.ToKeyword)
+                {
+                    hasExplicitLowerBound = true;
+                    NextToken();
+                    if (Current.Kind == SyntaxKind.NumberToken && long.TryParse(Current.Text, out upperBound))
+                        NextToken();
+                }
+                // AST currently supports the common zero-based, one-dimensional form.
+                // Keep unsupported bounds explicit instead of silently compiling the wrong size.
+                if ((hasExplicitLowerBound && firstBound != 0) || upperBound < firstBound || upperBound >= int.MaxValue)
+                    _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
+                        "AST arrays currently require a zero-based constant bound.", identifier.Span));
+                else
+                    arrayLength = checked((int)upperBound + 1);
             }
             while (Current.Kind is not SyntaxKind.CloseParenToken and not SyntaxKind.EndOfFileToken and not SyntaxKind.NewLineToken) NextToken();
             Match(SyntaxKind.CloseParenToken);

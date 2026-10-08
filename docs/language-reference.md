@@ -100,7 +100,7 @@ Array-consuming operations normalize an object reference whose value is `Nothing
 |---|---|---|---|---|
 | `ReDim` | `ReDim array(bounds)` | dynamic array and bounds. | Allocates/resizes array. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `ReDim Preserve` | `ReDim Preserve array(bounds)` | array and new bounds. | Resizes while preserving supported values. | [operators-arrays.xps](../samples/operators-arrays.xps) |
-| `Erase` | `Erase array`, `Erase list`, `Erase list(tag)` | array, List, or keyed List element. | Clears/deallocates array storage, clears a List, or removes one tag. Experimental AST currently supports declared Lists; see [AST emission](ast-csharp-emitter.md). | [operators-arrays.xps](../samples/operators-arrays.xps), [lists-classes.xps](../samples/lists-classes.xps) |
+| `Erase` | `Erase array`, `Erase list`, `Erase list(tag)` | array, List, or keyed List element. | Clears/deallocates array storage, clears a List, or removes one tag. Experimental AST supports fixed one-dimensional declared arrays and declared Lists; dynamic/multidimensional array lifecycle remains migration work. | [operators-arrays.xps](../samples/operators-arrays.xps), [lists-classes.xps](../samples/lists-classes.xps) |
 | `LBound` | `LBound(array [, dimension])` | array and optional dimension. | Returns lower bound. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `UBound` | `UBound(array [, dimension])` | array and optional dimension. | Returns upper bound. | [operators-arrays.xps](../samples/operators-arrays.xps) |
 | `Array` | `Array(value1, value2, ...)` | values. | Creates Variant array. | [operators-arrays.xps](../samples/operators-arrays.xps) |
