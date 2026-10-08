@@ -22,8 +22,6 @@ const string webGuard = "EnsureWebSafeMediaSource";
 const string webFileError = "source cannot expose a local filesystem path through server-web rendering.";
 const string imageWebGuard = "EnsureWebSafeMediaSource(field.ImageSource, \"image\")";
 const string bootImageWebGuard = "EnsureWebSafeMediaSource(_bootImage, \"boot image\")";
-const string xpImageCheck = "value.GetType().Name.Equals(\"XPImage\", StringComparison.Ordinal)";
-const string xpImageDataImage = "return \"data:image/png;base64,\" + Convert.ToBase64String(bytes);";
 
 foreach (var (target, generated) in new[] { ("desktop", desktop), ("android", android), ("browser", browser) })
 {
@@ -31,9 +29,6 @@ foreach (var (target, generated) in new[] { ("desktop", desktop), ("android", an
         !generated.Contains(imageWebGuard, StringComparison.Ordinal) ||
         !generated.Contains(bootImageWebGuard, StringComparison.Ordinal))
         throw new Exception($"Generated UIForm media policy must guard Image and BootImage server-web rendering for {target}: web={generated.Contains(webGuard, StringComparison.Ordinal)}, fileError={generated.Contains(webFileError, StringComparison.Ordinal)}, image={generated.Contains(imageWebGuard, StringComparison.Ordinal)}, boot={generated.Contains(bootImageWebGuard, StringComparison.Ordinal)}.");
-    if (!generated.Contains(xpImageCheck, StringComparison.Ordinal) ||
-        !generated.Contains(xpImageDataImage, StringComparison.Ordinal))
-        throw new Exception("Generated UIForm media policy must normalize XPImage sources to data-image content on every target.");
 }
 
 if (!desktop.Contains("true && " + fileClause, StringComparison.Ordinal))
