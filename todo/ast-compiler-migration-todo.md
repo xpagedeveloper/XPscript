@@ -37,7 +37,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 - [x] Identify syntax validation currently delegated to generated C# / Roslyn in `docs/ast-roslyn-validation-boundary.md`.
 - [x] Identify type and symbol validation currently delegated to generated C# / Roslyn in `docs/ast-symbol-validation-boundary.md`.
 - [x] Map existing source-map behavior and requirements in `docs/ast-source-mapping.md`.
-- [ ] Map compiler diagnostics and machine/MCP diagnostic contracts that must remain compatible.
+- [x] Map compiler diagnostics and machine/MCP diagnostic contracts in `docs/ast-diagnostic-contract.md`.
 - [ ] Inventory compiler tests by language feature and compiler phase.
 - [ ] Document syntax that is intentionally compatible with LotusScript/VB-like semantics.
 - [ ] Produce a migration-risk list before replacing any production parsing path.
