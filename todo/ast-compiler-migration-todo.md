@@ -170,7 +170,7 @@ Expressions are the first migration target because the current transpiler perfor
 - [x] Parse Subs and Functions.
 - [x] Parse parameters including ByRef/ByVal semantics.
 - [x] Parse return types.
-- [ ] Parse Classes and inheritance syntax.
+- [x] Parse Classes and inheritance syntax; `DeclarationParser` handles `Extend`, fields, properties and members, with inheritance contract regressions in Language FullTest.
 - [x] Parse fields.
 - [x] Parse properties.
 - [x] Parse constructors and destructors.
