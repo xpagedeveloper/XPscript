@@ -89,7 +89,9 @@ public sealed class BoundExpressionEmitter
         return $"{(call.Target is null ? functionName : Emit(call.Target))}({string.Join(", ", arguments)})";
     }
 
-    private string EmitBinary(BoundBinaryExpression binary) => binary.Type == typeof(object)
+    private string EmitBinary(BoundBinaryExpression binary) => binary.OperatorKind == SyntaxKind.IsKeyword
+        ? $"object.ReferenceEquals({Emit(binary.Left)}, {Emit(binary.Right)})"
+        : binary.Type == typeof(object)
         ? $"((dynamic)({Emit(binary.Left)}) {EmitBinaryOperator(binary.OperatorKind, binary.Type)} (dynamic)({Emit(binary.Right)}))"
         : binary.OperatorKind == SyntaxKind.PlusToken && binary.Type == typeof(string)
         ? $"(Convert.ToString({Emit(binary.Left)}) + Convert.ToString({Emit(binary.Right)}))"
@@ -145,6 +147,7 @@ public sealed class BoundExpressionEmitter
 
     private static string EmitBinaryOperator(SyntaxKind kind, Type resultType) => kind switch
     {
+        SyntaxKind.IsKeyword => "ReferenceEquals",
         SyntaxKind.PlusToken => "+",
         SyntaxKind.MinusToken => "-",
         SyntaxKind.StarToken => "*",

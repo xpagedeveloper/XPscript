@@ -1,0 +1,4 @@
+Sub Main()
+    Dim value As Variant
+    If value Is Nothing Then Print "IS_NOTHING_OK"
+End Sub

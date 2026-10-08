@@ -219,7 +219,6 @@ public sealed class ExpressionParser
         SyntaxKind.SetKeyword or
         SyntaxKind.GetKeyword or
         SyntaxKind.NewKeyword or
-        SyntaxKind.IsKeyword or
         SyntaxKind.ByValKeyword or
         SyntaxKind.ByRefKeyword or
         SyntaxKind.MeKeyword;
@@ -261,11 +260,10 @@ public sealed class ExpressionParser
     {
         SyntaxKind.StarToken or SyntaxKind.SlashToken => 5,
         SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.AmpersandToken => 4,
-        SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken or SyntaxKind.LessToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterToken or SyntaxKind.GreaterOrEqualsToken => 3,
+        SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken or SyntaxKind.IsKeyword or SyntaxKind.LessToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterToken or SyntaxKind.GreaterOrEqualsToken => 3,
         SyntaxKind.AndKeyword => 2,
         SyntaxKind.LikeKeyword => 3,
         SyntaxKind.OrKeyword => 1,
         _ => 0
     };
 }
-

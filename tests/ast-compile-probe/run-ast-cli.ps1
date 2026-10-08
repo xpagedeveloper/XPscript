@@ -69,6 +69,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'variant-byte-conversion.x
 if ($LASTEXITCODE -ne 0) { throw 'AST Variant-to-Byte conversion compilation failed.' }
 $byteResult = dotnet (Join-Path $byteOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($byteResult -join "`n") -ne '7') { throw 'AST Variant-to-Byte conversion execution failed.' }
+$isNothingOutput = Join-Path $output 'is-nothing'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'is-nothing.xps') -o $isNothingOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Is Nothing compilation failed.' }
+$isNothingResult = dotnet (Join-Path $isNothingOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($isNothingResult -join "`n") -ne 'IS_NOTHING_OK') { throw 'AST Is Nothing did not preserve Variant Nothing semantics.' }
 $nestedOutput = Join-Path $output 'nested-goto'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-goto.xps') -o $nestedOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nested GoTo compilation failed.' }
