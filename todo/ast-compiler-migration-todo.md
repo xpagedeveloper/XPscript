@@ -64,7 +64,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 
 - [x] Define a common `SyntaxNode` base abstraction.
 - [ ] Define source spans on every syntax node.
-- [ ] Define `CompilationUnitSyntax`.
+- [x] Define `CompilationUnitSyntax`; `DeclarationParser.ParseCompilationUnit` returns it with source-derived spans.
 - [ ] Define declaration node hierarchy.
 - [x] Define statement node hierarchy.
 - [x] Define expression node hierarchy.
