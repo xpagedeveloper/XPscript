@@ -1,0 +1,6 @@
+Sub Main()
+    GoTo done
+    Print "unreachable"
+done:
+    Print "done"
+End Sub
