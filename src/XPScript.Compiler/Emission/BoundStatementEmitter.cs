@@ -11,6 +11,8 @@ public sealed class BoundStatementEmitter
     public string Emit(IReadOnlyList<BoundStatement> statements)
     {
         var output = new BoundEmissionContext(statements);
+        if (statements.OfType<BoundGoToStatement>().Any(x => x.IsGoSub))
+            output.Write("var __xps_gosub = new System.Collections.Generic.Stack<int>();", 0);
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
         return output.Finish().Code;
@@ -21,6 +23,8 @@ public sealed class BoundStatementEmitter
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var output = new BoundEmissionContext(statements, source, sourcePath);
+        if (statements.OfType<BoundGoToStatement>().Any(x => x.IsGoSub))
+            output.Write("var __xps_gosub = new System.Collections.Generic.Stack<int>();", 0);
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
         return output.Finish();
@@ -37,8 +41,12 @@ public sealed class BoundStatementEmitter
             case BoundGoToStatement transfer when !transfer.IsGoSub:
                 Line($"goto {Label(transfer.Target)};");
                 break;
-            case BoundGoToStatement:
-                throw new NotSupportedException("GoSub requires structured return-stack lowering.");
+            case BoundGoToStatement transfer:
+                Line($"__xps_gosub.Push({transfer.Id}); goto {Label(transfer.Target)}; __xps_gosub_return_{transfer.Id}:;");
+                break;
+            case BoundGoSubReturnStatement:
+                Line("switch (__xps_gosub.Pop()) { case 1: goto __xps_gosub_return_1; default: return; }");
+                break;
             case BoundNoOpStatement:
                 break;
             case BoundAssignmentStatement assignment:

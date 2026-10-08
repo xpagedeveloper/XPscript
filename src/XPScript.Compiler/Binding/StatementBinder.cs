@@ -5,6 +5,8 @@ namespace XPScript.Compiler.Binding;
 public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false,
     bool allowDynamicMembers = false, string? functionName = null, LocalSymbol? functionResult = null)
 {
+    private int _nextGoSubId;
+    private bool _hasGoSub;
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly XpTypeSymbol? _returnType = returnType;
     private readonly bool _allowsReturnValue = allowsReturnValue;
@@ -24,7 +26,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             RuntimeFileStatementSyntax runtime => BindRuntimeStatement(runtime),
             ReturnStatementSyntax @return => BindReturn(@return),
             LabelStatementSyntax label => new BoundLabelStatement(label.Identifier.Text),
-            GoToStatementSyntax transfer => new BoundGoToStatement(transfer.Target.Text, transfer.IsGoSub),
+            GoToStatementSyntax transfer => BindTransfer(transfer),
             ExitStatementSyntax exit => BindExit(exit),
             ErrorStatementSyntax error => BindError(error),
             IfStatementSyntax @if => BindIf(@if),
@@ -38,6 +40,14 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         if (bound is not null)
             bound.Span = syntax.Span;
         return bound;
+    }
+
+    private BoundStatement BindTransfer(GoToStatementSyntax syntax)
+    {
+        if (!syntax.IsGoSub)
+            return new BoundGoToStatement(syntax.Target.Text, false);
+        _hasGoSub = true;
+        return new BoundGoToStatement(syntax.Target.Text, true, ++_nextGoSubId);
     }
 
     private BoundStatement? BindUnsupported(StatementSyntax syntax)
@@ -304,6 +314,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement BindReturn(ReturnStatementSyntax syntax)
     {
+        if (!_allowsReturnValue && syntax.Expression is null && _hasGoSub)
+            return new BoundGoSubReturnStatement();
         if (!_allowsReturnValue)
         {
             BoundExpression? expression = null;
