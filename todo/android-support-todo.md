@@ -4,6 +4,8 @@ Goal: add Android as an XPScript application target in independently testable st
 
 This TODO is the working checklist for Android support. Keep adding concrete Android and mobile follow-up work here as capabilities are discovered during implementation.
 
+Cross-platform follow-up for new UIForm controls is tracked separately in `todo/uiform-cross-platform-controls-todo.md`. Update both TODOs when an Android control requires shared API or non-Android platform work.
+
 ## Implementation order
 
 1. Get the smallest possible XPScript Android application running on a real device.
