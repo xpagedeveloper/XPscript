@@ -878,7 +878,7 @@ internal static class Program
         for (var count = parameters.Count - 1; count >= 0 && parameters[count].IsOptional; count--)
             symbols.Declare(new FunctionSymbol(name, returnType,
                 parameters.Take(count).Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
-                null, null, parameters.Take(count).Select(p => p.IsByRef).ToArray()));
+                null, null, parameters.Take(count).Select(p => p.IsByRef).ToArray()) { IsOptionalForwarding = true });
     }
 
     private static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters)
