@@ -27,6 +27,11 @@ public interface IXPScriptCameraService : IXPScriptMobileService
 
 public readonly record struct XPScriptLocation(double Latitude, double Longitude, double? AccuracyMeters, double? AltitudeMeters, double? SpeedMetersPerSecond, DateTimeOffset Timestamp);
 
+public sealed class XPScriptLocationUnavailableException : Exception
+{
+    public XPScriptLocationUnavailableException(string message) : base(message) { }
+}
+
 public interface IXPScriptLocationService : IXPScriptMobileService
 {
     XPScriptLocation GetCurrent(TimeSpan timeout);
@@ -59,7 +64,18 @@ public static class XPScriptLocation
         if (!XPScriptMobileServices.TryGet("location", out var service) || service is not IXPScriptLocationService location)
             throw new XPScriptRuntimeException(5, "location: " + XPScriptMobileServices.UnavailableReason("location"));
         if (!location.IsAvailable) throw new XPScriptRuntimeException(5, "location: " + location.UnavailableReason);
-        return location.GetCurrent(timeout);
+        try
+        {
+            return location.GetCurrent(timeout);
+        }
+        catch (TimeoutException)
+        {
+            throw new XPScriptRuntimeException(5, "location: timed out while waiting for a position fix.");
+        }
+        catch (XPScriptLocationUnavailableException exception)
+        {
+            throw new XPScriptRuntimeException(5, "location: " + exception.Message);
+        }
     }
 }
 

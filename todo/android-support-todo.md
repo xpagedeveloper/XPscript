@@ -229,7 +229,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 - [x] Define latitude, longitude, accuracy, altitude, speed and timestamp representation. `XPScriptLocation` uses portable numeric fields and `DateTimeOffset` for the timestamp.
 - [x] Handle foreground/background permission differences explicitly. AndroidLocationCapability reports background permission separately and the Android app declares `ACCESS_BACKGROUND_LOCATION`; requesting it remains lifecycle-controlled by the host.
 - [x] Handle location services being disabled. AndroidLocationCapability exposes enabled GPS/network providers and SelectProvider fails deterministically when none is available.
-- [ ] Handle timeout and unavailable-fix behavior deterministically.
+- [x] Handle timeout and unavailable-fix behavior deterministically. The shared location API maps `TimeoutException` and `XPScriptLocationUnavailableException` to stable XPScript runtime errors.
 - [ ] Add focused compiler/runtime tests with a fake location provider before device tests.
 - [ ] Add opt-in physical-device GPS integration tests.
 
