@@ -125,7 +125,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Transport `PlayMedia`, `PauseMedia` and `StopMedia` callback commands through Android UIForm action state and execute them on the generated Android media controls.
 - [x] Add Media3 listener signals to the Android playback adapter and generated Android host for playing-state changes, playback-state changes and playback errors; guarded by AndroidCompilerProbe.
 - [>] Add the shared `UIForm.ProgressBar` and indeterminate `UIForm.ActivityIndicator` API (`AddProgressBar`, `AddActivityIndicator`, `Value`, `IsIndeterminate`, `IsRunning`); Android Avalonia rendering and callback action-state are implemented, while other platform rendering and focused runtime regression remain.
-- [>] Add a general-purpose `UIForm.Slider` control suitable for values such as volume or media position, distinct from form-specific validation semantics where needed; `AddSlider` now exposes the shared range control path, while explicit step semantics and platform-specific regression remain.
+- [>] Add a general-purpose `UIForm.Slider` control suitable for values such as volume or media position, distinct from form-specific validation semantics where needed; `AddSlider` and validated `Step` transport/rendering are implemented, while change-event regressions remain.
 - [ ] Add a mobile-friendly `UIForm.Switch` boolean control with the same binding/action-state semantics as CheckBox.
 - [ ] Add a shared `UIForm.Icon` API with a portable built-in icon set/fallback strategy so common UI symbols do not require image assets.
 - [ ] Add `UIForm.Card`/`UIForm.Panel` containers for visually grouping controls, compatible with tabs, named grids, visibility/enabled state and responsive layout.

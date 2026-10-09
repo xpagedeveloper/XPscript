@@ -854,7 +854,8 @@ public static class AndroidFormHost
     {
         var minimum = field.TryGetProperty("minimum", out var minValue) && minValue.TryGetDouble(out var min) ? min : 0;
         var maximum = field.TryGetProperty("maximum", out var maxValue) && maxValue.TryGetDouble(out var max) ? max : 100;
-        return new Slider { Minimum = minimum, Maximum = maximum };
+        var step = field.TryGetProperty("step", out var stepValue) && stepValue.TryGetDouble(out var stepSize) ? stepSize : 1;
+        return new Slider { Minimum = minimum, Maximum = maximum, TickFrequency = step, IsSnapToTickEnabled = true };
     }
 
     private static Avalonia.Controls.NativeWebView CreateWebView(JsonElement field, string instanceId, string fieldName)

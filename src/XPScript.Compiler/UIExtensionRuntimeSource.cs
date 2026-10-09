@@ -55,6 +55,7 @@ internal sealed class XPScriptUIField
     private double _progressValue;
     private bool _progressIndeterminate;
     private bool _activityRunning;
+    private double _step = 1;
 
     internal XPScriptUIField(XPScriptUIForm owner, string name, string label, string type)
     {
@@ -72,6 +73,7 @@ internal sealed class XPScriptUIField
     public int? MaxLength { get; set; }
     public decimal? Minimum { get; set; }
     public decimal? Maximum { get; set; }
+    public double Step { get { EnsureSlider(); return _step; } set { EnsureSlider(); if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0) throw new XPScriptRuntimeException(5, "UIForm Slider Step must be greater than zero."); _step = value; } }
     public List<string> Options { get; } = [];
 
     public string Source
@@ -206,6 +208,7 @@ internal sealed class XPScriptUIField
     private void EnsureProgress() { if (Type != "ProgressBar") throw new XPScriptRuntimeException(5, "This UIForm field is not a ProgressBar."); }
     private bool EnsureActivityIndicatorValue() { EnsureActivityIndicator(); return true; }
     private void EnsureActivityIndicator() { if (Type != "ActivityIndicator") throw new XPScriptRuntimeException(5, "This UIForm field is not an ActivityIndicator."); }
+    private void EnsureSlider() { if (Type != "RangeField") throw new XPScriptRuntimeException(5, "This UIForm field is not a Slider."); }
     private static string NormalizeMediaSource(string? value)
     {
         var text = (value ?? string.Empty).Trim();
@@ -457,6 +460,12 @@ internal sealed class XPScriptUIForm
             throw new XPScriptRuntimeException(5, "UIForm numeric range is invalid.");
         field.Minimum = min;
         field.Maximum = max;
+    }
+
+    public void SetSliderStep(object? name, object? step)
+    {
+        var field = FindField(name);
+        field.Step = Convert.ToDouble(step, System.Globalization.CultureInfo.InvariantCulture);
     }
 
     public object? GetFieldValue(object? name)
