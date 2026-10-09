@@ -77,7 +77,7 @@ foreach (var expected in new[]
     "actions.Children.Add(ok);",
     "request.TryGetProperty(\"buttons\"",
     "var actionState = eventCallback(\"button:\" + buttonName, submittedValues);",
-    "ApplyActionState(actionState, editors, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);",
+    "ApplyActionState(actionState, editors, mediaControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);",
     "private static bool ApplyActionState",
     "var validationErrors = new Dictionary<string, TextBlock>",
     "validationErrors[name] = validationBlock;",
@@ -408,6 +408,9 @@ foreach (var expected in new[] { "SetOnPlay", "SetOnPause", "SetOnEnded", "SetOn
     if (!callbackModelSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm media event API regression is missing: " + expected);
 var dispatcherSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormEventDispatcherPostProcessor.cs"));
+foreach (var expected in new[] { "PlayMedia", "PauseMedia", "StopMedia", "mediaCommands" })
+    if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal) && !dispatcherSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Shared UIForm media command transport regression is missing: " + expected);
 foreach (var expected in new[] { "kind.Equals(\"play\"", "kind.Equals(\"pause\"", "kind.Equals(\"ended\"", "kind.Equals(\"error\"" })
     if (!dispatcherSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm media event dispatcher regression is missing: " + expected);

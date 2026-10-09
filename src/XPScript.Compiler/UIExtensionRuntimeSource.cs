@@ -225,6 +225,7 @@ internal sealed class XPScriptUIForm
     private XPScriptJsonObject _data = XPScriptNativeJson.CreateObject();
     private XPScriptJsonSchema? _validationSchema;
     private readonly List<XPScriptUIField> _fields = [];
+    private readonly List<(string Name, string Command)> _mediaCommands = [];
 
     internal XPScriptUIForm(string title, int? width, int? height, bool resizable)
     {
@@ -347,6 +348,18 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddVideo(object? name, object? label) => AddField(name, label, "Video");
     public XPScriptUIField AddAudio(object? name) => AddField(name, name, "Audio");
     public XPScriptUIField AddAudio(object? name, object? label) => AddField(name, label, "Audio");
+
+    public void PlayMedia(object? name) => QueueMediaCommand(name, "play");
+    public void PauseMedia(object? name) => QueueMediaCommand(name, "pause");
+    public void StopMedia(object? name) => QueueMediaCommand(name, "stop");
+
+    private void QueueMediaCommand(object? nameValue, string command)
+    {
+        var field = FindField(nameValue);
+        if (field.Type is not ("Video" or "Audio"))
+            throw new XPScriptRuntimeException(5, "UIForm media commands require an Audio or Video field.");
+        _mediaCommands.Add((field.Name, command));
+    }
     public XPScriptUIField AddWebView(object? name, object? label) => AddField(name, label, "WebView");
 
     public void AddOption(object? name, object? value)

@@ -122,6 +122,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Add the Android Avalonia Audio host bridge using the isolated Media3 player; Audio is headless, accepts the shared normalized source and is excluded from submitted editor state. Playback property/event synchronization remains open.
 - [x] Expose basic Play/Pause/Stop, IsPlaying, Position and Duration operations on the Android Video/Audio host controls for subsequent callback wiring.
 - [x] Expose Android Video/Audio host `SeekTo` and validated Volume operations through the shared Media3 adapter.
+- [x] Transport `PlayMedia`, `PauseMedia` and `StopMedia` callback commands through Android UIForm action state and execute them on the generated Android media controls.
 - [ ] Add `UIForm.ProgressBar` and an indeterminate `UIForm.ActivityIndicator`/spinner, including dynamic progress/running state updates from callbacks.
 - [ ] Add a general-purpose `UIForm.Slider` control suitable for values such as volume or media position, distinct from form-specific validation semantics where needed.
 - [ ] Add a mobile-friendly `UIForm.Switch` boolean control with the same binding/action-state semantics as CheckBox.

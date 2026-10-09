@@ -316,6 +316,7 @@ public static class AndroidFormHost
                 : Array.Empty<JsonElement>();
 
             var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
+            var mediaControls = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
             var validationErrors = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
             var fieldContainers = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
             var fieldLabels = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
@@ -448,6 +449,7 @@ public static class AndroidFormHost
                 }
 
                 editors[name] = editor;
+                if (type is "Video" or "Audio") mediaControls[name] = editor;
                 var validationBlock = new TextBlock
                 {
                     Text = string.Empty,
@@ -483,7 +485,7 @@ public static class AndroidFormHost
                         {
                             var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
                             var actionState = eventCallback("button:" + buttonName, submittedValues);
-                            ApplyActionState(actionState, editors, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
+                            ApplyActionState(actionState, editors, mediaControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
                         }
                         catch (Exception exception)
                         {
@@ -535,7 +537,7 @@ public static class AndroidFormHost
                     var callbackResult = eventCallback("button:OK", submittedValues);
                     if (!string.IsNullOrWhiteSpace(callbackResult))
                     {
-                        var hasValidationErrors = ApplyActionState(callbackResult, editors, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
+                        var hasValidationErrors = ApplyActionState(callbackResult, editors, mediaControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
                         if (hasValidationErrors)
                             return;
                         result = callbackResult;
@@ -556,6 +558,7 @@ public static class AndroidFormHost
     private static bool ApplyActionState(
         string actionStateJson,
         Dictionary<string, Control> editors,
+        Dictionary<string, Control> mediaControls,
         Dictionary<string, TextBlock> validationErrors,
         Dictionary<string, Control> fieldContainers,
         Dictionary<string, TextBlock> fieldLabels,
@@ -566,6 +569,24 @@ public static class AndroidFormHost
         var hasValidationErrors = false;
         using var document = JsonDocument.Parse(actionStateJson);
         var root = document.RootElement;
+        if (root.TryGetProperty("mediaCommands", out var mediaCommands) && mediaCommands.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var command in mediaCommands.EnumerateArray())
+            {
+                var name = command.TryGetProperty("name", out var nameValue) ? nameValue.GetString() ?? string.Empty : string.Empty;
+                var operation = command.TryGetProperty("command", out var operationValue) ? operationValue.GetString() ?? string.Empty : string.Empty;
+                if (!mediaControls.TryGetValue(name, out var mediaControl)) continue;
+                switch (operation.ToLowerInvariant())
+                {
+                    case "play" when mediaControl is GeneratedAndroidVideoControl video: video.Play(); break;
+                    case "pause" when mediaControl is GeneratedAndroidVideoControl video: video.Pause(); break;
+                    case "stop" when mediaControl is GeneratedAndroidVideoControl video: video.Stop(); break;
+                    case "play" when mediaControl is GeneratedAndroidAudioControl audio: audio.Play(); break;
+                    case "pause" when mediaControl is GeneratedAndroidAudioControl audio: audio.Pause(); break;
+                    case "stop" when mediaControl is GeneratedAndroidAudioControl audio: audio.Stop(); break;
+                }
+            }
+        }
         if (tabControl is not null && root.TryGetProperty("activeTab", out var activeTabElement))
         {
             var activeTab = activeTabElement.GetString() ?? string.Empty;

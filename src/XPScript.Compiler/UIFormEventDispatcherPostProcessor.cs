@@ -252,6 +252,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 regionId = field.RegionId,
                 validationError = string.IsNullOrEmpty(field.ValidationError) ? GetValidationError(field.Name) : field.ValidationError
             }).ToArray(),
+            mediaCommands = _mediaCommands.Select(command => new { name = command.Name, command = command.Command }).ToArray(),
             buttons = _buttons.Select(button => new
             {
                 name = button.Name,
@@ -265,6 +266,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
         _refreshAllRequested = false;
         _requestedRefreshRegions.Clear();
         _navigationTarget = string.Empty;
+        _mediaCommands.Clear();
         return result;
     }
 
