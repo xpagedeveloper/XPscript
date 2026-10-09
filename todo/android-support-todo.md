@@ -226,7 +226,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 - [x] Investigate Android location APIs suitable for XPScript. Android `LocationManager` capability probing is isolated in `AndroidLocationCapability`; updates and permission requests remain separate follow-up work.
 - [x] Define an XPScript API for one-shot current location. The shared `IXPScriptLocationService`/`XPScriptLocation.GetCurrent` contract returns portable coordinates and accepts a deterministic timeout.
 - [x] Define whether continuous location updates are required and, if so, cancellation/lifecycle behavior. The shared `IXPScriptContinuousLocationService` contract requires explicit StartUpdates/StopUpdates ownership and a minimum interval.
-- [ ] Define latitude, longitude, accuracy, altitude, speed and timestamp representation.
+- [x] Define latitude, longitude, accuracy, altitude, speed and timestamp representation. `XPScriptLocation` uses portable numeric fields and `DateTimeOffset` for the timestamp.
 - [ ] Handle foreground/background permission differences explicitly.
 - [x] Handle location services being disabled. AndroidLocationCapability exposes enabled GPS/network providers and SelectProvider fails deterministically when none is available.
 - [ ] Handle timeout and unavailable-fix behavior deterministically.
