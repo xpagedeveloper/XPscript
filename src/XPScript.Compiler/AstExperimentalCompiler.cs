@@ -58,7 +58,8 @@ internal static class AstExperimentalCompiler
         var sub = declaration as SubDeclarationSyntax;
         var function = declaration as FunctionDeclarationSyntax;
         if (sub is null && function is null)
-            throw new CompilerException("AST experimental compilation currently requires a Sub declaration.", "XPS3001", "ast");
+            throw MappedDiagnostic(new TextSpan(0, 0), sourcePath, fullSource,
+                "AST experimental compilation currently requires a Sub declaration.", "XPS3001", "ast");
 
         var symbols = SymbolTable.CreateWithCompilerCatalog();
         symbols.Declare(new TypeSymbol("Object", typeof(object), XpTypeSymbol.Object));
@@ -916,7 +917,7 @@ internal static class Program
     }
 
     private static CompilerException MappedDiagnostic(TextSpan span, string sourcePath, string source, string message,
-        string code = CompilerDiagnosticCodes.InvalidSyntax)
+        string code = CompilerDiagnosticCodes.InvalidSyntax, string category = "semantic")
     {
         var start = SourceTextMap.GetPosition(source, span.Start);
         var end = SourceTextMap.GetPosition(source, span.End);
@@ -924,9 +925,9 @@ internal static class Program
         {
             File = Path.GetFileName(sourcePath), Line = start.Line, Position = start.Column,
             EndLine = end.Line, EndColumn = end.Column, Description = message,
-            DiagnosticCode = code, Severity = "error", Category = "semantic"
+            DiagnosticCode = code, Severity = "error", Category = category
         };
-        return new CompilerException(message, code, "semantic", [mapped]);
+        return new CompilerException(message, code, category, [mapped]);
     }
 
     private static void RejectUnsupported(string sourcePath, string source, string pattern, string message)
