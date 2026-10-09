@@ -1,6 +1,8 @@
 using Android.Content;
 using Android.OS;
 
+#pragma warning disable CA1416, CA1422 // API-level guarded VibrationEffect/legacy fallback calls.
+
 namespace XPScript.UI.Android;
 
 /// <summary>Android vibration/haptics capability.</summary>
@@ -24,3 +26,5 @@ public sealed class AndroidHapticsCapability
             vibrator.Vibrate(milliseconds);
     }
 }
+
+#pragma warning restore CA1416, CA1422
