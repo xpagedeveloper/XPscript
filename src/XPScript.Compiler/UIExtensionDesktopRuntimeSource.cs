@@ -116,7 +116,8 @@ internal static class XPScriptUIDesktopAdapter
                 value = field.Type is "PasswordField" or "MultiListBox" ? null : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
                 minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, options = field.Options, cornerRadius = field.CornerRadius, tabName = field.TabName, gridName = field.GridName,
-                webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground
+                webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground,
+                source = field.Type is "Video" or "Audio" ? field.Source : null
             }).ToArray(),
             tabs = form.Tabs.Select(tab => new { name = tab.Name, label = tab.Label }).ToArray(),
             grids = form.Grids.Select(grid => new { name = grid.Name, columns = grid.Columns, tabName = grid.TabName }).ToArray(),

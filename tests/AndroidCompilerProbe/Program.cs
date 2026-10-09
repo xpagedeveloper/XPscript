@@ -416,6 +416,9 @@ var androidHostSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, 
 foreach (var expected in new[] { "GeneratedAndroidAudioControl", "\"Audio\" => CreateAudio(field)", "UIForm media Source must be an absolute supported media URI" })
     if (!androidHostSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Generated Android Audio host regression is missing: " + expected);
+var desktopRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs"));
+if (!desktopRuntimeSource.Contains("source = field.Type is \"Video\" or \"Audio\" ? field.Source : null", StringComparison.Ordinal))
+    throw new Exception("Android UIForm media sources must be transported in the shared form request.");
 
 var mediaSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormMediaButtonsPostProcessor.cs"));
 if (!mediaSource.Contains("normalized = \"assets/\" + normalized;", StringComparison.Ordinal))
