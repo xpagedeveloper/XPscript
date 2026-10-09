@@ -318,7 +318,10 @@ internal static class AstExperimentalCompiler
                 name = "Main";
             methods.Add(new BoundMethodDefinition(name, returnType, parameters, bound));
             var defaults = new BoundExpression?[parameters.Length];
-            var defaultBinder = new ExpressionBinder(symbols);
+            // Defaults are expressions in the procedure's declaration scope:
+            // an earlier parameter may be referenced, while locals and later
+            // parameters remain unavailable at declaration time.
+            var defaultBinder = new ExpressionBinder(scope);
             for (var i = 0; i < parameters.Length; i++)
             {
                 if (!procedureParameters[i].IsOptional) continue;

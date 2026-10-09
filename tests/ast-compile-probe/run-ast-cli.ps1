@@ -78,6 +78,11 @@ $classRuntime = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-run
 if ($LASTEXITCODE -ne 2 -or ($classRuntime -join "`n") -notmatch 'AST class declarations and runtime object lifecycle are not implemented') { throw 'AST silently accepted unsupported class runtime placeholders.' }
 $optionalOrder = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-order-error.xps') -o (Join-Path $output 'optional-order-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($optionalOrder -join "`n") -notmatch 'cannot follow an Optional parameter') { throw 'AST accepted a required parameter after Optional.' }
+$optionalDefault = Join-Path $output 'optional-default-name'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-default-name.xps') -o $optionalDefault
+if ($LASTEXITCODE -ne 0) { throw 'AST Optional default-name binding failed.' }
+$optionalDefaultResult = dotnet (Join-Path $optionalDefault 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionalDefaultResult -join "`n") -ne '5') { throw 'AST Optional default-name binding produced the wrong result.' }
 $nestedOutput = Join-Path $output 'nested-goto'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-goto.xps') -o $nestedOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nested GoTo compilation failed.' }
