@@ -343,6 +343,8 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddNumberField(object? name, object? label) => AddField(name, label, "NumberField");
     public XPScriptUIField AddRangeField(object? name) => AddField(name, name, "RangeField");
     public XPScriptUIField AddRangeField(object? name, object? label) => AddField(name, label, "RangeField");
+    public XPScriptUIField AddSlider(object? name) => AddField(name, name, "RangeField");
+    public XPScriptUIField AddSlider(object? name, object? label) => AddField(name, label, "RangeField");
     public XPScriptUIField AddCheckBox(object? name) => AddField(name, name, "CheckBox");
     public XPScriptUIField AddCheckBox(object? name, object? label) => AddField(name, label, "CheckBox");
     public XPScriptUIField AddDateField(object? name) => AddField(name, name, "DateField");
