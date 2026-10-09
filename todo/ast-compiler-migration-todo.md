@@ -49,7 +49,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 - [x] When a test fails, follow the repository test rule: create or move a small focused reproducer so it runs before the larger test.
 - [x] Never mark a syntax feature migrated until old and new paths have been compared against representative fixtures.
 - [ ] Preserve public compiler diagnostics where compatibility is required.
-- [ ] Keep normal compiler and machine/MCP compiler behavior synchronized.
+- [x] Keep normal compiler and machine/MCP compiler behavior synchronized for the current diagnostic surface. The protocol probe compares normal/debug MCP identities with normal/debug CLI identities and rejects drift; broader migrated-feature exposure remains tracked separately.
 - [ ] CLI compilation and MCP/AI machine compilation must consume the same lexer, parser, AST, semantic binder and bound tree; do not create a second language implementation for machine compilation.
 - [ ] Every migrated syntax/semantic feature must be verified through both normal compilation and MCP/AI machine compilation when that feature is exposed through the machine interface.
 - [ ] Any AST diagnostic change must be verified in both human-readable compiler output and the structured machine/MCP diagnostic contract.
