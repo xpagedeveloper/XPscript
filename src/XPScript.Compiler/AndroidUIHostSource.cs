@@ -14,6 +14,11 @@ using global::Android.Util;
 using AndroidX.Media3.Common;
 using AndroidX.Media3.ExoPlayer;
 using AndroidX.Media3.UI;
+using AndroidX.Camera.Core;
+using AndroidX.Camera.Lifecycle;
+using AndroidX.Camera.View;
+using AndroidX.Core.Content;
+using AndroidX.Lifecycle;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Android;
@@ -46,6 +51,8 @@ public sealed class App : Avalonia.Application
     }
 }
 
+[assembly: UsesPermission(global::Android.Manifest.Permission.Camera)]
+
 [Activity(
     Label = "XPScript",
     Theme = "@style/Theme.AppCompat.DayNight.NoActionBar",
@@ -54,6 +61,12 @@ public sealed class App : Avalonia.Application
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
 public sealed class MainActivity : AvaloniaMainActivity
 {
+    internal void RequestCameraPermission()
+    {
+        if (OperatingSystem.IsAndroidVersionAtLeast(23) && ContextCompat.CheckSelfPermission(this, global::Android.Manifest.Permission.Camera) != global::Android.Content.PM.Permission.Granted)
+            RequestPermissions(new[] { global::Android.Manifest.Permission.Camera }, 7001);
+    }
+    protected override void OnDestroy() { if (ReferenceEquals(Current, this)) Current = null; base.OnDestroy(); }
     internal static MainActivity? Current { get; private set; }
 
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -217,6 +230,42 @@ internal sealed class GeneratedAndroidMedia3Player : IDisposable
         public void OnIsPlayingChanged(bool isPlaying) => _owner.IsPlayingChanged?.Invoke(_owner, isPlaying);
         public void OnPlaybackStateChanged(int playbackState) => _owner.PlaybackStateChanged?.Invoke(_owner, playbackState);
         public void OnPlayerError(PlaybackException? error) => _owner.PlaybackError?.Invoke(_owner, error?.Message ?? "Media3 playback error.");
+    }
+}
+
+internal sealed class GeneratedAndroidCameraPreviewControl : NativeControlHost
+{
+    private PreviewView? _previewView;
+    private ProcessCameraProvider? _cameraProvider;
+
+    protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
+    {
+        var context = global::Android.App.Application.Context ?? throw new InvalidOperationException("Android application context is unavailable.");
+        if (ContextCompat.CheckSelfPermission(context, global::Android.Manifest.Permission.Camera) != global::Android.Content.PM.Permission.Granted)
+            throw new InvalidOperationException("Camera permission has not been granted.");
+        if (MainActivity.Current is not ILifecycleOwner lifecycleOwner)
+            throw new InvalidOperationException("Android camera preview requires a lifecycle owner.");
+        _previewView = new PreviewView(context);
+        var future = ProcessCameraProvider.GetInstance(context);
+        future.AddListener(new Java.Lang.Runnable(() =>
+        {
+            _cameraProvider = future.Get() as ProcessCameraProvider ?? throw new InvalidOperationException("CameraX provider is unavailable.");
+            var preview = new Preview.Builder().Build();
+            preview.SetSurfaceProvider(ContextCompat.GetMainExecutor(context)!, _previewView.SurfaceProvider);
+            _cameraProvider.UnbindAll();
+            _cameraProvider.BindToLifecycle(lifecycleOwner, CameraSelector.DefaultBackCamera, preview);
+        }), ContextCompat.GetMainExecutor(context));
+        return new PlatformHandle(_previewView.Handle, "Android.CameraX.PreviewView");
+    }
+
+    protected override void DestroyNativeControlCore(IPlatformHandle control)
+    {
+        _cameraProvider?.UnbindAll();
+        _cameraProvider?.Dispose();
+        _cameraProvider = null;
+        _previewView?.Dispose();
+        _previewView = null;
+        base.DestroyNativeControlCore(control);
     }
 }
 
@@ -509,7 +558,7 @@ public static class AndroidFormHost
                     "ProgressBar" => CreateProgressBar(field),
                     "ActivityIndicator" => CreateActivityIndicator(field),
                     "WebView" => CreateWebView(field, instanceId, name),
-                    "CameraPreview" => new TextBlock { Text = "Camera preview is unavailable: Android camera service is not configured.", TextWrapping = TextWrapping.Wrap },
+                    "CameraPreview" => CreateCameraPreview(),
                     "DateField" => new Avalonia.Controls.DatePicker(),
                     "TimeField" => new Avalonia.Controls.TimePicker(),
                     "DateTimeField" => new AndroidDateTimeFieldEditor(),
@@ -1070,6 +1119,17 @@ public static class AndroidFormHost
         }
         content.Children.Add(new TextBlock { Text = label, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
         return content;
+    }
+
+    private static Control CreateCameraPreview()
+    {
+        var activity = MainActivity.Current;
+        if (activity is null || ContextCompat.CheckSelfPermission(activity, global::Android.Manifest.Permission.Camera) != global::Android.Content.PM.Permission.Granted)
+        {
+            activity?.RequestCameraPermission();
+            return new TextBlock { Text = "Camera permission is required. Grant permission and reopen the form.", TextWrapping = TextWrapping.Wrap };
+        }
+        return new GeneratedAndroidCameraPreviewControl { MinHeight = 180 };
     }
 
     private static Control CreateImage(JsonElement field)
