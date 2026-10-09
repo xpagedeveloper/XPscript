@@ -319,7 +319,9 @@ internal static class AstExperimentalCompiler
                     throw SyntaxDiagnosticException(defaultBinder.Diagnostics[0], sourcePath, fullSource);
                 var conversion = Conversion.Classify(value.SemanticType, type);
                 if (!conversion.IsImplicit)
-                    throw new CompilerException($"Default value for Optional parameter '{parameters[i].Name}' is incompatible with its type.", CompilerDiagnosticCodes.TypeMismatch, "semantic");
+                    throw MappedDiagnostic(procedureParameters[i].Span, sourcePath, fullSource,
+                        $"Default value for Optional parameter '{parameters[i].Name}' is incompatible with its type.",
+                        CompilerDiagnosticCodes.TypeMismatch);
                 defaults[i] = conversion.IsIdentity ? value : new BoundConversionExpression(value, type, conversion) { Span = value.Span };
             }
             // Forwarding methods have real bodies and call the full signature;
@@ -913,7 +915,8 @@ internal static class Program
         return new CompilerException(diagnostic.Message, diagnostic.Code, mapped.Category, [mapped]);
     }
 
-    private static CompilerException MappedDiagnostic(TextSpan span, string sourcePath, string source, string message)
+    private static CompilerException MappedDiagnostic(TextSpan span, string sourcePath, string source, string message,
+        string code = CompilerDiagnosticCodes.InvalidSyntax)
     {
         var start = SourceTextMap.GetPosition(source, span.Start);
         var end = SourceTextMap.GetPosition(source, span.End);
@@ -921,9 +924,9 @@ internal static class Program
         {
             File = Path.GetFileName(sourcePath), Line = start.Line, Position = start.Column,
             EndLine = end.Line, EndColumn = end.Column, Description = message,
-            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Severity = "error", Category = "semantic"
+            DiagnosticCode = code, Severity = "error", Category = "semantic"
         };
-        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "semantic", [mapped]);
+        return new CompilerException(message, code, "semantic", [mapped]);
     }
 
     private static void RejectUnsupported(string sourcePath, string source, string pattern, string message)
