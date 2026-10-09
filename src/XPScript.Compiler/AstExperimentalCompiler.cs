@@ -14,26 +14,11 @@ internal static class AstExperimentalCompiler
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
-        if (Regex.IsMatch(source, @"(?im)^\s*(?:On\s+Error\b|Resume\b)"))
-            throw new CompilerException(
-                "AST On Error and Resume semantics are not implemented; the source was not lowered silently.",
-                CompilerDiagnosticCodes.InvalidSyntax, "semantic");
-        if (Regex.IsMatch(source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]"))
-            throw new CompilerException(
-                "AST With and implicit member access are not implemented; the source was not lowered silently.",
-                CompilerDiagnosticCodes.InvalidSyntax, "semantic");
-        if (Regex.IsMatch(source, @"(?i)\bXPImage\b"))
-            throw new CompilerException(
-                "AST XPImage runtime integration is not implemented; image operations were not replaced with Object.",
-                CompilerDiagnosticCodes.InvalidSyntax, "semantic");
-        if (Regex.IsMatch(source, @"(?im)^\s*Option\s+Base\b"))
-            throw new CompilerException(
-                "AST Option Base semantics are not implemented; array lower bounds were not assumed.",
-                CompilerDiagnosticCodes.InvalidSyntax, "semantic");
-        if (Regex.IsMatch(source, @"(?im)^\s*(?:Public\s+|Private\s+|Protected\s+)?Class\s+[A-Za-z_]\w*"))
-            throw new CompilerException(
-                "AST class declarations and runtime object lifecycle are not implemented; class source was not lowered to dynamic placeholders.",
-                CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+        RejectUnsupported(sourcePath, source, @"(?im)^\s*(?:On\s+Error\b|Resume\b)", "AST On Error and Resume semantics are not implemented; the source was not lowered silently.");
+        RejectUnsupported(sourcePath, source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]", "AST With and implicit member access are not implemented; the source was not lowered silently.");
+        RejectUnsupported(sourcePath, source, @"(?i)\bXPImage\b", "AST XPImage runtime integration is not implemented; image operations were not replaced with Object.");
+        RejectUnsupported(sourcePath, source, @"(?im)^\s*Option\s+Base\b", "AST Option Base semantics are not implemented; array lower bounds were not assumed.");
+        RejectUnsupported(sourcePath, source, @"(?im)^\s*(?:Public\s+|Private\s+|Protected\s+)?Class\s+[A-Za-z_]\w*", "AST class declarations and runtime object lifecycle are not implemented; class source was not lowered to dynamic placeholders.");
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
         source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);
@@ -913,6 +898,21 @@ internal static class Program
             Category = "semantic"
         };
         return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "semantic", [diagnostic]);
+    }
+
+    private static void RejectUnsupported(string sourcePath, string source, string pattern, string message)
+    {
+        var match = Regex.Match(source, pattern);
+        if (!match.Success) return;
+        var start = SourceTextMap.GetPosition(source, match.Index);
+        var end = SourceTextMap.GetPosition(source, match.Index + match.Length);
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourcePath), Line = start.Line, Position = start.Column,
+            EndLine = end.Line, EndColumn = end.Column, Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Severity = "error", Category = "semantic"
+        };
+        throw new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "semantic", [diagnostic]);
     }
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch
