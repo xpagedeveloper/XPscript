@@ -203,7 +203,7 @@ foreach (var expected in new[]
 }
 
 var sharedUiExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionRuntimeSource.cs"));
-foreach (var expected in new[] { "AddProgressBar", "AddActivityIndicator", "AddSlider", "AddSwitch", "AddIcon", "AddCard", "AddPanel", "AddScrollView", "SetSliderStep", "UIForm Slider Step must be greater than zero.", "public bool IsIndeterminate", "public bool IsRunning" })
+foreach (var expected in new[] { "AddProgressBar", "AddActivityIndicator", "AddSlider", "AddSwitch", "AddIcon", "AddCard", "AddPanel", "AddScrollView", "AddListView", "SetSliderStep", "UIForm Slider Step must be greater than zero.", "public bool IsIndeterminate", "public bool IsRunning" })
     if (!sharedUiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm progress/indicator API is missing: " + expected);
 

@@ -391,6 +391,8 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddSelect(object? name, object? label) => AddField(name, label, "Select");
     public XPScriptUIField AddListBox(object? name) => AddField(name, name, "ListBox");
     public XPScriptUIField AddListBox(object? name, object? label) => AddField(name, label, "ListBox");
+    public XPScriptUIField AddListView(object? name) => AddField(name, name, "ListView");
+    public XPScriptUIField AddListView(object? name, object? label) => AddField(name, label, "ListView");
     public XPScriptUIField AddMultiListBox(object? name) => AddField(name, name, "MultiListBox");
     public XPScriptUIField AddMultiListBox(object? name, object? label) => AddField(name, label, "MultiListBox");
     public XPScriptUIField AddRadioGroup(object? name) => AddField(name, name, "RadioGroup");

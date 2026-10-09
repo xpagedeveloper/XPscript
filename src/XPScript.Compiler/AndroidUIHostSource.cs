@@ -517,7 +517,7 @@ public static class AndroidFormHost
                     "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120, CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "PasswordField" => new TextBox { PasswordChar = '•', CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "Select" => new ComboBox { ItemsSource = options },
-                    "ListBox" => new ListBox { ItemsSource = options, MinHeight = 112, SelectionMode = SelectionMode.Single },
+                    "ListBox" or "ListView" => new ListBox { ItemsSource = options, MinHeight = 112, SelectionMode = SelectionMode.Single },
                     "MultiListBox" => new ListBox { ItemsSource = options, MinHeight = 112, SelectionMode = SelectionMode.Multiple | SelectionMode.Toggle },
                     "RadioGroup" => CreateRadioGroup(options),
                     "RangeField" => CreateRangeField(field),

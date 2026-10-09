@@ -98,7 +98,7 @@ For each control, explicitly evaluate:
 
 ## Data-driven controls
 
-- [ ] Implement ListView with XPJsonArray/object-backed rows.
+- [>] Implement ListView with XPJsonArray/object-backed rows (shared entry point and Android option-list rendering are implemented; object rows remain).
 - [ ] Define item template, selection, item-click and empty-state behavior.
 - [ ] Define virtualization and memory limits for mobile and desktop.
 - [ ] Implement desktop, Android, server-web and Browser-WASM adapters.
