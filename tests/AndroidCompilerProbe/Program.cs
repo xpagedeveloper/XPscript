@@ -172,6 +172,7 @@ foreach (var expected in new[]
     "audio.PlaybackError +=",
     "void DispatchFieldChange(string fieldName, string value)",
     "slider.ValueChanged +=",
+    "listView.SelectionChanged +=",
     "position = video.Position",
     "void DisposeMediaControls()",
     "DisposeMediaControls();",

@@ -552,6 +552,8 @@ public static class AndroidFormHost
                 }
                 if (editor is Slider slider)
                     slider.ValueChanged += (_, args) => DispatchFieldChange(name, args.NewValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                if (type == "ListView" && editor is ListBox listView)
+                    listView.SelectionChanged += (_, _) => DispatchFieldChange(name, listView.SelectedItem?.ToString() ?? string.Empty);
                 var validationBlock = new TextBlock
                 {
                     Text = string.Empty,
