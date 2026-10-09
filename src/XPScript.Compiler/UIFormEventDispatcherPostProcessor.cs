@@ -118,6 +118,19 @@ internal sealed class UIFormEventDispatcherPostProcessor
             var field = FindField(controlName);
             if (field.Type is not ("Audio" or "Video"))
                 throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is not a media field.");
+            if (submittedValue.Length > 0 && submittedValue[0] == '{')
+            {
+                try
+                {
+                    using var signal = System.Text.Json.JsonDocument.Parse(submittedValue);
+                    var state = signal.RootElement;
+                    if (state.TryGetProperty("position", out var position) && position.TryGetInt64(out var positionValue)) field.Position = positionValue;
+                    if (state.TryGetProperty("duration", out var duration) && duration.TryGetInt64(out var durationValue)) field.Duration = durationValue;
+                    if (state.TryGetProperty("isPlaying", out var playing) && playing.ValueKind == System.Text.Json.JsonValueKind.True) field.Play();
+                    else if (state.TryGetProperty("isPlaying", out playing) && playing.ValueKind == System.Text.Json.JsonValueKind.False) field.Pause();
+                }
+                catch (System.Text.Json.JsonException) { }
+            }
             handlerName = kind.ToLowerInvariant() switch
             {
                 "play" => field.OnPlayHandler,

@@ -380,12 +380,12 @@ public static class AndroidFormHost
                 switch (control)
                 {
                     case GeneratedAndroidVideoControl video:
-                        video.IsPlayingChanged += (_, playing) => DispatchMediaEvent(fieldName, playing ? "play" : "pause");
+                        video.IsPlayingChanged += (_, playing) => DispatchMediaEvent(fieldName, playing ? "play" : "pause", JsonSerializer.Serialize(new { position = video.Position, duration = video.Duration, isPlaying = playing }));
                         video.PlaybackStateChanged += (_, state) => { if (state == 4) DispatchMediaEvent(fieldName, "ended"); };
                         video.PlaybackError += (_, error) => DispatchMediaEvent(fieldName, "error", error);
                         break;
                     case GeneratedAndroidAudioControl audio:
-                        audio.IsPlayingChanged += (_, playing) => DispatchMediaEvent(fieldName, playing ? "play" : "pause");
+                        audio.IsPlayingChanged += (_, playing) => DispatchMediaEvent(fieldName, playing ? "play" : "pause", JsonSerializer.Serialize(new { position = audio.Position, duration = audio.Duration, isPlaying = playing }));
                         audio.PlaybackStateChanged += (_, state) => { if (state == 4) DispatchMediaEvent(fieldName, "ended"); };
                         audio.PlaybackError += (_, error) => DispatchMediaEvent(fieldName, "error", error);
                         break;
