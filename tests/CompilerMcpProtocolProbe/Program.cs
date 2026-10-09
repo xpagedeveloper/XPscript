@@ -19,6 +19,10 @@ var staticSource="Sub Accumulate()\n    Static value As Long\n    value = value 
 var staticValidation=await CallAsync(new {jsonrpc="2.0",id=26,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=staticSource,filename="static-local-parity.xps"}}});
 var staticResult=staticValidation.GetProperty("result").GetProperty("structuredContent");
 if (staticResult.GetProperty("result").GetString()!="ok") throw new Exception("AST MCP validation rejected the Static lifetime parity fixture.");
+var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\nEnd Sub",filename="ast-error.xps"}}});
+var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
+var astErrors=astDiagnosticResult.GetProperty("errors");
+if (astDiagnosticResult.GetProperty("result").GetString()!="error" || astErrors.GetArrayLength()==0 || astErrors[0].GetProperty("file").GetString()!="ast-error.xps" || string.IsNullOrWhiteSpace(astErrors[0].GetProperty("diagnosticCode").GetString())) throw new Exception("AST MCP diagnostics lost the stable code or source filename.");
 var diagnosticSource=await File.ReadAllTextAsync(Path.Combine(repo,"samples","null-integer-assignment-error.xps"));
 async Task<JsonElement> ValidateMcpAsync(int id, bool debug)
 {

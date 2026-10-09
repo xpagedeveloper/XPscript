@@ -141,9 +141,27 @@ public static class CompilerMcpServer
             await AstExperimentalCompiler.CompileAsync(sourcePath, outputPath).ConfigureAwait(false);
             return new { result = "ok", source = new { entryPoint = filename }, compiler = "ast" };
         }
+        catch (CompilerException exception)
+        {
+            var diagnostics = exception.GeneratedDiagnostics.Count > 0
+                ? exception.GeneratedDiagnostics.Select(diagnostic => new
+                {
+                    file = filename,
+                    line = diagnostic.Line,
+                    position = diagnostic.Position,
+                    endLine = diagnostic.EndLine,
+                    endColumn = diagnostic.EndColumn,
+                    description = diagnostic.Description,
+                    diagnosticCode = string.IsNullOrWhiteSpace(diagnostic.DiagnosticCode) ? exception.DiagnosticCode : diagnostic.DiagnosticCode,
+                    severity = diagnostic.Severity,
+                    category = diagnostic.Category
+                }).ToArray()
+                : [new { file = filename, line = 0, position = 0, endLine = 0, endColumn = 0, description = exception.Message, diagnosticCode = exception.DiagnosticCode, severity = "error", category = exception.Category }];
+            return new { result = "error", source = new { entryPoint = filename }, compiler = "ast", errors = diagnostics };
+        }
         catch (Exception exception)
         {
-            return new { result = "error", source = new { entryPoint = filename }, compiler = "ast", errors = new[] { new { file = filename, description = exception.Message } } };
+            return new { result = "error", source = new { entryPoint = filename }, compiler = "ast", errors = new[] { new { file = filename, line = 0, position = 0, endLine = 0, endColumn = 0, description = exception.Message, diagnosticCode = CompilerDiagnosticCodes.InternalCompilationFailed, severity = "error", category = "compiler" } } };
         }
         finally { try { Directory.Delete(root, true); } catch { } }
     }

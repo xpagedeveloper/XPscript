@@ -9,3 +9,5 @@ The protocol probe also compares normal and debug CLI/MCP diagnostic identities,
 
 The AST CLI regression also preserves the user-facing messages for malformed parser input, missing `Sub` entry points and invalid Optional declaration ordering. These checks run before the broader AST compile probe so a diagnostic regression fails early.
 
+AST-MCP errors use the same structured diagnostic identity as the AST compiler exception: stable `diagnosticCode`, source filename, line/position span, severity and category. The MCP protocol probe verifies both a successful Static validation and a source-mapped parser error.
+
