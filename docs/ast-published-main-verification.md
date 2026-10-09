@@ -40,6 +40,8 @@ The compatibility executable is the `main`-branch build preserved at `publish/xp
 
 The `main` branch also defines a `linux-x64` distribution target. A framework-dependent Linux reference was built from main commit `deb33819` in `publish/xpscript/linux-x64`; its `xpscript.dll` SHA-256 is `cda7258576b70322c86f5b358551c2c7b894f12122f7e9837c215d76594088c8`. The preserved `static-local-baseline.xps` fixture was compiled and executed through this Linux reference and the AST compiler with identical output: `1`, `2`. The published directory remains ignored/generated; rebuild it from main when the baseline changes.
 
+The `static-initializer-error.xps` fixture exposes an existing static-compiler quirk: Linux static compilation succeeds but execution emits only an empty line, while AST binds the scalar initializer and prints `3`. This is recorded as an intentional AST extension, not treated as a missing feature.
+
 ## Nested supplied Optional arguments
 
 Published main still rejects the expanded optional-nested-supplied-call.xps fixture with missing-argument and invalid closing-parenthesis errors. Token-based compatibility preprocessing replaces the flat regex; branch legacy and AST cover nested calls to the same Optional procedure, inner argument commas and multiple calls on a line. Expected output is 123, 1333, 246 and the unchanged string Choose(, Provided(),).

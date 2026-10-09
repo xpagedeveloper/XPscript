@@ -24,13 +24,16 @@ public sealed class BoundCompilationUnitEmitter
         methods = methods.Where(method => !method.IsOptionalForwarding ||
             !methods.Any(explicitMethod => !explicitMethod.IsOptionalForwarding && SameSignature(method, explicitMethod))).ToArray();
         var output = new StringBuilder();
+        var expressions = new BoundExpressionEmitter();
         foreach (var declaration in methods.SelectMany(method => BoundStatementTraversal.Descendants(method.Statements))
                      .OfType<BoundVariableDeclarationStatement>().Where(declaration => declaration.Local.StaticStorageName is not null))
         {
             var type = declaration.Local.SemanticType?.IsList == true
                 ? $"LSList<{BoundMethodEmitter.CSharpType(declaration.Local.SemanticType.ElementType!.RuntimeType)}>"
                 : BoundMethodEmitter.CSharpType(declaration.Local.Type);
-            var initialValue = declaration.Local.Type.IsArray
+            var initialValue = declaration.Initializer is not null
+                ? expressions.Emit(declaration.Initializer)
+                : declaration.Local.Type.IsArray
                 ? $"new {type[..^2]}[0]"
                 : declaration.Local.SemanticType?.IsList == true ? $"new {type}()"
                 : declaration.Local.Type == typeof(string) ? "string.Empty" : $"default({type})";
