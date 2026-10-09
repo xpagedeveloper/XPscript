@@ -206,7 +206,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 - [x] Decide which APIs belong in shared XPScript runtime objects and which should remain Android-only. Capability names, availability and safe error text belong to the shared runtime; CameraX controls, permissions and native handles remain Android-only adapters.
 - [x] Define capability detection for hardware or services that may not exist. `XPScriptMobileServices.IsAvailable` and `UnavailableReason` provide deterministic capability queries without exposing Android types.
 - [x] Define a consistent permission model. Shared services expose a generic permission name and `XPScriptMobilePermissionState`; platform adapters perform the actual Android request.
-- [ ] Map Android permission denial and unavailable-device states to predictable XPScript errors/results.
+- [x] Map Android permission denial and unavailable-device states to predictable XPScript errors/results. `XPScriptMobileServices.RequireAvailable` raises a deterministic runtime error with the registered safe reason.
 - [ ] Ensure mobile APIs are testable through injectable platform adapters where practical.
 
 ### Camera

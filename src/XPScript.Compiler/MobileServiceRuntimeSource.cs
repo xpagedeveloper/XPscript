@@ -36,6 +36,13 @@ public static class XPScriptMobileServices
 
     public static string UnavailableReason(object? capability)
         => Services.TryGetValue(XPScriptRuntime.CStr(capability), out var service) ? service.UnavailableReason : "Mobile capability is not registered.";
+
+    public static void RequireAvailable(object? capability)
+    {
+        var name = XPScriptRuntime.CStr(capability);
+        if (IsAvailable(name)) return;
+        throw new XPScriptRuntimeException(5, name + ": " + UnavailableReason(name));
+    }
 }
 """;
 }
