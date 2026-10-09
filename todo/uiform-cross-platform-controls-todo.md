@@ -80,8 +80,8 @@ For each control, explicitly evaluate:
 
 ## Progress and input controls
 
-- [ ] Implement ProgressBar on every supported UIForm platform.
-- [ ] Implement ActivityIndicator with determinate/indeterminate behavior where supported.
+- [>] Implement ProgressBar on every supported UIForm platform (shared API and Android Avalonia rendering are implemented).
+- [>] Implement ActivityIndicator with determinate/indeterminate behavior where supported (shared API and Android Avalonia rendering are implemented).
 - [ ] Implement Slider with value, minimum, maximum, step and change events.
 - [ ] Implement Switch with shared boolean binding and action-state semantics.
 - [ ] Verify keyboard, touch, accessibility and programmatic updates.
