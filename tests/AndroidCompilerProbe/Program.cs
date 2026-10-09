@@ -450,6 +450,10 @@ if (!uiFormAssetsSource.Contains("System.Environment.SpecialFolder.LocalApplicat
     throw new Exception("Embedded Android UIForm assets must materialize into the writable application sandbox.");
 
 var uiExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionRuntimeSource.cs"));
+var mobileServiceSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "MobileServiceRuntimeSource.cs"));
+foreach (var expected in new[] { "IXPScriptMobileService", "Capability", "IsAvailable", "UnavailableReason", "XPScriptMobileServices", "Register" })
+    if (!mobileServiceSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Platform-neutral mobile service contract is missing: " + expected);
 foreach (var expected in new[] { "\"assets/\" + normalized", "UIForm WebView relative Source must stay within the application asset root.", "UIForm BootImage relative source must stay within the application asset root." })
     if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm asset-reference normalization is missing: " + expected);
