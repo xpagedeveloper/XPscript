@@ -360,7 +360,7 @@ foreach (var expected in new[] { "AndroidDeviceInfoCapability", "Manufacturer", 
     if (!deviceInfoSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android device info capability probe is missing: " + expected);
 var uriSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidUriCapability.cs"));
-foreach (var expected in new[] { "AndroidUriCapability", "CreateViewIntent", "ActionView", "Uri.TryParse", "ResolveActivity" })
+foreach (var expected in new[] { "AndroidUriCapability", "CreateViewIntent", "ActionView", "System.Uri.TryCreate", "ResolveActivity" })
     if (!uriSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android URI capability probe is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);

@@ -1,5 +1,4 @@
 using Android.Content;
-using Android.Net;
 
 namespace XPScript.UI.Android;
 
@@ -12,9 +11,9 @@ public sealed class AndroidUriCapability
 
     public Intent CreateViewIntent(string uri)
     {
-        if (!Uri.TryParse(uri, out var parsed) || parsed is null)
+        if (!global::System.Uri.TryCreate(uri, global::System.UriKind.Absolute, out _))
             throw new ArgumentException("A valid URI is required.", nameof(uri));
-        return new Intent(Intent.ActionView, parsed);
+        return new Intent(Intent.ActionView, Android.Net.Uri.Parse(uri));
     }
 
     public bool IsAvailable(string uri)
