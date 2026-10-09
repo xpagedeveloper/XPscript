@@ -15,6 +15,10 @@ foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_
 var astValidation=await CallAsync(new {jsonrpc="2.0",id=25,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main()\n    Print \"AST_MCP_OK\"\nEnd Sub",filename="ast-agent.xps"}}});
 var astResult=astValidation.GetProperty("result").GetProperty("structuredContent");
 if (astResult.GetProperty("result").GetString()!="ok" || astResult.GetProperty("compiler").GetString()!="ast") throw new Exception("MCP AST validation did not use the experimental AST compiler.");
+var staticSource="Sub Accumulate()\n    Static value As Long\n    value = value + 1\n    Print value\nEnd Sub\n\nSub Main()\n    Accumulate()\n    Accumulate()\nEnd Sub";
+var staticValidation=await CallAsync(new {jsonrpc="2.0",id=26,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=staticSource,filename="static-local-parity.xps"}}});
+var staticResult=staticValidation.GetProperty("result").GetProperty("structuredContent");
+if (staticResult.GetProperty("result").GetString()!="ok") throw new Exception("AST MCP validation rejected the Static lifetime parity fixture.");
 var diagnosticSource=await File.ReadAllTextAsync(Path.Combine(repo,"samples","null-integer-assignment-error.xps"));
 async Task<JsonElement> ValidateMcpAsync(int id, bool debug)
 {

@@ -13,4 +13,6 @@ The compatibility preprocessor is deliberately treated as a migration boundary, 
 
 The experimental machine path now exposes `xpscript_ast_validate`. It invokes the same `AstExperimentalCompiler` entry point as the `ast-compile` CLI command and returns a non-executing validation result, keeping lexer/parser/binder/emitter behavior in one implementation.
 
+`tests/CompilerMcpProtocolProbe` pairs this path with the `Static` lifetime fixture. The normal AST CLI executes the fixture and expects `1`, `2`; AST-MCP validates the identical source through the same compiler entry point. New AST features must add an equivalent paired regression before machine exposure.
+
 The published compiler remains the compatibility reference. Its executable under `publish/xpscript/win-x64` is not rebuilt by the AST workflow.
