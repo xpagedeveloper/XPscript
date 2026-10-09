@@ -104,6 +104,9 @@ foreach (var expected in new[]
     "System.Environment.SpecialFolder.LocalApplicationData",
     "\"defaultButtonCornerRadius\"",
     "defaultButtonCornerRadiusValue.ValueKind == JsonValueKind.Number",
+    "buttonIcon = buttonValue.TryGetProperty(\"icon\"",
+    "buttonImage = buttonValue.TryGetProperty(\"image\"",
+    "var buttonContent = buttonIcon.Length > 0",
 
     "ResolveAndroidImagePath(value)",
     "uri.Scheme is \"http\" or \"https\"",
@@ -334,6 +337,9 @@ foreach (var expected in new[]
 
 if (!desktopRuntimeSource.Contains("buttons = form.Buttons.Select", StringComparison.Ordinal))
     throw new Exception("Android UIForm requests must include the shared UIForm button model.");
+foreach (var expected in new[] { "icon = button.Icon", "image = button.Image" })
+    if (!desktopRuntimeSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("UIForm button content metadata is missing: " + expected);
 
 var eventDispatcherSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormEventDispatcherPostProcessor.cs");
 var eventDispatcherSource = File.ReadAllText(eventDispatcherSourcePath);
@@ -431,6 +437,10 @@ var uiExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, 
 foreach (var expected in new[] { "\"assets/\" + normalized", "UIForm WebView relative Source must stay within the application asset root.", "UIForm BootImage relative source must stay within the application asset root." })
     if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm asset-reference normalization is missing: " + expected);
+var actionModelSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormActionModelPostProcessor.cs"));
+foreach (var expected in new[] { "SetButtonIcon", "SetButtonImage", "public string Icon", "public string Image" })
+    if (!actionModelSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Shared UIForm button content API regression is missing: " + expected);
 foreach (var expected in new[] { "Type is \"Video\" or \"Audio\"", "AddAudio(object? name)", "AddAudio(object? name, object? label)", "UIForm media Source uses an unsupported URI scheme" })
     if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm Audio API regression is missing: " + expected);
