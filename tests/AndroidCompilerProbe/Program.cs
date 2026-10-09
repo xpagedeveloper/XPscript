@@ -174,6 +174,21 @@ foreach (var expected in new[]
         throw new Exception("Android generated UIForm host is missing: " + expected);
 }
 
+foreach (var expected in new[]
+{
+    "private readonly Media3Listener _listener",
+    "_player.AddListener(_listener)",
+    "_player.RemoveListener(_listener)",
+    "public event EventHandler<bool>? IsPlayingChanged",
+    "public event EventHandler<int>? PlaybackStateChanged",
+    "public event EventHandler<string>? PlaybackError",
+    "public void OnPlayerError(PlaybackException? error)"
+})
+{
+    if (!uiHostCode.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Generated Android Media3 host is missing playback listener forwarding: " + expected);
+}
+
 if (!uiHostCode.Contains("var cancel = new Avalonia.Controls.Button { Content = \"Cancel\", MinWidth = 100 };", StringComparison.Ordinal) ||
     !uiHostCode.Contains("var ok = new Avalonia.Controls.Button { Content = \"OK\", MinWidth = 100 };", StringComparison.Ordinal) ||
     !uiHostCode.Contains("defaultButtonCornerRadiusValue.TryGetDouble(out var defaultButtonRadius)", StringComparison.Ordinal))

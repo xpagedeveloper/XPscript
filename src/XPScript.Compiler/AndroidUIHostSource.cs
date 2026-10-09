@@ -148,12 +148,19 @@ public sealed class MainView : UserControl
 internal sealed class GeneratedAndroidMedia3Player : IDisposable
 {
     private readonly IExoPlayer _player;
+    private readonly Media3Listener _listener;
     private bool _disposed;
+
+    public event EventHandler<bool>? IsPlayingChanged;
+    public event EventHandler<int>? PlaybackStateChanged;
+    public event EventHandler<string>? PlaybackError;
 
     public GeneratedAndroidMedia3Player(global::Android.Content.Context context)
     {
         _player = new ExoPlayerBuilder(context).Build()
             ?? throw new InvalidOperationException("Media3 ExoPlayerBuilder returned no player.");
+        _listener = new Media3Listener(this);
+        _player.AddListener(_listener);
     }
 
     public void Attach(PlayerView view)
@@ -195,10 +202,22 @@ internal sealed class GeneratedAndroidMedia3Player : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        _player.RemoveListener(_listener);
         _player.Release();
     }
 
     private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
+
+    private sealed class Media3Listener : Java.Lang.Object, IPlayerListener
+    {
+        private readonly GeneratedAndroidMedia3Player _owner;
+
+        public Media3Listener(GeneratedAndroidMedia3Player owner) => _owner = owner;
+
+        public void OnIsPlayingChanged(bool isPlaying) => _owner.IsPlayingChanged?.Invoke(_owner, isPlaying);
+        public void OnPlaybackStateChanged(int playbackState) => _owner.PlaybackStateChanged?.Invoke(_owner, playbackState);
+        public void OnPlayerError(PlaybackException? error) => _owner.PlaybackError?.Invoke(_owner, error?.Message ?? "Media3 playback error.");
+    }
 }
 
 internal sealed class GeneratedAndroidVideoControl : NativeControlHost
@@ -220,6 +239,21 @@ internal sealed class GeneratedAndroidVideoControl : NativeControlHost
     public bool IsPlaying => _mediaPlayer?.IsPlaying == true;
     public long Position => _mediaPlayer?.Position ?? 0;
     public long Duration => _mediaPlayer?.Duration ?? 0;
+    public event EventHandler<bool>? IsPlayingChanged
+    {
+        add { if (_mediaPlayer is not null) _mediaPlayer.IsPlayingChanged += value; }
+        remove { if (_mediaPlayer is not null) _mediaPlayer.IsPlayingChanged -= value; }
+    }
+    public event EventHandler<int>? PlaybackStateChanged
+    {
+        add { if (_mediaPlayer is not null) _mediaPlayer.PlaybackStateChanged += value; }
+        remove { if (_mediaPlayer is not null) _mediaPlayer.PlaybackStateChanged -= value; }
+    }
+    public event EventHandler<string>? PlaybackError
+    {
+        add { if (_mediaPlayer is not null) _mediaPlayer.PlaybackError += value; }
+        remove { if (_mediaPlayer is not null) _mediaPlayer.PlaybackError -= value; }
+    }
     public void Play() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Play();
     public void Pause() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Pause();
     public void Stop() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Stop();
@@ -275,6 +309,9 @@ internal sealed class GeneratedAndroidAudioControl : Control, IDisposable
     public bool IsPlaying => _mediaPlayer.IsPlaying;
     public long Position => _mediaPlayer.Position;
     public long Duration => _mediaPlayer.Duration;
+    public event EventHandler<bool> IsPlayingChanged { add => _mediaPlayer.IsPlayingChanged += value; remove => _mediaPlayer.IsPlayingChanged -= value; }
+    public event EventHandler<int> PlaybackStateChanged { add => _mediaPlayer.PlaybackStateChanged += value; remove => _mediaPlayer.PlaybackStateChanged -= value; }
+    public event EventHandler<string> PlaybackError { add => _mediaPlayer.PlaybackError += value; remove => _mediaPlayer.PlaybackError -= value; }
     public float Volume { get => _mediaPlayer.Volume; set => _mediaPlayer.Volume = value; }
     public void Play() => _mediaPlayer.Play();
     public void Pause() => _mediaPlayer.Pause();
