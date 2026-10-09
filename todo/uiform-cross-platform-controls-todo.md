@@ -82,7 +82,7 @@ For each control, explicitly evaluate:
 
 - [>] Implement ProgressBar on every supported UIForm platform (shared API and Android Avalonia rendering are implemented).
 - [>] Implement ActivityIndicator with determinate/indeterminate behavior where supported (shared API and Android Avalonia rendering are implemented).
-- [>] Implement Slider with value, minimum, maximum, step and change events (`AddSlider` and range rendering are implemented; step/change regression remains).
+- [>] Implement Slider with value, minimum, maximum, step and change events (`AddSlider`, step semantics, Android rendering and change dispatch are implemented; broader cross-platform regression remains).
 - [ ] Implement Switch with shared boolean binding and action-state semantics.
 - [ ] Verify keyboard, touch, accessibility and programmatic updates.
 - [ ] Add focused cross-platform regressions.

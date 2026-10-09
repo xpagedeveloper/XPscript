@@ -392,6 +392,20 @@ public static class AndroidFormHost
                 }
             }
 
+            void DispatchFieldChange(string fieldName, string value)
+            {
+                if (eventCallback is null) return;
+                try
+                {
+                    var actionState = eventCallback("change:" + fieldName, value);
+                    ApplyActionState(actionState, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
+                }
+                catch (Exception exception)
+                {
+                    Log.Error("XPScript", "UIForm field change callback failed: " + exception);
+                }
+            }
+
             void DisposeMediaControls()
             {
                 foreach (var control in mediaControls.Values)
@@ -533,6 +547,8 @@ public static class AndroidFormHost
                     mediaControls[name] = editor;
                     AttachMediaEvents(name, editor);
                 }
+                if (editor is Slider slider)
+                    slider.ValueChanged += (_, args) => DispatchFieldChange(name, args.NewValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 var validationBlock = new TextBlock
                 {
                     Text = string.Empty,

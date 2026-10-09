@@ -170,6 +170,8 @@ foreach (var expected in new[]
     "void DispatchMediaEvent(string fieldName, string eventKind, string submittedValue = \"\")",
     "video.IsPlayingChanged +=",
     "audio.PlaybackError +=",
+    "void DispatchFieldChange(string fieldName, string value)",
+    "slider.ValueChanged +=",
     "position = video.Position",
     "void DisposeMediaControls()",
     "DisposeMediaControls();",
