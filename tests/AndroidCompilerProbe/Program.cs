@@ -367,9 +367,9 @@ var notificationSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory,
 foreach (var expected in new[] { "AndroidNotificationCapability", "AreNotificationsEnabled", "EnsureChannel", "NotificationChannel", "NotificationImportance" })
     if (!notificationSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android notification capability probe is missing: " + expected);
-var uiExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionRuntimeSource.cs"));
+var carouselExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionRuntimeSource.cs"));
 foreach (var expected in new[] { "AddCarousel", "CarouselSources", "SetCarouselIndex", "SetCarouselLoop", "SetCarouselAutoAdvance" })
-    if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
+    if (!carouselExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared Carousel API probe is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);
 foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
