@@ -20,5 +20,5 @@ public sealed class AndroidFilePickerCapability
     }
 
     public bool IsAvailable(string? mimeType = null)
-        => _context.PackageManager?.ResolveActivity(CreateOpenDocumentIntent(mimeType), Android.Content.PM.PackageManager.MatchDefaultOnly) is not null;
+        => _context.PackageManager?.ResolveActivity(CreateOpenDocumentIntent(mimeType), global::Android.Content.PM.PackageManager.MatchDefaultOnly) is not null;
 }
