@@ -1,0 +1,4 @@
+' CameraPreview capability/fallback sample.
+Dim form As New UIForm("Camera preview", 480, 320, True)
+Dim preview = form.AddCameraPreview("camera", "Camera")
+form.ShowDialog()
