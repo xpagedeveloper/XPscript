@@ -276,7 +276,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Verify the latest RunCommand conversion fix with exact emission and executable true/false coverage.
 - [x] Introduce a bound-method console compilation-unit emitter and execute a cross-procedure call regression.
 - [x] Add these probes to the existing Language FullTest runner and pass the complete Windows Language FullTest.
-- [ ] Connect compilation-unit emission to the shared experimental CLI/machine compilation path with real procedure bodies and runtime integration.
+- [x] Connect compilation-unit emission to the shared experimental CLI/machine compilation path with real procedure bodies and runtime integration. `AstExperimentalCompiler` binds the parsed unit, emits real method bodies and produces executable `Generated.dll`; the AST CLI/MCP parity probes and `.wps` application-declaration fixture cover the path.
 
 - [x] Emit actual top-level Sub/Function bodies in the experimental CLI, with procedure-local scopes, forward calls and declared ByRef modes; remove fabricated reduced-arity procedure overloads.
 - [ ] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics.

@@ -23,6 +23,8 @@ Target-specific entry points use the same AST unit: `Sub Main` is preferred for 
 
 Block parsing is structural at the statement level. `If`, `For`, `ForAll`, `While`, `Do` and `Select` parsers consume their matching terminator tokens and emit a diagnostic when the terminator is missing or mismatched; the focused AST probe includes an unterminated-block regression.
 
+The compilation-unit emitter is connected to both the `ast-compile` CLI and AST-MCP validation through `AstExperimentalCompiler`. It binds real procedure bodies, emits the shared runtime and compiles an executable `Generated.dll`; the CLI regression executes the result while MCP validates the same source through the same entry point.
+
 ## Comments and trivia
 
 The AST lexer treats apostrophe comments as trivia: comment text is skipped and is not represented as a syntax node or token. The terminating newline remains a `NewLineToken`, so statement boundaries and source positions are preserved. Apostrophes inside quoted string literals remain part of the string token. This keeps the syntax tree focused on compilable structure while retaining enough source information for diagnostics and compatibility preprocessing.
