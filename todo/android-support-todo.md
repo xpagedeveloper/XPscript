@@ -237,7 +237,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 
 - [x] File/document picker. AndroidFilePickerCapability exposes ACTION_OPEN_DOCUMENT with MIME filtering, multi-select and deterministic handler availability; host result dispatch remains a follow-up.
 - [x] Photo/media picker. AndroidPhotoMediaPickerCapability uses the API 33 Photo Picker and an ACTION_GET_CONTENT fallback, with MIME filtering and multi-select support; host result dispatch remains a follow-up.
-- [ ] Share sheet.
+- [x] Share sheet. AndroidShareCapability creates an ACTION_SEND intent with MIME/text payload and reports whether a handler exists; URI/stream payloads remain a follow-up.
 - [ ] Clipboard integration.
 - [ ] Vibration/haptics.
 - [ ] Network/connectivity state.

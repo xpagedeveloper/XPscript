@@ -335,6 +335,10 @@ var photoPickerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, 
 foreach (var expected in new[] { "AndroidPhotoMediaPickerCapability", "PICK_IMAGES", "ActionGetContent", "CreatePickIntent", "BuildVersionCodes.Tiramisu", "ExtraAllowMultiple" })
     if (!photoPickerSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android photo/media picker capability probe is missing: " + expected);
+var shareSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidShareCapability.cs"));
+foreach (var expected in new[] { "AndroidShareCapability", "ActionSend", "CreateShareIntent", "ExtraText", "ResolveActivity" })
+    if (!shareSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android share capability probe is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);
 foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
 {
