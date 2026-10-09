@@ -289,7 +289,7 @@ internal static class AstExperimentalCompiler
                 "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName)) + ")");
             var bound = procedureStatements.Select(binder.Bind).OfType<BoundStatement>().ToList();
             if (binder.Diagnostics.Count > 0)
-                throw new CompilerException(string.Join(Environment.NewLine, binder.Diagnostics.Select(d => d.Message)), binder.Diagnostics[0].Code, "semantic");
+                throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, fullSource);
             if (result is not null)
             {
                 // Function-name assignment is ordinary state mutation, never
@@ -316,7 +316,7 @@ internal static class AstExperimentalCompiler
                     : new BoundLiteralExpression(parameters[i].Type == typeof(string) ? "" :
                         parameters[i].Type.IsValueType ? Activator.CreateInstance(parameters[i].Type) : null, parameters[i].Type, type);
                 if (defaultBinder.Diagnostics.Count > 0)
-                    throw new CompilerException(defaultBinder.Diagnostics[0].Message, defaultBinder.Diagnostics[0].Code, "semantic");
+                    throw SyntaxDiagnosticException(defaultBinder.Diagnostics[0], sourcePath, fullSource);
                 var conversion = Conversion.Classify(value.SemanticType, type);
                 if (!conversion.IsImplicit)
                     throw new CompilerException($"Default value for Optional parameter '{parameters[i].Name}' is incompatible with its type.", CompilerDiagnosticCodes.TypeMismatch, "semantic");
@@ -898,6 +898,20 @@ internal static class Program
             Category = "semantic"
         };
         return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "semantic", [diagnostic]);
+    }
+
+    private static CompilerException SyntaxDiagnosticException(SyntaxDiagnostic diagnostic, string sourcePath, string source)
+    {
+        var start = SourceTextMap.GetPosition(source, diagnostic.Span.Start);
+        var end = SourceTextMap.GetPosition(source, diagnostic.Span.End);
+        var mapped = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourcePath), Line = start.Line, Position = start.Column,
+            EndLine = end.Line, EndColumn = end.Column, Description = diagnostic.Message,
+            DiagnosticCode = diagnostic.Code, Severity = "error",
+            Category = diagnostic.Code.StartsWith("XPS2", StringComparison.Ordinal) ? "semantic" : "syntax"
+        };
+        return new CompilerException(diagnostic.Message, diagnostic.Code, mapped.Category, [mapped]);
     }
 
     private static void RejectUnsupported(string sourcePath, string source, string pattern, string message)
