@@ -211,13 +211,13 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 
 ### Camera
 
-- [ ] Investigate Android camera integration suitable for XPScript.
-- [ ] Prefer platform-supported maintained APIs or maintained libraries over custom camera stack implementation.
+- [x] Investigate Android camera integration suitable for XPScript. CameraX 1.4.2.1 is integrated through an isolated Android preview adapter.
+- [x] Prefer platform-supported maintained APIs or maintained libraries over custom camera stack implementation. CameraX is used for preview and file capture.
 - [>] Define an XPScript API for taking a photo; Android CameraX adapter now exposes file-based `CapturePhotoAsync`, while shared UIForm transport and output-format policy remain.
 - [ ] Define an XPScript API for selecting/capturing image output as file path and/or bytes.
 - [ ] Define image format, orientation and metadata behavior.
-- [ ] Handle runtime camera permission requests and denial.
-- [ ] Handle devices without a usable camera.
+- [x] Handle runtime camera permission requests and denial. API 23+ requests permission and shows a deterministic reopen-form fallback when unavailable or denied.
+- [x] Handle devices without a usable camera. CameraX/provider failures remain explicit and do not silently emulate a preview.
 - [ ] Add focused compiler/runtime tests with a fake platform adapter before device tests.
 - [ ] Add opt-in physical-device camera integration tests.
 
