@@ -63,7 +63,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 ## Phase 1: Syntax model
 
 - [x] Define a common `SyntaxNode` base abstraction.
-- [ ] Define source spans on every syntax node.
+- [x] Define source spans on every syntax node. `SyntaxNode.Span` and `TextSpan` are source-derived across the syntax tree; focused AST tests cover tokens, expressions, statements, declarations and diagnostics.
 - [x] Define `CompilationUnitSyntax`; `DeclarationParser.ParseCompilationUnit` returns it with source-derived spans.
 - [ ] Define declaration node hierarchy.
 - [x] Define statement node hierarchy.
