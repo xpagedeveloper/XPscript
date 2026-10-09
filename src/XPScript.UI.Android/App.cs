@@ -1,6 +1,9 @@
+using Android.App;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Themes.Fluent;
+
+[assembly: UsesPermission(global::Android.Manifest.Permission.Camera)]
 
 namespace XPScript.UI.Android;
 
