@@ -237,6 +237,24 @@ internal sealed class GeneratedAndroidCameraPreviewControl : NativeControlHost
 {
     private PreviewView? _previewView;
     private ProcessCameraProvider? _cameraProvider;
+    private ImageCapture? _imageCapture;
+
+    public Task<string> CapturePhotoAsync(string outputPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
+        if (_imageCapture is null) throw new InvalidOperationException("Camera preview is not initialized.");
+        var root = Path.GetFullPath(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData));
+        var fullPath = Path.GetFullPath(Path.IsPathRooted(outputPath) ? outputPath : Path.Combine(root, outputPath));
+        if (outputPath.Contains("..", StringComparison.Ordinal) || !fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Camera photo output path must remain inside the application sandbox.", nameof(outputPath));
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+        var options = new ImageCapture.OutputFileOptions.Builder(new Java.IO.File(fullPath)).Build();
+        var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var context = global::Android.App.Application.Context ?? throw new InvalidOperationException("Android application context is unavailable.");
+        _imageCapture.TakePicture(options, ContextCompat.GetMainExecutor(context)!, new PhotoCaptureCallback(completion, fullPath));
+        return completion.Task;
+    }
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
@@ -251,9 +269,10 @@ internal sealed class GeneratedAndroidCameraPreviewControl : NativeControlHost
         {
             _cameraProvider = future.Get() as ProcessCameraProvider ?? throw new InvalidOperationException("CameraX provider is unavailable.");
             var preview = new Preview.Builder().Build();
+            _imageCapture = new ImageCapture.Builder().Build();
             preview.SetSurfaceProvider(ContextCompat.GetMainExecutor(context)!, _previewView.SurfaceProvider);
             _cameraProvider.UnbindAll();
-            _cameraProvider.BindToLifecycle(lifecycleOwner, CameraSelector.DefaultBackCamera, preview);
+            _cameraProvider.BindToLifecycle(lifecycleOwner, CameraSelector.DefaultBackCamera, preview, _imageCapture);
         }), ContextCompat.GetMainExecutor(context));
         return new PlatformHandle(_previewView.Handle, "Android.CameraX.PreviewView");
     }
@@ -263,9 +282,20 @@ internal sealed class GeneratedAndroidCameraPreviewControl : NativeControlHost
         _cameraProvider?.UnbindAll();
         _cameraProvider?.Dispose();
         _cameraProvider = null;
+        _imageCapture?.Dispose();
+        _imageCapture = null;
         _previewView?.Dispose();
         _previewView = null;
         base.DestroyNativeControlCore(control);
+    }
+
+    private sealed class PhotoCaptureCallback : Java.Lang.Object, ImageCapture.IOnImageSavedCallback
+    {
+        private readonly TaskCompletionSource<string> _completion;
+        private readonly string _outputPath;
+        public PhotoCaptureCallback(TaskCompletionSource<string> completion, string outputPath) { _completion = completion; _outputPath = outputPath; }
+        public void OnError(ImageCaptureException exception) => _completion.TrySetException(new InvalidOperationException(exception.Message ?? "Camera photo capture failed."));
+        public void OnImageSaved(ImageCapture.OutputFileResults output) => _completion.TrySetResult(_outputPath);
     }
 }
 

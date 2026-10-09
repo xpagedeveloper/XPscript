@@ -93,6 +93,8 @@ foreach (var expected in new[]
     "private static Control HomeContent() => new Grid();",
     "CameraPreview",
     "GeneratedAndroidCameraPreviewControl",
+    "public Task<string> CapturePhotoAsync(string outputPath)",
+    "ImageCapture.IOnImageSavedCallback",
     "Camera permission is required. Grant permission and reopen the form.",
     "CornerRadius = new CornerRadius(cornerRadius)",
     "CornerRadius = new CornerRadius(fieldCornerRadius)",
