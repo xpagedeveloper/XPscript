@@ -279,7 +279,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Connect compilation-unit emission to the shared experimental CLI/machine compilation path with real procedure bodies and runtime integration. `AstExperimentalCompiler` binds the parsed unit, emits real method bodies and produces executable `Generated.dll`; the AST CLI/MCP parity probes and `.wps` application-declaration fixture cover the path.
 
 - [x] Emit actual top-level Sub/Function bodies in the experimental CLI, with procedure-local scopes, forward calls and declared ByRef modes; remove fabricated reduced-arity procedure overloads.
-- [ ] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics.
+- [x] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics. `xpscript_ast_validate` calls `AstExperimentalCompiler`, and `CompilerMcpProtocolProbe` compares CLI/MCP success and parser diagnostics.
 - [ ] Model Optional defaults in syntax/binding/emission instead of generating no-op overloads.
 - [x] Preserve Optional flags, parameter modes and default-expression syntax with absolute spans; handle nested default-expression commas in declaration parsing.
 - [ ] Validate Optional ordering, default types/expression rules and supplied/omitted arguments in the binder; lower omitted ByRef defaults through temporary locals.
