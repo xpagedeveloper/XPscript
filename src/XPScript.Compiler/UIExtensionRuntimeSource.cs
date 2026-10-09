@@ -75,6 +75,7 @@ internal sealed class XPScriptUIField
     public decimal? Maximum { get; set; }
     public double Step { get { EnsureSlider(); return _step; } set { EnsureSlider(); if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0) throw new XPScriptRuntimeException(5, "UIForm Slider Step must be greater than zero."); _step = value; } }
     public List<string> Options { get; } = [];
+    public string IconName { get; set; } = string.Empty;
 
     public string Source
     {
@@ -352,6 +353,18 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddCheckBox(object? name, object? label) => AddField(name, label, "CheckBox");
     public XPScriptUIField AddSwitch(object? name) => AddField(name, name, "Switch");
     public XPScriptUIField AddSwitch(object? name, object? label) => AddField(name, label, "Switch");
+    public XPScriptUIField AddIcon(object? name, object? icon)
+    {
+        var field = AddField(name, string.Empty, "Icon");
+        field.IconName = XPScriptRuntime.CStr(icon).Trim();
+        return field;
+    }
+    public XPScriptUIField AddIcon(object? name, object? icon, object? label)
+    {
+        var field = AddField(name, label, "Icon");
+        field.IconName = XPScriptRuntime.CStr(icon).Trim();
+        return field;
+    }
     public XPScriptUIField AddDateField(object? name) => AddField(name, name, "DateField");
     public XPScriptUIField AddDateField(object? name, object? label) => AddField(name, label, "DateField");
     public XPScriptUIField AddTimeField(object? name) => AddField(name, name, "TimeField");

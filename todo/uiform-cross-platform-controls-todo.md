@@ -89,7 +89,7 @@ For each control, explicitly evaluate:
 
 ## Visual and layout controls
 
-- [ ] Implement Icon with a portable built-in icon set and fallback behavior.
+- [>] Implement Icon with a portable built-in icon set and fallback behavior (shared API and Android glyph fallback are implemented; broader platform parity remains).
 - [ ] Implement Card and Panel containers.
 - [ ] Implement ScrollView with bounded nested scrolling behavior.
 - [ ] Extend Button with optional icon/image content.

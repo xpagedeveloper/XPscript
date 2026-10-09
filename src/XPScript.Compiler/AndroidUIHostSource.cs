@@ -524,6 +524,7 @@ public static class AndroidFormHost
                     "Separator" => new Separator(),
                     "Spacer" => new Border { Height = 16 },
                     "Image" => CreateImage(field),
+                    "Icon" => CreateIcon(field),
                     _ => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) }
                 };
 
@@ -535,7 +536,7 @@ public static class AndroidFormHost
                 fieldContainer.Children.Add(editor);
 
                 if (editor is ProgressBar progressControl) progressControls[name] = progressControl;
-                if (type is "Separator" or "Spacer" or "Image" or "WebView" or "ProgressBar" or "ActivityIndicator")
+                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "WebView" or "ProgressBar" or "ActivityIndicator")
                 {
                     AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
                     continue;
@@ -872,6 +873,25 @@ public static class AndroidFormHost
         var maximum = field.TryGetProperty("maximum", out var maxValue) && maxValue.TryGetDouble(out var max) ? max : 100;
         var step = field.TryGetProperty("step", out var stepValue) && stepValue.TryGetDouble(out var stepSize) ? stepSize : 1;
         return new Slider { Minimum = minimum, Maximum = maximum, TickFrequency = step, IsSnapToTickEnabled = true };
+    }
+
+    private static Control CreateIcon(JsonElement field)
+    {
+        var icon = field.TryGetProperty("icon", out var iconValue) ? iconValue.GetString() ?? string.Empty : string.Empty;
+        var glyph = icon.ToLowerInvariant() switch
+        {
+            "check" or "success" => "✓",
+            "close" or "cancel" => "×",
+            "warning" => "⚠",
+            "info" => "ⓘ",
+            "play" => "▶",
+            "pause" => "⏸",
+            "stop" => "⏹",
+            "heart" => "♥",
+            "star" => "★",
+            _ => icon.Length == 1 ? icon : "•"
+        };
+        return new TextBlock { Text = glyph, FontSize = 24, HorizontalAlignment = HorizontalAlignment.Center };
     }
 
     private static Avalonia.Controls.NativeWebView CreateWebView(JsonElement field, string instanceId, string fieldName)
