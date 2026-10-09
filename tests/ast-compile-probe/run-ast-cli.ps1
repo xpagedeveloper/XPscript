@@ -93,6 +93,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-array.xps') -o $st
 if ($LASTEXITCODE -ne 0) { throw 'AST Static array compilation failed.' }
 $staticArrayResult = dotnet (Join-Path $staticArray 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($staticArrayResult -join "`n") -ne "1`n2") { throw 'AST Static array lifetime did not persist across calls.' }
+$staticList = Join-Path $output 'static-list'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-list.xps') -o $staticList
+if ($LASTEXITCODE -ne 0) { throw 'AST Static List compilation failed.' }
+$staticListResult = dotnet (Join-Path $staticList 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($staticListResult -join "`n") -ne "1`n2") { throw 'AST Static List lifetime did not persist across calls.' }
 $parserError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'parser-error.xps') -o (Join-Path $output 'parser-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($parserError -join "`n") -notmatch 'Expected CloseParenToken') { throw 'AST parser diagnostic regression failed.' }
 $noEntry = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'no-entry-error.xps') -o (Join-Path $output 'no-entry-error') 2>&1

@@ -1,0 +1,13 @@
+Sub Accumulate()
+    Static values List As Long
+    If Not IsElement(values("count")) Then
+        values("count") = 0
+    End If
+    values("count") = values("count") + 1
+    Print values("count")
+End Sub
+
+Sub Main()
+    Accumulate()
+    Accumulate()
+End Sub
