@@ -76,6 +76,8 @@ $isNothingResult = dotnet (Join-Path $isNothingOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($isNothingResult -join "`n") -ne 'IS_NOTHING_OK') { throw 'AST Is Nothing did not preserve Variant Nothing semantics.' }
 $classRuntime = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-runtime-error.xps') -o (Join-Path $output 'class-runtime-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($classRuntime -join "`n") -notmatch 'AST class declarations and runtime object lifecycle are not implemented') { throw 'AST silently accepted unsupported class runtime placeholders.' }
+$optionalOrder = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-order-error.xps') -o (Join-Path $output 'optional-order-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($optionalOrder -join "`n") -notmatch 'cannot follow an Optional parameter') { throw 'AST accepted a required parameter after Optional.' }
 $nestedOutput = Join-Path $output 'nested-goto'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-goto.xps') -o $nestedOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nested GoTo compilation failed.' }

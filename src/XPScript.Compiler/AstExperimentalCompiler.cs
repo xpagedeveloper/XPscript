@@ -276,6 +276,7 @@ internal static class AstExperimentalCompiler
             var procedureSub = item as SubDeclarationSyntax;
             var procedureFunction = item as FunctionDeclarationSyntax;
             var procedureParameters = procedureSub?.Parameters ?? procedureFunction!.Parameters;
+            ValidateOptionalDeclarations(procedureParameters);
             var scope = symbols.CreateChildScope();
             var parameters = procedureParameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
                 ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef,
@@ -875,6 +876,28 @@ internal static class Program
             symbols.Declare(new FunctionSymbol(name, returnType,
                 parameters.Take(count).Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
                 null, null, parameters.Take(count).Select(p => p.IsByRef).ToArray()));
+    }
+
+    private static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters)
+    {
+        var optionalSeen = false;
+        foreach (var parameter in parameters)
+        {
+            if (parameter.IsOptional)
+            {
+                optionalSeen = true;
+                continue;
+            }
+
+            if (optionalSeen)
+                throw new CompilerException(
+                    $"Required parameter '{parameter.Identifier.Text}' cannot follow an Optional parameter.",
+                    CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+            if (parameter.DefaultValue is not null)
+                throw new CompilerException(
+                    $"Parameter '{parameter.Identifier.Text}' must be declared Optional when it has a default value.",
+                    CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+        }
     }
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch
