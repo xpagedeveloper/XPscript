@@ -52,6 +52,9 @@ internal sealed class XPScriptUIField
     private bool _mediaMuted;
     private double _mediaPlaybackRate = 1.0;
     private bool _mediaIsPlaying;
+    private double _progressValue;
+    private bool _progressIndeterminate;
+    private bool _activityRunning;
 
     internal XPScriptUIField(XPScriptUIForm owner, string name, string label, string type)
     {
@@ -117,6 +120,27 @@ internal sealed class XPScriptUIField
     public bool IsPlaying { get { EnsureMedia(); return _mediaIsPlaying; } }
     public void Play() { EnsureMedia(); _mediaIsPlaying = true; }
     public void Pause() { EnsureMedia(); _mediaIsPlaying = false; }
+    public double Value
+    {
+        get { EnsureProgress(); return _progressValue; }
+        set
+        {
+            EnsureProgress();
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1)
+                throw new XPScriptRuntimeException(5, "UIForm ProgressBar Value must be between 0 and 1.");
+            _progressValue = value;
+        }
+    }
+    public bool IsIndeterminate
+    {
+        get => Type == "ProgressBar" ? _progressIndeterminate : EnsureActivityIndicatorValue();
+        set { EnsureProgress(); _progressIndeterminate = value; }
+    }
+    public bool IsRunning
+    {
+        get { EnsureActivityIndicator(); return _activityRunning; }
+        set { EnsureActivityIndicator(); _activityRunning = value; }
+    }
     public string Html
     {
         get { EnsureWebView(); return _webViewHtml; }
@@ -179,6 +203,9 @@ internal sealed class XPScriptUIField
     }
     private void EnsureWebView() { if (Type != "WebView") throw new XPScriptRuntimeException(5, "This UIForm field is not a WebView."); }
     private void EnsureMedia() { if (Type is not ("Video" or "Audio")) throw new XPScriptRuntimeException(5, "This UIForm field is not a media field."); }
+    private void EnsureProgress() { if (Type != "ProgressBar") throw new XPScriptRuntimeException(5, "This UIForm field is not a ProgressBar."); }
+    private bool EnsureActivityIndicatorValue() { EnsureActivityIndicator(); return true; }
+    private void EnsureActivityIndicator() { if (Type != "ActivityIndicator") throw new XPScriptRuntimeException(5, "This UIForm field is not an ActivityIndicator."); }
     private static string NormalizeMediaSource(string? value)
     {
         var text = (value ?? string.Empty).Trim();
@@ -348,6 +375,10 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddVideo(object? name, object? label) => AddField(name, label, "Video");
     public XPScriptUIField AddAudio(object? name) => AddField(name, name, "Audio");
     public XPScriptUIField AddAudio(object? name, object? label) => AddField(name, label, "Audio");
+    public XPScriptUIField AddProgressBar(object? name) => AddField(name, string.Empty, "ProgressBar");
+    public XPScriptUIField AddProgressBar(object? name, object? label) => AddField(name, label, "ProgressBar");
+    public XPScriptUIField AddActivityIndicator(object? name) => AddField(name, string.Empty, "ActivityIndicator");
+    public XPScriptUIField AddActivityIndicator(object? name, object? label) => AddField(name, label, "ActivityIndicator");
 
     public void PlayMedia(object? name) => QueueMediaCommand(name, "play");
     public void PauseMedia(object? name) => QueueMediaCommand(name, "pause");

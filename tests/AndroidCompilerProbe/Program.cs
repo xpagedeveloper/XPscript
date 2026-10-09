@@ -189,6 +189,11 @@ foreach (var expected in new[]
         throw new Exception("Generated Android Media3 host is missing playback listener forwarding: " + expected);
 }
 
+var sharedUiExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionRuntimeSource.cs"));
+foreach (var expected in new[] { "AddProgressBar", "AddActivityIndicator", "UIForm ProgressBar Value must be between 0 and 1.", "public bool IsIndeterminate", "public bool IsRunning" })
+    if (!sharedUiExtensionSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Shared UIForm progress/indicator API is missing: " + expected);
+
 if (!uiHostCode.Contains("var cancel = new Avalonia.Controls.Button { Content = \"Cancel\", MinWidth = 100 };", StringComparison.Ordinal) ||
     !uiHostCode.Contains("var ok = new Avalonia.Controls.Button { Content = \"OK\", MinWidth = 100 };", StringComparison.Ordinal) ||
     !uiHostCode.Contains("defaultButtonCornerRadiusValue.TryGetDouble(out var defaultButtonRadius)", StringComparison.Ordinal))
