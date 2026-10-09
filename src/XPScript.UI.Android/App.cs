@@ -4,6 +4,8 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Themes.Fluent;
 
 [assembly: UsesPermission(global::Android.Manifest.Permission.Camera)]
+[assembly: UsesPermission(global::Android.Manifest.Permission.AccessFineLocation)]
+[assembly: UsesPermission(global::Android.Manifest.Permission.AccessCoarseLocation)]
 
 namespace XPScript.UI.Android;
 

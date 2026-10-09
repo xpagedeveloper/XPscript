@@ -223,7 +223,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 
 ### Location / GPS
 
-- [ ] Investigate Android location APIs suitable for XPScript.
+- [x] Investigate Android location APIs suitable for XPScript. Android `LocationManager` capability probing is isolated in `AndroidLocationCapability`; updates and permission requests remain separate follow-up work.
 - [ ] Define an XPScript API for one-shot current location.
 - [ ] Define whether continuous location updates are required and, if so, cancellation/lifecycle behavior.
 - [ ] Define latitude, longitude, accuracy, altitude, speed and timestamp representation.

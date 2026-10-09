@@ -323,6 +323,10 @@ var cameraAdapterSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory
 foreach (var expected in new[] { "CapturePhotoAsync", "NormalizeCapturePath", "Camera photo output path must remain inside the application sandbox.", "ImageCapture.OutputFileOptions", "IOnImageSavedCallback", "Camera photo capture failed" })
     if (!cameraAdapterSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android CameraX photo capture adapter is missing: " + expected);
+var locationCapabilitySource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidLocationCapability.cs"));
+foreach (var expected in new[] { "AndroidLocationCapability", "HasFinePermission", "HasCoarsePermission", "IsLocationEnabled", "LocationManager.GpsProvider" })
+    if (!locationCapabilitySource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android location capability probe is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);
 foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
 {
