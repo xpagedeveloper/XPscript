@@ -321,6 +321,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Preserve uninitialized Variant Nothing semantics for `Is Nothing`; AST now emits null storage instead of an ExpandoObject and matches published output.
 - [ ] Preserve original source spans through all preprocessing and map parser/binder errors through the shared diagnostic contract.
   Optional declaration validation, explicit unsupported-feature guards and binder/default-expression errors now emit source-mapped CompileDiagnostic values; remaining AST diagnostics still need the same treatment.
+  Parser diagnostics now use the same mapped path; control-flow and generated-source diagnostics remain open.
 
 Initial implementation: expression conversions and a method-body emitter for assignment, calls, return, If, For, ForAll, While, Do and Select Case are covered by `tests/ast-emission`. Bound syntax spans and an opt-in `#line`/mapping result are also available. `tests/ast-compile-probe` drives a real XPscript `Sub Main` through declaration parsing, binding and C# compilation. See `docs/ast-csharp-emitter.md` for supported nodes and remaining integration work. The phase remains open until the full bound tree, mapping and targets are connected to production compilation.
 

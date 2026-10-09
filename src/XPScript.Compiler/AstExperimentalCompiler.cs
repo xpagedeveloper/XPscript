@@ -49,7 +49,7 @@ internal static class AstExperimentalCompiler
         var parser = new DeclarationParser(source);
         var unit = parser.ParseCompilationUnit();
         if (parser.Diagnostics.Count > 0)
-            throw new CompilerException(parser.Diagnostics[0].Message, parser.Diagnostics[0].Code, "syntax");
+            throw SyntaxDiagnosticException(parser.Diagnostics[0], sourcePath, fullSource);
         // The experimental path keeps going when a non-selected declaration
         // contains syntax outside the current AST slice. Binding diagnostics
         // for the selected procedure remain authoritative below.
