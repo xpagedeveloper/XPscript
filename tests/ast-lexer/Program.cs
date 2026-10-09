@@ -344,6 +344,10 @@ Equal(SyntaxKind.LiteralExpression, blockIfSyntax.Condition.Kind, "block If cond
 Equal(SyntaxKind.LiteralExpression, blockIfSyntax.ElseIfClauses[0].Condition.Kind, "block ElseIf condition kind");
 Equal(new TextSpan(0, blockIfSource.Length), blockIfSyntax.Span, "block If full span");
 
+var unterminatedIfParser = new StatementParser("If True Then\nPrint(\"missing terminator\")");
+_ = unterminatedIfParser.ParseStatement();
+if (unterminatedIfParser.Diagnostics.Count == 0) throw new Exception("unterminated block If was not diagnosed structurally");
+
 var fileKeywordMemberRegression = new ExpressionParser("obj.Open").ParseExpression();
 Equal(SyntaxKind.MemberAccessExpression, fileKeywordMemberRegression.Kind, "file statement keywords remain valid member names");
 var fileKeywordCallRegression = new ExpressionParser("Open()").ParseExpression();

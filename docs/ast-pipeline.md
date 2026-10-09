@@ -21,6 +21,8 @@ Application-level `Option`, `Const` and `Declare` lines are retained in the synt
 
 Target-specific entry points use the same AST unit: `Sub Main` is preferred for console-style targets; when it is absent, the first `Sub` or `Function` is emitted as the target entry method. Route attributes such as `[Get]` are removed at the AST boundary so the procedure declaration remains reusable by the target host. `tests/ast-compile-probe/target-entry-point.wps` verifies the fallback path and prints `7`.
 
+Block parsing is structural at the statement level. `If`, `For`, `ForAll`, `While`, `Do` and `Select` parsers consume their matching terminator tokens and emit a diagnostic when the terminator is missing or mismatched; the focused AST probe includes an unterminated-block regression.
+
 ## Comments and trivia
 
 The AST lexer treats apostrophe comments as trivia: comment text is skipped and is not represented as a syntax node or token. The terminating newline remains a `NewLineToken`, so statement boundaries and source positions are preserved. Apostrophes inside quoted string literals remain part of the string token. This keeps the syntax tree focused on compilable structure while retaining enough source information for diagnostics and compatibility preprocessing.
