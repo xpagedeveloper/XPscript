@@ -7,3 +7,5 @@ The AST binder reports unknown symbols and members before generated C# reaches R
 
 The protocol probe also compares normal and debug CLI/MCP diagnostic identities, including code, file, source position, span and description. This keeps the current public diagnostic surface synchronized while feature-specific machine exposure is migrated.
 
+The AST CLI regression also preserves the user-facing messages for malformed parser input, missing `Sub` entry points and invalid Optional declaration ordering. These checks run before the broader AST compile probe so a diagnostic regression fails early.
+
