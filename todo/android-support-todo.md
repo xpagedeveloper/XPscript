@@ -120,6 +120,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [ ] Add shared media lifecycle/event semantics for Audio and Video: `OnPlay`, `OnPause`, `OnEnded`, `OnError`, position/duration state and deterministic cleanup on form/application lifecycle changes.
 - [x] Add shared registration and dispatch semantics for media `OnPlay`, `OnPause`, `OnEnded` and `OnError` handlers. Native host signal wiring and position/duration synchronization remain open.
 - [x] Add the Android Avalonia Audio host bridge using the isolated Media3 player; Audio is headless, accepts the shared normalized source and is excluded from submitted editor state. Playback property/event synchronization remains open.
+- [x] Expose basic Play/Pause/Stop, IsPlaying, Position and Duration operations on the Android Video/Audio host controls for subsequent callback wiring.
 - [ ] Add `UIForm.ProgressBar` and an indeterminate `UIForm.ActivityIndicator`/spinner, including dynamic progress/running state updates from callbacks.
 - [ ] Add a general-purpose `UIForm.Slider` control suitable for values such as volume or media position, distinct from form-specific validation semantics where needed.
 - [ ] Add a mobile-friendly `UIForm.Switch` boolean control with the same binding/action-state semantics as CheckBox.

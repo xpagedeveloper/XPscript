@@ -24,6 +24,13 @@ public sealed class AndroidVideoControl : NativeControlHost
     }
 
     public AndroidMedia3Player? MediaPlayer => _mediaPlayer;
+    public bool IsPlaying => _mediaPlayer?.IsPlaying == true;
+    public long Position => _mediaPlayer?.Position ?? 0;
+    public long Duration => _mediaPlayer?.Duration ?? 0;
+    public float Volume { get => _mediaPlayer?.Volume ?? 0; set => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Volume = value; }
+    public void Play() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Play();
+    public void Pause() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Pause();
+    public void Stop() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Stop();
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {

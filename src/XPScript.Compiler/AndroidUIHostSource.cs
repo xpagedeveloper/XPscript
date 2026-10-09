@@ -205,6 +205,12 @@ internal sealed class GeneratedAndroidVideoControl : NativeControlHost
                 _mediaPlayer.SetSource(_source);
         }
     }
+    public bool IsPlaying => _mediaPlayer?.IsPlaying == true;
+    public long Position => _mediaPlayer?.Position ?? 0;
+    public long Duration => _mediaPlayer?.Duration ?? 0;
+    public void Play() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Play();
+    public void Pause() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Pause();
+    public void Stop() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Stop();
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
@@ -253,6 +259,12 @@ internal sealed class GeneratedAndroidAudioControl : Control, IDisposable
             if (_source.Length > 0) _mediaPlayer.SetSource(_source);
         }
     }
+    public bool IsPlaying => _mediaPlayer.IsPlaying;
+    public long Position => _mediaPlayer.Position;
+    public long Duration => _mediaPlayer.Duration;
+    public void Play() => _mediaPlayer.Play();
+    public void Pause() => _mediaPlayer.Pause();
+    public void Stop() => _mediaPlayer.Stop();
 
     public void Dispose()
     {
