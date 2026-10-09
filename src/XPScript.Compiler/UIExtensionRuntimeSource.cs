@@ -401,6 +401,34 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddWebView(object? name) => AddField(name, string.Empty, "WebView");
     public XPScriptUIField AddVideo(object? name) => AddField(name, name, "Video");
     public XPScriptUIField AddVideo(object? name, object? label) => AddField(name, label, "Video");
+    public XPScriptUIField AddCarousel(object? name, params object?[] sources)
+    {
+        var field = AddField(name, name, "Carousel");
+        foreach (var source in sources ?? []) field.CarouselSources.Add(NormalizeMediaSource(source, "carousel"));
+        return field;
+    }
+    public void SetCarouselIndex(object? name, object? index)
+    {
+        var field = FindField(name);
+        if (field.Type != "Carousel") throw new XPScriptRuntimeException(5, "UIForm.SetCarouselIndex requires a Carousel field.");
+        var value = Convert.ToInt32(index, System.Globalization.CultureInfo.InvariantCulture);
+        if (value < 0 || value >= field.CarouselSources.Count) throw new XPScriptRuntimeException(5, "Carousel index is outside the available item range.");
+        field.CarouselIndex = value;
+    }
+    public void SetCarouselLoop(object? name, object? loop)
+    {
+        var field = FindField(name);
+        if (field.Type != "Carousel") throw new XPScriptRuntimeException(5, "UIForm.SetCarouselLoop requires a Carousel field.");
+        field.CarouselLoop = Convert.ToBoolean(loop, System.Globalization.CultureInfo.InvariantCulture);
+    }
+    public void SetCarouselAutoAdvance(object? name, object? milliseconds)
+    {
+        var field = FindField(name);
+        if (field.Type != "Carousel") throw new XPScriptRuntimeException(5, "UIForm.SetCarouselAutoAdvance requires a Carousel field.");
+        var value = Convert.ToInt32(milliseconds, System.Globalization.CultureInfo.InvariantCulture);
+        if (value < 0) throw new XPScriptRuntimeException(5, "Carousel auto-advance interval cannot be negative.");
+        field.CarouselAutoAdvanceMilliseconds = value == 0 ? null : value;
+    }
     public XPScriptUIField AddAudio(object? name) => AddField(name, name, "Audio");
     public XPScriptUIField AddAudio(object? name, object? label) => AddField(name, label, "Audio");
     public XPScriptUIField AddProgressBar(object? name) => AddField(name, string.Empty, "ProgressBar");
