@@ -11,3 +11,5 @@ The AST CLI regression also preserves the user-facing messages for malformed par
 
 AST-MCP errors use the same structured diagnostic identity as the AST compiler exception: stable `diagnosticCode`, source filename, line/position span, severity and category. The MCP protocol probe verifies both a successful Static validation and a source-mapped parser error.
 
+The AST CLI prints mapped diagnostics as `file:line:position: diagnosticCode: description`; it does not fall back to generated-C# locations when a mapped AST diagnostic is available.
+

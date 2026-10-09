@@ -320,7 +320,11 @@ public static class XPScriptCompilerCommandLine
         }
         catch (CompilerException ex)
         {
-            Console.Error.WriteLine(ex.Message);
+            if (ex.GeneratedDiagnostics.Count == 0)
+                Console.Error.WriteLine(ex.Message);
+            else
+                foreach (var diagnostic in ex.GeneratedDiagnostics)
+                    Console.Error.WriteLine($"{diagnostic.File}:{diagnostic.Line}:{diagnostic.Position}: {diagnostic.DiagnosticCode}: {diagnostic.Description}");
             return 2;
         }
     }
