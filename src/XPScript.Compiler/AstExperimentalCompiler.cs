@@ -278,11 +278,11 @@ internal static class AstExperimentalCompiler
                 .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault(group => group.Count() > 1)?.Skip(1).FirstOrDefault();
             if (duplicateLabel is not null)
-                throw new CompilerException($"Duplicate label '{duplicateLabel.Identifier.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+                throw MappedDiagnostic(duplicateLabel.Span, sourcePath, fullSource, $"Duplicate label '{duplicateLabel.Identifier.Text}'.");
             foreach (var transfer in allProcedureStatements.OfType<GoToStatementSyntax>().Where(transfer => !transfer.IsGoSub))
                 if (!labels.ContainsKey(transfer.Target.Text))
-                    throw new CompilerException($"Unknown label '{transfer.Target.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
-            ValidateLoopEntryTransfers(procedureStatements, labels);
+                    throw MappedDiagnostic(transfer.Span, sourcePath, fullSource, $"Unknown label '{transfer.Target.Text}'.");
+            ValidateLoopEntryTransfers(procedureStatements, labels, sourcePath, fullSource);
             var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType),
                 procedureFunction is not null, true, procedureFunction?.Identifier.Text, result,
                 (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
@@ -834,7 +834,7 @@ internal static class Program
     }
 
     private static void ValidateLoopEntryTransfers(IEnumerable<StatementSyntax> statements,
-        IReadOnlyDictionary<string, LabelStatementSyntax> labels)
+        IReadOnlyDictionary<string, LabelStatementSyntax> labels, string sourcePath, string source)
     {
         var scopes = FlattenStatements(statements)
             .Where(statement => statement is ForStatementSyntax or ForAllStatementSyntax)
@@ -846,9 +846,8 @@ internal static class Program
             var targetScope = InnermostContaining(scopes, label.Span);
             if (targetScope is not null && !ReferenceEquals(sourceScope, targetScope) &&
                 targetScope.Span.Start > transfer.Span.Start && targetScope.Span.End >= label.Span.End)
-                throw new CompilerException(
-                    $"GoTo cannot enter a For or ForAll block at label '{label.Identifier.Text}'. Move the label outside the loop or use structured control flow.",
-                    CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+                throw MappedDiagnostic(transfer.Span, sourcePath, source,
+                    $"GoTo cannot enter a For or ForAll block at label '{label.Identifier.Text}'. Move the label outside the loop or use structured control flow.");
         }
     }
 
@@ -912,6 +911,19 @@ internal static class Program
             Category = diagnostic.Code.StartsWith("XPS2", StringComparison.Ordinal) ? "semantic" : "syntax"
         };
         return new CompilerException(diagnostic.Message, diagnostic.Code, mapped.Category, [mapped]);
+    }
+
+    private static CompilerException MappedDiagnostic(TextSpan span, string sourcePath, string source, string message)
+    {
+        var start = SourceTextMap.GetPosition(source, span.Start);
+        var end = SourceTextMap.GetPosition(source, span.End);
+        var mapped = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourcePath), Line = start.Line, Position = start.Column,
+            EndLine = end.Line, EndColumn = end.Column, Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Severity = "error", Category = "semantic"
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "semantic", [mapped]);
     }
 
     private static void RejectUnsupported(string sourcePath, string source, string pattern, string message)
