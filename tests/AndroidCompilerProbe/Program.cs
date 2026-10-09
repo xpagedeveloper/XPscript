@@ -324,7 +324,7 @@ foreach (var expected in new[] { "CapturePhotoAsync", "NormalizeCapturePath", "C
     if (!cameraAdapterSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android CameraX photo capture adapter is missing: " + expected);
 var locationCapabilitySource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidLocationCapability.cs"));
-foreach (var expected in new[] { "AndroidLocationCapability", "HasFinePermission", "HasCoarsePermission", "IsLocationEnabled", "LocationManager.GpsProvider" })
+foreach (var expected in new[] { "AndroidLocationCapability", "HasFinePermission", "HasCoarsePermission", "IsLocationEnabled", "EnabledProviders", "SelectProvider", "LocationManager.GpsProvider" })
     if (!locationCapabilitySource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android location capability probe is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);

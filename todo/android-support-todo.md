@@ -228,7 +228,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 - [ ] Define whether continuous location updates are required and, if so, cancellation/lifecycle behavior.
 - [ ] Define latitude, longitude, accuracy, altitude, speed and timestamp representation.
 - [ ] Handle foreground/background permission differences explicitly.
-- [ ] Handle location services being disabled.
+- [x] Handle location services being disabled. AndroidLocationCapability exposes enabled GPS/network providers and SelectProvider fails deterministically when none is available.
 - [ ] Handle timeout and unavailable-fix behavior deterministically.
 - [ ] Add focused compiler/runtime tests with a fake location provider before device tests.
 - [ ] Add opt-in physical-device GPS integration tests.

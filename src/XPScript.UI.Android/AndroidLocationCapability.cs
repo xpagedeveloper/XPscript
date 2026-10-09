@@ -22,4 +22,23 @@ public sealed class AndroidLocationCapability
             return manager?.IsProviderEnabled(LocationManager.GpsProvider) == true || manager?.IsProviderEnabled(LocationManager.NetworkProvider) == true;
         }
     }
+
+    public IReadOnlyList<string> EnabledProviders
+    {
+        get
+        {
+            var manager = (LocationManager?)_context.GetSystemService(Context.LocationService);
+            return manager?.GetProviders(true)?.Where(provider => provider is LocationManager.GpsProvider or LocationManager.NetworkProvider).ToArray()
+                ?? Array.Empty<string>();
+        }
+    }
+
+    public string SelectProvider()
+    {
+        if (!HasPermission) throw new InvalidOperationException("Location permission has not been granted.");
+        var providers = EnabledProviders;
+        if (providers.Contains(LocationManager.GpsProvider, StringComparer.OrdinalIgnoreCase)) return LocationManager.GpsProvider;
+        if (providers.Contains(LocationManager.NetworkProvider, StringComparer.OrdinalIgnoreCase)) return LocationManager.NetworkProvider;
+        throw new InvalidOperationException("No Android location provider is enabled.");
+    }
 }
