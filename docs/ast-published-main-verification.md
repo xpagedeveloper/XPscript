@@ -36,6 +36,10 @@ The baseline SHA-256 was rechecked during this audit and remains unchanged. Prod
 
 The compatibility executable is the `main`-branch build preserved at `publish/xpscript/win-x64/xpscript.exe`. Its SHA-256 is `7380df231689fe1645b96a91bb4c7baffc16e3b167d01df19cc277e38d6b3bcf`. The AST branch keeps this artifact unchanged while AST fixtures are compiled and compared against it; it is not rebuilt by the AST workflow.
 
+## Linux main reference
+
+The `main` branch also defines a `linux-x64` distribution target. A framework-dependent Linux reference was built from main commit `deb33819` in `publish/xpscript/linux-x64`; its `xpscript.dll` SHA-256 is `cda7258576b70322c86f5b358551c2c7b894f12122f7e9837c215d76594088c8`. The preserved `static-local-baseline.xps` fixture was compiled and executed through this Linux reference and the AST compiler with identical output: `1`, `2`. The published directory remains ignored/generated; rebuild it from main when the baseline changes.
+
 ## Nested supplied Optional arguments
 
 Published main still rejects the expanded optional-nested-supplied-call.xps fixture with missing-argument and invalid closing-parenthesis errors. Token-based compatibility preprocessing replaces the flat regex; branch legacy and AST cover nested calls to the same Optional procedure, inner argument commas and multiple calls on a line. Expected output is 123, 1333, 246 and the unchanged string Choose(, Provided(),).
