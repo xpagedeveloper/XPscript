@@ -242,7 +242,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 - [x] Vibration/haptics. AndroidHapticsCapability provides duration-validated vibration with API 26+ VibrationEffect and a legacy fallback.
 - [x] Network/connectivity state. AndroidConnectivityCapability reports active network, internet capability, validated connectivity and metered status.
 - [x] Battery state. AndroidBatteryCapability reports scaled battery percentage, charging/full status and the low-battery broadcast state.
-- [ ] Device/app information.
+- [x] Device/app information. AndroidDeviceInfoCapability exposes manufacturer, model, Android release/API level and package name without mutable platform state.
 - [ ] Open URI / app links.
 - [ ] Notifications.
 - [ ] Sensors such as accelerometer/gyroscope if there is a concrete XPScript use case.

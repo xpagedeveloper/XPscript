@@ -355,6 +355,10 @@ var batterySource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, ".."
 foreach (var expected in new[] { "AndroidBatteryCapability", "LevelPercent", "IsCharging", "IsLow", "ActionBatteryChanged", "BatteryManager.ExtraLevel", "BatteryManager.ExtraStatus" })
     if (!batterySource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android battery capability probe is missing: " + expected);
+var deviceInfoSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidDeviceInfoCapability.cs"));
+foreach (var expected in new[] { "AndroidDeviceInfoCapability", "Manufacturer", "Model", "AndroidVersion", "ApiLevel", "PackageName", "Build.VERSION.SdkInt" })
+    if (!deviceInfoSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android device info capability probe is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);
 foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
 {
