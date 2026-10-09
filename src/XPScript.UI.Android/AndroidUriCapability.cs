@@ -13,7 +13,7 @@ public sealed class AndroidUriCapability
     {
         if (!global::System.Uri.TryCreate(uri, global::System.UriKind.Absolute, out _))
             throw new ArgumentException("A valid URI is required.", nameof(uri));
-        return new Intent(Intent.ActionView, Android.Net.Uri.Parse(uri));
+        return new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(uri));
     }
 
     public bool IsAvailable(string uri)
