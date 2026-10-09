@@ -371,6 +371,8 @@ var carouselExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirec
 foreach (var expected in new[] { "AddCarousel", "CarouselSources", "SetCarouselIndex", "SetCarouselLoop", "SetCarouselAutoAdvance" })
     if (!carouselExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared Carousel API probe is missing: " + expected);
+if (!carouselExtensionSource.Contains("NormalizeMediaSource(source, \"carousel\")", StringComparison.Ordinal))
+    throw new Exception("Carousel image source policy reuse is missing.");
 var appDebugSource = File.ReadAllText(appDebugSourcePath);
 foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
 {
