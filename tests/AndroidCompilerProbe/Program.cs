@@ -339,6 +339,10 @@ var shareSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", 
 foreach (var expected in new[] { "AndroidShareCapability", "ActionSend", "CreateShareIntent", "ExtraText", "ResolveActivity" })
     if (!shareSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android share capability probe is missing: " + expected);
+var clipboardSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidClipboardCapability.cs"));
+foreach (var expected in new[] { "AndroidClipboardCapability", "ClipboardService", "SetText", "GetText", "ClipData.NewPlainText", "PrimaryClip" })
+    if (!clipboardSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android clipboard capability probe is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);
 foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
 {
