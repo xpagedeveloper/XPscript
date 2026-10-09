@@ -203,7 +203,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 ### Architecture
 
 - [x] Define a platform-service abstraction so mobile APIs do not leak Android-specific types into normal XPScript code. Generated UI runtimes now expose `IXPScriptMobileService` and `XPScriptMobileServices` capability registration/query APIs.
-- [ ] Decide which APIs belong in shared XPScript runtime objects and which should remain Android-only.
+- [x] Decide which APIs belong in shared XPScript runtime objects and which should remain Android-only. Capability names, availability and safe error text belong to the shared runtime; CameraX controls, permissions and native handles remain Android-only adapters.
 - [ ] Define capability detection for hardware or services that may not exist.
 - [ ] Define a consistent permission model.
 - [ ] Map Android permission denial and unavailable-device states to predictable XPScript errors/results.
