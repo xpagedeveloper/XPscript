@@ -19,10 +19,27 @@ var staticSource="Sub Accumulate()\n    Static value As Long\n    value = value 
 var staticValidation=await CallAsync(new {jsonrpc="2.0",id=26,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=staticSource,filename="static-local-parity.xps"}}});
 var staticResult=staticValidation.GetProperty("result").GetProperty("structuredContent");
 if (staticResult.GetProperty("result").GetString()!="ok") throw new Exception("AST MCP validation rejected the Static lifetime parity fixture.");
-var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\nEnd Sub",filename="ast-error.xps"}}});
+var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps"}}});
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");
 if (astDiagnosticResult.GetProperty("result").GetString()!="error" || astErrors.GetArrayLength()==0 || astErrors[0].GetProperty("file").GetString()!="ast-error.xps" || string.IsNullOrWhiteSpace(astErrors[0].GetProperty("diagnosticCode").GetString())) throw new Exception("AST MCP diagnostics lost the stable code or source filename.");
+var astParityRoot=Path.Combine(Path.GetTempPath(),"XPScript","ast-parity",Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(astParityRoot);
+try
+{
+    var astParitySource=Path.Combine(astParityRoot,"ast-error.xps");
+    await File.WriteAllTextAsync(astParitySource,"Sub Main(\n    Print 1\nEnd Sub");
+    var astCli=new ProcessStartInfo("dotnet"){RedirectStandardOutput=true,RedirectStandardError=true,UseShellExecute=false,WorkingDirectory=repo};
+    foreach(var arg in new[]{"run","--project","src/XPScript.Compiler/XPScript.Compiler.csproj","-c","Release","--no-build","--","ast-compile",astParitySource,"-o",Path.Combine(astParityRoot,"output")}) astCli.ArgumentList.Add(arg);
+    using var astProcess=Process.Start(astCli) ?? throw new Exception("Could not start AST CLI parity process.");
+    var astCliError=await astProcess.StandardError.ReadToEndAsync();
+    await astProcess.StandardOutput.ReadToEndAsync();
+    await astProcess.WaitForExitAsync();
+    if(astProcess.ExitCode!=2 || !astCliError.Contains("ast-error.xps:3:8: XPS1012:",StringComparison.Ordinal)) throw new Exception("AST CLI diagnostic parity fixture did not preserve its mapped identity.");
+    var mcpDiagnostic=astErrors[0];
+    if(mcpDiagnostic.GetProperty("diagnosticCode").GetString()!="XPS1012" || mcpDiagnostic.GetProperty("line").GetInt32()!=3 || mcpDiagnostic.GetProperty("position").GetInt32()!=8) throw new Exception("AST MCP diagnostic identity does not match AST CLI.");
+}
+finally { try { Directory.Delete(astParityRoot,true); } catch { } }
 var diagnosticSource=await File.ReadAllTextAsync(Path.Combine(repo,"samples","null-integer-assignment-error.xps"));
 async Task<JsonElement> ValidateMcpAsync(int id, bool debug)
 {

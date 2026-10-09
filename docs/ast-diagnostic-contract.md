@@ -13,3 +13,5 @@ AST-MCP errors use the same structured diagnostic identity as the AST compiler e
 
 The AST CLI prints mapped diagnostics as `file:line:position: diagnosticCode: description`; it does not fall back to generated-C# locations when a mapped AST diagnostic is available.
 
+The permanent MCP protocol probe treats this as a release gate: it sends one parser-error source through AST-MCP, compiles the identical source through the AST CLI, and compares the stable diagnostic code, filename, line and position.
+
