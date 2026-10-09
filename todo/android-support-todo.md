@@ -213,7 +213,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 
 - [ ] Investigate Android camera integration suitable for XPScript.
 - [ ] Prefer platform-supported maintained APIs or maintained libraries over custom camera stack implementation.
-- [ ] Define an XPScript API for taking a photo.
+- [>] Define an XPScript API for taking a photo; Android CameraX adapter now exposes file-based `CapturePhotoAsync`, while shared UIForm transport and output-format policy remain.
 - [ ] Define an XPScript API for selecting/capturing image output as file path and/or bytes.
 - [ ] Define image format, orientation and metadata behavior.
 - [ ] Handle runtime camera permission requests and denial.
