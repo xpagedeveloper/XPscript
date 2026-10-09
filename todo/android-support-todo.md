@@ -26,7 +26,7 @@ Follow `knowledge/test-failure-feedback-rule.md` for every Android test.
 - [ ] Validate `Android/setup-android-dev.xps` on Windows.
 - [x] Verify/install .NET 10 SDK and the .NET Android workload. Verified with .NET SDK `10.0.401` and installed `android` workload.
 - [x] Verify/install Android Studio or required Android SDK command-line tooling. The Android command-line SDK manager is installed and available.
-- [ ] Locate Android SDK without relying on one fixed path.
+- [x] Locate Android SDK without relying on one fixed path. The CLI and emulator tooling resolve `ANDROID_SDK_ROOT`, `ANDROID_HOME` and the Windows Android SDK default path, then validate platform/build-tools directories.
 - [x] Verify Platform Tools and adb. Platform Tools/adb `1.0.41` is installed and executable.
 - [ ] Detect an attached device and report model, Android version, API level and ABI.
 - [x] Use `ShellExecute` for setup process execution and capture stdout, stderr, exit code and timeout state.
