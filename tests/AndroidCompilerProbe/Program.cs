@@ -170,6 +170,8 @@ foreach (var expected in new[]
     "void DispatchMediaEvent(string fieldName, string eventKind, string submittedValue = \"\")",
     "video.IsPlayingChanged +=",
     "audio.PlaybackError +=",
+    "void DisposeMediaControls()",
+    "DisposeMediaControls();",
     "ApplyActionState(actionState, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);",
     "MainView.Current",
     "Program.Main(Array.Empty<string>())",

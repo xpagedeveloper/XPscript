@@ -392,6 +392,13 @@ public static class AndroidFormHost
                 }
             }
 
+            void DisposeMediaControls()
+            {
+                foreach (var control in mediaControls.Values)
+                    if (control is IDisposable disposable)
+                        disposable.Dispose();
+            }
+
             var bootText = request.TryGetProperty("bootText", out var bootTextValue) ? bootTextValue.GetString() ?? string.Empty : string.Empty;
             var bootImage = request.TryGetProperty("bootImage", out var bootImageValue) ? bootImageValue.GetString() ?? string.Empty : string.Empty;
             if (bootImage.Length > 0)
@@ -596,6 +603,7 @@ public static class AndroidFormHost
 
             cancel.Click += (_, _) =>
             {
+                DisposeMediaControls();
                 MainView.Current?.RestoreHome();
                 completion.TrySetResult(JsonSerializer.Serialize(new { result = "Cancel", values = new { } }));
             };
@@ -620,6 +628,7 @@ public static class AndroidFormHost
                     }
                 }
 
+                DisposeMediaControls();
                 MainView.Current?.RestoreHome();
                 completion.TrySetResult(result);
             };
