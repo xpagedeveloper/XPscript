@@ -32,6 +32,10 @@ The optional-default-order.xps fixture matches published main with the trace EVA
 Saved follow-up fixtures: optional-nested-supplied-call.xps passes branch legacy/AST but published main still fails compilation. optional-bare-procedure-argument.xps is rejected by both published main and the branch AST/MCP surfaces with XPS2003; the branch no longer falls through to InvalidCastException.
 The baseline SHA-256 was rechecked during this audit and remains unchanged. Production MCP validation accepts the default-order fixture; AST machine exposure remains pending.
 
+## Preserved published baseline
+
+The compatibility executable is the `main`-branch build preserved at `publish/xpscript/win-x64/xpscript.exe`. Its SHA-256 is `7380df231689fe1645b96a91bb4c7baffc16e3b167d01df19cc277e38d6b3bcf`. The AST branch keeps this artifact unchanged while AST fixtures are compiled and compared against it; it is not rebuilt by the AST workflow.
+
 ## Nested supplied Optional arguments
 
 Published main still rejects the expanded optional-nested-supplied-call.xps fixture with missing-argument and invalid closing-parenthesis errors. Token-based compatibility preprocessing replaces the flat regex; branch legacy and AST cover nested calls to the same Optional procedure, inner argument commas and multiple calls on a line. Expected output is 123, 1333, 246 and the unchanged string Choose(, Provided(),).
