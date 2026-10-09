@@ -1,6 +1,6 @@
 namespace XPScript.Compiler.Syntax;
 
-public sealed class DestructorDeclarationSyntax(SyntaxToken? visibility, SyntaxToken subKeyword, SyntaxToken identifier, SyntaxToken openParenToken, SyntaxToken closeParenToken, IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken endSubKeyword) : SyntaxNode
+public sealed class DestructorDeclarationSyntax(SyntaxToken? visibility, SyntaxToken subKeyword, SyntaxToken identifier, SyntaxToken openParenToken, SyntaxToken closeParenToken, IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken endSubKeyword) : DeclarationSyntax
 {
     public SyntaxToken? Visibility { get; } = visibility;
     public SyntaxToken SubKeyword { get; } = subKeyword;

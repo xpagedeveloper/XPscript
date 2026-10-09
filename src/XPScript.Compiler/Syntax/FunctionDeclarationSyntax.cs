@@ -1,6 +1,6 @@
 namespace XPScript.Compiler.Syntax;
 
-public sealed class FunctionDeclarationSyntax(SyntaxToken? visibility, SyntaxToken functionKeyword, SyntaxToken identifier, SyntaxToken openParenToken, IReadOnlyList<ParameterSyntax> parameters, IReadOnlyList<SyntaxToken> commaTokens, SyntaxToken closeParenToken, SyntaxToken? asKeyword, TypeSyntax? returnType, IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken endFunctionKeyword) : SyntaxNode
+public sealed class FunctionDeclarationSyntax(SyntaxToken? visibility, SyntaxToken functionKeyword, SyntaxToken identifier, SyntaxToken openParenToken, IReadOnlyList<ParameterSyntax> parameters, IReadOnlyList<SyntaxToken> commaTokens, SyntaxToken closeParenToken, SyntaxToken? asKeyword, TypeSyntax? returnType, IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken endFunctionKeyword) : DeclarationSyntax
 {
     public SyntaxToken? Visibility { get; } = visibility;
     public SyntaxToken FunctionKeyword { get; } = functionKeyword;

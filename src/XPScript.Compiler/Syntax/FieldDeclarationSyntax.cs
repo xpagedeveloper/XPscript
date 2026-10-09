@@ -1,6 +1,6 @@
 namespace XPScript.Compiler.Syntax;
 
-public sealed class FieldDeclarationSyntax(SyntaxToken? visibility, SyntaxToken identifier, SyntaxToken asKeyword, TypeSyntax type) : SyntaxNode
+public sealed class FieldDeclarationSyntax(SyntaxToken? visibility, SyntaxToken identifier, SyntaxToken asKeyword, TypeSyntax type) : DeclarationSyntax
 {
     public SyntaxToken? Visibility { get; } = visibility;
     public SyntaxToken Identifier { get; } = identifier;

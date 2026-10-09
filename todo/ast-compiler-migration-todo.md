@@ -65,7 +65,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 - [x] Define a common `SyntaxNode` base abstraction.
 - [x] Define source spans on every syntax node. `SyntaxNode.Span` and `TextSpan` are source-derived across the syntax tree; focused AST tests cover tokens, expressions, statements, declarations and diagnostics.
 - [x] Define `CompilationUnitSyntax`; `DeclarationParser.ParseCompilationUnit` returns it with source-derived spans.
-- [ ] Define declaration node hierarchy.
+- [x] Define declaration node hierarchy. All compilation-unit and class declarations derive from `DeclarationSyntax`.
 - [x] Define statement node hierarchy.
 - [x] Define expression node hierarchy.
 - [x] Define type syntax nodes; `TypeSyntax` preserves the declared type token and span.

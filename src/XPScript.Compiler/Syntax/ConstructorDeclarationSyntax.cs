@@ -1,6 +1,6 @@
 namespace XPScript.Compiler.Syntax;
 
-public sealed class ConstructorDeclarationSyntax(SyntaxToken? visibility, SyntaxToken subKeyword, SyntaxToken newKeyword, SyntaxToken openParenToken, IReadOnlyList<ParameterSyntax> parameters, IReadOnlyList<SyntaxToken> commaTokens, SyntaxToken closeParenToken, IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken endSubKeyword) : SyntaxNode
+public sealed class ConstructorDeclarationSyntax(SyntaxToken? visibility, SyntaxToken subKeyword, SyntaxToken newKeyword, SyntaxToken openParenToken, IReadOnlyList<ParameterSyntax> parameters, IReadOnlyList<SyntaxToken> commaTokens, SyntaxToken closeParenToken, IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken endSubKeyword) : DeclarationSyntax
 {
     public SyntaxToken? Visibility { get; } = visibility;
     public SyntaxToken SubKeyword { get; } = subKeyword;

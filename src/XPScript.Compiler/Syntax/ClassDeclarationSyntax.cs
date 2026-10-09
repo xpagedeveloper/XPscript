@@ -1,6 +1,6 @@
 namespace XPScript.Compiler.Syntax;
 
-public sealed class ClassDeclarationSyntax(SyntaxToken? visibility, SyntaxToken classKeyword, SyntaxToken identifier, SyntaxToken? extendKeyword, TypeSyntax? baseType, IReadOnlyList<SyntaxNode> members, SyntaxToken endKeyword, SyntaxToken endClassKeyword) : SyntaxNode
+public sealed class ClassDeclarationSyntax(SyntaxToken? visibility, SyntaxToken classKeyword, SyntaxToken identifier, SyntaxToken? extendKeyword, TypeSyntax? baseType, IReadOnlyList<SyntaxNode> members, SyntaxToken endKeyword, SyntaxToken endClassKeyword) : DeclarationSyntax
 {
     public SyntaxToken? Visibility { get; } = visibility;
     public SyntaxToken ClassKeyword { get; } = classKeyword;

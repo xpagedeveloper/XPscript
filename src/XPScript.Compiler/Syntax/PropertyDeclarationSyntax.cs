@@ -1,6 +1,6 @@
 namespace XPScript.Compiler.Syntax;
 
-public sealed class PropertyDeclarationSyntax(SyntaxToken? visibility, SyntaxToken propertyKeyword, SyntaxToken accessorKeyword, SyntaxToken identifier, SyntaxToken? openParenToken, IReadOnlyList<ParameterSyntax> parameters, IReadOnlyList<SyntaxToken> commaTokens, SyntaxToken? closeParenToken, SyntaxToken? asKeyword, TypeSyntax? type, IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken endPropertyKeyword) : SyntaxNode
+public sealed class PropertyDeclarationSyntax(SyntaxToken? visibility, SyntaxToken propertyKeyword, SyntaxToken accessorKeyword, SyntaxToken identifier, SyntaxToken? openParenToken, IReadOnlyList<ParameterSyntax> parameters, IReadOnlyList<SyntaxToken> commaTokens, SyntaxToken? closeParenToken, SyntaxToken? asKeyword, TypeSyntax? type, IReadOnlyList<StatementSyntax> statements, SyntaxToken endKeyword, SyntaxToken endPropertyKeyword) : DeclarationSyntax
 {
     public SyntaxToken? Visibility { get; } = visibility;
     public SyntaxToken PropertyKeyword { get; } = propertyKeyword;
