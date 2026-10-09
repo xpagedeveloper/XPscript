@@ -25,6 +25,13 @@ public interface IXPScriptCameraService : IXPScriptMobileService
     string CapturePhoto(string outputPath);
 }
 
+public readonly record struct XPScriptLocation(double Latitude, double Longitude, double? AccuracyMeters, double? AltitudeMeters, double? SpeedMetersPerSecond, DateTimeOffset Timestamp);
+
+public interface IXPScriptLocationService : IXPScriptMobileService
+{
+    XPScriptLocation GetCurrent(TimeSpan timeout);
+}
+
 public static class XPScriptCamera
 {
     public static string CapturePhoto(object? outputPath)
@@ -34,6 +41,19 @@ public static class XPScriptCamera
             throw new XPScriptRuntimeException(5, "camera: " + XPScriptMobileServices.UnavailableReason("camera"));
         if (!camera.IsAvailable) throw new XPScriptRuntimeException(5, "camera: " + camera.UnavailableReason);
         return camera.CapturePhoto(path);
+    }
+}
+
+public static class XPScriptLocation
+{
+    public static XPScriptLocation GetCurrent(object? timeoutMilliseconds)
+    {
+        var timeout = TimeSpan.FromMilliseconds(XPScriptRuntime.CDbl(timeoutMilliseconds));
+        if (timeout <= TimeSpan.Zero) throw new XPScriptRuntimeException(5, "location: timeout must be greater than zero.");
+        if (!XPScriptMobileServices.TryGet("location", out var service) || service is not IXPScriptLocationService location)
+            throw new XPScriptRuntimeException(5, "location: " + XPScriptMobileServices.UnavailableReason("location"));
+        if (!location.IsAvailable) throw new XPScriptRuntimeException(5, "location: " + location.UnavailableReason);
+        return location.GetCurrent(timeout);
     }
 }
 

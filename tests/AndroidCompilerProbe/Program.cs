@@ -455,7 +455,7 @@ if (!uiFormAssetsSource.Contains("System.Environment.SpecialFolder.LocalApplicat
 
 var uiExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionRuntimeSource.cs"));
 var mobileServiceSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "MobileServiceRuntimeSource.cs"));
-foreach (var expected in new[] { "IXPScriptMobileService", "IXPScriptCameraService", "XPScriptCamera", "CapturePhoto", "Capability", "IsAvailable", "UnavailableReason", "Permission", "XPScriptMobilePermissionState", "Granted", "Denied", "XPScriptMobileServices", "Register", "RequireAvailable", "XPScriptRuntimeException" })
+foreach (var expected in new[] { "IXPScriptMobileService", "IXPScriptCameraService", "IXPScriptLocationService", "XPScriptLocation", "XPScriptLocation(double Latitude", "GetCurrent", "XPScriptCamera", "CapturePhoto", "Capability", "IsAvailable", "UnavailableReason", "Permission", "XPScriptMobilePermissionState", "Granted", "Denied", "XPScriptMobileServices", "Register", "RequireAvailable", "XPScriptRuntimeException" })
     if (!mobileServiceSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Platform-neutral mobile service contract is missing: " + expected);
 foreach (var expected in new[] { "\"assets/\" + normalized", "UIForm WebView relative Source must stay within the application asset root.", "UIForm BootImage relative source must stay within the application asset root." })
