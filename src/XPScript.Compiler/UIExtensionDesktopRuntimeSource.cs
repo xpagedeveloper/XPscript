@@ -127,7 +127,7 @@ internal static class XPScriptUIDesktopAdapter
             activeTab = form.ActiveTab,
             buttons = form.Buttons.Select(button => new
             {
-                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style, cornerRadius = button.CornerRadius,
+                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style, icon = button.Icon, image = button.Image, cornerRadius = button.CornerRadius,
                 layoutRow = button.LayoutRow, layoutColumn = button.LayoutColumn, columnSpan = button.ColumnSpan, rowSpan = button.RowSpan
             }).ToArray()
         };

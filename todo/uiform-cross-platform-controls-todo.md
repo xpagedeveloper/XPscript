@@ -92,7 +92,7 @@ For each control, explicitly evaluate:
 - [>] Implement Icon with a portable built-in icon set and fallback behavior (shared API and Android glyph fallback are implemented; broader platform parity remains).
 - [>] Implement Card and Panel containers (structural API and Android visual containers are implemented; nested child composition remains).
 - [>] Implement ScrollView with bounded nested scrolling behavior (structural API and bounded Android rendering are implemented; nested child composition remains).
-- [ ] Extend Button with optional icon/image content.
+- [>] Extend Button with optional icon/image content (shared API and Android transport are implemented; native image rendering and focused regressions remain).
 - [ ] Verify responsive layout, theme integration, focus order and accessibility.
 - [ ] Add focused cross-platform regressions.
 

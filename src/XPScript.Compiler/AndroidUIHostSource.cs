@@ -578,8 +578,12 @@ public static class AndroidFormHost
                         continue;
                     var buttonName = buttonValue.GetProperty("name").GetString() ?? string.Empty;
                     var buttonLabel = buttonValue.TryGetProperty("label", out var buttonLabelValue) ? buttonLabelValue.GetString() ?? buttonName : buttonName;
+                    var buttonIcon = buttonValue.TryGetProperty("icon", out var buttonIconValue) ? buttonIconValue.GetString() ?? string.Empty : string.Empty;
+                    var buttonImage = buttonValue.TryGetProperty("image", out var buttonImageValue) ? buttonImageValue.GetString() ?? string.Empty : string.Empty;
                     var cornerRadius = buttonValue.TryGetProperty("cornerRadius", out var cornerRadiusValue) && cornerRadiusValue.TryGetDouble(out var radius) ? radius : 0;
-                    var actionButton = new Avalonia.Controls.Button { Content = buttonLabel, MinWidth = 100, CornerRadius = new CornerRadius(cornerRadius) };
+                    var buttonContent = buttonIcon.Length > 0 ? buttonIcon + " " + buttonLabel : buttonLabel;
+                    if (buttonIcon.Length == 0 && buttonImage.Length > 0) buttonContent = "[image] " + buttonLabel;
+                    var actionButton = new Avalonia.Controls.Button { Content = buttonContent, MinWidth = 100, CornerRadius = new CornerRadius(cornerRadius) };
                     actionButton.IsEnabled = !buttonValue.TryGetProperty("enabled", out var buttonEnabled) || buttonEnabled.ValueKind != JsonValueKind.False;
                     actionButtons[buttonName] = actionButton;
                     actionButton.Click += (_, _) =>

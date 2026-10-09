@@ -51,6 +51,8 @@ internal sealed class XPScriptUIButton
     public required string Label { get; set; }
     public required string Handler { get; set; }
     public string Style { get; set; } = "Default";
+    public string Icon { get; set; } = string.Empty;
+    public string Image { get; set; } = string.Empty;
     public double CornerRadius { get; set; }
     public int LayoutRow { get; set; }
     public int LayoutColumn { get; set; }
@@ -244,6 +246,12 @@ internal sealed class XPScriptUIForm
             throw new XPScriptRuntimeException(5, "UIForm button style must contain between 1 and 64 characters.");
         FindButton(name).Style = value;
     }
+
+    public void SetButtonIcon(object? name, object? icon)
+        => FindButton(name).Icon = XPScriptRuntime.CStr(icon).Trim();
+
+    public void SetButtonImage(object? name, object? image)
+        => FindButton(name).Image = XPScriptRuntime.CStr(image).Trim();
 
     public void SetButtonCornerRadius(object? name, object? radius)
     {
