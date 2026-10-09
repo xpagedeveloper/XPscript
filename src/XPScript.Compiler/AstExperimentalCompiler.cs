@@ -276,7 +276,7 @@ internal static class AstExperimentalCompiler
             var procedureSub = item as SubDeclarationSyntax;
             var procedureFunction = item as FunctionDeclarationSyntax;
             var procedureParameters = procedureSub?.Parameters ?? procedureFunction!.Parameters;
-            ValidateOptionalDeclarations(procedureParameters);
+            ValidateOptionalDeclarations(procedureParameters, sourcePath, fullSource);
             var scope = symbols.CreateChildScope();
             var parameters = procedureParameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
                 ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef,
@@ -881,7 +881,7 @@ internal static class Program
                 null, null, parameters.Take(count).Select(p => p.IsByRef).ToArray()) { IsOptionalForwarding = true });
     }
 
-    private static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters)
+    private static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters, string sourcePath, string source)
     {
         var optionalSeen = false;
         foreach (var parameter in parameters)
@@ -893,14 +893,26 @@ internal static class Program
             }
 
             if (optionalSeen)
-                throw new CompilerException(
-                    $"Required parameter '{parameter.Identifier.Text}' cannot follow an Optional parameter.",
-                    CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+                throw OptionalDiagnostic(parameter, sourcePath, source,
+                    $"Required parameter '{parameter.Identifier.Text}' cannot follow an Optional parameter.");
             if (parameter.DefaultValue is not null)
-                throw new CompilerException(
-                    $"Parameter '{parameter.Identifier.Text}' must be declared Optional when it has a default value.",
-                    CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+                throw OptionalDiagnostic(parameter, sourcePath, source,
+                    $"Parameter '{parameter.Identifier.Text}' must be declared Optional when it has a default value.");
         }
+    }
+
+    private static CompilerException OptionalDiagnostic(ParameterSyntax parameter, string sourcePath, string source, string message)
+    {
+        var start = SourceTextMap.GetPosition(source, parameter.Span.Start);
+        var end = SourceTextMap.GetPosition(source, parameter.Span.End);
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourcePath), Line = start.Line, Position = start.Column,
+            EndLine = end.Line, EndColumn = end.Column, Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Severity = "error",
+            Category = "semantic"
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "semantic", [diagnostic]);
     }
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch
