@@ -19,7 +19,7 @@ public sealed class AndroidLocationCapability
         get
         {
             if (Build.VERSION.SdkInt < BuildVersionCodes.Q) return false;
-            return ContextCompat.CheckSelfPermission(_context, global::Android.Manifest.Permission.AccessBackgroundLocation) == global::Android.Content.PM.Permission.Granted;
+            return ContextCompat.CheckSelfPermission(_context, "android.permission.ACCESS_BACKGROUND_LOCATION") == global::Android.Content.PM.Permission.Granted;
         }
     }
     public bool HasPermission => HasFinePermission || HasCoarsePermission;
