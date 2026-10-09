@@ -106,7 +106,8 @@ foreach (var expected in new[]
     "defaultButtonCornerRadiusValue.ValueKind == JsonValueKind.Number",
     "buttonIcon = buttonValue.TryGetProperty(\"icon\"",
     "buttonImage = buttonValue.TryGetProperty(\"image\"",
-    "var buttonContent = buttonIcon.Length > 0",
+    "CreateButtonContent(buttonIcon, buttonImage, buttonLabel)",
+    "UIForm button image failed",
 
     "ResolveAndroidImagePath(value)",
     "uri.Scheme is \"http\" or \"https\"",
