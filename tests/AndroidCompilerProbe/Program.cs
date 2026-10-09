@@ -87,6 +87,8 @@ foreach (var expected in new[]
     "var bootText = request.TryGetProperty(\"bootText\"",
     "var bootImage = request.TryGetProperty(\"bootImage\"",
     "private static Control HomeContent() => new Grid();",
+    "CameraPreview",
+    "Camera preview is unavailable: Android camera service is not configured.",
     "CornerRadius = new CornerRadius(cornerRadius)",
     "CornerRadius = new CornerRadius(fieldCornerRadius)",
     "\"Select\" => new ComboBox",
@@ -210,7 +212,7 @@ foreach (var expected in new[]
 }
 
 var sharedUiExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionRuntimeSource.cs"));
-foreach (var expected in new[] { "AddProgressBar", "AddActivityIndicator", "AddSlider", "AddSwitch", "AddIcon", "AddCard", "AddPanel", "AddScrollView", "AddListView", "SetSliderStep", "UIForm Slider Step must be greater than zero.", "public bool IsIndeterminate", "public bool IsRunning" })
+foreach (var expected in new[] { "AddProgressBar", "AddActivityIndicator", "AddSlider", "AddSwitch", "AddIcon", "AddCard", "AddPanel", "AddScrollView", "AddListView", "AddCameraPreview", "SetSliderStep", "UIForm Slider Step must be greater than zero.", "public bool IsIndeterminate", "public bool IsRunning" })
     if (!sharedUiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Shared UIForm progress/indicator API is missing: " + expected);
 
@@ -226,7 +228,7 @@ if (!androidFormHostSource.Contains("defaultButtonCornerRadiusValue.TryGetDouble
 if (System.Text.RegularExpressions.Regex.IsMatch(uiHostCode, @"(?<!Avalonia\.Controls\.)\bRadioButton\b"))
     throw new Exception("Android UIForm host must fully qualify Avalonia RadioButton references to avoid Android.Widget ambiguity.");
 
-var structuralBranchIndex = uiHostCode.IndexOf("if (type is \"Separator\" or \"Spacer\" or \"Image\" or \"Icon\" or \"Card\" or \"Panel\" or \"ScrollView\" or \"WebView\" or \"ProgressBar\" or \"ActivityIndicator\")", StringComparison.Ordinal);
+var structuralBranchIndex = uiHostCode.IndexOf("if (type is \"Separator\" or \"Spacer\" or \"Image\" or \"Icon\" or \"Card\" or \"Panel\" or \"ScrollView\" or \"WebView\" or \"CameraPreview\" or \"ProgressBar\" or \"ActivityIndicator\")", StringComparison.Ordinal);
 var editorRegistrationIndex = uiHostCode.IndexOf("editors[name] = editor;", StringComparison.Ordinal);
 if (structuralBranchIndex < 0 || editorRegistrationIndex < 0 || editorRegistrationIndex < structuralBranchIndex)
     throw new Exception("Android structural/media controls must bypass editor-state registration so they cannot overwrite bound data during submission.");

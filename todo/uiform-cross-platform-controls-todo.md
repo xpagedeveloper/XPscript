@@ -106,7 +106,7 @@ For each control, explicitly evaluate:
 
 ## Device and rich-content controls
 
-- [ ] Define a platform-neutral CameraPreview contract.
+- [>] Define a platform-neutral CameraPreview contract (shared entry point exists; lifecycle, capture and permission semantics remain).
 - [ ] Implement desktop fallback or capability error.
 - [ ] Implement Android camera preview through the camera service.
 - [ ] Define server-web and Browser-WASM camera permission behavior.

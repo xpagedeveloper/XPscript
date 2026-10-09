@@ -420,6 +420,8 @@ internal sealed class XPScriptUIForm
         _mediaCommands.Add((field.Name, command));
     }
     public XPScriptUIField AddWebView(object? name, object? label) => AddField(name, label, "WebView");
+    public XPScriptUIField AddCameraPreview(object? name) => AddField(name, name, "CameraPreview");
+    public XPScriptUIField AddCameraPreview(object? name, object? label) => AddField(name, label, "CameraPreview");
 
     public void AddOption(object? name, object? value)
     {

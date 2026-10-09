@@ -509,6 +509,7 @@ public static class AndroidFormHost
                     "ProgressBar" => CreateProgressBar(field),
                     "ActivityIndicator" => CreateActivityIndicator(field),
                     "WebView" => CreateWebView(field, instanceId, name),
+                    "CameraPreview" => new TextBlock { Text = "Camera preview is unavailable: Android camera service is not configured.", TextWrapping = TextWrapping.Wrap },
                     "DateField" => new Avalonia.Controls.DatePicker(),
                     "TimeField" => new Avalonia.Controls.TimePicker(),
                     "DateTimeField" => new AndroidDateTimeFieldEditor(),
@@ -538,7 +539,7 @@ public static class AndroidFormHost
                 fieldContainer.Children.Add(editor);
 
                 if (editor is ProgressBar progressControl) progressControls[name] = progressControl;
-                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "Card" or "Panel" or "ScrollView" or "WebView" or "ProgressBar" or "ActivityIndicator")
+                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "Card" or "Panel" or "ScrollView" or "WebView" or "CameraPreview" or "ProgressBar" or "ActivityIndicator")
                 {
                     AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
                     continue;
