@@ -126,7 +126,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [x] Add Media3 listener signals to the Android playback adapter and generated Android host for playing-state changes, playback-state changes and playback errors; guarded by AndroidCompilerProbe.
 - [>] Add the shared `UIForm.ProgressBar` and indeterminate `UIForm.ActivityIndicator` API (`AddProgressBar`, `AddActivityIndicator`, `Value`, `IsIndeterminate`, `IsRunning`); Android Avalonia rendering and callback action-state are implemented, while other platform rendering and focused runtime regression remain.
 - [x] Add a general-purpose `UIForm.Slider` control suitable for values such as volume or media position, distinct from form-specific validation semantics where needed; `AddSlider`, validated `Step`, Android transport/rendering and change dispatch are implemented. Focused cross-platform regression coverage remains.
-- [ ] Add a mobile-friendly `UIForm.Switch` boolean control with the same binding/action-state semantics as CheckBox.
+- [>] Add a mobile-friendly `UIForm.Switch` boolean control with the same binding/action-state semantics as CheckBox; shared API and Android boolean rendering are implemented, while focused switch regressions remain.
 - [ ] Add a shared `UIForm.Icon` API with a portable built-in icon set/fallback strategy so common UI symbols do not require image assets.
 - [ ] Add `UIForm.Card`/`UIForm.Panel` containers for visually grouping controls, compatible with tabs, named grids, visibility/enabled state and responsive layout.
 - [ ] Add an explicit `UIForm.ScrollView` container for advanced nested/long layouts while preventing conflicting or unbounded nested scrolling behavior.

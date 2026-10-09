@@ -503,7 +503,7 @@ public static class AndroidFormHost
                     : Array.Empty<string>();
                 Control editor = type switch
                 {
-                    "CheckBox" => new Avalonia.Controls.CheckBox(),
+                    "CheckBox" or "Switch" => new Avalonia.Controls.CheckBox(),
                     "Video" => CreateVideo(field),
                     "Audio" => CreateAudio(field),
                     "ProgressBar" => CreateProgressBar(field),

@@ -350,6 +350,8 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddSlider(object? name, object? label) => AddField(name, label, "RangeField");
     public XPScriptUIField AddCheckBox(object? name) => AddField(name, name, "CheckBox");
     public XPScriptUIField AddCheckBox(object? name, object? label) => AddField(name, label, "CheckBox");
+    public XPScriptUIField AddSwitch(object? name) => AddField(name, name, "Switch");
+    public XPScriptUIField AddSwitch(object? name, object? label) => AddField(name, label, "Switch");
     public XPScriptUIField AddDateField(object? name) => AddField(name, name, "DateField");
     public XPScriptUIField AddDateField(object? name, object? label) => AddField(name, label, "DateField");
     public XPScriptUIField AddTimeField(object? name) => AddField(name, name, "TimeField");
@@ -597,6 +599,7 @@ internal sealed class XPScriptUIForm
                 _data.Set(field.Name, number);
                 return;
             case "CheckBox":
+            case "Switch":
                 if (submitted.Length == 0) { if (exists) _data.Set(field.Name, false); return; }
                 _data.Set(field.Name, submitted.Equals("1", StringComparison.OrdinalIgnoreCase) || submitted.Equals("true", StringComparison.OrdinalIgnoreCase) || submitted.Equals("on", StringComparison.OrdinalIgnoreCase));
                 return;
@@ -696,6 +699,7 @@ internal sealed class XPScriptUIForm
                 case "NumberField": html.Append("<input type=\"number\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(range).Append(">"); break;
                 case "RangeField": html.Append("<input type=\"range\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(range).Append(">"); break;
                 case "CheckBox":
+                case "Switch":
                     var checkedValue = GetFieldValue(field.Name) is bool b && b;
                     html.Append("<input type=\"checkbox\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"1\"");
                     if (checkedValue) html.Append(" checked");
