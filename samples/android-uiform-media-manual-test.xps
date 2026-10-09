@@ -33,26 +33,32 @@ Sub Main()
 End Sub
 
 Sub VideoPlay(evt As Variant, contextName As String)
+    Call evt.Form.PlayMedia("video")
     Call Application.Debug.Info("MEDIA TEST VIDEO PLAY REQUEST: PASS")
 End Sub
 
 Sub VideoPause(evt As Variant, contextName As String)
+    Call evt.Form.PauseMedia("video")
     Call Application.Debug.Info("MEDIA TEST VIDEO PAUSE REQUEST: PASS")
 End Sub
 
 Sub VideoStop(evt As Variant, contextName As String)
+    Call evt.Form.StopMedia("video")
     Call Application.Debug.Info("MEDIA TEST VIDEO STOP REQUEST: PASS")
 End Sub
 
 Sub AudioPlay(evt As Variant, contextName As String)
+    Call evt.Form.PlayMedia("audio")
     Call Application.Debug.Info("MEDIA TEST AUDIO PLAY REQUEST: PASS")
 End Sub
 
 Sub AudioPause(evt As Variant, contextName As String)
+    Call evt.Form.PauseMedia("audio")
     Call Application.Debug.Info("MEDIA TEST AUDIO PAUSE REQUEST: PASS")
 End Sub
 
 Sub AudioStop(evt As Variant, contextName As String)
+    Call evt.Form.StopMedia("audio")
     Call Application.Debug.Info("MEDIA TEST AUDIO STOP REQUEST: PASS")
 End Sub
 

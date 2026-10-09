@@ -425,6 +425,10 @@ foreach (var expected in new[] { "public bool IsPlaying", "public long Position"
 var mediaDesktopRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs"));
 if (!mediaDesktopRuntimeSource.Contains("source = field.Type is \"Video\" or \"Audio\" ? field.Source : null", StringComparison.Ordinal))
     throw new Exception("Android UIForm media sources must be transported in the shared form request.");
+var mediaManualSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-uiform-media-manual-test.xps"));
+foreach (var expected in new[] { "evt.Form.PlayMedia(\"video\")", "evt.Form.PauseMedia(\"video\")", "evt.Form.StopMedia(\"video\")", "evt.Form.PlayMedia(\"audio\")", "evt.Form.PauseMedia(\"audio\")", "evt.Form.StopMedia(\"audio\")" })
+    if (!mediaManualSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android media manual sample is missing command coverage: " + expected);
 
 var mediaSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormMediaButtonsPostProcessor.cs"));
 if (!mediaSource.Contains("normalized = \"assets/\" + normalized;", StringComparison.Ordinal))
