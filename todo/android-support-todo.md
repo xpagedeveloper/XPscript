@@ -24,10 +24,10 @@ Follow `knowledge/test-failure-feedback-rule.md` for every Android test.
 ## Stage 0: development environment
 
 - [ ] Validate `Android/setup-android-dev.xps` on Windows.
-- [ ] Verify/install .NET 10 SDK and the .NET Android workload.
-- [ ] Verify/install Android Studio or required Android SDK command-line tooling.
+- [x] Verify/install .NET 10 SDK and the .NET Android workload. Verified with .NET SDK `10.0.401` and installed `android` workload.
+- [x] Verify/install Android Studio or required Android SDK command-line tooling. The Android command-line SDK manager is installed and available.
 - [ ] Locate Android SDK without relying on one fixed path.
-- [ ] Verify Platform Tools and adb.
+- [x] Verify Platform Tools and adb. Platform Tools/adb `1.0.41` is installed and executable.
 - [ ] Detect an attached device and report model, Android version, API level and ABI.
 - [x] Use `ShellExecute` for setup process execution and capture stdout, stderr, exit code and timeout state.
 - [x] Add a small environment verification mode that performs no installs and only checks toolchain readiness.
