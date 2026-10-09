@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace XPScript.Compiler.Syntax;
 
 public sealed class DeclarationParser
@@ -25,6 +27,26 @@ public sealed class DeclarationParser
         for (var i = 0; i < lines.Count;)
         {
             if (string.IsNullOrWhiteSpace(lines[i].Text) || lines[i].Text.TrimStart().StartsWith("'", StringComparison.Ordinal)) { i++; continue; }
+            var applicationLine = lines[i].Text.Trim();
+            var applicationSpan = new TextSpan(_baseOffset + lines[i].Start, lines[i].Text.Length);
+            if (Regex.IsMatch(applicationLine, @"^(?:Option)\b", RegexOptions.IgnoreCase))
+            {
+                declarations.Add(new ApplicationOptionDeclarationSyntax(applicationLine, applicationSpan));
+                i++;
+                continue;
+            }
+            if (Regex.IsMatch(applicationLine, @"^(?:Const)\b", RegexOptions.IgnoreCase))
+            {
+                declarations.Add(new ApplicationConstDeclarationSyntax(applicationLine, applicationSpan));
+                i++;
+                continue;
+            }
+            if (Regex.IsMatch(applicationLine, @"^(?:(?:Public|Private)\s+)?Declare\b", RegexOptions.IgnoreCase))
+            {
+                declarations.Add(new ApplicationDeclareDeclarationSyntax(applicationLine, applicationSpan));
+                i++;
+                continue;
+            }
             var match = System.Text.RegularExpressions.Regex.Match(lines[i].Text, @"^\s*(?:Public\s+|Private\s+|Static\s+)*(Sub|Function|Class)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             if (!match.Success) { i++; continue; }
             var end = i + 1;

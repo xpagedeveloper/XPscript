@@ -3,6 +3,9 @@ namespace XPScript.Compiler.Syntax;
 public enum SyntaxKind
 {
     CompilationUnit,
+    ApplicationOptionDeclaration,
+    ApplicationConstDeclaration,
+    ApplicationDeclareDeclaration,
     BadToken,
     EndOfFileToken,
     NewLineToken,

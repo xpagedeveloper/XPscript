@@ -175,7 +175,7 @@ Expressions are the first migration target because the current transpiler perfor
 - [x] Parse properties.
 - [x] Parse constructors and destructors.
 - [x] Parse visibility modifiers.
-- [ ] Parse application-level declarations.
+- [x] Parse application-level declarations. `DeclarationParser` retains top-level `Option`, `Const` and `Declare` lines as typed application declaration nodes; the `.wps` regression compiles and prints `42`.
 - [ ] Parse target-specific entry points.
 - [ ] Validate block terminators structurally rather than with transpiler state.
 

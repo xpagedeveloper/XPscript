@@ -17,6 +17,8 @@ The experimental machine path now exposes `xpscript_ast_validate`. It invokes th
 
 The published compiler remains the compatibility reference. Its executable under `publish/xpscript/win-x64` is not rebuilt by the AST workflow.
 
+Application-level `Option`, `Const` and `Declare` lines are retained in the syntax tree as application declaration nodes. Their existing compatibility/emission handling remains unchanged. The focused `.wps` fixture `tests/ast-compile-probe/application-declarations.wps` produces `42` through the AST compiler. The published reference executable is Windows-only and cannot be executed in the Linux validation environment, so this fixture's static-reference execution remains an environment limitation.
+
 ## Comments and trivia
 
 The AST lexer treats apostrophe comments as trivia: comment text is skipped and is not represented as a syntax node or token. The terminating newline remains a `NewLineToken`, so statement boundaries and source positions are preserved. Apostrophes inside quoted string literals remain part of the string token. This keeps the syntax tree focused on compilable structure while retaining enough source information for diagnostics and compatibility preprocessing.

@@ -20,6 +20,14 @@ static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
 var optionalParser = new DeclarationParser("Sub Greeting(Optional ByVal prefix As String = \"Hello\", Optional count As Long = 2)\nEnd Sub");
+var applicationDeclarationParser = new DeclarationParser("Option Declare\nConst Answer As Integer = 42\nDeclare Function Native Lib \"native\" () As Integer\nSub Main()\nEnd Sub");
+var applicationUnit = applicationDeclarationParser.ParseCompilationUnit();
+Equal(4, applicationUnit.Declarations.Count, "application-level declarations are retained");
+Equal(SyntaxKind.ApplicationOptionDeclaration, applicationUnit.Declarations[0].Kind, "Option declaration kind");
+Equal(SyntaxKind.ApplicationConstDeclaration, applicationUnit.Declarations[1].Kind, "Const declaration kind");
+Equal(SyntaxKind.ApplicationDeclareDeclaration, applicationUnit.Declarations[2].Kind, "Declare declaration kind");
+Equal("Option Declare", ((ApplicationDeclarationSyntax)applicationUnit.Declarations[0]).Text, "Option declaration text");
+Equal(0, applicationDeclarationParser.Diagnostics.Count, "application-level declaration diagnostics");
 var optionalSub = (SubDeclarationSyntax)optionalParser.ParseDeclaration();
 Equal(0, optionalParser.Diagnostics.Count, "Optional parameter diagnostics");
 Equal(2, optionalSub.Parameters.Count, "Optional parameter count");
