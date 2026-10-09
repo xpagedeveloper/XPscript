@@ -28,7 +28,9 @@ public sealed class BoundCompilationUnitEmitter
                      .OfType<BoundVariableDeclarationStatement>().Where(declaration => declaration.Local.StaticStorageName is not null))
         {
             var type = BoundMethodEmitter.CSharpType(declaration.Local.Type);
-            var initialValue = declaration.Local.Type == typeof(string) ? "string.Empty" : $"default({type})";
+            var initialValue = declaration.Local.Type.IsArray
+                ? $"new {type[..^2]}[0]"
+                : declaration.Local.Type == typeof(string) ? "string.Empty" : $"default({type})";
             output.Append("private static ").Append(type).Append(' ').Append(declaration.Local.StaticStorageName)
                 .Append(" = ").Append(initialValue).Append(";\n");
         }

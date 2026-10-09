@@ -88,6 +88,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-overload-selecti
 if ($LASTEXITCODE -ne 0) { throw 'AST Optional overload selection failed.' }
 $optionalSelectionResult = dotnet (Join-Path $optionalSelection 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($optionalSelectionResult -join "`n") -ne '2') { throw 'AST did not prefer the explicit overload over Optional forwarding.' }
+$staticArray = Join-Path $output 'static-array'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-array.xps') -o $staticArray
+if ($LASTEXITCODE -ne 0) { throw 'AST Static array compilation failed.' }
+$staticArrayResult = dotnet (Join-Path $staticArray 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($staticArrayResult -join "`n") -ne "1`n2") { throw 'AST Static array lifetime did not persist across calls.' }
 $parserError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'parser-error.xps') -o (Join-Path $output 'parser-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($parserError -join "`n") -notmatch 'Expected CloseParenToken') { throw 'AST parser diagnostic regression failed.' }
 $noEntry = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'no-entry-error.xps') -o (Join-Path $output 'no-entry-error') 2>&1
