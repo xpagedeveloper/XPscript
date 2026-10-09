@@ -660,6 +660,10 @@ foreach (var expected in new[] { "UIForm(\"Android UIForm Regression\")", "AddTe
     if (!uiFormRegressionSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android UIForm regression sample is incomplete: " + expected);
 }
+var carouselSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-carousel-api.xps"));
+foreach (var expected in new[] { "AddCarousel(\"slides\"", "assets/slide-1.png", "data:image/png;base64", "SetCarouselIndex", "SetCarouselLoop", "SetCarouselAutoAdvance" })
+    if (!carouselSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android Carousel regression sample is incomplete: " + expected);
 
 var layoutRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormLayoutReactivePostProcessor.cs"));
 foreach (var expected in new[]

@@ -1,0 +1,9 @@
+Sub Main()
+    Dim form As New UIForm("Android Carousel API")
+    Dim carousel = form.AddCarousel("slides", "assets/slide-1.png", "assets/slide-2.png", "data:image/png;base64,iVBORw0KGgo=")
+    form.SetCarouselIndex("slides", 1)
+    form.SetCarouselLoop("slides", True)
+    form.SetCarouselAutoAdvance("slides", 3000)
+    Call Application.Debug.Info("ANDROID-CAROUSEL-ITEMS=" & carousel.CarouselSources.Count)
+    Print "ANDROID-CAROUSEL-API=ready"
+End Sub
