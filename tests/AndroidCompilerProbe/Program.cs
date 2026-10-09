@@ -327,6 +327,10 @@ var locationCapabilitySource = File.ReadAllText(Path.Combine(AppContext.BaseDire
 foreach (var expected in new[] { "AndroidLocationCapability", "HasFinePermission", "HasCoarsePermission", "HasBackgroundPermission", "IsLocationEnabled", "EnabledProviders", "SelectProvider", "LocationManager.GpsProvider" })
     if (!locationCapabilitySource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android location capability probe is missing: " + expected);
+var filePickerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidFilePickerCapability.cs"));
+foreach (var expected in new[] { "AndroidFilePickerCapability", "ActionOpenDocument", "CategoryOpenable", "CreateOpenDocumentIntent", "IsAvailable", "ExtraAllowMultiple" })
+    if (!filePickerSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android file picker capability probe is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);
 foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
 {

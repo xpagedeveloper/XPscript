@@ -235,7 +235,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 
 ### Additional mobile capabilities to investigate
 
-- [ ] File/document picker.
+- [x] File/document picker. AndroidFilePickerCapability exposes ACTION_OPEN_DOCUMENT with MIME filtering, multi-select and deterministic handler availability; host result dispatch remains a follow-up.
 - [ ] Photo/media picker.
 - [ ] Share sheet.
 - [ ] Clipboard integration.
