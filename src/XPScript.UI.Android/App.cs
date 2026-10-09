@@ -7,6 +7,7 @@ using Avalonia.Themes.Fluent;
 [assembly: UsesPermission(global::Android.Manifest.Permission.AccessFineLocation)]
 [assembly: UsesPermission(global::Android.Manifest.Permission.AccessCoarseLocation)]
 [assembly: UsesPermission(global::Android.Manifest.Permission.AccessBackgroundLocation)]
+[assembly: UsesPermission(global::Android.Manifest.Permission.Vibrate)]
 
 namespace XPScript.UI.Android;
 

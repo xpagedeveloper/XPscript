@@ -239,7 +239,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 - [x] Photo/media picker. AndroidPhotoMediaPickerCapability uses the API 33 Photo Picker and an ACTION_GET_CONTENT fallback, with MIME filtering and multi-select support; host result dispatch remains a follow-up.
 - [x] Share sheet. AndroidShareCapability creates an ACTION_SEND intent with MIME/text payload and reports whether a handler exists; URI/stream payloads remain a follow-up.
 - [x] Clipboard integration. AndroidClipboardCapability supports text read/write and reports unavailable clipboard services deterministically.
-- [ ] Vibration/haptics.
+- [x] Vibration/haptics. AndroidHapticsCapability provides duration-validated vibration with API 26+ VibrationEffect and a legacy fallback.
 - [ ] Network/connectivity state.
 - [ ] Battery state.
 - [ ] Device/app information.

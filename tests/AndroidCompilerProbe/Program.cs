@@ -343,6 +343,10 @@ var clipboardSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, ".
 foreach (var expected in new[] { "AndroidClipboardCapability", "ClipboardService", "SetText", "GetText", "ClipData.NewPlainText", "PrimaryClip" })
     if (!clipboardSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android clipboard capability probe is missing: " + expected);
+var hapticsSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidHapticsCapability.cs"));
+foreach (var expected in new[] { "AndroidHapticsCapability", "VibratorService", "HasVibrator", "Vibrate", "VibrationEffect.CreateOneShot", "BuildVersionCodes.O" })
+    if (!hapticsSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android haptics capability probe is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);
 foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
 {
