@@ -318,7 +318,7 @@ foreach (var expected in new[] { "public XPImage() { EnsureResourceLimits(); }",
 
 var appDebugSourcePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "ApplicationDebugRuntimeSource.cs");
 var cameraAdapterSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidCameraPreviewControl.cs"));
-foreach (var expected in new[] { "CapturePhotoAsync", "ImageCapture.OutputFileOptions", "IOnImageSavedCallback", "Camera photo capture failed" })
+foreach (var expected in new[] { "CapturePhotoAsync", "NormalizeCapturePath", "Camera photo output path must remain inside the application sandbox.", "ImageCapture.OutputFileOptions", "IOnImageSavedCallback", "Camera photo capture failed" })
     if (!cameraAdapterSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android CameraX photo capture adapter is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);

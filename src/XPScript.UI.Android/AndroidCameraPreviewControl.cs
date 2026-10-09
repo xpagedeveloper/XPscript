@@ -18,7 +18,7 @@ public sealed class AndroidCameraPreviewControl : NativeControlHost
 
     public Task<string> CapturePhotoAsync(string outputPath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
+        outputPath = NormalizeCapturePath(outputPath);
         if (_imageCapture is null) throw new InvalidOperationException("Camera preview is not initialized.");
         var directory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
@@ -28,6 +28,18 @@ public sealed class AndroidCameraPreviewControl : NativeControlHost
         var context = global::Android.App.Application.Context ?? throw new InvalidOperationException("Android application context is unavailable.");
         _imageCapture.TakePicture(options, ContextCompat.GetMainExecutor(context)!, new PhotoCaptureCallback(completion, outputPath));
         return completion.Task;
+    }
+
+    private static string NormalizeCapturePath(string outputPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
+        if (outputPath.Contains("..", StringComparison.Ordinal))
+            throw new ArgumentException("Camera photo output path may not contain '..'.", nameof(outputPath));
+        var root = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+        var fullPath = Path.GetFullPath(Path.IsPathRooted(outputPath) ? outputPath : Path.Combine(root, outputPath));
+        if (!fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Camera photo output path must remain inside the application sandbox.", nameof(outputPath));
+        return fullPath;
     }
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
