@@ -422,6 +422,10 @@ foreach (var expected in new[] { "GeneratedAndroidAudioControl", "\"Audio\" => C
 foreach (var expected in new[] { "public bool IsPlaying", "public long Position", "public long Duration", "public float Volume", "public void Play()", "public void Pause()", "public void Stop()", "public void SeekTo(long position)" })
     if (!androidHostSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Generated Android media playback control regression is missing: " + expected);
+var androidMediaPlayerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidMedia3Player.cs"));
+foreach (var expected in new[] { "IPlayerListener", "IsPlayingChanged", "PlaybackStateChanged", "PlaybackError", "_player.AddListener", "_player.RemoveListener" })
+    if (!androidMediaPlayerSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android Media3 listener regression is missing: " + expected);
 var mediaDesktopRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs"));
 if (!mediaDesktopRuntimeSource.Contains("source = field.Type is \"Video\" or \"Audio\" ? field.Source : null", StringComparison.Ordinal))
     throw new Exception("Android UIForm media sources must be transported in the shared form request.");
