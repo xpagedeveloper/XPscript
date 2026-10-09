@@ -73,6 +73,7 @@ public static class CompilerMcpServer
     private static object[] Tools() =>
     [
         Tool("xpscript_validate", "Validate XPScript source without executing it.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string", description="Simple virtual .xps filename." }, runtimeIdentifier=new { type="string" }, debug=new { type="boolean", description="Include debug diagnostics while preserving source-mapped XPScript locations." } }, required=new[]{"source"} }),
+        Tool("xpscript_ast_validate", "Validate source through the experimental AST compiler without executing it.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string", description="Simple virtual .xps filename." } }, required=new[]{"source"} }),
         Tool("xpscript_symbols", "Search the public XPScript symbol catalog.", new { type="object", properties=new { search=new { type="string" } } }),
         Tool("xpscript_describe", "Describe an exact public XPScript symbol.", new { type="object", properties=new { name=new { type="string" } }, required=new[]{"name"} }),
         Tool("xpscript_explain", "Explain a stable XPScript diagnostic code.", new { type="object", properties=new { diagnosticCode=new { type="string" } }, required=new[]{"diagnosticCode"} })
@@ -89,6 +90,7 @@ public static class CompilerMcpServer
         object value = name switch
         {
             "xpscript_validate" => await ValidateAsync(compiler, arguments).ConfigureAwait(false),
+            "xpscript_ast_validate" => await AstValidateAsync(arguments).ConfigureAwait(false),
             "xpscript_symbols" => CompilerSymbolCatalog.Search(GetOptionalString(arguments, "search") ?? ""),
             "xpscript_describe" => CompilerSymbolCatalog.Find(GetRequiredString(arguments, "name")) ?? throw new McpException(-32602, "Unknown XPScript symbol."),
             "xpscript_explain" => CompilerDiagnosticCatalog.Find(GetRequiredString(arguments, "diagnosticCode")) ?? throw new McpException(-32602, "Unknown XPScript diagnostic code."),
@@ -118,6 +120,30 @@ public static class CompilerMcpServer
             result.Source = new CompileSource { EntryPoint = filename };
             foreach (var diagnostic in result.Errors) if (!string.IsNullOrWhiteSpace(diagnostic.File)) diagnostic.File = filename;
             return result;
+        }
+        finally { try { Directory.Delete(root, true); } catch { } }
+    }
+
+    private static async Task<object> AstValidateAsync(JsonElement arguments)
+    {
+        var source = GetRequiredString(arguments, "source");
+        if (source.Length > MaxSourceChars) throw new McpException(-32602, $"source exceeds the {MaxSourceChars} character validation limit.");
+        var filename = GetOptionalString(arguments, "filename") ?? "program.xps";
+        if (!Path.GetFileName(filename).Equals(filename, StringComparison.Ordinal) || !Path.GetExtension(filename).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+            throw new McpException(-32602, "filename must be a simple .xps filename without a directory path.");
+        var root = Path.Combine(Path.GetTempPath(), "XPScript", "mcp-ast", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var sourcePath = Path.Combine(root, filename);
+            var outputPath = Path.Combine(root, "output");
+            await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
+            await AstExperimentalCompiler.CompileAsync(sourcePath, outputPath).ConfigureAwait(false);
+            return new { result = "ok", source = new { entryPoint = filename }, compiler = "ast" };
+        }
+        catch (Exception exception)
+        {
+            return new { result = "error", source = new { entryPoint = filename }, compiler = "ast", errors = new[] { new { file = filename, description = exception.Message } } };
         }
         finally { try { Directory.Delete(root, true); } catch { } }
     }

@@ -11,4 +11,6 @@ The experimental AST path currently processes a source file in this order:
 
 The compatibility preprocessor is deliberately treated as a migration boundary, not as semantic lowering. Current rewrites for GoTo/GoSub, Resume/On Error, implicit member statements and XPImage are tracked in `todo/ast-compiler-migration-todo.md` because they can discard observable behavior. A feature is complete only after its syntax is represented in the bound tree, emitted structurally and compared with the published compiler.
 
+The experimental machine path now exposes `xpscript_ast_validate`. It invokes the same `AstExperimentalCompiler` entry point as the `ast-compile` CLI command and returns a non-executing validation result, keeping lexer/parser/binder/emitter behavior in one implementation.
+
 The published compiler remains the compatibility reference. Its executable under `publish/xpscript/win-x64` is not rebuilt by the AST workflow.

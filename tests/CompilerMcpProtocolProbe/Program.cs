@@ -11,7 +11,10 @@ if (init.GetProperty("result").GetProperty("protocolVersion").GetString() != "20
 await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new {jsonrpc="2.0",method="notifications/initialized"})); await p.StandardInput.FlushAsync();
 var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new{}});
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
-foreach(var name in new[]{"xpscript_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP tool: "+name);
+foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP tool: "+name);
+var astValidation=await CallAsync(new {jsonrpc="2.0",id=25,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main()\n    Print \"AST_MCP_OK\"\nEnd Sub",filename="ast-agent.xps"}}});
+var astResult=astValidation.GetProperty("result").GetProperty("structuredContent");
+if (astResult.GetProperty("result").GetString()!="ok" || astResult.GetProperty("compiler").GetString()!="ast") throw new Exception("MCP AST validation did not use the experimental AST compiler.");
 var diagnosticSource=await File.ReadAllTextAsync(Path.Combine(repo,"samples","null-integer-assignment-error.xps"));
 async Task<JsonElement> ValidateMcpAsync(int id, bool debug)
 {
