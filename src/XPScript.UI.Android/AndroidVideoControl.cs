@@ -31,6 +31,7 @@ public sealed class AndroidVideoControl : NativeControlHost
     public void Play() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Play();
     public void Pause() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Pause();
     public void Stop() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Stop();
+    public void SeekTo(long position) => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).SeekTo(position);
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {

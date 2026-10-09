@@ -30,6 +30,7 @@ public sealed class AndroidAudioControl : Control, IDisposable
     public void Play() => _mediaPlayer.Play();
     public void Pause() => _mediaPlayer.Pause();
     public void Stop() => _mediaPlayer.Stop();
+    public void SeekTo(long position) => _mediaPlayer.SeekTo(position);
 
     public string Source
     {

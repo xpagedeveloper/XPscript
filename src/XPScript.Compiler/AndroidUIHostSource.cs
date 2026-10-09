@@ -178,6 +178,18 @@ internal sealed class GeneratedAndroidMedia3Player : IDisposable
     public bool IsPlaying => !_disposed && _player.IsPlaying;
     public long Position => _disposed ? 0 : Math.Max(0, _player.CurrentPosition);
     public long Duration => _disposed ? 0 : Math.Max(0, _player.Duration);
+    public float Volume
+    {
+        get => _disposed ? 0 : _player.Volume;
+        set
+        {
+            ThrowIfDisposed();
+            if (float.IsNaN(value) || float.IsInfinity(value) || value < 0 || value > 1)
+                throw new ArgumentOutOfRangeException(nameof(value), "Media volume must be between 0 and 1.");
+            _player.Volume = value;
+        }
+    }
+    public void SeekTo(long position) { ThrowIfDisposed(); if (position < 0) throw new ArgumentOutOfRangeException(nameof(position)); _player.SeekTo(position); }
 
     public void Dispose()
     {
@@ -211,6 +223,7 @@ internal sealed class GeneratedAndroidVideoControl : NativeControlHost
     public void Play() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Play();
     public void Pause() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Pause();
     public void Stop() => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).Stop();
+    public void SeekTo(long position) => (_mediaPlayer ?? throw new InvalidOperationException("Video player is not initialized.")).SeekTo(position);
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
@@ -262,9 +275,11 @@ internal sealed class GeneratedAndroidAudioControl : Control, IDisposable
     public bool IsPlaying => _mediaPlayer.IsPlaying;
     public long Position => _mediaPlayer.Position;
     public long Duration => _mediaPlayer.Duration;
+    public float Volume { get => _mediaPlayer.Volume; set => _mediaPlayer.Volume = value; }
     public void Play() => _mediaPlayer.Play();
     public void Pause() => _mediaPlayer.Pause();
     public void Stop() => _mediaPlayer.Stop();
+    public void SeekTo(long position) => _mediaPlayer.SeekTo(position);
 
     public void Dispose()
     {
