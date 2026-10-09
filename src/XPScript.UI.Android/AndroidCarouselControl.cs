@@ -14,13 +14,15 @@ namespace XPScript.UI.Android;
 public sealed class AndroidCarouselControl : NativeControlHost
 {
     private ViewPager2? _pager;
+    private FrameLayout? _root;
+    private LinearLayout? _indicators;
     private CarouselAdapter? _adapter;
     private Timer? _autoAdvanceTimer;
     public event EventHandler<int>? CurrentItemChanged;
     public IReadOnlyList<string> Sources
     {
         get => _adapter?.Sources ?? Array.Empty<string>();
-        set { if (_adapter is null) return; _adapter.Sources = value?.ToArray() ?? Array.Empty<string>(); _adapter.NotifyDataSetChanged(); RestartAutoAdvance(); }
+        set { if (_adapter is null) return; _adapter.Sources = value?.ToArray() ?? Array.Empty<string>(); _adapter.NotifyDataSetChanged(); RefreshIndicators(); RestartAutoAdvance(); }
     }
     public bool Loop { get; set; }
     public int? AutoAdvanceMilliseconds { get => _autoAdvanceTimer is null ? null : _autoAdvanceInterval; set => ConfigureAutoAdvance(value); }
@@ -28,13 +30,19 @@ public sealed class AndroidCarouselControl : NativeControlHost
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
+        _root = new FrameLayout(global::Android.App.Application.Context!);
         _pager = new ViewPager2(global::Android.App.Application.Context!);
         _adapter = new CarouselAdapter(global::Android.App.Application.Context!);
         _pager.Adapter = _adapter;
         _pager.Orientation = ViewPager2.OrientationHorizontal;
-        _pager.RegisterOnPageChangeCallback(new PageCallback(index => CurrentItemChanged?.Invoke(this, index)));
+        _root.AddView(_pager, new FrameLayout.LayoutParams(-1, -1));
+        _indicators = new LinearLayout(_root.Context) { Orientation = Orientation.Horizontal, Gravity = GravityFlags.Center };
+        var indicatorLayout = new FrameLayout.LayoutParams(-2, -2, GravityFlags.Bottom | GravityFlags.CenterHorizontal) { BottomMargin = 12 };
+        _root.AddView(_indicators, indicatorLayout);
+        _pager.RegisterOnPageChangeCallback(new PageCallback(index => { RefreshIndicators(index); CurrentItemChanged?.Invoke(this, index); }));
+        RefreshIndicators();
         RestartAutoAdvance();
-        return new PlatformHandle(_pager.Handle, "Android.View.View");
+        return new PlatformHandle(_root.Handle, "Android.View.View");
     }
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
@@ -45,6 +53,23 @@ public sealed class AndroidCarouselControl : NativeControlHost
         _adapter = null;
         _pager?.Dispose();
         _pager = null;
+        _root?.Dispose();
+        _root = null;
+        _indicators = null;
+    }
+
+    private void RefreshIndicators(int? selected = null)
+    {
+        if (_indicators is null || _adapter is null) return;
+        _indicators.RemoveAllViews();
+        var current = selected ?? _pager?.CurrentItem ?? 0;
+        for (var index = 0; index < _adapter.ItemCount; index++)
+        {
+            var item = new TextView(_indicators.Context) { Text = index == current ? "●" : "○", TextSize = 18, ContentDescription = $"Carousel item {index + 1}" };
+            var captured = index;
+            item.SetOnClickListener(new ClickListener(() => _pager?.SetCurrentItem(captured, true)));
+            _indicators.AddView(item, new LinearLayout.LayoutParams(-2, -2));
+        }
     }
 
     private void ConfigureAutoAdvance(int? milliseconds)
@@ -79,6 +104,13 @@ public sealed class AndroidCarouselControl : NativeControlHost
         private readonly Action<int> _changed;
         public PageCallback(Action<int> changed) => _changed = changed;
         public override void OnPageSelected(int position) => _changed(position);
+    }
+
+    private sealed class ClickListener : Java.Lang.Object, View.IOnClickListener
+    {
+        private readonly Action _click;
+        public ClickListener(Action click) => _click = click;
+        public void OnClick(View? v) => _click();
     }
 
     private sealed class CarouselAdapter : global::AndroidX.RecyclerView.Widget.RecyclerView.Adapter
