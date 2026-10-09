@@ -19,6 +19,8 @@ The published compiler remains the compatibility reference. Its executable under
 
 Application-level `Option`, `Const` and `Declare` lines are retained in the syntax tree as application declaration nodes. Their existing compatibility/emission handling remains unchanged. The focused `.wps` fixture `tests/ast-compile-probe/application-declarations.wps` produces `42` through the AST compiler. The published reference executable is Windows-only and cannot be executed in the Linux validation environment, so this fixture's static-reference execution remains an environment limitation.
 
+Target-specific entry points use the same AST unit: `Sub Main` is preferred for console-style targets; when it is absent, the first `Sub` or `Function` is emitted as the target entry method. Route attributes such as `[Get]` are removed at the AST boundary so the procedure declaration remains reusable by the target host. `tests/ast-compile-probe/target-entry-point.wps` verifies the fallback path and prints `7`.
+
 ## Comments and trivia
 
 The AST lexer treats apostrophe comments as trivia: comment text is skipped and is not represented as a syntax node or token. The terminating newline remains a `NewLineToken`, so statement boundaries and source positions are preserved. Apostrophes inside quoted string literals remain part of the string token. This keeps the syntax tree focused on compilable structure while retaining enough source information for diagnostics and compatibility preprocessing.

@@ -176,7 +176,7 @@ Expressions are the first migration target because the current transpiler perfor
 - [x] Parse constructors and destructors.
 - [x] Parse visibility modifiers.
 - [x] Parse application-level declarations. `DeclarationParser` retains top-level `Option`, `Const` and `Declare` lines as typed application declaration nodes; the `.wps` regression compiles and prints `42`.
-- [ ] Parse target-specific entry points.
+- [x] Parse target-specific entry points. AST compilation prefers `Sub Main`, otherwise selects the first `Sub`/`Function`; target route attributes are removed before parsing and the fallback entry point is covered by `target-entry-point.wps`.
 - [ ] Validate block terminators structurally rather than with transpiler state.
 
 ### Custom class compatibility contract
