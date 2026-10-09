@@ -2,6 +2,7 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
 
 namespace XPScript.UI.Android;
@@ -51,7 +52,7 @@ public static class AndroidFormHost
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
                     "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120 },
                     "Video" => new AndroidVideoControl { MinHeight = 180 },
-                    "CameraPreview" => new AndroidCameraPreviewControl { MinHeight = 180 },
+                    "CameraPreview" => CreateCameraPreview(),
                     "Audio" => new AndroidAudioControl(),
                     _ => new TextBox()
                 };
@@ -162,6 +163,17 @@ public static class AndroidFormHost
             Dispatcher.UIThread.Post(Show);
 
         return completion.Task.GetAwaiter().GetResult();
+    }
+
+    private static Control CreateCameraPreview()
+    {
+        var activity = MainActivity.Current;
+        if (activity is null || global::AndroidX.Core.Content.ContextCompat.CheckSelfPermission(activity, global::Android.Manifest.Permission.Camera) != global::Android.Content.PM.Permission.Granted)
+        {
+            activity?.RequestCameraPermission();
+            return new TextBlock { Text = "Camera permission is required. Grant permission and reopen the form.", TextWrapping = TextWrapping.Wrap };
+        }
+        return new AndroidCameraPreviewControl { MinHeight = 180 };
     }
 
     private static void SetEditorValue(Control editor, JsonElement value)
