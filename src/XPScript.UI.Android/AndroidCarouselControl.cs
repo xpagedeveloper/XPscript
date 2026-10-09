@@ -3,6 +3,9 @@ using Avalonia.Platform;
 using Android.Views;
 using Android.Widget;
 using AndroidX.ViewPager2.Widget;
+using Android.Graphics;
+using System.Net.Http;
+using System.Text;
 
 namespace XPScript.UI.Android;
 
@@ -22,7 +25,7 @@ public sealed class AndroidCarouselControl : NativeControlHost
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
         _pager = new ViewPager2(global::Android.App.Application.Context!);
-        _adapter = new CarouselAdapter();
+        _adapter = new CarouselAdapter(global::Android.App.Application.Context!);
         _pager.Adapter = _adapter;
         _pager.Orientation = ViewPager2.OrientationHorizontal;
         _pager.RegisterOnPageChangeCallback(new PageCallback(index => CurrentItemChanged?.Invoke(this, index)));
@@ -46,18 +49,68 @@ public sealed class AndroidCarouselControl : NativeControlHost
 
     private sealed class CarouselAdapter : global::AndroidX.RecyclerView.Widget.RecyclerView.Adapter
     {
+        private readonly global::Android.Content.Context _context;
+        public CarouselAdapter(global::Android.Content.Context context) => _context = context;
         public IReadOnlyList<string> Sources { get; set; } = Array.Empty<string>();
         public override int ItemCount => Sources.Count;
         public override global::AndroidX.RecyclerView.Widget.RecyclerView.ViewHolder OnCreateViewHolder(ViewGroup parent, int viewType)
             => new ImageHolder(new ImageView(parent.Context) { LayoutParameters = new ViewGroup.LayoutParams(-1, -1) });
-        public override void OnBindViewHolder(global::AndroidX.RecyclerView.Widget.RecyclerView.ViewHolder holder, int position)
+        public override async void OnBindViewHolder(global::AndroidX.RecyclerView.Widget.RecyclerView.ViewHolder holder, int position)
         {
-            if (holder is ImageHolder image) image.View.SetImageURI(global::Android.Net.Uri.Parse(Sources[position]));
+            if (holder is not ImageHolder image) return;
+            var source = Sources[position];
+            image.View.Tag = source;
+            var bitmap = await AndroidCarouselSourceLoader.LoadAsync(_context, source);
+            if (bitmap is not null && Equals(image.View.Tag, source)) image.View.SetImageBitmap(bitmap);
         }
         private sealed class ImageHolder : global::AndroidX.RecyclerView.Widget.RecyclerView.ViewHolder
         {
             public ImageView View { get; }
             public ImageHolder(ImageView view) : base(view) => View = view;
         }
+    }
+}
+
+internal static class AndroidCarouselSourceLoader
+{
+    public static async Task<Bitmap?> LoadAsync(global::Android.Content.Context context, string source)
+    {
+        if (source.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            using var stream = context.Assets?.Open(source["assets/".Length..]);
+            return stream is null ? null : await Task.Run(() => BitmapFactory.DecodeStream(stream));
+        }
+        if (source.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+        {
+            var comma = source.IndexOf(',');
+            if (comma < 0) return null;
+            var payload = source[(comma + 1)..];
+            var bytes = source[..comma].EndsWith(";base64", StringComparison.OrdinalIgnoreCase)
+                ? global::Android.Util.Base64.Decode(payload, global::Android.Util.Base64Flags.Default) ?? Array.Empty<byte>()
+                : Encoding.UTF8.GetBytes(Uri.UnescapeDataString(payload));
+            return await Task.Run(() => BitmapFactory.DecodeByteArray(bytes, 0, bytes.Length));
+        }
+        if (global::System.Uri.TryCreate(source, global::System.UriKind.Absolute, out var uri))
+        {
+            if (uri.Scheme is "http" or "https")
+            {
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                var bytes = await client.GetByteArrayAsync(uri);
+                return await Task.Run(() => BitmapFactory.DecodeByteArray(bytes, 0, bytes.Length));
+            }
+            if (uri.Scheme is "content" or "file")
+            {
+                var androidUri = global::Android.Net.Uri.Parse(uri.AbsoluteUri);
+                if (androidUri is null) return null;
+                using var stream = context.ContentResolver?.OpenInputStream(androidUri);
+                return stream is null ? null : await Task.Run(() => BitmapFactory.DecodeStream(stream));
+            }
+        }
+        if (global::System.IO.Path.IsPathRooted(source))
+        {
+            using var stream = File.OpenRead(source);
+            return await Task.Run(() => BitmapFactory.DecodeStream(stream));
+        }
+        return null;
     }
 }
