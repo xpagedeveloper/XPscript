@@ -817,6 +817,10 @@ public sealed class CompilerDriver
     <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.11.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.Ui" Version="1.11.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.Core" Version="1.4.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.Camera2" Version="1.4.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.View" Version="1.4.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.10.0.2" />
   </ItemGroup>
 """;
         project = project.Replace("    <NoWarn>CA1416;$(NoWarn)</NoWarn>", "    <NoWarn>CA1416;NU1608;$(NoWarn)</NoWarn>", StringComparison.Ordinal);

@@ -41,7 +41,11 @@ if (uiProject.Contains("<UseAppHost>", StringComparison.Ordinal))
 foreach (var expected in new[]
 {
     "<PackageReference Include=\"Avalonia.Android\" Version=\"12.0.3\" />",
-    "<PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"12.0.3\" />"
+    "<PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"12.0.3\" />",
+    "<PackageReference Include=\"Xamarin.AndroidX.Camera.Core\" Version=\"1.4.2.1\" />",
+    "<PackageReference Include=\"Xamarin.AndroidX.Camera.Camera2\" Version=\"1.4.2.1\" />",
+    "<PackageReference Include=\"Xamarin.AndroidX.Camera.View\" Version=\"1.4.2.1\" />",
+    "<PackageReference Include=\"Xamarin.AndroidX.Lifecycle.LiveData.Core\" Version=\"2.10.0.2\" />"
 })
 {
     if (!uiProject.Contains(expected, StringComparison.Ordinal))
