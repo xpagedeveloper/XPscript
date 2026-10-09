@@ -1,6 +1,8 @@
 using Android.Content;
 using Android.Net;
 
+#pragma warning disable CA1416 // ConnectivityManager APIs are available from Android API 23, the supported minimum is guarded by the host.
+
 namespace XPScript.UI.Android;
 
 /// <summary>Android network/connectivity capability.</summary>
@@ -27,3 +29,5 @@ public sealed class AndroidConnectivityCapability
         return network is null ? null : manager?.GetNetworkCapabilities(network);
     }
 }
+
+#pragma warning restore CA1416
