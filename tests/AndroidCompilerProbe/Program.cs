@@ -368,7 +368,7 @@ foreach (var expected in new[] { "AndroidNotificationCapability", "AreNotificati
     if (!notificationSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android notification capability probe is missing: " + expected);
 var carouselControlSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidCarouselControl.cs"));
-foreach (var expected in new[] { "AndroidCarouselControl", "ViewPager2", "CurrentItemChanged", "OnPageSelected", "RecyclerView.Adapter", "AndroidCarouselSourceLoader", "assets/", "data:image/", "HttpClient", "ContentResolver" })
+foreach (var expected in new[] { "AndroidCarouselControl", "ViewPager2", "CurrentItemChanged", "OnPageSelected", "RecyclerView.Adapter", "AndroidCarouselSourceLoader", "AutoAdvanceMilliseconds", "RestartAutoAdvance", "SetCurrentItem", "assets/", "data:image/", "HttpClient", "ContentResolver" })
     if (!carouselControlSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android Carousel control probe is missing: " + expected);
 var carouselExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionRuntimeSource.cs"));

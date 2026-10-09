@@ -6,6 +6,7 @@ using AndroidX.ViewPager2.Widget;
 using Android.Graphics;
 using System.Net.Http;
 using System.Text;
+using Avalonia.Threading;
 
 namespace XPScript.UI.Android;
 
@@ -14,13 +15,16 @@ public sealed class AndroidCarouselControl : NativeControlHost
 {
     private ViewPager2? _pager;
     private CarouselAdapter? _adapter;
+    private Timer? _autoAdvanceTimer;
     public event EventHandler<int>? CurrentItemChanged;
     public IReadOnlyList<string> Sources
     {
         get => _adapter?.Sources ?? Array.Empty<string>();
-        set { if (_adapter is null) return; _adapter.Sources = value?.ToArray() ?? Array.Empty<string>(); _adapter.NotifyDataSetChanged(); }
+        set { if (_adapter is null) return; _adapter.Sources = value?.ToArray() ?? Array.Empty<string>(); _adapter.NotifyDataSetChanged(); RestartAutoAdvance(); }
     }
     public bool Loop { get; set; }
+    public int? AutoAdvanceMilliseconds { get => _autoAdvanceTimer is null ? null : _autoAdvanceInterval; set => ConfigureAutoAdvance(value); }
+    private int? _autoAdvanceInterval;
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
@@ -29,15 +33,45 @@ public sealed class AndroidCarouselControl : NativeControlHost
         _pager.Adapter = _adapter;
         _pager.Orientation = ViewPager2.OrientationHorizontal;
         _pager.RegisterOnPageChangeCallback(new PageCallback(index => CurrentItemChanged?.Invoke(this, index)));
+        RestartAutoAdvance();
         return new PlatformHandle(_pager.Handle, "Android.View.View");
     }
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)
     {
         _pager?.Adapter = null;
+        _autoAdvanceTimer?.Dispose();
+        _autoAdvanceTimer = null;
         _adapter = null;
         _pager?.Dispose();
         _pager = null;
+    }
+
+    private void ConfigureAutoAdvance(int? milliseconds)
+    {
+        if (milliseconds is < 250) throw new ArgumentOutOfRangeException(nameof(milliseconds), "Carousel auto-advance interval must be at least 250 milliseconds.");
+        _autoAdvanceInterval = milliseconds;
+        RestartAutoAdvance();
+    }
+
+    private void RestartAutoAdvance()
+    {
+        _autoAdvanceTimer?.Dispose();
+        _autoAdvanceTimer = null;
+        if (_autoAdvanceInterval is not > 0 || _pager is null) return;
+        _autoAdvanceTimer = new Timer(_ => Dispatcher.UIThread.Post(Advance), null, _autoAdvanceInterval.Value, _autoAdvanceInterval.Value);
+    }
+
+    private void Advance()
+    {
+        if (_pager is null || _adapter is null || _adapter.ItemCount < 2) return;
+        var next = _pager.CurrentItem + 1;
+        if (next >= _adapter.ItemCount)
+        {
+            if (!Loop) { _autoAdvanceTimer?.Dispose(); _autoAdvanceTimer = null; return; }
+            next = 0;
+        }
+        _pager.SetCurrentItem(next, true);
     }
 
     private sealed class PageCallback : ViewPager2.OnPageChangeCallback
