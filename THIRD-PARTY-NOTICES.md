@@ -92,6 +92,10 @@ Android UIForm media support uses the `Xamarin.AndroidX.Media3.ExoPlayer` and `X
 
 ## Trademarks and third-party brands
 
+## AndroidX ViewPager2
+
+Android UIForm Carousel support uses the `Xamarin.AndroidX.ViewPager2` binding and its AndroidX dependencies. The underlying AndroidX ViewPager2 library is distributed by the Android Open Source Project under the Apache License 2.0. Release packages must preserve the NuGet-generated license and notice files for this dependency graph.
+
 HCL, HCL Notes, HCL Domino, Notes, Domino, Domino Designer, LotusScript, and related product names and marks are trademarks or registered trademarks of their respective owners. References to these products and technologies are used to identify compatibility, interoperability, implementation references, or required external runtimes. XPscript is an independent project and is not affiliated with, sponsored by, certified by, or endorsed by HCL unless HCL explicitly states otherwise.
 
 Microsoft, .NET, Windows, SQL Server, Azure, and related names and marks are trademarks or registered trademarks of Microsoft Corporation or its affiliates. MySQL and related marks are trademarks of Oracle and/or its affiliates. PostgreSQL, Npgsql, Avalonia, SQLite, Supabase, and all other third-party product, project, company, and brand names mentioned by XPscript remain the property of their respective owners.

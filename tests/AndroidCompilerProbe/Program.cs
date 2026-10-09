@@ -371,6 +371,9 @@ var carouselControlSource = File.ReadAllText(Path.Combine(AppContext.BaseDirecto
 foreach (var expected in new[] { "AndroidCarouselControl", "ViewPager2", "CurrentItemChanged", "OnPageSelected", "RecyclerView.Adapter", "AndroidCarouselSourceLoader", "AutoAdvanceMilliseconds", "RestartAutoAdvance", "SetCurrentItem", "assets/", "data:image/", "HttpClient", "ContentResolver" })
     if (!carouselControlSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android Carousel control probe is missing: " + expected);
+var noticesSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "THIRD-PARTY-NOTICES.md"));
+if (!noticesSource.Contains("AndroidX ViewPager2", StringComparison.Ordinal) || !noticesSource.Contains("Xamarin.AndroidX.ViewPager2", StringComparison.Ordinal))
+    throw new Exception("Android ViewPager2 third-party notice is missing.");
 var carouselExtensionSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionRuntimeSource.cs"));
 foreach (var expected in new[] { "AddCarousel", "CarouselSources", "SetCarouselIndex", "SetCarouselLoop", "SetCarouselAutoAdvance" })
     if (!carouselExtensionSource.Contains(expected, StringComparison.Ordinal))
