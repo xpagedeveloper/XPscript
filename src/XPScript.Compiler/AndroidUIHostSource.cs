@@ -361,6 +361,37 @@ public static class AndroidFormHost
             var actionButtons = new Dictionary<string, Avalonia.Controls.Button>(StringComparer.OrdinalIgnoreCase);
             var panel = new StackPanel { Spacing = 12, Margin = new Thickness(16), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Stretch };
 
+            void DispatchMediaEvent(string fieldName, string eventKind, string submittedValue = "")
+            {
+                if (eventCallback is null) return;
+                try
+                {
+                    var actionState = eventCallback(eventKind + ":" + fieldName, submittedValue);
+                    ApplyActionState(actionState, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
+                }
+                catch (Exception exception)
+                {
+                    Log.Error("XPScript", "UIForm media event '" + eventKind + "' callback failed: " + exception);
+                }
+            }
+
+            void AttachMediaEvents(string fieldName, Control control)
+            {
+                switch (control)
+                {
+                    case GeneratedAndroidVideoControl video:
+                        video.IsPlayingChanged += (_, playing) => DispatchMediaEvent(fieldName, playing ? "play" : "pause");
+                        video.PlaybackStateChanged += (_, state) => { if (state == 4) DispatchMediaEvent(fieldName, "ended"); };
+                        video.PlaybackError += (_, error) => DispatchMediaEvent(fieldName, "error", error);
+                        break;
+                    case GeneratedAndroidAudioControl audio:
+                        audio.IsPlayingChanged += (_, playing) => DispatchMediaEvent(fieldName, playing ? "play" : "pause");
+                        audio.PlaybackStateChanged += (_, state) => { if (state == 4) DispatchMediaEvent(fieldName, "ended"); };
+                        audio.PlaybackError += (_, error) => DispatchMediaEvent(fieldName, "error", error);
+                        break;
+                }
+            }
+
             var bootText = request.TryGetProperty("bootText", out var bootTextValue) ? bootTextValue.GetString() ?? string.Empty : string.Empty;
             var bootImage = request.TryGetProperty("bootImage", out var bootImageValue) ? bootImageValue.GetString() ?? string.Empty : string.Empty;
             if (bootImage.Length > 0)
@@ -490,7 +521,11 @@ public static class AndroidFormHost
                 }
 
                 editors[name] = editor;
-                if (type is "Video" or "Audio") mediaControls[name] = editor;
+                if (type is "Video" or "Audio")
+                {
+                    mediaControls[name] = editor;
+                    AttachMediaEvents(name, editor);
+                }
                 var validationBlock = new TextBlock
                 {
                     Text = string.Empty,
