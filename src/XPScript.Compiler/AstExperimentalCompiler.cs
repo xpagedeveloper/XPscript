@@ -74,6 +74,7 @@ internal static class AstExperimentalCompiler
         var function = declaration as FunctionDeclarationSyntax;
         if (sub is null && function is null)
             throw new CompilerException("AST experimental compilation currently requires a Sub declaration.", "XPS3001", "ast");
+        ValidateProcedureOverloads(unit);
 
         var symbols = SymbolTable.CreateWithCompilerCatalog();
         symbols.Declare(new TypeSymbol("Object", typeof(object), XpTypeSymbol.Object));
@@ -879,6 +880,26 @@ internal static class Program
             symbols.Declare(new FunctionSymbol(name, returnType,
                 parameters.Take(count).Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
                 null, null, parameters.Take(count).Select(p => p.IsByRef).ToArray()));
+    }
+
+    private static void ValidateProcedureOverloads(CompilationUnitSyntax unit)
+    {
+        var signatures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var procedure in unit.Declarations.Where(item => item is SubDeclarationSyntax or FunctionDeclarationSyntax))
+        {
+            var parameters = procedure is SubDeclarationSyntax sub ? sub.Parameters : ((FunctionDeclarationSyntax)procedure).Parameters;
+            var name = procedure is SubDeclarationSyntax subDeclaration ? subDeclaration.Identifier.Text : ((FunctionDeclarationSyntax)procedure).Identifier.Text;
+            var count = parameters.Count;
+            while (count > 0 && parameters[count - 1].IsOptional) count--;
+            for (var arity = count; arity <= parameters.Count; arity++)
+            {
+                var signature = name + "(" + string.Join(",", parameters.Take(arity).Select(parameter =>
+                    (parameter.IsByRef ? "ref:" : "value:") + ResolveRuntimeType(parameter.Type?.Identifier.Text).FullName)) + ")";
+                if (!signatures.Add(signature))
+                    throw new CompilerException($"Procedure '{name}' has a duplicate overload for {arity} argument(s).",
+                        CompilerDiagnosticCodes.DuplicateOverload, "semantic");
+            }
+        }
     }
 
     private static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters)
