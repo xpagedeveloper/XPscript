@@ -581,7 +581,7 @@ public static class AndroidFormHost
                     var buttonIcon = buttonValue.TryGetProperty("icon", out var buttonIconValue) ? buttonIconValue.GetString() ?? string.Empty : string.Empty;
                     var buttonImage = buttonValue.TryGetProperty("image", out var buttonImageValue) ? buttonImageValue.GetString() ?? string.Empty : string.Empty;
                     var cornerRadius = buttonValue.TryGetProperty("cornerRadius", out var cornerRadiusValue) && cornerRadiusValue.TryGetDouble(out var radius) ? radius : 0;
-                    var actionButton = new Avalonia.Controls.Button { Content = CreateButtonContent(buttonIcon, buttonImage, buttonLabel), MinWidth = 100, CornerRadius = new CornerRadius(cornerRadius) };
+                    var actionButton = new Avalonia.Controls.Button { Content = CreateButtonContent(buttonIcon, buttonImage, buttonLabel), Tag = new[] { buttonIcon, buttonImage }, MinWidth = 100, CornerRadius = new CornerRadius(cornerRadius) };
                     actionButton.IsEnabled = !buttonValue.TryGetProperty("enabled", out var buttonEnabled) || buttonEnabled.ValueKind != JsonValueKind.False;
                     actionButtons[buttonName] = actionButton;
                     actionButton.Click += (_, _) =>
@@ -756,7 +756,11 @@ public static class AndroidFormHost
                 var buttonName = button.TryGetProperty("name", out var nameValue) ? nameValue.GetString() ?? string.Empty : string.Empty;
                 if (buttonName.Length == 0 || !actionButtons.TryGetValue(buttonName, out var actionButton)) continue;
                 if (button.TryGetProperty("label", out var labelValue))
-                    actionButton.Content = labelValue.GetString() ?? buttonName;
+                {
+                    var label = labelValue.GetString() ?? buttonName;
+                    var content = actionButton.Tag as string[] ?? Array.Empty<string>();
+                    actionButton.Content = CreateButtonContent(content.ElementAtOrDefault(0) ?? string.Empty, content.ElementAtOrDefault(1) ?? string.Empty, label);
+                }
                 if (button.TryGetProperty("visible", out var visibleValue))
                     actionButton.IsVisible = visibleValue.ValueKind != JsonValueKind.False;
                 if (button.TryGetProperty("enabled", out var enabledValue))

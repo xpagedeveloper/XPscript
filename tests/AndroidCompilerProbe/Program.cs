@@ -107,6 +107,8 @@ foreach (var expected in new[]
     "buttonIcon = buttonValue.TryGetProperty(\"icon\"",
     "buttonImage = buttonValue.TryGetProperty(\"image\"",
     "CreateButtonContent(buttonIcon, buttonImage, buttonLabel)",
+    "Tag = new[] { buttonIcon, buttonImage }",
+    "CreateButtonContent(content.ElementAtOrDefault(0)",
     "UIForm button image failed",
 
     "ResolveAndroidImagePath(value)",
