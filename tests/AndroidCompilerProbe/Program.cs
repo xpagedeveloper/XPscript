@@ -413,11 +413,11 @@ foreach (var expected in new[] { "kind.Equals(\"play\"", "kind.Equals(\"pause\""
         throw new Exception("Shared UIForm media event dispatcher regression is missing: " + expected);
 
 var androidHostSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "AndroidUIHostSource.cs"));
-foreach (var expected in new[] { "GeneratedAndroidAudioControl", "\"Audio\" => CreateAudio(field)", "UIForm media Source must be an absolute supported media URI" })
+foreach (var expected in new[] { "GeneratedAndroidAudioControl", "\"Audio\" => CreateAudio(field)", "UIForm Video source must be an absolute supported media URI" })
     if (!androidHostSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Generated Android Audio host regression is missing: " + expected);
-var desktopRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs"));
-if (!desktopRuntimeSource.Contains("source = field.Type is \"Video\" or \"Audio\" ? field.Source : null", StringComparison.Ordinal))
+var mediaDesktopRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs"));
+if (!mediaDesktopRuntimeSource.Contains("source = field.Type is \"Video\" or \"Audio\" ? field.Source : null", StringComparison.Ordinal))
     throw new Exception("Android UIForm media sources must be transported in the shared form request.");
 
 var mediaSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormMediaButtonsPostProcessor.cs"));
