@@ -41,7 +41,7 @@ if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List alias compilation failed.' }
 $listResult = dotnet (Join-Path $listOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($listResult -join "`n") -ne "a`nb`n11`n12`none:BLUE`ntwo:GREEN`na`na`nb`nb`n12`n13`n5`n1`n2`n2") { throw 'AST ForAll List write-through, ListTag, nested alias scope or snapshot semantics failed.' }
 $staticInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-initializer-error.xps') -o (Join-Path $output 'static-initializer-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($staticInvalid -join "`n") -notmatch 'AST Static currently requires a scalar declaration without an initializer') { throw 'AST unsupported Static initializer was not explicitly rejected.' }
+if ($LASTEXITCODE -ne 2 -or ($staticInvalid -join "`n") -notmatch 'AST Static requires an initializer-free scalar or array declaration') { throw 'AST unsupported Static initializer was not explicitly rejected.' }
 $staticOutput = Join-Path $output 'static-local'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-local-lifetime.xps') -o $staticOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Static local compilation failed.' }
