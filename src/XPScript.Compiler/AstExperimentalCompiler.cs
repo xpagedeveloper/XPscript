@@ -30,6 +30,10 @@ internal static class AstExperimentalCompiler
             throw new CompilerException(
                 "AST Option Base semantics are not implemented; array lower bounds were not assumed.",
                 CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+        if (Regex.IsMatch(source, @"(?im)^\s*(?:Public\s+|Private\s+|Protected\s+)?Class\s+[A-Za-z_]\w*"))
+            throw new CompilerException(
+                "AST class declarations and runtime object lifecycle are not implemented; class source was not lowered to dynamic placeholders.",
+                CompilerDiagnosticCodes.InvalidSyntax, "semantic");
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
         source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);
