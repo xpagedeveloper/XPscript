@@ -51,6 +51,7 @@ public static class AndroidFormHost
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
                     "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120 },
                     "Video" => new AndroidVideoControl { MinHeight = 180 },
+                    "CameraPreview" => new AndroidCameraPreviewControl { MinHeight = 180 },
                     "Audio" => new AndroidAudioControl(),
                     _ => new TextBox()
                 };
@@ -63,7 +64,7 @@ public static class AndroidFormHost
                     audio.Source = audioSource.GetString() ?? string.Empty;
 
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
-                if (type is not "Video" and not "Audio" and not "Separator" and not "Spacer" and not "Image")
+                if (type is not "Video" and not "Audio" and not "CameraPreview" and not "Separator" and not "Spacer" and not "Image")
                     editors[name] = editor;
                 panel.Children.Add(editor);
 
