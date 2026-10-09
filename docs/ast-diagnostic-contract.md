@@ -15,3 +15,5 @@ The AST CLI prints mapped diagnostics as `file:line:position: diagnosticCode: de
 
 The permanent MCP protocol probe treats this as a release gate: it sends one parser-error source through AST-MCP, compiles the identical source through the AST CLI, and compares the stable diagnostic code, filename, line and position.
 
+The AST CLI accepts `--debug`, and `xpscript_ast_validate` accepts `debug: true`. Both modes are covered by the protocol regression and retain the same source diagnostic identity.
+

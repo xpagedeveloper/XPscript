@@ -73,7 +73,7 @@ public static class CompilerMcpServer
     private static object[] Tools() =>
     [
         Tool("xpscript_validate", "Validate XPScript source without executing it.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string", description="Simple virtual .xps filename." }, runtimeIdentifier=new { type="string" }, debug=new { type="boolean", description="Include debug diagnostics while preserving source-mapped XPScript locations." } }, required=new[]{"source"} }),
-        Tool("xpscript_ast_validate", "Validate source through the experimental AST compiler without executing it.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string", description="Simple virtual .xps filename." } }, required=new[]{"source"} }),
+        Tool("xpscript_ast_validate", "Validate source through the experimental AST compiler without executing it.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string", description="Simple virtual .xps filename." }, debug=new { type="boolean", description="Enable debug diagnostics without changing AST source diagnostic identity." } }, required=new[]{"source"} }),
         Tool("xpscript_symbols", "Search the public XPScript symbol catalog.", new { type="object", properties=new { search=new { type="string" } } }),
         Tool("xpscript_describe", "Describe an exact public XPScript symbol.", new { type="object", properties=new { name=new { type="string" } }, required=new[]{"name"} }),
         Tool("xpscript_explain", "Explain a stable XPScript diagnostic code.", new { type="object", properties=new { diagnosticCode=new { type="string" } }, required=new[]{"diagnosticCode"} })
@@ -132,12 +132,14 @@ public static class CompilerMcpServer
         if (!Path.GetFileName(filename).Equals(filename, StringComparison.Ordinal) || !Path.GetExtension(filename).Equals(".xps", StringComparison.OrdinalIgnoreCase))
             throw new McpException(-32602, "filename must be a simple .xps filename without a directory path.");
         var root = Path.Combine(Path.GetTempPath(), "XPScript", "mcp-ast", Guid.NewGuid().ToString("N"));
+        var debug = GetOptionalBoolean(arguments, "debug");
         Directory.CreateDirectory(root);
         try
         {
             var sourcePath = Path.Combine(root, filename);
             var outputPath = Path.Combine(root, "output");
             await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             await AstExperimentalCompiler.CompileAsync(sourcePath, outputPath).ConfigureAwait(false);
             return new { result = "ok", source = new { entryPoint = filename }, compiler = "ast" };
         }

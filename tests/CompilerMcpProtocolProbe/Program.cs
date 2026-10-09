@@ -23,6 +23,9 @@ var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");
 if (astDiagnosticResult.GetProperty("result").GetString()!="error" || astErrors.GetArrayLength()==0 || astErrors[0].GetProperty("file").GetString()!="ast-error.xps" || string.IsNullOrWhiteSpace(astErrors[0].GetProperty("diagnosticCode").GetString())) throw new Exception("AST MCP diagnostics lost the stable code or source filename.");
+var astDiagnosticDebug=await CallAsync(new {jsonrpc="2.0",id=28,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps",debug=true}}});
+var astDebugError=astDiagnosticDebug.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (astDebugError.GetProperty("diagnosticCode").GetString()!=astErrors[0].GetProperty("diagnosticCode").GetString() || astDebugError.GetProperty("line").GetInt32()!=astErrors[0].GetProperty("line").GetInt32() || astDebugError.GetProperty("position").GetInt32()!=astErrors[0].GetProperty("position").GetInt32()) throw new Exception("AST MCP debug mode changed source diagnostic identity.");
 var astParityRoot=Path.Combine(Path.GetTempPath(),"XPScript","ast-parity",Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(astParityRoot);
 try

@@ -56,7 +56,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 - [x] Every AST diagnostic preserves the original XPscript source filename, mapped line/column and end span in structured MCP output and human-readable AST CLI output. The parser-error regression verifies the same source location contract in both surfaces.
 - [x] Unknown variables, functions, properties and methods are reported by the XPscript semantic binder before Roslyn when the symbol/type information is available. Focused binder coverage verifies XPS2008 unknown symbols and XPS2009 unknown members; the MCP protocol probe also passes.
 - [x] Diagnostic parity is a release gate across normal AST CLI compilation and AST-MCP validation. The permanent MCP protocol probe runs the same parser-error source through both surfaces and compares stable code, filename and source position.
-- [ ] Diagnostic parity must be verified both with debug diagnostics disabled and enabled; debug mode may add generated-code/debug details but must not change the XPscript diagnostic code, meaning, source file, line, column or source span.
+- [x] Diagnostic parity is verified with debug diagnostics disabled and enabled. AST CLI and AST-MCP preserve the same diagnostic code, source file, line, column and span; debug mode is allowed only to add implementation details.
 - [x] Do not remove legacy parsing code until its replacement has dedicated tests and integration coverage.
 - [x] Prefer small commits organized by compiler phase or language feature.
 
