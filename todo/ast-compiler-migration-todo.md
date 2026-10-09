@@ -280,7 +280,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 
 - [x] Emit actual top-level Sub/Function bodies in the experimental CLI, with procedure-local scopes, forward calls and declared ByRef modes; remove fabricated reduced-arity procedure overloads.
 - [x] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics. `xpscript_ast_validate` calls `AstExperimentalCompiler`, and `CompilerMcpProtocolProbe` compares CLI/MCP success and parser diagnostics.
-- [ ] Model Optional defaults in syntax/binding/emission instead of generating no-op overloads.
+- [x] Model Optional defaults in syntax/binding/emission instead of generating no-op overloads. Defaults are retained in `ParameterSyntax`, bound in declaration scope and lowered to executable forwarding bodies with writable omitted ByRef storage.
 - [x] Preserve Optional flags, parameter modes and default-expression syntax with absolute spans; handle nested default-expression commas in declaration parsing.
 - [ ] Validate Optional ordering, default types/expression rules and supplied/omitted arguments in the binder; lower omitted ByRef defaults through temporary locals.
 - [x] Execute omitted trailing Optional arguments through bound forwarding bodies and fresh writable storage; preserve supplied ByRef aliases and Function results, with repeat-call and generated-name collision regressions.
