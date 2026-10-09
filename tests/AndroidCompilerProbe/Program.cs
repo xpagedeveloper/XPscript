@@ -77,7 +77,7 @@ foreach (var expected in new[]
     "actions.Children.Add(ok);",
     "request.TryGetProperty(\"buttons\"",
     "var actionState = eventCallback(\"button:\" + buttonName, submittedValues);",
-    "ApplyActionState(actionState, editors, mediaControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);",
+    "ApplyActionState(actionState, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);",
     "private static bool ApplyActionState",
     "var validationErrors = new Dictionary<string, TextBlock>",
     "validationErrors[name] = validationBlock;",
@@ -163,6 +163,11 @@ foreach (var expected in new[]
     "AvaloniaMainActivity",
     "AvaloniaAndroidApplication<App>",
     "AndroidFormHost",
+    "\"ProgressBar\" => CreateProgressBar(field)",
+    "\"ActivityIndicator\" => CreateActivityIndicator(field)",
+    "progressValue",
+    "activityRunning",
+    "ApplyActionState(actionState, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);",
     "MainView.Current",
     "Program.Main(Array.Empty<string>())",
     "Console.AndroidLog",
@@ -206,7 +211,7 @@ if (!androidFormHostSource.Contains("defaultButtonCornerRadiusValue.TryGetDouble
 if (System.Text.RegularExpressions.Regex.IsMatch(uiHostCode, @"(?<!Avalonia\.Controls\.)\bRadioButton\b"))
     throw new Exception("Android UIForm host must fully qualify Avalonia RadioButton references to avoid Android.Widget ambiguity.");
 
-var structuralBranchIndex = uiHostCode.IndexOf("if (type is \"Separator\" or \"Spacer\" or \"Image\" or \"WebView\")", StringComparison.Ordinal);
+var structuralBranchIndex = uiHostCode.IndexOf("if (type is \"Separator\" or \"Spacer\" or \"Image\" or \"WebView\" or \"ProgressBar\" or \"ActivityIndicator\")", StringComparison.Ordinal);
 var editorRegistrationIndex = uiHostCode.IndexOf("editors[name] = editor;", StringComparison.Ordinal);
 if (structuralBranchIndex < 0 || editorRegistrationIndex < 0 || editorRegistrationIndex < structuralBranchIndex)
     throw new Exception("Android structural/media controls must bypass editor-state registration so they cannot overwrite bound data during submission.");

@@ -354,6 +354,7 @@ public static class AndroidFormHost
 
             var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
             var mediaControls = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
+            var progressControls = new Dictionary<string, ProgressBar>(StringComparer.OrdinalIgnoreCase);
             var validationErrors = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
             var fieldContainers = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
             var fieldLabels = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
@@ -452,7 +453,9 @@ public static class AndroidFormHost
                 {
                     "CheckBox" => new Avalonia.Controls.CheckBox(),
                     "Video" => CreateVideo(field),
-            "Audio" => CreateAudio(field),
+                    "Audio" => CreateAudio(field),
+                    "ProgressBar" => CreateProgressBar(field),
+                    "ActivityIndicator" => CreateActivityIndicator(field),
                     "WebView" => CreateWebView(field, instanceId, name),
                     "DateField" => new Avalonia.Controls.DatePicker(),
                     "TimeField" => new Avalonia.Controls.TimePicker(),
@@ -479,7 +482,8 @@ public static class AndroidFormHost
                 ApplyEditorReadOnly(editor, field.TryGetProperty("readOnly", out var readOnly) && readOnly.ValueKind == JsonValueKind.True);
                 fieldContainer.Children.Add(editor);
 
-                if (type is "Separator" or "Spacer" or "Image" or "WebView")
+                if (editor is ProgressBar progressControl) progressControls[name] = progressControl;
+                if (type is "Separator" or "Spacer" or "Image" or "WebView" or "ProgressBar" or "ActivityIndicator")
                 {
                     AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
                     continue;
@@ -522,7 +526,7 @@ public static class AndroidFormHost
                         {
                             var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
                             var actionState = eventCallback("button:" + buttonName, submittedValues);
-                            ApplyActionState(actionState, editors, mediaControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
+                            ApplyActionState(actionState, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
                         }
                         catch (Exception exception)
                         {
@@ -574,7 +578,7 @@ public static class AndroidFormHost
                     var callbackResult = eventCallback("button:OK", submittedValues);
                     if (!string.IsNullOrWhiteSpace(callbackResult))
                     {
-                        var hasValidationErrors = ApplyActionState(callbackResult, editors, mediaControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
+                        var hasValidationErrors = ApplyActionState(callbackResult, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
                         if (hasValidationErrors)
                             return;
                         result = callbackResult;
@@ -596,6 +600,7 @@ public static class AndroidFormHost
         string actionStateJson,
         Dictionary<string, Control> editors,
         Dictionary<string, Control> mediaControls,
+        Dictionary<string, ProgressBar> progressControls,
         Dictionary<string, TextBlock> validationErrors,
         Dictionary<string, Control> fieldContainers,
         Dictionary<string, TextBlock> fieldLabels,
@@ -636,7 +641,18 @@ public static class AndroidFormHost
             foreach (var field in fields.EnumerateArray())
             {
                 var name = field.TryGetProperty("name", out var nameValue) ? nameValue.GetString() ?? string.Empty : string.Empty;
-                if (name.Length == 0 || !editors.TryGetValue(name, out var editor)) continue;
+                if (name.Length == 0) continue;
+                if (progressControls.TryGetValue(name, out var progressControl))
+                {
+                    if (field.TryGetProperty("progressValue", out var progressValue) && progressValue.TryGetDouble(out var progress))
+                        progressControl.Value = Math.Clamp(progress, 0, 1);
+                    if (field.TryGetProperty("progressIndeterminate", out var indeterminate))
+                        progressControl.IsIndeterminate = indeterminate.ValueKind == JsonValueKind.True;
+                    if (field.TryGetProperty("activityRunning", out var running))
+                        progressControl.IsVisible = running.ValueKind != JsonValueKind.False;
+                    continue;
+                }
+                if (!editors.TryGetValue(name, out var editor)) continue;
                 var validationError = field.TryGetProperty("validationError", out var validationValue)
                     ? validationValue.GetString() ?? string.Empty
                     : string.Empty;
@@ -761,6 +777,24 @@ public static class AndroidFormHost
         if (field.TryGetProperty("source", out var source) && source.ValueKind == JsonValueKind.String)
             audio.Source = source.GetString() ?? string.Empty;
         return audio;
+    }
+
+    private static Control CreateProgressBar(JsonElement field)
+    {
+        var progress = new ProgressBar { Minimum = 0, Maximum = 1, HorizontalAlignment = HorizontalAlignment.Stretch };
+        if (field.TryGetProperty("progressValue", out var value) && value.TryGetDouble(out var progressValue))
+            progress.Value = Math.Clamp(progressValue, 0, 1);
+        if (field.TryGetProperty("progressIndeterminate", out var indeterminate) && indeterminate.ValueKind == JsonValueKind.True)
+            progress.IsIndeterminate = true;
+        return progress;
+    }
+
+    private static Control CreateActivityIndicator(JsonElement field)
+    {
+        var progress = new ProgressBar { IsIndeterminate = true, HorizontalAlignment = HorizontalAlignment.Stretch };
+        if (field.TryGetProperty("activityRunning", out var running) && running.ValueKind == JsonValueKind.False)
+            progress.IsVisible = false;
+        return progress;
     }
 
     private static Control CreateRadioGroup(IReadOnlyList<string> options)
