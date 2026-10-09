@@ -32,6 +32,12 @@ public interface IXPScriptLocationService : IXPScriptMobileService
     XPScriptLocation GetCurrent(TimeSpan timeout);
 }
 
+public interface IXPScriptContinuousLocationService : IXPScriptLocationService
+{
+    void StartUpdates(TimeSpan minimumInterval, Action<XPScriptLocation> onLocation);
+    void StopUpdates();
+}
+
 public static class XPScriptCamera
 {
     public static string CapturePhoto(object? outputPath)
