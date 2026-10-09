@@ -90,7 +90,7 @@ For each control, explicitly evaluate:
 ## Visual and layout controls
 
 - [>] Implement Icon with a portable built-in icon set and fallback behavior (shared API and Android glyph fallback are implemented; broader platform parity remains).
-- [ ] Implement Card and Panel containers.
+- [>] Implement Card and Panel containers (structural API and Android visual containers are implemented; nested child composition remains).
 - [ ] Implement ScrollView with bounded nested scrolling behavior.
 - [ ] Extend Button with optional icon/image content.
 - [ ] Verify responsive layout, theme integration, focus order and accessibility.

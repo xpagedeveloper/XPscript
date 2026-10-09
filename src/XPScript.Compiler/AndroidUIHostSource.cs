@@ -525,6 +525,7 @@ public static class AndroidFormHost
                     "Spacer" => new Border { Height = 16 },
                     "Image" => CreateImage(field),
                     "Icon" => CreateIcon(field),
+                    "Card" or "Panel" => CreateCard(field),
                     _ => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) }
                 };
 
@@ -536,7 +537,7 @@ public static class AndroidFormHost
                 fieldContainer.Children.Add(editor);
 
                 if (editor is ProgressBar progressControl) progressControls[name] = progressControl;
-                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "WebView" or "ProgressBar" or "ActivityIndicator")
+                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "Card" or "Panel" or "WebView" or "ProgressBar" or "ActivityIndicator")
                 {
                     AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
                     continue;
@@ -892,6 +893,19 @@ public static class AndroidFormHost
             _ => icon.Length == 1 ? icon : "•"
         };
         return new TextBlock { Text = glyph, FontSize = 24, HorizontalAlignment = HorizontalAlignment.Center };
+    }
+
+    private static Control CreateCard(JsonElement field)
+    {
+        var label = field.TryGetProperty("label", out var labelValue) ? labelValue.GetString() ?? string.Empty : string.Empty;
+        return new Border
+        {
+            Padding = new Thickness(12),
+            Margin = new Thickness(2),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Child = new TextBlock { Text = label, FontWeight = FontWeight.SemiBold }
+        };
     }
 
     private static Avalonia.Controls.NativeWebView CreateWebView(JsonElement field, string instanceId, string fieldName)
