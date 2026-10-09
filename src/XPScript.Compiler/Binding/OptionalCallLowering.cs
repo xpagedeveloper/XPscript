@@ -34,7 +34,7 @@ public static class OptionalCallLowering
             parameters.Select(p => p.IsByRef).ToArray());
         var call = new BoundCallExpression(null, function, arguments);
         statements.Add(returnType == typeof(void) ? new BoundExpressionStatement(call) : new BoundReturnStatement(call));
-        return new BoundMethodDefinition(name, returnType, parameters.Take(suppliedCount).ToArray(), statements);
+        return new BoundMethodDefinition(name, returnType, parameters.Take(suppliedCount).ToArray(), statements, true);
     }
 
     private static BoundExpression ReplaceParameters(BoundExpression expression, IReadOnlyDictionary<Symbol, LocalSymbol> replacements)

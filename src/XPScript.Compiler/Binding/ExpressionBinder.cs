@@ -291,6 +291,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching overload for function '{name}'.");
         }
         if (candidates.Length > 1)
+        {
+            var explicitCandidates = candidates.Where(candidate => !candidate.IsOptionalForwarding).ToArray();
+            if (explicitCandidates.Length == 1)
+                candidates = explicitCandidates;
+        }
+        if (candidates.Length > 1)
             return Error(syntax, CompilerDiagnosticCodes.AmbiguousOverload, $"Call to function '{name}' is ambiguous.");
 
         return new BoundCallExpression(target, candidates[0], ConvertArguments(candidates[0], arguments));

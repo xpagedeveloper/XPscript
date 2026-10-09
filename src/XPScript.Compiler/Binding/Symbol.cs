@@ -81,6 +81,10 @@ public sealed record FunctionSymbol(
     IReadOnlyList<bool>? ByRefParameters = null) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.Function;
+
+    // Optional forwarding signatures are compiler-generated compatibility
+    // candidates. An explicit source overload has precedence when both match.
+    public bool IsOptionalForwarding { get; init; }
 }
 
 public sealed record ClassSymbol(

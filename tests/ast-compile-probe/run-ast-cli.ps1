@@ -83,6 +83,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-default-name.xps
 if ($LASTEXITCODE -ne 0) { throw 'AST Optional default-name binding failed.' }
 $optionalDefaultResult = dotnet (Join-Path $optionalDefault 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($optionalDefaultResult -join "`n") -ne '5') { throw 'AST Optional default-name binding produced the wrong result.' }
+$optionalSelection = Join-Path $output 'optional-overload-selection'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-overload-selection.xps') -o $optionalSelection
+if ($LASTEXITCODE -ne 0) { throw 'AST Optional overload selection failed.' }
+$optionalSelectionResult = dotnet (Join-Path $optionalSelection 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionalSelectionResult -join "`n") -ne '2') { throw 'AST did not prefer the explicit overload over Optional forwarding.' }
 $nestedOutput = Join-Path $output 'nested-goto'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-goto.xps') -o $nestedOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nested GoTo compilation failed.' }

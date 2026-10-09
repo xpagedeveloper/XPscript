@@ -5,7 +5,8 @@ namespace XPScript.Compiler.Emission;
 
 /// <summary>A procedure whose signature and body have already been bound.</summary>
 public sealed record BoundMethodDefinition(string Name, Type ReturnType,
-    IReadOnlyList<ParameterSymbol> Parameters, IReadOnlyList<BoundStatement> Statements);
+    IReadOnlyList<ParameterSymbol> Parameters, IReadOnlyList<BoundStatement> Statements,
+    bool IsOptionalForwarding = false);
 
 /// <summary>Emits a console compilation unit without parsing XPscript source.</summary>
 public sealed class BoundCompilationUnitEmitter
@@ -20,6 +21,8 @@ public sealed class BoundCompilationUnitEmitter
     public string EmitMembers(IReadOnlyList<BoundMethodDefinition> methods)
     {
         ArgumentNullException.ThrowIfNull(methods);
+        methods = methods.Where(method => !method.IsOptionalForwarding ||
+            !methods.Any(explicitMethod => !explicitMethod.IsOptionalForwarding && SameSignature(method, explicitMethod))).ToArray();
         var output = new StringBuilder();
         foreach (var declaration in methods.SelectMany(method => BoundStatementTraversal.Descendants(method.Statements))
                      .OfType<BoundVariableDeclarationStatement>().Where(declaration => declaration.Local.StaticStorageName is not null))
@@ -34,4 +37,8 @@ public sealed class BoundCompilationUnitEmitter
             output.Append(emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements));
         return output.ToString();
     }
+
+    private static bool SameSignature(BoundMethodDefinition left, BoundMethodDefinition right)
+        => left.Name.Equals(right.Name, StringComparison.OrdinalIgnoreCase) &&
+           left.Parameters.Select(parameter => parameter.Type).SequenceEqual(right.Parameters.Select(parameter => parameter.Type));
 }
