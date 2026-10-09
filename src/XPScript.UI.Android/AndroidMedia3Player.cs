@@ -12,12 +12,18 @@ public sealed class AndroidMedia3Player : IDisposable
 {
     private readonly IExoPlayer _player;
     private bool _disposed;
+    private readonly Media3Listener _listener;
+    public event EventHandler<bool>? IsPlayingChanged;
+    public event EventHandler<int>? PlaybackStateChanged;
+    public event EventHandler<string>? PlaybackError;
 
     public AndroidMedia3Player(Context context)
     {
         ArgumentNullException.ThrowIfNull(context);
         _player = new ExoPlayerBuilder(context).Build()
             ?? throw new InvalidOperationException("Media3 ExoPlayerBuilder returned no player.");
+        _listener = new Media3Listener(this);
+        _player.AddListener(_listener);
     }
 
     public bool IsPlaying => !_disposed && _player.IsPlaying;
@@ -84,6 +90,7 @@ public sealed class AndroidMedia3Player : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        _player.RemoveListener(_listener);
         _player.Release();
         GC.SuppressFinalize(this);
     }
@@ -91,5 +98,14 @@ public sealed class AndroidMedia3Player : IDisposable
     private void ThrowIfDisposed()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+
+    private sealed class Media3Listener : Java.Lang.Object, IPlayerListener
+    {
+        private readonly AndroidMedia3Player _owner;
+        public Media3Listener(AndroidMedia3Player owner) => _owner = owner;
+        public void OnIsPlayingChanged(bool isPlaying) => _owner.IsPlayingChanged?.Invoke(_owner, isPlaying);
+        public void OnPlaybackStateChanged(int playbackState) => _owner.PlaybackStateChanged?.Invoke(_owner, playbackState);
+        public void OnPlayerError(PlaybackException? error) => _owner.PlaybackError?.Invoke(_owner, error?.Message ?? "Media3 playback error.");
     }
 }
