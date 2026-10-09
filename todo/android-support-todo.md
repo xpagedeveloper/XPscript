@@ -244,5 +244,5 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 - [x] Battery state. AndroidBatteryCapability reports scaled battery percentage, charging/full status and the low-battery broadcast state.
 - [x] Device/app information. AndroidDeviceInfoCapability exposes manufacturer, model, Android release/API level and package name without mutable platform state.
 - [x] Open URI / app links. AndroidUriCapability validates URI input, creates ACTION_VIEW intents and reports handler availability.
-- [ ] Notifications.
+- [x] Notifications. AndroidNotificationCapability reports notification enablement and creates API 26+ notification channels; permission request and posting remain host-controlled follow-ups.
 - [ ] Sensors such as accelerometer/gyroscope if there is a concrete XPScript use case.

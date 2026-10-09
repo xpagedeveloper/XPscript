@@ -363,6 +363,10 @@ var uriSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", ".
 foreach (var expected in new[] { "AndroidUriCapability", "CreateViewIntent", "ActionView", "System.Uri.TryCreate", "ResolveActivity" })
     if (!uriSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android URI capability probe is missing: " + expected);
+var notificationSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidNotificationCapability.cs"));
+foreach (var expected in new[] { "AndroidNotificationCapability", "AreNotificationsEnabled", "EnsureChannel", "NotificationChannel", "NotificationImportance" })
+    if (!notificationSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android notification capability probe is missing: " + expected);
 var appDebugSource = File.ReadAllText(appDebugSourcePath);
 foreach (var expected in new[] { "Android.Util.Log, Mono.Android", "\"XPScript\"", "\"ERROR\" => \"Error\"", "\"WARN\" => \"Warn\"", "_ => \"Info\"" })
 {
