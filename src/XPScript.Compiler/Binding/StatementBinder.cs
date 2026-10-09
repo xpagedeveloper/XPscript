@@ -105,7 +105,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         if (syntax.IsStatic)
         {
             if (procedureIdentity is null || syntax.Initializer is not null ||
-                !syntax.IsArray && !syntax.IsList && type != typeof(long) && type != typeof(double) && type != typeof(bool) && type != typeof(string) && type != typeof(byte))
+                !syntax.IsArray && !syntax.IsList && !semanticType.IsVariant && type != typeof(long) && type != typeof(double) && type != typeof(bool) && type != typeof(string) && type != typeof(byte))
             {
                 _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
                     "AST Static requires an initializer-free scalar or array declaration in a named procedure; Static Lists remain unsupported.", syntax.Span));

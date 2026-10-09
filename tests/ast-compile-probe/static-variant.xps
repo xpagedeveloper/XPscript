@@ -1,0 +1,13 @@
+Sub Accumulate()
+    Static state As Variant
+    If state Is Nothing Then
+        state = 0
+    End If
+    state = state + 1
+    Print state
+End Sub
+
+Sub Main()
+    Accumulate()
+    Accumulate()
+End Sub
