@@ -1,5 +1,6 @@
 using Android.Content;
 using Android.Locations;
+using Android.OS;
 using AndroidX.Core.Content;
 
 namespace XPScript.UI.Android;
@@ -13,7 +14,14 @@ public sealed class AndroidLocationCapability
 
     public bool HasFinePermission => ContextCompat.CheckSelfPermission(_context, global::Android.Manifest.Permission.AccessFineLocation) == global::Android.Content.PM.Permission.Granted;
     public bool HasCoarsePermission => ContextCompat.CheckSelfPermission(_context, global::Android.Manifest.Permission.AccessCoarseLocation) == global::Android.Content.PM.Permission.Granted;
-    public bool HasBackgroundPermission => ContextCompat.CheckSelfPermission(_context, global::Android.Manifest.Permission.AccessBackgroundLocation) == global::Android.Content.PM.Permission.Granted;
+    public bool HasBackgroundPermission
+    {
+        get
+        {
+            if (Build.VERSION.SdkInt < BuildVersionCodes.Q) return false;
+            return ContextCompat.CheckSelfPermission(_context, global::Android.Manifest.Permission.AccessBackgroundLocation) == global::Android.Content.PM.Permission.Granted;
+        }
+    }
     public bool HasPermission => HasFinePermission || HasCoarsePermission;
     public bool IsLocationEnabled
     {
