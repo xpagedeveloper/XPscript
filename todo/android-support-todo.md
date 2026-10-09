@@ -241,7 +241,7 @@ Start this only after Stage 1 through Stage 3 are stable enough that mobile APIs
 - [x] Clipboard integration. AndroidClipboardCapability supports text read/write and reports unavailable clipboard services deterministically.
 - [x] Vibration/haptics. AndroidHapticsCapability provides duration-validated vibration with API 26+ VibrationEffect and a legacy fallback.
 - [x] Network/connectivity state. AndroidConnectivityCapability reports active network, internet capability, validated connectivity and metered status.
-- [ ] Battery state.
+- [x] Battery state. AndroidBatteryCapability reports scaled battery percentage, charging/full status and the low-battery broadcast state.
 - [ ] Device/app information.
 - [ ] Open URI / app links.
 - [ ] Notifications.
