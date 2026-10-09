@@ -129,7 +129,7 @@ Reuse the existing shared UIForm model. Android should add a platform backend, n
 - [>] Add a mobile-friendly `UIForm.Switch` boolean control with the same binding/action-state semantics as CheckBox; shared API and Android boolean rendering are implemented, while focused switch regressions remain.
 - [>] Add a shared `UIForm.Icon` API with a portable built-in icon set/fallback strategy so common UI symbols do not require image assets; shared `AddIcon` and Android built-in glyph fallback are implemented, while broader platform parity remains.
 - [>] Add `UIForm.Card`/`UIForm.Panel` containers for visually grouping controls, compatible with tabs, named grids, visibility/enabled state and responsive layout; structural API and Android visual containers are implemented, while nested child composition remains.
-- [ ] Add an explicit `UIForm.ScrollView` container for advanced nested/long layouts while preventing conflicting or unbounded nested scrolling behavior.
+- [>] Add an explicit `UIForm.ScrollView` container for advanced nested/long layouts while preventing conflicting or unbounded nested scrolling behavior; structural API and bounded Android rendering are implemented, while nested child composition remains.
 - [ ] Add a dynamic `UIForm.ListView` control for data-driven rows (including `XPJsonArray`/object-backed items), selection, item-click events and efficient Android list virtualization.
 - [ ] Extend the existing Button API with optional `Icon`/`Image` content instead of introducing a separate ImageButton unless a distinct control proves necessary.
 - [ ] Add `UIForm.CameraPreview` integrated with the planned camera service so a live preview can be embedded in a form and captured frames/photos can be returned as `XPImage` and/or file/bytes.

@@ -526,6 +526,7 @@ public static class AndroidFormHost
                     "Image" => CreateImage(field),
                     "Icon" => CreateIcon(field),
                     "Card" or "Panel" => CreateCard(field),
+                    "ScrollView" => CreateScrollView(field),
                     _ => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) }
                 };
 
@@ -537,7 +538,7 @@ public static class AndroidFormHost
                 fieldContainer.Children.Add(editor);
 
                 if (editor is ProgressBar progressControl) progressControls[name] = progressControl;
-                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "Card" or "Panel" or "WebView" or "ProgressBar" or "ActivityIndicator")
+                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "Card" or "Panel" or "ScrollView" or "WebView" or "ProgressBar" or "ActivityIndicator")
                 {
                     AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
                     continue;
@@ -905,6 +906,16 @@ public static class AndroidFormHost
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
             Child = new TextBlock { Text = label, FontWeight = FontWeight.SemiBold }
+        };
+    }
+
+    private static Control CreateScrollView(JsonElement field)
+    {
+        var label = field.TryGetProperty("label", out var labelValue) ? labelValue.GetString() ?? string.Empty : string.Empty;
+        return new ScrollViewer
+        {
+            MaxHeight = 240,
+            Content = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap }
         };
     }
 

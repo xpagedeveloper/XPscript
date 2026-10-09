@@ -369,6 +369,8 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddCard(object? name, object? label) => AddField(name, label, "Card");
     public XPScriptUIField AddPanel(object? name) => AddField(name, name, "Panel");
     public XPScriptUIField AddPanel(object? name, object? label) => AddField(name, label, "Panel");
+    public XPScriptUIField AddScrollView(object? name) => AddField(name, name, "ScrollView");
+    public XPScriptUIField AddScrollView(object? name, object? label) => AddField(name, label, "ScrollView");
     public XPScriptUIField AddDateField(object? name) => AddField(name, name, "DateField");
     public XPScriptUIField AddDateField(object? name, object? label) => AddField(name, label, "DateField");
     public XPScriptUIField AddTimeField(object? name) => AddField(name, name, "TimeField");
