@@ -8,6 +8,16 @@ public interface IXPScriptMobileService
     string Capability { get; }
     bool IsAvailable { get; }
     string UnavailableReason { get; }
+    string Permission { get; }
+    XPScriptMobilePermissionState PermissionState { get; }
+}
+
+public enum XPScriptMobilePermissionState
+{
+    NotRequired,
+    Unknown,
+    Granted,
+    Denied
 }
 
 public static class XPScriptMobileServices
