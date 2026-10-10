@@ -57,6 +57,16 @@ public sealed class DeclarationParser
             var endOffset = end < lines.Count ? lines[end].Start : _text.Length;
             if (match.Groups[1].Value.Equals("Class", StringComparison.OrdinalIgnoreCase))
             {
+                var parser = new DeclarationParser(_text[startOffset..endOffset].TrimStart(), _baseOffset + startOffset);
+                try
+                {
+                    declarations.Add(parser.ParseDeclaration());
+                    _diagnostics.AddRange(parser.Diagnostics);
+                }
+                catch (InvalidOperationException exception)
+                {
+                    _ = exception;
+                }
                 i = Math.Max(end, i + 1);
                 continue;
             }
