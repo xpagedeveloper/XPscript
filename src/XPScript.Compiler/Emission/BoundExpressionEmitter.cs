@@ -35,6 +35,8 @@ public sealed class BoundExpressionEmitter
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("http", StringComparison.OrdinalIgnoreCase) && member.Receiver.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"http.{member.Name}",
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
+        BoundIndexExpression index when index.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayLowerBound: not 0 } array } && index.Expression.Type.IsArray
+            => $"{Emit(index.Expression)}[{Emit(index.Index)} - {array.ArrayLowerBound}]",
         BoundIndexExpression index => index.Expression.Type == typeof(object)
             ? $"((dynamic){Emit(index.Expression)})[{Emit(index.Index)}]"
             : index.Expression.Type == typeof(Dictionary<string, object?>)

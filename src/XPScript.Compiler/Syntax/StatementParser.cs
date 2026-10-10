@@ -654,6 +654,7 @@ public sealed class StatementParser
         }
         var isArray = false;
         int? arrayLength = null;
+        var arrayLowerBound = 0;
         if (Current.Kind == SyntaxKind.OpenParenToken)
         {
             isArray = true;
@@ -672,11 +673,14 @@ public sealed class StatementParser
                 }
                 // AST currently supports the common zero-based, one-dimensional form.
                 // Keep unsupported bounds explicit instead of silently compiling the wrong size.
-                if ((hasExplicitLowerBound && firstBound != 0) || upperBound < firstBound || upperBound >= int.MaxValue)
+                if (upperBound < firstBound || upperBound >= int.MaxValue)
                     _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
-                        "AST arrays currently require a zero-based constant bound.", identifier.Span));
+                        "AST arrays require a valid constant bound.", identifier.Span));
                 else
-                    arrayLength = checked((int)upperBound + 1);
+                {
+                    arrayLowerBound = hasExplicitLowerBound ? checked((int)firstBound) : 0;
+                    arrayLength = checked((int)(upperBound - firstBound + 1));
+                }
             }
             var hasMultipleDimensions = false;
             while (Current.Kind is not SyntaxKind.CloseParenToken and not SyntaxKind.EndOfFileToken and not SyntaxKind.NewLineToken)
@@ -746,7 +750,8 @@ public sealed class StatementParser
             initializer,
             isArray,
             isList,
-            arrayLength);
+            arrayLength,
+            arrayLowerBound);
     }
 
     private StatementSyntax ParseAssignmentStatement(int equalsIndex)

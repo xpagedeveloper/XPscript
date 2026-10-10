@@ -9,7 +9,8 @@ public sealed class DimStatementSyntax(
     ExpressionSyntax? initializer,
     bool isArray = false,
     bool isList = false,
-    int? arrayLength = null) : StatementSyntax
+    int? arrayLength = null,
+    int arrayLowerBound = 0) : StatementSyntax
 {
     public SyntaxToken DimKeyword { get; } = dimKeyword;
     public bool IsStatic => DimKeyword.Text.Equals("Static", StringComparison.OrdinalIgnoreCase);
@@ -21,6 +22,7 @@ public sealed class DimStatementSyntax(
     public bool IsArray { get; } = isArray;
     public bool IsList { get; } = isList;
     public int? ArrayLength { get; } = arrayLength;
+    public int ArrayLowerBound { get; } = arrayLowerBound;
 
     public override SyntaxKind Kind => SyntaxKind.DimStatement;
 
