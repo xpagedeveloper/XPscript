@@ -150,6 +150,9 @@ jobs:
       - name: Build Android ScrollView API regression APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-scrollview-api.xps -o ./out/android-scrollview-api --runtime=false --platform android-x64 --debug
 
+      - name: Build Android ListView API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-listview-api.xps -o ./out/android-listview-api --runtime=false --platform android-x64 --debug
+
       - name: Build Android UIForm regression APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-regression.xps -o ./out/android-uiform-regression --runtime=false --platform android-x64 --debug
 
@@ -335,12 +338,31 @@ jobs:
             for attempt in $(seq 1 15); do
               if adb logcat -d | grep -q 'ANDROID-SCROLLVIEW-STATE=ready'; then
                 echo 'Android ScrollView regression passed.'
-                exit 0
+                break
               fi
               sleep 2
             done
             adb logcat -d | grep -E 'ANDROID-SCROLLVIEW|AndroidRuntime|FATAL EXCEPTION' || true
-            echo 'Android ScrollView regression did not reach configured state.' >&2
+            if ! adb logcat -d | grep -q 'ANDROID-SCROLLVIEW-STATE=ready'; then
+              echo 'Android ScrollView regression did not reach configured state.' >&2
+              exit 1
+            fi
+
+            listview_apk="$(find ./out/android-listview-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$listview_apk"
+            adb install -r "$listview_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-LISTVIEW-STATE=ready' && \
+                 adb logcat -d | grep -q 'ANDROID-LISTVIEW-COUNT=2'; then
+                echo 'Android ListView regression passed.'
+                exit 0
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-LISTVIEW|AndroidRuntime|FATAL EXCEPTION' || true
+            echo 'Android ListView regression did not reach configured state.' >&2
             exit 1
 
       - name: Verify debug APKs exist
