@@ -89,6 +89,40 @@ internal sealed class XPImage : System.IDisposable
         return LoadSource(source.Trim());
     }
 
+    public static XPImage CreateColorMap(int width = 360, int height = 256)
+    {
+        ValidateDimensions(width, height);
+        var image = new XPImage(width, height, "white");
+        for (var y = 0; y < height; y++)
+        {
+            var saturation = width <= 1 ? 1d : (double)y / (height - 1);
+            for (var x = 0; x < width; x++)
+            {
+                var hue = width <= 1 ? 0d : (double)x / (width - 1) * 360d;
+                image.SetPixel(x, y, HsvToRgb(hue, saturation, 1d));
+            }
+        }
+        return image;
+    }
+
+    private static string HsvToRgb(double hue, double saturation, double value)
+    {
+        var chroma = value * saturation;
+        var segment = hue / 60d;
+        var intermediate = chroma * (1d - System.Math.Abs(segment % 2d - 1d));
+        var (red, green, blue) = segment switch
+        {
+            < 1d => (chroma, intermediate, 0d),
+            < 2d => (intermediate, chroma, 0d),
+            < 3d => (0d, chroma, intermediate),
+            < 4d => (0d, intermediate, chroma),
+            < 5d => (intermediate, 0d, chroma),
+            _ => (chroma, 0d, intermediate)
+        };
+        var match = value - chroma;
+        return $"#{(int)System.Math.Round((red + match) * 255d):X2}{(int)System.Math.Round((green + match) * 255d):X2}{(int)System.Math.Round((blue + match) * 255d):X2}";
+    }
+
     private static XPImage LoadSource(string source)
     {
         if (source.StartsWith("data:", System.StringComparison.OrdinalIgnoreCase))
