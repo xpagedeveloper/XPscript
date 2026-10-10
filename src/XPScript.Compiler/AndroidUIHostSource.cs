@@ -1312,15 +1312,7 @@ public static class AndroidFormHost
         }
 
         private static string ColorMapColorAt(int width, int height, int x, int y)
-        {
-            var hue = width <= 1 ? 0d : (double)x / (width - 1) * 360d;
-            var saturation = height <= 1 ? 1d : (double)y / (height - 1);
-            var chroma = saturation;
-            var segment = hue / 60d;
-            var intermediate = chroma * (1d - Math.Abs(segment % 2d - 1d));
-            var (red, green, blue) = segment switch { < 1d => (chroma, intermediate, 0d), < 2d => (intermediate, chroma, 0d), < 3d => (0d, chroma, intermediate), < 4d => (0d, intermediate, chroma), < 5d => (intermediate, 0d, chroma), _ => (chroma, 0d, intermediate) };
-            return $"#{(int)Math.Round(red * 255d):X2}{(int)Math.Round(green * 255d):X2}{(int)Math.Round(blue * 255d):X2}";
-        }
+            => XPImage.ColorMapColorAt(width, height, x, y);
     }
 
     private static bool SetTemporalEditorValue(Control editor, string text)
