@@ -668,6 +668,10 @@ var progressActivitySample = File.ReadAllText(Path.Combine(AppContext.BaseDirect
 foreach (var expected in new[] { "AddProgressBar(\"progress\"", "progress.Value = 0.5", "progress.IsIndeterminate = False", "AddActivityIndicator(\"loading\"", "activity.IsRunning = True" })
     if (!progressActivitySample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android ProgressBar/ActivityIndicator regression sample is incomplete: " + expected);
+var switchSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-switch-api.xps"));
+foreach (var expected in new[] { "AddSwitch(\"enabled\"", "enabled.Value = True" })
+    if (!switchSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android Switch regression sample is incomplete: " + expected);
 
 var layoutRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormLayoutReactivePostProcessor.cs"));
 foreach (var expected in new[]

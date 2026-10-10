@@ -1,0 +1,7 @@
+Sub Main()
+    Dim form As New UIForm("Android Switch API")
+    Dim enabled = form.AddSwitch("enabled", "Enabled")
+    enabled.Value = True
+    Call Application.Debug.Info("ANDROID-SWITCH-VALUE=" & enabled.Value)
+    Print "ANDROID-SWITCH-API=ready"
+End Sub
