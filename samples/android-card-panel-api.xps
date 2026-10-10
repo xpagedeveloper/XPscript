@@ -3,5 +3,6 @@ Sub Main()
     Dim card = form.AddCard("summary", "Summary")
     Dim panel = form.AddPanel("details", "Details")
     Call Application.Debug.Info("ANDROID-CARD-PANEL=" & card.Name & "/" & panel.Name)
+    Call Application.Debug.Info("ANDROID-CARD-PANEL-STATE=ready")
     Print "ANDROID-CARD-PANEL-API=ready"
 End Sub
