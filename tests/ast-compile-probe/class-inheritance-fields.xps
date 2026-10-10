@@ -1,0 +1,16 @@
+Class BaseRecord
+    Public BaseValue As Long
+End Class
+
+Class ChildRecord Extend BaseRecord
+    Public ChildValue As Long
+End Class
+
+Sub Main()
+    Dim item As ChildRecord
+    Set item = New ChildRecord()
+    item.BaseValue = 4
+    item.ChildValue = 5
+    Print item.BaseValue
+    Print item.ChildValue
+End Sub

@@ -82,6 +82,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-field.xps') -o $cla
 if ($LASTEXITCODE -ne 0) { throw 'AST simple class field compilation failed.' }
 $classResult = dotnet (Join-Path $classOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($classResult -join "`n") -ne '7') { throw 'AST simple class field access produced the wrong result.' }
+$inheritanceOutput = Join-Path $output 'class-inheritance-fields'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-inheritance-fields.xps') -o $inheritanceOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST class inheritance compilation failed.' }
+$inheritanceResult = dotnet (Join-Path $inheritanceOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($inheritanceResult -join "`n") -ne "4`n5") { throw 'AST inherited class field access produced the wrong result.' }
 $optionalOrder = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-order-error.xps') -o (Join-Path $output 'optional-order-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($optionalOrder -join "`n") -notmatch 'cannot follow an Optional parameter') { throw 'AST accepted a required parameter after Optional.' }
 $optionalDefault = Join-Path $output 'optional-default-name'

@@ -65,6 +65,16 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new VariableSymbol("Object", typeof(object), XpTypeSymbol.Object));
         foreach (var classDeclaration in unit.Declarations.OfType<ClassDeclarationSyntax>())
             symbols.Declare(new TypeSymbol(classDeclaration.Identifier.Text, typeof(object), XpTypeSymbol.User(classDeclaration.Identifier.Text)));
+        var classes = unit.Declarations.OfType<ClassDeclarationSyntax>()
+            .ToDictionary(item => item.Identifier.Text, StringComparer.OrdinalIgnoreCase);
+        foreach (var classDeclaration in classes.Values)
+        {
+            for (var current = classDeclaration; current is not null; current = current.BaseType is not null && classes.TryGetValue(current.BaseType.Identifier.Text, out var baseClass) ? baseClass : null)
+            {
+                foreach (var field in current.Members.OfType<FieldDeclarationSyntax>())
+                    symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{field.Identifier.Text}", ResolveRuntimeType(field.Type.Identifier.Text), XpTypeSymbol.FromClr(ResolveRuntimeType(field.Type.Identifier.Text))));
+            }
+        }
         foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Public\s+|Private\s+)?Class\s+(?<name>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new TypeSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.User(match.Groups["name"].Value)));
         foreach (var procedure in unit.Declarations.OfType<SubDeclarationSyntax>())
@@ -361,7 +371,10 @@ internal static class AstExperimentalCompiler
             };
             var fields = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>().Select(field =>
                 $"public {CSharpType(field.Type.Identifier.Text)} {field.Identifier.Text} {{ get; set; }}"));
-            return $"public sealed class Xp{classDeclaration.Identifier.Text} {{ {fields} }}";
+            var baseClause = classDeclaration.BaseType is null
+                ? string.Empty
+                : $" : Xp{classDeclaration.BaseType.Identifier.Text}";
+            return $"public class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} }}";
         }));
         if (userClassSupport.Length == 0)
         {
