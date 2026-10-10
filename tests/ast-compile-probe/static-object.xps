@@ -1,0 +1,13 @@
+Sub Tick()
+    Static item As Object
+    If item Is Nothing Then
+        Print "OBJECT_CREATED"
+        Set item = New Object()
+    End If
+    Print item Is Nothing
+End Sub
+
+Sub Main()
+    Call Tick()
+    Call Tick()
+End Sub

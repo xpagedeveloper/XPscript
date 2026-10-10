@@ -4,6 +4,11 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$staticObjectOutput = Join-Path $output 'static-object'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-object.xps') -o $staticObjectOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Static Object compilation failed.' }
+$staticObjectResult = dotnet (Join-Path $staticObjectOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($staticObjectResult -join "`n") -ne "OBJECT_CREATED`nFalse`nFalse") { throw 'AST Static Object did not start as Nothing and retain the created instance.' }
 $eraseOutput = Join-Path $output 'list-erase'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-erase.xps') -o $eraseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST List Erase compilation failed.' }

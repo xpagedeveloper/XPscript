@@ -40,7 +40,7 @@ Use `Sub ... End Sub` for procedures without a result and `Function ... End Func
 
 Functions return values by assigning to the function name:
 
-Use `Static name As Type` inside a procedure when a scalar local must retain its value across calls. In experimental `ast-compile`, scalar Static declarations without initializers are supported, including ByRef use; strings begin empty and numeric/Boolean values begin at zero/false. Static arrays, lists, objects and explicit initializers remain unsupported. This concerns procedure locals; classes and class members remain instance-based.
+Use `Static name As Type` inside a procedure when a local must retain its value across calls. Experimental `ast-compile` supports scalar storage, initializer-free arrays, Lists, Variant, Object and user-class references. `Static item As Object` starts as Nothing; use `Set item = New Object()` to create it once and retain it across calls. Strings begin empty and numeric/Boolean values begin at zero/false. Scalar explicit initializers are supported as an AST extension; complete initializer semantics remain pending. See `docs/ast-csharp-emitter.md`. This concerns procedure locals; classes and class members remain instance-based.
 
 That assignment stores the current result and execution continues. `Exit Function` returns the stored result immediately; reaching `End Function` also returns it. Do not treat assigning the function name as an early return.
 
