@@ -1,0 +1,10 @@
+Sub Main()
+    Dim form As New UIForm("Android Progress API")
+    Dim progress = form.AddProgressBar("progress", "Progress")
+    progress.Value = 0.5
+    progress.IsIndeterminate = False
+    Dim activity = form.AddActivityIndicator("loading", "Loading")
+    activity.IsRunning = True
+    Call Application.Debug.Info("ANDROID-PROGRESS-VALUE=" & progress.Value)
+    Print "ANDROID-PROGRESS-ACTIVITY-API=ready"
+End Sub
