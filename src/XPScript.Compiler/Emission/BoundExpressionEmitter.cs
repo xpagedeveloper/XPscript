@@ -35,7 +35,7 @@ public sealed class BoundExpressionEmitter
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("http", StringComparison.OrdinalIgnoreCase) && member.Receiver.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"http.{member.Name}",
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
-        BoundIndexExpression index when index.Expression.SemanticType.IsArray && index.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayLowerBound: 0 } }
+        BoundIndexExpression index when index.Expression.SemanticType.IsArray && index.Expression is BoundNameExpression { Symbol: LocalSymbol }
             => EmitArrayGet(index),
         BoundIndexExpression index when index.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayLowerBound: not 0 } array } && index.Expression.Type.IsArray
             => $"{Emit(index.Expression)}[{Emit(index.Index)} - {array.ArrayLowerBound}]",
@@ -72,7 +72,10 @@ public sealed class BoundExpressionEmitter
 
     private string EmitArrayGet(BoundIndexExpression index)
     {
-        var access = $"LSArrayRuntime.Get({Emit(index.Expression)}, {Emit(index.Index)})";
+        var offset = index.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayLowerBound: var lower } } && lower != 0
+            ? $"({Emit(index.Index)} - {lower})"
+            : Emit(index.Index);
+        var access = $"LSArrayRuntime.Get({Emit(index.Expression)}, {offset})";
         return index.Type == typeof(long) ? $"Convert.ToInt64({access})"
             : index.Type == typeof(int) ? $"Convert.ToInt32({access})"
             : index.Type == typeof(double) ? $"Convert.ToDouble({access})"

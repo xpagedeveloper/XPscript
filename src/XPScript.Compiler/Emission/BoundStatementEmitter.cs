@@ -62,10 +62,12 @@ public sealed class BoundStatementEmitter
             case BoundAssignmentStatement assignment:
                 if (assignment.Target is BoundIndexedPropertyExpression)
                     throw new NotSupportedException("Indexed property assignment requires accessor lowering.");
-                if (assignment.Target is BoundIndexExpression { Expression.SemanticType.IsArray: true } arrayTarget &&
-                    arrayTarget.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayLowerBound: 0 } })
+                if (assignment.Target is BoundIndexExpression { Expression.SemanticType.IsArray: true } arrayTarget)
                 {
-                    Line($"LSArrayRuntime.Set({_expressions.Emit(arrayTarget.Expression)}, {_expressions.Emit(assignment.Expression)}, {_expressions.Emit(arrayTarget.Index)});");
+                    var index = arrayTarget.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayLowerBound: var lower } } && lower != 0
+                        ? $"({_expressions.Emit(arrayTarget.Index)} - {lower})"
+                        : _expressions.Emit(arrayTarget.Index);
+                    Line($"LSArrayRuntime.Set({_expressions.Emit(arrayTarget.Expression)}, {_expressions.Emit(assignment.Expression)}, {index});");
                     break;
                 }
                 var targetText = _expressions.Emit(assignment.Target);
