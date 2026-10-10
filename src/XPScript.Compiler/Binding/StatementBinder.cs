@@ -107,7 +107,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             if (procedureIdentity is null || syntax.IsList || (!syntax.IsArray && semanticType.IsObject))
             {
                 _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
-                    "AST Static requires a scalar or array declaration in a named procedure; Static Lists remain unsupported.", syntax.Span));
+                    "AST Static requires a declaration in a named procedure; Static Object declarations remain unsupported.", syntax.Span));
                 return null;
             }
             // Include the complete procedure signature so overloads cannot share
