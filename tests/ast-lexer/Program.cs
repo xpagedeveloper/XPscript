@@ -807,6 +807,9 @@ Equal(0, initializedDimParser.Diagnostics.Count, "initialized Dim diagnostics");
 Equal("Integer", initializedDimStatement.TypeNameToken!.Text, "initialized Dim type");
 Equal(SyntaxKind.BinaryExpression, initializedDimStatement.Initializer!.Kind, "initialized Dim expression kind");
 Equal(new TextSpan(0, 28), initializedDimStatement.Span, "initialized Dim full span");
+var clrRankedArrayType = XpTypeSymbol.FromClr(typeof(long[,]));
+Equal(2, clrRankedArrayType.ArrayRank, "CLR array semantic rank");
+Equal(typeof(long[,]), clrRankedArrayType.RuntimeType, "CLR array semantic runtime type");
 
 var rankedArrayParser = new StatementParser("Dim matrix(1, 2, 3) As Long");
 var rankedArrayStatement = (DimStatementSyntax)rankedArrayParser.ParseStatement();
