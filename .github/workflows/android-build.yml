@@ -188,12 +188,20 @@ jobs:
             adb install -r "$media_apk"
             adb logcat -c
             adb shell monkey -p "$package_name" 1
+            video_played=false
+            audio_played=false
             for attempt in $(seq 1 45); do
               if adb logcat -d | grep -q 'MEDIA TEST VIDEO PLAYBACK: PASS'; then
-                echo 'Android media playback regression passed.'
+                video_played=true
+              fi
+              if adb logcat -d | grep -q 'MEDIA TEST AUDIO PLAYBACK: PASS'; then
+                audio_played=true
+              fi
+              if [ "$video_played" = true ] && [ "$audio_played" = true ]; then
+                echo 'Android media playback regression passed for Video and Audio.'
                 exit 0
               fi
-              if adb logcat -d | grep -q 'MEDIA TEST VIDEO PLAYBACK: ERROR'; then
+              if adb logcat -d | grep -Eq 'MEDIA TEST (VIDEO|AUDIO) PLAYBACK: ERROR'; then
                 adb logcat -d | grep -E 'MEDIA TEST|AndroidRuntime|ExoPlayer|Media3' || true
                 echo 'Android media playback regression reported an error.' >&2
                 exit 1

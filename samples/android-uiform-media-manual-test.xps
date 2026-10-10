@@ -17,6 +17,9 @@ Sub Main()
     audio = form.AddAudio("audio", "Audio")
     audio.Source = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
     audio.Volume = 0.75
+    audio.AutoPlay = True
+    Call form.SetOnPlay("audio", "AudioPlaybackStarted")
+    Call form.SetOnError("audio", "AudioPlaybackError")
     audio.Loop = False
     audio.AutoPlay = False
 
@@ -41,6 +44,14 @@ End Sub
 
 Sub VideoPlaybackError(evt As Variant, contextName As String)
     Call Application.Debug.Info("MEDIA TEST VIDEO PLAYBACK: ERROR")
+End Sub
+
+Sub AudioPlaybackStarted(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST AUDIO PLAYBACK: PASS")
+End Sub
+
+Sub AudioPlaybackError(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST AUDIO PLAYBACK: ERROR")
 End Sub
 
 Sub VideoPlay(evt As Variant, contextName As String)

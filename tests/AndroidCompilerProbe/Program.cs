@@ -616,7 +616,7 @@ foreach (var expected in new[] { "AndroidX.Media3.ExoPlayer", "AndroidX.Media3.U
         throw new Exception("Generated Android Video host regression is missing: " + expected);
 
 var mediaSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-uiform-media-manual-test.xps"));
-foreach (var expected in new[] { "video.AutoPlay = True", "form.SetOnPlay(\"video\", \"VideoPlaybackStarted\")", "form.SetOnError(\"video\", \"VideoPlaybackError\")", "MEDIA TEST VIDEO PLAYBACK: PASS" })
+foreach (var expected in new[] { "video.AutoPlay = True", "audio.AutoPlay = True", "form.SetOnPlay(\"video\", \"VideoPlaybackStarted\")", "form.SetOnPlay(\"audio\", \"AudioPlaybackStarted\")", "form.SetOnError(\"video\", \"VideoPlaybackError\")", "form.SetOnError(\"audio\", \"AudioPlaybackError\")", "MEDIA TEST VIDEO PLAYBACK: PASS", "MEDIA TEST AUDIO PLAYBACK: PASS" })
     if (!mediaSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android media playback sample regression is missing: " + expected);
 
