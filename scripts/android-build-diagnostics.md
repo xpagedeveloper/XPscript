@@ -21,6 +21,16 @@ sharing outside the project. Binary logs omit embedded project imports.
 Progress text is a heuristic, not proof of the active MSBuild task. Inspect the
 last task in `stdout.log` or `msbuild.log` before attributing delays to AOT.
 
+For local probe builds, disable MSBuild node reuse. In this managed environment
+the default project-reference probe can otherwise exit as `Build FAILED` with
+zero reported errors:
+
+```bash
+dotnet build tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj \
+  -c Release --no-restore -m:1 -nr:false
+dotnet tests/AndroidCompilerProbe/bin/Release/net10.0/AndroidCompilerProbe.dll
+```
+
 Microsoft's troubleshooting guidance:
 
 - https://learn.microsoft.com/en-us/visualstudio/msbuild/obtaining-build-logs-with-msbuild
