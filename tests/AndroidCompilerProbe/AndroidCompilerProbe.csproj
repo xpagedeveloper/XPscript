@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- The probe must run offline; NuGet vulnerability service availability must not fail it. -->
+    <NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/XPScript.Compiler/XPScript.Compiler.csproj" />

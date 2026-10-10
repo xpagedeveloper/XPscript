@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <NuGetAudit>false</NuGetAudit>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AssemblyName>xpscriptc</AssemblyName>
     <RootNamespace>XPScript.Compiler</RootNamespace>
