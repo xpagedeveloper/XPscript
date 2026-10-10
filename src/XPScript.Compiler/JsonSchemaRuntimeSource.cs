@@ -130,6 +130,7 @@ internal static class XPScriptJsonSchemaValidator
         var errors = new System.Text.Json.Nodes.JsonArray();
         var node = XPScriptNativeJson.ToNode(value);
         ValidateNode(schema, node, "$", "$", errors, 0, schema);
+        ApplyCustomMessages(schema, errors);
         return new XPScriptJsonValidationResult(errors);
     }
 
@@ -278,7 +279,48 @@ internal static class XPScriptJsonSchemaValidator
     private static string Child(string path, string name) => path + "." + name;
     private static string SchemaChild(string path, string name) => path + "." + name;
     private static string Display(System.Text.Json.Nodes.JsonNode? node) => node?.ToJsonString() ?? "null";
-    private static void Add(System.Text.Json.Nodes.JsonArray errors, string path, string schemaPath, string keyword, string message, string expected, string actual) => errors.Add(new System.Text.Json.Nodes.JsonObject { ["path"] = path, ["schemaPath"] = schemaPath, ["keyword"] = keyword, ["message"] = message, ["expected"] = expected, ["actual"] = actual });
+    private static void ApplyCustomMessages(System.Text.Json.Nodes.JsonObject schema, System.Text.Json.Nodes.JsonArray errors)
+    {
+        foreach (var item in errors)
+        {
+            if (item is not System.Text.Json.Nodes.JsonObject error) continue;
+            var path = ReadString(error["path"]);
+            var keyword = ReadString(error["keyword"]);
+            string custom = string.Empty;
+
+            if (keyword == "required" && schema["x-requiredMessages"] is System.Text.Json.Nodes.JsonObject requiredMessages)
+            {
+                var fieldName = path.StartsWith("$.", StringComparison.Ordinal) ? path[2..].Split('.', '[')[0] : string.Empty;
+                if (fieldName.Length > 0) custom = ReadString(requiredMessages[fieldName]);
+            }
+
+            if (custom.Length == 0 && TryResolvePropertySchema(schema, path, out var propertySchema))
+            {
+                if (propertySchema["x-errorMessages"] is System.Text.Json.Nodes.JsonObject messages)
+                    custom = ReadString(messages[keyword]);
+                if (custom.Length == 0)
+                    custom = ReadString(propertySchema["x-errorMessage"]);
+            }
+
+            if (custom.Length > 0) error["message"] = custom;
+        }
+    }
+
+    private static bool TryResolvePropertySchema(System.Text.Json.Nodes.JsonObject schema, string path, out System.Text.Json.Nodes.JsonObject propertySchema)
+    {
+        propertySchema = schema;
+        if (!path.StartsWith("$.", StringComparison.Ordinal)) return false;
+        var fieldName = path[2..].Split('.', '[')[0];
+        if (fieldName.Length == 0 || schema["properties"] is not System.Text.Json.Nodes.JsonObject properties || properties[fieldName] is not System.Text.Json.Nodes.JsonObject fieldSchema)
+            return false;
+        propertySchema = fieldSchema;
+        return true;
+    }
+
+    private static void Add(System.Text.Json.Nodes.JsonArray errors, string path, string schemaPath, string keyword, string message, string expected, string actual)
+    {
+        errors.Add(new System.Text.Json.Nodes.JsonObject { ["path"] = path, ["schemaPath"] = schemaPath, ["keyword"] = keyword, ["message"] = message, ["expected"] = expected, ["actual"] = actual });
+    }
 }
 """;
 }

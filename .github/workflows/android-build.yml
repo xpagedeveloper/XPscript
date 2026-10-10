@@ -1,0 +1,428 @@
+name: Android Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-build-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-debug-apk:
+    name: Android debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      XPSCRIPT_BUILD_LOG_DIR: ${{ runner.temp }}/android-build-logs
+      MSBUILDDISABLENODEREUSE: '1'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      # Keep the smallest Android regressions first.
+      - name: Run UIForm media target policy probe first
+        run: dotnet run --project ./tests/UIFormMediaPolicyProbe/UIFormMediaPolicyProbe.csproj -c Release
+
+      - name: Run XPImage asset routing probe first
+        run: dotnet run --project ./tests/XPImageAssetProbe/XPImageAssetProbe.csproj -c Release
+
+      - name: Run Android CLI probe first
+        run: dotnet run --project ./tests/AndroidCliProbe/AndroidCliProbe.csproj -c Release
+
+      - name: Run Android setup probe
+        run: dotnet run --project ./tests/AndroidSetupProbe/AndroidSetupProbe.csproj -c Release
+
+      - name: Run Android project metadata probe
+        run: dotnet run --project ./tests/AndroidProjectMetadataProbe/AndroidProjectMetadataProbe.csproj -c Release
+
+      - name: Run Android scaffold probe
+        run: dotnet run --project ./tests/AndroidScaffoldProbe/AndroidScaffoldProbe.csproj -c Release
+
+      - name: Run Android compiler probe
+        # The probe references the built compiler core assembly.
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
+
+      - name: Restore XPScript CLI
+        run: dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+
+      - name: Build XPScript CLI
+        run: dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release --no-restore
+
+      - name: Install .NET Android workload
+        run: dotnet workload install android
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+
+      - name: Build Avalonia Android dependency layer
+        run: dotnet build ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release
+
+      - name: Build Avalonia Android x64 dependency probe first
+        run: dotnet build ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release -r android-x64
+
+      - name: Publish Avalonia Android x64 dependency probe first
+        run: dotnet publish ./src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release -r android-x64 --no-restore
+
+      - name: Compare Avalonia Android restore graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet list ./src/XPScript.UI.Android/XPScript.UI.Android.csproj package --include-transitive > /tmp/avalonia-packages.txt
+          cat /tmp/avalonia-packages.txt
+
+      - name: Compile Android runtime failure regression
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-runtime-error.xps -o ./out/android-runtime-error --runtime=false --platform android-x64 --debug
+
+      - name: Build minimal XPScript Android APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print --runtime=false --platform android-arm64 --debug
+
+      - name: Build x64 headless APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-debug-print.xps -o ./out/android-debug-print-x64 --runtime=false --platform android-x64 --debug
+
+      - name: Reproduce Android UIForm project directly first
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe="$RUNNER_TEMP/android-uiform-direct"
+          rm -rf "$probe"
+          mkdir -p "$probe"
+          cp ./src/XPScript.UI.Android/*.cs "$probe/"
+          cat > "$probe/Direct.csproj" <<'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net10.0-android</TargetFramework>
+              <AssemblyName>android-uiform-direct</AssemblyName>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <Nullable>enable</Nullable>
+              <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+              <NoWarn>$(NoWarn);NU1608</NoWarn>
+              <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+              <RuntimeIdentifier>android-x64</RuntimeIdentifier>
+              <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
+              <AndroidPackageFormat>apk</AndroidPackageFormat>
+              <ApplicationId>eu.xpscript.app</ApplicationId>
+              <ApplicationVersion>1</ApplicationVersion>
+              <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="Avalonia" Version="12.0.3" />
+              <PackageReference Include="Avalonia.Android" Version="12.0.3" />
+              <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
+              <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.11.1" />
+              <PackageReference Include="Xamarin.AndroidX.Media3.Ui" Version="1.11.1" />
+            </ItemGroup>
+          </Project>
+          EOF
+          dotnet publish "$probe/Direct.csproj" -c Release -r android-x64 -o "$probe/publish"
+
+      - name: Build minimal Android UIForm APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-minimal.xps -o ./out/android-uiform-minimal --runtime=false --platform android-x64 --debug
+
+      - name: Build Android Video API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-video-api.xps -o ./out/android-video-api --runtime=false --platform android-x64 --debug
+
+      - name: Build Android UIForm media manual test APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-media-manual-test.xps -o ./out/android-uiform-media-manual-test --runtime=false --platform android-x64 --debug
+
+      - name: Build Android Carousel API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-carousel-api.xps -o ./out/android-carousel-api --runtime=false --platform android-x64 --debug
+
+      - name: Build Android Progress and Activity API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-progress-activity-api.xps -o ./out/android-progress-activity-api --runtime=false --platform android-x64 --debug
+
+      - name: Build Android Switch API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-switch-api.xps -o ./out/android-switch-api --runtime=false --platform android-x64 --debug
+
+      - name: Build Android Icon API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-icon-api.xps -o ./out/android-icon-api --runtime=false --platform android-x64 --debug
+
+      - name: Build Android Card Panel API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-card-panel-api.xps -o ./out/android-card-panel-api --runtime=false --platform android-x64 --debug
+
+      - name: Build Android ScrollView API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-scrollview-api.xps -o ./out/android-scrollview-api --runtime=false --platform android-x64 --debug
+
+      - name: Build Android ListView API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-listview-api.xps -o ./out/android-listview-api --runtime=false --platform android-x64 --debug
+
+      - name: Build Android CameraPreview regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-camera-preview.xps -o ./out/android-camera-preview --runtime=false --platform android-x64 --debug
+
+      - name: Build Android Slider API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-slider-api.xps -o ./out/android-slider-api --runtime=false --platform android-x64 --debug
+
+      - name: Build Android UIForm regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-regression.xps -o ./out/android-uiform-regression --runtime=false --platform android-x64 --debug
+
+      - name: Compile complete Android UIForm controls API sample
+        run: bash ./scripts/compile-android-uiform-controls.sh ./out/android-uiform-controls-api
+
+      - name: Build Android UIForm manual test APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-manual-test.xps -o ./out/android-uiform-manual-test --runtime=false --platform android-x64 --debug
+
+      - name: Run Android x86_64 emulator smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: Pixel_5
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            adb wait-for-device
+            adb shell getprop ro.build.version.sdk
+            apk="$(find ./out/android-debug-print-x64 -type f -name '*.apk' -print -quit)"
+            test -n "$apk"
+            before_packages="$RUNNER_TEMP/android-packages-before.txt"
+            after_packages="$RUNNER_TEMP/android-packages-after.txt"
+            adb shell pm list packages | sort > "$before_packages"
+            adb install -r "$apk"
+            adb shell pm list packages | sort > "$after_packages"
+            package_name="$(comm -13 "$before_packages" "$after_packages" | sed -n '1s/^package://p' | tr -d '\\r')"
+            if [ -z "$package_name" ]; then
+              echo 'Unable to identify the package installed by the Android smoke APK.' >&2
+              adb shell pm list packages
+              exit 1
+            fi
+            echo "ANDROID_PACKAGE=$package_name"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 12); do
+              if adb logcat -d -s XPScript:D '*:S' | grep -q 'XPSCRIPT-EXIT=0'; then
+                echo 'Android emulator smoke test passed.'
+                break
+              fi
+              sleep 2
+            done
+            if ! adb logcat -d -s XPScript:D '*:S' | grep -q 'XPSCRIPT-EXIT=0'; then
+              adb logcat -d -s XPScript:D '*:S'
+              echo 'Android emulator smoke test did not observe XPSCRIPT-EXIT=0.' >&2
+              exit 1
+            fi
+
+            media_apk="$(find ./out/android-uiform-media-manual-test -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$media_apk"
+            adb install -r "$media_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            video_played=false
+            audio_played=false
+            for attempt in $(seq 1 45); do
+              if adb logcat -d | grep -q 'MEDIA TEST VIDEO PLAYBACK: PASS'; then
+                video_played=true
+              fi
+              if adb logcat -d | grep -q 'MEDIA TEST AUDIO PLAYBACK: PASS'; then
+                audio_played=true
+              fi
+              if [ "$video_played" = true ] && [ "$audio_played" = true ]; then
+                echo 'Android media playback regression passed for Video and Audio.'
+                break
+              fi
+              if adb logcat -d | grep -Eq 'MEDIA TEST (VIDEO|AUDIO) PLAYBACK: ERROR'; then
+                adb logcat -d | grep -E 'MEDIA TEST|AndroidRuntime|ExoPlayer|Media3' || true
+                echo 'Android media playback regression reported an error.' >&2
+                exit 1
+              fi
+              if adb logcat -d | grep -q 'MEDIA TEST STARTUP: PASS'; then
+                echo 'Android media test startup passed; waiting for playback callback.'
+              fi
+              sleep 2
+            done
+            if [ "$video_played" != true ] || [ "$audio_played" != true ]; then
+              adb logcat -d | grep -E 'MEDIA TEST|AndroidRuntime|ExoPlayer|Media3' || true
+              echo 'Android media test did not reach playback.' >&2
+              exit 1
+            fi
+
+            carousel_apk="$(find ./out/android-carousel-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$carousel_apk"
+            adb install -r "$carousel_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-CAROUSEL-AUTOADVANCE=3000' && \
+                 adb logcat -d | grep -q 'ANDROID-CAROUSEL-INDEX=1'; then
+                echo 'Android Carousel configuration regression passed.'
+                break
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-CAROUSEL|AndroidRuntime|FATAL EXCEPTION' || true
+            if ! adb logcat -d | grep -q 'ANDROID-CAROUSEL-AUTOADVANCE=3000'; then
+              echo 'Android Carousel regression did not reach configured state.' >&2
+              exit 1
+            fi
+
+            progress_apk="$(find ./out/android-progress-activity-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$progress_apk"
+            adb install -r "$progress_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-PROGRESS-VALUE=0.5' && \
+                 adb logcat -d | grep -q 'ANDROID-ACTIVITY-RUNNING=True'; then
+                echo 'Android ProgressBar and ActivityIndicator regression passed.'
+                break
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-PROGRESS|ANDROID-ACTIVITY|AndroidRuntime|FATAL EXCEPTION' || true
+            if ! adb logcat -d | grep -q 'ANDROID-PROGRESS-VALUE=0.5'; then
+              echo 'Android ProgressBar/ActivityIndicator regression did not reach configured state.' >&2
+              exit 1
+            fi
+
+            switch_apk="$(find ./out/android-switch-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$switch_apk"
+            adb install -r "$switch_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-SWITCH-VALUE=True'; then
+                echo 'Android Switch regression passed.'
+                break
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-SWITCH|AndroidRuntime|FATAL EXCEPTION' || true
+            if ! adb logcat -d | grep -q 'ANDROID-SWITCH-VALUE=True'; then
+              echo 'Android Switch regression did not reach configured state.' >&2
+              exit 1
+            fi
+
+            icon_apk="$(find ./out/android-icon-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$icon_apk"
+            adb install -r "$icon_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-ICON-STATE=ready'; then
+                echo 'Android Icon regression passed.'
+                break
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-ICON|AndroidRuntime|FATAL EXCEPTION' || true
+            if ! adb logcat -d | grep -q 'ANDROID-ICON-STATE=ready'; then
+              echo 'Android Icon regression did not reach configured state.' >&2
+              exit 1
+            fi
+
+            card_panel_apk="$(find ./out/android-card-panel-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$card_panel_apk"
+            adb install -r "$card_panel_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-CARD-PANEL-STATE=ready'; then
+                echo 'Android Card/Panel regression passed.'
+                break
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-CARD-PANEL|AndroidRuntime|FATAL EXCEPTION' || true
+            if ! adb logcat -d | grep -q 'ANDROID-CARD-PANEL-STATE=ready'; then
+              echo 'Android Card/Panel regression did not reach configured state.' >&2
+              exit 1
+            fi
+
+            scrollview_apk="$(find ./out/android-scrollview-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$scrollview_apk"
+            adb install -r "$scrollview_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-SCROLLVIEW-STATE=ready'; then
+                echo 'Android ScrollView regression passed.'
+                break
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-SCROLLVIEW|AndroidRuntime|FATAL EXCEPTION' || true
+            if ! adb logcat -d | grep -q 'ANDROID-SCROLLVIEW-STATE=ready'; then
+              echo 'Android ScrollView regression did not reach configured state.' >&2
+              exit 1
+            fi
+
+            listview_apk="$(find ./out/android-listview-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$listview_apk"
+            adb install -r "$listview_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-LISTVIEW-STATE=ready' && \
+                 adb logcat -d | grep -q 'ANDROID-LISTVIEW-COUNT=2'; then
+                echo 'Android ListView regression passed.'
+                break
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-LISTVIEW|AndroidRuntime|FATAL EXCEPTION' || true
+            if ! adb logcat -d | grep -q 'ANDROID-LISTVIEW-STATE=ready'; then
+              echo 'Android ListView regression did not reach configured state.' >&2
+              exit 1
+            fi
+
+            camera_apk="$(find ./out/android-camera-preview -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$camera_apk"
+            adb install -r "$camera_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-CAMERA-STATE=ready'; then
+                echo 'Android CameraPreview regression passed.'
+                break
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-CAMERA|Camera|AndroidRuntime|FATAL EXCEPTION' || true
+            if ! adb logcat -d | grep -q 'ANDROID-CAMERA-STATE=ready'; then
+              echo 'Android CameraPreview regression did not reach configured state.' >&2
+              exit 1
+            fi
+
+            slider_apk="$(find ./out/android-slider-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$slider_apk"
+            adb install -r "$slider_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-SLIDER-STATE=ready' && \
+                 adb logcat -d | grep -q 'ANDROID-SLIDER-STEP=0.25'; then
+                echo 'Android Slider regression passed.'
+                exit 0
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-SLIDER|AndroidRuntime|FATAL EXCEPTION' || true
+            echo 'Android Slider regression did not reach configured state.' >&2
+            exit 1
+
+      - name: Verify debug APKs exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t apks < <(find ./out -type f -name '*.apk' -print)
+          if [ "${#apks[@]}" -lt 5 ]; then
+            echo 'Android compiler did not produce the ARM64 headless, x64 headless, minimal x64 UIForm, regression x64 UIForm and manual-test x64 UIForm APKs.' >&2
+            exit 1
+          fi
+          printf 'ANDROID_APK=%s\n' "${apks[@]}"
+
+      - name: Upload Android build diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-diagnostics
+          path: ${{ runner.temp }}/android-build-logs
+          if-no-files-found: ignore

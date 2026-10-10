@@ -64,10 +64,6 @@ public sealed partial class XPScriptTranspiler
         var originalTargetRestriction = originalFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(originalTargetRestriction.Symbol))
             throw TargetUnavailable(originalTargetRestriction.Symbol, runtimeIdentifier, originalTargetRestriction.AllowedTargets, originalTargetRestriction.Detail);
-
-        // Semantic validators must run against the unmodified expanded source so their
-        // line numbers still index sourceMap. Source markers insert physical lines and
-        // would otherwise shift validator diagnostics away from the include map.
         try
         {
             new DateComparisonValidator().Validate(source, sourceName);
@@ -76,32 +72,14 @@ public sealed partial class XPScriptTranspiler
         }
         catch (CompilerException ex)
         {
-            // Semantic validators operate on the flattened include source. Remap their
-            // coordinates immediately while the exact include map is still available.
             var remapped = SourceMapDiagnostics.Remap(ex.Message, sourceName, sourceMap);
             if (string.Equals(remapped, ex.Message, StringComparison.Ordinal)) throw;
             throw new CompilerException(remapped, ex.DiagnosticCode, ex.Category, ex.GeneratedDiagnostics);
         }
-
-        // Expand multiline strings before the ordinary string scanner. Multiline
-        // delimiters are language syntax and must not be misclassified as XPS1006 by
-        // the compatibility string scan.
         source = new MultilineStringPreprocessor().Transform(source, sourceName);
-
-        // Resolve and validate physical line continuations while the source still has
-        // its original physical layout. NormalizeSource also consumes continuations, so
-        // this must run first to preserve dangling-continuation coordinates.
         source = new SourceLineContinuationPreprocessor().Transform(source, sourceName);
-
-        // Validate/normalize ordinary string delimiters while the source still has the
-        // physical line layout represented by sourceMap. Running this after marker and
-        // compatibility preprocessors would report transformed coordinates.
         var operatorArray = new OperatorArrayCompatibilityPreprocessor();
         source = operatorArray.NormalizeSource(source);
-
-        // Run source-coordinate-sensitive syntax preprocessors before inserting runtime
-        // source markers. Marker insertion adds physical lines and would otherwise shift
-        // diagnostics away from the user's XPScript source.
         source = new EscapedQuotePreprocessor().Transform(source);
         var jsonNames = new JsonNameMetadataPreprocessor();
         source = jsonNames.Transform(source);
@@ -126,9 +104,6 @@ public sealed partial class XPScriptTranspiler
         source = new NativeHttpJsonPreprocessor().Transform(source, sourceName);
         var archiveRequested = runtimeFeatures.Archive;
         source = new ArchiveObjectPreprocessor().Transform(source, sourceName);
-        // Attach runtime/#line markers only after source-coordinate-sensitive parser
-        // preprocessors have emitted diagnostics. Inserting markers earlier changes
-        // physical line numbers seen by Type/Enum/native constructor validation.
         source = new SourceLineMarkerPreprocessor().Transform(source, sourceMap, sourceName);
         var imageRequested = runtimeFeatures.Image;
         source = new ImageObjectPreprocessor().Transform(source);
@@ -149,12 +124,7 @@ public sealed partial class XPScriptTranspiler
         var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
         {
-            var detectedFeatures = runtimeFeatures with
-            {
-                Archive = usesArchive,
-                Spreadsheet = usesSpreadsheet,
-                NetworkTools = usesNetworkTools
-            };
+            var detectedFeatures = runtimeFeatures with { Archive = usesArchive, Spreadsheet = usesSpreadsheet, NetworkTools = usesNetworkTools };
             var runtimeTargetRestriction = detectedFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(runtimeTargetRestriction.Symbol))
                 throw TargetUnavailable(runtimeTargetRestriction.Symbol, runtimeIdentifier, runtimeTargetRestriction.AllowedTargets, runtimeTargetRestriction.Detail);
@@ -207,6 +177,7 @@ public sealed partial class XPScriptTranspiler
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
         if (runtimeFeatures.RequiresHttp) { generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n"; generated += "\n\n" + HttpCoreRuntimeSource.Code + "\n"; generated += "\n\n" + AsyncHttpRuntimeSource.Code + "\n"; }
         if (runtimeFeatures.Ui) generated += "\n\n" + UIExtensionRuntimeSource.Code + "\n";
+        if (runtimeFeatures.Ui) generated += "\n\n" + MobileServiceRuntimeSource.Code + "\n";
         if (runtimeFeatures.RequiresHttp && source.Contains("XPScriptHttpJsonHelpers", StringComparison.Ordinal)) generated += "\n\n" + HttpJsonRuntimeSource.Code + "\n";
         if (runtimeFeatures.RequiresHttp && runtimeFeatures.Ui && source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal)) generated += "\n\n" + HttpUiFormRuntimeSource.Code + "\n";
         if (runtimeFeatures.Database) generated += "\n\n" + CaseInsensitiveDynamicObjectRuntimeSource.Code + "\n";
@@ -228,7 +199,7 @@ public sealed partial class XPScriptTranspiler
         generated += "\n\n" + HclPrintFormattingRuntimeSource.Code + "\n";
         generated += "\n\n" + HclIsDefinedCompatibilityRuntimeSource.Code + "\n";
         if (usesAi) { generated = new AiSessionRuntimePostProcessor().Transform(generated); generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated); }
-        generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(generated);
+        generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures, runtimeIdentifier).Transform(generated);
         generated = new BrowserWasmHttpCsrfPostProcessor(runtimeIdentifier).Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
         generated = generated.Replace("XPScriptRuntime.SetArgs(args);", $"XPScriptRuntime.SetArgs(args);\n        XPScriptFileSystemRuntime.SetScriptDirectory(\"{EscapeCSharpString(GetSourceDirectory(sourceName))}\");\n        XPNativeInteropRuntime.Initialize();\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});", StringComparison.Ordinal);

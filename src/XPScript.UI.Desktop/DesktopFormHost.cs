@@ -58,11 +58,42 @@ public static class DesktopFormHost
         var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var customButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
+        if (!string.IsNullOrWhiteSpace(request.BootImage)) panel.Children.Add(DesktopImageHost.Create(request.BootImage, string.Empty));
+        if (!string.IsNullOrWhiteSpace(request.BootText)) panel.Children.Add(new TextBlock { Text = request.BootText, FontSize = 20, HorizontalAlignment = HorizontalAlignment.Center });
         var fieldsGrid = CreateFieldsGrid(request.GridColumns);
         panel.Children.Add(fieldsGrid);
+        TabControl? tabControl = null;
+        var tabGrids = new Dictionary<string, Grid>(StringComparer.OrdinalIgnoreCase);
+        var namedGrids = new Dictionary<string, Grid>(StringComparer.OrdinalIgnoreCase);
+        if (request.Tabs.Count > 0)
+        {
+            var tabItems = new List<TabItem>();
+            foreach (var tab in request.Tabs)
+            {
+                var grid = CreateFieldsGrid(request.GridColumns);
+                tabGrids[tab.Name] = grid;
+                tabItems.Add(new TabItem { Header = tab.Label, Tag = tab.Name, Content = grid });
+            }
+            tabControl = new TabControl { ItemsSource = tabItems };
+            var selected = tabItems.FindIndex(item => string.Equals(item.Tag?.ToString(), request.ActiveTab, StringComparison.OrdinalIgnoreCase));
+            tabControl.SelectedIndex = selected >= 0 ? selected : 0;
+            panel.Children.Add(tabControl);
+        }
+        foreach (var definition in request.Grids)
+        {
+            var grid = CreateFieldsGrid(definition.Columns);
+            namedGrids[definition.Name] = grid;
+            if (definition.TabName.Length > 0 && tabGrids.TryGetValue(definition.TabName, out var tabGrid))
+            {
+                EnsureRows(tabGrid, tabGrid.RowDefinitions.Count + 1);
+                Grid.SetRow(grid, tabGrid.RowDefinitions.Count - 1);
+                Grid.SetColumnSpan(grid, request.GridColumns);
+                tabGrid.Children.Add(grid);
+            }
+            else panel.Children.Add(grid);
+        }
         var validationText = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Red };
 
-        var automaticRow = 0;
         foreach (var field in request.Fields)
         {
             if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase)) continue;
@@ -98,16 +129,19 @@ public static class DesktopFormHost
             }
             fieldPanel.Children.Add(fieldValidation);
 
-            var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : automaticRow++;
+            var targetGrid = field.GridName.Length > 0 && namedGrids.TryGetValue(field.GridName, out var namedGrid)
+                ? namedGrid
+                : field.TabName.Length > 0 && tabGrids.TryGetValue(field.TabName, out var tabGrid) ? tabGrid : fieldsGrid;
+            var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : targetGrid.RowDefinitions.Count;
             var column = field.LayoutColumn > 0 ? field.LayoutColumn - 1 : 0;
             var columnSpan = field.LayoutColumn > 0 ? Math.Max(1, field.ColumnSpan) : Math.Max(1, request.GridColumns);
             var rowSpan = Math.Max(1, field.RowSpan);
-            EnsureRows(fieldsGrid, row + rowSpan);
+            EnsureRows(targetGrid, row + rowSpan);
             Grid.SetRow(fieldPanel, row);
             Grid.SetColumn(fieldPanel, column);
             Grid.SetColumnSpan(fieldPanel, columnSpan);
             Grid.SetRowSpan(fieldPanel, rowSpan);
-            fieldsGrid.Children.Add(fieldPanel);
+            targetGrid.Children.Add(fieldPanel);
         }
 
         var eventInProgress = false;
@@ -144,6 +178,13 @@ public static class DesktopFormHost
         {
             using var document = JsonDocument.Parse(responseJson);
             var root = document.RootElement;
+            if (tabControl is not null && root.TryGetProperty("activeTab", out var activeTabElement))
+            {
+                var activeTab = activeTabElement.GetString() ?? string.Empty;
+                var items = tabControl.ItemsSource?.Cast<TabItem>().ToList() ?? new List<TabItem>();
+                var selected = items.FindIndex(item => string.Equals(item.Tag?.ToString(), activeTab, StringComparison.OrdinalIgnoreCase));
+                if (selected >= 0) tabControl.SelectedIndex = selected;
+            }
             if (root.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
             {
                 foreach (var state in fields.EnumerateArray())
@@ -251,6 +292,9 @@ public static class DesktopFormHost
                     case ComboBox comboBox: comboBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, comboBox); break;
                     case ListBox listBox: listBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, listBox); break;
                     case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, checkBox); break;
+                    case Slider slider: slider.ValueChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, slider); break;
+                    case DatePicker datePicker: datePicker.SelectedDateChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, datePicker); break;
+                    case TimePicker timePicker: timePicker.PropertyChanged += (_, args) => { if (args.Property == TimePicker.SelectedTimeProperty) TriggerEvent(eventKind + sourceField.Name, sourceField, timePicker); }; break;
                     case StackPanel radioPanel:
                         foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, radioPanel);
                         break;
@@ -265,7 +309,7 @@ public static class DesktopFormHost
             var actionButtons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
             foreach (var definition in request.Buttons)
             {
-                var button = new Button { Content = definition.Label, MinWidth = 80, IsVisible = definition.Visible, IsEnabled = definition.Enabled };
+                var button = new Button { Content = definition.Label, MinWidth = 80, IsVisible = definition.Visible, IsEnabled = definition.Enabled, CornerRadius = new CornerRadius(definition.CornerRadius) };
                 customButtons[definition.Name] = button;
                 button.Click += (_, _) => TriggerEvent("button:" + definition.Name);
                 actionButtons.Children.Add(button);
@@ -276,6 +320,11 @@ public static class DesktopFormHost
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
         var ok = new Button { Content = "OK", MinWidth = 80 };
         var cancel = new Button { Content = "Cancel", MinWidth = 80 };
+        if (request.DefaultButtonCornerRadius is double defaultButtonRadius)
+        {
+            ok.CornerRadius = new CornerRadius(defaultButtonRadius);
+            cancel.CornerRadius = new CornerRadius(defaultButtonRadius);
+        }
         buttons.Children.Add(ok);
         buttons.Children.Add(cancel);
         panel.Children.Add(buttons);
@@ -433,15 +482,74 @@ public static class DesktopFormHost
         var value = field.Value ?? string.Empty;
         return field.Type switch
         {
-            "TextArea" => new TextBox { Text = value, AcceptsReturn = true, MinHeight = 96, TextWrapping = TextWrapping.Wrap },
-            "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•' },
+            "TextArea" => new TextBox { Text = value, AcceptsReturn = true, MinHeight = 96, TextWrapping = TextWrapping.Wrap, CornerRadius = new CornerRadius(field.CornerRadius) },
+            "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•', CornerRadius = new CornerRadius(field.CornerRadius) },
+            "Switch" => new CheckBox { IsChecked = bool.TryParse(value, out var switchValue) && switchValue },
+            "RangeField" => new Slider
+            {
+                Minimum = field.Minimum is { } minimum ? (double)minimum : 0,
+                Maximum = field.Maximum is { } maximum ? (double)maximum : 1,
+                Value = double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var sliderValue) ? sliderValue : 0,
+                TickFrequency = field.Step is > 0 ? field.Step.Value : 0,
+                IsSnapToTickEnabled = field.Step is > 0
+            },
+            "ProgressBar" => new ProgressBar
+            {
+                Minimum = 0,
+                Maximum = 1,
+                Value = field.ProgressValue ?? 0,
+                IsIndeterminate = field.ProgressIndeterminate
+            },
+            "ActivityIndicator" => new ProgressBar
+            {
+                IsIndeterminate = field.ActivityRunning,
+                Minimum = 0,
+                Maximum = 1
+            },
+            "DateField" => new DatePicker
+            {
+                SelectedDate = DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var selectedDate)
+                    ? new DateTimeOffset(selectedDate)
+                    : null
+            },
+            "TimeField" => new TimePicker
+            {
+                SelectedTime = TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var selectedTime) ? selectedTime : null
+            },
+            "DateTimeField" => CreateDateTimeEditor(value),
+            "Icon" => new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(field.Icon) ? field.Label : field.Icon,
+                FontSize = 24,
+                HorizontalAlignment = HorizontalAlignment.Left
+            },
+            "Card" => new Border
+            {
+                BorderBrush = Brushes.Gray,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(field.CornerRadius),
+                Padding = new Thickness(12),
+                Child = new TextBlock { Text = field.Label }
+            },
+            "Panel" => new Border
+            {
+                BorderBrush = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(8),
+                Child = new TextBlock { Text = field.Label }
+            },
+            "ScrollView" => new ScrollViewer
+            {
+                MinHeight = 96,
+                Content = new TextBlock { Text = field.Label, TextWrapping = TextWrapping.Wrap }
+            },
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Select" => CreateSelect(field),
             "ListBox" => CreateListBox(field, false),
             "MultiListBox" => CreateListBox(field, true),
             "RadioGroup" => CreateRadioGroup(field),
             "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
-            _ => new TextBox { Text = value }
+            _ => new TextBox { Text = value, CornerRadius = new CornerRadius(field.CornerRadius) }
         };
     }
 
@@ -579,10 +687,36 @@ public static class DesktopFormHost
     {
         if (editor is TextBox textBox) return textBox.Text ?? string.Empty;
         if (editor is CheckBox checkBox) return checkBox.IsChecked == true ? "true" : string.Empty;
+        if (editor is Slider slider) return slider.Value.ToString(CultureInfo.InvariantCulture);
+        if (editor is DatePicker datePicker) return datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
+        if (editor is TimePicker timePicker) return timePicker.SelectedTime?.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture) ?? string.Empty;
+        if (editor is StackPanel dateTimePanel && field.Type == "DateTimeField")
+        {
+            var date = dateTimePanel.Children.OfType<DatePicker>().FirstOrDefault()?.SelectedDate;
+            var time = dateTimePanel.Children.OfType<TimePicker>().FirstOrDefault()?.SelectedTime;
+            return date is null || time is null ? string.Empty : $"{date.Value:yyyy-MM-dd}T{time.Value.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)}";
+        }
         if (editor is ComboBox comboBox) return comboBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is StackPanel radioPanel) return radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
         return string.Empty;
+    }
+
+    private static Control CreateDateTimeEditor(string value)
+    {
+        var date = DateTime.TryParseExact(value, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
+            ? parsed
+            : (DateTime?)null;
+        return new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            Children =
+            {
+                new DatePicker { SelectedDate = date is null ? null : new DateTimeOffset(date.Value) },
+                new TimePicker { SelectedTime = date?.TimeOfDay }
+            }
+        };
     }
 
     private static JsonElement? ReadEditorValue(DesktopFormField field, Control editor)
@@ -594,6 +728,7 @@ public static class DesktopFormHost
             if (field.Type == "ColorField" && text.Length > 0) return JsonSerializer.SerializeToElement(text.ToLowerInvariant());
             return JsonSerializer.SerializeToElement(text);
         }
+        if (editor is Slider slider) return JsonSerializer.SerializeToElement(slider.Value);
         if (editor is CheckBox checkBox) return JsonSerializer.SerializeToElement(checkBox.IsChecked == true);
         if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.SelectedItem?.ToString() ?? string.Empty);
         if (editor is ListBox listBox)

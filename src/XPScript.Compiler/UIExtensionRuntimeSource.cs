@@ -43,6 +43,19 @@ internal sealed class XPScriptUIField
     private string _webViewHtml = string.Empty;
     private string _webViewUserAgent = string.Empty;
     private string _webViewBackground = string.Empty;
+    private string _mediaSource = string.Empty;
+    private long _mediaPosition;
+    private long _mediaDuration;
+    private double _mediaVolume = 1.0;
+    private bool _mediaAutoPlay;
+    private bool _mediaLoop;
+    private bool _mediaMuted;
+    private double _mediaPlaybackRate = 1.0;
+    private bool _mediaIsPlaying;
+    private double _progressValue;
+    private bool _progressIndeterminate;
+    private bool _activityRunning;
+    private double _step = 1;
 
     internal XPScriptUIField(XPScriptUIForm owner, string name, string label, string type)
     {
@@ -60,12 +73,76 @@ internal sealed class XPScriptUIField
     public int? MaxLength { get; set; }
     public decimal? Minimum { get; set; }
     public decimal? Maximum { get; set; }
+    public double Step { get { EnsureSlider(); return _step; } set { EnsureSlider(); if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0) throw new XPScriptRuntimeException(5, "UIForm Slider Step must be greater than zero."); _step = value; } }
     public List<string> Options { get; } = [];
+    public string IconName { get; set; } = string.Empty;
 
     public string Source
     {
-        get => Type == "WebView" && _owner.Visible ? WebViewCommand("source", null) : _webViewSource;
-        set { EnsureWebView(); _webViewSource = NormalizeWebViewUrl(value); _webViewHtml = string.Empty; if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource); }
+        get
+        {
+            if (Type == "WebView") return _owner.Visible ? WebViewCommand("source", null) : _webViewSource;
+            if (Type is "Video" or "Audio") return _mediaSource;
+            throw new XPScriptRuntimeException(5, "Source is only supported for WebView, Video and Audio fields.");
+        }
+        set
+        {
+            if (Type is "Video" or "Audio")
+            {
+                _mediaSource = NormalizeMediaSource(value);
+                _mediaPosition = 0;
+                _mediaDuration = 0;
+                _mediaIsPlaying = false;
+                return;
+            }
+            EnsureWebView();
+            _webViewSource = NormalizeWebViewUrl(value);
+            _webViewHtml = string.Empty;
+            if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource);
+        }
+    }
+    public long Position
+    {
+        get { EnsureMedia(); return _mediaPosition; }
+        set { EnsureMedia(); _mediaPosition = Math.Max(0, value); }
+    }
+    public long Duration { get { EnsureMedia(); return _mediaDuration; } internal set { EnsureMedia(); _mediaDuration = Math.Max(0, value); } }
+    public double Volume
+    {
+        get { EnsureMedia(); return _mediaVolume; }
+        set { EnsureMedia(); if (value < 0 || value > 1) throw new XPScriptRuntimeException(5, "UIForm media Volume must be between 0 and 1."); _mediaVolume = value; }
+    }
+    public bool AutoPlay { get { EnsureMedia(); return _mediaAutoPlay; } set { EnsureMedia(); _mediaAutoPlay = value; } }
+    public bool Loop { get { EnsureMedia(); return _mediaLoop; } set { EnsureMedia(); _mediaLoop = value; } }
+    public bool Muted { get { EnsureMedia(); return _mediaMuted; } set { EnsureMedia(); _mediaMuted = value; } }
+    public double PlaybackRate
+    {
+        get { EnsureMedia(); return _mediaPlaybackRate; }
+        set { EnsureMedia(); if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm media PlaybackRate must be greater than zero."); _mediaPlaybackRate = value; }
+    }
+    public bool IsPlaying { get { EnsureMedia(); return _mediaIsPlaying; } }
+    public void Play() { EnsureMedia(); _mediaIsPlaying = true; }
+    public void Pause() { EnsureMedia(); _mediaIsPlaying = false; }
+    public double Value
+    {
+        get { EnsureProgress(); return _progressValue; }
+        set
+        {
+            EnsureProgress();
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1)
+                throw new XPScriptRuntimeException(5, "UIForm ProgressBar Value must be between 0 and 1.");
+            _progressValue = value;
+        }
+    }
+    public bool IsIndeterminate
+    {
+        get => Type == "ProgressBar" ? _progressIndeterminate : EnsureActivityIndicatorValue();
+        set { EnsureProgress(); _progressIndeterminate = value; }
+    }
+    public bool IsRunning
+    {
+        get { EnsureActivityIndicator(); return _activityRunning; }
+        set { EnsureActivityIndicator(); _activityRunning = value; }
     }
     public string Html
     {
@@ -93,7 +170,17 @@ internal sealed class XPScriptUIField
     public bool GoBack() { EnsureWebView(); return WebViewCommand("back", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
     public bool GoForward() { EnsureWebView(); return WebViewCommand("forward", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
     public bool Refresh() { EnsureWebView(); return WebViewCommand("refresh", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
-    public bool Stop() { EnsureWebView(); return WebViewCommand("stop", null).Equals("true", StringComparison.OrdinalIgnoreCase); }
+    public bool Stop()
+    {
+        if (Type is "Video" or "Audio")
+        {
+            _mediaIsPlaying = false;
+            _mediaPosition = 0;
+            return true;
+        }
+        EnsureWebView();
+        return WebViewCommand("stop", null).Equals("true", StringComparison.OrdinalIgnoreCase);
+    }
     public void ShowPrintUI() { EnsureWebView(); _ = WebViewCommand("print", null); }
     public void PrintToPdf(object? path) { EnsureWebView(); _ = WebViewCommand("pdf", XPScriptRuntime.CStr(path)); }
     public void Copy() { EnsureWebView(); _ = WebViewCommand("copy", null); }
@@ -118,13 +205,43 @@ internal sealed class XPScriptUIField
         return XPScriptUIDesktopAdapter.WebViewCommand(_owner.InstanceId, Name, command, argument);
     }
     private void EnsureWebView() { if (Type != "WebView") throw new XPScriptRuntimeException(5, "This UIForm field is not a WebView."); }
+    private void EnsureMedia() { if (Type is not ("Video" or "Audio")) throw new XPScriptRuntimeException(5, "This UIForm field is not a media field."); }
+    private void EnsureProgress() { if (Type != "ProgressBar") throw new XPScriptRuntimeException(5, "This UIForm field is not a ProgressBar."); }
+    private bool EnsureActivityIndicatorValue() { EnsureActivityIndicator(); return true; }
+    private void EnsureActivityIndicator() { if (Type != "ActivityIndicator") throw new XPScriptRuntimeException(5, "This UIForm field is not an ActivityIndicator."); }
+    private void EnsureSlider() { if (Type != "RangeField") throw new XPScriptRuntimeException(5, "This UIForm field is not a Slider."); }
+    private static string NormalizeMediaSource(string? value)
+    {
+        var text = (value ?? string.Empty).Trim();
+        if (text.Length == 0) return string.Empty;
+        if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri))
+            throw new XPScriptRuntimeException(5, "UIForm media Source is invalid.");
+        if (uri.IsAbsoluteUri)
+        {
+            if (uri.Scheme is not ("http" or "https" or "file" or "content" or "android.resource"))
+                throw new XPScriptRuntimeException(5, "UIForm media Source uses an unsupported URI scheme.");
+            return uri.AbsoluteUri;
+        }
+        var normalized = text.Replace('\\', '/');
+        if (normalized.StartsWith("/", StringComparison.Ordinal) || normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
+            throw new XPScriptRuntimeException(5, "UIForm media relative Source must stay within the application asset root.");
+        return normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? normalized : "assets/" + normalized;
+    }
+
     private static string NormalizeWebViewUrl(string? value)
     {
         var text = (value ?? string.Empty).Trim();
         if (text.Length == 0) return "about:blank";
-        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri)) throw new XPScriptRuntimeException(5, "UIForm WebView Source must be an absolute URI.");
-        if (uri.Scheme is not ("http" or "https" or "file" or "about" or "data")) throw new XPScriptRuntimeException(5, "UIForm WebView Source uses an unsupported URI scheme.");
-        return uri.AbsoluteUri;
+        if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri)) throw new XPScriptRuntimeException(5, "UIForm WebView Source is invalid.");
+        if (uri.IsAbsoluteUri)
+        {
+            if (uri.Scheme is not ("http" or "https" or "file" or "about" or "data")) throw new XPScriptRuntimeException(5, "UIForm WebView Source uses an unsupported URI scheme.");
+            return uri.AbsoluteUri;
+        }
+        var normalized = text.Replace('\\', '/');
+        if (normalized.StartsWith("/", StringComparison.Ordinal) || normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
+            throw new XPScriptRuntimeException(5, "UIForm WebView relative Source must stay within the application asset root.");
+        return normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? normalized : "assets/" + normalized;
     }
 }
 
@@ -134,9 +251,12 @@ internal sealed class XPScriptUIForm
     private int? _width;
     private int? _height;
     private bool _resizable;
+    private string _bootText = string.Empty;
+    private string _bootImage = string.Empty;
     private XPScriptJsonObject _data = XPScriptNativeJson.CreateObject();
     private XPScriptJsonSchema? _validationSchema;
     private readonly List<XPScriptUIField> _fields = [];
+    private readonly List<(string Name, string Command)> _mediaCommands = [];
 
     internal XPScriptUIForm(string title, int? width, int? height, bool resizable)
     {
@@ -150,6 +270,22 @@ internal sealed class XPScriptUIForm
     public int Width { get => _width ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm width must be greater than zero."); _width = value; } }
     public int Height { get => _height ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm height must be greater than zero."); _height = value; } }
     public bool Resizable { get => _resizable; set => _resizable = value; }
+    public string BootText { get => _bootText; set => _bootText = value ?? string.Empty; }
+    public string BootImage
+    {
+        get => _bootImage;
+        set
+        {
+            var text = (value ?? string.Empty).Trim();
+            if (text.Length == 0) { _bootImage = string.Empty; return; }
+            if (!Uri.TryCreate(text, UriKind.RelativeOrAbsolute, out var uri)) throw new XPScriptRuntimeException(5, "UIForm BootImage source is invalid.");
+            if (uri.IsAbsoluteUri) { _bootImage = uri.AbsoluteUri; return; }
+            var normalized = text.Replace('\\', '/');
+            if (normalized.StartsWith("/", StringComparison.Ordinal) || normalized.Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
+                throw new XPScriptRuntimeException(5, "UIForm BootImage relative source must stay within the application asset root.");
+            _bootImage = normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? normalized : "assets/" + normalized;
+        }
+    }
     public bool HasExplicitSize => _width.HasValue || _height.HasValue;
     public object Data => _data;
     public int FieldCount => _fields.Count;
@@ -211,8 +347,30 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddNumberField(object? name, object? label) => AddField(name, label, "NumberField");
     public XPScriptUIField AddRangeField(object? name) => AddField(name, name, "RangeField");
     public XPScriptUIField AddRangeField(object? name, object? label) => AddField(name, label, "RangeField");
+    public XPScriptUIField AddSlider(object? name) => AddField(name, name, "RangeField");
+    public XPScriptUIField AddSlider(object? name, object? label) => AddField(name, label, "RangeField");
     public XPScriptUIField AddCheckBox(object? name) => AddField(name, name, "CheckBox");
     public XPScriptUIField AddCheckBox(object? name, object? label) => AddField(name, label, "CheckBox");
+    public XPScriptUIField AddSwitch(object? name) => AddField(name, name, "Switch");
+    public XPScriptUIField AddSwitch(object? name, object? label) => AddField(name, label, "Switch");
+    public XPScriptUIField AddIcon(object? name, object? icon)
+    {
+        var field = AddField(name, string.Empty, "Icon");
+        field.IconName = XPScriptRuntime.CStr(icon).Trim();
+        return field;
+    }
+    public XPScriptUIField AddIcon(object? name, object? icon, object? label)
+    {
+        var field = AddField(name, label, "Icon");
+        field.IconName = XPScriptRuntime.CStr(icon).Trim();
+        return field;
+    }
+    public XPScriptUIField AddCard(object? name) => AddField(name, name, "Card");
+    public XPScriptUIField AddCard(object? name, object? label) => AddField(name, label, "Card");
+    public XPScriptUIField AddPanel(object? name) => AddField(name, name, "Panel");
+    public XPScriptUIField AddPanel(object? name, object? label) => AddField(name, label, "Panel");
+    public XPScriptUIField AddScrollView(object? name) => AddField(name, name, "ScrollView");
+    public XPScriptUIField AddScrollView(object? name, object? label) => AddField(name, label, "ScrollView");
     public XPScriptUIField AddDateField(object? name) => AddField(name, name, "DateField");
     public XPScriptUIField AddDateField(object? name, object? label) => AddField(name, label, "DateField");
     public XPScriptUIField AddTimeField(object? name) => AddField(name, name, "TimeField");
@@ -233,13 +391,65 @@ internal sealed class XPScriptUIForm
     public XPScriptUIField AddSelect(object? name, object? label) => AddField(name, label, "Select");
     public XPScriptUIField AddListBox(object? name) => AddField(name, name, "ListBox");
     public XPScriptUIField AddListBox(object? name, object? label) => AddField(name, label, "ListBox");
+    public XPScriptUIField AddListView(object? name) => AddField(name, name, "ListView");
+    public XPScriptUIField AddListView(object? name, object? label) => AddField(name, label, "ListView");
     public XPScriptUIField AddMultiListBox(object? name) => AddField(name, name, "MultiListBox");
     public XPScriptUIField AddMultiListBox(object? name, object? label) => AddField(name, label, "MultiListBox");
     public XPScriptUIField AddRadioGroup(object? name) => AddField(name, name, "RadioGroup");
     public XPScriptUIField AddRadioGroup(object? name, object? label) => AddField(name, label, "RadioGroup");
     public XPScriptUIField AddHiddenField(object? name) => AddField(name, string.Empty, "HiddenField");
     public XPScriptUIField AddWebView(object? name) => AddField(name, string.Empty, "WebView");
+    public XPScriptUIField AddVideo(object? name) => AddField(name, name, "Video");
+    public XPScriptUIField AddVideo(object? name, object? label) => AddField(name, label, "Video");
+    public XPScriptUIField AddCarousel(object? name, params object?[] sources)
+    {
+        var field = AddField(name, name, "Carousel");
+        foreach (var source in sources ?? []) field.CarouselSources.Add(NormalizeMediaSource(source, "carousel"));
+        return field;
+    }
+    public void SetCarouselIndex(object? name, object? index)
+    {
+        var field = FindField(name);
+        if (field.Type != "Carousel") throw new XPScriptRuntimeException(5, "UIForm.SetCarouselIndex requires a Carousel field.");
+        var value = Convert.ToInt32(index, System.Globalization.CultureInfo.InvariantCulture);
+        if (value < 0 || value >= field.CarouselSources.Count) throw new XPScriptRuntimeException(5, "Carousel index is outside the available item range.");
+        field.CarouselIndex = value;
+    }
+    public void SetCarouselLoop(object? name, object? loop)
+    {
+        var field = FindField(name);
+        if (field.Type != "Carousel") throw new XPScriptRuntimeException(5, "UIForm.SetCarouselLoop requires a Carousel field.");
+        field.CarouselLoop = Convert.ToBoolean(loop, System.Globalization.CultureInfo.InvariantCulture);
+    }
+    public void SetCarouselAutoAdvance(object? name, object? milliseconds)
+    {
+        var field = FindField(name);
+        if (field.Type != "Carousel") throw new XPScriptRuntimeException(5, "UIForm.SetCarouselAutoAdvance requires a Carousel field.");
+        var value = Convert.ToInt32(milliseconds, System.Globalization.CultureInfo.InvariantCulture);
+        if (value < 0) throw new XPScriptRuntimeException(5, "Carousel auto-advance interval cannot be negative.");
+        field.CarouselAutoAdvanceMilliseconds = value == 0 ? null : value;
+    }
+    public XPScriptUIField AddAudio(object? name) => AddField(name, name, "Audio");
+    public XPScriptUIField AddAudio(object? name, object? label) => AddField(name, label, "Audio");
+    public XPScriptUIField AddProgressBar(object? name) => AddField(name, string.Empty, "ProgressBar");
+    public XPScriptUIField AddProgressBar(object? name, object? label) => AddField(name, label, "ProgressBar");
+    public XPScriptUIField AddActivityIndicator(object? name) => AddField(name, string.Empty, "ActivityIndicator");
+    public XPScriptUIField AddActivityIndicator(object? name, object? label) => AddField(name, label, "ActivityIndicator");
+
+    public void PlayMedia(object? name) => QueueMediaCommand(name, "play");
+    public void PauseMedia(object? name) => QueueMediaCommand(name, "pause");
+    public void StopMedia(object? name) => QueueMediaCommand(name, "stop");
+
+    private void QueueMediaCommand(object? nameValue, string command)
+    {
+        var field = FindField(nameValue);
+        if (field.Type is not ("Video" or "Audio"))
+            throw new XPScriptRuntimeException(5, "UIForm media commands require an Audio or Video field.");
+        _mediaCommands.Add((field.Name, command));
+    }
     public XPScriptUIField AddWebView(object? name, object? label) => AddField(name, label, "WebView");
+    public XPScriptUIField AddCameraPreview(object? name) => AddField(name, name, "CameraPreview");
+    public XPScriptUIField AddCameraPreview(object? name, object? label) => AddField(name, label, "CameraPreview");
 
     public void AddOption(object? name, object? value)
     {
@@ -303,6 +513,12 @@ internal sealed class XPScriptUIForm
             throw new XPScriptRuntimeException(5, "UIForm numeric range is invalid.");
         field.Minimum = min;
         field.Maximum = max;
+    }
+
+    public void SetSliderStep(object? name, object? step)
+    {
+        var field = FindField(name);
+        field.Step = Convert.ToDouble(step, System.Globalization.CultureInfo.InvariantCulture);
     }
 
     public object? GetFieldValue(object? name)
@@ -434,6 +650,7 @@ internal sealed class XPScriptUIForm
                 _data.Set(field.Name, number);
                 return;
             case "CheckBox":
+            case "Switch":
                 if (submitted.Length == 0) { if (exists) _data.Set(field.Name, false); return; }
                 _data.Set(field.Name, submitted.Equals("1", StringComparison.OrdinalIgnoreCase) || submitted.Equals("true", StringComparison.OrdinalIgnoreCase) || submitted.Equals("on", StringComparison.OrdinalIgnoreCase));
                 return;
@@ -505,6 +722,10 @@ internal sealed class XPScriptUIForm
     {
         var html = new System.Text.StringBuilder();
         html.Append("<form method=\"post\" class=\"xpscript-uiform\">");
+        if (_bootImage.Length > 0)
+            html.Append("<img class=\"xpscript-uiform-boot-image\" src=\"").Append(System.Net.WebUtility.HtmlEncode(_bootImage)).Append("\" alt=\"\" aria-hidden=\"true\">");
+        if (_bootText.Length > 0)
+            html.Append("<div class=\"xpscript-uiform-boot-text\">").Append(System.Net.WebUtility.HtmlEncode(_bootText)).Append("</div>");
         if (_title.Length > 0) html.Append("<h1>").Append(System.Net.WebUtility.HtmlEncode(_title)).Append("</h1>");
         foreach (var field in _fields)
         {
@@ -529,6 +750,7 @@ internal sealed class XPScriptUIForm
                 case "NumberField": html.Append("<input type=\"number\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(range).Append(">"); break;
                 case "RangeField": html.Append("<input type=\"range\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(range).Append(">"); break;
                 case "CheckBox":
+                case "Switch":
                     var checkedValue = GetFieldValue(field.Name) is bool b && b;
                     html.Append("<input type=\"checkbox\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"1\"");
                     if (checkedValue) html.Append(" checked");

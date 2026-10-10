@@ -32,6 +32,7 @@ try
         "new" => XpsScaffolder.Run(args[1..]),
         "openapi" => XPScript.Cli.XpsOpenApiCommand.Run(args[1..]),
         "service" => await XPScript.Cli.ServiceCommand.RunAsync(args[1..]),
+        "android" => await XPScript.Cli.AndroidCommand.RunAsync(args[1..]),
         "web" => await RunWebAsync(args[1..]),
         "fastcgi" => await RunFastCgiAsync(args[1..]),
         _ => Fail("Unknown command: " + args[0])
@@ -517,9 +518,14 @@ Usage:
   xpscript security <source.xps> [--platform RID|--rid RID] [--json]
   xpscript [--info] run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
   xpscript <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [compiler options...]
-  xpscript new <rest|web|desktop|cli> <directory>
+  xpscript new <rest|web|desktop|cli|android> <directory>
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
   xpscript service install <compiled-service> --name NAME --display-name "DISPLAY NAME" [--start auto|manual|disabled]
+  xpscript android devices
+  xpscript android install <app.apk> [--device SERIAL]
+  xpscript android launch [--device SERIAL]
+  xpscript android logs [--device SERIAL]
+  xpscript android run <source.xps> [--device SERIAL]
   xpscript web <directory> [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
                 [--health] [--metrics] [--operational-allow CIDR ...] [--sessions]
@@ -534,9 +540,10 @@ Usage:
 Command model:
   compile  Compile an XPScript source file.
   run      Compile to an isolated temporary output and execute on the current OS/architecture. Program arguments are passed only through --Args.
-  new      Create a REST, web, desktop or CLI starter in a required target directory. Use . for the current directory.
+  new      Create a REST, web, desktop, CLI or Android starter in a required target directory. Use . for the current directory.
   openapi  Generate XPScript REST server source from OpenAPI 3.0/3.1 YAML or JSON.
   service  Install compiled XPScript services using the native service manager.
+  android  Discover and deploy to Android devices and emulators.
   web      Run the standalone Kestrel runtime.
   fastcgi  Run the FastCGI web runtime.
 
@@ -555,6 +562,7 @@ Scaffolding:
 
 Examples:
   xpscript new cli ./myapp
+  xpscript new android ./myandroidapp
   xpscript new desktop ./myapp
   xpscript new web ./mysite
   xpscript new rest ./myapi
@@ -566,6 +574,7 @@ Examples:
   xpscript run hello.xps --info
   xpscript run hello.xps --Args "first second"
   xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto
+  xpscript android devices
   xpscript web ./site
   xpscript web --config ./production.cfg
   xpscript web --root ./site --sessions

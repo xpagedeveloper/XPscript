@@ -6,7 +6,7 @@ namespace XPScript.Compiler;
 internal sealed class SourceLineMarkerPreprocessor
 {
     private static readonly Regex ApplicationExecutableMetadataPattern = new(
-        @"^\s*Application\.(?<property>Icon|Executable\.(?:Icon|FileDescription|Comments|Product|Company|Version|Copyright))\s*=\s*""(?<value>(?:""""|[^""])*)""\s*$",
+        @"^\s*Application\.(?<property>PackageName|Icon|Executable\.(?:Icon|FileDescription|Comments|Product|Company|Version|Copyright))\s*=\s*""(?<value>(?:""""|[^""])*)""\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public string Transform(string source) => Transform(source, null, "input.xps");
@@ -95,6 +95,8 @@ internal sealed class SourceLineMarkerPreprocessor
             catch { return null; }
         }
 
+        if (property.Equals("PackageName", StringComparison.OrdinalIgnoreCase))
+            return ApplicationObjectPreprocessor.BuildPackageNameMarker + value;
         if (property.Equals("Executable.FileDescription", StringComparison.OrdinalIgnoreCase))
             return ApplicationObjectPreprocessor.BuildFileDescriptionMarker + value;
         if (property.Equals("Executable.Comments", StringComparison.OrdinalIgnoreCase))

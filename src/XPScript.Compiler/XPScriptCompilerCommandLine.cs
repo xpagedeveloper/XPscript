@@ -7,6 +7,8 @@ namespace XPScript.Compiler;
 public static class XPScriptCompilerCommandLine
 {
     private static int progressLineWidth;
+    private static int compilerProgressPercent;
+    private static string compilerProgressPhase = "Starting";
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -177,6 +179,7 @@ public static class XPScriptCompilerCommandLine
         string? target = null;
         var restricted = false;
         var debug = false;
+        var info = false;
         ApplicationSecurityMode? securityMode = null;
         var embedAssets = false;
         var sourceRoots = new List<string>();
@@ -210,6 +213,8 @@ public static class XPScriptCompilerCommandLine
                     restricted = true;
                 else if (args[i] == "--debug")
                     debug = true;
+                else if (args[i] == "--info")
+                    info = true;
                 else if (args[i].StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
                     securityMode = ApplicationSecurityModeContext.Parse(args[i]["--security=".Length..]);
                 else if (args[i] == "--security" && i + 1 < args.Length)
@@ -234,7 +239,7 @@ public static class XPScriptCompilerCommandLine
             if (target == "webiis" && embedAssets)
                 throw new ArgumentException("--embed-assets is supported for desktop executable compilation. Web and browser-WASM assets are packaged as application assets.");
 
-            var effectiveSecurityMode = securityMode ?? (debug ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
+            var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
             using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             using var publishLayoutScope = CompilePublishLayoutContext.Push(singleFile, selfContained);
@@ -249,8 +254,8 @@ public static class XPScriptCompilerCommandLine
                     timer,
                     $"Compiling {sourceName} as WebIIS package").ConfigureAwait(false);
                 CompleteProgress(targetResult.Success
-                    ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
-                    : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
+                    ? $"Compiled {sourceName} in {FormatCompileElapsed(timer.Elapsed)}"
+                    : $"Compilation failed for {sourceName} after {FormatCompileElapsed(timer.Elapsed)}");
                 WriteResult(targetResult, resultFormat);
                 return targetResult.Success ? 0 : 2;
             }
@@ -262,23 +267,35 @@ public static class XPScriptCompilerCommandLine
             var defaultExtension = runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".exe" : "";
             outputPath ??= Path.Combine(Path.GetDirectoryName(sourcePath)!, fileName + defaultExtension);
 
-            if (UIFormAppAssets.UsesUIForm(sourcePath))
+            var usesUiFormAssets = UIFormAppAssets.UsesUIForm(sourcePath);
+            if (usesUiFormAssets)
                 UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
 
-            using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
+            var effectiveEmbedAssets = embedAssets || usesUiFormAssets;
+            using var assetScope = UIFormAssetCompileContext.Push(effectiveEmbedAssets);
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
             var compiler = new CompilerDriver();
             var mode = $"single-file={singleFile.ToString().ToLowerInvariant()}, runtime={selfContained.ToString().ToLowerInvariant()}";
+            compilerProgressPercent = 0;
+            compilerProgressPhase = "Starting";
+            using var progressScope = CompilerProgressContext.Push((percent, phase) =>
+            {
+                compilerProgressPercent = percent;
+                compilerProgressPhase = phase;
+            });
             var result = await WaitWithProgressAsync(
                 compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier),
                 timer,
-                $"Compiling {sourceName} [{runtimeIdentifier}, {mode}]").ConfigureAwait(false);
-            if (result.Success && !embedAssets && UIFormAppAssets.UsesUIForm(sourcePath))
+                $"Compiling {sourceName} [{runtimeIdentifier}, {mode}]",
+                () => (compilerProgressPercent, compilerProgressPhase)).ConfigureAwait(false);
+            if (result.Success && !effectiveEmbedAssets && usesUiFormAssets)
                 UIFormAppAssets.PublishExternalAssets(sourcePath, outputPath);
             CompleteProgress(result.Success
-                ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
-                : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
+                ? $"Compiled {sourceName} in {FormatCompileElapsed(timer.Elapsed)}"
+                : $"Compilation failed for {sourceName} after {FormatCompileElapsed(timer.Elapsed)}");
+            if (result.Success && (info || debug))
+                WriteArtifactSize(result.Output ?? outputPath);
             WriteResult(result, resultFormat);
             return result.Success ? 0 : 2;
         }
@@ -573,6 +590,9 @@ public static class XPScriptCompilerCommandLine
 
                 if (debug)
                 {
+                    compilerProgressPercent = 0;
+                    compilerProgressPhase = "Validating source";
+                    WriteProgress($"Running {sourceName}... 0% | Validating source | {FormatProgressElapsed(timer.Elapsed)}");
                     var validationResult = await new CompilerDriver()
                         .ValidateWithResultAsync(sourcePath, currentRuntimeIdentifier)
                         .ConfigureAwait(false);
@@ -602,18 +622,39 @@ public static class XPScriptCompilerCommandLine
                         restricted,
                         sourceRoots,
                         sourcePreprocessors);
-                var compileResult = info
-                    ? await WaitWithProgressAsync(
+                CompileResult compileResult;
+                if (debug)
+                {
+                    compilerProgressPercent = 0;
+                    compilerProgressPhase = "Starting";
+                    using var progressScope = CompilerProgressContext.Push((percent, phase) =>
+                    {
+                        compilerProgressPercent = percent;
+                        compilerProgressPhase = phase;
+                    });
+                    compileResult = await WaitWithProgressAsync(
                         compileTask,
                         timer,
-                        $"Compiling {sourceName} [{currentRuntimeIdentifier}, run]").ConfigureAwait(false)
-                    : await compileTask.ConfigureAwait(false);
+                        $"Compiling {sourceName} [{currentRuntimeIdentifier}, run]",
+                        () => (compilerProgressPercent, compilerProgressPhase)).ConfigureAwait(false);
+                }
+                else if (info)
+                {
+                    compileResult = await WaitWithProgressAsync(
+                        compileTask,
+                        timer,
+                        $"Compiling {sourceName} [{currentRuntimeIdentifier}, run]").ConfigureAwait(false);
+                }
+                else
+                {
+                    compileResult = await compileTask.ConfigureAwait(false);
+                }
 
                 if (!compileResult.Success)
                 {
                     runCache.Invalidate();
-                    if (info)
-                        CompleteProgress($"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
+                    if (info || debug)
+                        CompleteProgress($"Compilation failed for {sourceName} after {FormatProgressElapsed(timer.Elapsed)}");
                     WriteResult(compileResult, resultFormat);
                     return 2;
                 }
@@ -623,12 +664,16 @@ public static class XPScriptCompilerCommandLine
                     throw new InvalidOperationException("Run compilation succeeded without a runnable executable.");
 
                 if (runCache.Enabled) runCache.MarkReady(executablePath);
-                if (info)
-                    CompleteProgress($"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s");
+                if (info || debug)
+                {
+                    CompleteProgress($"Compiled {sourceName} in {FormatProgressElapsed(timer.Elapsed)}");
+                    WriteArtifactSize(executablePath);
+                }
             }
-            else if (info)
+            else if (info || debug)
             {
                 WriteProgressLine($"Run cache hit for {sourceName}");
+                WriteArtifactSize(executablePath);
             }
 
             if (string.IsNullOrWhiteSpace(executablePath) || !File.Exists(executablePath))
@@ -777,14 +822,20 @@ public static class XPScriptCompilerCommandLine
         throw new ArgumentException(optionName + " must be true or false.");
     }
 
-    private static async Task<T> WaitWithProgressAsync<T>(Task<T> task, Stopwatch timer, string status)
+    private static async Task<T> WaitWithProgressAsync<T>(Task<T> task, Stopwatch timer, string status, Func<(int Percent, string Phase)>? progress = null)
     {
         var nextReportAt = TimeSpan.Zero;
         while (!task.IsCompleted)
         {
             if (timer.Elapsed >= nextReportAt)
             {
-                WriteProgress($"{status}... {timer.Elapsed.TotalSeconds:F0}s");
+                if (progress is null)
+                    WriteProgress($"{status}... {timer.Elapsed.TotalSeconds:F0}s");
+                else
+                {
+                    var current = progress();
+                    WriteProgress($"{status}... {current.Percent}% | {current.Phase} | {FormatProgressElapsed(timer.Elapsed)}");
+                }
                 nextReportAt += TimeSpan.FromSeconds(1);
             }
 
@@ -792,6 +843,32 @@ public static class XPScriptCompilerCommandLine
             if (completed == task) break;
         }
         return await task.ConfigureAwait(false);
+    }
+
+    private static void WriteArtifactSize(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+        var bytes = new FileInfo(path).Length;
+        var mib = bytes / (1024d * 1024d);
+        WriteProgressLine($"Output: {path} ({mib:F2} MiB, {bytes:N0} bytes)");
+    }
+
+    private static string FormatProgressElapsed(TimeSpan elapsed)
+    {
+        if (elapsed.TotalMinutes < 1)
+            return $"{elapsed.TotalSeconds:F0}s";
+
+        var totalSeconds = (int)Math.Floor(elapsed.TotalSeconds);
+        return $"{totalSeconds / 60},{totalSeconds % 60:00} min";
+    }
+
+    private static string FormatCompileElapsed(TimeSpan elapsed)
+    {
+        if (elapsed.TotalMinutes < 1)
+            return $"{elapsed.TotalSeconds:F1}s";
+
+        var totalSeconds = (int)Math.Floor(elapsed.TotalSeconds);
+        return $"{totalSeconds / 60},{totalSeconds % 60:00} min";
     }
 
     private static void WriteProgress(string message)

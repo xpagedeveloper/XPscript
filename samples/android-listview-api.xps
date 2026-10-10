@@ -1,0 +1,9 @@
+Sub Main()
+    Dim form As New UIForm("Android ListView API")
+    Dim list = form.AddListView("items", "Items")
+    form.AddOption("items", "First")
+    form.AddOption("items", "Second")
+    Call Application.Debug.Info("ANDROID-LISTVIEW-COUNT=" & list.Options.Count)
+    Call Application.Debug.Info("ANDROID-LISTVIEW-STATE=ready")
+    Print "ANDROID-LISTVIEW-API=ready"
+End Sub

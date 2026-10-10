@@ -1,0 +1,7 @@
+Sub Main()
+    Dim form As New UIForm("Android Icon API")
+    Dim icon = form.AddIcon("status", "check", "Status")
+    Call Application.Debug.Info("ANDROID-ICON-NAME=" & icon.IconName)
+    Call Application.Debug.Info("ANDROID-ICON-STATE=ready")
+    Print "ANDROID-ICON-API=ready"
+End Sub

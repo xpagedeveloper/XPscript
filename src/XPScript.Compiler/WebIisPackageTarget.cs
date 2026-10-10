@@ -25,6 +25,9 @@ internal static class WebIisPackageTarget
         var siteRoot = Path.Combine(outputPath, "site");
         Directory.CreateDirectory(siteRoot);
         CopyApplicationFiles(root, siteRoot);
+        var sourceAssets = Path.Combine(root, UIFormAppAssets.DirectoryName);
+        if (Directory.Exists(sourceAssets) && UIFormAppAssets.UsesUIForm(sourcePath))
+            UIFormAppAssets.CopyAssetsToDirectory(sourcePath, Path.Combine(siteRoot, ".xpscript-private"));
 
         var hostRoot = Path.Combine(siteRoot, "host");
         Directory.CreateDirectory(hostRoot);
@@ -125,6 +128,7 @@ internal static class WebIisPackageTarget
     private static bool IsExcludedDirectory(string segment)
         => segment.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
            segment.Equals(".xpscript-cache", StringComparison.OrdinalIgnoreCase) ||
+           segment.Equals("assets", StringComparison.OrdinalIgnoreCase) ||
            segment.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
            segment.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
            segment.Equals("publish-webiis", StringComparison.OrdinalIgnoreCase);

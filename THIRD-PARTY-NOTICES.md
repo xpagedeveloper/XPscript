@@ -30,7 +30,7 @@ XPscript also uses the following open source NuGet packages. The versions below 
 
 The following packages are distributed under the MIT License:
 
-- [Avalonia](https://github.com/AvaloniaUI/Avalonia), including `Avalonia.Desktop`, `Avalonia.FreeDesktop`, `Avalonia.FreeDesktop.AtSpi`, `Avalonia.HarfBuzz`, `Avalonia.Native`, `Avalonia.Remote.Protocol`, `Avalonia.Skia`, `Avalonia.Themes.Fluent`, `Avalonia.Win32`, and `Avalonia.X11` (`12.0.3`)
+- [Avalonia](https://github.com/AvaloniaUI/Avalonia), including `Avalonia.Android`, `Avalonia.Desktop`, `Avalonia.FreeDesktop`, `Avalonia.FreeDesktop.AtSpi`, `Avalonia.HarfBuzz`, `Avalonia.Native`, `Avalonia.Remote.Protocol`, `Avalonia.Skia`, `Avalonia.Themes.Fluent`, `Avalonia.Win32`, and `Avalonia.X11` (`12.0.3`)
 - [Avalonia.Controls.WebView](https://github.com/AvaloniaUI/Avalonia.Controls.WebView) (`12.0.1`)
 - [BouncyCastle.Cryptography](https://github.com/bcgit/bc-csharp) (`2.6.2`)
 - [HarfBuzzSharp](https://github.com/mono/SkiaSharp), including its platform native asset packages (`8.3.1.3`)
@@ -86,7 +86,15 @@ XPscript is built on the [.NET platform](https://github.com/dotnet/runtime) and 
 
 The .NET runtime is supplied by the .NET distribution and is not source code copied into this repository. This notice does not grant rights to redistribute HCL Notes/Domino binaries, which remain subject to HCL's commercial product terms.
 
+## AndroidX Media3
+
+Android UIForm media support uses the `Xamarin.AndroidX.Media3.ExoPlayer` and `Xamarin.AndroidX.Media3.Ui` bindings. The underlying AndroidX Media3 libraries are distributed by the Android Open Source Project under the Apache License 2.0. The .NET bindings are distributed under their package license. Release packages must preserve the NuGet-generated license and notice files for these dependencies.
+
 ## Trademarks and third-party brands
+
+## AndroidX ViewPager2
+
+Android UIForm Carousel support uses the `Xamarin.AndroidX.ViewPager2` binding and its AndroidX dependencies. The underlying AndroidX ViewPager2 library is distributed by the Android Open Source Project under the Apache License 2.0. Release packages must preserve the NuGet-generated license and notice files for this dependency graph.
 
 HCL, HCL Notes, HCL Domino, Notes, Domino, Domino Designer, LotusScript, and related product names and marks are trademarks or registered trademarks of their respective owners. References to these products and technologies are used to identify compatibility, interoperability, implementation references, or required external runtimes. XPscript is an independent project and is not affiliated with, sponsored by, certified by, or endorsed by HCL unless HCL explicitly states otherwise.
 

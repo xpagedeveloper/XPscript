@@ -1,14 +1,6 @@
 name: Notes Database QueryAccess
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - .github/workflows/oneshot-notes-query-access.yml
-      - samples/notes-database-query-access-runtime-test.xps
-      - tests/NotesFullRuntimeSurfaceAudit/**
-      - src/XPScript.Compiler/**
-      - src/XPScript.Compiler.Core/**
   workflow_dispatch:
 
 permissions:

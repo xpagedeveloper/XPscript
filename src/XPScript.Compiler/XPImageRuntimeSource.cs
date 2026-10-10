@@ -15,7 +15,11 @@ internal sealed class XPImage : System.IDisposable
     private const ulong MaxPixelCacheDiskBytes = 512UL * 1024 * 1024;
     private static int _resourceLimitsInitialized;
     private ImageMagick.MagickImage? _image;
-    private string _format;
+    private string _format = string.Empty;
+    private string _src = string.Empty;
+    private string _loadError = string.Empty;
+
+    public XPImage() { EnsureResourceLimits(); }
 
     public XPImage(int width, int height) : this(width, height, "transparent") { }
 
@@ -35,6 +39,35 @@ internal sealed class XPImage : System.IDisposable
         _format = NormalizeFormat(format);
     }
 
+    public bool IsLoaded => _image is not null;
+    public string Src
+    {
+        get => _src;
+        set
+        {
+            var source = value?.Trim() ?? string.Empty;
+            _image?.Dispose();
+            _image = null;
+            _format = string.Empty;
+            _src = source;
+            _loadError = string.Empty;
+            if (source.Length == 0) return;
+            try
+            {
+                var loaded = LoadSource(source);
+                _image = loaded._image;
+                loaded._image = null;
+                _format = loaded._format;
+            }
+            catch (System.Exception ex)
+            {
+                _loadError = ex.Message;
+            }
+        }
+    }
+
+    public string LoadError => _loadError;
+
     public int Width => checked((int)Image.Width);
     public int Height => checked((int)Image.Height);
     public string Format => _format;
@@ -50,10 +83,60 @@ internal sealed class XPImage : System.IDisposable
     public double DpiX => _image.Density?.X ?? 0d;
     public double DpiY => _image.Density?.Y ?? 0d;
 
-    public static XPImage Load(string path)
+    public static XPImage Load(string source)
     {
-        if (string.IsNullOrWhiteSpace(path)) throw new System.ArgumentException("Image path cannot be empty.", nameof(path));
-        var resolved = XPScriptFileSystemRuntime.ResolvePath(path);
+        if (string.IsNullOrWhiteSpace(source)) throw new System.ArgumentException("Image source cannot be empty.", nameof(source));
+        return LoadSource(source.Trim());
+    }
+
+    public static XPImage CreateColorMap(int width = 360, int height = 256)
+    {
+        ValidateDimensions(width, height);
+        var image = new XPImage(width, height, "white");
+        for (var y = 0; y < height; y++)
+        {
+            var saturation = width <= 1 ? 1d : (double)y / (height - 1);
+            for (var x = 0; x < width; x++)
+            {
+                var hue = width <= 1 ? 0d : (double)x / (width - 1) * 360d;
+                image.SetPixel(x, y, HsvToRgb(hue, saturation, 1d));
+            }
+        }
+        return image;
+    }
+
+    private static string HsvToRgb(double hue, double saturation, double value)
+    {
+        var chroma = value * saturation;
+        var segment = hue / 60d;
+        var intermediate = chroma * (1d - System.Math.Abs(segment % 2d - 1d));
+        var (red, green, blue) = segment switch
+        {
+            < 1d => (chroma, intermediate, 0d),
+            < 2d => (intermediate, chroma, 0d),
+            < 3d => (0d, chroma, intermediate),
+            < 4d => (0d, intermediate, chroma),
+            < 5d => (intermediate, 0d, chroma),
+            _ => (chroma, 0d, intermediate)
+        };
+        var match = value - chroma;
+        return $"#{(int)System.Math.Round((red + match) * 255d):X2}{(int)System.Math.Round((green + match) * 255d):X2}{(int)System.Math.Round((blue + match) * 255d):X2}";
+    }
+
+    private static XPImage LoadSource(string source)
+    {
+        if (source.StartsWith("data:", System.StringComparison.OrdinalIgnoreCase))
+            return FromBase64(source);
+
+        if (System.Uri.TryCreate(source, System.UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
+        {
+            using var client = new System.Net.Http.HttpClient { Timeout = System.TimeSpan.FromSeconds(15) };
+            var bytes = client.GetByteArrayAsync(uri).GetAwaiter().GetResult();
+            if (bytes.LongLength > MaxEncodedBytes) throw new System.InvalidOperationException("Image exceeds the maximum encoded size.");
+            return FromBytes(bytes);
+        }
+
+        var resolved = XPScriptFileSystemRuntime.ResolvePath(source);
         var info = new System.IO.FileInfo(resolved);
         if (!info.Exists) throw new System.IO.FileNotFoundException("Image file was not found.", resolved);
         if (info.Length > MaxEncodedBytes) throw new System.InvalidOperationException("Image exceeds the maximum encoded size.");
@@ -106,6 +189,15 @@ internal sealed class XPImage : System.IDisposable
     }
 
     public XPImage Clone() => new((ImageMagick.MagickImage)_image.Clone(), _format);
+
+    public static implicit operator string(XPImage image)
+    {
+        System.ArgumentNullException.ThrowIfNull(image);
+        var bytes = image.ToBytes("png");
+        if (bytes.LongLength is < 1 or > 32L * 1024 * 1024)
+            throw new XPScriptRuntimeException(5, "UIForm image source must contain between 1 byte and 32 MiB.");
+        return "data:image/png;base64," + System.Convert.ToBase64String(bytes);
+    }
 
     public void Resize(int width, int height)
     {
@@ -702,6 +794,7 @@ internal sealed class XPImage : System.IDisposable
             throw new System.ArgumentException("XPImage output path must be relative to the application directory.", nameof(path));
         var root = XPScriptFileSystemRuntime.ResolvePath(".");
         var resolved = XPScriptFileSystemRuntime.ResolvePath(path);
+        XPScriptFileSystemRuntime.EnsureWritablePath(resolved);
         var relative = System.IO.Path.GetRelativePath(root, resolved);
         if (relative == ".." || relative.StartsWith(".." + System.IO.Path.DirectorySeparatorChar, System.StringComparison.Ordinal) || System.IO.Path.IsPathRooted(relative))
             throw new System.ArgumentException("XPImage output path must remain inside the application directory.", nameof(path));
