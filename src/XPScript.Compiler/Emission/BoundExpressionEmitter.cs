@@ -86,8 +86,8 @@ public sealed class BoundExpressionEmitter
             if (call.Function.Name.Equals("LBound", StringComparison.OrdinalIgnoreCase))
                 return local.ArrayLowerBound.ToString(CultureInfo.InvariantCulture);
             if (call.Function.Name.Equals("UBound", StringComparison.OrdinalIgnoreCase))
-                return local.ArrayLength is { } length
-                    ? (local.ArrayLowerBound + length - 1).ToString(CultureInfo.InvariantCulture)
+                return local.ArrayUpperBound is { } upperBound
+                    ? upperBound.ToString(CultureInfo.InvariantCulture)
                     : $"{Emit(tagArgument)}.GetUpperBound(0)";
         }
         var arguments = call.Arguments.Select((argument, index) =>
