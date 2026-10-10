@@ -1,0 +1,6 @@
+Sub Main()
+    Dim colorMap = XPImage.CreateColorMap(360, 256)
+    Dim selectedColor = XPImage.ColorMapColorAt(colorMap.Width, colorMap.Height, 120, 80)
+    Call Application.Debug.Info("COLOR-MAP-SAMPLE=" & selectedColor)
+    Print selectedColor
+End Sub

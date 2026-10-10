@@ -1,6 +1,11 @@
 using System.Reflection;
 using XPScript.Compiler;
 
+var colorMapSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "color-map-api.xps"));
+foreach (var expected in new[] { "XPImage.CreateColorMap(360, 256)", "XPImage.ColorMapColorAt", "COLOR-MAP-SAMPLE=" })
+    if (!colorMapSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Color map sample is incomplete: " + expected);
+
 var transpiler = new XPScriptTranspiler();
 var generated = transpiler.Transpile("""
 Sub Main()
