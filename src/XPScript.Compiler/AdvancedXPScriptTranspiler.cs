@@ -814,6 +814,15 @@ internal static class LSForAllRuntime
             Write(sb, $"LSRef<{className}> {name} = LSRef<{className}>.Create(new {className}({TransformArgumentList(newObject.Groups[3].Value)}));"); return true;
         }
 
+        var inferred = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
+        if (inferred.Success)
+        {
+            var name = inferred.Groups[1].Value;
+            EnsureLocalDoesNotShadowFunctionResult(name);
+            Write(sb, $"var {name} = {TransformExpression(inferred.Groups[2].Value)};");
+            return true;
+        }
+
         var dim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*(?:\[\])?))?$", RegexOptions.IgnoreCase);
         if (!dim.Success) return false;
         var variable = dim.Groups[1].Value; var xpscriptType = string.IsNullOrWhiteSpace(dim.Groups[2].Value) ? "Variant" : dim.Groups[2].Value;
