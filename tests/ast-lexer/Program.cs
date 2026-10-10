@@ -808,6 +808,11 @@ Equal("Integer", initializedDimStatement.TypeNameToken!.Text, "initialized Dim t
 Equal(SyntaxKind.BinaryExpression, initializedDimStatement.Initializer!.Kind, "initialized Dim expression kind");
 Equal(new TextSpan(0, 28), initializedDimStatement.Span, "initialized Dim full span");
 
+var rankedArrayParser = new StatementParser("Dim matrix(1, 2, 3) As Long");
+var rankedArrayStatement = (DimStatementSyntax)rankedArrayParser.ParseStatement();
+Equal(3, rankedArrayStatement.ArrayRank, "multidimensional Dim rank");
+Equal(1, rankedArrayParser.Diagnostics.Count, "multidimensional Dim diagnostic");
+
 const string whileSource = "While True\ncount = count + 1\nWend";
 var whileParser = new StatementParser(whileSource);
 var whileStatement = whileParser.ParseStatement();
