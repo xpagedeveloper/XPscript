@@ -845,6 +845,11 @@ internal static class Program
         foreach (var transfer in FlattenStatements(statements).OfType<GoToStatementSyntax>().Where(item => !item.IsGoSub))
         {
             if (!labels.TryGetValue(transfer.Target.Text, out var label)) continue;
+            if (label.Span.Start > transfer.Span.Start &&
+                FlattenStatements(statements).OfType<DimStatementSyntax>().Any(declaration =>
+                    declaration.Span.Start > transfer.Span.Start && declaration.Span.End < label.Span.Start))
+                throw MappedDiagnostic(transfer.Span, sourcePath, source,
+                    $"GoTo cannot jump over local declaration to label '{label.Identifier.Text}'. Move the declaration before the GoTo or move the label before the declaration.");
             var sourceScope = InnermostContaining(scopes, transfer.Span);
             var targetScope = InnermostContaining(scopes, label.Span);
             if (targetScope is not null && !ReferenceEquals(sourceScope, targetScope) &&

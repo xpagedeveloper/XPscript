@@ -117,6 +117,8 @@ $nestedResult = dotnet (Join-Path $nestedOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($nestedResult -join "`n") -ne "0`nNESTED_GOTO_OK") { throw 'AST nested GoTo branch/loop semantics failed.' }
 $nestedLoopError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-nested-for-error.xps') -o (Join-Path $output 'nested-for-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($nestedLoopError -join "`n") -notmatch 'GoTo cannot enter a For or ForAll block') { throw 'AST did not diagnose a GoTo entering a nested loop clearly.' }
+$declarationJumpError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-declaration-error.xps') -o (Join-Path $output 'declaration-jump-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($declarationJumpError -join "`n") -notmatch 'GoTo cannot jump over local declaration') { throw 'AST did not diagnose a GoTo jumping over a local declaration clearly.' }
 $invalidDefault = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-default-error.xps') -o (Join-Path $output 'invalid-default') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($invalidDefault -join "`n") -notmatch "Default value for Optional parameter 'value' is incompatible with its type") { throw 'AST invalid Optional default was not rejected by binding.' }
 dotnet $compiler ast-compile $source -o $output

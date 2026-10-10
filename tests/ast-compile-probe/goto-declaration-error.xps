@@ -1,0 +1,6 @@
+Sub Main()
+    GoTo afterDeclaration
+    Dim value As Long
+afterDeclaration:
+    Print "UNREACHABLE"
+End Sub
