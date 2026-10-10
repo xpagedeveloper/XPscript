@@ -80,7 +80,7 @@ public sealed class BoundExpressionEmitter
             : index.Type == typeof(int) ? $"Convert.ToInt32({access})"
             : index.Type == typeof(double) ? $"Convert.ToDouble({access})"
             : index.Type == typeof(bool) ? $"Convert.ToBoolean({access})"
-            : index.Type == typeof(string) ? $"Convert.ToString({access}) ?? string.Empty"
+            : index.Type == typeof(string) ? $"(Convert.ToString({access}) ?? string.Empty)"
             : access;
     }
 

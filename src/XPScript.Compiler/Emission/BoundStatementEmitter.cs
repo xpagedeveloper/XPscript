@@ -172,12 +172,7 @@ public sealed class BoundStatementEmitter
                 }
                 else if (expression.Expression is BoundCallExpression { Function.Name: "EraseArray" } erase && erase.Arguments.Count == 1)
                 {
-                    var array = _expressions.Emit(erase.Arguments[0]);
-                    var element = erase.Arguments[0].SemanticType.ElementType?.RuntimeType;
-                    if (element == typeof(string))
-                        Line($"System.Array.Fill((string[]){array}, string.Empty);");
-                    else
-                        Line($"System.Array.Clear((System.Array){array}, 0, ((System.Array){array}).Length);");
+                    Line($"LSArrayRuntime.Erase({_expressions.Emit(erase.Arguments[0])});");
                 }
                 else
                     Line($"{_expressions.Emit(expression.Expression)};");

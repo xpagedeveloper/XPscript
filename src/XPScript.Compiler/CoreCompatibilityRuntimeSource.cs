@@ -265,7 +265,10 @@ internal static class LSArrayRuntime
         }
         if (value is Array managed)
         {
-            Array.Clear(managed, 0, managed.Length);
+            if (managed.GetType().GetElementType() == typeof(string))
+                Array.Fill((string[])managed, string.Empty);
+            else
+                Array.Clear(managed, 0, managed.Length);
             return;
         }
         throw new InvalidOperationException("Value is not an XPScript array.");
