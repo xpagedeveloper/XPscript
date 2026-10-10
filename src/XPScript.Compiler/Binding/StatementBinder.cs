@@ -156,7 +156,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         if (isList) return (typeof(object), XpTypeSymbol.ListOf(result.Item2));
         if (!isArray) return result;
         var arrayType = arrayRank == 1 ? result.Item1.MakeArrayType() : result.Item1.MakeArrayType(arrayRank);
-        return (arrayType, XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(result.Item1)));
+        return (arrayType, XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(result.Item1), arrayRank));
     }
 
     private BoundStatement? BindCallStatement(CallStatementSyntax syntax)

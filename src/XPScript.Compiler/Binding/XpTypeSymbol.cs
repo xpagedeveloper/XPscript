@@ -11,7 +11,8 @@ public sealed record XpTypeSymbol(
     string Name,
     Type RuntimeType,
     XpTypeSymbol? ElementType = null,
-    XpTypeShape Shape = XpTypeShape.Scalar)
+    XpTypeShape Shape = XpTypeShape.Scalar,
+    int ArrayRank = 1)
 {
     public static XpTypeSymbol Variant { get; } = new("Variant", typeof(object));
     public static XpTypeSymbol Object { get; } = new("Object", typeof(object));
@@ -28,13 +29,15 @@ public sealed record XpTypeSymbol(
 
     public static XpTypeSymbol FromClr(Type type) =>
         type.IsArray
-            ? ArrayOf(FromClr(type.GetElementType()!))
+            ? ArrayOf(FromClr(type.GetElementType()!), type.GetArrayRank())
             : new(type.Name, type);
 
     public static XpTypeSymbol User(string name) => new(name, typeof(object));
 
-    public static XpTypeSymbol ArrayOf(XpTypeSymbol elementType) =>
-        new(elementType.Name + "[]", elementType.RuntimeType.MakeArrayType(), elementType, XpTypeShape.Array);
+    public static XpTypeSymbol ArrayOf(XpTypeSymbol elementType, int rank = 1) =>
+        new(elementType.Name + (rank == 1 ? "[]" : $"[{new string(',', rank - 1)}]"),
+            rank == 1 ? elementType.RuntimeType.MakeArrayType() : elementType.RuntimeType.MakeArrayType(rank),
+            elementType, XpTypeShape.Array, rank);
 
     public static XpTypeSymbol ListOf(XpTypeSymbol elementType) =>
         new("List As " + elementType.Name, typeof(object), elementType, XpTypeShape.List);
