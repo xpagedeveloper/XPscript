@@ -633,6 +633,8 @@ public static class AndroidFormHost
                 }
                 if (editor is Slider slider)
                     slider.ValueChanged += (_, args) => DispatchFieldChange(name, args.NewValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                if (editor is AndroidColorFieldEditor colorField)
+                    colorField.ValueEditor.TextChanged += (_, _) => DispatchFieldChange(name, colorField.ValueEditor.Text ?? string.Empty);
                 if (type == "ListView" && editor is ListBox listView)
                     listView.SelectionChanged += (_, _) => DispatchFieldChange(name, listView.SelectedItem?.ToString() ?? string.Empty);
                 var validationBlock = new TextBlock
@@ -1284,6 +1286,11 @@ public static class AndroidFormHost
         {
             Spacing = 8;
             Orientation = Avalonia.Layout.Orientation.Horizontal;
+            ValueEditor.TextChanged += (_, _) =>
+            {
+                if (Avalonia.Media.Color.TryParse(ValueEditor.Text, out var color))
+                    Preview.Background = new Avalonia.Media.SolidColorBrush(color);
+            };
             Children.Add(ValueEditor);
             Children.Add(Preview);
         }
