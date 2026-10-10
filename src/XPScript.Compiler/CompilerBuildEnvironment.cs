@@ -49,6 +49,10 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         startInfo.Environment["DOTNET_NOLOGO"] = "1";
+        // Generated builds run in isolated temporary directories. Do not use a
+        // shared Roslyn compiler server whose pipe may belong to another user.
+        startInfo.Environment["UseSharedCompilation"] = "false";
+        startInfo.ArgumentList.Add("-p:UseSharedCompilation=false");
         if (Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT") is { Length: > 0 } androidSdk)
         {
             startInfo.Environment["AndroidSdkDirectory"] = androidSdk;
