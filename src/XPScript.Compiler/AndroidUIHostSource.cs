@@ -2,7 +2,10 @@ namespace XPScript.Compiler;
 
 internal static class AndroidUIHostSource
 {
-    public static string Build(bool debug) => Code.Replace("__XPSCRIPT_ANDROID_DEBUG__", debug ? "true" : "false", StringComparison.Ordinal);
+    public static string Build(bool debug)
+        => Code
+            .Replace("__XPSCRIPT_ANDROID_DEBUG__", debug ? "true" : "false", StringComparison.Ordinal)
+            .Replace("[assembly: UsesPermission(global::Android.Manifest.Permission.Camera)]", string.Empty, StringComparison.Ordinal);
 
     public const string Code = """
 using System.Text.Json;
