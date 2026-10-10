@@ -294,6 +294,7 @@ public static class DesktopFormHost
                     case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, checkBox); break;
                     case Slider slider: slider.ValueChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, slider); break;
                     case DesktopColorFieldEditor colorField: colorField.Changed += value => TriggerEvent(eventKind + sourceField.Name, sourceField, colorField); break;
+                    case DesktopMonthFieldEditor monthField: monthField.Changed += value => TriggerEvent(eventKind + sourceField.Name, sourceField, monthField); break;
                     case DatePicker datePicker: datePicker.SelectedDateChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, datePicker); break;
                     case TimePicker timePicker: timePicker.PropertyChanged += (_, args) => { if (args.Property == TimePicker.SelectedTimeProperty) TriggerEvent(eventKind + sourceField.Name, sourceField, timePicker); }; break;
                     case StackPanel radioPanel:
@@ -519,6 +520,7 @@ public static class DesktopFormHost
             },
             "DateTimeField" => CreateDateTimeEditor(value),
             "ColorField" => new DesktopColorFieldEditor(value),
+            "MonthField" => new DesktopMonthFieldEditor(value),
             "Icon" => new TextBlock
             {
                 Text = string.IsNullOrWhiteSpace(field.Icon) ? field.Label : field.Icon,
@@ -691,6 +693,7 @@ public static class DesktopFormHost
         if (editor is CheckBox checkBox) return checkBox.IsChecked == true ? "true" : string.Empty;
         if (editor is Slider slider) return slider.Value.ToString(CultureInfo.InvariantCulture);
         if (editor is DesktopColorFieldEditor colorField) return colorField.Value;
+        if (editor is DesktopMonthFieldEditor monthField) return monthField.Value;
         if (editor is DatePicker datePicker) return datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is TimePicker timePicker) return timePicker.SelectedTime?.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is StackPanel dateTimePanel && field.Type == "DateTimeField")
@@ -771,6 +774,34 @@ public static class DesktopFormHost
         }
     }
 
+    private sealed class DesktopMonthFieldEditor : StackPanel
+    {
+        private readonly NumericUpDown _year = new() { Minimum = 1, Maximum = 9999, Width = 120 };
+        private readonly ComboBox _month = new() { ItemsSource = Enumerable.Range(1, 12).Select(value => value.ToString("00", CultureInfo.InvariantCulture)).ToArray(), Width = 90 };
+        public event Action<string>? Changed;
+        public string Value => $"{Convert.ToInt32(_year.Value ?? DateTime.Now.Year, CultureInfo.InvariantCulture):0000}-{(_month.SelectedIndex + 1).ToString("00", CultureInfo.InvariantCulture)}";
+
+        public DesktopMonthFieldEditor(string value)
+        {
+            Orientation = Orientation.Horizontal;
+            Spacing = 8;
+            if (DateTime.TryParseExact(value + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+            {
+                _year.Value = parsed.Year;
+                _month.SelectedIndex = parsed.Month - 1;
+            }
+            else
+            {
+                _year.Value = DateTime.Now.Year;
+                _month.SelectedIndex = DateTime.Now.Month - 1;
+            }
+            _year.ValueChanged += (_, _) => Changed?.Invoke(Value);
+            _month.SelectionChanged += (_, _) => Changed?.Invoke(Value);
+            Children.Add(_year);
+            Children.Add(_month);
+        }
+    }
+
     private static JsonElement? ReadEditorValue(DesktopFormField field, Control editor)
     {
         if (editor is TextBox textBox)
@@ -782,6 +813,7 @@ public static class DesktopFormHost
         }
         if (editor is Slider slider) return JsonSerializer.SerializeToElement(slider.Value);
         if (editor is DesktopColorFieldEditor colorField) return JsonSerializer.SerializeToElement(colorField.Value);
+        if (editor is DesktopMonthFieldEditor monthField) return JsonSerializer.SerializeToElement(monthField.Value);
         if (editor is CheckBox checkBox) return JsonSerializer.SerializeToElement(checkBox.IsChecked == true);
         if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.SelectedItem?.ToString() ?? string.Empty);
         if (editor is ListBox listBox)
