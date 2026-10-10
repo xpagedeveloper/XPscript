@@ -33,6 +33,16 @@ var aliasMultipleSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests"
 var aliasMultipleValidation = await CallAsync(new {jsonrpc="2.0",id=32,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=aliasMultipleSource,filename="forall-list-byref-multiple-error.xps"}}});
 if (aliasMultipleValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
     throw new Exception("AST MCP rejected multiple ForAll List ByRef aliases.");
+var gotoNestedSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "goto-nested-for-error.xps"));
+var gotoNestedValidation = await CallAsync(new {jsonrpc="2.0",id=33,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=gotoNestedSource,filename="goto-nested-for-error.xps"}}});
+var gotoNestedError = gotoNestedValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (gotoNestedError.GetProperty("line").GetInt32() != 4 || gotoNestedError.GetProperty("position").GetInt32() != 5)
+    throw new Exception("AST MCP GoTo loop diagnostic lost the GoTo source span.");
+var gotoDeclarationSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "goto-declaration-error.xps"));
+var gotoDeclarationValidation = await CallAsync(new {jsonrpc="2.0",id=34,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=gotoDeclarationSource,filename="goto-declaration-error.xps"}}});
+var gotoDeclarationError = gotoDeclarationValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (gotoDeclarationError.GetProperty("line").GetInt32() != 2 || gotoDeclarationError.GetProperty("position").GetInt32() != 5)
+    throw new Exception("AST MCP GoTo declaration diagnostic lost the GoTo source span.");
 var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps"}}});
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");
