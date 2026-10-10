@@ -312,7 +312,7 @@ foreach (var expected in new[]
 
 var xpImageRuntimePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "XPImageRuntimeSource.cs");
 var xpImageRuntime = File.ReadAllText(xpImageRuntimePath);
-foreach (var expected in new[] { "public XPImage() { EnsureResourceLimits(); }", "public bool IsLoaded => _image is not null;", "public string LoadError => _loadError;", "public string Src", "private static XPImage LoadSource(string source)", "source.StartsWith(\"data:\"", "uri.Scheme is \"http\" or \"https\"", "public static implicit operator string(XPImage image)", "\"data:image/png;base64,\"", "EnsureWritablePath(resolved)" })
+foreach (var expected in new[] { "public XPImage() { EnsureResourceLimits(); }", "public bool IsLoaded => _image is not null;", "public string LoadError => _loadError;", "public string Src", "private static XPImage LoadSource(string source)", "public static XPImage CreateColorMap(int width = 360, int height = 256)", "private static string HsvToRgb", "source.StartsWith(\"data:\"", "uri.Scheme is \"http\" or \"https\"", "public static implicit operator string(XPImage image)", "\"data:image/png;base64,\"", "EnsureWritablePath(resolved)" })
 {
     if (!xpImageRuntime.Contains(expected, StringComparison.Ordinal))
         throw new Exception("XPImage UIForm/asset integration is missing: " + expected);
