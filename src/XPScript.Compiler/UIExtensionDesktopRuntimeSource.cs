@@ -118,9 +118,9 @@ internal static class XPScriptUIDesktopAdapter
                 minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, step = field.Type == "RangeField" ? field.Step : (double?)null, options = field.Options, cornerRadius = field.CornerRadius, tabName = field.TabName, gridName = field.GridName,
                 webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground, icon = field.IconName,
                 source = field.Type is "Video" or "Audio" ? field.Source : null,
-                progressValue = field.Type == "ProgressBar" ? field.Value : null,
-                progressIndeterminate = field.Type == "ProgressBar" ? field.IsIndeterminate : null,
-                activityRunning = field.Type == "ActivityIndicator" ? field.IsRunning : null
+                progressValue = field.Type == "ProgressBar" ? (double?)field.Value : null,
+                progressIndeterminate = field.Type == "ProgressBar" ? (bool?)field.IsIndeterminate : null,
+                activityRunning = field.Type == "ActivityIndicator" ? (bool?)field.IsRunning : null
             }).ToArray(),
             tabs = form.Tabs.Select(tab => new { name = tab.Name, label = tab.Label }).ToArray(),
             grids = form.Grids.Select(grid => new { name = grid.Name, columns = grid.Columns, tabName = grid.TabName }).ToArray(),

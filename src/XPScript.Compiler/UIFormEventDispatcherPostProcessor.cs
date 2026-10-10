@@ -261,9 +261,9 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 regexPattern = field.RegexPattern,
                 value = field.Type is "PasswordField" or "MultiListBox" or "Separator" or "Spacer" ? null : GetFieldValueString(field.Name),
                 values = field.Type == "MultiListBox" ? ReadSelectedValues(field.Name) : Array.Empty<string>(),
-                progressValue = field.Type == "ProgressBar" ? field.Value : null,
-                progressIndeterminate = field.Type == "ProgressBar" ? field.IsIndeterminate : null,
-                activityRunning = field.Type == "ActivityIndicator" ? field.IsRunning : null,
+                progressValue = field.Type == "ProgressBar" ? (double?)field.Value : null,
+                progressIndeterminate = field.Type == "ProgressBar" ? (bool?)field.IsIndeterminate : null,
+                activityRunning = field.Type == "ActivityIndicator" ? (bool?)field.IsRunning : null,
                 options = field.Options,
                 regionId = field.RegionId,
                 validationError = string.IsNullOrEmpty(field.ValidationError) ? GetValidationError(field.Name) : field.ValidationError

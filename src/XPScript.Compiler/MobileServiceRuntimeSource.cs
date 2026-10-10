@@ -25,7 +25,7 @@ public interface IXPScriptCameraService : IXPScriptMobileService
     string CapturePhoto(string outputPath);
 }
 
-public readonly record struct XPScriptLocation(double Latitude, double Longitude, double? AccuracyMeters, double? AltitudeMeters, double? SpeedMetersPerSecond, DateTimeOffset Timestamp);
+public readonly record struct XPScriptLocationData(double Latitude, double Longitude, double? AccuracyMeters, double? AltitudeMeters, double? SpeedMetersPerSecond, DateTimeOffset Timestamp);
 
 public sealed class XPScriptLocationUnavailableException : Exception
 {
@@ -34,12 +34,12 @@ public sealed class XPScriptLocationUnavailableException : Exception
 
 public interface IXPScriptLocationService : IXPScriptMobileService
 {
-    XPScriptLocation GetCurrent(TimeSpan timeout);
+    XPScriptLocationData GetCurrent(TimeSpan timeout);
 }
 
 public interface IXPScriptContinuousLocationService : IXPScriptLocationService
 {
-    void StartUpdates(TimeSpan minimumInterval, Action<XPScriptLocation> onLocation);
+    void StartUpdates(TimeSpan minimumInterval, Action<XPScriptLocationData> onLocation);
     void StopUpdates();
 }
 
@@ -57,7 +57,7 @@ public static class XPScriptCamera
 
 public static class XPScriptLocation
 {
-    public static XPScriptLocation GetCurrent(object? timeoutMilliseconds)
+    public static XPScriptLocationData GetCurrent(object? timeoutMilliseconds)
     {
         var timeout = TimeSpan.FromMilliseconds(XPScriptRuntime.CDbl(timeoutMilliseconds));
         if (timeout <= TimeSpan.Zero) throw new XPScriptRuntimeException(5, "location: timeout must be greater than zero.");

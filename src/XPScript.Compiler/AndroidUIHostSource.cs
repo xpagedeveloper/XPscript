@@ -434,12 +434,13 @@ public static class AndroidFormHost
 
             var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
             var mediaControls = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
-            var progressControls = new Dictionary<string, ProgressBar>(StringComparer.OrdinalIgnoreCase);
+            var progressControls = new Dictionary<string, Avalonia.Controls.ProgressBar>(StringComparer.OrdinalIgnoreCase);
             var validationErrors = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
             var fieldContainers = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
             var fieldLabels = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
             var actionButtons = new Dictionary<string, Avalonia.Controls.Button>(StringComparer.OrdinalIgnoreCase);
             var panel = new StackPanel { Spacing = 12, Margin = new Thickness(16), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Stretch };
+            TabControl? tabControl = null;
 
             void DispatchMediaEvent(string fieldName, string eventKind, string submittedValue = "")
             {
@@ -522,7 +523,6 @@ public static class AndroidFormHost
             }
 
             var tabPanels = new Dictionary<string, StackPanel>(StringComparer.OrdinalIgnoreCase);
-            TabControl? tabControl = null;
             if (request.TryGetProperty("tabs", out var tabs) && tabs.ValueKind == JsonValueKind.Array && tabs.GetArrayLength() > 0)
             {
                 var tabItems = new List<TabItem>();
@@ -618,7 +618,7 @@ public static class AndroidFormHost
                 ApplyEditorReadOnly(editor, field.TryGetProperty("readOnly", out var readOnly) && readOnly.ValueKind == JsonValueKind.True);
                 fieldContainer.Children.Add(editor);
 
-                if (editor is ProgressBar progressControl) progressControls[name] = progressControl;
+                if (editor is Avalonia.Controls.ProgressBar progressControl) progressControls[name] = progressControl;
                 if (type is "Separator" or "Spacer" or "Image" or "Icon" or "Card" or "Panel" or "ScrollView" or "WebView" or "CameraPreview" or "ProgressBar" or "ActivityIndicator")
                 {
                     AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
@@ -748,7 +748,7 @@ public static class AndroidFormHost
         string actionStateJson,
         Dictionary<string, Control> editors,
         Dictionary<string, Control> mediaControls,
-        Dictionary<string, ProgressBar> progressControls,
+        Dictionary<string, Avalonia.Controls.ProgressBar> progressControls,
         Dictionary<string, TextBlock> validationErrors,
         Dictionary<string, Control> fieldContainers,
         Dictionary<string, TextBlock> fieldLabels,
@@ -933,7 +933,7 @@ public static class AndroidFormHost
 
     private static Control CreateProgressBar(JsonElement field)
     {
-        var progress = new ProgressBar { Minimum = 0, Maximum = 1, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var progress = new Avalonia.Controls.ProgressBar { Minimum = 0, Maximum = 1, HorizontalAlignment = HorizontalAlignment.Stretch };
         if (field.TryGetProperty("progressValue", out var value) && value.TryGetDouble(out var progressValue))
             progress.Value = Math.Clamp(progressValue, 0, 1);
         if (field.TryGetProperty("progressIndeterminate", out var indeterminate) && indeterminate.ValueKind == JsonValueKind.True)
@@ -943,7 +943,7 @@ public static class AndroidFormHost
 
     private static Control CreateActivityIndicator(JsonElement field)
     {
-        var progress = new ProgressBar { IsIndeterminate = true, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var progress = new Avalonia.Controls.ProgressBar { IsIndeterminate = true, HorizontalAlignment = HorizontalAlignment.Stretch };
         if (field.TryGetProperty("activityRunning", out var running) && running.ValueKind == JsonValueKind.False)
             progress.IsVisible = false;
         return progress;
