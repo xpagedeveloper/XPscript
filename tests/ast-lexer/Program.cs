@@ -813,6 +813,11 @@ var rankedArrayStatement = (DimStatementSyntax)rankedArrayParser.ParseStatement(
 Equal(3, rankedArrayStatement.ArrayRank, "multidimensional Dim rank");
 Equal(1, rankedArrayParser.Diagnostics.Count, "multidimensional Dim diagnostic");
 
+var boundedArrayParser = new StatementParser("Dim values(1 To 3) As Long");
+var boundedArrayStatement = (DimStatementSyntax)boundedArrayParser.ParseStatement();
+Equal(1, boundedArrayStatement.ArrayLowerBound, "bounded Dim lower bound");
+Equal(3, boundedArrayStatement.ArrayLength, "bounded Dim length");
+
 const string whileSource = "While True\ncount = count + 1\nWend";
 var whileParser = new StatementParser(whileSource);
 var whileStatement = whileParser.ParseStatement();
