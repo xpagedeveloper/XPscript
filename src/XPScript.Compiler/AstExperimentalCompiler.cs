@@ -426,6 +426,7 @@ using System.Text;
 using System.Globalization;
 {{XPScriptObjectRuntimeSource.IterableContract}}
 {{XPScriptListRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.", StringComparison.Ordinal)}}
+{{AstArrayRuntimeCode()}}
 internal static class LSCoreCompare
 {
     public static bool Equal(object? left, object? right) => string.Equals(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
@@ -857,6 +858,25 @@ internal static class Program
         var nativeHttp = NativeHttpRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal).Replace("Program.XPScriptRuntime.CInt(", "Convert.ToInt32(", StringComparison.Ordinal);
         generated += Environment.NewLine + "public sealed class XPScriptRuntimeException : Exception { public int ErrorCode { get; } public XPScriptRuntimeException(int code, string message) : base(message) { ErrorCode = code; } }" + Environment.NewLine + "internal sealed class XPScriptTlsValidationState { public string Mode { get; set; } = \"strict\"; public string LastError { get; private set; } = string.Empty; public void Reset() { LastError = string.Empty; } public Exception Failure(string context) => new XPScriptRuntimeException(1201, context + \" failed: \" + LastError); public bool Validate(object sender, System.Security.Cryptography.X509Certificates.X509Certificate? c, System.Security.Cryptography.X509Certificates.X509Chain? chain, System.Net.Security.SslPolicyErrors errors) => true; }" + Environment.NewLine + nativeHttp;
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string AstArrayRuntimeCode()
+    {
+        const string startMarker = "internal sealed class LSArray";
+        const string endMarker = "internal sealed class LSByRefValue";
+        var source = CoreCompatibilityRuntimeSource.Code;
+        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
+        var end = source.IndexOf(endMarker, start, StringComparison.Ordinal);
+        if (start < 0 || end < 0)
+            throw new InvalidOperationException("AST array runtime source markers are missing.");
+        return source[start..end]
+            .Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal)
+            .Replace("value is ILSObjectReference reference && reference.IsNothing", "value is null", StringComparison.Ordinal)
+            .Replace(".Select(Program.XPScriptRuntime.CInt).ToArray()", ".Select(value => Convert.ToInt32(Program.XPScriptRuntime.CInt(value))).ToArray()", StringComparison.Ordinal)
+            .Replace("Program.XPScriptRuntime.CByte(value)", "Convert.ToByte(value)", StringComparison.Ordinal)
+            .Replace("Program.XPScriptRuntime.CSng(value)", "Convert.ToSingle(value)", StringComparison.Ordinal)
+            .Replace("Program.XPScriptRuntime.CCur(value)", "Convert.ToDecimal(value)", StringComparison.Ordinal)
+            .Replace("Program.XPScriptRuntime.CDat(value)", "Convert.ToDateTime(value)", StringComparison.Ordinal);
     }
 
     private static IEnumerable<StatementSyntax> FlattenStatements(IEnumerable<StatementSyntax> statements)
