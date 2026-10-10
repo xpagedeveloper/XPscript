@@ -96,6 +96,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         {
             ArrayLowerBound = syntax.ArrayLowerBound,
             ArrayLength = syntax.ArrayLength,
+            ArrayStorage = syntax.IsArray && syntax.ArrayLength is null ? AstArrayStorageKind.ClrDynamic : AstArrayStorageKind.ClrFixed,
             IsDynamicArray = syntax.IsArray && syntax.ArrayLength is null
         };
         if (syntax.IsStatic)

@@ -1,5 +1,12 @@
 namespace XPScript.Compiler.Binding;
 
+public enum AstArrayStorageKind
+{
+    ClrFixed,
+    ClrDynamic,
+    AstArray
+}
+
 public enum SymbolKind
 {
     Variable,
@@ -28,6 +35,7 @@ public sealed record LocalSymbol(string Name, Type Type, XpTypeSymbol? SemanticT
 {
     public int ArrayLowerBound { get; init; }
     public int? ArrayLength { get; init; }
+    public AstArrayStorageKind ArrayStorage { get; init; } = AstArrayStorageKind.ClrFixed;
     /// <summary>Compiler-owned field backing a persistent procedure-local value.</summary>
     public string? StaticStorageName { get; init; }
     /// <summary>True for `Dim name()` storage, which Erase must deallocate.</summary>
