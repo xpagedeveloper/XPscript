@@ -884,7 +884,7 @@ internal static class Program
             if (!labels.TryGetValue(transfer.Target.Text, out var label)) continue;
             if (label.Span.Start > transfer.Span.Start &&
                 FlattenStatements(statements).OfType<DimStatementSyntax>().Any(declaration =>
-                    declaration.Span.Start > transfer.Span.Start && declaration.Span.End < label.Span.Start))
+                    declaration.Span.Start > transfer.Span.Start && declaration.Span.End < label.Span.Start && declaration.Initializer is not null))
                 throw MappedDiagnostic(transfer.Span, sourcePath, source,
                     $"GoTo cannot jump over local declaration to label '{label.Identifier.Text}'. Move the declaration before the GoTo or move the label before the declaration.");
             var sourceScope = InnermostContaining(scopes, transfer.Span);

@@ -1,6 +1,6 @@
 Sub Main()
     GoTo afterDeclaration
-    Dim value As Long = 1
+    Dim value As Long
 afterDeclaration:
-    Print "UNREACHABLE"
+    Print "GOTO_DECLARATION_HOIST_OK"
 End Sub

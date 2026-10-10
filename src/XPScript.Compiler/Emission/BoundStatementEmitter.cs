@@ -13,6 +13,19 @@ public sealed class BoundStatementEmitter
     {
         _flatControlFlow = Collect(statements).Any();
         var output = new BoundEmissionContext(statements);
+        if (_flatControlFlow)
+        {
+            foreach (var declaration in BoundStatementTraversal.Descendants(statements)
+                         .OfType<BoundVariableDeclarationStatement>()
+                         .Where(item => item.Initializer is null && item.Local.StaticStorageName is null))
+            {
+                var type = CSharpType(declaration.Local.Type);
+                if (declaration.Local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
+                    !semantic.IsVariant && !semantic.IsObject && !semantic.IsNothing && !semantic.IsNull && !semantic.IsEmpty)
+                    type = $"Xp{semantic.Name}";
+                output.Write($"{type} {declaration.Local.Name} = default({type});", 0, declaration.Span);
+            }
+        }
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
         return output.Finish().Code;
@@ -85,6 +98,8 @@ public sealed class BoundStatementEmitter
                 break;
             case BoundVariableDeclarationStatement { Local.StaticStorageName: not null }:
                 // Storage is initialized once in the compilation unit, not on entry.
+                break;
+            case BoundVariableDeclarationStatement { Initializer: null } when _flatControlFlow:
                 break;
             case BoundVariableDeclarationStatement { Local.SemanticType.IsList: true } list:
                 Line($"LSList<{CSharpType(list.Local.SemanticType!.ElementType!.RuntimeType)}> {list.Local.Name} = new();");
