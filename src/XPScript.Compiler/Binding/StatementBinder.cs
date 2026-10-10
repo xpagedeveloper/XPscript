@@ -96,6 +96,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         {
             ArrayLowerBound = syntax.ArrayLowerBound,
             ArrayLength = syntax.ArrayLength,
+            ArrayBounds = syntax.ArrayBounds.Select(bound => (bound.Lower, bound.Upper)).ToArray(),
             ArrayStorage = syntax.IsArray && syntax.ArrayLength is null ? AstArrayStorageKind.ClrDynamic : AstArrayStorageKind.ClrFixed,
             ArrayRank = syntax.ArrayRank,
             IsDynamicArray = syntax.IsArray && syntax.ArrayLength is null

@@ -35,6 +35,7 @@ public sealed record LocalSymbol(string Name, Type Type, XpTypeSymbol? SemanticT
 {
     public int ArrayLowerBound { get; init; }
     public int? ArrayLength { get; init; }
+    public IReadOnlyList<(int Lower, int Upper)> ArrayBounds { get; init; } = [];
     public int? ArrayUpperBound => ArrayLength is { } length
         ? checked(ArrayLowerBound + length - 1)
         : null;
