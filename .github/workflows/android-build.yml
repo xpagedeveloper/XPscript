@@ -132,6 +132,9 @@ jobs:
       - name: Build Android UIForm media manual test APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-media-manual-test.xps -o ./out/android-uiform-media-manual-test --runtime=false --platform android-x64 --debug
 
+      - name: Build Android Carousel API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-carousel-api.xps -o ./out/android-carousel-api --runtime=false --platform android-x64 --debug
+
       - name: Build Android UIForm regression APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-regression.xps -o ./out/android-uiform-regression --runtime=false --platform android-x64 --debug
 
@@ -199,7 +202,7 @@ jobs:
               fi
               if [ "$video_played" = true ] && [ "$audio_played" = true ]; then
                 echo 'Android media playback regression passed for Video and Audio.'
-                exit 0
+                break
               fi
               if adb logcat -d | grep -Eq 'MEDIA TEST (VIDEO|AUDIO) PLAYBACK: ERROR'; then
                 adb logcat -d | grep -E 'MEDIA TEST|AndroidRuntime|ExoPlayer|Media3' || true
@@ -211,14 +214,27 @@ jobs:
               fi
               sleep 2
             done
-            if adb logcat -d | grep -q 'MEDIA TEST STARTUP: PASS'; then
+            if [ "$video_played" != true ] || [ "$audio_played" != true ]; then
               adb logcat -d | grep -E 'MEDIA TEST|AndroidRuntime|ExoPlayer|Media3' || true
               echo 'Android media test did not reach playback.' >&2
               exit 1
             fi
-            adb logcat -d | grep -E 'MEDIA TEST|AndroidRuntime|FATAL EXCEPTION' || true
-            echo 'Android media test did not reach startup or playback.' >&2
-            exit 1
+
+            carousel_apk="$(find ./out/android-carousel-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$carousel_apk"
+            adb install -r "$carousel_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-CAROUSEL-AUTOADVANCE=3000' && \
+                 adb logcat -d | grep -q 'ANDROID-CAROUSEL-INDEX=1'; then
+                echo 'Android Carousel configuration regression passed.'
+                exit 0
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-CAROUSEL|AndroidRuntime|FATAL EXCEPTION' || true
+            echo 'Android Carousel regression did not reach configured state.' >&2
             exit 1
 
       - name: Verify debug APKs exist
