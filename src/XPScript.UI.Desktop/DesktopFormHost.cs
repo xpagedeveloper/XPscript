@@ -292,6 +292,9 @@ public static class DesktopFormHost
                     case ComboBox comboBox: comboBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, comboBox); break;
                     case ListBox listBox: listBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, listBox); break;
                     case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, checkBox); break;
+                    case Slider slider: slider.ValueChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, slider); break;
+                    case DatePicker datePicker: datePicker.SelectedDateChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, datePicker); break;
+                    case TimePicker timePicker: timePicker.PropertyChanged += (_, args) => { if (args.Property == TimePicker.SelectedTimeProperty) TriggerEvent(eventKind + sourceField.Name, sourceField, timePicker); }; break;
                     case StackPanel radioPanel:
                         foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, radioPanel);
                         break;
@@ -684,6 +687,7 @@ public static class DesktopFormHost
     {
         if (editor is TextBox textBox) return textBox.Text ?? string.Empty;
         if (editor is CheckBox checkBox) return checkBox.IsChecked == true ? "true" : string.Empty;
+        if (editor is Slider slider) return slider.Value.ToString(CultureInfo.InvariantCulture);
         if (editor is DatePicker datePicker) return datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is TimePicker timePicker) return timePicker.SelectedTime?.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is StackPanel dateTimePanel && field.Type == "DateTimeField")
@@ -724,6 +728,7 @@ public static class DesktopFormHost
             if (field.Type == "ColorField" && text.Length > 0) return JsonSerializer.SerializeToElement(text.ToLowerInvariant());
             return JsonSerializer.SerializeToElement(text);
         }
+        if (editor is Slider slider) return JsonSerializer.SerializeToElement(slider.Value);
         if (editor is CheckBox checkBox) return JsonSerializer.SerializeToElement(checkBox.IsChecked == true);
         if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.SelectedItem?.ToString() ?? string.Empty);
         if (editor is ListBox listBox)
