@@ -2,6 +2,9 @@
 
 Goal: investigate and implement every new UIForm control introduced for Android across the other supported platforms without leaking Android-specific APIs into shared XPScript code.
 
+Den kompletta komponentinventeringen och portningschecklistan finns i
+[`todo/android-components-cross-platform-port-todo.md`](android-components-cross-platform-port-todo.md).
+
 This TODO complements `todo/android-support-todo.md`. Android remains the first implementation target. A control is complete only when its shared API, supported platform behavior, validation, accessibility, lifecycle semantics and regression coverage are documented and tested.
 
 ## Controls in scope
