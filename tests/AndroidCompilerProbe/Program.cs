@@ -615,6 +615,11 @@ foreach (var expected in new[] { "AndroidX.Media3.ExoPlayer", "AndroidX.Media3.U
     if (!generatedVideoHost.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Generated Android Video host regression is missing: " + expected);
 
+var mediaSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-uiform-media-manual-test.xps"));
+foreach (var expected in new[] { "video.AutoPlay = True", "form.SetOnPlay(\"video\", \"VideoPlaybackStarted\")", "form.SetOnError(\"video\", \"VideoPlaybackError\")", "MEDIA TEST VIDEO PLAYBACK: PASS" })
+    if (!mediaSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android media playback sample regression is missing: " + expected);
+
 if (!compilerSource.Contains("outputPath += \".apk\";", StringComparison.Ordinal))
     throw new Exception("Android compiler output is not normalized to an .apk path.");
 
