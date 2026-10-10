@@ -49,6 +49,7 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesJSONNavigator", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonObject", StringComparison.OrdinalIgnoreCase) => "new XpJsonObject()",
+        BoundNewExpression @new when @new.Type == typeof(object) && @new.SemanticType.Name.Length > 0 && char.IsUpper(@new.SemanticType.Name[0]) => $"new Xp{@new.SemanticType.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPAi", StringComparison.OrdinalIgnoreCase) => $"new XpAi({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("AITool", StringComparison.OrdinalIgnoreCase) => $"new XpAiTool({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new => @new.Type == typeof(object)

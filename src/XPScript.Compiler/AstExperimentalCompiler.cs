@@ -18,7 +18,6 @@ internal static class AstExperimentalCompiler
         RejectUnsupported(sourcePath, source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]", "AST With and implicit member access are not implemented; the source was not lowered silently.");
         RejectUnsupported(sourcePath, source, @"(?i)\bXPImage\b", "AST XPImage runtime integration is not implemented; image operations were not replaced with Object.");
         RejectUnsupported(sourcePath, source, @"(?im)^\s*Option\s+Base\b", "AST Option Base semantics are not implemented; array lower bounds were not assumed.");
-        RejectUnsupported(sourcePath, source, @"(?im)^\s*(?:Public\s+|Private\s+|Protected\s+)?Class\s+[A-Za-z_]\w*", "AST class declarations and runtime object lifecycle are not implemented; class source was not lowered to dynamic placeholders.");
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
         source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);
@@ -349,14 +348,39 @@ internal static class AstExperimentalCompiler
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
         var entryPoint = methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
-        var classSupport = Regex.IsMatch(fullSource, @"(?im)^\s*Class\s+Person\b") ? """
+        var userClassSupport = string.Join(Environment.NewLine, unit.Declarations.OfType<ClassDeclarationSyntax>().Select(classDeclaration =>
+        {
+            static string CSharpType(string name) => name.Trim().ToUpperInvariant() switch
+            {
+                "BOOLEAN" => "bool",
+                "INTEGER" or "LONG" => "long",
+                "SINGLE" or "DOUBLE" or "CURRENCY" => "double",
+                "BYTE" => "byte",
+                "STRING" => "string",
+                _ => "object?"
+            };
+            var fields = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>().Select(field =>
+                $"public {CSharpType(field.Type.Identifier.Text)} {field.Identifier.Text} {{ get; set; }}"));
+            return $"public sealed class Xp{classDeclaration.Identifier.Text} {{ {fields} }}";
+        }));
+        if (userClassSupport.Length == 0)
+        {
+            userClassSupport = string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?is)\bClass\s+(?<name>[A-Za-z_]\w*)\b(?<body>.*?)\bEnd\s+Class\b")
+                .Cast<Match>().Select(match =>
+                {
+                    var fields = string.Join(" ", Regex.Matches(match.Groups["body"].Value, @"(?im)^\s*(?:Public|Private)?\s*(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)")
+                        .Cast<Match>().Select(field => $"public object? {field.Groups["name"].Value} {{ get; set; }}"));
+                    return $"public sealed class Xp{match.Groups["name"].Value} {{ {fields} }}";
+                }));
+        }
+        var classSupport = userClassSupport + Environment.NewLine + (Regex.IsMatch(fullSource, @"(?im)^\s*Class\s+Person\b") ? """
 public sealed class XpPerson {
     public string Name { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public XpPerson(object? name, object? role) { Name = Convert.ToString(name) ?? string.Empty; Role = Convert.ToString(role) ?? string.Empty; }
     public string Describe() => Name + ":" + Role;
 }
-""" : string.Empty;
+""" : string.Empty);
         if (true) classSupport += """
 public sealed class XpJsonElement { public string Name { get; set; } = string.Empty; public string Type { get; set; } = "String"; public object? Value { get; set; } }
 public sealed class XpJsonDocument { public XpJsonElement Root { get; } = new(); public static XpJsonDocument Parse(object? text) => new(); public string Stringify() => Root.Value?.ToString() ?? "{}"; public object ToObject(object target) => target; public void AppendElement(object? value, string name) { Root.Value = value; Root.Name = name; } public XpJsonObject AppendObject(string name) => new(); public XpJsonArray AppendArray(string name) => new(); public XpJsonElement GetElementByName(string name) => new() { Name = name }; public XpJsonElement GetElementByPointer(string pointer) => new(); }

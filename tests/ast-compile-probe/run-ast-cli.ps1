@@ -77,8 +77,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'is-nothing.xps') -o $isNo
 if ($LASTEXITCODE -ne 0) { throw 'AST Is Nothing compilation failed.' }
 $isNothingResult = dotnet (Join-Path $isNothingOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($isNothingResult -join "`n") -ne 'IS_NOTHING_OK') { throw 'AST Is Nothing did not preserve Variant Nothing semantics.' }
-$classRuntime = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-runtime-error.xps') -o (Join-Path $output 'class-runtime-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($classRuntime -join "`n") -notmatch 'AST class declarations and runtime object lifecycle are not implemented') { throw 'AST silently accepted unsupported class runtime placeholders.' }
+$classOutput = Join-Path $output 'class-field'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-field.xps') -o $classOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST simple class field compilation failed.' }
+$classResult = dotnet (Join-Path $classOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classResult -join "`n") -ne '7') { throw 'AST simple class field access produced the wrong result.' }
 $optionalOrder = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-order-error.xps') -o (Join-Path $output 'optional-order-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($optionalOrder -join "`n") -notmatch 'cannot follow an Optional parameter') { throw 'AST accepted a required parameter after Optional.' }
 $optionalDefault = Join-Path $output 'optional-default-name'
