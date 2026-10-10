@@ -120,6 +120,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-loop-body.xps') -o $
 if ($LASTEXITCODE -ne 0) { throw 'AST GoTo inside For/ForAll loop compilation failed.' }
 $loopBodyResult = dotnet (Join-Path $loopBodyOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($loopBodyResult -join "`n") -ne "6`n15") { throw 'AST GoTo inside For/ForAll loop semantics failed.' }
+$nestedLoopBodyOutput = Join-Path $output 'goto-nested-loop-body'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-nested-loop-body.xps') -o $nestedLoopBodyOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST nested For/ForAll GoTo compilation failed.' }
+$nestedLoopBodyResult = dotnet (Join-Path $nestedLoopBodyOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($nestedLoopBodyResult -join "`n") -ne '9') { throw 'AST nested For/ForAll GoTo semantics failed.' }
 $nestedLoopError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-nested-for-error.xps') -o (Join-Path $output 'nested-for-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($nestedLoopError -join "`n") -notmatch 'GoTo cannot enter a For or ForAll block') { throw 'AST did not diagnose a GoTo entering a nested loop clearly.' }
 $declarationJumpError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-declaration-error.xps') -o (Join-Path $output 'declaration-jump-error') 2>&1
