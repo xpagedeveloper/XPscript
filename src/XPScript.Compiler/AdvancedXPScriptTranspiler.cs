@@ -688,11 +688,9 @@ internal static class LSForAllRuntime
                 return;
             }
 
-            var isDeclaredValue = _variableTypes.ContainsKey(sourceName) || _objectVariables.ContainsKey(sourceName);
-            var isMemberExpression = Regex.IsMatch(sourceName, @"^[A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)+$");
-            if (!isDeclaredValue && !isMemberExpression)
-                throw new CompilerException($"ForAll source '{sourceName}' is not a declared list, array, or enumerable variable.");
-
+            // The source may be any expression that evaluates to an enumerable
+            // value, not only a local variable or member access.  In particular,
+            // Array(...) is a valid XPScript collection expression.
             Write(sb, $"foreach (dynamic {alias} in LSForAllRuntime.Enumerate({TransformExpression(sourceName)}))");
             Write(sb, "{");
             _indent++;

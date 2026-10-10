@@ -55,8 +55,8 @@ Function OptionalZero(Optional ByRef value As Long) As Long
     OptionalZero = value
 End Function
 
-Function OptionalCollision(ByVal __xpsOptional1 As Long, Optional ByRef other As Long = 3) As Long
-    OptionalCollision = __xpsOptional1 + other
+Function OptionalCollision(ByVal firstValue As Long, Optional ByRef other As Long = 3) As Long
+    OptionalCollision = firstValue + other
 End Function
 
 Function OptionalSum(Optional ByVal first As Long = 2, Optional ByRef second As Long = 3) As Long
@@ -69,9 +69,9 @@ Sub OptionalIncrease(ByRef value As Long, Optional ByRef increment As Long = 2)
 End Sub
 
 Function Accumulate(ByVal count As Long) As Long
-    Dim __xpsFunctionResult As Long
-    __xpsFunctionResult = 1
-    Accumulate = __xpsFunctionResult
+    Dim functionResult As Long
+    functionResult = 1
+    Accumulate = functionResult
     Dim i As Long
     For i = 1 To count
         Accumulate = Accumulate + i
