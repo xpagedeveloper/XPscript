@@ -59,6 +59,10 @@ var withSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-co
 var withValidation = await CallAsync(new {jsonrpc="2.0",id=38,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=withSource,filename="with-error.xps"}}});
 var withError = withValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
 if (withError.GetProperty("line").GetInt32() != 2 || withError.GetProperty("position").GetInt32() != 1 || withError.GetProperty("description").GetString() is not { } withMessage || !withMessage.Contains("With and implicit member access", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP With diagnostics lost the source span or stable message.");
+var imageSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "xpimage-error.xps"));
+var imageValidation = await CallAsync(new {jsonrpc="2.0",id=39,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=imageSource,filename="xpimage-error.xps"}}});
+var imageError = imageValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (imageError.GetProperty("line").GetInt32() != 2 || imageError.GetProperty("position").GetInt32() != 18 || imageError.GetProperty("description").GetString() is not { } imageMessage || !imageMessage.Contains("XPImage runtime integration", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP XPImage diagnostics lost the source span or stable message.");
 var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps"}}});
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");
