@@ -203,6 +203,16 @@ public sealed class CompilerDriver
         Directory.CreateDirectory(tempRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
 
+        var buildLogRoot = Environment.GetEnvironmentVariable("XPSCRIPT_BUILD_LOG_DIR");
+        var buildLogDirectory = string.IsNullOrWhiteSpace(buildLogRoot) ? null
+            : Path.Combine(Path.GetFullPath(buildLogRoot), Path.GetFileName(tempRoot));
+        if (buildLogDirectory is not null)
+        {
+            Directory.CreateDirectory(buildLogDirectory);
+            Console.Error.WriteLine("Build logs: " + buildLogDirectory);
+            Console.Error.WriteLine("Preserved generated project: " + tempRoot);
+        }
+
         try
         {
             var projectPath = Path.Combine(tempRoot, "Generated.csproj");
@@ -256,18 +266,33 @@ public sealed class CompilerDriver
                 psi.ArgumentList.Add(selfContained ? "true" : "false");
             }
             CompilerBuildEnvironment.Configure(psi, tempRoot);
+            if (buildLogDirectory is not null)
+            {
+                psi.ArgumentList.Add("-v:diag");
+                psi.ArgumentList.Add("-bl:" + Path.Combine(buildLogDirectory, "publish.binlog") + ";ProjectImports=None");
+                psi.ArgumentList.Add("-flp:LogFile=" + Path.Combine(buildLogDirectory, "msbuild.log") + ";Verbosity=diagnostic;Encoding=UTF-8");
+                psi.ArgumentList.Add("-clp:PerformanceSummary");
+                psi.Environment["DOTNET_HOST_TRACE"] = "1";
+                psi.Environment["DOTNET_HOST_TRACE_VERBOSITY"] = "4";
+                psi.Environment["DOTNET_HOST_TRACEFILE"] = Path.Combine(buildLogDirectory, "dotnet-host.log");
+                await File.WriteAllTextAsync(Path.Combine(buildLogDirectory, "project-path.txt"), projectPath);
+            }
 
             CompilerProgressContext.Report(40, "Publishing application");
             using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start dotnet publish.");
             var stdoutLines = new List<string>();
             var stderrLines = new List<string>();
             var publishProgress = new PublishProgressState();
-            var stdoutTask = DrainPublishOutputAsync(process.StandardOutput, stdoutLines, publishProgress);
-            var stderrTask = DrainPublishOutputAsync(process.StandardError, stderrLines, publishProgress);
+            using var stdoutLog = buildLogDirectory is null ? null : new StreamWriter(Path.Combine(buildLogDirectory, "stdout.log")) { AutoFlush = true };
+            using var stderrLog = buildLogDirectory is null ? null : new StreamWriter(Path.Combine(buildLogDirectory, "stderr.log")) { AutoFlush = true };
+            var stdoutTask = DrainPublishOutputAsync(process.StandardOutput, stdoutLines, publishProgress, stdoutLog);
+            var stderrTask = DrainPublishOutputAsync(process.StandardError, stderrLines, publishProgress, stderrLog);
             await process.WaitForExitAsync();
             await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
             var stdout = string.Join(Environment.NewLine, stdoutLines);
             var stderr = string.Join(Environment.NewLine, stderrLines);
+            if (buildLogDirectory is not null)
+                await File.WriteAllTextAsync(Path.Combine(buildLogDirectory, "exit-code.txt"), process.ExitCode.ToString());
             ApplicationSecurityAudit.Report(stdout + Environment.NewLine + stderr);
 
             CompilerProgressContext.Report(85, "Finalizing publish");
@@ -337,7 +362,8 @@ public sealed class CompilerDriver
         }
         finally
         {
-            try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
+            if (buildLogDirectory is null)
+                try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
         }
     }
 
@@ -988,11 +1014,12 @@ public sealed class CompilerDriver
         }
     }
 
-    private static async Task DrainPublishOutputAsync(StreamReader reader, List<string> lines, PublishProgressState progress)
+    private static async Task DrainPublishOutputAsync(StreamReader reader, List<string> lines, PublishProgressState progress, StreamWriter? log = null)
     {
         while (await reader.ReadLineAsync().ConfigureAwait(false) is { } line)
         {
             lines.Add(line);
+            if (log is not null) await log.WriteLineAsync(line).ConfigureAwait(false);
             var phase = ClassifyPublishProgress(line);
             if (phase is not null)
                 progress.Report(phase);

@@ -39,7 +39,20 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["TMPDIR"] = processTemp;
         startInfo.Environment["DOTNET_CLI_HOME"] = cliHome;
         if (nugetPackages is not null) startInfo.Environment["NUGET_PACKAGES"] = nugetPackages;
-        else startInfo.Environment.Remove("NUGET_PACKAGES");
+        else
+        {
+            // Resolve the caller's cache before changing HOME/DOTNET_CLI_HOME.
+            // Otherwise NuGet silently uses the empty isolated profile cache.
+            var callerPackages = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
+            if (string.IsNullOrWhiteSpace(callerPackages))
+            {
+                var callerHome = Environment.GetEnvironmentVariable("DOTNET_CLI_HOME");
+                if (string.IsNullOrWhiteSpace(callerHome))
+                    callerHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                callerPackages = Path.Combine(callerHome, ".nuget", "packages");
+            }
+            startInfo.Environment["NUGET_PACKAGES"] = Path.GetFullPath(callerPackages);
+        }
         startInfo.Environment["NUGET_HTTP_CACHE_PATH"] = nugetHttpCache;
         startInfo.Environment["NUGET_PLUGINS_CACHE_PATH"] = nugetPluginsCache;
         startInfo.Environment["USERPROFILE"] = profile;

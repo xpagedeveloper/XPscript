@@ -15,6 +15,8 @@ jobs:
     name: Android debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      XPSCRIPT_BUILD_LOG_DIR: ${{ runner.temp }}/android-build-logs
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
@@ -41,7 +43,10 @@ jobs:
         run: dotnet run --project ./tests/AndroidScaffoldProbe/AndroidScaffoldProbe.csproj -c Release
 
       - name: Run Android compiler probe
-        run: dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
+        # The probe references the built compiler core assembly.
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
 
       - name: Restore XPScript CLI
         run: dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
@@ -185,3 +190,11 @@ jobs:
             exit 1
           fi
           printf 'ANDROID_APK=%s\n' "${apks[@]}"
+
+      - name: Upload Android build diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-diagnostics
+          path: ${{ runner.temp }}/android-build-logs
+          if-no-files-found: ignore

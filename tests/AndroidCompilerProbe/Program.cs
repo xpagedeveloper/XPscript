@@ -764,4 +764,38 @@ foreach (var expected in new[]
         throw new Exception("Android multi-line output regression sample is incomplete: " + expected);
 }
 
+// Exercise the cache handoff: isolated CLI profiles must not discard the
+// caller's populated NuGet package directory during Android UIForm publish.
+var cacheProbeRoot = Path.Combine(Path.GetTempPath(), "android-cache-probe-" + Guid.NewGuid().ToString("N"));
+var originalPackages = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
+var originalCliHome = Environment.GetEnvironmentVariable("DOTNET_CLI_HOME");
+try
+{
+    Directory.CreateDirectory(cacheProbeRoot);
+    File.WriteAllText(Path.Combine(cacheProbeRoot, "Program.cs"), "XPScriptUI.CreateForm(\"test\");");
+    var environmentType = type.Assembly.GetType("XPScript.Compiler.CompilerBuildEnvironment", throwOnError: true)!;
+    var configure = environmentType.GetMethod("Configure", BindingFlags.Public | BindingFlags.Static)!;
+    var expectedPackages = Path.Combine(cacheProbeRoot, "caller-cache");
+    foreach (var explicitCache in new[] { true, false })
+    {
+        Environment.SetEnvironmentVariable("NUGET_PACKAGES", explicitCache ? expectedPackages : null);
+        Environment.SetEnvironmentVariable("DOTNET_CLI_HOME", cacheProbeRoot);
+        var startInfo = new System.Diagnostics.ProcessStartInfo("dotnet");
+        startInfo.ArgumentList.Add("publish");
+        startInfo.ArgumentList.Add(Path.Combine(cacheProbeRoot, "Generated.csproj"));
+        startInfo.ArgumentList.Add("-r");
+        startInfo.ArgumentList.Add("android-x64");
+        configure.Invoke(null, new object[] { startInfo, cacheProbeRoot });
+        var expected = explicitCache ? expectedPackages : Path.Combine(cacheProbeRoot, ".nuget", "packages");
+        if (startInfo.Environment["NUGET_PACKAGES"] != expected)
+            throw new Exception("Android UIForm publish lost the caller's NuGet cache after profile isolation.");
+    }
+}
+finally
+{
+    Environment.SetEnvironmentVariable("NUGET_PACKAGES", originalPackages);
+    Environment.SetEnvironmentVariable("DOTNET_CLI_HOME", originalCliHome);
+    Directory.Delete(cacheProbeRoot, recursive: true);
+}
+
 Console.WriteLine("ANDROID-COMPILER-PROBE=OK");
