@@ -74,6 +74,10 @@ if (goSubError.GetProperty("line").GetInt32() != 3 || goSubError.GetProperty("po
 var staticArraySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "static-array.xps"));
 var staticArrayValidation = await CallAsync(new {jsonrpc="2.0",id=42,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=staticArraySource,filename="static-array.xps"}}});
 if (staticArrayValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected the Static array lifecycle fixture.");
+var paritySource = "Sub Main()\n    Print 7\nEnd Sub";
+var legacyParity = await CallAsync(new {jsonrpc="2.0",id=43,method="tools/call",@params=new{name="xpscript_validate",arguments=new{source=paritySource,filename="parity.xps"}}});
+var astParity = await CallAsync(new {jsonrpc="2.0",id=44,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=paritySource,filename="parity.xps"}}});
+if (legacyParity.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok" || astParity.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("CLI and AST MCP parity fixture did not validate through both compiler backends.");
 var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps"}}});
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");
