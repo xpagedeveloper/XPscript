@@ -293,6 +293,7 @@ public static class DesktopFormHost
                     case ListBox listBox: listBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, listBox); break;
                     case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, checkBox); break;
                     case Slider slider: slider.ValueChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, slider); break;
+                    case DesktopColorFieldEditor colorField: colorField.Changed += value => TriggerEvent(eventKind + sourceField.Name, sourceField, colorField); break;
                     case DatePicker datePicker: datePicker.SelectedDateChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, datePicker); break;
                     case TimePicker timePicker: timePicker.PropertyChanged += (_, args) => { if (args.Property == TimePicker.SelectedTimeProperty) TriggerEvent(eventKind + sourceField.Name, sourceField, timePicker); }; break;
                     case StackPanel radioPanel:
@@ -517,6 +518,7 @@ public static class DesktopFormHost
                 SelectedTime = TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var selectedTime) ? selectedTime : null
             },
             "DateTimeField" => CreateDateTimeEditor(value),
+            "ColorField" => new DesktopColorFieldEditor(value),
             "Icon" => new TextBlock
             {
                 Text = string.IsNullOrWhiteSpace(field.Icon) ? field.Label : field.Icon,
@@ -688,6 +690,7 @@ public static class DesktopFormHost
         if (editor is TextBox textBox) return textBox.Text ?? string.Empty;
         if (editor is CheckBox checkBox) return checkBox.IsChecked == true ? "true" : string.Empty;
         if (editor is Slider slider) return slider.Value.ToString(CultureInfo.InvariantCulture);
+        if (editor is DesktopColorFieldEditor colorField) return colorField.Value;
         if (editor is DatePicker datePicker) return datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is TimePicker timePicker) return timePicker.SelectedTime?.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is StackPanel dateTimePanel && field.Type == "DateTimeField")
@@ -719,6 +722,55 @@ public static class DesktopFormHost
         };
     }
 
+    private sealed class DesktopColorFieldEditor : StackPanel
+    {
+        private readonly TextBox _valueEditor = new() { PlaceholderText = "#RRGGBB", MinWidth = 180 };
+        private readonly Button _preview = new() { Width = 36, Height = 36, Padding = new Thickness(0) };
+        public event Action<string>? Changed;
+        public string Value => _valueEditor.Text ?? string.Empty;
+
+        public DesktopColorFieldEditor(string value)
+        {
+            Orientation = Orientation.Horizontal;
+            Spacing = 8;
+            _valueEditor.Text = value;
+            _valueEditor.TextChanged += (_, _) => { UpdatePreview(); Changed?.Invoke(Value); };
+            _preview.Click += (_, _) => ShowColorMap();
+            Children.Add(_valueEditor);
+            Children.Add(_preview);
+            UpdatePreview();
+        }
+
+        private void UpdatePreview()
+        {
+            if (Color.TryParse(Value, out var color)) _preview.Background = new SolidColorBrush(color);
+        }
+
+        private void ShowColorMap()
+        {
+            var grid = new WrapPanel { Width = 18 * 24 + 12, Margin = new Thickness(6) };
+            for (var y = 0; y < 8; y++)
+            for (var x = 0; x < 18; x++)
+            {
+                var color = ColorMapColorAt(18, 8, x, y);
+                var button = new Button { Width = 24, Height = 24, Padding = new Thickness(0), Background = new SolidColorBrush(Color.Parse(color)) };
+                button.Click += (_, _) => _valueEditor.Text = color;
+                grid.Children.Add(button);
+            }
+            new Flyout { Content = grid, Placement = PlacementMode.Bottom }.ShowAt(_preview);
+        }
+
+        private static string ColorMapColorAt(int width, int height, int x, int y)
+        {
+            var hue = width <= 1 ? 0d : (double)x / (width - 1) * 360d;
+            var saturation = height <= 1 ? 1d : (double)y / (height - 1);
+            var segment = hue / 60d;
+            var intermediate = saturation * (1d - Math.Abs(segment % 2d - 1d));
+            var (red, green, blue) = segment switch { < 1d => (saturation, intermediate, 0d), < 2d => (intermediate, saturation, 0d), < 3d => (0d, saturation, intermediate), < 4d => (0d, intermediate, saturation), < 5d => (intermediate, 0d, saturation), _ => (saturation, 0d, intermediate) };
+            return $"#{(int)Math.Round(red * 255d):X2}{(int)Math.Round(green * 255d):X2}{(int)Math.Round(blue * 255d):X2}";
+        }
+    }
+
     private static JsonElement? ReadEditorValue(DesktopFormField field, Control editor)
     {
         if (editor is TextBox textBox)
@@ -729,6 +781,7 @@ public static class DesktopFormHost
             return JsonSerializer.SerializeToElement(text);
         }
         if (editor is Slider slider) return JsonSerializer.SerializeToElement(slider.Value);
+        if (editor is DesktopColorFieldEditor colorField) return JsonSerializer.SerializeToElement(colorField.Value);
         if (editor is CheckBox checkBox) return JsonSerializer.SerializeToElement(checkBox.IsChecked == true);
         if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.SelectedItem?.ToString() ?? string.Empty);
         if (editor is ListBox listBox)
