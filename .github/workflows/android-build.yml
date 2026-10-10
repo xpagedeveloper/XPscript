@@ -135,6 +135,9 @@ jobs:
       - name: Build Android Carousel API regression APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-carousel-api.xps -o ./out/android-carousel-api --runtime=false --platform android-x64 --debug
 
+      - name: Build Android Progress and Activity API regression APK
+        run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-progress-activity-api.xps -o ./out/android-progress-activity-api --runtime=false --platform android-x64 --debug
+
       - name: Build Android UIForm regression APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-regression.xps -o ./out/android-uiform-regression --runtime=false --platform android-x64 --debug
 
@@ -229,12 +232,31 @@ jobs:
               if adb logcat -d | grep -q 'ANDROID-CAROUSEL-AUTOADVANCE=3000' && \
                  adb logcat -d | grep -q 'ANDROID-CAROUSEL-INDEX=1'; then
                 echo 'Android Carousel configuration regression passed.'
-                exit 0
+                break
               fi
               sleep 2
             done
             adb logcat -d | grep -E 'ANDROID-CAROUSEL|AndroidRuntime|FATAL EXCEPTION' || true
-            echo 'Android Carousel regression did not reach configured state.' >&2
+            if ! adb logcat -d | grep -q 'ANDROID-CAROUSEL-AUTOADVANCE=3000'; then
+              echo 'Android Carousel regression did not reach configured state.' >&2
+              exit 1
+            fi
+
+            progress_apk="$(find ./out/android-progress-activity-api -type f -name '*-Signed.apk' -print -quit)"
+            test -n "$progress_apk"
+            adb install -r "$progress_apk"
+            adb logcat -c
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 15); do
+              if adb logcat -d | grep -q 'ANDROID-PROGRESS-VALUE=0.5' && \
+                 adb logcat -d | grep -q 'ANDROID-ACTIVITY-RUNNING=True'; then
+                echo 'Android ProgressBar and ActivityIndicator regression passed.'
+                exit 0
+              fi
+              sleep 2
+            done
+            adb logcat -d | grep -E 'ANDROID-PROGRESS|ANDROID-ACTIVITY|AndroidRuntime|FATAL EXCEPTION' || true
+            echo 'Android ProgressBar/ActivityIndicator regression did not reach configured state.' >&2
             exit 1
 
       - name: Verify debug APKs exist

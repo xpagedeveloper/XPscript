@@ -6,5 +6,7 @@ Sub Main()
     Dim activity = form.AddActivityIndicator("loading", "Loading")
     activity.IsRunning = True
     Call Application.Debug.Info("ANDROID-PROGRESS-VALUE=" & progress.Value)
+    Call Application.Debug.Info("ANDROID-PROGRESS-INDETERMINATE=" & progress.IsIndeterminate)
+    Call Application.Debug.Info("ANDROID-ACTIVITY-RUNNING=" & activity.IsRunning)
     Print "ANDROID-PROGRESS-ACTIVITY-API=ready"
 End Sub
