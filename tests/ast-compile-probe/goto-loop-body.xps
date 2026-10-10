@@ -1,0 +1,20 @@
+Sub Main()
+    Dim total As Long
+    Dim i As Long
+    For i = 1 To 3
+        GoTo addValue
+        total = total + 100
+addValue:
+        total = total + i
+    Next
+    Print total
+
+    Dim item As Variant
+    ForAll item In Array(4, 5)
+        GoTo addItem
+        total = total + 100
+addItem:
+        total = total + item
+    End ForAll
+    Print total
+End Sub

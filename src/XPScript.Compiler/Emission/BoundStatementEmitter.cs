@@ -230,6 +230,50 @@ public sealed class BoundStatementEmitter
                 Body(value.ElseStatements);
                 Line($"{end}:;");
                 return true;
+            case BoundForStatement value:
+                var range = output.Temporary();
+                var rangeIndex = output.Temporary();
+                var rangeValue = output.Temporary();
+                var rangeStart = output.Temporary();
+                var rangeDone = output.Temporary();
+                var rangeStep = value.StepExpression is null ? "1L" : _expressions.Emit(value.StepExpression);
+                Line($"var {range} = XPScriptRuntime.Range({_expressions.Emit(value.FromExpression)}, {_expressions.Emit(value.ToExpression)}, {rangeStep}).ToArray();");
+                Line($"var {rangeIndex} = 0;");
+                Line($"long {rangeValue} = 0;");
+                Line($"{rangeStart}:;");
+                Line($"if ({rangeIndex} >= {range}.Length) goto {rangeDone};");
+                Line($"{rangeValue} = {range}[{rangeIndex}++];");
+                Line($"{_expressions.Emit(value.Variable)} = XPScriptRuntime.CLng({rangeValue});");
+                Body(value.Statements);
+                Line($"goto {rangeStart};");
+                Line($"{rangeDone}:;");
+                return true;
+            case BoundForAllStatement value:
+                var items = output.Temporary();
+                var itemIndex = output.Temporary();
+                var itemValue = output.Temporary();
+                var itemStart = output.Temporary();
+                var itemDone = output.Temporary();
+                var collection = value.Collection.SemanticType.IsList
+                    ? $"{_expressions.Emit(value.Collection)}.Aliases().ToArray()"
+                    : $"System.Linq.Enumerable.Cast<object?>(LSForAllRuntime.Enumerate({_expressions.Emit(value.Collection)})).ToArray()";
+                Line($"var {items} = {collection};");
+                Line($"var {itemIndex} = 0;");
+                Line($"object? {itemValue} = null;");
+                Line($"{itemStart}:;");
+                Line($"if ({itemIndex} >= {items}.Length) goto {itemDone};");
+                Line($"{itemValue} = {items}[{itemIndex}++];");
+                if (value.Collection.SemanticType.IsList)
+                    _expressions.WithListAlias(value.Variable.Symbol, $"{itemValue}.Value", $"{itemValue}.Tag", () => Body(value.Statements));
+                else
+                {
+                    var converted = value.Variable.Type == typeof(long) ? $"XPScriptRuntime.CLng({itemValue})" : itemValue;
+                    Line($"{_expressions.Emit(value.Variable)} = {converted};");
+                    Body(value.Statements);
+                }
+                Line($"goto {itemStart};");
+                Line($"{itemDone}:;");
+                return true;
             case BoundWhileStatement value:
                 var start = output.Temporary();
                 var exit = output.Temporary();
