@@ -672,6 +672,10 @@ var switchSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..",
 foreach (var expected in new[] { "AddSwitch(\"enabled\"", "enabled.Value = True" })
     if (!switchSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android Switch regression sample is incomplete: " + expected);
+var iconSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-icon-api.xps"));
+foreach (var expected in new[] { "AddIcon(\"status\", \"check\"", "icon.IconName" })
+    if (!iconSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android Icon regression sample is incomplete: " + expected);
 
 var layoutRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormLayoutReactivePostProcessor.cs"));
 foreach (var expected in new[]
