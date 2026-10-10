@@ -115,6 +115,15 @@ internal sealed class XPImage : System.IDisposable
         return HsvToRgb(hue, saturation, 1d);
     }
 
+    public void FillColorMap()
+    {
+        for (var y = 0; y < Height; y++)
+            for (var x = 0; x < Width; x++)
+                SetPixel(x, y, ColorMapColorAt(Width, Height, x, y));
+    }
+
+    public string ColorMapColorAt(int x, int y) => ColorMapColorAt(Width, Height, x, y);
+
     private static string HsvToRgb(double hue, double saturation, double value)
     {
         var chroma = value * saturation;
