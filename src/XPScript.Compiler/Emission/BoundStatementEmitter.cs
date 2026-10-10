@@ -21,7 +21,7 @@ public sealed class BoundStatementEmitter
             {
                 var type = CSharpType(declaration.Local.Type);
                 if (declaration.Local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
-                    !semantic.IsVariant && !semantic.IsObject && !semantic.IsNothing && !semantic.IsNull && !semantic.IsEmpty)
+                    !semantic.IsVariant && !semantic.IsObject && !semantic.IsNothing && !semantic.IsNull && !semantic.IsEmpty && !semantic.IsList)
                     type = $"Xp{semantic.Name}";
                 output.Write($"{type} {declaration.Local.Name} = default({type});", 0, declaration.Span);
             }

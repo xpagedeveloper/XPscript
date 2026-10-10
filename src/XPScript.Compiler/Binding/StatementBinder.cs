@@ -98,7 +98,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         };
         if (syntax.IsStatic)
         {
-            if (procedureIdentity is null || syntax.IsList || (!syntax.IsArray && semanticType.IsObject))
+            if (procedureIdentity is null || (!syntax.IsArray && !syntax.IsList && semanticType.IsObject))
             {
                 _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
                     "AST Static requires a declaration in a named procedure; Static Object declarations remain unsupported.", syntax.Span));
