@@ -503,6 +503,16 @@ public static class DesktopFormHost
                 Minimum = 0,
                 Maximum = 1
             },
+            "DateField" => new DatePicker
+            {
+                SelectedDate = DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var selectedDate)
+                    ? new DateTimeOffset(selectedDate)
+                    : null
+            },
+            "TimeField" => new TimePicker
+            {
+                SelectedTime = TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var selectedTime) ? selectedTime : null
+            },
             "Icon" => new TextBlock
             {
                 Text = string.IsNullOrWhiteSpace(field.Icon) ? field.Label : field.Icon,
@@ -673,6 +683,8 @@ public static class DesktopFormHost
     {
         if (editor is TextBox textBox) return textBox.Text ?? string.Empty;
         if (editor is CheckBox checkBox) return checkBox.IsChecked == true ? "true" : string.Empty;
+        if (editor is DatePicker datePicker) return datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
+        if (editor is TimePicker timePicker) return timePicker.SelectedTime?.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is ComboBox comboBox) return comboBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is StackPanel radioPanel) return radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
