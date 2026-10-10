@@ -655,6 +655,7 @@ public sealed class StatementParser
         var isArray = false;
         int? arrayLength = null;
         var arrayLowerBound = 0;
+        var arrayRank = 1;
         if (Current.Kind == SyntaxKind.OpenParenToken)
         {
             isArray = true;
@@ -685,12 +686,18 @@ public sealed class StatementParser
             var hasMultipleDimensions = false;
             while (Current.Kind is not SyntaxKind.CloseParenToken and not SyntaxKind.EndOfFileToken and not SyntaxKind.NewLineToken)
             {
-                hasMultipleDimensions |= Current.Kind == SyntaxKind.CommaToken;
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    hasMultipleDimensions = true;
+                    arrayRank++;
+                }
                 NextToken();
             }
             if (hasMultipleDimensions)
+            {
                 _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
                     "AST arrays currently support one dimension only.", identifier.Span));
+            }
             Match(SyntaxKind.CloseParenToken);
         }
 
@@ -751,7 +758,8 @@ public sealed class StatementParser
             isArray,
             isList,
             arrayLength,
-            arrayLowerBound);
+            arrayLowerBound,
+            arrayRank);
     }
 
     private StatementSyntax ParseAssignmentStatement(int equalsIndex)

@@ -36,6 +36,7 @@ public sealed record LocalSymbol(string Name, Type Type, XpTypeSymbol? SemanticT
     public int ArrayLowerBound { get; init; }
     public int? ArrayLength { get; init; }
     public AstArrayStorageKind ArrayStorage { get; init; } = AstArrayStorageKind.ClrFixed;
+    public int ArrayRank { get; init; } = 1;
     /// <summary>Compiler-owned field backing a persistent procedure-local value.</summary>
     public string? StaticStorageName { get; init; }
     /// <summary>True for `Dim name()` storage, which Erase must deallocate.</summary>
