@@ -122,6 +122,8 @@ internal static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("CStr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LBound", typeof(long), [typeof(object)]));
         symbols.Declare(new FunctionSymbol("UBound", typeof(long), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("LBound", typeof(long), [typeof(object), typeof(long)]));
+        symbols.Declare(new FunctionSymbol("UBound", typeof(long), [typeof(object), typeof(long)]));
         symbols.Declare(new FunctionSymbol("Base64DecodeBinary", typeof(object), [typeof(string)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Len", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LenB", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));

@@ -96,13 +96,17 @@ public sealed class BoundExpressionEmitter
         if (call.Target is null && call.Function.Name.Equals("ListTag", StringComparison.OrdinalIgnoreCase) &&
             tagArgument is BoundNameExpression name && _aliases.TryGetValue(name.Symbol, out var alias))
             return alias.Tag;
-        if (call.Target is null && call.Arguments.Count == 1 &&
+        if (call.Target is null && call.Arguments.Count is 1 or 2 &&
             tagArgument is BoundNameExpression { Symbol: LocalSymbol local } && local.SemanticType?.IsArray == true)
         {
             if (call.Function.Name.Equals("LBound", StringComparison.OrdinalIgnoreCase))
-                return local.ArrayLowerBound.ToString(CultureInfo.InvariantCulture);
+                return call.Arguments.Count == 2
+                    ? $"LSArrayRuntime.LBound({Emit(tagArgument)}, Convert.ToInt32({Emit(call.Arguments[1])}))"
+                    : local.ArrayLowerBound.ToString(CultureInfo.InvariantCulture);
             if (call.Function.Name.Equals("UBound", StringComparison.OrdinalIgnoreCase))
-                return local.ArrayUpperBound is { } upperBound
+                return call.Arguments.Count == 2
+                    ? $"LSArrayRuntime.UBound({Emit(tagArgument)}, Convert.ToInt32({Emit(call.Arguments[1])}))"
+                    : local.ArrayUpperBound is { } upperBound
                     ? upperBound.ToString(CultureInfo.InvariantCulture)
                     : $"{Emit(tagArgument)}.GetUpperBound(0)";
         }
