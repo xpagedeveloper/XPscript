@@ -281,7 +281,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         if (candidates.Length == 0)
         {
             for (var i = 0; i < arguments.Length; i++)
-                if (arguments[i] is BoundIndexExpression { Expression.SemanticType.IsList: true } &&
+                if (!ReferenceEquals(syntax, listByRefStatementCall) &&
+                    arguments[i] is BoundIndexExpression { Expression.SemanticType.IsList: true } &&
                     functions.Any(function => function.ParameterTypes.Count == arguments.Length && function.ByRefParameters?[i] == true))
                     return Error(syntax.Arguments[i], CompilerDiagnosticCodes.InvalidSyntax,
                         "AST List element ByRef arguments are not implemented; pass a scalar local or use an explicit copy-back pattern.");
@@ -329,10 +330,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             if (!function.ByRefParameters[i])
                 continue;
-            if (ReferenceEquals(syntax, listByRefStatementCall) && arguments.Count == 1 &&
+            if (ReferenceEquals(syntax, listByRefStatementCall) &&
                 function.ReturnType == typeof(void) &&
                 syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
-                arguments[i] is BoundIndexExpression { Expression.SemanticType.IsList: true } &&
+                (arguments[i] is BoundIndexExpression { Expression.SemanticType.IsList: true } ||
+                 arguments[i] is BoundNameExpression { Symbol: LocalSymbol { IsListAlias: true } }) &&
                 Conversion.Classify(arguments[i].SemanticType,
                     function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(function.ParameterTypes[i])).IsIdentity)
                 continue;
@@ -340,7 +342,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 name.Symbol is not (VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol))
                 return false;
             if (name.Symbol is LocalSymbol { IsListAlias: true } &&
-                !(ReferenceEquals(syntax, listByRefStatementCall) && arguments.Count == 1 &&
+                !(ReferenceEquals(syntax, listByRefStatementCall) &&
                   function.ReturnType == typeof(void) && syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
                   Conversion.Classify(arguments[i].SemanticType,
                       function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(function.ParameterTypes[i])).IsIdentity))

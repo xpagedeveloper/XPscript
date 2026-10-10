@@ -5,9 +5,9 @@ End Sub
 
 Sub Main()
     Dim values List As Long
-    values("item") = 1
-    ForAll entry In values
-        Call TouchPair(entry, entry)
-        Print entry
-    End ForAll
+    values("first") = 1
+    values("second") = 2
+    Call TouchPair(values("first"), values("second"))
+    Print values("first")
+    Print values("second")
 End Sub

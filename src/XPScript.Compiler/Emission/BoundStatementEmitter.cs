@@ -102,6 +102,54 @@ public sealed class BoundStatementEmitter
                     output.Write("}", indent + 1, statement.Span);
                     Line("}");
                 }
+                else if (expression.Expression is BoundCallExpression multiListCall && multiListCall.Target is null &&
+                    multiListCall.Function.ReturnType == typeof(void) &&
+                    multiListCall.Function.ByRefParameters is not null &&
+                    multiListCall.Arguments.Zip(multiListCall.Function.ByRefParameters).Any(pair =>
+                        pair.Second && (pair.First is BoundIndexExpression { Expression.SemanticType.IsList: true } ||
+                                        pair.First is BoundNameExpression alias && _expressions.IsListAlias(alias.Symbol))))
+                {
+                    Line("{");
+                    var callArguments = new List<string>();
+                    var copyBacks = new List<(string Location, string Value, TextSpan? Span)>();
+                    for (var i = 0; i < multiListCall.Arguments.Count; i++)
+                    {
+                        var argument = multiListCall.Arguments[i];
+                        var byRef = multiListCall.Function.ByRefParameters[i];
+                        if (byRef && argument is BoundIndexExpression listElement && listElement.Expression.SemanticType.IsList)
+                        {
+                            var receiver = output.Temporary();
+                            var tag = output.Temporary();
+                            var value = output.Temporary();
+                            output.Write($"var {receiver} = {_expressions.Emit(listElement.Expression)};", indent + 1, listElement.Expression.Span);
+                            output.Write($"var {tag} = {_expressions.Emit(listElement.Index)};", indent + 1, listElement.Index.Span);
+                            var location = $"{receiver}[{tag}]";
+                            output.Write($"var {value} = {location};", indent + 1, argument.Span);
+                            callArguments.Add($"ref {value}");
+                            copyBacks.Add((location, value, argument.Span));
+                        }
+                        else if (byRef && argument is BoundNameExpression alias && _expressions.IsListAlias(alias.Symbol))
+                        {
+                            var value = output.Temporary();
+                            var location = _expressions.Emit(argument);
+                            output.Write($"var {value} = {location};", indent + 1, argument.Span);
+                            callArguments.Add($"ref {value}");
+                            copyBacks.Add((location, value, argument.Span));
+                        }
+                        else
+                            callArguments.Add((byRef ? "ref " : string.Empty) + _expressions.Emit(argument));
+                    }
+                    output.Write("try", indent + 1, statement.Span);
+                    output.Write("{", indent + 1, statement.Span);
+                    output.Write($"{multiListCall.Function.Name}({string.Join(", ", callArguments)});", indent + 2, statement.Span);
+                    output.Write("}", indent + 1, statement.Span);
+                    output.Write("finally", indent + 1, statement.Span);
+                    output.Write("{", indent + 1, statement.Span);
+                    foreach (var copyBack in copyBacks)
+                        output.Write($"{copyBack.Location} = {copyBack.Value};", indent + 2, copyBack.Span);
+                    output.Write("}", indent + 1, statement.Span);
+                    Line("}");
+                }
                 else if (expression.Expression is BoundCallExpression { Function.Name: "Delete" } delete && delete.Arguments.Count == 1 && delete.Arguments[0] is BoundNameExpression name)
                 {
                     // Delete invokes the object's cleanup hook before releasing the caller's reference.

@@ -9,8 +9,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-byref.xps') -
 if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List ByRef compilation failed.' }
 $aliasByRefResult = dotnet (Join-Path $aliasByRefOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($aliasByRefResult -join "`n") -ne "a:11`nb:12`n21`n22`n23`nhello!") { throw 'AST ForAll List ByRef copy-back or nested alias restoration failed.' }
-$aliasMultipleError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-byref-multiple-error.xps') -o (Join-Path $output 'forall-list-byref-multiple-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($aliasMultipleError -join "`n") -notmatch 'XPS2004') { throw 'AST unsupported multiple ByRef aliases must produce a binder diagnostic.' }
+$aliasMultipleOutput = Join-Path $output 'forall-list-byref-multiple'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-byref-multiple-error.xps') -o $aliasMultipleOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST multiple ForAll List ByRef compilation failed.' }
+$aliasMultipleResult = dotnet (Join-Path $aliasMultipleOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($aliasMultipleResult -join "`n") -ne '21') { throw 'AST multiple ForAll List ByRef copy-back failed.' }
 $listCopybackOutput = Join-Path $output 'list-byref-copyback'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-copyback.xps') -o $listCopybackOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST List ByRef copy-back compilation failed.' }
@@ -69,7 +72,7 @@ if ($LASTEXITCODE -ne 0) { throw 'AST List initializer compilation failed.' }
 $listInitializerResult = dotnet (Join-Path $listInitializerOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($listInitializerResult -join "`n") -ne '7') { throw 'AST List initializer did not preserve the source list.' }
 $listByRef = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-multiple-error.xps') -o (Join-Path $output 'list-byref-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($listByRef -join "`n") -notmatch 'AST List element ByRef arguments are not implemented') { throw 'AST did not diagnose unsupported List ByRef copy-back.' }
+if ($LASTEXITCODE -ne 0) { throw 'AST multiple List ByRef copy-back compilation failed.' }
 $listOutput = Join-Path $output 'forall-list'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-alias.xps') -o $listOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List alias compilation failed.' }
