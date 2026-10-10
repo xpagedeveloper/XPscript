@@ -81,8 +81,9 @@ För varje komponent:
   en kompatibel kontroll.
 - [x] Behåll shared `XPImage.CreateColorMap(width, height)` som fallback för
   hosts utan native picker.
-- [ ] Öppna fallback-kartan i en större modal/overlay och mappa klickets
-  koordinat till `XPImage.GetPixel` och `#RRGGBB`.
+- [x] Öppna fallback-kartan i en större host-overlay och mappa vald ruta till
+  `#RRGGBB`; Android använder shared `XPImage.ColorMapColorAt` och desktop
+  använder samma färgkartssemantik.
 
 ### Specialfält
 
