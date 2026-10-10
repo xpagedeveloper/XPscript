@@ -1,0 +1,23 @@
+Function BuildValue(ByVal value As Long) As Long
+    Print "STATIC_INITIALIZED"
+    BuildValue = value + 1
+End Function
+
+Sub Remember(ByVal seed As Long)
+    Dim localValue As Long
+    localValue = seed * 2
+    If seed > 0 Then
+        Static saved As Long = BuildValue(localValue)
+        Static firstSeed As Long = seed
+        Print saved
+        Print firstSeed
+    End If
+End Sub
+
+Sub Main()
+    Print "BEFORE_CALLS"
+    Call Remember(0)
+    Print "AFTER_SKIPPED_DECLARATION"
+    Call Remember(3)
+    Call Remember(9)
+End Sub

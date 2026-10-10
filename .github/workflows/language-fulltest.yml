@@ -25,6 +25,6 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
-      - name: Run Language FullTest, Object lifetime and initializer regressions first
+      - name: Run Language FullTest, Static initializer scope and Object lifetime regressions first
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite language

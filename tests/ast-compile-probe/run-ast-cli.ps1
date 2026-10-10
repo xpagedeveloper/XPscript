@@ -4,6 +4,11 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$staticScopeOutput = Join-Path $output 'static-initializer-scope'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-initializer-scope.xps') -o $staticScopeOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Static initializer parameter/local binding failed.' }
+$staticScopeResult = dotnet (Join-Path $staticScopeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($staticScopeResult -join "`n") -ne "BEFORE_CALLS`nAFTER_SKIPPED_DECLARATION`nSTATIC_INITIALIZED`n7`n3`n7`n3") { throw 'AST Static initializer must execute once at the first reached declaration with current parameter/local values.' }
 $objectInitializerOutput = Join-Path $output 'object-initializer-lifetime'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-initializer-lifetime.xps') -o $objectInitializerOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Object initializer compilation failed.' }

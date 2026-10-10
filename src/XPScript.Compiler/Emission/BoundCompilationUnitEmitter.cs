@@ -24,7 +24,6 @@ public sealed class BoundCompilationUnitEmitter
         methods = methods.Where(method => !method.IsOptionalForwarding ||
             !methods.Any(explicitMethod => !explicitMethod.IsOptionalForwarding && SameSignature(method, explicitMethod))).ToArray();
         var output = new StringBuilder();
-        var expressions = new BoundExpressionEmitter();
         foreach (var declaration in methods.SelectMany(method => BoundStatementTraversal.Descendants(method.Statements))
                      .OfType<BoundVariableDeclarationStatement>().Where(declaration => declaration.Local.StaticStorageName is not null))
         {
@@ -34,14 +33,14 @@ public sealed class BoundCompilationUnitEmitter
             if (declaration.Local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
                 !semantic.IsVariant && !semantic.IsObject && !semantic.IsEmpty && !semantic.IsNothing && !semantic.IsNull && !semantic.IsList)
                 type = $"Xp{semantic.Name}";
-            var initialValue = declaration.Initializer is not null
-                ? expressions.Emit(declaration.Initializer)
-                : declaration.Local.Type.IsArray
+            var initialValue = declaration.Local.Type.IsArray
                 ? $"new {type[..^2]}[0]"
                 : declaration.Local.SemanticType?.IsList == true ? $"new {type}()"
                 : declaration.Local.Type == typeof(string) ? "string.Empty" : $"default({type})";
             output.Append("private static ").Append(type).Append(' ').Append(declaration.Local.StaticStorageName)
                 .Append(" = ").Append(initialValue).Append(";\n");
+            if (declaration.Initializer is not null)
+                output.Append("private static bool ").Append(declaration.Local.StaticStorageName).Append("_initialized;\n");
         }
         var emitter = new BoundMethodEmitter();
         foreach (var method in methods)

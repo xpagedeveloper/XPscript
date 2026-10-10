@@ -84,7 +84,7 @@ End If
 
 `Dim value As Object` inside a procedure starts as Nothing on every call. `Static value As Object` starts as Nothing once and keeps its reference between calls. Neither declaration creates an object; use `Set value = New Object()` explicitly.
 
-Experimental AST also supports `Dim value As Object = New Object()` and `Static value As Object = New Object()`. Dim executes the initializer again on each call; Static uses a generated static field initializer, so clearing its reference does not rerun the initializer. For lazy creation, keep `Static value As Object` without an initializer and use `If value Is Nothing Then` with an explicit Set. Static initializers that depend on procedure parameters or locals remain unsupported.
+Experimental AST also supports `Dim value As Object = New Object()` and `Static value As Object = New Object()`. Dim executes the initializer each time the declaration is reached; Static executes it once at the first reached declaration, using that call's parameters and earlier locals. Clearing a Static reference does not rerun its initializer. To recreate an object after clearing it, use `Static value As Object` without an initializer and `If value Is Nothing Then` with an explicit Set. Recursive initialization and simultaneous first calls are not covered by the current contract.
 
 All XPscript classes are instance-based. Create class objects with `New`.
 

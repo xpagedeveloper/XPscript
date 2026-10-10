@@ -96,8 +96,16 @@ public sealed class BoundStatementEmitter
                 else
                     Line($"{_expressions.Emit(expression.Expression)};");
                 break;
-            case BoundVariableDeclarationStatement { Local.StaticStorageName: not null }:
-                // Storage is initialized once in the compilation unit, not on entry.
+            case BoundVariableDeclarationStatement { Local.StaticStorageName: not null } persistent:
+                if (persistent.Initializer is not null)
+                {
+                    var storage = persistent.Local.StaticStorageName;
+                    Line($"if (!{storage}_initialized)");
+                    Line("{");
+                    output.Write($"{storage} = {_expressions.Emit(persistent.Initializer)};", indent + 1, persistent.Initializer.Span);
+                    output.Write($"{storage}_initialized = true;", indent + 1, persistent.Span);
+                    Line("}");
+                }
                 break;
             case BoundVariableDeclarationStatement { Initializer: null } when _flatControlFlow:
                 break;
