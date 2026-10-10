@@ -81,14 +81,14 @@ public sealed class BoundExpressionEmitter
             tagArgument is BoundNameExpression name && _aliases.TryGetValue(name.Symbol, out var alias))
             return alias.Tag;
         if (call.Target is null && call.Arguments.Count == 1 &&
-            call.Arguments[0] is BoundNameExpression { Symbol: LocalSymbol local } && local.Type.IsArray)
+            tagArgument is BoundNameExpression { Symbol: LocalSymbol local } && local.SemanticType?.IsArray == true)
         {
             if (call.Function.Name.Equals("LBound", StringComparison.OrdinalIgnoreCase))
                 return local.ArrayLowerBound.ToString(CultureInfo.InvariantCulture);
             if (call.Function.Name.Equals("UBound", StringComparison.OrdinalIgnoreCase))
                 return local.ArrayLength is { } length
                     ? (local.ArrayLowerBound + length - 1).ToString(CultureInfo.InvariantCulture)
-                    : $"{Emit(call.Arguments[0])}.GetUpperBound(0)";
+                    : $"{Emit(tagArgument)}.GetUpperBound(0)";
         }
         var arguments = call.Arguments.Select((argument, index) =>
         {
