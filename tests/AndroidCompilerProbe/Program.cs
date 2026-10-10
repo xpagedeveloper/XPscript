@@ -680,6 +680,10 @@ var cardPanelSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, ".
 foreach (var expected in new[] { "AddCard(\"summary\"", "AddPanel(\"details\"", "card.Name", "panel.Name" })
     if (!cardPanelSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android Card/Panel regression sample is incomplete: " + expected);
+var completeControlsSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-uiform-controls-api.xps"));
+foreach (var expected in new[] { "AddProgressBar", "AddActivityIndicator", "AddSlider", "SetSliderStep", "AddSwitch", "AddIcon", "AddCard", "AddPanel", "AddScrollView", "AddListView", "AddOption", "AddCameraPreview", "AddCarousel", "SetCarouselIndex", "SetCarouselLoop", "SetCarouselAutoAdvance", "AddAudio", "PlayMedia", "PauseMedia", "StopMedia", "AddVideo", "audio.Source", "audio.Position", "audio.Duration", "audio.Volume", "audio.AutoPlay", "audio.Loop", "audio.Muted", "audio.PlaybackRate", "audio.Play()", "audio.Pause()", "video.Source" })
+    if (!completeControlsSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Complete Android UIForm controls sample is missing: " + expected);
 
 var layoutRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormLayoutReactivePostProcessor.cs"));
 foreach (var expected in new[]

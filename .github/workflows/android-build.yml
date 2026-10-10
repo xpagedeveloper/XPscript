@@ -129,6 +129,9 @@ jobs:
       - name: Build Android UIForm regression APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-regression.xps -o ./out/android-uiform-regression --runtime=false --platform android-x64 --debug
 
+      - name: Compile complete Android UIForm controls API sample
+        run: bash ./scripts/compile-android-uiform-controls.sh ./out/android-uiform-controls-api
+
       - name: Build Android UIForm manual test APK
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/android-uiform-manual-test.xps -o ./out/android-uiform-manual-test --runtime=false --platform android-x64 --debug
 

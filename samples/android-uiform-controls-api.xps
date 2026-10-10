@@ -1,0 +1,75 @@
+Sub Main()
+    Dim form As New UIForm("Android UIForm Controls API")
+
+    Dim progress As Variant
+    progress = form.AddProgressBar("progress", "Progress")
+    progress.Value = 0.5
+    progress.IsIndeterminate = False
+    Dim activity As Variant
+    activity = form.AddActivityIndicator("activity", "Loading")
+    activity.IsRunning = True
+
+    Dim slider As Variant
+    slider = form.AddSlider("volume", "Volume")
+    slider.Value = 0.75
+    slider.Minimum = 0
+    slider.Maximum = 1
+    slider.Step = 0.05
+    form.SetSliderStep("volume", 0.05)
+
+    Dim toggle As Variant
+    toggle = form.AddSwitch("enabled", "Enabled")
+    toggle.Value = True
+    Dim icon As Variant
+    icon = form.AddIcon("status", "check", "Status")
+    Dim card As Variant
+    card = form.AddCard("summary", "Summary")
+    Dim panel As Variant
+    panel = form.AddPanel("details", "Details")
+    Dim scroll As Variant
+    scroll = form.AddScrollView("content", "Content")
+
+    Dim list As Variant
+    list = form.AddListView("items", "Items")
+    form.AddOption("items", "First")
+    form.AddOption("items", "Second")
+
+    Dim camera As Variant
+    camera = form.AddCameraPreview("camera", "Camera")
+    Dim carousel As Variant
+    carousel = form.AddCarousel("slides", "assets/slide-1.png", "data:image/png;base64,iVBORw0KGgo=")
+    form.SetCarouselIndex("slides", 0)
+    form.SetCarouselLoop("slides", True)
+    form.SetCarouselAutoAdvance("slides", 3000)
+
+    Dim audio As Variant
+    audio = form.AddAudio("audio", "Audio")
+    audio.Source = "assets/sample.mp3"
+    audio.Position = 0
+    audio.Volume = 0.8
+    audio.AutoPlay = False
+    audio.Loop = True
+    audio.Muted = False
+    audio.PlaybackRate = 1
+    audio.Play()
+    audio.Pause()
+    form.PlayMedia("audio")
+    form.PauseMedia("audio")
+    form.StopMedia("audio")
+
+    Dim video As Variant
+    video = form.AddVideo("video", "Video")
+    video.Source = "assets/sample.mp4"
+    video.Position = 0
+    video.Volume = 0.8
+    video.AutoPlay = False
+    video.Loop = True
+    video.Muted = False
+    video.PlaybackRate = 1
+    form.PlayMedia("video")
+    form.PauseMedia("video")
+    form.StopMedia("video")
+
+    Call Application.Debug.Info("ANDROID-UIFORM-CONTROLS-API=ready")
+    Print "ANDROID-UIFORM-CONTROLS-API=ready"
+End Sub
