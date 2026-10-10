@@ -4,6 +4,11 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$objectLifetimeOutput = Join-Path $output 'object-local-lifetime'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-local-lifetime.xps') -o $objectLifetimeOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST local Object lifetime compilation failed.' }
+$objectLifetimeResult = dotnet (Join-Path $objectLifetimeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($objectLifetimeResult -join "`n") -ne "True`nTrue`nFalse`nTrue`nFalse`nFalse") { throw 'AST Dim Object must start as Nothing on each call while Static Object retains its reference.' }
 $staticObjectOutput = Join-Path $output 'static-object'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-object.xps') -o $staticObjectOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Static Object compilation failed.' }

@@ -82,6 +82,8 @@ End If
 
 ## Classes and object lifetime
 
+`Dim value As Object` inside a procedure starts as Nothing on every call. `Static value As Object` starts as Nothing once and keeps its reference between calls. Neither declaration creates an object; use `Set value = New Object()` explicitly.
+
 All XPscript classes are instance-based. Create class objects with `New`.
 
 ```xpscript

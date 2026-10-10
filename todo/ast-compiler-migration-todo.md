@@ -318,6 +318,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [ ] Replace experimental runtime placeholders (including HTTP/TLS, image, UI, error and environment helpers) with existing runtime implementations before claiming sample compatibility.
 - [ ] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding.
 - [ ] Migrate class declarations, inheritance and object lifecycle into the AST bound tree. AST now rejects class source explicitly instead of compiling null/dynamic placeholders that fail at runtime.
+  Simple class fields and inheritance are supported. Object locals now start as Nothing; `object-local-lifetime.xps` verifies fresh Dim references versus persistent Static references across calls. Class members and complete lifecycle lowering remain open.
 - [x] Add missing AST Variant-to-Byte conversion through the existing runtime `CByte` helper; the executable regression now matches published scalar conversion behavior.
 - [x] Preserve uninitialized Variant Nothing semantics for `Is Nothing`; AST now emits null storage instead of an ExpandoObject and matches published output.
 - [ ] Preserve original source spans through all preprocessing and map parser/binder errors through the shared diagnostic contract.
