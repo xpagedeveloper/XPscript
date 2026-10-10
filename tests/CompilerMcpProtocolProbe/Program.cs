@@ -43,6 +43,10 @@ var gotoDeclarationValidation = await CallAsync(new {jsonrpc="2.0",id=34,method=
 var gotoDeclarationError = gotoDeclarationValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
 if (gotoDeclarationError.GetProperty("line").GetInt32() != 2 || gotoDeclarationError.GetProperty("position").GetInt32() != 5)
     throw new Exception("AST MCP GoTo declaration diagnostic lost the GoTo source span.");
+var optionBaseSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "option-base.xps"));
+var optionBaseValidation = await CallAsync(new {jsonrpc="2.0",id=35,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=optionBaseSource,filename="option-base.xps"}}});
+if (optionBaseValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+    throw new Exception("AST MCP rejected the Option Base array fixture.");
 var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps"}}});
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");
