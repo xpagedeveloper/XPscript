@@ -311,7 +311,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [ ] Emit reads and writes through the abstraction instead of directly indexing CLR arrays.
   - [ ] Lower `ReDim`, `ReDim Preserve` and `Erase` through the abstraction.
 - [ ] Complete `Option Base` and lower-bound semantics. AST now supports `Option Base 1` for simple one-dimensional constant arrays through the same offset-indexing path as explicit bounds; dynamic and multidimensional lower-bound semantics remain open.
-  - [ ] Apply `Option Base` to dynamic declarations and `ReDim` without changing fixed-array behavior.
+  - [x] Apply `Option Base` to dynamic one-dimensional `ReDim` bounds without changing fixed-array behavior; multidimensional lower-bound semantics remain open.
   - [ ] Emit `LBound` and `UBound` for every supported storage kind and dimension.
 - [ ] Complete List ByRef aliases/copy-back, initialized declarations and parameters/returns. The ByRef alias audit produces a C# ref-property error in AST; published main compiles but leaves the element unchanged (1 instead of the expected mutation to 11). Initialized List declarations are explicitly rejected instead of discarded. Complete IsElement argument validation, dynamically supplied Lists and array Erase as part of API migration.
   AST supports explicit Sub calls with one or more matching typed ByRef List elements or ForAll aliases. Receiver/tag expressions are evaluated once, with typed temporary storage and finally copy-back; numeric/string CLI fixtures, nested alias scope, exceptional emitter fixtures and AST-MCP validation cover both forms. Function expressions remain open. List reference initializers are supported.
