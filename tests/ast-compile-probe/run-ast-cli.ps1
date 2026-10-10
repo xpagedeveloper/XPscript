@@ -106,6 +106,8 @@ $unsupportedResume = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'resu
 if ($LASTEXITCODE -ne 2 -or ($unsupportedResume -join "`n") -notmatch 'AST On Error and Resume semantics are not implemented') { throw 'AST silently lowered unsupported Resume handling.' }
 $unsupportedWith = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'with-error.xps') -o (Join-Path $output 'with-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedWith -join "`n") -notmatch 'AST With and implicit member access are not implemented') { throw 'AST silently lowered unsupported With/member access.' }
+$unsupportedImplicitMember = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'implicit-member-error.xps') -o (Join-Path $output 'implicit-member-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($unsupportedImplicitMember -join "`n") -notmatch 'AST With and implicit member access are not implemented') { throw 'AST silently lowered unsupported implicit member access.' }
 $unsupportedImage = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-error.xps') -o (Join-Path $output 'xpimage-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedImage -join "`n") -notmatch 'AST XPImage runtime integration is not implemented') { throw 'AST silently substituted XPImage with Object.' }
 $optionBaseOutput = Join-Path $output 'option-base'
