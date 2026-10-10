@@ -503,6 +503,32 @@ public static class DesktopFormHost
                 Minimum = 0,
                 Maximum = 1
             },
+            "Icon" => new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(field.Icon) ? field.Label : field.Icon,
+                FontSize = 24,
+                HorizontalAlignment = HorizontalAlignment.Left
+            },
+            "Card" => new Border
+            {
+                BorderBrush = Brushes.Gray,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(field.CornerRadius),
+                Padding = new Thickness(12),
+                Child = new TextBlock { Text = field.Label }
+            },
+            "Panel" => new Border
+            {
+                BorderBrush = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(8),
+                Child = new TextBlock { Text = field.Label }
+            },
+            "ScrollView" => new ScrollViewer
+            {
+                MinHeight = 96,
+                Content = new TextBlock { Text = field.Label, TextWrapping = TextWrapping.Wrap }
+            },
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Select" => CreateSelect(field),
             "ListBox" => CreateListBox(field, false),

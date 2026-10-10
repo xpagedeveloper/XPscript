@@ -47,6 +47,7 @@ public sealed record DesktopFormField(
     public string ImageSource { get; init; } = string.Empty;
     public string ImageAltText { get; init; } = string.Empty;
     public string ImageCertificateValidation { get; init; } = "Strict";
+    public string Icon { get; init; } = string.Empty;
     public string WebViewSource { get; init; } = "about:blank";
     public string WebViewHtml { get; init; } = string.Empty;
     public string WebViewUserAgent { get; init; } = string.Empty;
