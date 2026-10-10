@@ -64,7 +64,20 @@ internal static class CompilerBuildEnvironment
         if (string.IsNullOrWhiteSpace(baseDirectory)) baseDirectory = Path.Combine(Path.GetTempPath(), "XPScript-user-cache");
         var compilerIdentity = typeof(CompilerBuildEnvironment).Assembly.ManifestModule.ModuleVersionId.ToString("N");
         var root = Path.Combine(baseDirectory, "XPScript", "run-build-cache", compilerIdentity);
-        Directory.CreateDirectory(root);
+        try
+        {
+            Directory.CreateDirectory(root);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            root = Path.Combine(Path.GetTempPath(), "XPScript-user-cache", compilerIdentity);
+            Directory.CreateDirectory(root);
+        }
+        catch (IOException)
+        {
+            root = Path.Combine(Path.GetTempPath(), "XPScript-user-cache", compilerIdentity);
+            Directory.CreateDirectory(root);
+        }
         CompilerPathSecurity.HardenTemporaryDirectory(root);
         return root;
     }
