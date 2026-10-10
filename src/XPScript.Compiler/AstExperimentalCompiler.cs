@@ -17,6 +17,16 @@ internal static class AstExperimentalCompiler
         RejectUnsupported(sourcePath, source, @"(?im)^\s*(?:On\s+Error\b|Resume\b)", "AST On Error and Resume semantics are not implemented; the source was not lowered silently.");
         RejectUnsupported(sourcePath, source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]", "AST With and implicit member access are not implemented; the source was not lowered silently.");
         RejectUnsupported(sourcePath, source, @"(?i)\bXPImage\b", "AST XPImage runtime integration is not implemented; image operations were not replaced with Object.");
+        var optionBase = 0;
+        var optionBaseMatch = Regex.Match(source, @"(?im)^\s*Option\s+Base\s+(?<base>[01])\s*(?:\r?$)");
+        if (optionBaseMatch.Success)
+        {
+            optionBase = int.Parse(optionBaseMatch.Groups["base"].Value);
+            source = Regex.Replace(source, @"(?im)^\s*Option\s+Base\s+[01]\s*(?:\r?$)", string.Empty);
+            if (optionBase == 1)
+                source = Regex.Replace(source, @"(?im)^(?<indent>\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*)\((?<upper>\d+)\)",
+                    "${indent}(1 To ${upper})");
+        }
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"_\s*(?:\r?\n)", " ");
         source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);

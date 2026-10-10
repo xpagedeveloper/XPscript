@@ -106,8 +106,11 @@ $unsupportedWith = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'with-e
 if ($LASTEXITCODE -ne 2 -or ($unsupportedWith -join "`n") -notmatch 'AST With and implicit member access are not implemented') { throw 'AST silently lowered unsupported With/member access.' }
 $unsupportedImage = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-error.xps') -o (Join-Path $output 'xpimage-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedImage -join "`n") -notmatch 'AST XPImage runtime integration is not implemented') { throw 'AST silently substituted XPImage with Object.' }
-$unsupportedOptionBase = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'option-base-error.xps') -o (Join-Path $output 'option-base-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($unsupportedOptionBase -join "`n") -notmatch 'AST Option Base semantics are not implemented') { throw 'AST silently assumed an unsupported Option Base.' }
+$optionBaseOutput = Join-Path $output 'option-base'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'option-base.xps') -o $optionBaseOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Option Base compilation failed.' }
+$optionBaseResult = dotnet (Join-Path $optionBaseOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionBaseResult -join "`n") -ne "10`n30") { throw 'AST Option Base indexing returned the wrong elements.' }
 $byteOutput = Join-Path $output 'variant-byte-conversion'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'variant-byte-conversion.xps') -o $byteOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Variant-to-Byte conversion compilation failed.' }
