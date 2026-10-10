@@ -71,6 +71,19 @@ För varje komponent:
 - [ ] Portera native picker-/editor-semantik till övriga plattformar.
 - [ ] Definiera locale, timezone, format, keyboard och accessibility.
 
+### ColorField picker-strategi
+
+- [x] Använd plattformens native color picker när den finns och har stabil API:
+  server-web/Browser-WASM använder HTML `input type="color"`.
+- [ ] Använd Androids native picker när en kompatibel Android/Avalonia-host
+  finns tillgänglig och kan returnera `#RRGGBB` med change-event.
+- [ ] Använd desktop-native picker när den valda Avalonia-versionen erbjuder
+  en kompatibel kontroll.
+- [x] Behåll shared `XPImage.CreateColorMap(width, height)` som fallback för
+  hosts utan native picker.
+- [ ] Öppna fallback-kartan i en större modal/overlay och mappa klickets
+  koordinat till `XPImage.GetPixel` och `#RRGGBB`.
+
 ### Specialfält
 
 - [ ] `AddEmailField` med email-validering och rätt input mode.

@@ -7,6 +7,10 @@ Den kompletta komponentinventeringen och portningschecklistan finns i
 
 This TODO complements `todo/android-support-todo.md`. Android remains the first implementation target. A control is complete only when its shared API, supported platform behavior, validation, accessibility, lifecycle semantics and regression coverage are documented and tested.
 
+Platform controls should prefer a stable native picker/control where available;
+shared XPImage-based fallbacks are used only when the platform host has no
+compatible native control.
+
 ## Controls in scope
 
 - Video
