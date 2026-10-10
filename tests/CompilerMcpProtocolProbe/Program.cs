@@ -67,6 +67,10 @@ var implicitMemberSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests
 var implicitMemberValidation = await CallAsync(new {jsonrpc="2.0",id=40,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=implicitMemberSource,filename="implicit-member-error.xps"}}});
 var implicitMemberError = implicitMemberValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
 if (implicitMemberError.GetProperty("line").GetInt32() != 2 || implicitMemberError.GetProperty("position").GetInt32() != 1 || implicitMemberError.GetProperty("description").GetString() is not { } implicitMessage || !implicitMessage.Contains("With and implicit member access", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP implicit-member diagnostics lost the source span or stable message.");
+var goSubSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "unsupported-gosub.xps"));
+var goSubValidation = await CallAsync(new {jsonrpc="2.0",id=41,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=goSubSource,filename="unsupported-gosub.xps"}}});
+var goSubError = goSubValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (goSubError.GetProperty("line").GetInt32() != 3 || goSubError.GetProperty("position").GetInt32() != 9 || goSubError.GetProperty("description").GetString() is not { } goSubMessage || !goSubMessage.Contains("GoSub is not implemented", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP GoSub diagnostics lost the source span or stable message.");
 var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps"}}});
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");
