@@ -757,13 +757,7 @@ internal static class Program
     {
         var lowerBound = lower is null ? 0 : Convert.ToInt32(lower);
         var upperBound = Convert.ToInt32(upper);
-        var length = Math.Max(0, upperBound - lowerBound + 1);
-        var source = value as System.Array;
-        var elementType = source?.GetType().GetElementType() ?? typeof(object);
-        var result = System.Array.CreateInstance(elementType, [length], [lowerBound]);
-        if (Convert.ToBoolean(preserve) && source is not null)
-            System.Array.Copy(source, result, Math.Min(source.Length, result.Length));
-        return result;
+        return LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), lowerBound, upperBound);
     }
     public static object Explode(object? value, object? separator) => (value?.ToString() ?? string.Empty).Split(separator?.ToString() ?? ",");
     public static string FullTrim(object? value) => value?.ToString()?.Trim() ?? string.Empty;

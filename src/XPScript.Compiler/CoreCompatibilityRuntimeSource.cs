@@ -203,6 +203,17 @@ internal static class LSArrayRuntime
         return array;
     }
 
+    public static Array ReDimManaged(object? value, bool preserve, int lower, int upper)
+    {
+        var source = value as Array;
+        var elementType = source?.GetType().GetElementType() ?? typeof(object);
+        var length = Math.Max(0, upper - lower + 1);
+        var result = Array.CreateInstance(elementType, [length], [lower]);
+        if (preserve && source is not null)
+            Array.Copy(source, result, Math.Min(source.Length, result.Length));
+        return result;
+    }
+
     public static object? Get(object? value, params object?[] indices)
     {
         if (IsNothing(value)) return NothingArray().Get(indices);
