@@ -8,6 +8,9 @@
     <NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/XPScript.Compiler/XPScript.Compiler.csproj" />
+    <Reference Include="XPScript.Compiler.Core">
+      <HintPath>../../src/XPScript.Compiler.Core/bin/$(Configuration)/net10.0/XPScript.Compiler.Core.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
 </Project>
