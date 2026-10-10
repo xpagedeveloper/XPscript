@@ -86,7 +86,7 @@ public sealed class BoundExpressionEmitter
 
     private string EmitCall(BoundCallExpression call)
     {
-        var tagArgument = call.Arguments.Count == 1 ? call.Arguments[0] : null;
+        var tagArgument = call.Arguments.Count >= 1 ? call.Arguments[0] : null;
         if (tagArgument is BoundConversionExpression conversion) tagArgument = conversion.Expression;
         // IsElement inspects the tag, not the indexed value: reading a missing
         // element first would throw instead of returning False.
