@@ -679,6 +679,10 @@ var listViewSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..
 foreach (var expected in new[] { "AddListView(\"items\"", "AddOption(\"items\", \"First\")", "ANDROID-LISTVIEW-STATE=ready" })
     if (!listViewSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android ListView regression sample is incomplete: " + expected);
+var cameraSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-uiform-camera-preview.xps"));
+foreach (var expected in new[] { "AddCameraPreview(\"camera\"", "ANDROID-CAMERA-STATE=ready" })
+    if (!cameraSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android CameraPreview regression sample is incomplete: " + expected);
 var progressActivitySample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-progress-activity-api.xps"));
 foreach (var expected in new[] { "AddProgressBar(\"progress\"", "progress.Value = 0.5", "progress.IsIndeterminate = False", "AddActivityIndicator(\"loading\"", "activity.IsRunning = True" })
     if (!progressActivitySample.Contains(expected, StringComparison.Ordinal))
