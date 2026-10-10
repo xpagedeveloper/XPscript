@@ -676,6 +676,10 @@ var iconSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "
 foreach (var expected in new[] { "AddIcon(\"status\", \"check\"", "icon.IconName" })
     if (!iconSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android Icon regression sample is incomplete: " + expected);
+var cardPanelSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-card-panel-api.xps"));
+foreach (var expected in new[] { "AddCard(\"summary\"", "AddPanel(\"details\"", "card.Name", "panel.Name" })
+    if (!cardPanelSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android Card/Panel regression sample is incomplete: " + expected);
 
 var layoutRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormLayoutReactivePostProcessor.cs"));
 foreach (var expected in new[]
