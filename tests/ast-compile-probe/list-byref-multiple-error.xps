@@ -1,0 +1,10 @@
+Sub TouchPair(ByRef first As Long, ByRef second As Long)
+    first = first + 10
+    second = second + 20
+End Sub
+
+Sub Main()
+    Dim values List As Long
+    values("item") = 1
+    Call TouchPair(values("item"), values("item"))
+End Sub

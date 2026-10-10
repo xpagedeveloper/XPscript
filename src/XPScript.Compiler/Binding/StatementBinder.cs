@@ -157,8 +157,11 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindCallStatement(CallStatementSyntax syntax)
     {
-        var expression = BindExpression(syntax.Expression);
-        return expression is null ? null : new BoundExpressionStatement(expression);
+        var binder = new ExpressionBinder(_symbols, _allowDynamicMembers, functionName, functionResult,
+            listByRefStatementCall: syntax.Expression);
+        var expression = binder.Bind(syntax.Expression);
+        _diagnostics.AddRange(binder.Diagnostics);
+        return binder.Diagnostics.Count == 0 ? new BoundExpressionStatement(expression) : null;
     }
 
     private BoundStatement? BindRuntimeStatement(RuntimeFileStatementSyntax syntax)

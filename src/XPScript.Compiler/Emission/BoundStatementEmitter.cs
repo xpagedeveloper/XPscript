@@ -72,7 +72,29 @@ public sealed class BoundStatementEmitter
                 Line($"{targetText} = {expressionText};");
                 break;
             case BoundExpressionStatement expression:
-                if (expression.Expression is BoundCallExpression { Function.Name: "Delete" } delete && delete.Arguments.Count == 1 && delete.Arguments[0] is BoundNameExpression name)
+                if (expression.Expression is BoundCallExpression listCall && listCall.Target is null &&
+                    listCall.Function.ReturnType == typeof(void) && listCall.Arguments.Count == 1 &&
+                    listCall.Function.ByRefParameters?[0] == true &&
+                    listCall.Arguments[0] is BoundIndexExpression { Expression.SemanticType.IsList: true } listElement)
+                {
+                    var receiver = output.Temporary();
+                    var tag = output.Temporary();
+                    var value = output.Temporary();
+                    Line("{");
+                    output.Write($"var {receiver} = {_expressions.Emit(listElement.Expression)};", indent + 1, listElement.Expression.Span);
+                    output.Write($"var {tag} = {_expressions.Emit(listElement.Index)};", indent + 1, listElement.Index.Span);
+                    output.Write($"var {value} = {receiver}[{tag}];", indent + 1, listElement.Span);
+                    output.Write("try", indent + 1, statement.Span);
+                    output.Write("{", indent + 1, statement.Span);
+                    output.Write($"{listCall.Function.Name}(ref {value});", indent + 2, statement.Span);
+                    output.Write("}", indent + 1, statement.Span);
+                    output.Write("finally", indent + 1, statement.Span);
+                    output.Write("{", indent + 1, statement.Span);
+                    output.Write($"{receiver}[{tag}] = {value};", indent + 2, listElement.Span);
+                    output.Write("}", indent + 1, statement.Span);
+                    Line("}");
+                }
+                else if (expression.Expression is BoundCallExpression { Function.Name: "Delete" } delete && delete.Arguments.Count == 1 && delete.Arguments[0] is BoundNameExpression name)
                 {
                     // Delete invokes the object's cleanup hook before releasing the caller's reference.
                     Line($"if ({name.Symbol.Name} is not null) ((dynamic){name.Symbol.Name}).Delete();");

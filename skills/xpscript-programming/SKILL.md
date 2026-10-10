@@ -68,6 +68,8 @@ For a declared List, `ForAll alias In values` exposes a writable element alias: 
 
 Use `IsElement(values(tag))` to test for a List tag before reading its value. The experimental AST path supports this for declared Lists and returns False for a missing tag; it evaluates the tag expression once. Dynamically supplied Lists and complete argument validation remain migration work.
 
+Experimental AST supports `Call Touch(values(tag))` for a declared Sub with one matching typed ByRef parameter. It evaluates the List/tag once and copies the changed value back, including if the Sub throws. Use explicit scalar temporaries and copy-back for multiple arguments, Function expressions or ForAll alias arguments; those forms remain unsupported.
+
 Use `Erase values(tag)` to remove one List entry or `Erase values` to clear all entries. Experimental AST supports these forms for declared Lists, including safe removal of a missing tag and removals during ForAll snapshot iteration. It also supports fixed one-dimensional declared arrays; dynamic and multidimensional array lifecycle remains migration work.
 
 ```xpscript

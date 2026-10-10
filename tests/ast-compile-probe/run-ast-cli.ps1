@@ -4,6 +4,11 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$listCopybackOutput = Join-Path $output 'list-byref-copyback'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-copyback.xps') -o $listCopybackOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST List ByRef copy-back compilation failed.' }
+$listCopybackResult = dotnet (Join-Path $listCopybackOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listCopybackResult -join "`n") -ne "TAG_EVALUATED_ONCE`n11`nhello!") { throw 'AST List ByRef must copy back typed values and evaluate the tag once.' }
 $staticScopeOutput = Join-Path $output 'static-initializer-scope'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-initializer-scope.xps') -o $staticScopeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Static initializer parameter/local binding failed.' }
@@ -56,7 +61,7 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-initializer-error.xp
 if ($LASTEXITCODE -ne 0) { throw 'AST List initializer compilation failed.' }
 $listInitializerResult = dotnet (Join-Path $listInitializerOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($listInitializerResult -join "`n") -ne '7') { throw 'AST List initializer did not preserve the source list.' }
-$listByRef = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-error.xps') -o (Join-Path $output 'list-byref-error') 2>&1
+$listByRef = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-multiple-error.xps') -o (Join-Path $output 'list-byref-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($listByRef -join "`n") -notmatch 'AST List element ByRef arguments are not implemented') { throw 'AST did not diagnose unsupported List ByRef copy-back.' }
 $listOutput = Join-Path $output 'forall-list'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-alias.xps') -o $listOutput

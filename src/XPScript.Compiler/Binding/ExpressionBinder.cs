@@ -3,7 +3,7 @@ using XPScript.Compiler.Syntax;
 namespace XPScript.Compiler.Binding;
 
 public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDynamicMembers = false,
-    string? functionName = null, LocalSymbol? functionResult = null)
+    string? functionName = null, LocalSymbol? functionResult = null, ExpressionSyntax? listByRefStatementCall = null)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly bool _allowDynamicMembers = allowDynamicMembers;
@@ -187,7 +187,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         var candidates = functions
             .Where(function => function.ParameterTypes.Count == arguments.Length)
             .Where(function => ParametersMatch(function, arguments))
-            .Where(function => ParameterModesMatch(function, arguments))
+            .Where(function => ParameterModesMatch(function, arguments, syntax))
             .ToArray();
 
         if (candidates.Length == 0)
@@ -275,7 +275,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         var candidates = functions
             .Where(function => function.ParameterTypes.Count == arguments.Length)
             .Where(function => ParametersMatch(function, arguments))
-            .Where(function => ParameterModesMatch(function, arguments))
+            .Where(function => ParameterModesMatch(function, arguments, syntax))
             .ToArray();
 
         if (candidates.Length == 0)
@@ -318,7 +318,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         return converted;
     }
 
-    private static bool ParameterModesMatch(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
+    private bool ParameterModesMatch(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments, ExpressionSyntax syntax)
     {
         if (function.ByRefParameters is null)
             return true;
@@ -328,6 +328,13 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         for (var i = 0; i < arguments.Count; i++)
         {
             if (!function.ByRefParameters[i])
+                continue;
+            if (ReferenceEquals(syntax, listByRefStatementCall) && arguments.Count == 1 &&
+                function.ReturnType == typeof(void) &&
+                syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
+                arguments[i] is BoundIndexExpression { Expression.SemanticType.IsList: true } &&
+                Conversion.Classify(arguments[i].SemanticType,
+                    function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(function.ParameterTypes[i])).IsIdentity)
                 continue;
             if (arguments[i] is not BoundNameExpression name ||
                 name.Symbol is not (VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol))

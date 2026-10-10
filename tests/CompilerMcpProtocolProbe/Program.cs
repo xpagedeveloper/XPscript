@@ -19,6 +19,14 @@ var staticSource="Sub Accumulate()\n    Static value As Long\n    value = value 
 var staticValidation=await CallAsync(new {jsonrpc="2.0",id=26,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=staticSource,filename="static-local-parity.xps"}}});
 var staticResult=staticValidation.GetProperty("result").GetProperty("structuredContent");
 if (staticResult.GetProperty("result").GetString()!="ok") throw new Exception("AST MCP validation rejected the Static lifetime parity fixture.");
+var listCopybackSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "list-byref-copyback.xps"));
+var listCopybackValidation = await CallAsync(new {jsonrpc="2.0",id=29,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=listCopybackSource,filename="list-byref-copyback.xps"}}});
+if (listCopybackValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP validation rejected the List ByRef copy-back CLI fixture.");
+var listMultipleSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "list-byref-multiple-error.xps"));
+var listMultipleValidation = await CallAsync(new {jsonrpc="2.0",id=30,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=listMultipleSource,filename="list-byref-multiple-error.xps"}}});
+var listMultipleResult = listMultipleValidation.GetProperty("result").GetProperty("structuredContent");
+if (listMultipleResult.GetProperty("result").GetString() != "error" || listMultipleResult.GetProperty("errors")[0].GetProperty("diagnosticCode").GetString() != "XPS1012" || listMultipleResult.GetProperty("errors")[0].GetProperty("line").GetInt32() != 9)
+    throw new Exception("AST MCP lost the unsupported multiple List ByRef diagnostic or source line.");
 var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps"}}});
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");

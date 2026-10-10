@@ -8,6 +8,10 @@ using SyntaxKind = XPScript.Compiler.Syntax.SyntaxKind;
 using Conversion = XPScript.Compiler.Binding.Conversion;
 
 var expressions = new BoundExpressionEmitter();
+var copybackList = new BoundNameExpression(new LocalSymbol("copybackValues", typeof(object), XpTypeSymbol.ListOf(XpTypeSymbol.FromClr(typeof(long)))));
+var copybackElement = new BoundIndexExpression(copybackList, new BoundLiteralExpression("item", typeof(string)), typeof(long), XpTypeSymbol.FromClr(typeof(long)));
+var copybackCall = new BoundCallExpression(null, new FunctionSymbol("MutateThenThrow", typeof(void), [typeof(long)], ByRefParameters: [true]), [copybackElement]);
+var exceptionalCopybackBody = new BoundStatementEmitter().Emit([new BoundExpressionStatement(copybackCall)]);
 var commandSymbols = new SymbolTable();
 commandSymbols.Declare(new FunctionSymbol("RunCommand", typeof(bool), [typeof(string), typeof(string[])]));
 commandSymbols.Declare(new FunctionSymbol("Array", typeof(object), [typeof(string)]));
@@ -116,6 +120,23 @@ public static class Probe
     {
         public static long CLng(object value) => Convert.ToInt64(value);
     }
+    private sealed class CopybackList
+    {
+        private long value = 1;
+        public long this[object tag] { get => value; set => this.value = value; }
+    }
+    private static void MutateThenThrow(ref long value)
+    {
+        value += 10;
+        throw new InvalidOperationException("expected");
+    }
+    public static long ExceptionalCopyback()
+    {
+        var copybackValues = new CopybackList();
+        try { {{exceptionalCopybackBody}} }
+        catch (InvalidOperationException) { }
+        return copybackValues["item"];
+    }
     public static object Integer() => {{EmitExpression("1")}};
     public static object Floating() => {{EmitExpression("1.0")}};
     public static object Null() => {{EmitExpression("Null")}};
@@ -169,6 +190,7 @@ Equal(double.PositiveInfinity, Invoke("Infinity"));
 Equal(5L, Invoke("Flow"));
 Equal(6L, Invoke("ForAllFlow"));
 Equal(9L, Invoke("SelectFlow"));
+Equal(11L, Invoke("ExceptionalCopyback"));
 // Reflection boxes ref arguments and writes the updated value back into the array.
 var refArgs = new object?[] { 3L, 0L };
 type.GetMethod("AddInto")!.Invoke(null, refArgs);
