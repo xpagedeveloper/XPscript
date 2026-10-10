@@ -36,7 +36,7 @@ public sealed class AndroidCarouselControl : NativeControlHost
         _pager.Adapter = _adapter;
         _pager.Orientation = ViewPager2.OrientationHorizontal;
         _root.AddView(_pager, new FrameLayout.LayoutParams(-1, -1));
-        _indicators = new LinearLayout(_root.Context) { Orientation = Orientation.Horizontal, Gravity = GravityFlags.Center };
+        _indicators = new LinearLayout(_root.Context) { Orientation = Orientation.Horizontal };
         var indicatorLayout = new FrameLayout.LayoutParams(-2, -2, GravityFlags.Bottom | GravityFlags.CenterHorizontal) { BottomMargin = 12 };
         _root.AddView(_indicators, indicatorLayout);
         _pager.RegisterOnPageChangeCallback(new PageCallback(index => { RefreshIndicators(index); CurrentItemChanged?.Invoke(this, index); }));
