@@ -105,6 +105,16 @@ internal sealed class XPImage : System.IDisposable
         return image;
     }
 
+    public static string ColorMapColorAt(int width, int height, int x, int y)
+    {
+        ValidateDimensions(width, height);
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            throw new System.ArgumentOutOfRangeException(nameof(x), "Color map coordinate is outside the image.");
+        var hue = width <= 1 ? 0d : (double)x / (width - 1) * 360d;
+        var saturation = height <= 1 ? 1d : (double)y / (height - 1);
+        return HsvToRgb(hue, saturation, 1d);
+    }
+
     private static string HsvToRgb(double hue, double saturation, double value)
     {
         var chroma = value * saturation;

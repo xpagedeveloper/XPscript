@@ -29,6 +29,7 @@ foreach (var expected in new[]
 {
     "var resolved = XPScriptFileSystemRuntime.ResolvePath(source);",
     "public static XPImage CreateColorMap(int width = 360, int height = 256)",
+    "public static string ColorMapColorAt(int width, int height, int x, int y)",
     "private static string HsvToRgb",
     "image.SetPixel(x, y, HsvToRgb(hue, saturation, 1d));",
     "XPScriptFileSystemRuntime.EnsureWritablePath(resolved);"
