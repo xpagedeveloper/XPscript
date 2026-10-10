@@ -71,6 +71,9 @@ var goSubSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-c
 var goSubValidation = await CallAsync(new {jsonrpc="2.0",id=41,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=goSubSource,filename="unsupported-gosub.xps"}}});
 var goSubError = goSubValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
 if (goSubError.GetProperty("line").GetInt32() != 3 || goSubError.GetProperty("position").GetInt32() != 9 || goSubError.GetProperty("description").GetString() is not { } goSubMessage || !goSubMessage.Contains("GoSub is not implemented", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP GoSub diagnostics lost the source span or stable message.");
+var staticArraySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "static-array.xps"));
+var staticArrayValidation = await CallAsync(new {jsonrpc="2.0",id=42,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=staticArraySource,filename="static-array.xps"}}});
+if (staticArrayValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected the Static array lifecycle fixture.");
 var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps"}}});
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");
