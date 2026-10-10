@@ -1,5 +1,7 @@
 namespace XPScript.Compiler.Syntax;
 
+public readonly record struct ArrayBound(int Lower, int Upper);
+
 public sealed class DimStatementSyntax(
     SyntaxToken dimKeyword,
     SyntaxToken identifierToken,
@@ -25,6 +27,7 @@ public sealed class DimStatementSyntax(
     public int? ArrayLength { get; } = arrayLength;
     public int ArrayLowerBound { get; } = arrayLowerBound;
     public int ArrayRank { get; } = arrayRank;
+    public IReadOnlyList<ArrayBound> ArrayBounds { get; init; } = [];
 
     public override SyntaxKind Kind => SyntaxKind.DimStatement;
 

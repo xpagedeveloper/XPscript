@@ -815,6 +815,9 @@ var rankedArrayParser = new StatementParser("Dim matrix(1, 2, 3) As Long");
 var rankedArrayStatement = (DimStatementSyntax)rankedArrayParser.ParseStatement();
 Equal(3, rankedArrayStatement.ArrayRank, "multidimensional Dim rank");
 Equal(1, rankedArrayParser.Diagnostics.Count, "multidimensional Dim diagnostic");
+Equal(new ArrayBound(0, 1), rankedArrayStatement.ArrayBounds[0], "first multidimensional bound");
+Equal(new ArrayBound(0, 2), rankedArrayStatement.ArrayBounds[1], "second multidimensional bound");
+Equal(new ArrayBound(0, 3), rankedArrayStatement.ArrayBounds[2], "third multidimensional bound");
 
 var boundedArrayParser = new StatementParser("Dim values(1 To 3) As Long");
 var boundedArrayStatement = (DimStatementSyntax)boundedArrayParser.ParseStatement();

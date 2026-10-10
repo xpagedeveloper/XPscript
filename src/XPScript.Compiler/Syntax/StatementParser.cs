@@ -656,10 +656,12 @@ public sealed class StatementParser
         int? arrayLength = null;
         var arrayLowerBound = 0;
         var arrayRank = 1;
+        IReadOnlyList<ArrayBound> parsedArrayBounds = [];
         if (Current.Kind == SyntaxKind.OpenParenToken)
         {
             isArray = true;
             NextToken();
+            var boundsStart = _position;
             if (Current.Kind == SyntaxKind.NumberToken && long.TryParse(Current.Text, out var firstBound))
             {
                 var upperBound = firstBound;
@@ -698,7 +700,11 @@ public sealed class StatementParser
                 _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
                     "AST arrays currently support one dimension only.", identifier.Span));
             }
+            var arrayBounds = ParseArrayBounds(boundsStart, _position);
             Match(SyntaxKind.CloseParenToken);
+
+            // Preserve constant shape metadata even while multidimensional lowering is blocked.
+            parsedArrayBounds = arrayBounds;
         }
 
         SyntaxToken? asKeyword = null;
@@ -759,7 +765,32 @@ public sealed class StatementParser
             isList,
             arrayLength,
             arrayLowerBound,
-            arrayRank);
+            arrayRank)
+        {
+            ArrayBounds = parsedArrayBounds
+        };
+    }
+
+    private IReadOnlyList<ArrayBound> ParseArrayBounds(int start, int end)
+    {
+        var result = new List<ArrayBound>();
+        var segmentStart = start;
+        for (var i = start; i <= end; i++)
+        {
+            if (i != end && _tokens[i].Kind != SyntaxKind.CommaToken)
+                continue;
+            var segmentEnd = i;
+            var numberTokens = _tokens[segmentStart..segmentEnd]
+                .Where(token => token.Kind == SyntaxKind.NumberToken)
+                .Select(token => long.TryParse(token.Text, out var value) ? (long?)value : null)
+                .Where(value => value.HasValue).Select(value => value!.Value).ToArray();
+            if (numberTokens.Length == 1 && numberTokens[0] <= int.MaxValue && numberTokens[0] >= int.MinValue)
+                result.Add(new ArrayBound(0, (int)numberTokens[0]));
+            else if (numberTokens.Length >= 2 && numberTokens[0] <= int.MaxValue && numberTokens[0] >= int.MinValue && numberTokens[1] <= int.MaxValue && numberTokens[1] >= int.MinValue)
+                result.Add(new ArrayBound((int)numberTokens[0], (int)numberTokens[1]));
+            segmentStart = i + 1;
+        }
+        return result;
     }
 
     private StatementSyntax ParseAssignmentStatement(int equalsIndex)
