@@ -1,4 +1,6 @@
 Sub Main()
     Dim original List As Long
+    original("value") = 7
     Dim copy List As Long = original
+    Print copy("value")
 End Sub

@@ -102,7 +102,7 @@ public sealed class BoundStatementEmitter
             case BoundVariableDeclarationStatement { Initializer: null } when _flatControlFlow:
                 break;
             case BoundVariableDeclarationStatement { Local.SemanticType.IsList: true } list:
-                Line($"LSList<{CSharpType(list.Local.SemanticType!.ElementType!.RuntimeType)}> {list.Local.Name} = new();");
+                Line($"LSList<{CSharpType(list.Local.SemanticType!.ElementType!.RuntimeType)}> {list.Local.Name} = {(list.Initializer is null ? "new()" : _expressions.Emit(list.Initializer))};");
                 break;
             case BoundVariableDeclarationStatement declaration:
                 var type = CSharpType(declaration.Local.Type);

@@ -91,12 +91,6 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindDim(DimStatementSyntax syntax)
     {
-        if (syntax.IsList && syntax.Initializer is not null)
-        {
-            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
-                "AST List declarations with initializers are not implemented.", syntax.Span));
-            return null;
-        }
         var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text, syntax.IsArray, syntax.ArrayLength, syntax.IsList);
         var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType)
         {
