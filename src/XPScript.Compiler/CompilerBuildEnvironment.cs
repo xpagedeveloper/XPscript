@@ -49,6 +49,16 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         startInfo.Environment["DOTNET_NOLOGO"] = "1";
+        if (Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT") is { Length: > 0 } androidSdk)
+        {
+            startInfo.Environment["AndroidSdkDirectory"] = androidSdk;
+            startInfo.ArgumentList.Add("-p:AndroidSdkDirectory=" + androidSdk);
+        }
+        if (Environment.GetEnvironmentVariable("JAVA_HOME") is { Length: > 0 } javaHome)
+        {
+            startInfo.Environment["JavaSdkDirectory"] = javaHome;
+            startInfo.ArgumentList.Add("-p:JavaSdkDirectory=" + javaHome);
+        }
         if (usePersistentRunCache) startInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1";
         startInfo.Environment.Remove("MSBuildProjectExtensionsPath");
         startInfo.Environment.Remove("MSBUILDPROJECTEXTENSIONSPATH");

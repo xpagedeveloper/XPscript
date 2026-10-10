@@ -33,6 +33,8 @@ using Avalonia.Interactivity;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 
+[assembly: UsesPermission(global::Android.Manifest.Permission.Camera)]
+
 namespace XPScript.UI.Android;
 
 internal static class AndroidDebugMode
@@ -50,8 +52,6 @@ public sealed class App : Avalonia.Application
         base.OnFrameworkInitializationCompleted();
     }
 }
-
-[assembly: UsesPermission(global::Android.Manifest.Permission.Camera)]
 
 [Activity(
     Label = "XPScript",
