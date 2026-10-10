@@ -441,6 +441,8 @@ if (project.Contains("<AndroidSupportedAbis>", StringComparison.Ordinal))
     throw new Exception("Android generated project still uses obsolete AndroidSupportedAbis.");
 if (project.Contains("<StartupObject>", StringComparison.Ordinal))
     throw new Exception("Android generated project must not specify StartupObject.");
+if (!uiProject.Contains("<AndroidLinkMode>None</AndroidLinkMode>", StringComparison.Ordinal))
+    throw new Exception("Generated Android UIForm project must disable ILLink for reliable APK generation.");
 
 var hostType = type.Assembly.GetType("XPScript.Compiler.AndroidHostSource", throwOnError: true)!;
 var code = (string)(hostType.GetField("Code", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetRawConstantValue()
