@@ -47,6 +47,7 @@ Sub Main()
     audio = form.AddAudio("audio", "Audio")
     audio.Source = "assets/sample.mp3"
     audio.Position = 0
+    Call Application.Debug.Info("AUDIO-DURATION=" & audio.Duration)
     audio.Volume = 0.8
     audio.AutoPlay = False
     audio.Loop = True
@@ -62,6 +63,7 @@ Sub Main()
     video = form.AddVideo("video", "Video")
     video.Source = "assets/sample.mp4"
     video.Position = 0
+    Call Application.Debug.Info("VIDEO-DURATION=" & video.Duration)
     video.Volume = 0.8
     video.AutoPlay = False
     video.Loop = True
