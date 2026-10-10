@@ -481,6 +481,28 @@ public static class DesktopFormHost
         {
             "TextArea" => new TextBox { Text = value, AcceptsReturn = true, MinHeight = 96, TextWrapping = TextWrapping.Wrap, CornerRadius = new CornerRadius(field.CornerRadius) },
             "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•', CornerRadius = new CornerRadius(field.CornerRadius) },
+            "Switch" => new CheckBox { IsChecked = bool.TryParse(value, out var switchValue) && switchValue },
+            "RangeField" => new Slider
+            {
+                Minimum = field.Minimum is { } minimum ? (double)minimum : 0,
+                Maximum = field.Maximum is { } maximum ? (double)maximum : 1,
+                Value = double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var sliderValue) ? sliderValue : 0,
+                TickFrequency = field.Step is > 0 ? field.Step.Value : 0,
+                IsSnapToTickEnabled = field.Step is > 0
+            },
+            "ProgressBar" => new ProgressBar
+            {
+                Minimum = 0,
+                Maximum = 1,
+                Value = field.ProgressValue ?? 0,
+                IsIndeterminate = field.ProgressIndeterminate
+            },
+            "ActivityIndicator" => new ProgressBar
+            {
+                IsIndeterminate = field.ActivityRunning,
+                Minimum = 0,
+                Maximum = 1
+            },
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Select" => CreateSelect(field),
             "ListBox" => CreateListBox(field, false),

@@ -63,6 +63,10 @@ public sealed record DesktopFormField(
     public string HotKey { get; init; } = string.Empty;
     public string ValidationError { get; init; } = string.Empty;
     public string SchemaValidationError { get; init; } = string.Empty;
+    public double? Step { get; init; }
+    public double? ProgressValue { get; init; }
+    public bool ProgressIndeterminate { get; init; }
+    public bool ActivityRunning { get; init; }
 }
 
 public sealed record DesktopFormButton(
