@@ -671,6 +671,10 @@ var carouselSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..
 foreach (var expected in new[] { "AddCarousel(\"slides\"", "assets/slide-1.png", "data:image/png;base64", "SetCarouselIndex", "SetCarouselLoop", "SetCarouselAutoAdvance" })
     if (!carouselSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android Carousel regression sample is incomplete: " + expected);
+var scrollViewSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-scrollview-api.xps"));
+foreach (var expected in new[] { "AddScrollView(\"content\"", "ANDROID-SCROLLVIEW-STATE=ready" })
+    if (!scrollViewSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android ScrollView regression sample is incomplete: " + expected);
 var progressActivitySample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-progress-activity-api.xps"));
 foreach (var expected in new[] { "AddProgressBar(\"progress\"", "progress.Value = 0.5", "progress.IsIndeterminate = False", "AddActivityIndicator(\"loading\"", "activity.IsRunning = True" })
     if (!progressActivitySample.Contains(expected, StringComparison.Ordinal))
