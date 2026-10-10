@@ -31,6 +31,9 @@ public sealed class BoundCompilationUnitEmitter
             var type = declaration.Local.SemanticType?.IsList == true
                 ? $"LSList<{BoundMethodEmitter.CSharpType(declaration.Local.SemanticType.ElementType!.RuntimeType)}>"
                 : BoundMethodEmitter.CSharpType(declaration.Local.Type);
+            if (declaration.Local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
+                !semantic.IsVariant && !semantic.IsObject && !semantic.IsEmpty && !semantic.IsNothing && !semantic.IsNull)
+                type = $"Xp{semantic.Name}";
             var initialValue = declaration.Initializer is not null
                 ? expressions.Emit(declaration.Initializer)
                 : declaration.Local.Type.IsArray

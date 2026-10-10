@@ -87,6 +87,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-inheritance-fields.
 if ($LASTEXITCODE -ne 0) { throw 'AST class inheritance compilation failed.' }
 $inheritanceResult = dotnet (Join-Path $inheritanceOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($inheritanceResult -join "`n") -ne "4`n5") { throw 'AST inherited class field access produced the wrong result.' }
+$staticClassOutput = Join-Path $output 'static-class-instance'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-class-instance.xps') -o $staticClassOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST static class instance compilation failed.' }
+$staticClassResult = dotnet (Join-Path $staticClassOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($staticClassResult -join "`n") -ne "1`n2") { throw 'AST static class instance lifetime produced the wrong result.' }
 $optionalOrder = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-order-error.xps') -o (Join-Path $output 'optional-order-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($optionalOrder -join "`n") -notmatch 'cannot follow an Optional parameter') { throw 'AST accepted a required parameter after Optional.' }
 $optionalDefault = Join-Path $output 'optional-default-name'
