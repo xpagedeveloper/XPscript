@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 
@@ -547,6 +548,12 @@ public static class DesktopFormHost
                 MinHeight = 96,
                 Content = new TextBlock { Text = field.Label, TextWrapping = TextWrapping.Wrap }
             },
+            "Image" => new Avalonia.Controls.Image
+            {
+                Source = TryLoadImage(field.ImageSource),
+                Stretch = Stretch.Uniform,
+                MaxHeight = 320
+            },
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Select" => CreateSelect(field),
             "ListBox" => CreateListBox(field, false),
@@ -800,6 +807,25 @@ public static class DesktopFormHost
             Children.Add(_year);
             Children.Add(_month);
         }
+    }
+
+    private static Bitmap? TryLoadImage(string source)
+    {
+        try
+        {
+            if (source.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                var comma = source.IndexOf(',');
+                if (comma > 0 && source[..comma].Contains(";base64", StringComparison.OrdinalIgnoreCase))
+                    return new Bitmap(new MemoryStream(Convert.FromBase64String(source[(comma + 1)..])));
+            }
+            if (File.Exists(source)) return new Bitmap(source);
+        }
+        catch
+        {
+            // Invalid image sources are rendered as an empty image control.
+        }
+        return null;
     }
 
     private static JsonElement? ReadEditorValue(DesktopFormField field, Control editor)
