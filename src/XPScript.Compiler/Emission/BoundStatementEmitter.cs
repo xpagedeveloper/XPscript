@@ -75,22 +75,30 @@ public sealed class BoundStatementEmitter
                 if (expression.Expression is BoundCallExpression listCall && listCall.Target is null &&
                     listCall.Function.ReturnType == typeof(void) && listCall.Arguments.Count == 1 &&
                     listCall.Function.ByRefParameters?[0] == true &&
-                    listCall.Arguments[0] is BoundIndexExpression { Expression.SemanticType.IsList: true } listElement)
+                    (listCall.Arguments[0] is BoundIndexExpression { Expression.SemanticType.IsList: true } ||
+                     listCall.Arguments[0] is BoundNameExpression aliasArgument && _expressions.IsListAlias(aliasArgument.Symbol)))
                 {
-                    var receiver = output.Temporary();
-                    var tag = output.Temporary();
                     var value = output.Temporary();
                     Line("{");
-                    output.Write($"var {receiver} = {_expressions.Emit(listElement.Expression)};", indent + 1, listElement.Expression.Span);
-                    output.Write($"var {tag} = {_expressions.Emit(listElement.Index)};", indent + 1, listElement.Index.Span);
-                    output.Write($"var {value} = {receiver}[{tag}];", indent + 1, listElement.Span);
+                    string location;
+                    var argument = listCall.Arguments[0];
+                    if (argument is BoundIndexExpression listElement)
+                    {
+                        var receiver = output.Temporary();
+                        var tag = output.Temporary();
+                        output.Write($"var {receiver} = {_expressions.Emit(listElement.Expression)};", indent + 1, listElement.Expression.Span);
+                        output.Write($"var {tag} = {_expressions.Emit(listElement.Index)};", indent + 1, listElement.Index.Span);
+                        location = $"{receiver}[{tag}]";
+                    }
+                    else location = _expressions.Emit(argument);
+                    output.Write($"var {value} = {location};", indent + 1, argument.Span);
                     output.Write("try", indent + 1, statement.Span);
                     output.Write("{", indent + 1, statement.Span);
                     output.Write($"{listCall.Function.Name}(ref {value});", indent + 2, statement.Span);
                     output.Write("}", indent + 1, statement.Span);
                     output.Write("finally", indent + 1, statement.Span);
                     output.Write("{", indent + 1, statement.Span);
-                    output.Write($"{receiver}[{tag}] = {value};", indent + 2, listElement.Span);
+                    output.Write($"{location} = {value};", indent + 2, argument.Span);
                     output.Write("}", indent + 1, statement.Span);
                     Line("}");
                 }

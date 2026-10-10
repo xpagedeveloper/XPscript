@@ -8,6 +8,7 @@ namespace XPScript.Compiler.Emission;
 public sealed class BoundExpressionEmitter
 {
     private readonly Dictionary<Symbol, (string Value, string Tag)> _aliases = [];
+    internal bool IsListAlias(Symbol symbol) => _aliases.ContainsKey(symbol);
 
     // Alias substitution is lexical: nested ForAll blocks restore the outer
     // binding even when body emission fails.

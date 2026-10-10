@@ -30,6 +30,8 @@ public sealed record LocalSymbol(string Name, Type Type, XpTypeSymbol? SemanticT
     public string? StaticStorageName { get; init; }
     /// <summary>True for `Dim name()` storage, which Erase must deallocate.</summary>
     public bool IsDynamicArray { get; init; }
+    /// <summary>Typed writable view of a List entry during ForAll.</summary>
+    public bool IsListAlias { get; init; }
     public override SymbolKind Kind => SymbolKind.Local;
 }
 

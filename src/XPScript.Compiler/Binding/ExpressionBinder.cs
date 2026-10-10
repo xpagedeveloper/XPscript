@@ -339,6 +339,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (arguments[i] is not BoundNameExpression name ||
                 name.Symbol is not (VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol))
                 return false;
+            if (name.Symbol is LocalSymbol { IsListAlias: true } &&
+                !(ReferenceEquals(syntax, listByRefStatementCall) && arguments.Count == 1 &&
+                  function.ReturnType == typeof(void) && syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
+                  Conversion.Classify(arguments[i].SemanticType,
+                      function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(function.ParameterTypes[i])).IsIdentity))
+                return false;
         }
 
         return true;

@@ -12,6 +12,9 @@ var copybackList = new BoundNameExpression(new LocalSymbol("copybackValues", typ
 var copybackElement = new BoundIndexExpression(copybackList, new BoundLiteralExpression("item", typeof(string)), typeof(long), XpTypeSymbol.FromClr(typeof(long)));
 var copybackCall = new BoundCallExpression(null, new FunctionSymbol("MutateThenThrow", typeof(void), [typeof(long)], ByRefParameters: [true]), [copybackElement]);
 var exceptionalCopybackBody = new BoundStatementEmitter().Emit([new BoundExpressionStatement(copybackCall)]);
+var copybackAlias = new BoundNameExpression(new LocalSymbol("alias", typeof(long), XpTypeSymbol.FromClr(typeof(long))) { IsListAlias = true });
+var aliasCall = new BoundCallExpression(null, copybackCall.Function, [copybackAlias]);
+var exceptionalAliasBody = new BoundStatementEmitter().Emit([new BoundForAllStatement(copybackAlias, copybackList, [new BoundExpressionStatement(aliasCall)])]);
 var commandSymbols = new SymbolTable();
 commandSymbols.Declare(new FunctionSymbol("RunCommand", typeof(bool), [typeof(string), typeof(string[])]));
 commandSymbols.Declare(new FunctionSymbol("Array", typeof(object), [typeof(string)]));
@@ -124,6 +127,12 @@ public static class Probe
     {
         private long value = 1;
         public long this[object tag] { get => value; set => this.value = value; }
+        public CopybackAlias[] Aliases() => [new CopybackAlias(this)];
+    }
+    private sealed class CopybackAlias(CopybackList list)
+    {
+        public long Value { get => list["item"]; set => list["item"] = value; }
+        public string Tag => "item";
     }
     private static void MutateThenThrow(ref long value)
     {
@@ -134,6 +143,13 @@ public static class Probe
     {
         var copybackValues = new CopybackList();
         try { {{exceptionalCopybackBody}} }
+        catch (InvalidOperationException) { }
+        return copybackValues["item"];
+    }
+    public static long ExceptionalAliasCopyback()
+    {
+        var copybackValues = new CopybackList();
+        try { {{exceptionalAliasBody}} }
         catch (InvalidOperationException) { }
         return copybackValues["item"];
     }
@@ -191,6 +207,7 @@ Equal(5L, Invoke("Flow"));
 Equal(6L, Invoke("ForAllFlow"));
 Equal(9L, Invoke("SelectFlow"));
 Equal(11L, Invoke("ExceptionalCopyback"));
+Equal(11L, Invoke("ExceptionalAliasCopyback"));
 // Reflection boxes ref arguments and writes the updated value back into the array.
 var refArgs = new object?[] { 3L, 0L };
 type.GetMethod("AddInto")!.Invoke(null, refArgs);

@@ -275,7 +275,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             // A List alias is a typed view of its entry, not a copied Variant.
             // Bind it in a child scope so nested aliases restore outer names.
             var scope = _symbols.CreateChildScope();
-            var alias = new LocalSymbol(syntax.IdentifierToken.Text, element.RuntimeType, element);
+            var alias = new LocalSymbol(syntax.IdentifierToken.Text, element.RuntimeType, element) { IsListAlias = true };
             scope.Declare(alias);
             var binder = new StatementBinder(scope, _returnType, _allowsReturnValue, _allowDynamicMembers,
                 functionName, functionResult, procedureIdentity);

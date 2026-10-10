@@ -1,0 +1,32 @@
+Sub Touch(ByRef value As Long)
+    value = value + 10
+End Sub
+
+Sub AppendText(ByRef value As String)
+    value = value & "!"
+End Sub
+
+Sub Main()
+    Dim numbers List As Long
+    numbers("a") = 1
+    numbers("b") = 2
+    Dim extras List As Long
+    extras("only") = 3
+    ForAll entry In numbers
+        Call Touch(entry)
+        Print ListTag(entry) & ":" & CStr(entry)
+        ForAll inner In extras
+            Call Touch(inner)
+        End ForAll
+        Call Touch(entry)
+    End ForAll
+    Print numbers("a")
+    Print numbers("b")
+    Print extras("only")
+    Dim words List As String
+    words("greeting") = "hello"
+    ForAll word In words
+        Call AppendText(word)
+    End ForAll
+    Print words("greeting")
+End Sub

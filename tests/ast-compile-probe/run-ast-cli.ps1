@@ -4,6 +4,13 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$aliasByRefOutput = Join-Path $output 'forall-list-byref'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-byref.xps') -o $aliasByRefOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List ByRef compilation failed.' }
+$aliasByRefResult = dotnet (Join-Path $aliasByRefOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($aliasByRefResult -join "`n") -ne "a:11`nb:12`n21`n22`n23`nhello!") { throw 'AST ForAll List ByRef copy-back or nested alias restoration failed.' }
+$aliasMultipleError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-byref-multiple-error.xps') -o (Join-Path $output 'forall-list-byref-multiple-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($aliasMultipleError -join "`n") -notmatch 'XPS2004') { throw 'AST unsupported multiple ByRef aliases must produce a binder diagnostic.' }
 $listCopybackOutput = Join-Path $output 'list-byref-copyback'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-copyback.xps') -o $listCopybackOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST List ByRef copy-back compilation failed.' }

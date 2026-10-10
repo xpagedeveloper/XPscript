@@ -27,6 +27,14 @@ var listMultipleValidation = await CallAsync(new {jsonrpc="2.0",id=30,method="to
 var listMultipleResult = listMultipleValidation.GetProperty("result").GetProperty("structuredContent");
 if (listMultipleResult.GetProperty("result").GetString() != "error" || listMultipleResult.GetProperty("errors")[0].GetProperty("diagnosticCode").GetString() != "XPS1012" || listMultipleResult.GetProperty("errors")[0].GetProperty("line").GetInt32() != 9)
     throw new Exception("AST MCP lost the unsupported multiple List ByRef diagnostic or source line.");
+var aliasByRefSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "forall-list-byref.xps"));
+var aliasByRefValidation = await CallAsync(new {jsonrpc="2.0",id=31,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=aliasByRefSource,filename="forall-list-byref.xps"}}});
+if (aliasByRefValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected the ForAll ByRef CLI fixture.");
+var aliasMultipleSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "forall-list-byref-multiple-error.xps"));
+var aliasMultipleValidation = await CallAsync(new {jsonrpc="2.0",id=32,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=aliasMultipleSource,filename="forall-list-byref-multiple-error.xps"}}});
+var aliasMultipleResult = aliasMultipleValidation.GetProperty("result").GetProperty("structuredContent");
+if (aliasMultipleResult.GetProperty("result").GetString() != "error" || aliasMultipleResult.GetProperty("errors")[0].GetProperty("diagnosticCode").GetString() != "XPS2004" || aliasMultipleResult.GetProperty("errors")[0].GetProperty("line").GetInt32() != 10)
+    throw new Exception("AST MCP lost the unsupported multiple ByRef alias diagnostic or source line.");
 var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps"}}});
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");
