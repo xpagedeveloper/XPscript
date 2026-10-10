@@ -11,6 +11,9 @@ Sub Main()
 
     video = form.AddVideo("video", "Video")
     video.Source = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
+    video.AutoPlay = True
+    Call form.SetOnPlay("video", "VideoPlaybackStarted")
+    Call form.SetOnError("video", "VideoPlaybackError")
     audio = form.AddAudio("audio", "Audio")
     audio.Source = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
     audio.Volume = 0.75
@@ -30,6 +33,14 @@ Sub Main()
     Call Application.Debug.Info("MEDIA TEST AUDIO SOURCE=" & audio.Source)
     Call form.ShowDialog()
     Call Application.Debug.Info("MEDIA TEST COMPLETE: inspect MEDIA TEST and XPSCRIPT lines in logcat")
+End Sub
+
+Sub VideoPlaybackStarted(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST VIDEO PLAYBACK: PASS")
+End Sub
+
+Sub VideoPlaybackError(evt As Variant, contextName As String)
+    Call Application.Debug.Info("MEDIA TEST VIDEO PLAYBACK: ERROR")
 End Sub
 
 Sub VideoPlay(evt As Variant, contextName As String)

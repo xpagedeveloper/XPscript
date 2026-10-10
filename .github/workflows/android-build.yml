@@ -188,14 +188,28 @@ jobs:
             adb logcat -c
             adb shell monkey -p "$package_name" 1
             for attempt in $(seq 1 15); do
-              if adb logcat -d | grep -q 'MEDIA TEST STARTUP: PASS'; then
-                echo 'Android media test startup passed.'
+              if adb logcat -d | grep -q 'MEDIA TEST VIDEO PLAYBACK: PASS'; then
+                echo 'Android media playback regression passed.'
                 exit 0
+              fi
+              if adb logcat -d | grep -q 'MEDIA TEST VIDEO PLAYBACK: ERROR'; then
+                adb logcat -d | grep -E 'MEDIA TEST|AndroidRuntime|ExoPlayer|Media3' || true
+                echo 'Android media playback regression reported an error.' >&2
+                exit 1
+              fi
+              if adb logcat -d | grep -q 'MEDIA TEST STARTUP: PASS'; then
+                echo 'Android media test startup passed; waiting for playback callback.'
               fi
               sleep 2
             done
+            if adb logcat -d | grep -q 'MEDIA TEST STARTUP: PASS'; then
+              adb logcat -d | grep -E 'MEDIA TEST|AndroidRuntime|ExoPlayer|Media3' || true
+              echo 'Android media test did not reach playback.' >&2
+              exit 1
+            fi
             adb logcat -d | grep -E 'MEDIA TEST|AndroidRuntime|FATAL EXCEPTION' || true
-            echo 'Android media test did not reach startup.' >&2
+            echo 'Android media test did not reach startup or playback.' >&2
+            exit 1
             exit 1
 
       - name: Verify debug APKs exist
