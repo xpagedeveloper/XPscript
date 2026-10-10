@@ -27,6 +27,7 @@ public sealed record VariableSymbol(string Name, Type Type, XpTypeSymbol? Semant
 public sealed record LocalSymbol(string Name, Type Type, XpTypeSymbol? SemanticType = null) : Symbol(Name)
 {
     public int ArrayLowerBound { get; init; }
+    public int? ArrayLength { get; init; }
     /// <summary>Compiler-owned field backing a persistent procedure-local value.</summary>
     public string? StaticStorageName { get; init; }
     /// <summary>True for `Dim name()` storage, which Erase must deallocate.</summary>

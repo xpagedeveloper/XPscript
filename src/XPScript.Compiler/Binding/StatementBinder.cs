@@ -95,6 +95,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType)
         {
             ArrayLowerBound = syntax.ArrayLowerBound,
+            ArrayLength = syntax.ArrayLength,
             IsDynamicArray = syntax.IsArray && syntax.ArrayLength is null
         };
         if (syntax.IsStatic)

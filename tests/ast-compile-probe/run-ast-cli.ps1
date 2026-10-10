@@ -110,7 +110,7 @@ $optionBaseOutput = Join-Path $output 'option-base'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'option-base.xps') -o $optionBaseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Option Base compilation failed.' }
 $optionBaseResult = dotnet (Join-Path $optionBaseOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($optionBaseResult -join "`n") -ne "10`n30") { throw 'AST Option Base indexing returned the wrong elements.' }
+if ($LASTEXITCODE -ne 0 -or ($optionBaseResult -join "`n") -ne "1`n3`n10`n30") { throw 'AST Option Base bounds or indexing returned the wrong elements.' }
 $byteOutput = Join-Path $output 'variant-byte-conversion'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'variant-byte-conversion.xps') -o $byteOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Variant-to-Byte conversion compilation failed.' }
