@@ -308,7 +308,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [ ] Implement multidimensional and nonzero-bound array shapes. AST now supports explicit one-dimensional lower bounds such as `Dim values(1 To 3)` with offset indexing; multidimensional shapes and dynamic lower-bound semantics remain open.
   - [ ] Define one AST array storage abstraction for fixed, dynamic and multidimensional arrays.
   - [x] Preserve array rank in syntax and bound symbols; multidimensional lowering remains intentionally blocked until the storage abstraction is implemented.
-  - [ ] Emit reads and writes through the abstraction instead of directly indexing CLR arrays.
+  - [x] Emit one-dimensional reads, writes and `Erase` through the shared array runtime instead of directly indexing CLR arrays; multidimensional lowering remains open.
   - [ ] Lower `ReDim`, `ReDim Preserve` and `Erase` through the abstraction.
 - [ ] Complete `Option Base` and lower-bound semantics. AST now supports `Option Base 1` for simple one-dimensional constant arrays through the same offset-indexing path as explicit bounds; dynamic and multidimensional lower-bound semantics remain open.
   - [x] Apply `Option Base` to dynamic one-dimensional `ReDim` bounds without changing fixed-array behavior; multidimensional lower-bound semantics remain open.
