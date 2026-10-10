@@ -28,6 +28,9 @@ var runtime = (string)(runtimeType.GetField("Code", BindingFlags.Public | Bindin
 foreach (var expected in new[]
 {
     "var resolved = XPScriptFileSystemRuntime.ResolvePath(source);",
+    "public static XPImage CreateColorMap(int width = 360, int height = 256)",
+    "private static string HsvToRgb",
+    "image.SetPixel(x, y, HsvToRgb(hue, saturation, 1d));",
     "XPScriptFileSystemRuntime.EnsureWritablePath(resolved);"
 })
 {
