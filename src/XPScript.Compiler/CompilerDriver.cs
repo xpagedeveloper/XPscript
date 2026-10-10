@@ -838,6 +838,7 @@ public sealed class CompilerDriver
     {
         project = project.Replace("<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>", "<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>", StringComparison.Ordinal);
         project = project.Replace("    <SelfContained>false</SelfContained>" + Environment.NewLine, string.Empty, StringComparison.Ordinal);
+        project = project.Replace("    <UseAppHost>true</UseAppHost>" + Environment.NewLine, "    <AndroidLinkMode>None</AndroidLinkMode>" + Environment.NewLine, StringComparison.Ordinal);
         project = project.Replace("    <UseAppHost>true</UseAppHost>" + Environment.NewLine, string.Empty, StringComparison.Ordinal);
 
         const string packages = """
