@@ -513,6 +513,7 @@ public static class DesktopFormHost
             {
                 SelectedTime = TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var selectedTime) ? selectedTime : null
             },
+            "DateTimeField" => CreateDateTimeEditor(value),
             "Icon" => new TextBlock
             {
                 Text = string.IsNullOrWhiteSpace(field.Icon) ? field.Label : field.Icon,
@@ -685,10 +686,33 @@ public static class DesktopFormHost
         if (editor is CheckBox checkBox) return checkBox.IsChecked == true ? "true" : string.Empty;
         if (editor is DatePicker datePicker) return datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is TimePicker timePicker) return timePicker.SelectedTime?.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture) ?? string.Empty;
+        if (editor is StackPanel dateTimePanel && field.Type == "DateTimeField")
+        {
+            var date = dateTimePanel.Children.OfType<DatePicker>().FirstOrDefault()?.SelectedDate;
+            var time = dateTimePanel.Children.OfType<TimePicker>().FirstOrDefault()?.SelectedTime;
+            return date is null || time is null ? string.Empty : $"{date.Value:yyyy-MM-dd}T{time.Value.ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture)}";
+        }
         if (editor is ComboBox comboBox) return comboBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is StackPanel radioPanel) return radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
         return string.Empty;
+    }
+
+    private static Control CreateDateTimeEditor(string value)
+    {
+        var date = DateTime.TryParseExact(value, new[] { "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd'T'HH:mm:ss" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
+            ? parsed
+            : (DateTime?)null;
+        return new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            Children =
+            {
+                new DatePicker { SelectedDate = date is null ? null : new DateTimeOffset(date.Value) },
+                new TimePicker { SelectedTime = date?.TimeOfDay }
+            }
+        };
     }
 
     private static JsonElement? ReadEditorValue(DesktopFormField field, Control editor)
