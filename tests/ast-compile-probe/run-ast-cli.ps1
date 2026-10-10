@@ -4,6 +4,11 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$objectInitializerOutput = Join-Path $output 'object-initializer-lifetime'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-initializer-lifetime.xps') -o $objectInitializerOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Object initializer compilation failed.' }
+$objectInitializerResult = dotnet (Join-Path $objectInitializerOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($objectInitializerResult -join "`n") -ne "False`nFalse`nFalse`nTrue") { throw 'AST Dim Object initializer must rerun while a cleared Static Object initializer must not rerun.' }
 $objectLifetimeOutput = Join-Path $output 'object-local-lifetime'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-local-lifetime.xps') -o $objectLifetimeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST local Object lifetime compilation failed.' }
