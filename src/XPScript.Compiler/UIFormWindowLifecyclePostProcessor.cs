@@ -7,8 +7,8 @@ internal sealed class UIFormWindowLifecyclePostProcessor
         ArgumentNullException.ThrowIfNull(generated);
 
         generated = ReplaceRequired(generated,
-            "    private readonly List<XPScriptUIField> _fields = [];\n\n    internal XPScriptUIForm(string title, int? width, int? height, bool resizable)",
-            "    private readonly List<XPScriptUIField> _fields = [];\n    private readonly string _instanceId = Guid.NewGuid().ToString(\"N\");\n    private bool _visible;\n    private bool _modal;\n\n    internal XPScriptUIForm(string title, int? width, int? height, bool resizable)",
+            "    private readonly List<XPScriptUIField> _fields = [];\n    private readonly List<(string Name, string Command)> _mediaCommands = [];\n\n    internal XPScriptUIForm(string title, int? width, int? height, bool resizable)",
+            "    private readonly List<XPScriptUIField> _fields = [];\n    private readonly List<(string Name, string Command)> _mediaCommands = [];\n    private readonly string _instanceId = Guid.NewGuid().ToString(\"N\");\n    private bool _visible;\n    private bool _modal;\n\n    internal XPScriptUIForm(string title, int? width, int? height, bool resizable)",
             "form-instance-state");
 
         generated = ReplaceRequired(generated,

@@ -18,6 +18,6 @@
   <ItemGroup>
     <PackageReference Include="MimeKit" Version="4.17.0" />
     <Compile Include="Program.cs" />
-    <ProjectReference Include="../XPScript.Compiler.Core/XPScript.Compiler.Core.csproj" />
+    <ProjectReference Include="../XPScript.Compiler.Core/XPScript.Compiler.Core.csproj" SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 </Project>

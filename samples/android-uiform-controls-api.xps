@@ -1,5 +1,6 @@
 Sub Main()
     Dim form As New UIForm("Android UIForm Controls API")
+    Dim result As String
 
     Dim progress As Variant
     progress = form.AddProgressBar("progress", "Progress")
@@ -71,5 +72,6 @@ Sub Main()
     form.StopMedia("video")
 
     Call Application.Debug.Info("ANDROID-UIFORM-CONTROLS-API=ready")
+    result = form.ShowDialog()
     Print "ANDROID-UIFORM-CONTROLS-API=ready"
 End Sub
