@@ -854,9 +854,11 @@ public sealed class CompilerDriver
     <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.10.0.2" />
     <PackageReference Include="Xamarin.AndroidX.Tracing.Tracing" Version="1.3.0.4" />
     <PackageReference Include="Xamarin.AndroidX.Tracing.Tracing.Ktx" Version="1.2.0.10" ExcludeAssets="all" />
+    <!-- Media3 1.11.1 currently resolves Kotlin 2.4 metadata, which the .NET 10 Android D8 tool cannot rewrite. -->
+    <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.0.21.3" />
   </ItemGroup>
 """;
-        project = project.Replace("    <NoWarn>CA1416;$(NoWarn)</NoWarn>", "    <NoWarn>CA1416;NU1608;$(NoWarn)</NoWarn>", StringComparison.Ordinal);
+        project = project.Replace("    <NoWarn>CA1416;NU1608;$(NoWarn)</NoWarn>", "    <NoWarn>CA1416;NU1605;NU1608;$(NoWarn)</NoWarn>", StringComparison.Ordinal);
         return project.Replace("</Project>", packages + "</Project>", StringComparison.Ordinal);
     }
 
