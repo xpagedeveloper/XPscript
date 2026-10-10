@@ -91,7 +91,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindDim(DimStatementSyntax syntax)
     {
-        var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text, syntax.IsArray, syntax.ArrayLength, syntax.IsList);
+        var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text, syntax.IsArray, syntax.ArrayLength, syntax.IsList, syntax.ArrayRank);
         var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType)
         {
             ArrayLowerBound = syntax.ArrayLowerBound,
@@ -142,7 +142,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         return new BoundVariableDeclarationStatement(local, initializer, syntax.IsArray && syntax.ArrayLength is null, syntax.ArrayLength);
     }
 
-    private static (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name, bool isArray = false, int? arrayLength = null, bool isList = false)
+    private static (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name, bool isArray = false, int? arrayLength = null, bool isList = false, int arrayRank = 1)
     {
         var result = name?.Trim().ToUpperInvariant() switch
         {
@@ -155,7 +155,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         };
         if (isList) return (typeof(object), XpTypeSymbol.ListOf(result.Item2));
         if (!isArray) return result;
-        var arrayType = result.Item1.MakeArrayType();
+        var arrayType = arrayRank == 1 ? result.Item1.MakeArrayType() : result.Item1.MakeArrayType(arrayRank);
         return (arrayType, XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(result.Item1)));
     }
 
