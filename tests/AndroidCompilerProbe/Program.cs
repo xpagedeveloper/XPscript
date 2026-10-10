@@ -683,6 +683,10 @@ var cameraSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..",
 foreach (var expected in new[] { "AddCameraPreview(\"camera\"", "ANDROID-CAMERA-STATE=ready" })
     if (!cameraSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android CameraPreview regression sample is incomplete: " + expected);
+var sliderSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-slider-api.xps"));
+foreach (var expected in new[] { "AddSlider(\"volume\"", "slider.Value = 0.75", "SetSliderStep(\"volume\", 0.25)", "ANDROID-SLIDER-STATE=ready" })
+    if (!sliderSample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android Slider regression sample is incomplete: " + expected);
 var progressActivitySample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-progress-activity-api.xps"));
 foreach (var expected in new[] { "AddProgressBar(\"progress\"", "progress.Value = 0.5", "progress.IsIndeterminate = False", "AddActivityIndicator(\"loading\"", "activity.IsRunning = True" })
     if (!progressActivitySample.Contains(expected, StringComparison.Ordinal))
