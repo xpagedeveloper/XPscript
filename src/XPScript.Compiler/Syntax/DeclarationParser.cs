@@ -57,11 +57,11 @@ public sealed class DeclarationParser
             var endOffset = end < lines.Count ? lines[end].Start : _text.Length;
             if (match.Groups[1].Value.Equals("Class", StringComparison.OrdinalIgnoreCase))
             {
-                var parser = new DeclarationParser(_text[startOffset..endOffset].TrimStart(), _baseOffset + startOffset);
+                var classParser = new DeclarationParser(_text[startOffset..endOffset].TrimStart(), _baseOffset + startOffset);
                 try
                 {
-                    declarations.Add(parser.ParseDeclaration());
-                    _diagnostics.AddRange(parser.Diagnostics);
+                    declarations.Add(classParser.ParseDeclaration());
+                    _diagnostics.AddRange(classParser.Diagnostics);
                 }
                 catch (InvalidOperationException exception)
                 {
