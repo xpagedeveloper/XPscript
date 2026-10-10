@@ -57,6 +57,8 @@ if ($LASTEXITCODE -ne 0 -or ($redimResult -join "`n") -ne "2`n9`n9") { throw 'AS
 $redimError = Join-Path $output 'redim-array-error'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'redim-array-error.xps') -o $redimError
 if ($LASTEXITCODE -ne 0) { throw 'AST dynamic Erase regression did not compile.' }
+$nonzeroRedimError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'redim-nonzero-error.xps') -o (Join-Path $output 'redim-nonzero-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($nonzeroRedimError -join "`n") -notmatch 'dynamic ReDim with non-zero lower bounds') { throw 'AST did not reject unsupported dynamic non-zero ReDim bounds early.' }
 $multiDimensional = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-array-error.xps') -o (Join-Path $output 'multidimensional-array-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($multiDimensional -join "`n") -notmatch 'AST arrays currently support one dimension only') { throw 'AST silently accepted a multidimensional array declaration.' }
 $nonzeroBoundOutput = Join-Path $output 'nonzero-bound-array'

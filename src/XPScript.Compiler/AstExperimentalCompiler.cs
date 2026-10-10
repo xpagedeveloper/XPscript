@@ -17,6 +17,7 @@ internal static class AstExperimentalCompiler
         RejectUnsupported(sourcePath, source, @"(?im)^\s*(?:On\s+Error\b|Resume\b)", "AST On Error and Resume semantics are not implemented; the source was not lowered silently.");
         RejectUnsupported(sourcePath, source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]", "AST With and implicit member access are not implemented; the source was not lowered silently.");
         RejectUnsupported(sourcePath, source, @"(?i)\bXPImage\b", "AST XPImage runtime integration is not implemented; image operations were not replaced with Object.");
+        RejectUnsupported(sourcePath, source, @"(?im)^\s*ReDim\s+(?:Preserve\s+)?[A-Za-z_]\w*\s*\([^)]*\bTo\b", "AST dynamic ReDim with non-zero lower bounds is not implemented; use zero-based ReDim until dynamic storage is migrated.");
         var optionBase = 0;
         var optionBaseMatch = Regex.Match(source, @"(?im)^\s*Option\s+Base\s+(?<base>[01])\s*(?:\r?$)");
         if (optionBaseMatch.Success)
