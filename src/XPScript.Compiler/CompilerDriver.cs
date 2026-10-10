@@ -228,7 +228,9 @@ public sealed class CompilerDriver
             if (IsAndroidRuntime(rid))
             {
                 var androidHostPath = Path.Combine(tempRoot, usesAndroidUIForm ? "AndroidUIHost.cs" : "AndroidHost.cs");
-                await File.WriteAllTextAsync(androidHostPath, usesAndroidUIForm ? AndroidUIHostSource.Build(CompilerDiagnosticMode.Debug) : AndroidHostSource.Code);
+                var androidHostCode = usesAndroidUIForm ? AndroidUIHostSource.Build(CompilerDiagnosticMode.Debug) : AndroidHostSource.Code;
+                androidHostCode = androidHostCode.Replace("[assembly: UsesPermission(global::Android.Manifest.Permission.Camera)]", string.Empty, StringComparison.Ordinal);
+                await File.WriteAllTextAsync(androidHostPath, androidHostCode);
                 CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
             }
 
