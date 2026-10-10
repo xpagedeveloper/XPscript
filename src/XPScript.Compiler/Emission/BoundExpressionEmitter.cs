@@ -100,15 +100,23 @@ public sealed class BoundExpressionEmitter
             tagArgument is BoundNameExpression { Symbol: LocalSymbol local } && local.SemanticType?.IsArray == true)
         {
             if (call.Function.Name.Equals("LBound", StringComparison.OrdinalIgnoreCase))
+            {
+                if (call.Arguments.Count == 2 && call.Arguments[1] is BoundLiteralExpression { Value: long dimension } && dimension == 1 && local.ArrayBounds.Count > 0)
+                    return local.ArrayBounds[0].Lower.ToString(CultureInfo.InvariantCulture);
                 return call.Arguments.Count == 2
                     ? $"LSArrayRuntime.LBound({Emit(tagArgument)}, Convert.ToInt32({Emit(call.Arguments[1])}))"
                     : local.ArrayLowerBound.ToString(CultureInfo.InvariantCulture);
+            }
             if (call.Function.Name.Equals("UBound", StringComparison.OrdinalIgnoreCase))
+            {
+                if (call.Arguments.Count == 2 && call.Arguments[1] is BoundLiteralExpression { Value: long dimension } && dimension == 1 && local.ArrayBounds.Count > 0)
+                    return local.ArrayBounds[0].Upper.ToString(CultureInfo.InvariantCulture);
                 return call.Arguments.Count == 2
                     ? $"LSArrayRuntime.UBound({Emit(tagArgument)}, Convert.ToInt32({Emit(call.Arguments[1])}))"
                     : local.ArrayUpperBound is { } upperBound
                     ? upperBound.ToString(CultureInfo.InvariantCulture)
                     : $"{Emit(tagArgument)}.GetUpperBound(0)";
+            }
         }
         var arguments = call.Arguments.Select((argument, index) =>
         {

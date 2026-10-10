@@ -4,8 +4,14 @@ Sub Main()
     Dim values(3) As Long
     values(1) = 10
     values(3) = 30
+    Dim lower As Long
+    Dim upper As Long
+    lower = LBound(values, 1)
+    upper = UBound(values, 1)
     Print LBound(values)
     Print UBound(values)
+    Print lower
+    Print upper
     Print values(1)
     Print values(3)
 End Sub
