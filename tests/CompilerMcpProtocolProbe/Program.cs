@@ -51,6 +51,10 @@ var errorHandlingSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests"
 var errorHandlingValidation = await CallAsync(new {jsonrpc="2.0",id=36,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=errorHandlingSource,filename="on-error-error.xps"}}});
 var errorHandlingError = errorHandlingValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
 if (errorHandlingError.GetProperty("line").GetInt32() != 2 || errorHandlingError.GetProperty("position").GetInt32() != 1 || errorHandlingError.GetProperty("description").GetString() is not { } message || !message.Contains("On Error and Resume", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP On Error diagnostics lost the source span or stable message.");
+var resumeSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "resume-error.xps"));
+var resumeValidation = await CallAsync(new {jsonrpc="2.0",id=37,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=resumeSource,filename="resume-error.xps"}}});
+var resumeError = resumeValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (resumeError.GetProperty("line").GetInt32() != 2 || resumeError.GetProperty("position").GetInt32() != 1 || resumeError.GetProperty("description").GetString() is not { } resumeMessage || !resumeMessage.Contains("On Error and Resume", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP Resume diagnostics lost the source span or stable message.");
 var astDiagnostic=await CallAsync(new {jsonrpc="2.0",id=27,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps"}}});
 var astDiagnosticResult=astDiagnostic.GetProperty("result").GetProperty("structuredContent");
 var astErrors=astDiagnosticResult.GetProperty("errors");

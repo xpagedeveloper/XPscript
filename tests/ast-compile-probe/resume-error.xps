@@ -1,0 +1,4 @@
+Sub Main()
+    Resume Next
+    Print 1
+End Sub
