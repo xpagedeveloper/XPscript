@@ -83,6 +83,7 @@ internal sealed class ApplicationObjectPreprocessor
         source = Regex.Replace(source, @"\bApplication\.Args\b", "XPScriptApplicationRuntime.Args()", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.ArgCount\b", "XPScriptApplicationRuntime.ArgCount", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.CommandLine\b", "XPScriptApplicationRuntime.CommandLine", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bApplication\.NewLine\b", "XPScriptApplicationRuntime.NewLine", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.ExecutablePath\b", "XPScriptApplicationRuntime.ExecutablePath", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.ExecutableFileName\b", "XPScriptApplicationRuntime.ExecutableFileName", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.ExecutableDirectory\b", "XPScriptApplicationRuntime.ExecutableDirectory", RegexOptions.IgnoreCase);
@@ -182,7 +183,7 @@ internal sealed class ApplicationObjectPreprocessor
         {
             var line = StripComment(lines[i]);
             if (Regex.IsMatch(line, @"\bApplication\.Args\s*\([^)]*\)\s*=", RegexOptions.IgnoreCase) ||
-                Regex.IsMatch(line, @"\bApplication\.(?:Args|ArgCount|CommandLine|ExecutablePath|ExecutableFileName|ExecutableDirectory|TempPath|TempFolder|Path|FileName|IsDebugging)\s*=", RegexOptions.IgnoreCase))
+                Regex.IsMatch(line, @"\bApplication\.(?:Args|ArgCount|CommandLine|NewLine|ExecutablePath|ExecutableFileName|ExecutableDirectory|TempPath|TempFolder|Path|FileName|IsDebugging)\s*=", RegexOptions.IgnoreCase))
                 throw new CompilerException($"input.xps({i + 1},1): Application is read-only runtime state.");
         }
     }

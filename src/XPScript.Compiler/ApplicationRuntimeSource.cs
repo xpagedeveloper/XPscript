@@ -289,6 +289,8 @@ internal static class XPScriptApplicationRuntime
         get { lock (Sync) return string.Join(" ", _args); }
     }
 
+    public static string NewLine => Environment.NewLine;
+
     public static string ExecutablePath => Environment.ProcessPath ?? Environment.GetCommandLineArgs().FirstOrDefault() ?? "";
     public static string ExecutableFileName => System.IO.Path.GetFileName(ExecutablePath);
     public static string ExecutableDirectory => System.IO.Path.GetDirectoryName(ExecutablePath) ?? "";
