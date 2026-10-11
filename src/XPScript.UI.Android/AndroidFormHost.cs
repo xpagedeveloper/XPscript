@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
 namespace XPScript.UI.Android;
@@ -55,6 +56,7 @@ public static class AndroidFormHost
                     "CameraPreview" => CreateCameraPreview(),
                     "Audio" => new AndroidAudioControl(),
                     "ColorField" => new AndroidColorFieldEditor(),
+                    "Image" => CreateImage(field),
                     _ => new TextBox()
                 };
 
@@ -175,6 +177,26 @@ public static class AndroidFormHost
             return new TextBlock { Text = "Camera permission is required. Grant permission and reopen the form.", TextWrapping = TextWrapping.Wrap };
         }
         return new AndroidCameraPreviewControl { MinHeight = 180 };
+    }
+
+    private static Control CreateImage(JsonElement field)
+    {
+        var source = field.TryGetProperty("imageSource", out var sourceValue) ? sourceValue.GetString() ?? string.Empty : string.Empty;
+        try
+        {
+            if (source.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                var comma = source.IndexOf(',');
+                if (comma > 0 && source[..comma].Contains(";base64", StringComparison.OrdinalIgnoreCase))
+                    return new Avalonia.Controls.Image { Source = new Bitmap(new MemoryStream(Convert.FromBase64String(source[(comma + 1)..]))), Stretch = Stretch.Uniform, MaxHeight = 320 };
+            }
+            var path = File.Exists(source) ? source : Path.Combine(AppContext.BaseDirectory, source.Replace('/', Path.DirectorySeparatorChar));
+            if (File.Exists(path)) return new Avalonia.Controls.Image { Source = new Bitmap(path), Stretch = Stretch.Uniform, MaxHeight = 320 };
+        }
+        catch
+        {
+        }
+        return new TextBlock { Text = "Image could not be loaded.", TextWrapping = TextWrapping.Wrap };
     }
 
     private static void SetEditorValue(Control editor, JsonElement value)
