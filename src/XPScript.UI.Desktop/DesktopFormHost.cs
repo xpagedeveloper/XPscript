@@ -873,6 +873,14 @@ public static class DesktopFormHost
     }
 
     public static string? WebViewCommand(string instanceId, string fieldName, string command, string? argument) => DesktopWebViewHost.TryCommand(instanceId, fieldName, command, argument);
+    public static string? MediaCommand(string instanceId, string fieldName, string command, string? argument) => DesktopWebViewHost.TryCommand(instanceId, fieldName, "script", command switch
+    {
+        "source" => "document.querySelector('audio,video').src=" + System.Text.Json.JsonSerializer.Serialize(argument ?? string.Empty) + ";document.querySelector('audio,video').load();",
+        "play" => "document.querySelector('audio,video').play();",
+        "pause" => "document.querySelector('audio,video').pause();",
+        "stop" => "document.querySelector('audio,video').pause();document.querySelector('audio,video').currentTime=0;",
+        _ => throw new InvalidOperationException("Unknown UIForm desktop media command: " + command)
+    });
 
     private static DesktopFormResult EmptyResult(string result) => new(result, new ReadOnlyDictionary<string, JsonElement>(new Dictionary<string, JsonElement>()));
     private static string LabelOrName(this DesktopFormField field) => string.IsNullOrWhiteSpace(field.Label) ? field.Name : field.Label;

@@ -93,6 +93,7 @@ internal sealed class XPScriptUIField
                 _mediaPosition = 0;
                 _mediaDuration = 0;
                 _mediaIsPlaying = false;
+                if (_owner.Visible) TryDesktopMediaCommand("source", _mediaSource);
                 return;
             }
             EnsureWebView();
@@ -121,8 +122,8 @@ internal sealed class XPScriptUIField
         set { EnsureMedia(); if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm media PlaybackRate must be greater than zero."); _mediaPlaybackRate = value; }
     }
     public bool IsPlaying { get { EnsureMedia(); return _mediaIsPlaying; } }
-    public void Play() { EnsureMedia(); _mediaIsPlaying = true; }
-    public void Pause() { EnsureMedia(); _mediaIsPlaying = false; }
+    public void Play() { EnsureMedia(); _mediaIsPlaying = true; TryDesktopMediaCommand("play", null); }
+    public void Pause() { EnsureMedia(); _mediaIsPlaying = false; TryDesktopMediaCommand("pause", null); }
     public double Value
     {
         get { EnsureProgress(); return _progressValue; }
@@ -176,6 +177,7 @@ internal sealed class XPScriptUIField
         {
             _mediaIsPlaying = false;
             _mediaPosition = 0;
+            TryDesktopMediaCommand("stop", null);
             return true;
         }
         EnsureWebView();
@@ -206,6 +208,20 @@ internal sealed class XPScriptUIField
     }
     private void EnsureWebView() { if (Type != "WebView") throw new XPScriptRuntimeException(5, "This UIForm field is not a WebView."); }
     private void EnsureMedia() { if (Type is not ("Video" or "Audio")) throw new XPScriptRuntimeException(5, "This UIForm field is not a media field."); }
+    private void TryDesktopMediaCommand(string command, string? argument)
+    {
+        if (Type is not ("Video" or "Audio") || !_owner.Visible) return;
+        try
+        {
+            var host = System.Type.GetType("XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop", false);
+            var method = host?.GetMethod("MediaCommand", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            method?.Invoke(null, [_owner.InstanceId, Name, command, argument]);
+        }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            throw new XPScriptRuntimeException(5, "UIForm desktop media command failed: " + ex.InnerException.Message);
+        }
+    }
     private void EnsureProgress() { if (Type != "ProgressBar") throw new XPScriptRuntimeException(5, "This UIForm field is not a ProgressBar."); }
     private bool EnsureActivityIndicatorValue() { EnsureActivityIndicator(); return true; }
     private void EnsureActivityIndicator() { if (Type != "ActivityIndicator") throw new XPScriptRuntimeException(5, "This UIForm field is not an ActivityIndicator."); }
