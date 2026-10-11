@@ -318,7 +318,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [ ] Complete List ByRef aliases/copy-back, initialized declarations and parameters/returns. The ByRef alias audit produces a C# ref-property error in AST; published main compiles but leaves the element unchanged (1 instead of the expected mutation to 11). Initialized List declarations are explicitly rejected instead of discarded. Complete IsElement argument validation, dynamically supplied Lists and array Erase as part of API migration.
   AST supports explicit Sub calls with one or more matching typed ByRef List elements or ForAll aliases. Receiver/tag expressions are evaluated once, with typed temporary storage and finally copy-back; numeric/string CLI fixtures, nested alias scope, exceptional emitter fixtures and AST-MCP validation cover both forms. Function expressions remain open. List reference initializers are supported.
 - [ ] Preserve legacy Resume and On Error semantics in the AST bound tree. AST now rejects these forms explicitly instead of lowering them to `AstNoOp`; CLI/MCP fixtures verify stable source-mapped diagnostics for both forms. Error-handler state remains open.
-  - [ ] Add bound error-handler state for `On Error Resume Next`, `On Error GoTo 0` and handler labels.
+  - [x] Add bound error-handler state for `On Error Resume Next`, `On Error GoTo 0` and handler labels. The bound model preserves the mode and optional handler label; runtime lowering remains separate.
   - [ ] Lower protected statements with source-mapped `try/catch` and resume targets.
   - [ ] Implement `Resume`, `Resume Next` and `Resume label` transfer semantics.
   - [ ] Add CLI/MCP execution fixtures and compare against the legacy compiler.

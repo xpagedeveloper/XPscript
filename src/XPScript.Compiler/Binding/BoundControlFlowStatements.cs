@@ -33,10 +33,13 @@ public enum BoundErrorHandlerMode
     GoToLabel
 }
 
+public sealed record BoundErrorHandlerState(BoundErrorHandlerMode Mode, string? HandlerLabel = null);
+
 public sealed class BoundOnErrorStatement(BoundErrorHandlerMode mode, string? target) : BoundStatement
 {
     public BoundErrorHandlerMode Mode { get; } = mode;
     public string? Target { get; } = target;
+    public BoundErrorHandlerState State => new(Mode, Target);
     public override BoundNodeKind Kind => BoundNodeKind.OnErrorStatement;
 }
 
