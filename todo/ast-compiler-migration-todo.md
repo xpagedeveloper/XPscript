@@ -348,8 +348,8 @@ Initial implementation: expression conversions and a method-body emitter for ass
 
 - [x] Attach source span and source file to all AST parser diagnostics. `SyntaxDiagnosticException` maps parser spans through the original source, and the CLI/MCP probe verifies filename, line, column and span identity.
 - [x] Attach source span and source file to AST semantic diagnostics. Binder errors are mapped through the original source; the MCP probe verifies XPS2008, semantic category, filename, line, column and end span for an unresolved variable.
-- [ ] Map new diagnostics into existing `CompileDiagnostic`.
-- [ ] Preserve stable XPS diagnostic codes where applicable.
+- [x] Map new AST diagnostics into existing `CompileDiagnostic`. Parser, binder and explicit unsupported-feature diagnostics all use the shared mapped payload consumed by CLI and MCP.
+- [x] Preserve stable XPS diagnostic codes where applicable. The permanent probe asserts stable XPS1012 and XPS2008 identities across the AST diagnostic surfaces.
 - [ ] Add new codes only with documented categories and tests.
 - [ ] Update compiler machine interface together with normal compiler diagnostics.
 - [x] Update MCP compiler output together with normal compiler diagnostics. AST MCP now marks structured compilation failures as protocol tool errors while preserving the shared diagnostic payload.
