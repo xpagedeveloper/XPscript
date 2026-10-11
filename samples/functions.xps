@@ -1,6 +1,6 @@
 Option Declare
 
-Function AddNumbers(a As Long, b As Long) As Long
+Function AddNumbers(ByVal a As Long, ByVal b As Long) As Long
     AddNumbers = a + b
 End Function
 
