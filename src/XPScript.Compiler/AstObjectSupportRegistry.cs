@@ -45,6 +45,13 @@ internal static class AstObjectSupportRegistry
         "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
         "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
+        ,"UIForm", "UIListView"
+        ,"NotesSession", "NotesDatabase", "NotesDocument", "NotesView", "NotesViewEntry", "NotesItem",
+        "NotesRichTextItem", "NotesRichTextStyle", "NotesMIMEEntity", "NotesMIMEHeader", "NotesEmbeddedObject"
+        ,"XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn"
+        ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
+        "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection"
+        ,"XPDBSQLite", "XPDBMySQL", "XPDBMsSQL", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest"
     };
 
     public static readonly IReadOnlyList<ObjectDefinition> Objects = BuildObjectDefinitions();
