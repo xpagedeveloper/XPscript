@@ -11,6 +11,7 @@ repo_root="$(cd "$script_dir/.." && pwd)"
 : "${DOTNET_ROOT:=$XPSCRIPT_TOOLS_ROOT/dotnet}"
 : "${ANDROID_SDK_ROOT:=$XPSCRIPT_TOOLS_ROOT/android-sdk}"
 : "${ANDROID_HOME:=$ANDROID_SDK_ROOT}"
+: "${ANDROID_USER_HOME:=$XPSCRIPT_TOOLS_ROOT/android-user}"
 : "${JAVA_HOME:=$XPSCRIPT_TOOLS_ROOT/jdk21}"
 : "${ANDROID_API_LEVEL:=30}"
 : "${ANDROID_BUILD_TOOLS_VERSION:=35.0.0}"
@@ -25,7 +26,7 @@ command -v curl >/dev/null || die "curl is required"
 command -v unzip >/dev/null || die "unzip is required"
 command -v tar >/dev/null || die "tar is required"
 
-mkdir -p "$XPSCRIPT_TOOLS_ROOT" "$ANDROID_SDK_ROOT" "$HOME/.android"
+mkdir -p "$XPSCRIPT_TOOLS_ROOT" "$ANDROID_SDK_ROOT" "$ANDROID_USER_HOME"
 
 if [[ ! -x "$DOTNET_ROOT/dotnet" ]]; then
   log "Installing .NET 10 SDK"
@@ -64,6 +65,7 @@ if [[ ! -x "$sdkmanager" ]]; then
 fi
 
 export DOTNET_ROOT ANDROID_SDK_ROOT ANDROID_HOME JAVA_HOME
+export ANDROID_USER_HOME
 export PATH="$DOTNET_ROOT:$JAVA_HOME/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$PATH"
 
 log "Accepting Android SDK licenses"
@@ -93,6 +95,7 @@ cat > "$XPSCRIPT_TOOLS_ROOT/android-build-env.sh" <<EOF
 export DOTNET_ROOT="$DOTNET_ROOT"
 export ANDROID_SDK_ROOT="$ANDROID_SDK_ROOT"
 export ANDROID_HOME="$ANDROID_HOME"
+export ANDROID_USER_HOME="$ANDROID_USER_HOME"
 export JAVA_HOME="$JAVA_HOME"
 export PATH="$DOTNET_ROOT:$JAVA_HOME/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:\$PATH"
 EOF
