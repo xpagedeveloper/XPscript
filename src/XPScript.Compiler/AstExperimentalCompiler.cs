@@ -16,7 +16,8 @@ public static class AstExperimentalCompiler
         var fullSource = source;
         RejectUnsupported(sourcePath, source, @"(?im)^\s*(?:On\s+Error\b|Resume\b)", "AST On Error and Resume semantics are not implemented; the source was not lowered silently.");
         RejectUnsupported(sourcePath, source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]", "AST With and implicit member access are not implemented; the source was not lowered silently.");
-        RejectUnsupported(sourcePath, source, @"(?i)\bXPImage\b", "AST XPImage runtime integration is not implemented; image operations were not replaced with Object.");
+        if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var unsupportedObject))
+            RejectUnsupported(sourcePath, source, $@"(?i)\b{Regex.Escape(unsupportedObject)}\b", $"AST {unsupportedObject} runtime integration is not implemented; image operations were not replaced with Object.");
         RejectUnsupported(sourcePath, source, @"(?im)^\s*ReDim\s+(?:Preserve\s+)?[A-Za-z_]\w*\s*\([^)]*\bTo\b", "AST dynamic ReDim with non-zero lower bounds is not implemented; use zero-based ReDim until dynamic storage is migrated.");
         var optionBase = 0;
         var optionBaseMatch = Regex.Match(source, @"(?im)^\s*Option\s+Base\s+(?<base>[01])\s*(?:\r?$)");
@@ -124,7 +125,7 @@ public static class AstExperimentalCompiler
             DeclareOptionalSignatures(symbols, procedure.Identifier.Text, resultType, procedure.Parameters);
         }
         symbols.Declare(new VariableSymbol("BuildState", typeof(object), XpTypeSymbol.Variant));
-        foreach (var compatibilityName in new[] { "With", "GoSub", "Worker", "AfterWorker", "SkipLine", "ErrorHandler", "ErrorDone", "RetryHandler", "RetryDone", "ResumeTarget", "LabelHandler", "LabelDone", "ProviderError", "InvalidConnection", "System", "XPImage" })
+        foreach (var compatibilityName in AstObjectSupportRegistry.CompatibilityNames)
             symbols.Declare(new VariableSymbol(compatibilityName, typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new LocalSymbol("matrix", typeof(object), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$", RegexOptions.Multiline))
@@ -133,7 +134,7 @@ public static class AstExperimentalCompiler
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, ResolveRuntimeType(match.Groups["type"].Value), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
-        foreach (var typeName in new[] { "XPJson", "XPJsonDocument", "XPJsonSchema", "XPJsonArray", "XPJsonObject" })
+        foreach (var typeName in AstObjectSupportRegistry.VariantTypeNames)
             symbols.Declare(new VariableSymbol(typeName, typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Console", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));

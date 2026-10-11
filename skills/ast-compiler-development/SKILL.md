@@ -1,0 +1,29 @@
+---
+name: ast-compiler-development
+description: Extend XPScript AST compiler support for XP objects through the shared registry, binder, emitter and runtime contract.
+---
+
+# AST compiler development
+
+Use this workflow when adding support for an XP object or AST-only language feature.
+
+## Object support contract
+
+1. Add the object name and detection rules to `AstObjectSupportRegistry`.
+2. Define the shared semantic symbols and signatures in the binder catalog.
+3. Bind declared members with stable XPScript types and source spans.
+4. Emit calls and member access through existing runtime APIs; do not duplicate runtime behavior.
+5. Add the runtime surface in its own source file when the object needs generated support.
+6. Keep unsupported-object diagnostics explicit until the complete runtime contract exists.
+
+## Verification
+
+- Add a focused AST source fixture for success and unsupported cases.
+- Run AST CLI compilation and execute the generated program when applicable.
+- Run MCP/CLI validation for the same source and compare structured diagnostics.
+- Run the relevant compiler probe and a normal `xpscript compile`.
+- Commit and push only after build and tests pass.
+
+## Design rule
+
+Object detection belongs in the registry. Binding, emission and runtime implementation remain separate layers so adding another XP object does not require expanding `AstExperimentalCompiler` with more object-specific regex logic.
