@@ -197,6 +197,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-declaration-hoist.xp
 if ($LASTEXITCODE -ne 0) { throw 'AST GoTo declaration hoisting compilation failed.' }
 $declarationHoistResult = dotnet (Join-Path $declarationHoistOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($declarationHoistResult -join "`n") -ne 'GOTO_DECLARATION_HOIST_OK') { throw 'AST GoTo declaration hoisting execution failed.' }
+$applicationNewLineOutput = Join-Path $output 'application-newline'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'application-newline.xps') -o $applicationNewLineOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Application.NewLine compilation failed.' }
+$applicationNewLineResult = dotnet (Join-Path $applicationNewLineOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($applicationNewLineResult -join "`n") -notmatch 'APPLICATION_NEWLINE_BEGIN' -or ($applicationNewLineResult -join "`n") -notmatch 'APPLICATION_NEWLINE_END') { throw 'AST Application.NewLine runtime regression failed.' }
 $invalidDefault = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-default-error.xps') -o (Join-Path $output 'invalid-default') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($invalidDefault -join "`n") -notmatch "Default value for Optional parameter 'value' is incompatible with its type") { throw 'AST invalid Optional default was not rejected by binding.' }
 dotnet $compiler ast-compile $source -o $output

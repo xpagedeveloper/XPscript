@@ -496,7 +496,8 @@ internal static class Program
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
     public static bool True = true;
     public static bool False = false;
-    public static dynamic Application = new ExpandoObject();
+    public static dynamic Application = CreateApplication();
+    private static dynamic CreateApplication() { dynamic application = new ExpandoObject(); application.NewLine = Environment.NewLine; return application; }
     public static dynamic Console = CreateConsole();
     private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.WriteLine = (Action<object?>)(value => System.Console.WriteLine(value)); return console; }
     public static dynamic Debugger = new ExpandoObject();
