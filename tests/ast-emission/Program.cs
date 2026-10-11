@@ -115,6 +115,20 @@ if (resumeNext.State != new BoundErrorHandlerState(BoundErrorHandlerMode.ResumeN
     resumeNextTarget.ResumeTarget != new BoundResumeTarget(BoundResumeMode.Next) ||
     resumeLabel.ResumeTarget != new BoundResumeTarget(BoundResumeMode.Label, "Retry"))
     throw new InvalidOperationException("Bound error-handler state did not preserve its mode or target.");
+BoundStatement BindHandlerStatement(string text)
+{
+    var handlerParser = new StatementParser(text);
+    var bound = new StatementBinder(new SymbolTable()).Bind(handlerParser.ParseStatement());
+    if (handlerParser.Diagnostics.Count != 0 || bound is null)
+        throw new InvalidOperationException($"Could not bind error-handler fixture: {text}");
+    return bound;
+}
+if (BindHandlerStatement("On Error Resume Next") is not BoundOnErrorStatement { Mode: BoundErrorHandlerMode.ResumeNext } ||
+    BindHandlerStatement("On Error GoTo 0") is not BoundOnErrorStatement { Mode: BoundErrorHandlerMode.Disable } ||
+    BindHandlerStatement("On Error GoTo ErrorHandler") is not BoundOnErrorStatement { Mode: BoundErrorHandlerMode.GoToLabel, Target: "ErrorHandler" } ||
+    BindHandlerStatement("Resume Next") is not BoundResumeStatement { Mode: BoundResumeMode.Next } ||
+    BindHandlerStatement("Resume Retry") is not BoundResumeStatement { Mode: BoundResumeMode.Label, Target: "Retry" })
+    throw new InvalidOperationException("Statement binding did not preserve error-handler syntax semantics.");
 var selectBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(sum, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
 Equal("var __xpsEmit0 = 2L;\nif (LSCoreCompare.Equal(__xpsEmit0, 2L))\n{\n    number = 9L;\n}\n", selectBody);
 var source = $$"""
