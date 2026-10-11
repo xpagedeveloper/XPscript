@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      XPSCRIPT_BUILD_LOG_DIR: ${{ runner.temp }}/android-build-logs
+      XPSCRIPT_BUILD_LOG_DIR: ${{ github.workspace }}/.android-build-logs
       MSBUILDDISABLENODEREUSE: '1'
     steps:
       - uses: actions/checkout@v6
@@ -424,5 +424,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-build-diagnostics
-          path: ${{ runner.temp }}/android-build-logs
+          path: ./.android-build-logs
           if-no-files-found: ignore
