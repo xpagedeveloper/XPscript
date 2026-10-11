@@ -1,0 +1,14 @@
+Sub Main()
+    Dim total As Long
+    Dim outer As Variant
+    Dim inner As Variant
+    ForAll outer In Array(1, 2)
+        ForAll inner In Array(10, 20)
+            total = total + outer + inner
+            GoTo nextOuter
+        End ForAll
+nextOuter:
+        total = total + 100
+    End ForAll
+    Print total
+End Sub

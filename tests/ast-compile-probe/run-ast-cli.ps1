@@ -199,6 +199,18 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-nested-loop-body.xps
 if ($LASTEXITCODE -ne 0) { throw 'AST nested For/ForAll GoTo compilation failed.' }
 $nestedLoopBodyResult = dotnet (Join-Path $nestedLoopBodyOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($nestedLoopBodyResult -join "`n") -ne '9') { throw 'AST nested For/ForAll GoTo semantics failed.' }
+$gotoOutOutput = Join-Path $output 'goto-out-forall'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-out-forall.xps') -o $gotoOutOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST GoTo out of ForAll compilation failed.' }
+$gotoOutResult = dotnet (Join-Path $gotoOutOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($gotoOutResult -join "`n") -ne '1') { throw 'AST GoTo out of ForAll did not exit the loop before jumping.' }
+$nestedForAllOutput = Join-Path $output 'goto-nested-forall'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-nested-forall.xps') -o $nestedForAllOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST nested ForAll GoTo compilation failed.' }
+$nestedForAllResult = dotnet (Join-Path $nestedForAllOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($nestedForAllResult -join "`n") -ne '223') { throw 'AST nested ForAll GoTo did not exit the inner loop correctly.' }
+$gotoIntoForAllError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-into-forall-error.xps') -o (Join-Path $output 'goto-into-forall-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($gotoIntoForAllError -join "`n") -notmatch 'GoTo cannot enter a For or ForAll block') { throw 'AST did not diagnose GoTo entering ForAll clearly.' }
 $nestedLoopError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-nested-for-error.xps') -o (Join-Path $output 'nested-for-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($nestedLoopError -join "`n") -notmatch 'GoTo cannot enter a For or ForAll block') { throw 'AST did not diagnose a GoTo entering a nested loop clearly.' }
 $declarationJumpError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-declaration-error.xps') -o (Join-Path $output 'declaration-jump-error') 2>&1

@@ -1,0 +1,9 @@
+Sub Main()
+    Dim total As Long
+    GoTo inside
+    ForAll item In Array(1, 2)
+inside:
+        total = total + item
+    End ForAll
+    Print total
+End Sub
