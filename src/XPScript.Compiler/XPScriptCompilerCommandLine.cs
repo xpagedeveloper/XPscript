@@ -331,6 +331,13 @@ public static class XPScriptCompilerCommandLine
                     Console.Error.WriteLine($"{diagnostic.File}:{diagnostic.Line}:{diagnostic.Position}: {diagnostic.DiagnosticCode}: {diagnostic.Description}");
             return 2;
         }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(debug
+                ? ex.ToString()
+                : "Kompileringen misslyckades. Kör med --debug för teknisk diagnostik.");
+            return 1;
+        }
     }
 
     public static async Task<int> ValidateAsync(string[] args)
