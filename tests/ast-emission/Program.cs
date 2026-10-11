@@ -96,6 +96,9 @@ Equal("public long InstanceValue()\n{\n    return 7L;\n}\n", instanceMethod);
 var mapped = statements.EmitWithSourceMap([boundIf], "If True Then\nnumber = 1\nEnd If", "flow.xps");
 if (!mapped.Code.Contains("#line 1 \"flow.xps\"", StringComparison.Ordinal) || mapped.SourceMappings.Count == 0)
     throw new InvalidOperationException("Bound statement emission did not preserve source mapping.");
+var firstMapping = mapped.SourceMappings[0];
+if (firstMapping.SourcePath != "flow.xps" || firstMapping.Position.Line != 1 || firstMapping.Position.Column != 1 || firstMapping.Span != boundIf.Span || firstMapping.GeneratedLine <= 1)
+    throw new InvalidOperationException("Bound statement emission produced an inaccurate source mapping.");
 var selectBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(sum, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
 Equal("var __xpsEmit0 = 2L;\nif (LSCoreCompare.Equal(__xpsEmit0, 2L))\n{\n    number = 9L;\n}\n", selectBody);
 var source = $$"""
