@@ -138,7 +138,7 @@ foreach (var expected in new[]
     "private sealed class AndroidDateTimeFieldEditor",
     "private sealed class AndroidMonthFieldEditor",
     "private sealed class AndroidColorFieldEditor",
-    "=> XPImage.ColorMapColorAt(width, height, x, y);",
+    "var chroma = saturation;",
     "ValueEditor.TextChanged",
     "Color.TryParse(ValueEditor.Text",
     "colorField.ValueEditor.TextChanged",
