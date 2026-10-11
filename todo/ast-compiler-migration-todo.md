@@ -380,7 +380,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Compare web target behavior.
 - [ ] Compare desktop/Avalonia behavior.
 - [ ] Compare Android/mobile behavior as support matures.
-- [ ] Add explicit compatibility fixtures for LotusScript-like edge cases.
+- [x] Add explicit compatibility fixtures for LotusScript-like edge cases. The AST compatibility suite now has permanent executable fixtures for `Rem`/apostrophe comments, `_` line continuation and `Application.NewLine`.
 - [x] Record intentional behavior changes instead of silently changing semantics. `docs/ast-intentional-behavior.md` documents explicit legacy fallback, mapped unsupported-feature diagnostics and deferred runtime semantics.
 
 ## Post-migration performance investigation
