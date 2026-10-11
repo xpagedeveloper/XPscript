@@ -166,6 +166,12 @@ var reservedTemporary = new BoundNameExpression(new VariableSymbol("__xpsEmit0",
 var collisionBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(reservedTemporary, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
 if (!collisionBody.Contains("var __xpsEmit1 = 2L;", StringComparison.Ordinal) || !collisionBody.Contains("__xpsEmit0 = 9L;", StringComparison.Ordinal))
     throw new InvalidOperationException("Bound emission temporary names collided with a user symbol.");
+var nestedTemporaryBody = statements.Emit([
+    new BoundSelectStatement(new BoundLiteralExpression(1L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(1L, typeof(long)), null, [])]),
+    new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [])])
+]);
+if (!nestedTemporaryBody.Contains("var __xpsEmit0 = 1L;", StringComparison.Ordinal) || !nestedTemporaryBody.Contains("var __xpsEmit1 = 2L;", StringComparison.Ordinal))
+    throw new InvalidOperationException("Bound emission did not allocate unique temporaries for multiple selectors.");
 var source = $$"""
 using System;
 public static class Probe
