@@ -72,6 +72,17 @@ public sealed class BoundExpressionEmitter
 
     private string EmitArrayGet(BoundIndexExpression index)
     {
+        var access = $"LSArrayRuntime.Get({Emit(index.Expression)}, {EmitArrayIndexArguments(index)})";
+        return index.Type == typeof(long) ? $"Convert.ToInt64({access})"
+            : index.Type == typeof(int) ? $"Convert.ToInt32({access})"
+            : index.Type == typeof(double) ? $"Convert.ToDouble({access})"
+            : index.Type == typeof(bool) ? $"Convert.ToBoolean({access})"
+            : index.Type == typeof(string) ? $"(Convert.ToString({access}) ?? string.Empty)"
+            : access;
+    }
+
+    internal string EmitArrayIndexArguments(BoundIndexExpression index)
+    {
         var offsets = index.Indices.Select((item, dimension) =>
         {
             var lower = index.Expression is BoundNameExpression { Symbol: LocalSymbol local } && dimension < local.ArrayBounds.Count
@@ -80,13 +91,7 @@ public sealed class BoundExpressionEmitter
             var emitted = Emit(item);
             return lower == 0 ? emitted : $"({emitted} - {lower})";
         });
-        var access = $"LSArrayRuntime.Get({Emit(index.Expression)}, {string.Join(", ", offsets)})";
-        return index.Type == typeof(long) ? $"Convert.ToInt64({access})"
-            : index.Type == typeof(int) ? $"Convert.ToInt32({access})"
-            : index.Type == typeof(double) ? $"Convert.ToDouble({access})"
-            : index.Type == typeof(bool) ? $"Convert.ToBoolean({access})"
-            : index.Type == typeof(string) ? $"(Convert.ToString({access}) ?? string.Empty)"
-            : access;
+        return string.Join(", ", offsets);
     }
 
     private string EmitCall(BoundCallExpression call)

@@ -191,6 +191,8 @@ var matrixIndex = new BoundIndexExpression(new BoundNameExpression(matrixLocal),
     [new BoundLiteralExpression(1L, typeof(long)), new BoundLiteralExpression(3L, typeof(long))],
     typeof(long), XpTypeSymbol.FromClr(typeof(long)));
 Equal("Convert.ToInt64(LSArrayRuntime.Get(matrix, (1L - 1), (3L - 3)))", expressions.Emit(matrixIndex));
+var matrixAssignment = statements.Emit([new BoundAssignmentStatement(matrixIndex, new BoundLiteralExpression(9L, typeof(long)), false)]);
+Equal("LSArrayRuntime.Set(matrix, 9L, (1L - 1), (3L - 3));\n", matrixAssignment);
 var source = $$"""
 using System;
 public static class Probe
