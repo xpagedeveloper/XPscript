@@ -162,6 +162,10 @@ foreach (var unsupportedHandler in new BoundStatement[]
 }
 var selectBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(sum, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
 Equal("var __xpsEmit0 = 2L;\nif (LSCoreCompare.Equal(__xpsEmit0, 2L))\n{\n    number = 9L;\n}\n", selectBody);
+var reservedTemporary = new BoundNameExpression(new VariableSymbol("__xpsEmit0", typeof(long)));
+var collisionBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(reservedTemporary, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
+if (!collisionBody.Contains("var __xpsEmit1 = 2L;", StringComparison.Ordinal) || !collisionBody.Contains("__xpsEmit0 = 9L;", StringComparison.Ordinal))
+    throw new InvalidOperationException("Bound emission temporary names collided with a user symbol.");
 var source = $$"""
 using System;
 public static class Probe
