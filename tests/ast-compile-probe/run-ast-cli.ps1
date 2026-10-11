@@ -72,7 +72,7 @@ if ($LASTEXITCODE -ne 2 -or ($nonzeroRedimError -join "`n") -notmatch 'dynamic R
 $multiDimensionalOutput = Join-Path $output 'multidimensional-array'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-array.xps') -o $multiDimensionalOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST multidimensional array compilation failed.' }
-if ((@(& dotnet (Join-Path $multiDimensionalOutput 'Generated.dll')) -join "`n") -ne "12`n0`n1") { throw 'AST multidimensional array output mismatch.' }
+if ((@(& dotnet (Join-Path $multiDimensionalOutput 'Generated.dll')) -join "`n") -ne "12`n0`n1`n0") { throw 'AST multidimensional array output mismatch.' }
 $nonzeroBoundOutput = Join-Path $output 'nonzero-bound-array'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nonzero-array.xps') -o $nonzeroBoundOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nonzero array lower-bound compilation failed.' }

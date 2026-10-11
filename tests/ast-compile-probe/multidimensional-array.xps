@@ -5,4 +5,6 @@ Sub Main()
     Print matrix(1, 1)
     Print LBound(matrix, 2)
     Print UBound(matrix, 2)
+    Erase matrix
+    Print matrix(1, 1)
 End Sub
