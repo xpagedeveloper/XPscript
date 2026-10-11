@@ -435,13 +435,13 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
 
 The first AST proof of concept is complete when:
 
-- [ ] A lexer can tokenize a representative XPscript expression with exact spans.
-- [ ] An expression parser produces a deterministic syntax tree.
-- [ ] Operator precedence is covered by focused tests.
-- [ ] `Not RunCommand(...)` is represented as a unary expression over the call result.
-- [ ] `RunCommand(...) = False` is represented as a comparison expression.
-- [ ] Both forms can be bound to boolean semantics without relying on C# parsing to determine XPscript meaning.
-- [ ] The proof of concept can emit valid C# for those expressions.
+- [x] A lexer can tokenize a representative XPscript expression with exact spans. Lexer fixtures cover token families, malformed tokens, comments, strings and line continuations.
+- [x] An expression parser produces a deterministic syntax tree. Syntax dump and parser regressions cover representative expressions.
+- [x] Operator precedence is covered by focused tests.
+- [x] `Not RunCommand(...)` is represented as a unary expression over the call result.
+- [x] `RunCommand(...) = False` is represented as a comparison expression.
+- [x] Both forms can be bound to boolean semantics without relying on C# parsing to determine XPscript meaning.
+- [x] The proof of concept can emit valid C# for those expressions.
 - [x] Existing production compilation remains unchanged unless the experimental path is explicitly selected. Normal `compile` continues through the legacy driver; `ast-compile` is opt-in.
 - [x] The proof of concept demonstrates that both CLI compilation and MCP/AI machine compilation can call the same AST front-end without duplicating parsing or semantic logic. Both surfaces call `AstExperimentalCompiler`.
 
