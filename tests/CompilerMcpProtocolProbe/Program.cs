@@ -85,6 +85,9 @@ if (astDiagnosticResult.GetProperty("result").GetString()!="error" || astErrors.
 var astDiagnosticDebug=await CallAsync(new {jsonrpc="2.0",id=28,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main(\n    Print 1\nEnd Sub",filename="ast-error.xps",debug=true}}});
 var astDebugError=astDiagnosticDebug.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
 if (astDebugError.GetProperty("diagnosticCode").GetString()!=astErrors[0].GetProperty("diagnosticCode").GetString() || astDebugError.GetProperty("line").GetInt32()!=astErrors[0].GetProperty("line").GetInt32() || astDebugError.GetProperty("position").GetInt32()!=astErrors[0].GetProperty("position").GetInt32()) throw new Exception("AST MCP debug mode changed source diagnostic identity.");
+var astSemanticDiagnostic=await CallAsync(new {jsonrpc="2.0",id=29,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main()\n    Print missingValue\nEnd Sub",filename="ast-semantic-error.xps"}}});
+var astSemanticError=astSemanticDiagnostic.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (astSemanticError.GetProperty("diagnosticCode").GetString()!="XPS2008" || astSemanticError.GetProperty("category").GetString()!="semantic" || astSemanticError.GetProperty("file").GetString()!="ast-semantic-error.xps" || astSemanticError.GetProperty("line").GetInt32()!=2 || astSemanticError.GetProperty("position").GetInt32()!=11 || astSemanticError.GetProperty("endColumn").GetInt32()<=astSemanticError.GetProperty("position").GetInt32()) throw new Exception("AST MCP semantic diagnostics lost source mapping.");
 var astParityRoot=Path.Combine(Path.GetTempPath(),"XPScript","ast-parity",Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(astParityRoot);
 try
