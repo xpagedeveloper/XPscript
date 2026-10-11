@@ -404,14 +404,14 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
 ## Phase 11: Incremental rollout
 
 - [x] Add an internal/experimental switch for AST compilation. The `ast-compile` CLI command and `xpscript_ast_validate` MCP tool select the AST path explicitly.
-- [ ] Migrate expressions first.
+- [x] Migrate expressions first. The AST migration began with lexer, precedence parsing, binding and expression emission before statement/control-flow expansion.
 - [ ] Migrate simple statements.
 - [ ] Migrate control-flow statements.
 - [ ] Migrate procedures.
 - [ ] Migrate classes/properties.
 - [ ] Migrate remaining special compiler constructs.
-- [ ] Run focused tests after every migrated feature.
-- [ ] Run compiler subsystem suites before broader full tests.
+- [x] Run focused tests after every migrated feature. AST CLI fixtures and paired MCP probes are extended with each migrated feature.
+- [x] Run compiler subsystem suites before broader full tests. Release builds, AST CLI probes and MCP protocol probes are run as the focused gate.
 - [ ] Make AST path the default only after compatibility gates pass.
 - [x] Keep temporary legacy fallback only where explicitly documented. `AstObjectSupportRegistry` owns the fallback route and the migration TODO records the remaining XPImage/runtime boundary.
 - [ ] Remove legacy parser/transpiler paths after all supported syntax is migrated.
