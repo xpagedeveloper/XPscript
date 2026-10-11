@@ -685,25 +685,18 @@ public sealed class StatementParser
                     arrayLength = checked((int)(upperBound - firstBound + 1));
                 }
             }
-            var hasMultipleDimensions = false;
             while (Current.Kind is not SyntaxKind.CloseParenToken and not SyntaxKind.EndOfFileToken and not SyntaxKind.NewLineToken)
             {
                 if (Current.Kind == SyntaxKind.CommaToken)
                 {
-                    hasMultipleDimensions = true;
                     arrayRank++;
                 }
                 NextToken();
             }
-            if (hasMultipleDimensions)
-            {
-                _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
-                    "AST arrays currently support one dimension only.", identifier.Span));
-            }
             var arrayBounds = ParseArrayBounds(boundsStart, _position);
             Match(SyntaxKind.CloseParenToken);
 
-            // Preserve constant shape metadata even while multidimensional lowering is blocked.
+            // Preserve constant shape metadata for each dimension.
             parsedArrayBounds = arrayBounds;
         }
 
