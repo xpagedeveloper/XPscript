@@ -145,7 +145,8 @@ För varje komponent:
 - [x] `AddAudio(name[, label])` och Android Media3-host.
 - [x] `Source`, `Play`, `Pause`, `Stop`, `Position`, `Duration`, `Volume`, `AutoPlay`,
   `Loop`, `Muted`, `PlaybackRate` och playback events i shared API.
-- [ ] Desktop playback backend.
+- [>] Desktop playback backend is not selected yet; desktop host now reports a
+  deterministic capability message instead of treating media as text input.
 - [ ] Server-web/WASM HTML audio backend.
 - [ ] Background/resume, disposal, source policy och error semantics.
 
