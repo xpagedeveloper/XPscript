@@ -12,6 +12,9 @@ public sealed class BoundMethodEmitter
         => Emit(methodName, returnType, [], statements);
 
     public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements)
+        => Emit(methodName, returnType, parameters, statements, isStatic: true);
+
+    public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements, bool isStatic)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
         ArgumentNullException.ThrowIfNull(returnType);
@@ -20,7 +23,7 @@ public sealed class BoundMethodEmitter
 
         var body = _statements.Emit(statements);
         var output = new StringBuilder();
-        output.Append("public static ").Append(CSharpType(returnType)).Append(' ')
+        output.Append("public ").Append(isStatic ? "static " : string.Empty).Append(CSharpType(returnType)).Append(' ')
             .Append(methodName).Append('(')
             .Append(string.Join(", ", parameters.Select(Parameter)))
             .Append(")\n{\n");
