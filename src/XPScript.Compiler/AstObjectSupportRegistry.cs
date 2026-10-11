@@ -52,10 +52,11 @@ internal static class AstObjectSupportRegistry
         "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink", "NotesName", "NotesDateTime",
         "NotesAgentResult", "NotesAgent", "NotesStream", "NotesDXLImporter", "NotesDXLExporter",
         "NotesMIMEEntity", "NotesMIMEHeader", "NotesEmbeddedObject", "NotesViewEntry"
+        ,"NotesHTTPRequest", "NotesJSONNavigator", "NotesJSONObject", "NotesJSONArray", "NotesJSONElement"
         ,"XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn"
         ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
         "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection"
-        ,"XPDBSQLite", "XPDBMySQL", "XPDBMsSQL", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest"
+        ,"XPDBSQLite", "XPDBMySQL", "XPDBMsSQL", "XPDbSupabase", "XPDbMySql", "XPDbMsSql", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest", "AITool"
         ,"XPHttpPart", "XPHttpFile", "XPPathValue", "XPFileInfoValue", "XPShellResult"
     };
 
