@@ -84,6 +84,18 @@ internal static class AstExperimentalCompiler
             {
                 foreach (var field in current.Members.OfType<FieldDeclarationSyntax>())
                     symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{field.Identifier.Text}", ResolveRuntimeType(field.Type.Identifier.Text), XpTypeSymbol.FromClr(ResolveRuntimeType(field.Type.Identifier.Text))));
+                foreach (var property in current.Members.OfType<PropertyDeclarationSyntax>())
+                {
+                    var propertyType = ResolveRuntimeType(property.Type?.Identifier.Text);
+                    symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{property.Identifier.Text}", propertyType, XpTypeSymbol.FromClr(propertyType)));
+                }
+                foreach (var method in current.Members.OfType<SubDeclarationSyntax>())
+                    symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", typeof(void), method.Parameters.Select(parameter => ResolveRuntimeType(parameter.Type?.Identifier.Text)).ToArray(), null, null, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
+                foreach (var method in current.Members.OfType<FunctionDeclarationSyntax>())
+                {
+                    var returnType = ResolveRuntimeType(method.ReturnType?.Identifier.Text);
+                    symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", returnType, method.Parameters.Select(parameter => ResolveRuntimeType(parameter.Type?.Identifier.Text)).ToArray(), XpTypeSymbol.FromClr(returnType), null, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
+                }
             }
         }
         foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Public\s+|Private\s+)?Class\s+(?<name>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
