@@ -819,7 +819,10 @@ public static class DesktopFormHost
                 if (comma > 0 && source[..comma].Contains(";base64", StringComparison.OrdinalIgnoreCase))
                     return new Bitmap(new MemoryStream(Convert.FromBase64String(source[(comma + 1)..])));
             }
-            if (File.Exists(source)) return new Bitmap(source);
+            var path = File.Exists(source)
+                ? source
+                : Path.Combine(AppContext.BaseDirectory, source.Replace('/', Path.DirectorySeparatorChar));
+            if (File.Exists(path)) return new Bitmap(path);
         }
         catch
         {
