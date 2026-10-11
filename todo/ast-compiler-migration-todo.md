@@ -373,8 +373,8 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Compare compile success/failure.
 - [ ] Compare diagnostic locations and categories.
 - [ ] Run representative corpus cases through the MCP/AI machine compiler as well as the normal compiler.
-- [ ] Compare CLI and machine/MCP compile success/failure for the same source.
-- [ ] Compare CLI and machine/MCP structured diagnostics for the same source.
+- [x] Compare CLI and machine/MCP compile success/failure for the same source. `CompilerMcpProtocolProbe` exercises shared valid fixtures through legacy and AST MCP validation and checks the AST CLI parity fixture.
+- [x] Compare CLI and machine/MCP structured diagnostics for the same source. The permanent protocol probe compares diagnostic code, source, line, column, span and message identity for normal/debug CLI and MCP paths.
 - [ ] Compare observable runtime output.
 - [ ] Compare generated target behavior for console.
 - [ ] Compare web target behavior.

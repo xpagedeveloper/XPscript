@@ -29,7 +29,7 @@ if (listMultipleValidation.GetProperty("result").GetProperty("structuredContent"
 var listByRefExpressionSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "list-byref-expression-error.xps"));
 var listByRefExpressionValidation = await CallAsync(new {jsonrpc="2.0",id=30_1,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=listByRefExpressionSource,filename="list-byref-expression-error.xps"}}});
 var listByRefExpressionError = listByRefExpressionValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
-if (listByRefExpressionError.GetProperty("description").GetString() is not { } listByRefExpressionMessage || !listByRefExpressionMessage.Contains("No matching overload", StringComparison.OrdinalIgnoreCase))
+if (listByRefExpressionError.GetProperty("description").GetString() is not { } listByRefExpressionMessage || !listByRefExpressionMessage.Contains("List element ByRef arguments are not implemented", StringComparison.OrdinalIgnoreCase))
     throw new Exception("AST MCP did not preserve the List ByRef expression binder diagnostic.");
 var aliasByRefSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "forall-list-byref.xps"));
 var aliasByRefValidation = await CallAsync(new {jsonrpc="2.0",id=31,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=aliasByRefSource,filename="forall-list-byref.xps"}}});
