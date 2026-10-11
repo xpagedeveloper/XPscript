@@ -9,6 +9,13 @@ namespace XPScript.Compiler;
 /// </summary>
 internal static class AstObjectSupportRegistry
 {
+    public sealed record ObjectDefinition(string Name, bool Supported, string? UnsupportedMessage);
+
+    public static readonly IReadOnlyList<ObjectDefinition> Objects =
+    [
+        new("XPImage", false, "AST XPImage runtime integration is not implemented; image operations were not replaced with Object.")
+    ];
+
     public static readonly IReadOnlySet<string> VariantTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "XPJson", "XPJsonDocument", "XPJsonSchema", "XPJsonArray", "XPJsonObject"
@@ -23,11 +30,11 @@ internal static class AstObjectSupportRegistry
 
     public static bool UsesUnsupportedObject(string source, out string objectName)
     {
-        foreach (var name in new[] { "XPImage" })
+        foreach (var definition in Objects.Where(item => !item.Supported))
         {
-            if (Regex.IsMatch(source, $@"(?i)\b{Regex.Escape(name)}\b"))
+            if (Regex.IsMatch(source, $@"(?i)\b{Regex.Escape(definition.Name)}\b"))
             {
-                objectName = name;
+                objectName = definition.Name;
                 return true;
             }
         }

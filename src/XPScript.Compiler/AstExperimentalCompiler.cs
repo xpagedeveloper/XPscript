@@ -17,7 +17,10 @@ public static class AstExperimentalCompiler
         RejectUnsupported(sourcePath, source, @"(?im)^\s*(?:On\s+Error\b|Resume\b)", "AST On Error and Resume semantics are not implemented; the source was not lowered silently.");
         RejectUnsupported(sourcePath, source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]", "AST With and implicit member access are not implemented; the source was not lowered silently.");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var unsupportedObject))
-            RejectUnsupported(sourcePath, source, $@"(?i)\b{Regex.Escape(unsupportedObject)}\b", $"AST {unsupportedObject} runtime integration is not implemented; image operations were not replaced with Object.");
+        {
+            var definition = AstObjectSupportRegistry.Objects.First(item => item.Name.Equals(unsupportedObject, StringComparison.OrdinalIgnoreCase));
+            RejectUnsupported(sourcePath, source, $@"(?i)\b{Regex.Escape(unsupportedObject)}\b", definition.UnsupportedMessage!);
+        }
         RejectUnsupported(sourcePath, source, @"(?im)^\s*ReDim\s+(?:Preserve\s+)?[A-Za-z_]\w*\s*\([^)]*\bTo\b", "AST dynamic ReDim with non-zero lower bounds is not implemented; use zero-based ReDim until dynamic storage is migrated.");
         var optionBase = 0;
         var optionBaseMatch = Regex.Match(source, @"(?im)^\s*Option\s+Base\s+(?<base>[01])\s*(?:\r?$)");
