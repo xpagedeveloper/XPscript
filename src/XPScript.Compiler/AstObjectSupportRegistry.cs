@@ -18,10 +18,21 @@ internal static class AstObjectSupportRegistry
 
     public sealed record ObjectDefinition(string Name, CompilationRoute Route, string? Message);
 
-    public static readonly IReadOnlyList<ObjectDefinition> Objects =
-    [
-        new("XPImage", CompilationRoute.LegacyFallback, null)
-    ];
+    private static readonly IReadOnlySet<string> AstObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Application",
+        "List",
+        "Array",
+        "Variant",
+        "XPJson",
+        "XPJsonDocument",
+        "XPJsonSchema",
+        "XPJsonArray",
+        "XPJsonObject",
+        "XPJsonElement"
+    };
+
+    public static readonly IReadOnlyList<ObjectDefinition> Objects = BuildObjectDefinitions();
 
     public static readonly IReadOnlySet<string> VariantTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -34,6 +45,22 @@ internal static class AstObjectSupportRegistry
         "RetryHandler", "RetryDone", "ResumeTarget", "LabelHandler", "LabelDone",
         "ProviderError", "InvalidConnection", "System", "XPImage"
     };
+
+    private static IReadOnlyList<ObjectDefinition> BuildObjectDefinitions()
+    {
+        var names = CompilerSymbolCatalog.All
+            .Where(symbol => symbol.Kind.Equals("class", StringComparison.OrdinalIgnoreCase))
+            .Select(symbol => symbol.Name)
+            .Concat(["XPImage"])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
+
+        return names
+            .Select(name => AstObjectNames.Contains(name)
+                ? new ObjectDefinition(name, CompilationRoute.Ast, null)
+                : new ObjectDefinition(name, CompilationRoute.LegacyFallback, null))
+            .ToArray();
+    }
 
     public static bool UsesUnsupportedObject(string source, out ObjectDefinition? definition)
     {
