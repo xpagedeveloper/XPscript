@@ -101,6 +101,9 @@ if (firstMapping.SourcePath != "flow.xps" || firstMapping.Position.Line != 1 || 
     throw new InvalidOperationException("Bound statement emission produced an inaccurate source mapping.");
 if (mapped.SourceMappings.Any(mapping => mapping.SourcePath != "flow.xps" || mapping.GeneratedLine <= 1))
     throw new InvalidOperationException("Nested bound statements produced an invalid source mapping entry.");
+var generatedMappingLines = mapped.SourceMappings.Select(mapping => mapping.GeneratedLine).ToArray();
+if (!generatedMappingLines.SequenceEqual(generatedMappingLines.OrderBy(line => line)) || generatedMappingLines.Distinct().Count() != generatedMappingLines.Length)
+    throw new InvalidOperationException("Bound statement source mappings were not deterministic by generated line.");
 var mappedStatementIds = new[] { boundIf.StatementId }.Concat(boundIf.ThenStatements.Select(statement => statement.StatementId)).ToArray();
 if (mappedStatementIds.Length < 2 || mappedStatementIds.Any(id => id <= 0) || mappedStatementIds.Distinct().Count() != mappedStatementIds.Length)
     throw new InvalidOperationException("Bound statement emission did not assign unique positive statement IDs.");
