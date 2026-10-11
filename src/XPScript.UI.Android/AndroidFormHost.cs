@@ -190,6 +190,12 @@ public static class AndroidFormHost
                 if (comma > 0 && source[..comma].Contains(";base64", StringComparison.OrdinalIgnoreCase))
                     return new Avalonia.Controls.Image { Source = new Bitmap(new MemoryStream(Convert.FromBase64String(source[(comma + 1)..]))), Stretch = Stretch.Uniform, MaxHeight = 320 };
             }
+            if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            {
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                using var stream = new MemoryStream(client.GetByteArrayAsync(uri).GetAwaiter().GetResult());
+                return new Avalonia.Controls.Image { Source = new Bitmap(stream), Stretch = Stretch.Uniform, MaxHeight = 320 };
+            }
             var path = File.Exists(source) ? source : Path.Combine(AppContext.BaseDirectory, source.Replace('/', Path.DirectorySeparatorChar));
             if (File.Exists(path)) return new Avalonia.Controls.Image { Source = new Bitmap(path), Stretch = Stretch.Uniform, MaxHeight = 320 };
         }
