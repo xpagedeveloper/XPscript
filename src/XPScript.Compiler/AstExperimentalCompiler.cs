@@ -397,10 +397,17 @@ internal static class AstExperimentalCompiler
             };
             var fields = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>().Select(field =>
                 $"public {CSharpType(field.Type.Identifier.Text)} {field.Identifier.Text} {{ get; set; }}"));
+            var properties = string.Join(" ", classDeclaration.Members.OfType<PropertyDeclarationSyntax>()
+                .GroupBy(property => property.Identifier.Text, StringComparer.OrdinalIgnoreCase)
+                .Select(group =>
+                {
+                    var property = group.First();
+                    return $"public {CSharpType(property.Type?.Identifier.Text ?? "Object")} {property.Identifier.Text} {{ get; set; }}";
+                }));
             var baseClause = classDeclaration.BaseType is null
                 ? string.Empty
                 : $" : Xp{classDeclaration.BaseType.Identifier.Text}";
-            return $"public class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} }}";
+            return $"public class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} }}";
         }));
         if (userClassSupport.Length == 0)
         {
