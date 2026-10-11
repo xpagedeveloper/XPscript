@@ -455,7 +455,7 @@ The first AST proof of concept is complete when:
 - [ ] Existing supported runtime behavior passes compatibility tests.
 - [ ] Normal compiler and machine/MCP interfaces use the same AST/binder implementation and report consistent diagnostics.
 - [ ] Legacy parser/transpiler implementation is removed or reduced to explicitly justified compatibility code.
-- [ ] Compiler architecture and extension guidance are documented.
+- [x] Compiler architecture and extension guidance are documented in `docs/ast-compiler-extension-guide.md`.
 - [ ] Update the compiler/package version to `0.9.4 Beta` only after all AST migration gates above pass and published `0.9.3 Beta` compatibility verification is recorded.
 
 ## Additional compatibility regressions discovered during reverification
