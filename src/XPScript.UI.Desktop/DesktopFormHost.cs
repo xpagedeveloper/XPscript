@@ -554,11 +554,7 @@ public static class DesktopFormHost
                 Stretch = Stretch.Uniform,
                 MaxHeight = 320
             },
-            "Audio" or "Video" => new TextBlock
-            {
-                Text = $"{field.Label}: media playback is not available on this desktop host.",
-                TextWrapping = TextWrapping.Wrap
-            },
+            "Audio" or "Video" => DesktopMediaHost.Create(instanceId, field),
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Select" => CreateSelect(field),
             "ListBox" => CreateListBox(field, false),

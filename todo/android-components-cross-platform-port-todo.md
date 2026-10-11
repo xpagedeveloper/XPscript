@@ -149,8 +149,8 @@ För varje komponent:
 - [x] `AddAudio(name[, label])` och Android Media3-host.
 - [x] `Source`, `Play`, `Pause`, `Stop`, `Position`, `Duration`, `Volume`, `AutoPlay`,
   `Loop`, `Muted`, `PlaybackRate` och playback events i shared API.
-- [>] Desktop playback backend is not selected yet; desktop host now reports a
-  deterministic capability message instead of treating media as text input.
+- [>] Desktop host renders Audio/Video through the existing Avalonia WebView
+  backend on Windows/Linux/macOS; native media commands and lifecycle remain.
 - [ ] Evaluate LibVLCSharp (LGPL-2.1-or-later; Windows/Linux/macOS support) as
   the simplest complete player backend.
 - [ ] Evaluate GStreamer (LGPL; native multiplatform pipeline) when packaging
@@ -177,7 +177,8 @@ För varje komponent:
 - [x] `AddVideo(name[, label])` och Android Media3/ExoPlayer-host.
 - [x] `Source`-validering för assets och URI-scheman.
 - [x] Playback properties/actions/events och Android compiler/CI regression.
-- [ ] Desktop playback backend.
+- [>] Desktop playback rendering via the existing Avalonia WebView backend;
+  native media commands and lifecycle remain.
 - [ ] Keep the selected backend behind the desktop media adapter; do not expose
   LibVLC, GStreamer or FFmpeg types through shared XPScript UIForm APIs.
 - [x] Server-web/WASM grundrendering med HTML `<video>`.
