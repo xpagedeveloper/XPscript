@@ -571,6 +571,9 @@ if (!desktopWebViewSource.Contains("ResolveSourceUri(source)", StringComparison.
     throw new Exception("Desktop WebView must resolve local UIForm assets.");
 
 var desktopFormSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Desktop", "DesktopFormHost.cs"));
+foreach (var expected in new[] { "MediaCommand", "document.querySelector('audio,video').play()", "currentTime*1000", "playbackRate" })
+    if (!desktopFormSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Desktop media command regression is missing: " + expected);
 if (!desktopFormSource.Contains("DesktopImageHost.Create(request.BootImage", StringComparison.Ordinal))
     throw new Exception("Desktop UIForm must render BootImage through the shared asset-aware image host.");
 
