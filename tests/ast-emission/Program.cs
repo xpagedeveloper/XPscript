@@ -51,7 +51,7 @@ var symbols = new SymbolTable();
 symbols.Declare(new VariableSymbol("number", typeof(long)));
 var parser = new StatementParser("If False Then\nnumber = 9\nElseIf True Then\nnumber = 2\nElse\nnumber = 8\nEnd If");
 var binder = new StatementBinder(symbols);
-var boundIf = binder.Bind(parser.ParseStatement()) ?? throw new InvalidOperationException("If failed to bind.");
+var boundIf = binder.Bind(parser.ParseStatement()) as BoundIfStatement ?? throw new InvalidOperationException("If failed to bind.");
 if (parser.Diagnostics.Count != 0 || binder.Diagnostics.Count != 0)
     throw new InvalidOperationException("If probe must bind without diagnostics.");
 var name = new BoundNameExpression(new VariableSymbol("number", typeof(long)));
@@ -99,6 +99,9 @@ if (!mapped.Code.Contains("#line 1 \"flow.xps\"", StringComparison.Ordinal) || m
 var firstMapping = mapped.SourceMappings[0];
 if (firstMapping.SourcePath != "flow.xps" || firstMapping.Position.Line != 1 || firstMapping.Position.Column != 1 || firstMapping.Span != boundIf.Span || firstMapping.GeneratedLine <= 1)
     throw new InvalidOperationException("Bound statement emission produced an inaccurate source mapping.");
+var mappedStatementIds = new[] { boundIf.StatementId }.Concat(boundIf.ThenStatements.Select(statement => statement.StatementId)).ToArray();
+if (mappedStatementIds.Length < 2 || mappedStatementIds.Any(id => id <= 0) || mappedStatementIds.Distinct().Count() != mappedStatementIds.Length)
+    throw new InvalidOperationException("Bound statement emission did not assign unique positive statement IDs.");
 var selectBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(sum, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
 Equal("var __xpsEmit0 = 2L;\nif (LSCoreCompare.Equal(__xpsEmit0, 2L))\n{\n    number = 9L;\n}\n", selectBody);
 var source = $$"""
