@@ -182,6 +182,15 @@ var caseInsensitiveCollision = new BoundNameExpression(new VariableSymbol("__XPS
 var caseInsensitiveBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(3L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(3L, typeof(long)), null, [new BoundAssignmentStatement(caseInsensitiveCollision, new BoundLiteralExpression(4L, typeof(long)), false)])])]);
 if (!caseInsensitiveBody.Contains("var __xpsEmit1 = 3L;", StringComparison.Ordinal) || !caseInsensitiveBody.Contains("__XPSEMIT0 = 4L;", StringComparison.Ordinal))
     throw new InvalidOperationException("Bound emission temporary names were not case-insensitively collision-safe.");
+var matrixLocal = new LocalSymbol("matrix", typeof(long[,]), XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(typeof(long)), 2))
+{
+    ArrayRank = 2,
+    ArrayBounds = [(1, 2), (3, 4)]
+};
+var matrixIndex = new BoundIndexExpression(new BoundNameExpression(matrixLocal),
+    [new BoundLiteralExpression(1L, typeof(long)), new BoundLiteralExpression(3L, typeof(long))],
+    typeof(long), XpTypeSymbol.FromClr(typeof(long)));
+Equal("Convert.ToInt64(LSArrayRuntime.Get(matrix, (1L - 1), (3L - 3)))", expressions.Emit(matrixIndex));
 var source = $$"""
 using System;
 public static class Probe
