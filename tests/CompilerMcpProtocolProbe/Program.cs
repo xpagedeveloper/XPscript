@@ -26,6 +26,11 @@ var listMultipleSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests",
 var listMultipleValidation = await CallAsync(new {jsonrpc="2.0",id=30,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=listMultipleSource,filename="list-byref-multiple-error.xps"}}});
 if (listMultipleValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
     throw new Exception("AST MCP rejected multiple List ByRef arguments.");
+var listByRefExpressionSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "list-byref-expression-error.xps"));
+var listByRefExpressionValidation = await CallAsync(new {jsonrpc="2.0",id=30_1,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=listByRefExpressionSource,filename="list-byref-expression-error.xps"}}});
+var listByRefExpressionError = listByRefExpressionValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (listByRefExpressionError.GetProperty("description").GetString() is not { } listByRefExpressionMessage || !listByRefExpressionMessage.Contains("No matching overload", StringComparison.OrdinalIgnoreCase))
+    throw new Exception("AST MCP did not preserve the List ByRef expression binder diagnostic.");
 var aliasByRefSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "forall-list-byref.xps"));
 var aliasByRefValidation = await CallAsync(new {jsonrpc="2.0",id=31,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=aliasByRefSource,filename="forall-list-byref.xps"}}});
 if (aliasByRefValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected the ForAll ByRef CLI fixture.");
