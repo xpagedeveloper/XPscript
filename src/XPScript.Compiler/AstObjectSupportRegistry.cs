@@ -9,11 +9,18 @@ namespace XPScript.Compiler;
 /// </summary>
 internal static class AstObjectSupportRegistry
 {
-    public sealed record ObjectDefinition(string Name, bool Supported, string? UnsupportedMessage);
+    public enum CompilationRoute
+    {
+        Ast,
+        LegacyFallback,
+        Unsupported
+    }
+
+    public sealed record ObjectDefinition(string Name, CompilationRoute Route, string? Message);
 
     public static readonly IReadOnlyList<ObjectDefinition> Objects =
     [
-        new("XPImage", false, "AST XPImage runtime integration is not implemented; image operations were not replaced with Object.")
+        new("XPImage", CompilationRoute.LegacyFallback, null)
     ];
 
     public static readonly IReadOnlySet<string> VariantTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -30,7 +37,7 @@ internal static class AstObjectSupportRegistry
 
     public static bool UsesUnsupportedObject(string source, out ObjectDefinition? definition)
     {
-        foreach (var candidate in Objects.Where(item => !item.Supported))
+        foreach (var candidate in Objects.Where(item => item.Route != CompilationRoute.Ast))
         {
             if (Regex.IsMatch(source, $@"(?i)\b{Regex.Escape(candidate.Name)}\b"))
             {

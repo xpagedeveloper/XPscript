@@ -110,8 +110,9 @@ $unsupportedWith = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'with-e
 if ($LASTEXITCODE -ne 2 -or ($unsupportedWith -join "`n") -notmatch 'AST With and implicit member access are not implemented') { throw 'AST silently lowered unsupported With/member access.' }
 $unsupportedImplicitMember = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'implicit-member-error.xps') -o (Join-Path $output 'implicit-member-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedImplicitMember -join "`n") -notmatch 'AST With and implicit member access are not implemented') { throw 'AST silently lowered unsupported implicit member access.' }
-$unsupportedImage = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-error.xps') -o (Join-Path $output 'xpimage-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($unsupportedImage -join "`n") -notmatch 'AST XPImage runtime integration is not implemented') { throw 'AST silently substituted XPImage with Object.' }
+$legacyImageOutput = Join-Path $output 'xpimage-error'
+$legacyImage = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-error.xps') -o $legacyImageOutput 2>&1
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $legacyImageOutput 'Generated'))) { throw 'AST did not route XPImage source through the legacy compiler.' }
 $optionBaseOutput = Join-Path $output 'option-base'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'option-base.xps') -o $optionBaseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Option Base compilation failed.' }

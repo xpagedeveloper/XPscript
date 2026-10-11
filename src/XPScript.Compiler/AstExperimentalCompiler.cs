@@ -17,7 +17,12 @@ public static class AstExperimentalCompiler
         RejectUnsupported(sourcePath, source, @"(?im)^\s*(?:On\s+Error\b|Resume\b)", "AST On Error and Resume semantics are not implemented; the source was not lowered silently.");
         RejectUnsupported(sourcePath, source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]", "AST With and implicit member access are not implemented; the source was not lowered silently.");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
-            RejectUnsupported(sourcePath, source, $@"(?i)\b{Regex.Escape(definition!.Name)}\b", definition.UnsupportedMessage!);
+        {
+            if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)
+                return await CompileWithLegacyFallbackAsync(sourcePath, outputDirectory, cancellationToken).ConfigureAwait(false);
+
+            RejectUnsupported(sourcePath, source, $@"(?i)\b{Regex.Escape(definition.Name)}\b", definition.Message ?? "The XP object is not implemented by the AST compiler.");
+        }
         RejectUnsupported(sourcePath, source, @"(?im)^\s*ReDim\s+(?:Preserve\s+)?[A-Za-z_]\w*\s*\([^)]*\bTo\b", "AST dynamic ReDim with non-zero lower bounds is not implemented; use zero-based ReDim until dynamic storage is migrated.");
         var optionBase = 0;
         var optionBaseMatch = Regex.Match(source, @"(?im)^\s*Option\s+Base\s+(?<base>[01])\s*(?:\r?$)");
@@ -904,6 +909,20 @@ internal static class Program
         var nativeHttp = NativeHttpRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal).Replace("Program.XPScriptRuntime.CInt(", "Convert.ToInt32(", StringComparison.Ordinal);
         generated += Environment.NewLine + "public sealed class XPScriptRuntimeException : Exception { public int ErrorCode { get; } public XPScriptRuntimeException(int code, string message) : base(message) { ErrorCode = code; } }" + Environment.NewLine + "internal sealed class XPScriptTlsValidationState { public string Mode { get; set; } = \"strict\"; public string LastError { get; private set; } = string.Empty; public void Reset() { LastError = string.Empty; } public Exception Failure(string context) => new XPScriptRuntimeException(1201, context + \" failed: \" + LastError); public bool Validate(object sender, System.Security.Cryptography.X509Certificates.X509Certificate? c, System.Security.Cryptography.X509Certificates.X509Chain? chain, System.Net.Security.SslPolicyErrors errors) => true; }" + Environment.NewLine + nativeHttp;
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<string> CompileWithLegacyFallbackAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var outputPath = Path.Combine(outputDirectory, OperatingSystem.IsWindows() ? "Generated.exe" : "Generated");
+        var result = await new CompilerDriver().CompileWithResultAsync(
+            sourcePath,
+            outputPath,
+            selfContained: false,
+            CompilerDriver.CurrentRuntimeIdentifier()).ConfigureAwait(false);
+        if (!result.Success)
+            throw new CompilerException("Legacy compilation failed.", result.Errors);
+        return outputPath;
     }
 
     private static string AstArrayRuntimeCode()
