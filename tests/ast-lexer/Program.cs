@@ -273,6 +273,12 @@ Equal(SyntaxKind.NewLineToken, remTokens[0].Kind, "Rem comment preserves newline
 Equal("Print", remTokens[1].Text, "token after Rem comment");
 Equal(0, remLexer.Diagnostics.Count, "valid Rem comment diagnostics");
 
+var inlineRemLexer = new Lexer("Print value : Rem trailing comment\nnext");
+var inlineRemTokens = inlineRemLexer.Lex().ToArray();
+Equal(SyntaxKind.NewLineToken, inlineRemTokens[3].Kind, "inline Rem comment preserves newline");
+Equal("next", inlineRemTokens[4].Text, "token after inline Rem comment");
+Equal(0, inlineRemLexer.Diagnostics.Count, "valid inline Rem comment diagnostics");
+
 var badLexer = new Lexer("@");
 var badTokens = badLexer.Lex().ToArray();
 Equal(SyntaxKind.BadToken, badTokens[0].Kind, "bad token kind");

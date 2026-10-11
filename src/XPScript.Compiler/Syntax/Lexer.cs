@@ -185,7 +185,7 @@ public sealed class Lexer
     {
         var before = _position - 1;
         while (before >= 0 && _text[before] is ' ' or '\t') before--;
-        if (before >= 0 && _text[before] is not '\r' and not '\n') return false;
+        if (before >= 0 && _text[before] is not '\r' and not '\n' and not ':') return false;
         if (!_text.AsSpan(_position, Math.Min(3, _text.Length - _position)).Equals("Rem", StringComparison.OrdinalIgnoreCase)) return false;
         var after = _position + 3;
         return after >= _text.Length || char.IsWhiteSpace(_text[after]);
