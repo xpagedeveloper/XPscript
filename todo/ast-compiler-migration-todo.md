@@ -346,7 +346,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 
 ## Phase 9: Diagnostics and tooling
 
-- [ ] Attach source span and source file to all parser diagnostics.
+- [x] Attach source span and source file to all AST parser diagnostics. `SyntaxDiagnosticException` maps parser spans through the original source, and the CLI/MCP probe verifies filename, line, column and span identity.
 - [ ] Attach source span and source file to semantic diagnostics.
 - [ ] Map new diagnostics into existing `CompileDiagnostic`.
 - [ ] Preserve stable XPS diagnostic codes where applicable.
