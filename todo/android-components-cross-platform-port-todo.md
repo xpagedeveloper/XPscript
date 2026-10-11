@@ -155,6 +155,16 @@ För varje komponent:
   supplied FFmpeg binaries/codecs retain their own LGPL/GPL licensing.
 - [ ] Select and document one backend, native library packaging, codec policy,
   notices and license obligations before implementing playback.
+- [ ] Optimize for the smallest deployment: prefer Windows Media Foundation,
+  macOS AVFoundation and the installed Linux media service before bundling a
+  full player runtime.
+- [ ] Keep the shared `DesktopMediaAdapter` platform-neutral while selecting
+  native backends per OS: Media Foundation on Windows, AVFoundation on macOS
+  and system GStreamer on Linux.
+- [ ] Measure published size in MB for each backend and record the result,
+  including native dependencies, codecs, notices and optional feature packs.
+- [ ] Use LibVLC/FFmpeg/GStreamer bundled runtimes only when native APIs cannot
+  satisfy the required formats or playback features.
 - [ ] Server-web/WASM HTML audio backend.
 - [ ] Background/resume, disposal, source policy och error semantics.
 
