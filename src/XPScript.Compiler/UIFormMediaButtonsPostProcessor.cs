@@ -16,7 +16,10 @@ internal sealed class UIFormMediaButtonsPostProcessor
         ArgumentNullException.ThrowIfNull(generated);
         var sourcePath = ExpandedSourceContext.Current?.SourcePath;
         if (!string.IsNullOrWhiteSpace(sourcePath))
+        {
             UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
+            generated = StageLiteralMediaSources(generated, sourcePath);
+        }
 
         if (!generated.Contains("public string ImageSource { get; set; } = string.Empty;", StringComparison.Ordinal))
         {
@@ -243,6 +246,20 @@ internal sealed class UIFormMediaButtonsPostProcessor
         generated = ReplacePostHandling(generated);
         generated = ReplaceDefaultButtonRendering(generated);
         return string.IsNullOrWhiteSpace(sourcePath) ? generated : UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);
+    }
+
+    private static string StageLiteralMediaSources(string generated, string sourcePath)
+    {
+        // Generated calls retain literal sources; dynamic values remain runtime-resolved.
+        var pattern = new Regex("(?<call>\\b(?:AddImage|AddAudio|AddVideo)\\s*\\(\\s*[^,]+,\\s*)\\\"(?<source>(?:\\\\.|[^\\\"])*)\\\"", RegexOptions.Compiled);
+        return pattern.Replace(generated, match =>
+        {
+            var encoded = match.Groups["source"].Value;
+            var value = Regex.Unescape(encoded);
+            var staged = UIFormAppAssets.StageLocalMediaSource(sourcePath, value);
+            if (staged == value) return match.Value;
+            return match.Groups["call"].Value + "\"" + staged.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        });
     }
 
     private static string EnsureBootImageWebSafety(string generated)
