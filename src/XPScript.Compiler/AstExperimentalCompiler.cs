@@ -449,7 +449,7 @@ public sealed class XpPerson {
             {
                 var values = Regex.Matches(match.Groups["body"].Value, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$")
                     .Cast<Match>().Select((value, index) => $"public static readonly Xp{match.Groups["name"].Value} {value.Groups["name"].Value} = new({(value.Groups["value"].Success ? value.Groups["value"].Value : index.ToString(System.Globalization.CultureInfo.InvariantCulture))});");
-                return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} private Xp{match.Groups["name"].Value}(long value) => Value = value; public static implicit operator Xp{match.Groups["name"].Value}(int value) => new(value); public static implicit operator Xp{match.Groups["name"].Value}(long value) => new(value); {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
+                return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} public Xp{match.Groups["name"].Value}() {{ }} private Xp{match.Groups["name"].Value}(long value) => Value = value; public static implicit operator Xp{match.Groups["name"].Value}(int value) => new(value); public static implicit operator Xp{match.Groups["name"].Value}(long value) => new(value); {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
             }));
         if (true) classSupport += """
 public sealed class XpJsonElement { public string Name { get; set; } = string.Empty; public string Type { get; set; } = "String"; public object? Value { get; set; } }
