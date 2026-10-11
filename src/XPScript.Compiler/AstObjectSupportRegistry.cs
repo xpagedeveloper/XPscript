@@ -93,9 +93,10 @@ internal static class AstObjectSupportRegistry
 
     public static bool UsesUnsupportedObject(string source, out ObjectDefinition? definition)
     {
+        var code = RemoveStringsAndComments(source);
         foreach (var candidate in Objects.Where(item => item.Route != CompilationRoute.Ast))
         {
-            if (Regex.IsMatch(source, $@"(?i)\b{Regex.Escape(candidate.Name)}\b"))
+            if (Regex.IsMatch(code, $@"(?i)\b{Regex.Escape(candidate.Name)}\b"))
             {
                 definition = candidate;
                 return true;
@@ -104,5 +105,63 @@ internal static class AstObjectSupportRegistry
 
         definition = null;
         return false;
+    }
+
+    private static string RemoveStringsAndComments(string source)
+    {
+        var result = new System.Text.StringBuilder(source.Length);
+        var inString = false;
+        var inComment = false;
+        for (var i = 0; i < source.Length; i++)
+        {
+            var c = source[i];
+            if (inComment)
+            {
+                if (c is '\r' or '\n')
+                {
+                    inComment = false;
+                    result.Append(c);
+                }
+                else result.Append(' ');
+                continue;
+            }
+
+            if (inString)
+            {
+                if (c == '"')
+                {
+                    if (i + 1 < source.Length && source[i + 1] == '"')
+                    {
+                        result.Append("  ");
+                        i++;
+                    }
+                    else
+                    {
+                        inString = false;
+                        result.Append(' ');
+                    }
+                }
+                else if (c is '\r' or '\n')
+                {
+                    inString = false;
+                    result.Append(c);
+                }
+                else result.Append(' ');
+                continue;
+            }
+
+            if (c == '"')
+            {
+                inString = true;
+                result.Append(' ');
+            }
+            else if (c == '\'')
+            {
+                inComment = true;
+                result.Append(' ');
+            }
+            else result.Append(c);
+        }
+        return result.ToString();
     }
 }

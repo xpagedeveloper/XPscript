@@ -4,6 +4,11 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$textObjectOutput = Join-Path $output 'object-name-text'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-name-text.xps') -o $textObjectOutput
+if ($LASTEXITCODE -ne 0) { throw 'Object names inside strings/comments must not trigger legacy fallback.' }
+$textObjectResult = dotnet (Join-Path $textObjectOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($textObjectResult -join "`n") -ne 'XPImage') { throw 'AST object-name text regression failed.' }
 $aliasByRefOutput = Join-Path $output 'forall-list-byref'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-byref.xps') -o $aliasByRefOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List ByRef compilation failed.' }
