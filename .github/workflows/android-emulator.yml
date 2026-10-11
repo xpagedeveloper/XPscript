@@ -34,9 +34,11 @@ jobs:
         with:
           api-level: 30
           target: default
-          arch: x86_64
+          # GitHub's hosted runner does not expose KVM here; x86 is more
+          # reliable than x86_64 when the emulator must run with TCG.
+          arch: x86
           profile: pixel_2
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-metrics -gpu swiftshader_indirect
           disable-animations: true
           script: |
             set -euo pipefail
