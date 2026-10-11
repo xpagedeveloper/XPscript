@@ -21,7 +21,11 @@ internal static class CompilerBuildEnvironment
         var appData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Roaming"));
         var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
         _ = CreatePrivateDirectory(appData, "NuGet");
-        var isolateNuGetPackages = !IsAndroidUiFormPublish(startInfo, root);
+        // Android workloads and linker tasks are installed in the caller's
+        // workload/NuGet environment. Using a fresh per-build package cache
+        // makes headless Android publishes fail offline even when all required
+        // packages are already installed locally.
+        var isolateNuGetPackages = !IsAndroidPublish(startInfo);
         var nugetPackages = isolateNuGetPackages ? CreatePrivateDirectory(cacheRoot, "nuget-packages") : null;
         var nugetHttpCache = CreatePrivateDirectory(cacheRoot, "nuget-http-cache");
         var nugetPluginsCache = CreatePrivateDirectory(cacheRoot, "nuget-plugins-cache");
@@ -34,6 +38,23 @@ internal static class CompilerBuildEnvironment
             startInfo.ArgumentList.Add("-p:RestoreAdditionalProjectSources=" + patchSource);
         if (usePersistentRunCache) ConfigurePersistentRunBuild(startInfo, root, cacheRoot);
         startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
+        var dotnetRoot = Path.GetDirectoryName(Path.GetFullPath(startInfo.FileName));
+        if (!string.IsNullOrWhiteSpace(dotnetRoot))
+        {
+            // MSBuild task hosts are launched through the SDK apphost. Keep
+            // the selected SDK visible to that child process as well.
+            startInfo.Environment["DOTNET_ROOT"] = dotnetRoot;
+            startInfo.Environment["DOTNET_ROOT_X64"] = dotnetRoot;
+            startInfo.Environment["DOTNET_HOST_PATH"] = Path.GetFullPath(startInfo.FileName);
+            var msbuildPath = Directory.Exists(Path.Combine(dotnetRoot, "sdk"))
+                ? Directory.EnumerateDirectories(Path.Combine(dotnetRoot, "sdk"))
+                    .Select(path => Path.Combine(path, OperatingSystem.IsWindows() ? "MSBuild.exe" : "MSBuild"))
+                    .Where(File.Exists)
+                    .OrderByDescending(path => path, StringComparer.Ordinal)
+                    .FirstOrDefault()
+                : null;
+            if (!string.IsNullOrWhiteSpace(msbuildPath)) startInfo.Environment["MSBUILD_EXE_PATH"] = msbuildPath;
+        }
         startInfo.Environment["TEMP"] = processTemp;
         startInfo.Environment["TMP"] = processTemp;
         startInfo.Environment["TMPDIR"] = processTemp;
@@ -91,6 +112,12 @@ internal static class CompilerBuildEnvironment
         var generatedSource = Path.Combine(root, "Program.cs");
         return File.Exists(generatedSource) && File.ReadAllText(generatedSource).Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
     }
+
+    private static bool IsAndroidPublish(ProcessStartInfo startInfo) =>
+        startInfo.ArgumentList.Count > 0 &&
+        (string.Equals(startInfo.ArgumentList[0], "publish", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(startInfo.ArgumentList[0], "build", StringComparison.OrdinalIgnoreCase)) &&
+        ReadRuntimeIdentifier(startInfo).StartsWith("android-", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsTransientRunBuild(ProcessStartInfo startInfo) =>
         startInfo.ArgumentList.Count > 0 && string.Equals(startInfo.ArgumentList[0], "build", StringComparison.OrdinalIgnoreCase);

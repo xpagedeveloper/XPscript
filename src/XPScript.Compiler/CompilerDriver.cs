@@ -308,6 +308,12 @@ public sealed class CompilerDriver
                 }
                 var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
                 var generatedDiagnostics = ParseGeneratedCompilerDiagnostics(stdout + Environment.NewLine + stderr, sourcePath, tempRoot);
+                if (CompilerDiagnosticMode.Debug)
+                {
+                    Console.Error.WriteLine("--- Generated Android build output ---");
+                    Console.Error.WriteLine(diagnosticText);
+                    Console.Error.WriteLine("--- end generated Android build output ---");
+                }
                 throw new CompilerException(
                     "Generated code failed to compile.",
                     generatedDiagnostics);
@@ -803,6 +809,7 @@ public sealed class CompilerDriver
         var startupObject = isAndroid ? string.Empty : "    <StartupObject>Program</StartupObject>" + Environment.NewLine;
         var androidProperties = isAndroid
             ? """
+    <AndroidLinkMode>None</AndroidLinkMode>
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <ApplicationId>eu.xpscript.app</ApplicationId>

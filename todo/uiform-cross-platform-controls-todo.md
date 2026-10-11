@@ -7,6 +7,18 @@ Den kompletta komponentinventeringen och portningschecklistan finns i
 
 This TODO complements `todo/android-support-todo.md`. Android remains the first implementation target. A control is complete only when its shared API, supported platform behavior, validation, accessibility, lifecycle semantics and regression coverage are documented and tested.
 
+## Current platform investigation (2026-10-11)
+
+The shared API should be implemented once, then routed through these host strategies:
+
+- Windows/Linux/macOS Avalonia: keep controls in the shared Avalonia host where a native Avalonia control exists. Use OS media APIs through a small desktop adapter for playback; do not expose Media3, LibVLC, GStreamer or FFmpeg types in shared code.
+- Server-rendered web: use semantic HTML controls (`img`, `audio`, `video`, `input`, scrolling containers) and explicit capability errors for device-only features. Keep local filesystem paths out of browser-visible markup.
+- Browser-WASM: use HTML media/input elements and browser permission/user-gesture rules. Reject arbitrary local filesystem paths and require packaged assets, data URLs or permitted HTTP(S) sources.
+- Desktop media size policy: first measure native Windows Media Foundation, macOS AVFoundation and installed Linux GStreamer integration. Bundle LibVLC/FFmpeg only when required formats or lifecycle features cannot be provided by the native/system backend.
+- Android: Media3/ExoPlayer, ViewPager2 and CameraX remain isolated in `XPScript.UI.Android`; emulator/device playback and camera tests are still runtime work.
+
+The following items have been compiler/APK-build verified locally, but are not marked runtime-complete until host tests exist: Video, Audio, Carousel, ProgressBar, ActivityIndicator, Slider, Switch, Icon, Card/Panel, ScrollView, ListView, Button image/icon transport and CameraPreview.
+
 Platform controls should prefer a stable native picker/control where available;
 shared XPImage-based fallbacks are used only when the platform host has no
 compatible native control.

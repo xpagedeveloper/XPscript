@@ -85,6 +85,13 @@ The first implementation must stay intentionally small. Do not start with Avalon
 
 ## Stage 3: UIForm on Android with Avalonia
 
+### Local verification log (2026-10-11)
+
+- [x] Compile Android APK samples locally, without starting an emulator: Video, Carousel, Audio, Progress/ActivityIndicator, Slider, Switch, Icon, Card/Panel, ScrollView, ListView, full UIForm manual test, media manual test, CameraPreview, UIForm regression and asset regression.
+- [x] Verify the local compiler and AndroidCompilerProbe with .NET 10 / Android workload.
+- [ ] Run the generated APKs on a physical device or local emulator; this remains intentionally opt-in and was not started in this environment.
+- [x] Complete headless Android debug-output/runtime-error APK builds. Generated Android projects explicitly use `AndroidLinkMode=None`; both `android-debug-output-regression.xps` and `android-debug-runtime-error.xps` now build locally. Physical/emulator log verification remains separate.
+
 Reuse the existing shared UIForm model. Android should add a platform backend, not fork the XPScript UI API.
 
 - [x] Review the current Avalonia desktop host boundaries and identify the smallest reusable shared UI layer. Documented in `knowledge/android-uiform-architecture.md`: `XPScriptUIForm` remains platform-neutral, while Android gets a separate adapter and host.
