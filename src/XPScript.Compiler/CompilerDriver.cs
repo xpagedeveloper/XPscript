@@ -825,7 +825,7 @@ public sealed class CompilerDriver
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
-    <NoWarn>CA1416;NU1608;$(NoWarn)</NoWarn>
+    <NoWarn>CA1416;NU1608;CS8618;CS8601;CA2255;$(NoWarn)</NoWarn>
     <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
     <UseAppHost>true</UseAppHost>
@@ -859,7 +859,7 @@ public sealed class CompilerDriver
     <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.0.21.3" />
   </ItemGroup>
 """;
-        project = project.Replace("    <NoWarn>CA1416;NU1608;$(NoWarn)</NoWarn>", "    <NoWarn>CA1416;NU1605;NU1608;$(NoWarn)</NoWarn>", StringComparison.Ordinal);
+        project = project.Replace("    <NoWarn>CA1416;NU1608;CS8618;CS8601;CA2255;$(NoWarn)</NoWarn>", "    <NoWarn>CA1416;NU1605;NU1608;CS8618;CS8601;CA2255;$(NoWarn)</NoWarn>", StringComparison.Ordinal);
         return project.Replace("</Project>", packages + "</Project>", StringComparison.Ordinal);
     }
 
