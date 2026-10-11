@@ -119,7 +119,7 @@ BoundStatement BindHandlerStatement(string text)
 {
     var handlerParser = new StatementParser(text);
     var bound = new StatementBinder(new SymbolTable()).Bind(handlerParser.ParseStatement());
-    if (handlerParser.Diagnostics.Count != 0 || bound is null)
+    if (handlerParser.Diagnostics.Count != 0 || bound is null || bound.Span is not { Start: 0, Length: var length } || length != text.Length)
         throw new InvalidOperationException($"Could not bind error-handler fixture: {text}");
     return bound;
 }
