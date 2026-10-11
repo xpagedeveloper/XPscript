@@ -107,6 +107,10 @@ if (!generatedMappingLines.SequenceEqual(generatedMappingLines.OrderBy(line => l
 var mappedStatementIds = new[] { boundIf.StatementId }.Concat(boundIf.ThenStatements.Select(statement => statement.StatementId)).ToArray();
 if (mappedStatementIds.Length < 2 || mappedStatementIds.Any(id => id <= 0) || mappedStatementIds.Distinct().Count() != mappedStatementIds.Length)
     throw new InvalidOperationException("Bound statement emission did not assign unique positive statement IDs.");
+statements.EmitWithSourceMap([boundIf], "If True Then\nnumber = 1\nEnd If", "flow.xps");
+var repeatedStatementIds = new[] { boundIf.StatementId }.Concat(boundIf.ThenStatements.Select(statement => statement.StatementId)).ToArray();
+if (!mappedStatementIds.SequenceEqual(repeatedStatementIds))
+    throw new InvalidOperationException("Bound statement IDs were not deterministic across emissions.");
 var resumeNext = new BoundOnErrorStatement(BoundErrorHandlerMode.ResumeNext, null);
 var disableErrors = new BoundOnErrorStatement(BoundErrorHandlerMode.Disable, null);
 var handler = new BoundOnErrorStatement(BoundErrorHandlerMode.GoToLabel, "ErrorHandler");
