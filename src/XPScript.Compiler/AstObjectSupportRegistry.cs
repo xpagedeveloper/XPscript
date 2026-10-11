@@ -46,8 +46,12 @@ internal static class AstObjectSupportRegistry
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
         "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
         ,"UIForm", "UIListView"
-        ,"NotesSession", "NotesDatabase", "NotesDocument", "NotesView", "NotesViewEntry", "NotesItem",
-        "NotesRichTextItem", "NotesRichTextStyle", "NotesMIMEEntity", "NotesMIMEHeader", "NotesEmbeddedObject"
+        ,"NotesSession", "NotesMail", "NotesDatabase", "NotesDatabaseAccess", "NotesView", "NotesDocumentCollection",
+        "NotesNoteCollection", "NotesDocument", "NotesItem", "NotesRichTextItem", "NotesRichTextNavigator",
+        "NotesRichTextParagraphStyle", "NotesRichTextRange", "NotesRichTextSection", "NotesRichTextStyle",
+        "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink", "NotesName", "NotesDateTime",
+        "NotesAgentResult", "NotesAgent", "NotesStream", "NotesDXLImporter", "NotesDXLExporter",
+        "NotesMIMEEntity", "NotesMIMEHeader", "NotesEmbeddedObject"
         ,"XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn"
         ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
         "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection"
