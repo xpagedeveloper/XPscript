@@ -9,6 +9,10 @@
     <RootNamespace>XPScript.Compiler</RootNamespace>
     <AssemblyTitle>XPScript Compiler</AssemblyTitle>
     <Product>XPScript</Product>
+    <!-- The compiler has transitive UI/runtime project references. Serial project
+         resolution avoids an MSBuild SDK 10 parallel graph failure that otherwise
+         reports no diagnostic and aborts before compilation. -->
+    <BuildInParallel>false</BuildInParallel>
     <Version>0.9.3-beta</Version>
     <Copyright>(c) XPageDeveloper.com 2026</Copyright>
   </PropertyGroup>
