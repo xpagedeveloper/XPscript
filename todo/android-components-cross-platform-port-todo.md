@@ -147,6 +147,14 @@ För varje komponent:
   `Loop`, `Muted`, `PlaybackRate` och playback events i shared API.
 - [>] Desktop playback backend is not selected yet; desktop host now reports a
   deterministic capability message instead of treating media as text input.
+- [ ] Evaluate LibVLCSharp (LGPL-2.1-or-later; Windows/Linux/macOS support) as
+  the simplest complete player backend.
+- [ ] Evaluate GStreamer (LGPL; native multiplatform pipeline) when packaging
+  and deployment control is more important than a small integration.
+- [ ] Evaluate FFMediaToolkit (MIT wrapper), remembering that its separately
+  supplied FFmpeg binaries/codecs retain their own LGPL/GPL licensing.
+- [ ] Select and document one backend, native library packaging, codec policy,
+  notices and license obligations before implementing playback.
 - [ ] Server-web/WASM HTML audio backend.
 - [ ] Background/resume, disposal, source policy och error semantics.
 
@@ -156,6 +164,8 @@ För varje komponent:
 - [x] `Source`-validering för assets och URI-scheman.
 - [x] Playback properties/actions/events och Android compiler/CI regression.
 - [ ] Desktop playback backend.
+- [ ] Keep the selected backend behind the desktop media adapter; do not expose
+  LibVLC, GStreamer or FFmpeg types through shared XPScript UIForm APIs.
 - [ ] Server-web/WASM HTML video backend.
 - [ ] Source policy, fullscreen, resize/aspect ratio, lifecycle och errors.
 
