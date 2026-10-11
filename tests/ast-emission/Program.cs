@@ -102,6 +102,15 @@ if (firstMapping.SourcePath != "flow.xps" || firstMapping.Position.Line != 1 || 
 var mappedStatementIds = new[] { boundIf.StatementId }.Concat(boundIf.ThenStatements.Select(statement => statement.StatementId)).ToArray();
 if (mappedStatementIds.Length < 2 || mappedStatementIds.Any(id => id <= 0) || mappedStatementIds.Distinct().Count() != mappedStatementIds.Length)
     throw new InvalidOperationException("Bound statement emission did not assign unique positive statement IDs.");
+var resumeNext = new BoundOnErrorStatement(BoundErrorHandlerMode.ResumeNext, null);
+var disableErrors = new BoundOnErrorStatement(BoundErrorHandlerMode.Disable, null);
+var handler = new BoundOnErrorStatement(BoundErrorHandlerMode.GoToLabel, "ErrorHandler");
+var resumeLabel = new BoundResumeStatement(BoundResumeMode.Label, "Retry");
+if (resumeNext.State != new BoundErrorHandlerState(BoundErrorHandlerMode.ResumeNext) ||
+    disableErrors.State != new BoundErrorHandlerState(BoundErrorHandlerMode.Disable) ||
+    handler.State != new BoundErrorHandlerState(BoundErrorHandlerMode.GoToLabel, "ErrorHandler") ||
+    resumeLabel.ResumeTarget != new BoundResumeTarget(BoundResumeMode.Label, "Retry"))
+    throw new InvalidOperationException("Bound error-handler state did not preserve its mode or target.");
 var selectBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(sum, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
 Equal("var __xpsEmit0 = 2L;\nif (LSCoreCompare.Equal(__xpsEmit0, 2L))\n{\n    number = 9L;\n}\n", selectBody);
 var source = $$"""
