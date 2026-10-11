@@ -403,7 +403,7 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
 
 ## Phase 11: Incremental rollout
 
-- [ ] Add an internal/experimental switch for AST compilation.
+- [x] Add an internal/experimental switch for AST compilation. The `ast-compile` CLI command and `xpscript_ast_validate` MCP tool select the AST path explicitly.
 - [ ] Migrate expressions first.
 - [ ] Migrate simple statements.
 - [ ] Migrate control-flow statements.
@@ -413,7 +413,7 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
 - [ ] Run focused tests after every migrated feature.
 - [ ] Run compiler subsystem suites before broader full tests.
 - [ ] Make AST path the default only after compatibility gates pass.
-- [ ] Keep temporary legacy fallback only where explicitly documented.
+- [x] Keep temporary legacy fallback only where explicitly documented. `AstObjectSupportRegistry` owns the fallback route and the migration TODO records the remaining XPImage/runtime boundary.
 - [ ] Remove legacy parser/transpiler paths after all supported syntax is migrated.
 - [ ] Remove obsolete regex/string rewriting after replacement coverage exists.
 
