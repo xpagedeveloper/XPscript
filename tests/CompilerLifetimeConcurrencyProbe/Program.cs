@@ -50,8 +50,8 @@ End Sub
     if (alpha.Success || beta.Success)
         throw new Exception("Expected both same-filename diagnostic compilations to fail.");
 
-    var alphaText = string.Join("\n", alpha.Errors.Select(e => e.Description + "\n" + e.Code + "\n" + e.MarkedCode));
-    var betaText = string.Join("\n", beta.Errors.Select(e => e.Description + "\n" + e.Code + "\n" + e.MarkedCode));
+    var alphaText = string.Join("\n", alpha.Errors.Select(e => e.Description + "\n" + e.DiagnosticCode + "\n" + e.MarkedCode));
+    var betaText = string.Join("\n", beta.Errors.Select(e => e.Description + "\n" + e.DiagnosticCode + "\n" + e.MarkedCode));
 
     if (!alphaText.Contains("MissingAlpha", StringComparison.Ordinal) || alphaText.Contains("MissingBeta", StringComparison.Ordinal))
         throw new Exception("Alpha diagnostics crossed invocation boundaries: " + alphaText);
