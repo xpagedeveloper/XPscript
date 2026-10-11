@@ -109,6 +109,7 @@ internal static class AstObjectSupportRegistry
 
     private static string RemoveStringsAndComments(string source)
     {
+        source = Regex.Replace(source, @"(?im)^[ \t]*Rem\b[^\r\n]*", match => new string(' ', match.Length));
         var result = new System.Text.StringBuilder(source.Length);
         var inString = false;
         var inComment = false;
