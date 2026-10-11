@@ -1,0 +1,48 @@
+name: Android Core Build
+
+on:
+  push:
+    branches: [android-runtime-uiform-mobile]
+    paths: ['todo/run-android-workflow.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-core-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Android core probes and dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run focused Android probes
+        run: |
+          dotnet run --project tests/UIFormMediaPolicyProbe/UIFormMediaPolicyProbe.csproj -c Release
+          dotnet run --project tests/XPImageAssetProbe/XPImageAssetProbe.csproj -c Release
+          dotnet run --project tests/AndroidCliProbe/AndroidCliProbe.csproj -c Release
+          dotnet run --project tests/AndroidSetupProbe/AndroidSetupProbe.csproj -c Release
+          dotnet run --project tests/AndroidProjectMetadataProbe/AndroidProjectMetadataProbe.csproj -c Release
+          dotnet run --project tests/AndroidScaffoldProbe/AndroidScaffoldProbe.csproj -c Release
+      - name: Build compiler and run Android compiler probe
+        run: |
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          dotnet run --project tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
+      - name: Install Android workload
+        run: dotnet workload install android
+      - name: Build Android dependency layer
+        run: |
+          dotnet build src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release
+          dotnet publish src/XPScript.UI.Android/XPScript.UI.Android.csproj -c Release -r android-x64 --no-restore
+      - name: Build headless APKs
+        run: |
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- samples/android-runtime-error.xps -o out/android-runtime-error --runtime=false --platform android-x64 --debug
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- samples/android-debug-print.xps -o out/android-debug-print --runtime=false --platform android-arm64 --debug
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- samples/android-debug-print.xps -o out/android-debug-print-x64 --runtime=false --platform android-x64 --debug

@@ -1,0 +1,54 @@
+name: Android Emulator Smoke
+
+on:
+  push:
+    branches: [android-runtime-uiform-mobile]
+    paths: ['todo/run-android-workflow.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-emulator-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Android API 30 Pixel 5 smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Android workload
+        run: dotnet workload install android
+      - name: Build smoke APK
+        run: |
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- samples/android-debug-print.xps -o out/android-debug-print-x64 --runtime=false --platform android-x64 --debug
+      - name: Run API 30 x86_64 emulator smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: Pixel_5
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            apk="$(find out/android-debug-print-x64 -type f -name '*.apk' -print -quit)"
+            test -n "$apk"
+            adb install -r "$apk"
+            adb logcat -c
+            package_name="$(aapt dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
+            adb shell monkey -p "$package_name" 1
+            for attempt in $(seq 1 20); do
+              adb logcat -d -s XPScript:D '*:S' | grep -q 'XPSCRIPT-EXIT=0' && exit 0
+              sleep 2
+            done
+            adb logcat -d -s XPScript:D '*:S'
+            exit 1

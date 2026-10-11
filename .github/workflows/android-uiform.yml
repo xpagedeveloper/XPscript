@@ -1,0 +1,50 @@
+name: Android UIForm APKs
+
+on:
+  push:
+    branches: [android-runtime-uiform-mobile]
+    paths: ['todo/run-android-workflow.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-uiform-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  uiform:
+    name: Android UIForm APK regression set
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Android workload
+        run: dotnet workload install android
+      - name: Build compiler
+        run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Build UIForm regression APKs
+        run: |
+          set -euo pipefail
+          compile() { dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- "$1" -o "$2" --runtime=false --platform android-x64 --debug; }
+          compile samples/android-uiform-minimal.xps out/android-uiform-minimal
+          compile samples/android-video-api.xps out/android-video-api
+          compile samples/android-uiform-media-manual-test.xps out/android-uiform-media-manual-test
+          compile samples/android-carousel-api.xps out/android-carousel-api
+          compile samples/android-progress-activity-api.xps out/android-progress-activity-api
+          compile samples/android-switch-api.xps out/android-switch-api
+          compile samples/android-icon-api.xps out/android-icon-api
+          compile samples/android-card-panel-api.xps out/android-card-panel-api
+          compile samples/android-scrollview-api.xps out/android-scrollview-api
+          compile samples/android-listview-api.xps out/android-listview-api
+          compile samples/android-uiform-camera-preview.xps out/android-camera-preview
+          compile samples/android-slider-api.xps out/android-slider-api
+          compile samples/android-uiform-regression.xps out/android-uiform-regression
+          compile samples/android-uiform-manual-test.xps out/android-uiform-manual-test
+          bash scripts/compile-android-uiform-controls.sh out/android-uiform-controls-api
+      - name: Verify APK output
+        run: test "$(find out -type f -name '*.apk' | wc -l)" -ge 10
