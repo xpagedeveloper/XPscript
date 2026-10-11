@@ -112,6 +112,9 @@ if (!generatedMappingLines.SequenceEqual(generatedMappingLines.OrderBy(line => l
 var quotedPathMapping = statements.EmitWithSourceMap([boundIf], "If True Then\nnumber = 1\nEnd If", "flow \"quoted\".xps");
 if (!quotedPathMapping.Code.Contains("#line 1 \"flow \\\"quoted\\\".xps\"", StringComparison.Ordinal) || quotedPathMapping.SourceMappings[0].SourcePath != "flow \"quoted\".xps")
     throw new InvalidOperationException("Bound statement emission did not escape a quoted source path.");
+var windowsPathMapping = statements.EmitWithSourceMap([boundIf], "If True Then\nnumber = 1\nEnd If", "C:\\src\\flow.xps");
+if (!windowsPathMapping.Code.Contains("#line 1 \"C:\\\\src\\\\flow.xps\"", StringComparison.Ordinal) || windowsPathMapping.SourceMappings[0].SourcePath != "C:\\src\\flow.xps")
+    throw new InvalidOperationException("Bound statement emission did not escape Windows path separators.");
 var mappedStatementIds = new[] { boundIf.StatementId }.Concat(boundIf.ThenStatements.Select(statement => statement.StatementId)).ToArray();
 if (mappedStatementIds.Length < 2 || mappedStatementIds.Any(id => id <= 0) || mappedStatementIds.Distinct().Count() != mappedStatementIds.Length)
     throw new InvalidOperationException("Bound statement emission did not assign unique positive statement IDs.");
