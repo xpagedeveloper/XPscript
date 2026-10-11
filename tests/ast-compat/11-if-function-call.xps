@@ -1,4 +1,4 @@
-Function IsAnswer(value As Long) As Boolean
+Function IsAnswer(ByVal value As Long) As Boolean
     If value = 42 Then
         IsAnswer = True
     Else

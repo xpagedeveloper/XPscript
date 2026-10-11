@@ -1,8 +1,8 @@
-Function AddNumbers(a As Long, b As Long) As Long
+Function AddNumbers(ByVal a As Long, ByVal b As Long) As Long
     AddNumbers = a + b
 End Function
 
-Function DoubleValue(value As Long) As Long
+Function DoubleValue(ByVal value As Long) As Long
     DoubleValue = value * 2
 End Function
 

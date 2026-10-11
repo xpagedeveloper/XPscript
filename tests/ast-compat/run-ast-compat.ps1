@@ -25,10 +25,12 @@ foreach ($test in $tests) {
     $source = Join-Path $PSScriptRoot $test.File
     $output = Join-Path $outRoot $test.Name
     if ($IsWindows) { $output += ".exe" }
-    dotnet run --project $compiler -c Release --no-build -- $source -o $output --runtime=false
+    dotnet run --project $compiler -c Release --no-build -- ast-compile $source -o $output
     if ($LASTEXITCODE -ne 0) { throw "Compilation failed: $($test.Name)" }
 
-    $lines = @(& $output)
+    $generated = Join-Path $output "Generated.dll"
+    if (-not (Test-Path $generated)) { throw "AST compilation produced no executable: $($test.Name)" }
+    $lines = @(& dotnet $generated)
     if ($LASTEXITCODE -ne 0) { throw "Program failed: $($test.Name), exit code $LASTEXITCODE" }
     $actual = @($lines | ForEach-Object { "$_".TrimEnd() })
     $expected = @($test.Expected)
