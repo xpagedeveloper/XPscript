@@ -100,6 +100,16 @@ internal static class AstExperimentalCompiler
         }
         foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Public\s+|Private\s+)?Class\s+(?<name>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new TypeSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.User(match.Groups["name"].Value)));
+        foreach (Match typeMatch in Regex.Matches(fullSource, @"(?ims)^\s*Type\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Type\b"))
+        {
+            var typeName = typeMatch.Groups["name"].Value;
+            symbols.Declare(new TypeSymbol(typeName, typeof(object), XpTypeSymbol.User(typeName)));
+            foreach (Match fieldMatch in Regex.Matches(typeMatch.Groups["body"].Value, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)\s*$"))
+            {
+                var fieldType = ResolveRuntimeType(fieldMatch.Groups["type"].Value);
+                symbols.Declare(new PropertySymbol($"{typeName}.{fieldMatch.Groups["name"].Value}", fieldType, XpTypeSymbol.FromClr(fieldType)));
+            }
+        }
         foreach (var procedure in unit.Declarations.OfType<SubDeclarationSyntax>())
         {
             var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
@@ -427,6 +437,20 @@ public sealed class XpPerson {
     public string Describe() => Name + ":" + Role;
 }
 """ : string.Empty);
+        classSupport += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?ims)^\s*Type\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Type\b")
+            .Cast<Match>().Select(match =>
+            {
+                var fields = string.Join(" ", Regex.Matches(match.Groups["body"].Value, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)\s*$")
+                    .Cast<Match>().Select(field => $"public {field.Groups["type"].Value.Trim().ToUpperInvariant() switch { "INTEGER" or "LONG" => "long", "DOUBLE" or "SINGLE" or "CURRENCY" => "double", "BYTE" => "byte", "BOOLEAN" => "bool", "STRING" => "string", _ => "object?" }} {field.Groups["name"].Value} {{ get; set; }}"));
+                return $"public sealed class Xp{match.Groups["name"].Value} {{ {fields} }}";
+            }));
+        classSupport += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?ims)^\s*Enum\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Enum\b")
+            .Cast<Match>().Select(match =>
+            {
+                var values = Regex.Matches(match.Groups["body"].Value, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$")
+                    .Cast<Match>().Select((value, index) => $"public static readonly Xp{match.Groups["name"].Value} {value.Groups["name"].Value} = new({(value.Groups["value"].Success ? value.Groups["value"].Value : index.ToString(System.Globalization.CultureInfo.InvariantCulture))});");
+                return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} private Xp{match.Groups["name"].Value}(long value) => Value = value; {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
+            }));
         if (true) classSupport += """
 public sealed class XpJsonElement { public string Name { get; set; } = string.Empty; public string Type { get; set; } = "String"; public object? Value { get; set; } }
 public sealed class XpJsonDocument { public XpJsonElement Root { get; } = new(); public static XpJsonDocument Parse(object? text) => new(); public string Stringify() => Root.Value?.ToString() ?? "{}"; public object ToObject(object target) => target; public void AppendElement(object? value, string name) { Root.Value = value; Root.Name = name; } public XpJsonObject AppendObject(string name) => new(); public XpJsonArray AppendArray(string name) => new(); public XpJsonElement GetElementByName(string name) => new() { Name = name }; public XpJsonElement GetElementByPointer(string pointer) => new(); }
