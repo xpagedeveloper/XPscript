@@ -37,7 +37,15 @@ public sealed class Lexer
                 _position++;
 
             if (Current != '\'')
+            {
+                if (IsRemCommentStart())
+                {
+                    while (_position < _text.Length && Current is not '\r' and not '\n')
+                        _position++;
+                    continue;
+                }
                 break;
+            }
 
             while (_position < _text.Length && Current is not '\r' and not '\n')
                 _position++;
@@ -172,6 +180,16 @@ public sealed class Lexer
     private char Current => _position < _text.Length ? _text[_position] : '\0';
     private char Peek(int offset) => _position + offset < _text.Length ? _text[_position + offset] : '\0';
     private char CurrentAt(int position) => position < _text.Length ? _text[position] : '\0';
+
+    private bool IsRemCommentStart()
+    {
+        var before = _position - 1;
+        while (before >= 0 && _text[before] is ' ' or '\t') before--;
+        if (before >= 0 && _text[before] is not '\r' and not '\n') return false;
+        if (!_text.AsSpan(_position, Math.Min(3, _text.Length - _position)).Equals("Rem", StringComparison.OrdinalIgnoreCase)) return false;
+        var after = _position + 3;
+        return after >= _text.Length || char.IsWhiteSpace(_text[after]);
+    }
 
     private SyntaxToken BadToken(int start)
     {

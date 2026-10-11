@@ -267,6 +267,12 @@ Equal(SyntaxKind.NewLineToken, commentTokens[2].Kind, "comment preserves newline
 Equal("next", commentTokens[3].Text, "token after comment");
 Equal(0, commentLexer.Diagnostics.Count, "valid comment diagnostics");
 
+var remLexer = new Lexer("Rem XPImage is a comment\nPrint value");
+var remTokens = remLexer.Lex().ToArray();
+Equal(SyntaxKind.NewLineToken, remTokens[0].Kind, "Rem comment preserves newline");
+Equal("Print", remTokens[1].Text, "token after Rem comment");
+Equal(0, remLexer.Diagnostics.Count, "valid Rem comment diagnostics");
+
 var badLexer = new Lexer("@");
 var badTokens = badLexer.Lex().ToArray();
 Equal(SyntaxKind.BadToken, badTokens[0].Kind, "bad token kind");

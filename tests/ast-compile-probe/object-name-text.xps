@@ -1,4 +1,5 @@
 Sub Main()
     Print "XPImage"
     ' XPImage in a comment must not select the legacy compiler.
+    Rem XPImage in a Rem comment must not select the legacy compiler.
 End Sub
