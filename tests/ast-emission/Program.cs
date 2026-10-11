@@ -93,6 +93,9 @@ var byRefParameter = new ParameterSymbol("result", typeof(long), IsByRef: true);
 var parameterMethod = methods.Emit("AddInto", typeof(void), [parameter, byRefParameter], [new BoundAssignmentStatement(new BoundNameExpression(byRefParameter), new BoundBinaryExpression(new BoundNameExpression(parameter), SyntaxKind.PlusToken, new BoundLiteralExpression(1L, typeof(long)), typeof(long)), false)]);
 if (!parameterMethod.Contains("public static void AddInto(long value, ref long result)", StringComparison.Ordinal) || !parameterMethod.Contains("result = (value + 1L);", StringComparison.Ordinal))
     throw new InvalidOperationException("Bound method parameter emission did not preserve ByRef semantics.");
+var instanceMethod = methods.Emit("InstanceValue", typeof(long), [], [new BoundReturnStatement(new BoundLiteralExpression(7L, typeof(long)))], isStatic: false);
+if (!instanceMethod.Contains("public long InstanceValue()", StringComparison.Ordinal) || instanceMethod.Contains("public static long InstanceValue()", StringComparison.Ordinal))
+    throw new InvalidOperationException("Bound method emission did not produce an instance method.");
 var mapped = statements.EmitWithSourceMap([boundIf], "If True Then\nnumber = 1\nEnd If", "flow.xps");
 if (!mapped.Code.Contains("#line 1 \"flow.xps\"", StringComparison.Ordinal) || mapped.SourceMappings.Count == 0)
     throw new InvalidOperationException("Bound statement emission did not preserve source mapping.");
