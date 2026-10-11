@@ -876,6 +876,9 @@ public static class DesktopFormHost
     public static string? MediaCommand(string instanceId, string fieldName, string command, string? argument) => DesktopWebViewHost.TryCommand(instanceId, fieldName, "script", command switch
     {
         "source" => "document.querySelector('audio,video').src=" + System.Text.Json.JsonSerializer.Serialize(argument ?? string.Empty) + ";document.querySelector('audio,video').load();",
+        "position" => "String(Math.round(document.querySelector('audio,video').currentTime*1000))",
+        "duration" => "String(Math.round((document.querySelector('audio,video').duration||0)*1000))",
+        "playing" => "String(!document.querySelector('audio,video').paused)",
         "play" => "document.querySelector('audio,video').play();",
         "pause" => "document.querySelector('audio,video').pause();",
         "stop" => "document.querySelector('audio,video').pause();document.querySelector('audio,video').currentTime=0;",

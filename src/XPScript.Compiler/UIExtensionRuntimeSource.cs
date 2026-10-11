@@ -104,10 +104,10 @@ internal sealed class XPScriptUIField
     }
     public long Position
     {
-        get { EnsureMedia(); return _mediaPosition; }
-        set { EnsureMedia(); _mediaPosition = Math.Max(0, value); }
+        get { EnsureMedia(); return ReadDesktopMediaLong("position", _mediaPosition); }
+        set { EnsureMedia(); _mediaPosition = Math.Max(0, value); TryDesktopMediaCommand("position", _mediaPosition.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
     }
-    public long Duration { get { EnsureMedia(); return _mediaDuration; } internal set { EnsureMedia(); _mediaDuration = Math.Max(0, value); } }
+    public long Duration { get { EnsureMedia(); return ReadDesktopMediaLong("duration", _mediaDuration); } internal set { EnsureMedia(); _mediaDuration = Math.Max(0, value); } }
     public double Volume
     {
         get { EnsureMedia(); return _mediaVolume; }
@@ -121,7 +121,7 @@ internal sealed class XPScriptUIField
         get { EnsureMedia(); return _mediaPlaybackRate; }
         set { EnsureMedia(); if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm media PlaybackRate must be greater than zero."); _mediaPlaybackRate = value; TryDesktopMediaCommand("rate", value.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
     }
-    public bool IsPlaying { get { EnsureMedia(); return _mediaIsPlaying; } }
+    public bool IsPlaying { get { EnsureMedia(); return ReadDesktopMediaBool("playing", _mediaIsPlaying); } }
     public void Play() { EnsureMedia(); _mediaIsPlaying = true; TryDesktopMediaCommand("play", null); }
     public void Pause() { EnsureMedia(); _mediaIsPlaying = false; TryDesktopMediaCommand("pause", null); }
     public double Value
@@ -220,6 +220,27 @@ internal sealed class XPScriptUIField
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
         {
             throw new XPScriptRuntimeException(5, "UIForm desktop media command failed: " + ex.InnerException.Message);
+        }
+    }
+    private long ReadDesktopMediaLong(string command, long fallback)
+    {
+        var value = TryDesktopMediaQuery(command);
+        return long.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? Math.Max(0, parsed) : fallback;
+    }
+    private bool ReadDesktopMediaBool(string command, bool fallback)
+        => bool.TryParse(TryDesktopMediaQuery(command), out var parsed) ? parsed : fallback;
+    private string TryDesktopMediaQuery(string command)
+    {
+        if (Type is not ("Video" or "Audio") || !_owner.Visible) return string.Empty;
+        try
+        {
+            var host = System.Type.GetType("XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop", false);
+            var method = host?.GetMethod("MediaCommand", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            return Convert.ToString(method?.Invoke(null, [_owner.InstanceId, Name, command, null]), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+        }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            throw new XPScriptRuntimeException(5, "UIForm desktop media query failed: " + ex.InnerException.Message);
         }
     }
     private void EnsureProgress() { if (Type != "ProgressBar") throw new XPScriptRuntimeException(5, "This UIForm field is not a ProgressBar."); }
