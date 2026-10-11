@@ -20,6 +20,14 @@ internal sealed class UIFormEventDispatcherPostProcessor
 
         return regex.Replace(generated,
             """
+    [System.Diagnostics.CodeAnalysis.DynamicDependency(
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods,
+        typeof(XPScriptUIFormEvent))]
+    [System.Diagnostics.CodeAnalysis.DynamicDependency(
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods,
+        typeof(XPScriptUIForm))]
     internal string DispatchRegisteredEvent(string eventToken, string submittedValue)
     {
         var separator = eventToken.IndexOf(':');
@@ -85,13 +93,55 @@ internal sealed class UIFormEventDispatcherPostProcessor
         }
         else if (kind.Equals("button", StringComparison.OrdinalIgnoreCase))
         {
-            ApplySubmittedStateJson(submittedValue);
+            try
+            {
+                ApplySubmittedStateJson(submittedValue);
+            }
+            catch (XPScriptRuntimeException)
+            {
+                return SerializeActionState();
+            }
+            if (!IsDataValid)
+                return SerializeActionState();
             var button = FindButton(controlName);
             handlerName = button.Handler;
             useEventCallback = button.UseEventCallback;
             callbackArguments = button.EventCallbackArguments;
             if (useEventCallback)
                 callbackEvent = new XPScriptUIFormEvent(this, "button", button.Name, null, Array.Empty<string>());
+        }
+        else if (kind.Equals("play", StringComparison.OrdinalIgnoreCase) ||
+                 kind.Equals("pause", StringComparison.OrdinalIgnoreCase) ||
+                 kind.Equals("ended", StringComparison.OrdinalIgnoreCase) ||
+                 kind.Equals("error", StringComparison.OrdinalIgnoreCase))
+        {
+            var field = FindField(controlName);
+            if (field.Type is not ("Audio" or "Video"))
+                throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is not a media field.");
+            if (submittedValue.Length > 0 && submittedValue[0] == '{')
+            {
+                try
+                {
+                    using var signal = System.Text.Json.JsonDocument.Parse(submittedValue);
+                    var state = signal.RootElement;
+                    if (state.TryGetProperty("position", out var position) && position.TryGetInt64(out var positionValue)) field.Position = positionValue;
+                    if (state.TryGetProperty("duration", out var duration) && duration.TryGetInt64(out var durationValue)) field.Duration = durationValue;
+                    if (state.TryGetProperty("isPlaying", out var playing) && playing.ValueKind == System.Text.Json.JsonValueKind.True) field.Play();
+                    else if (state.TryGetProperty("isPlaying", out playing) && playing.ValueKind == System.Text.Json.JsonValueKind.False) field.Pause();
+                }
+                catch (System.Text.Json.JsonException) { }
+            }
+            handlerName = kind.ToLowerInvariant() switch
+            {
+                "play" => field.OnPlayHandler,
+                "pause" => field.OnPauseHandler,
+                "ended" => field.OnEndedHandler,
+                "error" => field.OnErrorHandler,
+                _ => string.Empty
+            };
+            if (handlerName.Length == 0)
+                throw new XPScriptRuntimeException(5, $"UIForm media field '{field.Name}' has no registered {kind} handler.");
+            callbackEvent = new XPScriptUIFormEvent(this, kind.ToLowerInvariant(), field.Name, submittedValue, Array.Empty<string>());
         }
         else
         {
@@ -152,7 +202,16 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 System.Text.Json.JsonValueKind.Null => string.Empty,
                 _ => throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' submitted an unsupported event value type.")
             };
-            ApplySubmittedValue(field, submitted);
+            try
+            {
+                field.ValidationError = string.Empty;
+                ApplySubmittedValue(field, submitted);
+            }
+            catch (XPScriptRuntimeException exception)
+            {
+                field.ValidationError = exception.Message;
+                throw;
+            }
         }
     }
 
@@ -184,6 +243,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
         {
             refreshAll = _refreshAllRequested,
             refreshRegions = _requestedRefreshRegions.ToArray(),
+            activeTab = _activeTab,
             navigation = _navigationTarget.Length == 0 ? null : new
             {
                 target = _navigationTarget
@@ -201,10 +261,14 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 regexPattern = field.RegexPattern,
                 value = field.Type is "PasswordField" or "MultiListBox" or "Separator" or "Spacer" ? null : GetFieldValueString(field.Name),
                 values = field.Type == "MultiListBox" ? ReadSelectedValues(field.Name) : Array.Empty<string>(),
+                progressValue = field.Type == "ProgressBar" ? (double?)field.Value : null,
+                progressIndeterminate = field.Type == "ProgressBar" ? (bool?)field.IsIndeterminate : null,
+                activityRunning = field.Type == "ActivityIndicator" ? (bool?)field.IsRunning : null,
                 options = field.Options,
                 regionId = field.RegionId,
                 validationError = string.IsNullOrEmpty(field.ValidationError) ? GetValidationError(field.Name) : field.ValidationError
             }).ToArray(),
+            mediaCommands = _mediaCommands.Select(command => new { name = command.Name, command = command.Command }).ToArray(),
             buttons = _buttons.Select(button => new
             {
                 name = button.Name,
@@ -218,6 +282,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
         _refreshAllRequested = false;
         _requestedRefreshRegions.Clear();
         _navigationTarget = string.Empty;
+        _mediaCommands.Clear();
         return result;
     }
 

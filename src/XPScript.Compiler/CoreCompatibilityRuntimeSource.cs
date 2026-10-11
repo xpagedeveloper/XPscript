@@ -621,6 +621,7 @@ internal static class LSFileRuntime
     {
         var state = Get(number);
         EnsureBinary(state);
+        XPScriptFileSystemRuntime.EnsureWritablePath(state.Stream.Name);
         PositionForRecord(state, recordNumber);
         using var writer = new BinaryWriter(state.Stream, Encoding.Default, true);
         WriteTyped(writer, state, value, xpscriptType);

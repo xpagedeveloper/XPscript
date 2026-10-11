@@ -160,10 +160,23 @@ internal static class Program
         }
         catch (Exception ex)
         {
+            var runtimeSource = XPSourceLineRuntime.CurrentSource;
+            var runtimeLine = XPSourceLineRuntime.Current;
+#if ANDROID
+            if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_RUNTIME_DEBUG"), "1", StringComparison.Ordinal))
+                Console.WriteLine(ex.ToString());
+            else
+                Console.WriteLine("error: " + ex.Message);
+            if (!string.IsNullOrWhiteSpace(runtimeSource) && runtimeLine > 0)
+                Console.WriteLine("at " + runtimeSource + ":" + runtimeLine.ToString(System.Globalization.CultureInfo.InvariantCulture));
+#else
             if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_RUNTIME_DEBUG"), "1", StringComparison.Ordinal))
                 Console.Error.WriteLine(ex.ToString());
             else
                 Console.Error.WriteLine("error: " + ex.Message);
+            if (!string.IsNullOrWhiteSpace(runtimeSource) && runtimeLine > 0)
+                Console.Error.WriteLine("at " + runtimeSource + ":" + runtimeLine.ToString(System.Globalization.CultureInfo.InvariantCulture));
+#endif
             Environment.ExitCode = 1;
         }
         finally
@@ -799,6 +812,15 @@ internal static class LSForAllRuntime
             EnsureLocalDoesNotShadowFunctionResult(name);
             EnsureClassType(className); _objectVariables[name] = className; _variableTypes[name] = $"LSRef<{className}>";
             Write(sb, $"LSRef<{className}> {name} = LSRef<{className}>.Create(new {className}({TransformArgumentList(newObject.Groups[3].Value)}));"); return true;
+        }
+
+        var inferred = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
+        if (inferred.Success)
+        {
+            var name = inferred.Groups[1].Value;
+            EnsureLocalDoesNotShadowFunctionResult(name);
+            Write(sb, $"var {name} = {TransformExpression(inferred.Groups[2].Value)};");
+            return true;
         }
 
         var dim = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s*(?:As\s+([A-Za-z_]\w*(?:\[\])?))?$", RegexOptions.IgnoreCase);

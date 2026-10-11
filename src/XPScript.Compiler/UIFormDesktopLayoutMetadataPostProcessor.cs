@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace XPScript.Compiler;
 
 internal sealed class UIFormDesktopLayoutMetadataPostProcessor
@@ -21,88 +19,67 @@ internal sealed class UIFormDesktopLayoutMetadataPostProcessor
             generated.Contains("regexPattern = field.RegexPattern", StringComparison.Ordinal))
             return generated;
 
-        const string pattern = """
-            var\s+request\s*=\s*new\s*\{\s*
-            instanceId\s*=\s*form\.InstanceId\s*,\s*
-            modal(?:\s*=\s*modal)?\s*,\s*
-            title\s*=\s*form\.Title\s*,\s*
-            width\s*=\s*form\.Width\s*>\s*0\s*\?\s*form\.Width\s*:\s*\(int\?\)null\s*,\s*
-            height\s*=\s*form\.Height\s*>\s*0\s*\?\s*form\.Height\s*:\s*\(int\?\)null\s*,\s*
-            resizable\s*=\s*form\.Resizable\s*,\s*
-            fields\s*=\s*fields\.Select\(field\s*=>\s*new\s*\{.*?\}\)\.ToArray\(\)\s*
-            \}\s*;
-            """;
+        const string requestMarker = "resizable = form.Resizable,";
+        const string fieldMarker = "required = field.Required,";
+        const string buttonMarker = "style = button.Style,";
 
-        const string replacement = """
-        var request = new
-        {
-            instanceId = form.InstanceId,
-            modal,
-            title = form.Title,
-            width = form.Width > 0 ? form.Width : (int?)null,
-            height = form.Height > 0 ? form.Height : (int?)null,
-            resizable = form.Resizable,
+        if (!generated.Contains(requestMarker, StringComparison.Ordinal) ||
+            !generated.Contains(fieldMarker, StringComparison.Ordinal) ||
+            !generated.Contains(buttonMarker, StringComparison.Ordinal))
+            throw new CompilerException("Unable to install UIForm desktop layout metadata bridge (request-object).");
+
+        var requestStart = generated.IndexOf("var request = new", StringComparison.Ordinal);
+        var buttonsStart = requestStart < 0 ? -1 : generated.IndexOf("buttons = form.Buttons.Select", requestStart, StringComparison.Ordinal);
+        var requestEnd = buttonsStart < 0 ? -1 : generated.IndexOf("};", buttonsStart, StringComparison.Ordinal);
+        if (requestStart < 0 || buttonsStart < 0 || requestEnd < 0)
+            throw new CompilerException("Unable to locate the UIForm desktop request scope.");
+
+        var request = generated.Substring(requestStart, requestEnd + 2 - requestStart);
+        if (!request.Contains(requestMarker, StringComparison.Ordinal) ||
+            !request.Contains(fieldMarker, StringComparison.Ordinal) ||
+            !request.Contains(buttonMarker, StringComparison.Ordinal))
+            throw new CompilerException("Unable to install UIForm desktop layout metadata bridge inside the request scope.");
+
+        request = ReplaceFirst(request, requestMarker, requestMarker + """
+            
             theme = form.Theme,
             showValidationErrors = form.ShowValidationErrors,
             showDefaultButtons = form.ShowDefaultButtons,
+            defaultButtonCornerRadius = form.DefaultButtonCornerRadius,
             gridColumns = form.GridColumns,
             hasValidationSchema = form.HasValidationSchema,
-            fields = fields.Select(field => new
-            {
-                name = field.Name,
-                label = field.Label,
-                type = field.Type,
-                required = field.Required,
-                value = field.Type is "PasswordField" or "MultiListBox" or "Image" or "WebView"
-                    ? null
-                    : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
-                values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
-                minLength = field.MinLength,
-                maxLength = field.MaxLength,
-                minimum = field.Minimum,
-                maximum = field.Maximum,
-                options = field.Options,
-                layoutRow = field.LayoutRow,
-                layoutColumn = field.LayoutColumn,
-                columnSpan = field.ColumnSpan,
-                rowSpan = field.RowSpan,
-                regionId = field.RegionId,
-                refreshTargetRegion = field.RefreshTargetRegion,
-                refreshHandler = field.RefreshHandler,
-                onChangeHandler = field.OnChangeHandler,
-                visible = field.Visible,
-                enabled = field.Enabled,
-                readOnly = field.ReadOnly,
-                placeholder = field.Placeholder,
-                tooltip = field.Tooltip,
-                imageSource = field.ImageSource,
-                imageAltText = field.ImageAltText,
-                imageCertificateValidation = field.ImageCertificateValidation,
-                webViewSource = field.WebViewSource,
-                webViewHtml = field.WebViewHtml,
-                webViewUserAgent = field.WebViewUserAgent,
-                webViewBackground = field.WebViewBackground,
-                regexPattern = field.RegexPattern,
-                schemaValidationError = form.GetValidationError(field.Name)
-            }).ToArray(),
-            buttons = form.Buttons.Select(button => new
-            {
-                name = button.Name,
-                label = button.Label,
-                style = button.Style,
-                layoutRow = button.LayoutRow,
-                layoutColumn = button.LayoutColumn,
-                columnSpan = button.ColumnSpan,
-                rowSpan = button.RowSpan,
-                visible = button.Visible,
-                enabled = button.Enabled
-            }).ToArray()
-        };
-        """;
+            """);
 
-        var regex = new Regex(pattern, RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.IgnorePatternWhitespace);
-        if (!regex.IsMatch(generated))
-            throw new CompilerException("Unable to install UIForm desktop layout metadata bridge (request-object).");
-        return regex.Replace(generated, replacement, 1);
+        request = ReplaceFirst(request, fieldMarker, fieldMarker + """
+            
+            placeholder = field.Placeholder,
+            tooltip = field.Tooltip,
+            imageSource = field.ImageSource,
+            imageAltText = field.ImageAltText,
+            imageCertificateValidation = field.ImageCertificateValidation,
+            webViewSource = field.WebViewSource,
+            webViewHtml = field.WebViewHtml,
+            webViewUserAgent = field.WebViewUserAgent,
+            webViewBackground = field.WebViewBackground,
+            regexPattern = field.RegexPattern,
+            schemaValidationError = form.GetValidationError(field.Name),
+            """);
+
+        request = ReplaceFirst(request, buttonMarker, buttonMarker + """
+            
+            layoutRow = button.LayoutRow,
+            layoutColumn = button.LayoutColumn,
+            columnSpan = button.ColumnSpan,
+            rowSpan = button.RowSpan,
+            """);
+
+        return string.Concat(generated.AsSpan(0, requestStart), request, generated.AsSpan(requestEnd + 2));
+    }
+
+    private static string ReplaceFirst(string source, string marker, string replacement)
+    {
+        var index = source.IndexOf(marker, StringComparison.Ordinal);
+        if (index < 0) return source;
+        return string.Concat(source.AsSpan(0, index), replacement, source.AsSpan(index + marker.Length));
     }
 }

@@ -67,31 +67,39 @@ internal static class RunCompiler
         if (!CompilerDriver.SupportedRuntimes.Contains(rid, StringComparer.OrdinalIgnoreCase))
             throw new CompilerException("Unsupported runtime identifier '" + runtimeIdentifier + "'.", CompilerDiagnosticCodes.RuntimeIdentifierUnsupported, "configuration");
 
+        CompilerProgressContext.Report(5, "Reading source");
         var originalSource = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        CompilerProgressContext.Report(10, "Preprocessing source");
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
         var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
         var source = managedReferences.Source;
         var nativeDependencies = new NativeDependencyPackager(rid).Collect(source, includeResult.Map, sourcePath);
 
+        CompilerProgressContext.Report(20, "Transpiling XPScript");
         var transpiler = new XPScriptTranspiler();
         string generatedSource;
         using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
             generatedSource = transpiler.Transpile(source, sourcePath, rid);
 
+        CompilerProgressContext.Report(30, "Preparing run output");
         var outputRoot = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
 
+        var usesDesktopUi = RunRoslynCompiler.UsesDesktopUi(generatedSource);
         if (RunRoslynCompiler.CanCompile(generatedSource, managedReferences.Managed.Count > 0))
         {
+            CompilerProgressContext.Report(45, "Compiling generated code");
             var assembly = await RunRoslynCompiler.CompileAsync(generatedSource, outputRoot, debug, cancellationToken).ConfigureAwait(false);
+            CompilerProgressContext.Report(90, "Staging runtime dependencies");
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
-            if (RunRoslynCompiler.UsesDesktopUi(generatedSource))
+            if (usesDesktopUi)
                 StageDesktopDependencies(outputRoot);
             return assembly;
         }
 
-        return await CompileWithMsBuildAsync(
+        CompilerProgressContext.Report(40, "Building generated project");
+        var runnable = await CompileWithMsBuildAsync(
             sourcePath,
             outputRoot,
             generatedSource,
@@ -99,6 +107,11 @@ internal static class RunCompiler
             nativeDependencies,
             debug,
             cancellationToken).ConfigureAwait(false);
+        CompilerProgressContext.Report(90, "Staging runtime dependencies");
+        if (usesDesktopUi)
+            StageDesktopDependencies(outputRoot);
+        CompilerProgressContext.Report(100, "Run build ready");
+        return runnable;
     }
 
     private static async Task<string> CompileWithMsBuildAsync(
@@ -334,6 +347,8 @@ internal static class RunCompiler
         var runtimes = Path.Combine(directory, "runtimes");
         if (Directory.Exists(runtimes))
         {
+            var currentRid = CompilerDriver.CurrentRuntimeIdentifier();
+            var currentNativePrefix = currentRid + Path.DirectorySeparatorChar + "native" + Path.DirectorySeparatorChar;
             foreach (var source in Directory.EnumerateFiles(runtimes, "*", SearchOption.AllDirectories))
             {
                 var relative = Path.GetRelativePath(runtimes, source);
@@ -343,9 +358,10 @@ internal static class RunCompiler
                 CompilerPathSecurity.HardenTemporaryFile(target);
 
                 // Native libraries are resolved from the application's base directory
-                // by the run fast path. Also flatten the native asset for the current
-                // process RID so DllImport("libSkiaSharp") can find it directly.
-                if (relative.Contains(Path.DirectorySeparatorChar + "native" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                // by the run fast path. Flatten only the current process RID. Flattening
+                // every RID causes identically named assets such as libSkiaSharp.so from
+                // linux-x64 and linux-arm64 to collide in the output directory.
+                if (relative.StartsWith(currentNativePrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     var flatTarget = Path.Combine(outputRoot, Path.GetFileName(source));
                     CompilerSecureFileCopy.CopyValidatedRegularFile(source, flatTarget, "Desktop UI native runtime dependency");

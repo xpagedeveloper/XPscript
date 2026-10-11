@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <NuGetAudit>false</NuGetAudit>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <AssemblyName>xpscriptc</AssemblyName>
     <RootNamespace>XPScript.Compiler</RootNamespace>
@@ -18,6 +19,6 @@
   <ItemGroup>
     <PackageReference Include="MimeKit" Version="4.17.0" />
     <Compile Include="Program.cs" />
-    <ProjectReference Include="../XPScript.Compiler.Core/XPScript.Compiler.Core.csproj" />
+    <ProjectReference Include="../XPScript.Compiler.Core/XPScript.Compiler.Core.csproj" SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 </Project>

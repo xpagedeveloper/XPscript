@@ -6,6 +6,7 @@ internal sealed class ApplicationObjectPreprocessor
 {
     private const string IdStateKey = "__xps_application_id";
     private const string TitleStateKey = "__xps_application_title";
+    private const string PackageNameStateKey = "__xps_application_package_name";
     private const string IconStateKey = "__xps_application_icon";
     private const string ProductStateKey = "__xps_application_executable_product";
     private const string CompanyStateKey = "__xps_application_executable_company";
@@ -15,6 +16,7 @@ internal sealed class ApplicationObjectPreprocessor
     private const string CommentsStateKey = "__xps_application_executable_comments";
     private const string WidthStateKey = "__xps_application_width";
     private const string HeightStateKey = "__xps_application_height";
+    internal const string BuildPackageNameMarker = "__XPSCRIPT_APPLICATION_PACKAGE_NAME_BUILD__=";
     internal const string BuildIconMarker = "__XPSCRIPT_APPLICATION_ICON_BUILD__=";
     internal const string BuildProductMarker = "__XPSCRIPT_APPLICATION_PRODUCT_BUILD__=";
     internal const string BuildCompanyMarker = "__XPSCRIPT_APPLICATION_COMPANY_BUILD__=";
@@ -36,6 +38,7 @@ internal sealed class ApplicationObjectPreprocessor
 
         source = RewriteWritableApplicationProperty(source, "Id", IdStateKey);
         source = RewriteWritableApplicationProperty(source, "Title", TitleStateKey);
+        source = RewriteWritableApplicationProperty(source, "PackageName", PackageNameStateKey, BuildPackageNameMarker);
         source = RewriteWritableApplicationProperty(source, "Executable.Icon", IconStateKey, BuildIconMarker, resolvePath: true);
         source = RewriteWritableApplicationProperty(source, "Icon", IconStateKey, BuildIconMarker, resolvePath: true);
         source = RewriteWritableApplicationProperty(source, "Executable.Product", ProductStateKey, BuildProductMarker);

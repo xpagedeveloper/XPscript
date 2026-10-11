@@ -34,6 +34,50 @@ public static class UIFormAppAssets
     public const string DirectoryName = "assets";
     private const long MaximumEmbeddedBytes = 64L * 1024 * 1024;
 
+    /// <summary>Copies a literal local media file into the source application's assets directory.</summary>
+    public static string StageLocalMediaSource(string sourcePath, string value)
+    {
+        var text = value.Trim();
+        if (text.Length == 0 || IsRemoteOrAssetSource(text)) return value;
+
+        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
+        var candidate = Path.IsPathRooted(text) ? text : Path.Combine(sourceDirectory, text);
+        if (!File.Exists(candidate)) return value;
+
+        var fullSource = Path.GetFullPath(candidate);
+        var assetsRoot = EnsureAssetsDirectory(sourcePath);
+        var extension = Path.GetExtension(fullSource);
+        var sourceKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(fullSource))).ToLowerInvariant()[..12];
+        var safeName = Path.GetFileNameWithoutExtension(fullSource);
+        foreach (var invalid in Path.GetInvalidFileNameChars()) safeName = safeName.Replace(invalid, '_');
+        if (safeName.Length == 0) safeName = "media";
+        var fileName = $"local-{sourceKey}-{safeName}{extension}";
+        var destination = Path.Combine(assetsRoot, fileName);
+        if (!File.Exists(destination) || ShouldRefreshAsset(fullSource, destination))
+        {
+            File.Copy(fullSource, destination, overwrite: true);
+            File.SetLastWriteTimeUtc(destination, File.GetLastWriteTimeUtc(fullSource));
+        }
+        return $"assets/{fileName}";
+    }
+
+    private static bool ShouldRefreshAsset(string source, string destination)
+    {
+        var sourceInfo = new FileInfo(source);
+        var assetInfo = new FileInfo(destination);
+        return sourceInfo.Length > assetInfo.Length || sourceInfo.LastWriteTimeUtc > assetInfo.LastWriteTimeUtc;
+    }
+
+    private static bool IsRemoteOrAssetSource(string value)
+    {
+        if (value.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ||
+            value.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) return true;
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri) return false;
+        return uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+               uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+               uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static bool UsesUIForm(string sourcePath)
     {
         if (!File.Exists(sourcePath)) return false;
@@ -119,7 +163,9 @@ internal static class XPScriptEmbeddedAppAssets
     [System.Runtime.CompilerServices.ModuleInitializer]
     internal static void Materialize()
     {
-        var root = System.IO.Path.Combine(System.AppContext.BaseDirectory, "assets");
+        var root = System.OperatingSystem.IsAndroid()
+            ? System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "assets")
+            : System.IO.Path.Combine(System.AppContext.BaseDirectory, "assets");
         System.IO.Directory.CreateDirectory(root);
 {{entries}}    }
 

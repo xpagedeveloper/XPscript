@@ -608,7 +608,7 @@ End Sub
         throw new Exception("Browser-WASM server bridge no longer enforces a same-origin relative bridge URL.");
     foreach (var requiredMarker in new[]
     {
-        "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result",
+        "gridTemplateColumns", "form-select", "readOnly", "request.buttons", "xpscript:form-result", "request.bootImage", "request.bootText", "xpscript-uiform-boot-image", "xpscript-uiform-boot-text",
         "multilistbox", "selectedOptions", "select.multiple", "field.placeholder", "field.regexPattern", "field.schemaValidationError", "aria-invalid", "xpscript-uiform-error", "_schema_error", "field.dateMinimum", "field.dateMaximum", "field.timeMinimum", "field.timeMaximum", "field.dateTimeMinimum", "field.dateTimeMaximum", "field.monthMinimum", "field.monthMaximum", "field.tooltip",
         "type === 'separator'", "type === 'spacer'", "export function stageRequestState", "export function consumeRequestState",
         "export function navigate", "export function applyApplicationMetadata", "export function setEventDispatcher",

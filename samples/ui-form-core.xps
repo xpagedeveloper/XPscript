@@ -11,6 +11,12 @@ Sub Main()
     Print "FIRST_HEIGHT=" & CStr(first.Height)
     Print "FIRST_RESIZABLE=" & CStr(first.Resizable)
     Print "FIRST_HAS_SIZE=" & CStr(first.HasExplicitSize)
+    If first.BootText <> "" Then Error 5, "Expected empty UIForm boot text by default"
+    If first.BootImage <> "" Then Error 5, "Expected empty UIForm boot image by default"
+    first.BootText = "Starting customer form"
+    first.BootImage = "splash.png"
+    If first.BootText <> "Starting customer form" Then Error 5, "Expected UIForm boot text roundtrip"
+    If first.BootImage <> "splash.png" Then Error 5, "Expected UIForm boot image roundtrip"
 
     Print "SECOND_TITLE=" & second.Title
     Print "SECOND_WIDTH=" & CStr(second.Width)
@@ -44,6 +50,17 @@ Sub Main()
     If Not first.HasValidationSchema Then Error 5, "Expected UIForm JSON Schema to be configured"
     If first.IsDataValid Then Error 5, "Expected bound JSON data to fail configured schema"
     If first.ValidateData().FailedPaths.Get(0) <> "$.age" Then Error 5, "Expected UIForm schema failure path"
+
+    Dim customMessageForm As New UIForm("Custom schema messages")
+    Dim customMessageData As New XPJsonObject
+    Call customMessageData.Set("name", "ab")
+    Call customMessageForm.BindData(customMessageData)
+    Call customMessageForm.AddTextField("name", "Name")
+    Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string"",""minLength"":3,""x-errorMessages"":{""minLength"":""Name must contain at least 3 characters""}}},""required"":[""name""],""x-requiredMessages"":{""name"":""Please enter your name""}}")
+    Call customMessageForm.SetValidationSchema(schema)
+    If customMessageForm.GetValidationError("name") <> "Name must contain at least 3 characters" Then Error 5, "Expected custom minLength validation message"
+    Call customMessageData.Remove("name")
+    If customMessageForm.GetValidationError("name") <> "Please enter your name" Then Error 5, "Expected custom required validation message"
 
     Dim nestedForm As New UIForm("Nested schema")
     Dim nestedData As New XPJsonObject

@@ -1,0 +1,278 @@
+' XPScript Android UIForm manual emulator/phone verification
+' (c) xpagedeveloper.com 2026
+
+Sub Main()
+    Dim data As New XPJsonObject
+    Dim form As New UIForm("Android UIForm Manual Test")
+    Dim schema As XPJsonSchema
+    Dim detailsGrid As Variant
+    Dim browser As Variant
+    Dim result As String
+    Dim runtimeImage As XPImage
+
+    Call Application.Debug.Info("TEST STARTUP: PASS")
+    Call Application.Debug.Info("TEST INSTRUCTION: Fill Name and Notes, toggle Enabled, select the requested option/list/radio values, set Range to 75, enter a password, then press Verify Input.")
+
+    Call data.Set("name", "")
+    Call data.Set("notes", "")
+    Call data.Set("enabled", False)
+    Call data.Set("choice", "Beta")
+    Call data.Set("listChoice", "Two")
+    Call data.Set("multiChoice", Array("Red", "Blue"))
+    Call data.Set("radioChoice", "Right")
+    Call data.Set("rangeValue", 75)
+    Call data.Set("password", "")
+    Call data.Set("numberValue", 42)
+    Call data.Set("emailValue", "android@example.com")
+    Call data.Set("urlValue", "https://example.com")
+    Call data.Set("dateValue", "2026-10-03")
+    Call data.Set("timeValue", "19:30")
+    Call data.Set("dateTimeValue", "2026-10-03T19:30")
+    Call data.Set("monthValue", "2026-10")
+    Call data.Set("colorValue", "#336699")
+    form.BootText = "Loading Android UIForm manual test"
+    Set runtimeImage = New XPImage(32, 32, "#336699")
+    form.BootImage = runtimeImage
+    Call form.BindData(data)
+    Call form.AddTab("basic", "Basic")
+    Call form.AddTab("more", "More")
+    detailsGrid = form.AddGrid("detailsGrid", 2)
+    Call detailsGrid.SetTab("more")
+    Call form.AddTextField("name", "1. Name - type MANUAL-ANDROID")
+    Call form.AddTextArea("notes", "2. Notes - type two lines")
+    Call form.AddCheckBox("enabled", "3. Enabled - toggle this")
+    Call form.SetFieldCornerRadius("name", 12)
+    Call form.SetFieldCornerRadius("notes", 12)
+    Call form.SetFieldTab("name", "basic")
+    Call form.SetFieldTab("notes", "basic")
+    Call form.SetFieldTab("enabled", "basic")
+
+    Call form.AddSeparator("section1")
+    Call form.AddSelect("choice", "4. Select - choose Beta")
+    Call form.AddOption("choice", "Alpha")
+    Call form.AddOption("choice", "Beta")
+    Call form.AddOption("choice", "Gamma")
+    Call form.AddListBox("listChoice", "5. ListBox - choose Two")
+    Call form.AddOption("listChoice", "One")
+    Call form.AddOption("listChoice", "Two")
+    Call form.AddOption("listChoice", "Three")
+    Call form.AddMultiListBox("multiChoice", "6. MultiListBox - choose Red and Blue")
+    Call form.AddOption("multiChoice", "Red")
+    Call form.AddOption("multiChoice", "Green")
+    Call form.AddOption("multiChoice", "Blue")
+    Call form.AddRadioGroup("radioChoice", "7. RadioGroup - choose Right")
+    Call form.AddOption("radioChoice", "Left")
+    Call form.AddOption("radioChoice", "Right")
+    Call form.AddRangeField("rangeValue", "8. Range - set to 75")
+    Call form.SetNumberRange("rangeValue", 0, 100)
+    Call form.AddPasswordField("password", "9. Password - type android-secret")
+    Call form.AddNumberField("numberValue", "10. Number - keep 42")
+    Call form.SetNumberRange("numberValue", 0, 100)
+    Call form.AddEmailField("emailValue", "11. Email - keep android@example.com")
+    Call form.AddUrlField("urlValue", "12. URL - keep https://example.com")
+    Call form.AddDateField("dateValue", "13. Date - keep 2026-10-03")
+    Call form.AddTimeField("timeValue", "14. Time - keep 19:30")
+    Call form.AddDateTimeField("dateTimeValue", "15. DateTime - keep 2026-10-03 19:30")
+    Call form.AddMonthField("monthValue", "16. Month - keep 2026-10")
+    Call form.AddColorField("colorValue", "17. Color - keep #336699")
+    browser = form.AddWebView("webPreview", "18. WebView - example.com")
+    browser.Source = "https://example.com"
+    Call form.SetFieldCornerRadius("password", 12)
+    Call form.SetFieldCornerRadius("emailValue", 12)
+    Call form.SetFieldCornerRadius("urlValue", 12)
+    Call form.AddSpacer("space1")
+    Call form.AddImage("testImage", "Android/test-image.png", "Android UIForm asset image")
+    Call form.AddImage("xpImage", runtimeImage, "Android UIForm XPImage")
+    Call detailsGrid.SetFieldPosition("choice", 1)
+    Call detailsGrid.SetFieldPosition("listChoice", 1)
+    Call form.SetFieldTab("multiChoice", "more")
+    Call detailsGrid.SetFieldPosition("radioChoice", 1)
+    Call detailsGrid.SetFieldPosition("rangeValue", 1)
+    Call form.SetFieldTab("password", "more")
+    Call detailsGrid.SetFieldPosition("numberValue", 2)
+    Call detailsGrid.AddNewRow()
+    Call detailsGrid.SetFieldPosition("emailValue", 1)
+    Call detailsGrid.SetFieldPosition("urlValue", 1)
+    Call form.SetFieldTab("testImage", "more")
+    Call form.SetFieldTab("xpImage", "more")
+    Call form.SetFieldTab("dateValue", "more")
+    Call form.SetFieldTab("timeValue", "more")
+    Call form.SetFieldTab("dateTimeValue", "more")
+    Call form.SetFieldTab("monthValue", "more")
+    Call form.SetFieldTab("colorValue", "more")
+    Call form.SetFieldTab("webPreview", "more")
+    Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string"",""minLength"":3,""x-errorMessages"":{""minLength"":""Name must contain at least 3 characters""}}},""required"":[""name""],""x-requiredMessages"":{""name"":""Please enter your name""}}")
+    Call form.SetValidationSchema(schema)
+
+    Call form.AddButtonCallback("verify", "Verify Input", "VerifyInput", "manual")
+    Call form.AddButtonCallback("touch", "Touch PASS", "TouchPass", "manual")
+    Call form.AddButtonCallback("layout", "Layout PASS", "LayoutPass", "manual")
+    Call form.AddButtonCallback("keyboard", "Keyboard PASS", "KeyboardPass", "manual")
+    Call form.SetButtonCornerRadius("verify", 12)
+    Call form.SetButtonCornerRadius("touch", 12)
+    Call form.SetButtonCornerRadius("layout", 12)
+    Call form.SetButtonCornerRadius("keyboard", 12)
+    result = form.ShowDialog()
+
+    Call Application.Debug.Info("TEST DIALOG RESULT: " & result)
+    Call Application.Debug.Info("TEST FINAL NAME: " & form.GetFieldValueString("name"))
+    Call Application.Debug.Info("TEST FINAL NOTES: " & form.GetFieldValueString("notes"))
+    Call Application.Debug.Info("TEST FINAL ENABLED: " & form.GetFieldValueString("enabled"))
+    Call Application.Debug.Info("TEST FINAL SELECT: " & form.GetFieldValueString("choice"))
+    Call Application.Debug.Info("TEST FINAL LISTBOX: " & form.GetFieldValueString("listChoice"))
+    Call Application.Debug.Info("TEST FINAL RADIO: " & form.GetFieldValueString("radioChoice"))
+    Call Application.Debug.Info("TEST FINAL RANGE: " & form.GetFieldValueString("rangeValue"))
+    Call Application.Debug.Info("TEST FINAL NUMBER: " & form.GetFieldValueString("numberValue"))
+    Call Application.Debug.Info("TEST FINAL EMAIL: " & form.GetFieldValueString("emailValue"))
+    Call Application.Debug.Info("TEST FINAL URL: " & form.GetFieldValueString("urlValue"))
+    Call Application.Debug.Info("TEST FINAL DATE: " & form.GetFieldValueString("dateValue"))
+    Call Application.Debug.Info("TEST FINAL TIME: " & form.GetFieldValueString("timeValue"))
+    Call Application.Debug.Info("TEST FINAL DATETIME: " & form.GetFieldValueString("dateTimeValue"))
+    Call Application.Debug.Info("TEST FINAL MONTH: " & form.GetFieldValueString("monthValue"))
+    Call Application.Debug.Info("TEST FINAL COLOR: " & form.GetFieldValueString("colorValue"))
+
+    If result = "OK" Then
+        If form.GetFieldValueString("name") = "MANUAL-ANDROID" Then
+            Call Application.Debug.Info("TEST TEXTFIELD/BINDING: PASS")
+        Else
+            Call Application.Debug.Error("TEST TEXTFIELD/BINDING: FAIL expected MANUAL-ANDROID")
+        End If
+        If form.GetFieldValueString("notes") <> "" Then
+            Call Application.Debug.Info("TEST TEXTAREA/BINDING: PASS")
+        Else
+            Call Application.Debug.Error("TEST TEXTAREA/BINDING: FAIL notes empty")
+        End If
+        If form.GetFieldValueString("enabled") = "true" Then
+            Call Application.Debug.Info("TEST CHECKBOX/BINDING: PASS")
+        Else
+            Call Application.Debug.Error("TEST CHECKBOX/BINDING: FAIL checkbox not enabled")
+        End If
+        If form.IsDataValid Then
+            Call Application.Debug.Info("TEST VALIDATION: PASS")
+        Else
+            Call Application.Debug.Error("TEST VALIDATION: FAIL " & form.GetValidationError("name"))
+        End If
+    Else
+        Call Application.Debug.Error("TEST DIALOG: FAIL cancelled")
+    End If
+
+    Call Application.Debug.Info("TEST INSTRUCTION: Rotate portrait/landscape, press Home and return, lock/unlock, then confirm logcat contains XPSCRIPT-LIFECYCLE pause/resume without crash.")
+    Call Application.Debug.Info("TEST MANUAL COMPLETE: inspect all TEST and XPSCRIPT-LIFECYCLE lines in logcat")
+End Sub
+
+Sub VerifyInput(evt As Variant, contextName As String)
+    Dim form As Variant
+    Call Application.Debug.Info("TEST VERIFY CALLBACK ENTERED")
+    form = evt.Form
+    Call Application.Debug.Info("TEST VERIFY EVENT FORM: PASS")
+    If form.GetFieldValueString("name") = "MANUAL-ANDROID" Then
+        Call Application.Debug.Info("TEST BUTTON HANDLER: PASS")
+        Call Application.Debug.Info("TEST LIVE TEXTFIELD: PASS value=MANUAL-ANDROID")
+    Else
+        Call Application.Debug.Error("TEST LIVE TEXTFIELD: FAIL value=" & form.GetFieldValueString("name"))
+    End If
+    If form.GetFieldValueString("notes") <> "" Then
+        Call Application.Debug.Info("TEST LIVE TEXTAREA: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE TEXTAREA: FAIL")
+    End If
+    If form.GetFieldValueString("enabled") = "true" Then
+        Call Application.Debug.Info("TEST LIVE CHECKBOX: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE CHECKBOX: FAIL")
+    End If
+    If form.GetFieldValueString("choice") = "Beta" Then
+        Call Application.Debug.Info("TEST LIVE SELECT: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE SELECT: FAIL value=" & form.GetFieldValueString("choice"))
+    End If
+    If form.GetFieldValueString("listChoice") = "Two" Then
+        Call Application.Debug.Info("TEST LIVE LISTBOX: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE LISTBOX: FAIL value=" & form.GetFieldValueString("listChoice"))
+    End If
+    If form.GetFieldValueString("radioChoice") = "Right" Then
+        Call Application.Debug.Info("TEST LIVE RADIOGROUP: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE RADIOGROUP: FAIL value=" & form.GetFieldValueString("radioChoice"))
+    End If
+    If form.GetFieldValueString("rangeValue") = "75" Then
+        Call Application.Debug.Info("TEST LIVE RANGE: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE RANGE: FAIL value=" & form.GetFieldValueString("rangeValue"))
+    End If
+    If form.GetFieldValueString("password") = "android-secret" Then
+        Call Application.Debug.Info("TEST LIVE PASSWORD: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE PASSWORD: FAIL")
+    End If
+    If form.GetFieldValueString("numberValue") = "42" Then
+        Call Application.Debug.Info("TEST LIVE NUMBER: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE NUMBER: FAIL value=" & form.GetFieldValueString("numberValue"))
+    End If
+    If form.GetFieldValueString("emailValue") = "android@example.com" Then
+        Call Application.Debug.Info("TEST LIVE EMAIL: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE EMAIL: FAIL value=" & form.GetFieldValueString("emailValue"))
+    End If
+    If form.GetFieldValueString("urlValue") = "https://example.com" Then
+        Call Application.Debug.Info("TEST LIVE URL: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE URL: FAIL value=" & form.GetFieldValueString("urlValue"))
+    End If
+    If form.GetFieldValueString("dateValue") = "2026-10-03" Then
+        Call Application.Debug.Info("TEST LIVE DATE: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE DATE: FAIL value=" & form.GetFieldValueString("dateValue"))
+    End If
+    If form.GetFieldValueString("timeValue") = "19:30" Then
+        Call Application.Debug.Info("TEST LIVE TIME: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE TIME: FAIL value=" & form.GetFieldValueString("timeValue"))
+    End If
+    If form.GetFieldValueString("dateTimeValue") = "2026-10-03T19:30" Then
+        Call Application.Debug.Info("TEST LIVE DATETIME: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE DATETIME: FAIL value=" & form.GetFieldValueString("dateTimeValue"))
+    End If
+    If form.GetFieldValueString("monthValue") = "2026-10" Then
+        Call Application.Debug.Info("TEST LIVE MONTH: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE MONTH: FAIL value=" & form.GetFieldValueString("monthValue"))
+    End If
+    If form.GetFieldValueString("colorValue") = "#336699" Then
+        Call Application.Debug.Info("TEST LIVE COLOR: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE COLOR: FAIL value=" & form.GetFieldValueString("colorValue"))
+    End If
+    Call Application.Debug.Info("TEST WEBVIEW: inspect example.com rendered inside form")
+    Call Application.Debug.Info("TEST MULTILISTBOX: inspect Red and Blue selected")
+    Call Application.Debug.Info("TEST GRID: inspect two-column layout and full-width Number row")
+    Call Application.Debug.Info("TEST STRUCTURAL: inspect separator, spacer and image")
+    If form.IsDataValid Then
+        form.ActiveTab = "more"
+        Call Application.Debug.Info("TEST ACTIVE TAB: PASS more")
+        Call form.SetActiveTab("basic")
+        Call Application.Debug.Info("TEST SET ACTIVE TAB: PASS basic")
+        form.ActiveTab = "more"
+        Call Application.Debug.Info("TEST LIVE VALIDATION: PASS")
+    Else
+        Call Application.Debug.Error("TEST LIVE VALIDATION: FAIL " & form.GetValidationError("name"))
+    End If
+End Sub
+
+Sub TouchPass(evt As Variant, contextName As String)
+    Call Application.Debug.Info("TEST BUTTON CLICK: touch")
+    Call Application.Debug.Info("TEST TOUCH: PASS confirmed by user")
+End Sub
+
+Sub LayoutPass(evt As Variant, contextName As String)
+    Call Application.Debug.Info("TEST BUTTON CLICK: layout")
+    Call Application.Debug.Info("TEST LAYOUT/SCROLL: PASS confirmed by user")
+End Sub
+
+Sub KeyboardPass(evt As Variant, contextName As String)
+    Call Application.Debug.Info("TEST BUTTON CLICK: keyboard")
+    Call Application.Debug.Info("TEST FOCUS/KEYBOARD: PASS confirmed by user")
+End Sub

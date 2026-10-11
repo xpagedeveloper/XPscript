@@ -16,6 +16,10 @@ internal sealed class UIFormCallbackModelPostProcessor
             "    public string OnChangeHandler { get; set; } = string.Empty;",
             """
     public string OnChangeHandler { get; set; } = string.Empty;
+    public string OnPlayHandler { get; set; } = string.Empty;
+    public string OnPauseHandler { get; set; } = string.Empty;
+    public string OnEndedHandler { get; set; } = string.Empty;
+    public string OnErrorHandler { get; set; } = string.Empty;
     public bool UseEventCallback { get; set; }
     public object?[] EventCallbackArguments { get; set; } = [];
 """,
@@ -115,6 +119,33 @@ internal sealed class XPScriptUIForm
         field.OnChangeHandler = NormalizeHandlerName(handlerName);
         field.UseEventCallback = true;
         field.EventCallbackArguments = CopyEventCallbackArguments(callbackArguments);
+    }
+
+    public void SetOnPlay(object? name, object? handlerName)
+        => SetMediaHandler(name, handlerName, "play");
+
+    public void SetOnPause(object? name, object? handlerName)
+        => SetMediaHandler(name, handlerName, "pause");
+
+    public void SetOnEnded(object? name, object? handlerName)
+        => SetMediaHandler(name, handlerName, "ended");
+
+    public void SetOnError(object? name, object? handlerName)
+        => SetMediaHandler(name, handlerName, "error");
+
+    private void SetMediaHandler(object? name, object? handlerName, string eventType)
+    {
+        var field = FindField(name);
+        if (field.Type is not ("Audio" or "Video"))
+            throw new XPScriptRuntimeException(5, "Media event handlers require an Audio or Video field.");
+        var normalized = NormalizeHandlerName(handlerName);
+        switch (eventType)
+        {
+            case "play": field.OnPlayHandler = normalized; break;
+            case "pause": field.OnPauseHandler = normalized; break;
+            case "ended": field.OnEndedHandler = normalized; break;
+            case "error": field.OnErrorHandler = normalized; break;
+        }
     }
 """,
             "change-callback-api");

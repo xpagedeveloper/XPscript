@@ -5,6 +5,12 @@ namespace XPScript.Compiler;
 internal sealed class UIFormStructuralElementsPostProcessor
 {
     private const string InstalledSentinel = "public XPScriptUIField AddSeparator(object? name)";
+    private readonly string? _runtimeIdentifier;
+
+    public UIFormStructuralElementsPostProcessor(string? runtimeIdentifier = null)
+    {
+        _runtimeIdentifier = runtimeIdentifier;
+    }
 
     public string Transform(string generated)
     {
@@ -130,9 +136,9 @@ foreach (var field in _fields)
         return Finish(generated);
     }
 
-    private static string Finish(string generated)
+    private string Finish(string generated)
     {
-        generated = new UIFormMediaButtonsPostProcessor().Transform(generated);
+        generated = new UIFormMediaButtonsPostProcessor(_runtimeIdentifier).Transform(generated);
         return new UIFormServerAccessibilityEnhancementPostProcessor().Transform(generated);
     }
 
