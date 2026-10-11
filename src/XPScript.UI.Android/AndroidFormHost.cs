@@ -54,6 +54,7 @@ public static class AndroidFormHost
                     "Video" => new AndroidVideoControl { MinHeight = 180 },
                     "CameraPreview" => CreateCameraPreview(),
                     "Audio" => new AndroidAudioControl(),
+                    "ColorField" => new AndroidColorFieldEditor(),
                     _ => new TextBox()
                 };
 
@@ -180,6 +181,7 @@ public static class AndroidFormHost
     {
         var text = value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : value.ToString();
         if (editor is TextBox textBox) textBox.Text = text;
+        else if (editor is AndroidColorFieldEditor colorEditor) colorEditor.ValueEditor.Text = text;
         else if (editor is Avalonia.Controls.CheckBox checkBox) checkBox.IsChecked = value.ValueKind == JsonValueKind.True || text.Equals("true", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -187,7 +189,27 @@ public static class AndroidFormHost
         => editor switch
         {
             TextBox textBox => textBox.Text ?? string.Empty,
+            AndroidColorFieldEditor colorEditor => colorEditor.ValueEditor.Text ?? string.Empty,
             Avalonia.Controls.CheckBox checkBox => checkBox.IsChecked == true,
             _ => null
         };
+
+    private sealed class AndroidColorFieldEditor : StackPanel
+    {
+        public TextBox ValueEditor { get; } = new TextBox { PlaceholderText = "#RRGGBB", MinWidth = 180 };
+        private readonly Border _preview = new() { Width = 36, Height = 36, BorderThickness = new Thickness(1), BorderBrush = Brushes.Gray };
+
+        public AndroidColorFieldEditor()
+        {
+            Orientation = Avalonia.Layout.Orientation.Horizontal;
+            Spacing = 8;
+            ValueEditor.TextChanged += (_, _) =>
+            {
+                if (Color.TryParse(ValueEditor.Text, out var color))
+                    _preview.Background = new SolidColorBrush(color);
+            };
+            Children.Add(ValueEditor);
+            Children.Add(_preview);
+        }
+    }
 }
