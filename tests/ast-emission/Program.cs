@@ -105,10 +105,14 @@ if (mappedStatementIds.Length < 2 || mappedStatementIds.Any(id => id <= 0) || ma
 var resumeNext = new BoundOnErrorStatement(BoundErrorHandlerMode.ResumeNext, null);
 var disableErrors = new BoundOnErrorStatement(BoundErrorHandlerMode.Disable, null);
 var handler = new BoundOnErrorStatement(BoundErrorHandlerMode.GoToLabel, "ErrorHandler");
+var resumeCurrent = new BoundResumeStatement(BoundResumeMode.Current, null);
+var resumeNextTarget = new BoundResumeStatement(BoundResumeMode.Next, null);
 var resumeLabel = new BoundResumeStatement(BoundResumeMode.Label, "Retry");
 if (resumeNext.State != new BoundErrorHandlerState(BoundErrorHandlerMode.ResumeNext) ||
     disableErrors.State != new BoundErrorHandlerState(BoundErrorHandlerMode.Disable) ||
     handler.State != new BoundErrorHandlerState(BoundErrorHandlerMode.GoToLabel, "ErrorHandler") ||
+    resumeCurrent.ResumeTarget != new BoundResumeTarget(BoundResumeMode.Current) ||
+    resumeNextTarget.ResumeTarget != new BoundResumeTarget(BoundResumeMode.Next) ||
     resumeLabel.ResumeTarget != new BoundResumeTarget(BoundResumeMode.Label, "Retry"))
     throw new InvalidOperationException("Bound error-handler state did not preserve its mode or target.");
 var selectBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(sum, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
