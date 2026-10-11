@@ -165,7 +165,7 @@ För varje komponent:
   including native dependencies, codecs, notices and optional feature packs.
 - [ ] Use LibVLC/FFmpeg/GStreamer bundled runtimes only when native APIs cannot
   satisfy the required formats or playback features.
-- [ ] Server-web/WASM HTML audio backend.
+- [x] Server-web/WASM grundrendering med HTML `<audio>`.
 - [ ] Background/resume, disposal, source policy och error semantics.
 
 ### Video
@@ -176,7 +176,7 @@ För varje komponent:
 - [ ] Desktop playback backend.
 - [ ] Keep the selected backend behind the desktop media adapter; do not expose
   LibVLC, GStreamer or FFmpeg types through shared XPScript UIForm APIs.
-- [ ] Server-web/WASM HTML video backend.
+- [x] Server-web/WASM grundrendering med HTML `<video>`.
 - [ ] Source policy, fullscreen, resize/aspect ratio, lifecycle och errors.
 
 ### Carousel
