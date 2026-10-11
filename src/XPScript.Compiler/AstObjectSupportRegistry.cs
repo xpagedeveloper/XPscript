@@ -28,18 +28,18 @@ internal static class AstObjectSupportRegistry
         "ProviderError", "InvalidConnection", "System", "XPImage"
     };
 
-    public static bool UsesUnsupportedObject(string source, out string objectName)
+    public static bool UsesUnsupportedObject(string source, out ObjectDefinition? definition)
     {
-        foreach (var definition in Objects.Where(item => !item.Supported))
+        foreach (var candidate in Objects.Where(item => !item.Supported))
         {
-            if (Regex.IsMatch(source, $@"(?i)\b{Regex.Escape(definition.Name)}\b"))
+            if (Regex.IsMatch(source, $@"(?i)\b{Regex.Escape(candidate.Name)}\b"))
             {
-                objectName = definition.Name;
+                definition = candidate;
                 return true;
             }
         }
 
-        objectName = string.Empty;
+        definition = null;
         return false;
     }
 }
