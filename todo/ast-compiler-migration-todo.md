@@ -344,7 +344,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 Initial implementation: expression conversions and a method-body emitter for assignment, calls, return, If, For, ForAll, While, Do and Select Case are covered by `tests/ast-emission`. Bound syntax spans and an opt-in `#line`/mapping result are also available. `tests/ast-compile-probe` drives a real XPscript `Sub Main` through declaration parsing, binding and C# compilation. See `docs/ast-csharp-emitter.md` for supported nodes and remaining integration work. The phase remains open until the full bound tree, mapping and targets are connected to production compilation.
 
 - [ ] Implement C# generation from bound nodes.
-- [ ] Keep emitter free of XPscript parsing logic.
+- [x] Keep emitter free of XPscript parsing logic. Parsing and binding are completed before `BoundStatementEmitter`/`BoundExpressionEmitter`; the emitters consume bound nodes only.
 - [ ] Reuse existing runtime APIs rather than reimplementing runtime behavior.
 - [ ] Preserve generated source mapping.
 - [ ] Preserve target-specific generated code requirements.
