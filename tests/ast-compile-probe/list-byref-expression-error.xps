@@ -1,0 +1,10 @@
+Function Touch(ByRef value As Long) As Long
+    value = value + 10
+    Touch = value
+End Function
+
+Sub Main()
+    Dim values List As Long
+    values("item") = 1
+    Print Touch(values("item"))
+End Sub

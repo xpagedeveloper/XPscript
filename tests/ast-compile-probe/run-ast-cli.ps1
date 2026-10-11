@@ -88,6 +88,8 @@ $listInitializerResult = dotnet (Join-Path $listInitializerOutput 'Generated.dll
 if ($LASTEXITCODE -ne 0 -or ($listInitializerResult -join "`n") -ne '7') { throw 'AST List initializer did not preserve the source list.' }
 $listByRef = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-multiple-error.xps') -o (Join-Path $output 'list-byref-error') 2>&1
 if ($LASTEXITCODE -ne 0) { throw 'AST multiple List ByRef copy-back compilation failed.' }
+$listByRefExpression = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-expression-error.xps') -o (Join-Path $output 'list-byref-expression-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($listByRefExpression -join "`n") -notmatch 'No matching overload|List element ByRef') { throw 'AST List ByRef expression calls were not rejected with a stable binder diagnostic.' }
 $listOutput = Join-Path $output 'forall-list'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-alias.xps') -o $listOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List alias compilation failed.' }
