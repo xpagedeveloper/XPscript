@@ -16,8 +16,8 @@ concurrency:
 jobs:
   smoke:
     name: Android API 30 Pixel 5 smoke
-    # Run the emulator smoke test on the Windows hosted runner.
-    runs-on: windows-latest
+    # reactivecircus/android-emulator-runner supports Ubuntu and macOS only.
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
@@ -34,10 +34,10 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
-          target: google_apis
+          target: default
           arch: x86_64
           profile: pixel_2
-          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-metrics -gpu swiftshader_indirect -accel off
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-metrics -gpu swiftshader_indirect
           disable-animations: true
           script: |
             set -euo pipefail
