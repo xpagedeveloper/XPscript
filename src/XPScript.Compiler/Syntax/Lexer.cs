@@ -84,6 +84,12 @@ public sealed class Lexer
             var value = new System.Text.StringBuilder();
             while (_position < _text.Length)
             {
+                if (Current == '\\' && Peek(1) == '"')
+                {
+                    value.Append('"');
+                    _position += 2;
+                    continue;
+                }
                 if (Current == '"')
                 {
                     if (Peek(1) == '"')

@@ -222,6 +222,10 @@ Equal(SyntaxKind.StringToken, str.Kind, "string kind");
 Equal("hello \"XP\"", (string)str.Value!, "escaped string value");
 Equal(new TextSpan(0, 14), str.Span, "string span");
 
+var backslashEscaped = Lex("\"hello \\\"XP\\\"\"")[0];
+Equal(SyntaxKind.StringToken, backslashEscaped.Kind, "backslash escaped string kind");
+Equal("hello \"XP\"", (string)backslashEscaped.Value!, "backslash escaped string value");
+
 var operators = Lex("() , . + - * / & = < <= > >= <>");
 var expectedOperators = new[]
 {
