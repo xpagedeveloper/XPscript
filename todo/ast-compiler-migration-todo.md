@@ -321,6 +321,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Add bound error-handler state for `On Error Resume Next`, `On Error GoTo 0` and handler labels. The bound model preserves the mode and optional handler label; runtime lowering remains separate.
   - [ ] Lower protected statements with source-mapped `try/catch` and resume targets.
   - [ ] Implement `Resume`, `Resume Next` and `Resume label` transfer semantics.
+    - [x] Model resume targets as typed bound state with optional label; runtime transfer remains open.
   - [ ] Add CLI/MCP execution fixtures and compare against the legacy compiler.
 - [ ] Preserve implicit With/member statement semantics in the AST path. AST now rejects `With` and implicit member access explicitly instead of rewriting them to `AstNoOp`; separate CLI/MCP fixtures verify both diagnostics and source spans. Receiver scopes remain open.
 - [ ] Replace AST XPImage/Object substitutions with the existing image runtime implementation. Until that migration is complete, AST detects XPImage and routes the entire source file through the legacy compiler; CLI/MCP verify the fallback. `FromBytes`, `FromBase64`, `Load` and `New XPImage(...)` still require AST runtime integration.

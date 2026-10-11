@@ -50,10 +50,13 @@ public enum BoundResumeMode
     Label
 }
 
+public sealed record BoundResumeTarget(BoundResumeMode Mode, string? Label = null);
+
 public sealed class BoundResumeStatement(BoundResumeMode mode, string? target) : BoundStatement
 {
     public BoundResumeMode Mode { get; } = mode;
     public string? Target { get; } = target;
+    public BoundResumeTarget ResumeTarget => new(Mode, Target);
     public override BoundNodeKind Kind => BoundNodeKind.ResumeStatement;
 }
 
