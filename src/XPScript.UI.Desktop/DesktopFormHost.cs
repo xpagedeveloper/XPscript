@@ -819,6 +819,12 @@ public static class DesktopFormHost
                 if (comma > 0 && source[..comma].Contains(";base64", StringComparison.OrdinalIgnoreCase))
                     return new Bitmap(new MemoryStream(Convert.FromBase64String(source[(comma + 1)..])));
             }
+            if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            {
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                using var stream = new MemoryStream(client.GetByteArrayAsync(uri).GetAwaiter().GetResult());
+                return new Bitmap(stream);
+            }
             var path = File.Exists(source)
                 ? source
                 : Path.Combine(AppContext.BaseDirectory, source.Replace('/', Path.DirectorySeparatorChar));
