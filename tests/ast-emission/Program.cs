@@ -130,7 +130,11 @@ if (BindHandlerStatement("On Error Resume Next") is not BoundOnErrorStatement { 
     BindHandlerStatement("Resume Next") is not BoundResumeStatement { Mode: BoundResumeMode.Next } ||
     BindHandlerStatement("Resume Retry") is not BoundResumeStatement { Mode: BoundResumeMode.Label, Target: "Retry" })
     throw new InvalidOperationException("Statement binding did not preserve error-handler syntax semantics.");
-foreach (var unsupportedHandler in new BoundStatement[] { resumeNext, resumeCurrent })
+foreach (var unsupportedHandler in new BoundStatement[]
+{
+    resumeNext, disableErrors, handler,
+    resumeCurrent, resumeNextTarget, resumeLabel
+})
 {
     try
     {
