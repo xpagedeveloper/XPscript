@@ -158,6 +158,13 @@ try
     if(cliNormalIdentity != mcpNormalIdentity) throw new Exception($"CLI/MCP diagnostic mismatch. cli={cliNormalIdentity} mcp={mcpNormalIdentity}");
 }
 finally { try { Directory.Delete(cliRoot,true); } catch { } }
+var nonzeroRedimSource=await File.ReadAllTextAsync(Path.Combine(repo,"tests","ast-compile-probe","redim-nonzero-error.xps"));
+var nonzeroRedimValidation=await CallAsync(new {jsonrpc="2.0",id=43,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=nonzeroRedimSource,filename="redim-nonzero-error.xps"}}});
+var nonzeroRedimResult=nonzeroRedimValidation.GetProperty("result");
+if (!nonzeroRedimResult.GetProperty("isError").GetBoolean()) throw new Exception("AST MCP accepted unsupported dynamic non-zero ReDim bounds.");
+var nonzeroRedimErrors=nonzeroRedimResult.GetProperty("structuredContent").GetProperty("errors");
+if (nonzeroRedimErrors.GetArrayLength() == 0 || nonzeroRedimErrors[0].GetProperty("diagnosticCode").GetString() != "XPS1012" || !(nonzeroRedimErrors[0].GetProperty("description").GetString() ?? "").Contains("dynamic ReDim with non-zero lower bounds", StringComparison.OrdinalIgnoreCase))
+    throw new Exception("AST MCP lost the dynamic non-zero ReDim diagnostic contract.");
 var webValidation=await CallAsync(new {jsonrpc="2.0",id=4,method="tools/call",@params=new{name="xpscript_validate",arguments=new{source="[Anonymous]\n[Get]\nSub Index()\n    Response.Write(\"ok\")\nEnd Sub",filename="web.xps"}}});
 var webResult=webValidation.GetProperty("result");
 if (!webResult.GetProperty("isError").GetBoolean()) throw new Exception("Web source validated as a console application must be an MCP tool error.");
