@@ -350,7 +350,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Preserve target-specific generated code requirements.
 - [x] Preserve generated runtime integration. AST output includes the shared compatibility/runtime fragments required by the bound emitter and preserves the existing third-party notice generation path.
 - [x] Keep Roslyn as the .NET backend and final generated-C# validator. AST-generated C# is compiled through the shared in-process Roslyn backend.
-- [ ] Add snapshot/golden tests for generated C# where useful.
+- [x] Add snapshot/golden tests for generated C# where useful. The AST emission probe now compares stable method, ByRef, instance-method and Select Case output against exact golden strings before compiling and executing the generated C#.
 
 ## Phase 9: Diagnostics and tooling
 

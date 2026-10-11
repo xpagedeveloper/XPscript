@@ -86,20 +86,18 @@ var select = statements.Emit([new BoundSelectStatement(name, [selectClause])]);
 if (!select.Contains("LSCoreCompare.Equal", StringComparison.Ordinal))
     throw new InvalidOperationException("Select Case emission did not use the shared comparison runtime helper.");
 var method = methods.Emit("GeneratedValue", typeof(long), [new BoundReturnStatement(new BoundLiteralExpression(42L, typeof(long))) ]);
-if (!method.Contains("public static long GeneratedValue()", StringComparison.Ordinal) || !method.Contains("return 42L;", StringComparison.Ordinal))
-    throw new InvalidOperationException("Bound method emission did not produce a complete C# method.");
+Equal("public static long GeneratedValue()\n{\n    return 42L;\n}\n", method);
 var parameter = new ParameterSymbol("value", typeof(long), IsByRef: false);
 var byRefParameter = new ParameterSymbol("result", typeof(long), IsByRef: true);
 var parameterMethod = methods.Emit("AddInto", typeof(void), [parameter, byRefParameter], [new BoundAssignmentStatement(new BoundNameExpression(byRefParameter), new BoundBinaryExpression(new BoundNameExpression(parameter), SyntaxKind.PlusToken, new BoundLiteralExpression(1L, typeof(long)), typeof(long)), false)]);
-if (!parameterMethod.Contains("public static void AddInto(long value, ref long result)", StringComparison.Ordinal) || !parameterMethod.Contains("result = (value + 1L);", StringComparison.Ordinal))
-    throw new InvalidOperationException("Bound method parameter emission did not preserve ByRef semantics.");
+Equal("public static void AddInto(long value, ref long result)\n{\n    result = (value + 1L);\n}\n", parameterMethod);
 var instanceMethod = methods.Emit("InstanceValue", typeof(long), [], [new BoundReturnStatement(new BoundLiteralExpression(7L, typeof(long)))], isStatic: false);
-if (!instanceMethod.Contains("public long InstanceValue()", StringComparison.Ordinal) || instanceMethod.Contains("public static long InstanceValue()", StringComparison.Ordinal))
-    throw new InvalidOperationException("Bound method emission did not produce an instance method.");
+Equal("public long InstanceValue()\n{\n    return 7L;\n}\n", instanceMethod);
 var mapped = statements.EmitWithSourceMap([boundIf], "If True Then\nnumber = 1\nEnd If", "flow.xps");
 if (!mapped.Code.Contains("#line 1 \"flow.xps\"", StringComparison.Ordinal) || mapped.SourceMappings.Count == 0)
     throw new InvalidOperationException("Bound statement emission did not preserve source mapping.");
 var selectBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(sum, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
+Equal("var __xpsEmit0 = 2L;\nif (LSCoreCompare.Equal(__xpsEmit0, 2L))\n{\n    number = 9L;\n}\n", selectBody);
 var source = $$"""
 using System;
 public static class Probe
