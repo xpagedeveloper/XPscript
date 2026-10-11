@@ -126,6 +126,7 @@ BoundStatement BindHandlerStatement(string text)
 if (BindHandlerStatement("On Error Resume Next") is not BoundOnErrorStatement { Mode: BoundErrorHandlerMode.ResumeNext } ||
     BindHandlerStatement("On Error GoTo 0") is not BoundOnErrorStatement { Mode: BoundErrorHandlerMode.Disable } ||
     BindHandlerStatement("On Error GoTo ErrorHandler") is not BoundOnErrorStatement { Mode: BoundErrorHandlerMode.GoToLabel, Target: "ErrorHandler" } ||
+    BindHandlerStatement("Resume") is not BoundResumeStatement { Mode: BoundResumeMode.Current } ||
     BindHandlerStatement("Resume Next") is not BoundResumeStatement { Mode: BoundResumeMode.Next } ||
     BindHandlerStatement("Resume Retry") is not BoundResumeStatement { Mode: BoundResumeMode.Label, Target: "Retry" })
     throw new InvalidOperationException("Statement binding did not preserve error-handler syntax semantics.");
