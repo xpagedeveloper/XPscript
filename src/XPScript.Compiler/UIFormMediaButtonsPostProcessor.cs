@@ -215,6 +215,11 @@ internal sealed class UIFormMediaButtonsPostProcessor
                         .Append(System.Net.WebUtility.HtmlEncode(EnsureWebSafeMediaSource(field.ImageSource, "image"))).Append("\" alt=\"")
                         .Append(System.Net.WebUtility.HtmlEncode(field.ImageAltText)).Append("\"").Append(required).Append(">");
                     break;
+                case "Video":
+                    html.Append("<video id=\"xps_").Append(name).Append("\" class=\"w-100 xpscript-uiform-video\" controls playsinline preload=\"metadata\" src=\"")
+                        .Append(System.Net.WebUtility.HtmlEncode(EnsureWebSafeMediaSource(field.Source, "video"))).Append("\" aria-label=\"")
+                        .Append(System.Net.WebUtility.HtmlEncode(field.Label.Length > 0 ? field.Label : field.Name)).Append("\"").Append(required).Append("></video>");
+                    break;
                 case "WebView":
                     html.Append("<iframe id=\"xps_").Append(name).Append("\" class=\"xpscript-uiform-webview w-100 border rounded\" title=\"")
                         .Append(System.Net.WebUtility.HtmlEncode(field.Label.Length > 0 ? field.Label : field.Name)).Append("\"").Append(required);
