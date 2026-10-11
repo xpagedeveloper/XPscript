@@ -325,7 +325,15 @@ public static class XPScriptCompilerCommandLine
         catch (CompilerException ex)
         {
             if (ex.GeneratedDiagnostics.Count == 0)
-                Console.Error.WriteLine(ex.Message);
+            {
+                var message = ex.Message;
+                var containsBackendDetail = message.Contains(".NET", StringComparison.OrdinalIgnoreCase) ||
+                    message.Contains("dotnet", StringComparison.OrdinalIgnoreCase) ||
+                    message.Contains("Roslyn", StringComparison.OrdinalIgnoreCase);
+                Console.Error.WriteLine(!debug && containsBackendDetail
+                    ? "Kompileringen misslyckades. Kör med --debug för teknisk diagnostik."
+                    : message);
+            }
             else
                 foreach (var diagnostic in ex.GeneratedDiagnostics)
                     Console.Error.WriteLine($"{diagnostic.File}:{diagnostic.Line}:{diagnostic.Position}: {diagnostic.DiagnosticCode}: {diagnostic.Description}");
