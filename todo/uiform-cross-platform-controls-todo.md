@@ -130,6 +130,7 @@ For each control, explicitly evaluate:
 - [ ] Add executable samples for each completed control.
 - [ ] Add compiler/runtime probes for shared API and source validation.
 - [ ] Add Android emulator coverage where the control is supported.
+- [x] Keep emulator coverage opt-in/local when the GitHub-hosted runner cannot provide stable virtualization. Local Windows emulator/device testing remains the execution path.
 - [ ] Add desktop smoke coverage where the control is supported.
 - [ ] Add web/WASM smoke coverage where the control is supported.
 - [ ] Keep unsupported-platform tests explicit and deterministic.
