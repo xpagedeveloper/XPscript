@@ -29,6 +29,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             ExitStatementSyntax exit => BindExit(exit),
             ErrorStatementSyntax error => BindError(error),
             OnErrorStatementSyntax onError => new BoundOnErrorStatement(onError.ActionKeyword.Text, onError.TargetToken?.Text),
+            ResumeStatementSyntax resume => new BoundResumeStatement(resume.TargetToken?.Text),
             IfStatementSyntax @if => BindIf(@if),
             ForStatementSyntax @for => BindFor(@for),
             ForAllStatementSyntax forAll => BindForAll(forAll),
