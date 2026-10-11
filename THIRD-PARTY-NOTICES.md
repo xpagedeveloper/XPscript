@@ -90,6 +90,8 @@ The .NET runtime is supplied by the .NET distribution and is not source code cop
 
 Android UIForm media support uses the `Xamarin.AndroidX.Media3.ExoPlayer` and `Xamarin.AndroidX.Media3.Ui` bindings. The underlying AndroidX Media3 libraries are distributed by the Android Open Source Project under the Apache License 2.0. The .NET bindings are distributed under their package license. Release packages must preserve the NuGet-generated license and notice files for these dependencies.
 
+Android UIForm camera and lifecycle support also uses the `Xamarin.AndroidX.Camera.Camera2`, `Xamarin.AndroidX.Camera.Core`, `Xamarin.AndroidX.Camera.View` and `Xamarin.AndroidX.Lifecycle.LiveData.Core` bindings. The underlying AndroidX libraries are distributed by the Android Open Source Project under the Apache License 2.0. Release packages must preserve the NuGet-generated license and notice files for these dependencies.
+
 ## Trademarks and third-party brands
 
 ## AndroidX ViewPager2
