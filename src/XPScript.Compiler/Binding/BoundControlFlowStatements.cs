@@ -26,15 +26,30 @@ public sealed class BoundErrorStatement(BoundExpression number, BoundExpression?
     public override BoundNodeKind Kind => BoundNodeKind.ErrorStatement;
 }
 
-public sealed class BoundOnErrorStatement(string action, string? target) : BoundStatement
+public enum BoundErrorHandlerMode
 {
-    public string Action { get; } = action;
+    ResumeNext,
+    Disable,
+    GoToLabel
+}
+
+public sealed class BoundOnErrorStatement(BoundErrorHandlerMode mode, string? target) : BoundStatement
+{
+    public BoundErrorHandlerMode Mode { get; } = mode;
     public string? Target { get; } = target;
     public override BoundNodeKind Kind => BoundNodeKind.OnErrorStatement;
 }
 
-public sealed class BoundResumeStatement(string? target) : BoundStatement
+public enum BoundResumeMode
 {
+    Current,
+    Next,
+    Label
+}
+
+public sealed class BoundResumeStatement(BoundResumeMode mode, string? target) : BoundStatement
+{
+    public BoundResumeMode Mode { get; } = mode;
     public string? Target { get; } = target;
     public override BoundNodeKind Kind => BoundNodeKind.ResumeStatement;
 }

@@ -28,8 +28,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             GoToStatementSyntax transfer => BindTransfer(transfer),
             ExitStatementSyntax exit => BindExit(exit),
             ErrorStatementSyntax error => BindError(error),
-            OnErrorStatementSyntax onError => new BoundOnErrorStatement(onError.ActionKeyword.Text, onError.TargetToken?.Text),
-            ResumeStatementSyntax resume => new BoundResumeStatement(resume.TargetToken?.Text),
+            OnErrorStatementSyntax onError => BindOnError(onError),
+            ResumeStatementSyntax resume => BindResume(resume),
             IfStatementSyntax @if => BindIf(@if),
             ForStatementSyntax @for => BindFor(@for),
             ForAllStatementSyntax forAll => BindForAll(forAll),
@@ -427,6 +427,22 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         return number is null || (syntax.DescriptionExpression is not null && description is null)
             ? null : new BoundErrorStatement(number, description);
     }
+
+    private BoundStatement BindOnError(OnErrorStatementSyntax syntax)
+    {
+        if (syntax.ActionKeyword.Kind == SyntaxKind.ResumeKeyword)
+            return new BoundOnErrorStatement(BoundErrorHandlerMode.ResumeNext, null);
+        if (syntax.TargetToken is { Text: "0" })
+            return new BoundOnErrorStatement(BoundErrorHandlerMode.Disable, null);
+        return new BoundOnErrorStatement(BoundErrorHandlerMode.GoToLabel, syntax.TargetToken?.Text);
+    }
+
+    private BoundStatement BindResume(ResumeStatementSyntax syntax) => syntax.TargetToken?.Kind switch
+    {
+        null => new BoundResumeStatement(BoundResumeMode.Current, null),
+        { } kind when kind == SyntaxKind.NextKeyword => new BoundResumeStatement(BoundResumeMode.Next, null),
+        _ => new BoundResumeStatement(BoundResumeMode.Label, syntax.TargetToken.Text)
+    };
 
     private BoundStatement? BindAssignment(ExpressionSyntax targetSyntax, ExpressionSyntax valueSyntax, bool isSet = false)
     {
