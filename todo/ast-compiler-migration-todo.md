@@ -306,6 +306,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Preserve one-dimensional zero-based array declaration lengths, string defaults and Erase for fixed CLR arrays. AST and published main now match the permanent array-storage regression. Nonzero lower bounds, multidimensional and dynamic array lifecycle semantics remain separate migration work.
 - [x] Preserve dynamic array type and allocation lifecycle through `ReDim`, `ReDim Preserve` and `Erase`. AST retains the CLR element type, deallocates dynamic arrays on `Erase`, and `UBound` after deallocation now raises the same allocation error as published main. Multidimensional and nonzero-bound arrays remain separate work.
 - [ ] Implement multidimensional and nonzero-bound array shapes. AST now supports explicit one-dimensional lower bounds such as `Dim values(1 To 3)` with offset indexing; multidimensional shapes and dynamic lower-bound semantics remain open.
+  Deferred by decision: multidimensional arrays remain explicitly unimplemented until the shared array storage abstraction is ready.
   - [ ] Define one AST array storage abstraction for fixed, dynamic and multidimensional arrays.
   - [x] Preserve array rank, lower/upper bounds and element type in syntax and bound symbols; runtime lowering remains intentionally blocked until the storage abstraction is implemented.
   - [x] Emit one-dimensional reads, writes and `Erase` through the shared array runtime instead of directly indexing CLR arrays; multidimensional lowering remains open.
