@@ -208,8 +208,33 @@ public static class AndroidFormHost
                 if (Color.TryParse(ValueEditor.Text, out var color))
                     _preview.Background = new SolidColorBrush(color);
             };
+            _preview.Tapped += (_, _) => ShowColorMap();
             Children.Add(ValueEditor);
             Children.Add(_preview);
+        }
+
+        private void ShowColorMap()
+        {
+            var grid = new WrapPanel { Width = 18 * 24 + 12, Margin = new Thickness(6) };
+            for (var y = 0; y < 8; y++)
+            for (var x = 0; x < 18; x++)
+            {
+                var color = ColorMapColorAt(18, 8, x, y);
+                var button = new Avalonia.Controls.Button { Width = 24, Height = 24, Padding = new Thickness(0), Background = new SolidColorBrush(Color.Parse(color)) };
+                button.Click += (_, _) => ValueEditor.Text = color;
+                grid.Children.Add(button);
+            }
+            new Flyout { Content = grid, Placement = PlacementMode.Bottom }.ShowAt(_preview);
+        }
+
+        private static string ColorMapColorAt(int width, int height, int x, int y)
+        {
+            var hue = width <= 1 ? 0d : (double)x / (width - 1) * 360d;
+            var saturation = height <= 1 ? 1d : (double)y / (height - 1);
+            var segment = hue / 60d;
+            var intermediate = saturation * (1d - Math.Abs(segment % 2d - 1d));
+            var (red, green, blue) = segment switch { < 1d => (saturation, intermediate, 0d), < 2d => (intermediate, saturation, 0d), < 3d => (0d, saturation, intermediate), < 4d => (0d, intermediate, saturation), < 5d => (intermediate, 0d, saturation), _ => (saturation, 0d, intermediate) };
+            return $"#{(int)Math.Round(red * 255d):X2}{(int)Math.Round(green * 255d):X2}{(int)Math.Round(blue * 255d):X2}";
         }
     }
 }
