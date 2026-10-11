@@ -134,7 +134,8 @@ För varje komponent:
 
 ### Image / XPImage
 
-- [ ] UIForm Image på alla plattformar.
+- [>] Desktop UIForm Image stöder lokala filer, `assets/...`, `data:image` och
+  HTTP/HTTPS; Android/web har befintliga adapters och övriga plattformar återstår.
 - [ ] `XPImage` som runtime source.
 - [ ] `assets/...`, `data:image`, HTTP/HTTPS och lokala filer enligt platform policy.
 - [ ] Loaded lifecycle, decode errors och read-only packaged assets.
