@@ -32,6 +32,21 @@ internal static class AstObjectSupportRegistry
         "XPJsonElement"
     };
 
+    private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Archive", "ArchiveEntry",
+        "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult",
+        "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo",
+        "NetworkHostResult", "NetworkSubnetInfo", "NetworkTlsVersionResult", "NetworkCertificateResult",
+        "NetworkHttpHeadersResult", "NetworkHttpSecurityHeadersResult", "NetworkRedirectResult", "NetworkBannerResult",
+        "NetworkPortExposureInfo",
+        "NotesEmbeddedObject",
+        "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
+        "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
+        "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
+        "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
+    };
+
     public static readonly IReadOnlyList<ObjectDefinition> Objects = BuildObjectDefinitions();
 
     public static readonly IReadOnlySet<string> VariantTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -51,6 +66,7 @@ internal static class AstObjectSupportRegistry
         var names = CompilerSymbolCatalog.All
             .Where(symbol => symbol.Kind.Equals("class", StringComparison.OrdinalIgnoreCase))
             .Select(symbol => symbol.Name)
+            .Concat(LegacyObjectNames)
             .Concat(["XPImage"])
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
