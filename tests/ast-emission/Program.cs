@@ -103,6 +103,9 @@ if (mapped.SourceMappings.Any(mapping => mapping.SourcePath != "flow.xps" || map
     throw new InvalidOperationException("Nested bound statements produced an invalid source mapping entry.");
 if (boundIf.ThenStatements.Count == 0 || !mapped.SourceMappings.Any(mapping => mapping.Span == boundIf.ThenStatements[0].Span))
     throw new InvalidOperationException("Nested bound statement source span was not preserved.");
+var nestedMapping = mapped.SourceMappings.Single(mapping => mapping.Span == boundIf.ThenStatements[0].Span);
+if (nestedMapping.Position.Line != 2 || nestedMapping.Position.Column != 2 || mapped.SourceMappings.Any(mapping => mapping.Span.Length <= 0))
+    throw new InvalidOperationException($"Nested bound statement source position was not preserved accurately: {nestedMapping.Position.Line}:{nestedMapping.Position.Column}.");
 var generatedMappingLines = mapped.SourceMappings.Select(mapping => mapping.GeneratedLine).ToArray();
 if (!generatedMappingLines.SequenceEqual(generatedMappingLines.OrderBy(line => line)) || generatedMappingLines.Distinct().Count() != generatedMappingLines.Length)
     throw new InvalidOperationException("Bound statement source mappings were not deterministic by generated line.");
