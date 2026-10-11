@@ -16,9 +16,8 @@ concurrency:
 jobs:
   smoke:
     name: Android API 30 Pixel 5 smoke
-    # The Android emulator is unstable in the hosted Linux runner without KVM.
-    # The Intel macOS runner provides hardware acceleration for this smoke test.
-    runs-on: macos-13
+    # Run the emulator smoke test on the Windows hosted runner.
+    runs-on: windows-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
