@@ -94,11 +94,13 @@ Equal("public static void AddInto(long value, ref long result)\n{\n    result = 
 var instanceMethod = methods.Emit("InstanceValue", typeof(long), [], [new BoundReturnStatement(new BoundLiteralExpression(7L, typeof(long)))], isStatic: false);
 Equal("public long InstanceValue()\n{\n    return 7L;\n}\n", instanceMethod);
 var mapped = statements.EmitWithSourceMap([boundIf], "If True Then\nnumber = 1\nEnd If", "flow.xps");
-if (!mapped.Code.Contains("#line 1 \"flow.xps\"", StringComparison.Ordinal) || mapped.SourceMappings.Count == 0)
+if (!mapped.Code.Contains("#line 1 \"flow.xps\"", StringComparison.Ordinal) || !mapped.Code.EndsWith("#line default\n", StringComparison.Ordinal) || mapped.SourceMappings.Count < 2)
     throw new InvalidOperationException("Bound statement emission did not preserve source mapping.");
 var firstMapping = mapped.SourceMappings[0];
 if (firstMapping.SourcePath != "flow.xps" || firstMapping.Position.Line != 1 || firstMapping.Position.Column != 1 || firstMapping.Span != boundIf.Span || firstMapping.GeneratedLine <= 1)
     throw new InvalidOperationException("Bound statement emission produced an inaccurate source mapping.");
+if (mapped.SourceMappings.Any(mapping => mapping.SourcePath != "flow.xps" || mapping.GeneratedLine <= 1))
+    throw new InvalidOperationException("Nested bound statements produced an invalid source mapping entry.");
 var mappedStatementIds = new[] { boundIf.StatementId }.Concat(boundIf.ThenStatements.Select(statement => statement.StatementId)).ToArray();
 if (mappedStatementIds.Length < 2 || mappedStatementIds.Any(id => id <= 0) || mappedStatementIds.Distinct().Count() != mappedStatementIds.Length)
     throw new InvalidOperationException("Bound statement emission did not assign unique positive statement IDs.");
