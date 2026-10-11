@@ -13,6 +13,17 @@ internal sealed class BoundEmissionContext(IReadOnlyList<BoundStatement> stateme
     private int _nextTemporary;
     private int _line = 1;
 
+    public IReadOnlyList<BoundStatement> Statements { get; } = BoundStatementTraversal.Descendants(statements)
+        .OfType<BoundStatement>()
+        .Select((statement, index) => AssignStatementId(statement, index + 1))
+        .ToArray();
+
+    private static BoundStatement AssignStatementId(BoundStatement statement, int id)
+    {
+        statement.StatementId = id;
+        return statement;
+    }
+
     public string Temporary()
     {
         string name;

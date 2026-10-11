@@ -320,6 +320,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [ ] Preserve legacy Resume and On Error semantics in the AST bound tree. AST now rejects these forms explicitly instead of lowering them to `AstNoOp`; CLI/MCP fixtures verify stable source-mapped diagnostics for both forms. Error-handler state remains open.
   - [x] Add bound error-handler state for `On Error Resume Next`, `On Error GoTo 0` and handler labels. The bound model preserves the mode and optional handler label; runtime lowering remains separate.
   - [ ] Lower protected statements with source-mapped `try/catch` and resume targets.
+    - [x] Assign stable IDs to bound statements for source mapping and future resume transfers.
   - [ ] Implement `Resume`, `Resume Next` and `Resume label` transfer semantics.
     - [x] Model resume targets as typed bound state with optional label; runtime transfer remains open.
   - [ ] Add CLI/MCP execution fixtures and compare against the legacy compiler.
