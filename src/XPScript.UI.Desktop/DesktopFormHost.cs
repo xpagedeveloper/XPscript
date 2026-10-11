@@ -879,6 +879,11 @@ public static class DesktopFormHost
         "play" => "document.querySelector('audio,video').play();",
         "pause" => "document.querySelector('audio,video').pause();",
         "stop" => "document.querySelector('audio,video').pause();document.querySelector('audio,video').currentTime=0;",
+        "volume" => "document.querySelector('audio,video').volume=" + (argument ?? "1") + ";",
+        "muted" => "document.querySelector('audio,video').muted=" + (argument ?? "false") + ";",
+        "loop" => "document.querySelector('audio,video').loop=" + (argument ?? "false") + ";",
+        "autoplay" => "document.querySelector('audio,video').autoplay=" + (argument ?? "false") + ";",
+        "rate" => "document.querySelector('audio,video').playbackRate=" + (argument ?? "1") + ";",
         _ => throw new InvalidOperationException("Unknown UIForm desktop media command: " + command)
     });
 

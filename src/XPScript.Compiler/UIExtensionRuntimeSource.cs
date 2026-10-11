@@ -111,15 +111,15 @@ internal sealed class XPScriptUIField
     public double Volume
     {
         get { EnsureMedia(); return _mediaVolume; }
-        set { EnsureMedia(); if (value < 0 || value > 1) throw new XPScriptRuntimeException(5, "UIForm media Volume must be between 0 and 1."); _mediaVolume = value; }
+        set { EnsureMedia(); if (value < 0 || value > 1) throw new XPScriptRuntimeException(5, "UIForm media Volume must be between 0 and 1."); _mediaVolume = value; TryDesktopMediaCommand("volume", value.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
     }
-    public bool AutoPlay { get { EnsureMedia(); return _mediaAutoPlay; } set { EnsureMedia(); _mediaAutoPlay = value; } }
-    public bool Loop { get { EnsureMedia(); return _mediaLoop; } set { EnsureMedia(); _mediaLoop = value; } }
-    public bool Muted { get { EnsureMedia(); return _mediaMuted; } set { EnsureMedia(); _mediaMuted = value; } }
+    public bool AutoPlay { get { EnsureMedia(); return _mediaAutoPlay; } set { EnsureMedia(); _mediaAutoPlay = value; TryDesktopMediaCommand("autoplay", value ? "true" : "false"); } }
+    public bool Loop { get { EnsureMedia(); return _mediaLoop; } set { EnsureMedia(); _mediaLoop = value; TryDesktopMediaCommand("loop", value ? "true" : "false"); } }
+    public bool Muted { get { EnsureMedia(); return _mediaMuted; } set { EnsureMedia(); _mediaMuted = value; TryDesktopMediaCommand("muted", value ? "true" : "false"); } }
     public double PlaybackRate
     {
         get { EnsureMedia(); return _mediaPlaybackRate; }
-        set { EnsureMedia(); if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm media PlaybackRate must be greater than zero."); _mediaPlaybackRate = value; }
+        set { EnsureMedia(); if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm media PlaybackRate must be greater than zero."); _mediaPlaybackRate = value; TryDesktopMediaCommand("rate", value.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
     }
     public bool IsPlaying { get { EnsureMedia(); return _mediaIsPlaying; } }
     public void Play() { EnsureMedia(); _mediaIsPlaying = true; TryDesktopMediaCommand("play", null); }
