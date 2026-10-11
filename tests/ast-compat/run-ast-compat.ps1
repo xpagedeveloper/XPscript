@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "../..")
-$compiler = Join-Path $root "src/XPScript.Compiler/XPScript.Compiler.csproj"
+$compiler = Join-Path $root "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll"
 $outRoot = Join-Path $root "out/ast-compat"
 
 $tests = @(
@@ -28,7 +28,7 @@ foreach ($test in $tests) {
     $source = Join-Path $PSScriptRoot $test.File
     $output = Join-Path $outRoot $test.Name
     if ($IsWindows) { $output += ".exe" }
-    dotnet run --project $compiler -c Release --no-build -- ast-compile $source -o $output
+    dotnet $compiler ast-compile $source -o $output
     if ($LASTEXITCODE -ne 0) { throw "Compilation failed: $($test.Name)" }
 
     $generated = Join-Path $output "Generated.dll"
