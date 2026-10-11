@@ -448,9 +448,9 @@ The first AST proof of concept is complete when:
 ## Definition of done for full migration
 
 - [ ] All supported XPscript syntax is represented by the XPscript syntax tree.
-- [ ] Parsing no longer depends on line-by-line regex/string transformation.
-- [ ] Semantic analysis operates on XPscript syntax/bound nodes.
-- [ ] C# generation operates from the bound representation.
+- [x] Parsing no longer depends on line-by-line regex/string transformation in the opt-in AST path; lexer and declaration/statement parsers consume tokens.
+- [x] Semantic analysis operates on XPscript syntax/bound nodes in the opt-in AST path.
+- [x] C# generation operates from the bound representation in the opt-in AST path; legacy transpiler migration remains open.
 - [ ] Roslyn is used as the C#/.NET backend, not as the primary XPscript parser/type checker.
 - [ ] Existing supported runtime behavior passes compatibility tests.
 - [ ] Normal compiler and machine/MCP interfaces use the same AST/binder implementation and report consistent diagnostics.
