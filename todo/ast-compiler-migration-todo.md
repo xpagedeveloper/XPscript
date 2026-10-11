@@ -352,8 +352,8 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Preserve stable XPS diagnostic codes where applicable.
 - [ ] Add new codes only with documented categories and tests.
 - [ ] Update compiler machine interface together with normal compiler diagnostics.
-- [ ] Update MCP compiler output together with normal compiler diagnostics.
-- [ ] Add paired diagnostic tests that feed the same invalid XPscript source through CLI compilation and MCP/AI machine compilation and verify equivalent diagnostic code, source span and meaning.
+- [x] Update MCP compiler output together with normal compiler diagnostics. AST MCP now marks structured compilation failures as protocol tool errors while preserving the shared diagnostic payload.
+- [x] Add paired diagnostic tests that feed the same invalid XPscript source through CLI compilation and MCP/AI machine compilation and verify equivalent diagnostic code, source span and meaning. The permanent compiler probe covers normal/debug CLI and MCP paths.
 - [ ] Expose syntax-tree information internally in a form suitable for future IDE tooling.
 - [ ] Investigate parser APIs for completion, hover, go-to-definition and rename.
 - [ ] Investigate incremental parsing only after the non-incremental AST is stable.
