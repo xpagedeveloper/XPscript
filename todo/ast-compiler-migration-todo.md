@@ -360,7 +360,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 
 ## Phase 10: Compatibility harness
 
-- [ ] Build a corpus of existing XPscript samples and test programs.
+- [x] Build a corpus of existing XPscript samples and test programs. `tests/ast-compat` contains focused fixtures plus the repository sweep over representative `samples/` and `demo/` programs; the sweep records compatible successes and existing failures separately.
 - [ ] Run each compatible source through legacy and AST compiler paths.
 - [ ] Compare compile success/failure.
 - [ ] Compare diagnostic locations and categories.
