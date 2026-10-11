@@ -8,7 +8,7 @@ using XPScript.Compiler.Syntax;
 namespace XPScript.Compiler;
 
 /// <summary>Experimental CLI bridge for the currently supported AST compilation slice.</summary>
-internal static class AstExperimentalCompiler
+public static class AstExperimentalCompiler
 {
     public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken = default)
     {

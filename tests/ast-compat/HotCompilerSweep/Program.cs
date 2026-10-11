@@ -38,9 +38,6 @@ var negative = files.Where(path => IsNegative(path, negativePatterns)).ToArray()
 
 Console.WriteLine($"AST_REPOSITORY_SWEEP total={files.Length} positive={positive.Length} negative={negative.Length}");
 var failures = new List<string>();
-var compiler = new CompilerDriver();
-var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
-
 for (var index = 0; index < positive.Length; index++)
 {
     var file = positive[index];
@@ -51,10 +48,9 @@ for (var index = 0; index < positive.Length; index++)
     var output = Path.Combine(outRoot, $"{index + 1:D4}-{safeName}");
     Console.WriteLine($"AST_REPOSITORY_COMPILE={relative}");
 
-    CompileResult result;
     try
     {
-        result = await compiler.CompileWithResultAsync(file, output, selfContained: false, runtimeIdentifier);
+        await AstExperimentalCompiler.CompileAsync(file, output);
     }
     catch (Exception ex)
     {
@@ -63,11 +59,6 @@ for (var index = 0; index < positive.Length; index++)
         continue;
     }
 
-    if (!result.Success)
-    {
-        failures.Add(relative);
-        Console.WriteLine($"AST_REPOSITORY_SKIPPED={relative}");
-    }
 }
 
 Console.WriteLine("AST_REPOSITORY_NEGATIVE_FIXTURES");
