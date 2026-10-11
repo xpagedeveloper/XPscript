@@ -279,6 +279,11 @@ Equal(SyntaxKind.NewLineToken, inlineRemTokens[3].Kind, "inline Rem comment pres
 Equal("next", inlineRemTokens[4].Text, "token after inline Rem comment");
 Equal(0, inlineRemLexer.Diagnostics.Count, "valid inline Rem comment diagnostics");
 
+var continuationLexer = new Lexer("value = 1 _\n + 2");
+var continuationTokens = continuationLexer.Lex().ToArray();
+Equal("value,=,1,+,2", string.Join(',', continuationTokens.Where(t => t.Kind != SyntaxKind.EndOfFileToken).Select(t => t.Text)), "line continuation tokens");
+Equal(0, continuationLexer.Diagnostics.Count, "valid line continuation diagnostics");
+
 var badLexer = new Lexer("@");
 var badTokens = badLexer.Lex().ToArray();
 Equal(SyntaxKind.BadToken, badTokens[0].Kind, "bad token kind");

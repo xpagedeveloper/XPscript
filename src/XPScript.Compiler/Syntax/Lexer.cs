@@ -36,6 +36,15 @@ public sealed class Lexer
             while (Current is ' ' or '\t')
                 _position++;
 
+            if (IsContinuationMarker())
+            {
+                _position++;
+                while (Current is ' ' or '\t') _position++;
+                if (Current == '\r' && Peek(1) == '\n') _position += 2;
+                else if (Current == '\n' || Current == '\r') _position++;
+                continue;
+            }
+
             if (Current != '\'')
             {
                 if (IsRemCommentStart())
@@ -189,6 +198,15 @@ public sealed class Lexer
         if (!_text.AsSpan(_position, Math.Min(3, _text.Length - _position)).Equals("Rem", StringComparison.OrdinalIgnoreCase)) return false;
         var after = _position + 3;
         return after >= _text.Length || char.IsWhiteSpace(_text[after]);
+    }
+
+    private bool IsContinuationMarker()
+    {
+        if (Current != '_') return false;
+        var after = Peek(1);
+        if (after is not ' ' and not '\t' and not '\r' and not '\n') return false;
+        var before = _position - 1;
+        return before < 0 || char.IsWhiteSpace(_text[before]) || _text[before] is ':' or '(' or ',' or '+' or '-' or '*' or '/' or '&' or '=';
     }
 
     private SyntaxToken BadToken(int start)

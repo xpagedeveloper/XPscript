@@ -9,6 +9,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-name-text.xps') -o
 if ($LASTEXITCODE -ne 0) { throw 'Object names inside strings/comments must not trigger legacy fallback.' }
 $textObjectResult = dotnet (Join-Path $textObjectOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($textObjectResult -join "`n") -ne 'XPImage') { throw 'AST object-name text regression failed.' }
+$continuationOutput = Join-Path $output 'line-continuation'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'line-continuation.xps') -o $continuationOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST line continuation compilation failed.' }
+$continuationResult = dotnet (Join-Path $continuationOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($continuationResult -join "`n") -ne '3') { throw 'AST line continuation execution failed.' }
 $aliasByRefOutput = Join-Path $output 'forall-list-byref'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-byref.xps') -o $aliasByRefOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List ByRef compilation failed.' }
