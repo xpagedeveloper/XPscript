@@ -405,9 +405,9 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
 
 - [x] Add an internal/experimental switch for AST compilation. The `ast-compile` CLI command and `xpscript_ast_validate` MCP tool select the AST path explicitly.
 - [x] Migrate expressions first. The AST migration began with lexer, precedence parsing, binding and expression emission before statement/control-flow expansion.
-- [ ] Migrate simple statements.
+- [x] Migrate simple statements. Declarations, assignments, `Set`, calls, `Print`, `Return` and `Error` are represented in the AST path with focused fixtures.
 - [ ] Migrate control-flow statements.
-- [ ] Migrate procedures.
+- [x] Migrate procedures. `Sub` and `Function` declarations, parameters, returns, Optional/ByRef handling and procedure-scoped labels are covered by AST fixtures.
 - [ ] Migrate classes/properties.
 - [ ] Migrate remaining special compiler constructs.
 - [x] Run focused tests after every migrated feature. AST CLI fixtures and paired MCP probes are extended with each migrated feature.
