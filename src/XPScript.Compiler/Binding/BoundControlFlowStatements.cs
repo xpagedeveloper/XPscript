@@ -26,6 +26,13 @@ public sealed class BoundErrorStatement(BoundExpression number, BoundExpression?
     public override BoundNodeKind Kind => BoundNodeKind.ErrorStatement;
 }
 
+public sealed class BoundOnErrorStatement(string action, string? target) : BoundStatement
+{
+    public string Action { get; } = action;
+    public string? Target { get; } = target;
+    public override BoundNodeKind Kind => BoundNodeKind.OnErrorStatement;
+}
+
 public sealed class BoundExpressionStatement(BoundExpression expression) : BoundStatement
 {
     public BoundExpression Expression { get; } = expression;

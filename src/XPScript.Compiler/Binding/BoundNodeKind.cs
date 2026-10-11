@@ -15,6 +15,7 @@ public enum BoundNodeKind
     AssignmentStatement,
     VariableDeclarationStatement,
     ErrorStatement,
+    OnErrorStatement,
     ExpressionStatement,
     ReturnStatement,
     LabelStatement,
