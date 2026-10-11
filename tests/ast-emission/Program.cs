@@ -109,6 +109,9 @@ if (nestedMapping.Position.Line != 2 || nestedMapping.Position.Column != 2 || ma
 var generatedMappingLines = mapped.SourceMappings.Select(mapping => mapping.GeneratedLine).ToArray();
 if (!generatedMappingLines.SequenceEqual(generatedMappingLines.OrderBy(line => line)) || generatedMappingLines.Distinct().Count() != generatedMappingLines.Length)
     throw new InvalidOperationException("Bound statement source mappings were not deterministic by generated line.");
+var quotedPathMapping = statements.EmitWithSourceMap([boundIf], "If True Then\nnumber = 1\nEnd If", "flow \"quoted\".xps");
+if (!quotedPathMapping.Code.Contains("#line 1 \"flow \\\"quoted\\\".xps\"", StringComparison.Ordinal) || quotedPathMapping.SourceMappings[0].SourcePath != "flow \"quoted\".xps")
+    throw new InvalidOperationException("Bound statement emission did not escape a quoted source path.");
 var mappedStatementIds = new[] { boundIf.StatementId }.Concat(boundIf.ThenStatements.Select(statement => statement.StatementId)).ToArray();
 if (mappedStatementIds.Length < 2 || mappedStatementIds.Any(id => id <= 0) || mappedStatementIds.Distinct().Count() != mappedStatementIds.Length)
     throw new InvalidOperationException("Bound statement emission did not assign unique positive statement IDs.");
