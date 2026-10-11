@@ -172,6 +172,10 @@ var nestedTemporaryBody = statements.Emit([
 ]);
 if (!nestedTemporaryBody.Contains("var __xpsEmit0 = 1L;", StringComparison.Ordinal) || !nestedTemporaryBody.Contains("var __xpsEmit1 = 2L;", StringComparison.Ordinal))
     throw new InvalidOperationException("Bound emission did not allocate unique temporaries for multiple selectors.");
+var caseInsensitiveCollision = new BoundNameExpression(new VariableSymbol("__XPSEMIT0", typeof(long)));
+var caseInsensitiveBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(3L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(3L, typeof(long)), null, [new BoundAssignmentStatement(caseInsensitiveCollision, new BoundLiteralExpression(4L, typeof(long)), false)])])]);
+if (!caseInsensitiveBody.Contains("var __xpsEmit1 = 3L;", StringComparison.Ordinal) || !caseInsensitiveBody.Contains("__XPSEMIT0 = 4L;", StringComparison.Ordinal))
+    throw new InvalidOperationException("Bound emission temporary names were not case-insensitively collision-safe.");
 var source = $$"""
 using System;
 public static class Probe
