@@ -22,9 +22,17 @@ public sealed class BoundMethodEmitter
         ArgumentNullException.ThrowIfNull(statements);
         ArgumentNullException.ThrowIfNull(parameters);
 
-        var body = source is not null && sourcePath is not null && BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement)
-            ? _statements.EmitWithSourceMap(statements, source, sourcePath).Code
-            : _statements.Emit(statements);
+        string body;
+        try
+        {
+            body = source is not null && sourcePath is not null && BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement)
+                ? _statements.EmitWithSourceMap(statements, source, sourcePath).Code
+                : _statements.Emit(statements);
+        }
+        catch (NotSupportedException ex)
+        {
+            throw new BoundEmissionException(ex.Message, statements.FirstOrDefault()?.Span, ex);
+        }
         var output = new StringBuilder();
         output.Append("public ").Append(isStatic ? "static " : string.Empty).Append(CSharpType(returnType)).Append(' ')
             .Append(methodName).Append('(')

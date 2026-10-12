@@ -336,7 +336,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Add missing AST Variant-to-Byte conversion through the existing runtime `CByte` helper; the executable regression now matches published scalar conversion behavior.
 - [x] Preserve uninitialized Variant Nothing semantics for `Is Nothing`; AST now emits null storage instead of an ExpandoObject and matches published output.
 - [ ] Preserve original source spans through all preprocessing and map parser/binder errors through the shared diagnostic contract.
-  Optional declaration validation, explicit unsupported-feature guards and binder/default-expression errors now emit source-mapped CompileDiagnostic values; remaining AST diagnostics still need the same treatment.
+  Optional declaration validation, explicit unsupported-feature guards and binder/default-expression errors now emit source-mapped CompileDiagnostic values. Bound emitter failures are wrapped with the originating bound statement span and mapped to the emission diagnostic category; generated control-flow mappings retain the original file/line. Remaining generated-backend/Roslyn diagnostics are still reported by the backend contract.
   Parser diagnostics now use the same mapped path; control-flow and generated-source diagnostics remain open.
   Label, duplicate-label and forbidden loop-entry diagnostics now also carry source spans.
 
@@ -345,7 +345,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Implement C# generation from bound nodes.
 - [x] Keep emitter free of XPscript parsing logic. Parsing and binding are completed before `BoundStatementEmitter`/`BoundExpressionEmitter`; the emitters consume bound nodes only.
 - [ ] Reuse existing runtime APIs rather than reimplementing runtime behavior.
-- [ ] Preserve generated source mapping.
+- [x] Preserve generated source mapping for AST control-flow and emitter diagnostics. Bound emission failures now retain the originating statement span and are mapped through the shared CLI/MCP diagnostic contract; generated `#line` mappings remain deterministic for emitted control flow.
 - [ ] Preserve target-specific generated code requirements.
 - [x] Preserve generated runtime integration. AST output includes the shared compatibility/runtime fragments required by the bound emitter and preserves the existing third-party notice generation path.
 - [x] Keep Roslyn as the .NET backend and final generated-C# validator. AST-generated C# is compiled through the shared in-process Roslyn backend.

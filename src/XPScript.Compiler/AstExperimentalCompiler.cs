@@ -410,7 +410,16 @@ public static class AstExperimentalCompiler
         }
         var declarationName = sub?.Identifier.Text ?? function!.Identifier.Text;
         var methodName = declarationName;
-        var body = new BoundCompilationUnitEmitter().EmitMembers(methods, source, sourcePath);
+        string body;
+        try
+        {
+            body = new BoundCompilationUnitEmitter().EmitMembers(methods, source, sourcePath);
+        }
+        catch (BoundEmissionException ex)
+        {
+            var span = ex.Span ?? sub?.Span ?? function?.Span ?? new TextSpan(0, 0);
+            throw MappedDiagnostic(span, sourcePath, fullSource, ex.Message, CompilerDiagnosticCodes.InvalidSyntax, "emission");
+        }
         var moduleFields = string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
