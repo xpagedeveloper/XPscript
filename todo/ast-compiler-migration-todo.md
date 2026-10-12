@@ -305,11 +305,11 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Preserve one-dimensional zero-based array declaration lengths, string defaults and Erase for fixed CLR arrays. AST and published main now match the permanent array-storage regression. Nonzero lower bounds, multidimensional and dynamic array lifecycle semantics remain separate migration work.
 - [x] Preserve dynamic array type and allocation lifecycle through `ReDim`, `ReDim Preserve` and `Erase`. AST retains the CLR element type, deallocates dynamic arrays on `Erase`, and `UBound` after deallocation now raises the same allocation error as published main. Multidimensional and nonzero-bound arrays remain separate work.
 - [x] Implement multidimensional array lifecycle. Fixed and dynamic CLR-backed arrays preserve rank, explicit lower/upper bounds, element type, reads, writes, `Erase`, `LBound` and `UBound` (including rank two and three); dynamic `ReDim`/`ReDim Preserve` now copies overlapping values through the shared runtime.
-  Remaining architecture work: consolidate fixed and dynamic array lowering behind one explicit storage abstraction.
-  - [ ] Define one AST array storage abstraction for fixed, dynamic and multidimensional arrays.
+  Fixed, dynamic and multidimensional lowering now share `IXPScriptArrayStorage`; CLR-backed arrays use the managed adapter and dynamic AST arrays use the same runtime contract.
+  - [x] Define one AST array storage abstraction for fixed, dynamic and multidimensional arrays.
   - [x] Preserve array rank, lower/upper bounds and element type in syntax and bound symbols; fixed rank-two/rank-three runtime fixtures verify the lowering.
   - [x] Emit fixed multidimensional and one-dimensional reads, writes and `Erase` through the shared array runtime.
-  - [x] Lower one-dimensional `ReDim`, `ReDim Preserve` and `Erase` through the shared runtime abstraction; multidimensional resizing remains open.
+  - [x] Lower one-dimensional and multidimensional `ReDim`, `ReDim Preserve` and `Erase` through the shared runtime abstraction.
 - [x] Complete `Option Base` and lower-bound semantics. Fixed and dynamic one-dimensional and multidimensional arrays now honor `Option Base 1` and explicit lower bounds.
   Remaining architecture work: extend lower-bound parity tests to additional legacy array forms as they migrate.
   - [x] Apply `Option Base` to dynamic one-dimensional and multidimensional `ReDim` bounds without changing fixed-array behavior; permanent fixtures cover both.

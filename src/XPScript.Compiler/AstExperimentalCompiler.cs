@@ -961,7 +961,7 @@ internal static class Program
 
     private static string AstArrayRuntimeCode()
     {
-        const string startMarker = "internal sealed class LSArray";
+        const string startMarker = "internal interface IXPScriptArrayStorage";
         const string endMarker = "internal sealed class LSByRefValue";
         var source = CoreCompatibilityRuntimeSource.Code;
         var start = source.IndexOf(startMarker, StringComparison.Ordinal);
@@ -971,6 +971,8 @@ internal static class Program
         return source[start..end]
             .Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal)
             .Replace("value is ILSObjectReference reference && reference.IsNothing", "value is null", StringComparison.Ordinal)
+            .Replace("ILSObjectReference reference when reference.IsNothing => NothingArray(),", "null => NothingArray(),", StringComparison.Ordinal)
+            .Replace("null => NothingArray(),\n        null => NothingArray(),", "null => NothingArray(),", StringComparison.Ordinal)
             .Replace(".Select(Program.XPScriptRuntime.CInt).ToArray()", ".Select(value => Convert.ToInt32(Program.XPScriptRuntime.CInt(value))).ToArray()", StringComparison.Ordinal)
             .Replace("Program.XPScriptRuntime.CByte(value)", "Convert.ToByte(value)", StringComparison.Ordinal)
             .Replace("Program.XPScriptRuntime.CSng(value)", "Convert.ToSingle(value)", StringComparison.Ordinal)
