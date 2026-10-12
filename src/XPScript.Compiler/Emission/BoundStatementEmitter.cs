@@ -224,7 +224,7 @@ public sealed class BoundStatementEmitter
                 if (declaration.Initializer is null && declaration.Local.SemanticType?.IsObject == true)
                     initializer = "null";
                 Line($"{type} {declaration.Local.Name} = {initializer};");
-                if (declaration.Local.Type.IsArray && declaration.Initializer is null && declaration.Local.Type.GetElementType() == typeof(string) && !declaration.EmptyArray)
+                if (declaration.Local.Type.IsArray && declaration.Local.Type.GetArrayRank() == 1 && declaration.Initializer is null && declaration.Local.Type.GetElementType() == typeof(string) && !declaration.EmptyArray)
                     Line($"System.Array.Fill((string[]){declaration.Local.Name}, string.Empty);");
                 break;
             case BoundErrorStatement error:
