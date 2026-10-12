@@ -365,7 +365,7 @@ public static class AstExperimentalCompiler
             var binder = new StatementBinder(scope, procedureFunction is null ? null : ResolveValueType(procedureFunction.ReturnType),
                 procedureFunction is not null, true, procedureFunction?.Identifier.Text, result,
                 (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
-                "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName)) + ")");
+                "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName + ":" + parameter.SemanticType?.Name)) + ")");
             var bound = procedureStatements.Select(binder.Bind).OfType<BoundStatement>().ToList();
             if (binder.Diagnostics.Count > 0)
                 throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, fullSource);

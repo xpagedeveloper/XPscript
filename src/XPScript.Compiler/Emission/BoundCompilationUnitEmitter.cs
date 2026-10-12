@@ -56,5 +56,6 @@ public sealed class BoundCompilationUnitEmitter
 
     private static bool SameSignature(BoundMethodDefinition left, BoundMethodDefinition right)
         => left.Name.Equals(right.Name, StringComparison.OrdinalIgnoreCase) &&
-           left.Parameters.Select(parameter => parameter.Type).SequenceEqual(right.Parameters.Select(parameter => parameter.Type));
+           left.Parameters.Select(parameter => (parameter.Type, parameter.SemanticType?.Name))
+               .SequenceEqual(right.Parameters.Select(parameter => (parameter.Type, parameter.SemanticType?.Name)));
 }

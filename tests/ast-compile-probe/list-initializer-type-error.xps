@@ -1,0 +1,4 @@
+Sub Main()
+    Dim values List As Long
+    Dim wrong List As String = values
+End Sub

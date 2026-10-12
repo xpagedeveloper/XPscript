@@ -110,8 +110,17 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-function-order.xps')
 if ($LASTEXITCODE -ne 0) { throw 'AST List Function evaluation-order compilation failed.' }
 $listOrderResult = dotnet (Join-Path $listOrderOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($listOrderResult -join "`n") -ne "TAG_ONCE`n6`n6") { throw 'AST List Function did not evaluate the tag once and capture its value before later arguments.' }
+$listOverloadsOutput = Join-Path $output 'list-parameter-overloads'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-parameter-overloads.xps') -o $listOverloadsOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST List parameter overload compilation failed.' }
+$listOverloadsResult = dotnet (Join-Path $listOverloadsOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listOverloadsResult -join "`n") -ne "1`n10`n2`n20") { throw 'AST List parameter element types must preserve overload and Static storage isolation.' }
 $isElementInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-iselement-invalid.xps') -o (Join-Path $output 'list-iselement-invalid') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($isElementInvalid -join "`n") -notmatch 'IsElement requires one keyed List access') { throw 'AST accepted an invalid IsElement argument.' }
+foreach ($listInvalid in @('list-parameter-type-error', 'list-initializer-type-error')) {
+    $invalidResult = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$listInvalid.xps") -o (Join-Path $output $listInvalid) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($invalidResult -join "`n") -notmatch 'No matching overload|Cannot assign') { throw "AST accepted incompatible List element types: $listInvalid" }
+}
 $listOutput = Join-Path $output 'forall-list'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-alias.xps') -o $listOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List alias compilation failed.' }

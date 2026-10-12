@@ -33,9 +33,25 @@ if (listByRefExpressionValidation.GetProperty("result").GetProperty("structuredC
 var listFunctionsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "list-functions.xps"));
 var listFunctionsValidation = await CallAsync(new {jsonrpc="2.0",id=30_2,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=listFunctionsSource,filename="list-functions.xps"}}});
 if (listFunctionsValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected List parameter and return semantics.");
+var listOverloadsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "list-parameter-overloads.xps"));
+var listOverloadsValidation = await CallAsync(new {jsonrpc="2.0",id=30_20,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=listOverloadsSource,filename="list-parameter-overloads.xps"}}});
+if (listOverloadsValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected typed List parameter overloads.");
 var isElementValidation = await CallAsync(new {jsonrpc="2.0",id=30_3,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main()\n    Print IsElement(1)\nEnd Sub",filename="list-iselement-invalid.xps"}}});
 var isElementError = isElementValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
 if (isElementError.GetProperty("line").GetInt32() != 2 || !isElementError.GetProperty("description").GetString()!.Contains("IsElement requires one keyed List access")) throw new Exception("MCP lost IsElement argument diagnostics.");
+var listTypeRequestId = 30_4;
+foreach (var listInvalid in new[] { "list-parameter-type-error", "list-initializer-type-error" })
+{
+    var invalidSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", listInvalid + ".xps"));
+    var invalidValidation = await CallAsync(new {jsonrpc="2.0",id=listTypeRequestId++,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=invalidSource,filename=listInvalid + ".xps"}}});
+    var invalidResult = invalidValidation.GetProperty("result");
+    var invalidErrors = invalidResult.GetProperty("structuredContent").GetProperty("errors");
+    var expectedCode = listInvalid == "list-parameter-type-error" ? "XPS2004" : "XPS2001";
+    var expectedLine = listInvalid == "list-parameter-type-error" ? 7 : 3;
+    if (!invalidResult.GetProperty("isError").GetBoolean() || invalidErrors.GetArrayLength() != 1 ||
+        invalidErrors[0].GetProperty("diagnosticCode").GetString() != expectedCode || invalidErrors[0].GetProperty("line").GetInt32() != expectedLine)
+        throw new Exception("MCP lost List element type diagnostics: " + listInvalid);
+}
 var aliasByRefSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "forall-list-byref.xps"));
 var aliasByRefValidation = await CallAsync(new {jsonrpc="2.0",id=31,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=aliasByRefSource,filename="forall-list-byref.xps"}}});
 if (aliasByRefValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected the ForAll ByRef CLI fixture.");
