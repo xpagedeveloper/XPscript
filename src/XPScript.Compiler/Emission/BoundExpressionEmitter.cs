@@ -89,7 +89,8 @@ public sealed class BoundExpressionEmitter
                 ? local.ArrayBounds[dimension].Lower
                 : 0;
             var emitted = Emit(item);
-            return lower == 0 ? emitted : $"({emitted} - {lower})";
+            var multidimensional = index.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayRank: > 1 } };
+            return lower == 0 || multidimensional ? emitted : $"({emitted} - {lower})";
         });
         return string.Join(", ", offsets);
     }

@@ -73,6 +73,10 @@ $multiDimensionalOutput = Join-Path $output 'multidimensional-array'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-array.xps') -o $multiDimensionalOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST multidimensional array compilation failed.' }
 if ((@(& dotnet (Join-Path $multiDimensionalOutput 'Generated.dll')) -join "`n") -ne "12`n0`n1`n0`n9") { throw 'AST multidimensional array output mismatch.' }
+$multiDimensionalOptionBaseOutput = Join-Path $output 'multidimensional-option-base'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-option-base.xps') -o $multiDimensionalOptionBaseOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST multidimensional Option Base compilation failed.' }
+if ((@(& dotnet (Join-Path $multiDimensionalOptionBaseOutput 'Generated.dll')) -join "`n") -ne "6`n1`n1") { throw 'AST multidimensional Option Base output mismatch.' }
 $nonzeroBoundOutput = Join-Path $output 'nonzero-bound-array'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nonzero-array.xps') -o $nonzeroBoundOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nonzero array lower-bound compilation failed.' }

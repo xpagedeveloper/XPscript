@@ -31,8 +31,12 @@ public static class AstExperimentalCompiler
             optionBase = int.Parse(optionBaseMatch.Groups["base"].Value);
             source = Regex.Replace(source, @"(?im)^\s*Option\s+Base\s+[01]\s*(?:\r?$)", string.Empty);
             if (optionBase == 1)
-                source = Regex.Replace(source, @"(?im)^(?<indent>\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*)\((?<upper>\d+)\)",
-                    "${indent}(1 To ${upper})");
+                source = Regex.Replace(source, @"(?im)^(?<indent>\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*)\((?<bounds>[^)]*)\)", match =>
+                {
+                    var bounds = string.Join(", ", match.Groups["bounds"].Value.Split(',').Select(bound =>
+                        Regex.IsMatch(bound.Trim(), @"^\d+$") ? $"1 To {bound.Trim()}" : bound.Trim()));
+                    return $"{match.Groups["indent"].Value}({bounds})";
+                });
         }
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"(?im)^\s*Const\s+[A-Za-z_]\w*.*(?:\r?\n|$)", string.Empty);
