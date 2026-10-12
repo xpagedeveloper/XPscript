@@ -167,10 +167,13 @@ foreach ($runtimeFailure in @('resume-disabled', 'resume-error')) {
     $failureResult = dotnet (Join-Path $failureOutput 'Generated.dll') 2>&1
     if ($LASTEXITCODE -eq 0 -or ($failureResult -join "`n") -notmatch 'DISABLED_ERROR|Resume without an active error handler') { throw "AST $runtimeFailure did not raise the expected runtime error." }
 }
-$unsupportedWith = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'with-error.xps') -o (Join-Path $output 'with-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($unsupportedWith -join "`n") -notmatch 'AST With and implicit member access are not implemented') { throw 'AST silently lowered unsupported With/member access.' }
+$withOutput = Join-Path $output 'with'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'with-error.xps') -o $withOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST With compilation failed.' }
+$withResult = dotnet (Join-Path $withOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($withResult -join "`n") -ne "`n") { throw 'AST With receiver/member access execution failed.' }
 $unsupportedImplicitMember = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'implicit-member-error.xps') -o (Join-Path $output 'implicit-member-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($unsupportedImplicitMember -join "`n") -notmatch 'AST With and implicit member access are not implemented') { throw 'AST silently lowered unsupported implicit member access.' }
+if ($LASTEXITCODE -ne 2 -or ($unsupportedImplicitMember -join "`n") -notmatch "Implicit member 'Name' requires an active With scope") { throw 'AST accepted an implicit member outside a With scope.' }
 $legacyImageOutput = Join-Path $output 'xpimage-error'
 $legacyImage = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-error.xps') -o $legacyImageOutput 2>&1
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $legacyImageOutput 'Generated'))) { throw 'AST did not route XPImage source through the legacy compiler.' }

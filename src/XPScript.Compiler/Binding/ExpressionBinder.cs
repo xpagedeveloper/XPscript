@@ -3,7 +3,8 @@ using XPScript.Compiler.Syntax;
 namespace XPScript.Compiler.Binding;
 
 public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDynamicMembers = false,
-    string? functionName = null, LocalSymbol? functionResult = null, ExpressionSyntax? listByRefStatementCall = null)
+    string? functionName = null, LocalSymbol? functionResult = null, ExpressionSyntax? listByRefStatementCall = null,
+    BoundExpression? implicitReceiver = null)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly bool _allowDynamicMembers = allowDynamicMembers;
@@ -24,12 +25,28 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         UnaryExpressionSyntax unary => BindUnary(unary),
         BinaryExpressionSyntax binary => BindBinary(binary),
         ParenthesizedExpressionSyntax parenthesized => Bind(parenthesized.Expression),
+        ImplicitMemberAccessExpressionSyntax implicitMember => BindImplicitMemberAccess(implicitMember),
         _ => Error(syntax, $"Binding is not implemented for {syntax.Kind}.")
         };
         bound.Span = syntax.Span;
         return bound;
     }
 
+    private BoundExpression BindImplicitMemberAccess(ImplicitMemberAccessExpressionSyntax syntax)
+    {
+        if (implicitReceiver is null)
+            return Error(syntax, CompilerDiagnosticCodes.UnknownMember, $"Implicit member '{syntax.NameToken.Text}' requires an active With scope.");
+        if (_symbols.TryLookupMember(implicitReceiver.SemanticType, syntax.NameToken.Text, out var symbol))
+        {
+            if (symbol is PropertySymbol property)
+                return new BoundMemberAccessExpression(implicitReceiver, syntax.NameToken.Text, property.PropertyType, property.SemanticType);
+            if (symbol is FunctionSymbol function)
+                return new BoundMemberAccessExpression(implicitReceiver, syntax.NameToken.Text, function.ReturnType, function.SemanticReturnType);
+        }
+        return _allowDynamicMembers && implicitReceiver.SemanticType.IsVariant
+            ? new BoundMemberAccessExpression(implicitReceiver, syntax.NameToken.Text, typeof(object), XpTypeSymbol.Variant)
+            : Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{syntax.NameToken.Text}' on '{implicitReceiver.SemanticType.Name}'.");
+    }
     private BoundExpression BindLiteral(LiteralExpressionSyntax syntax)
     {
         if (syntax.LiteralToken.Kind == SyntaxKind.TrueKeyword)

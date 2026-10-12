@@ -105,6 +105,11 @@ public sealed class ExpressionParser
 
     private ExpressionSyntax ParsePrimaryExpression()
     {
+        if (Current.Kind == SyntaxKind.DotToken)
+        {
+            var dot = NextToken();
+            return new ImplicitMemberAccessExpressionSyntax(dot, MatchIdentifier());
+        }
         if (Current.Kind == SyntaxKind.IdentifierToken
             && Current.Text.Equals("Array", StringComparison.OrdinalIgnoreCase)
             && Peek(1).Kind == SyntaxKind.OpenParenToken)

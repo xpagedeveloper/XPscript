@@ -12,6 +12,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     private readonly bool _allowDynamicMembers = allowDynamicMembers;
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
     private readonly int _forAllDepth = forAllDepth;
+    private BoundExpression? _withReceiver;
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
     public BoundStatement? Bind(StatementSyntax syntax)
@@ -37,6 +38,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             WhileStatementSyntax @while => BindWhile(@while),
             DoStatementSyntax @do => BindDo(@do),
             SelectStatementSyntax select => BindSelect(select),
+            WithStatementSyntax with => BindWith(with),
             _ => BindUnsupported(syntax)
         };
         if (bound is not null)
@@ -66,10 +68,23 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundExpression? BindExpression(ExpressionSyntax syntax)
     {
-        var binder = new ExpressionBinder(_symbols, _allowDynamicMembers, functionName, functionResult);
+        var binder = new ExpressionBinder(_symbols, _allowDynamicMembers, functionName, functionResult, implicitReceiver: _withReceiver);
         var expression = binder.Bind(syntax);
         _diagnostics.AddRange(binder.Diagnostics);
         return binder.Diagnostics.Count == 0 ? expression : null;
+    }
+
+    private BoundStatement? BindWith(WithStatementSyntax syntax)
+    {
+        var receiver = BindExpression(syntax.Receiver);
+        if (receiver is null) return null;
+        var previous = _withReceiver;
+        _withReceiver = receiver;
+        try
+        {
+            return new BoundWithStatement(receiver, BindStatements(syntax.Statements));
+        }
+        finally { _withReceiver = previous; }
     }
 
     private IReadOnlyList<BoundStatement> BindStatements(IReadOnlyList<StatementSyntax> statements)

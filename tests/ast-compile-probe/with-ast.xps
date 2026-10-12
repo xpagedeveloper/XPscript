@@ -1,0 +1,5 @@
+Sub Main()
+    With Application
+        Print .NewLine
+    End With
+End Sub

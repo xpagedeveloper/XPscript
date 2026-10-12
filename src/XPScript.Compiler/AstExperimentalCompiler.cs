@@ -14,7 +14,6 @@ public static class AstExperimentalCompiler
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
-        RejectUnsupported(sourcePath, source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]", "AST With and implicit member access are not implemented; the source was not lowered silently.");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
             if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)

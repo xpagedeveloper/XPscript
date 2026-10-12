@@ -70,6 +70,8 @@ public sealed class StatementParser
             _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Class declarations are not allowed inside procedures.", classKeyword.Span));
             return new ExpressionStatementSyntax(new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, classKeyword.Text, classKeyword.Value, classKeyword.Span)));
         }
+        if (IsIdentifier("With"))
+            return ParseWithStatement();
         if (Current.Kind == SyntaxKind.IfKeyword)
             return ParseIfStatement();
         if (Current.Kind == SyntaxKind.SetKeyword)
@@ -639,6 +641,26 @@ public sealed class StatementParser
 
         var wendKeyword = Match(SyntaxKind.WendKeyword);
         return new WhileStatementSyntax(whileKeyword, condition, statements, wendKeyword);
+    }
+
+    private StatementSyntax ParseWithStatement()
+    {
+        var withKeyword = NextToken();
+        var receiver = ParseExpressionUntilLineEnd();
+        ConsumeRequiredNewLine("With");
+        var statements = new List<StatementSyntax>();
+        while (!(Current.Kind == SyntaxKind.EndKeyword && PeekKind(1) == SyntaxKind.IdentifierToken &&
+                 Current.Text.Equals("End", StringComparison.OrdinalIgnoreCase) &&
+                 _tokens[Math.Min(_position + 1, _tokens.Length - 1)].Text.Equals("With", StringComparison.OrdinalIgnoreCase)) &&
+               Current.Kind != SyntaxKind.EndOfFileToken)
+        {
+            if (Current.Kind == SyntaxKind.NewLineToken) { NextToken(); continue; }
+            statements.Add(ParseCurrentStatement());
+            RecoverToStatementBoundary();
+        }
+        var endKeyword = Match(SyntaxKind.EndKeyword);
+        var endWithKeyword = Match(SyntaxKind.IdentifierToken);
+        return new WithStatementSyntax(withKeyword, receiver, statements, endKeyword, endWithKeyword);
     }
 
     private StatementSyntax ParseDimStatement()

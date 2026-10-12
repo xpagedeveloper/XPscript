@@ -135,6 +135,7 @@ public enum SyntaxKind
     ForAllStatement,
     DoStatement,
     SelectStatement,
+    WithStatement,
     CaseClause,
     ElseIfClause,
     Type,

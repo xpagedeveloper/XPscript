@@ -98,15 +98,14 @@ if (args.Contains("--ast-error-flow-only"))
 }
 var withSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "with-error.xps"));
 var withValidation = await CallAsync(new {jsonrpc="2.0",id=38,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=withSource,filename="with-error.xps"}}});
-var withError = withValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
-if (withError.GetProperty("line").GetInt32() != 2 || withError.GetProperty("position").GetInt32() != 1 || withError.GetProperty("description").GetString() is not { } withMessage || !withMessage.Contains("With and implicit member access", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP With diagnostics lost the source span or stable message.");
+if (withValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected the valid With fixture.");
 var imageSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "xpimage-error.xps"));
 var imageValidation = await CallAsync(new {jsonrpc="2.0",id=39,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=imageSource,filename="xpimage-error.xps"}}});
 if (imageValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP did not route XPImage source through the legacy compiler.");
 var implicitMemberSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "implicit-member-error.xps"));
 var implicitMemberValidation = await CallAsync(new {jsonrpc="2.0",id=40,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=implicitMemberSource,filename="implicit-member-error.xps"}}});
 var implicitMemberError = implicitMemberValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
-if (implicitMemberError.GetProperty("line").GetInt32() != 2 || implicitMemberError.GetProperty("position").GetInt32() != 1 || implicitMemberError.GetProperty("description").GetString() is not { } implicitMessage || !implicitMessage.Contains("With and implicit member access", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP implicit-member diagnostics lost the source span or stable message.");
+if (implicitMemberError.GetProperty("line").GetInt32() != 2 || implicitMemberError.GetProperty("position").GetInt32() != 11 || implicitMemberError.GetProperty("description").GetString() is not { } implicitMessage || !implicitMessage.Contains("requires an active With scope", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP implicit-member diagnostics lost the source span or stable message.");
 var goSubSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "unsupported-gosub.xps"));
 var goSubValidation = await CallAsync(new {jsonrpc="2.0",id=41,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=goSubSource,filename="unsupported-gosub.xps"}}});
 var goSubError = goSubValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];

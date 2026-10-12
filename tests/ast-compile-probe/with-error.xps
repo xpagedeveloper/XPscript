@@ -1,5 +1,5 @@
 Sub Main()
-    With value
-        Print .Name
+    With Application
+        Print .NewLine
     End With
 End Sub

@@ -337,6 +337,13 @@ public sealed class BoundStatementEmitter
                 if (@do.IsPostTest)
                     output.Write($"while ({condition});", indent, @do.Condition?.Span ?? statement.Span);
                 break;
+            case BoundWithStatement with:
+                // The receiver is already captured in each bound member access;
+                // emitting the body preserves one evaluation per access and
+                // supports nested With scopes.
+                foreach (var child in with.Statements)
+                    EmitStatement(output, child, indent);
+                break;
             default:
                 throw new NotSupportedException($"Statement emission is not implemented for {statement.Kind}.");
         }

@@ -28,5 +28,6 @@ public enum BoundNodeKind
     WhileStatement,
     DoStatement,
     SelectStatement,
+    WithStatement,
     NoOpStatement
 }

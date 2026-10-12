@@ -16,6 +16,7 @@ internal static class BoundStatementTraversal
                 BoundForStatement value => value.Statements,
                 BoundForAllStatement value => value.Statements,
                 BoundSelectStatement value => value.Cases.SelectMany(clause => clause.Statements),
+                BoundWithStatement value => value.Statements,
                 _ => []
             };
             foreach (var child in Descendants(children)) yield return child;
