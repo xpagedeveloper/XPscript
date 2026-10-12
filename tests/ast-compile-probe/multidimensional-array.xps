@@ -25,6 +25,13 @@ Sub Main()
     Dim flags(1, 1) As Boolean
     flags(1, 0) = True
     Print flags(1, 0)
+    Dim bytes(1, 1) As Byte
+    bytes(0, 0) = 255
+    Print bytes(0, 0)
     Erase texts
     Print texts(1, 1)
+    Erase doubles
+    Print doubles(0, 1)
+    Erase flags
+    Print flags(1, 0)
 End Sub
