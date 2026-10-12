@@ -72,7 +72,7 @@ if ($LASTEXITCODE -ne 2 -or ($nonzeroRedimError -join "`n") -notmatch 'dynamic R
 $multiDimensionalOutput = Join-Path $output 'multidimensional-array'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-array.xps') -o $multiDimensionalOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST multidimensional array compilation failed.' }
-if ((@(& dotnet (Join-Path $multiDimensionalOutput 'Generated.dll')) -join "`n") -ne "12`n0`n1`n0`n9`n1`n2`n3`n4`n1`n2`n0`n1`n3`n11`nTEXT_OK`n2.5`nTrue`n255`n`n0`nFalse") { throw 'AST multidimensional array output mismatch.' }
+if ((@(& dotnet (Join-Path $multiDimensionalOutput 'Generated.dll')) -join "`n") -ne "12`n0`n1`n0`n9`n1`n2`n3`n4`n1`n2`n0`n1`n3`n11`nTEXT_OK`n2.5`nTrue`n255`n`n0`nFalse`n13`n1") { throw 'AST multidimensional array output mismatch.' }
 $multiDimensionalOptionBaseOutput = Join-Path $output 'multidimensional-option-base'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-option-base.xps') -o $multiDimensionalOptionBaseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST multidimensional Option Base compilation failed.' }
