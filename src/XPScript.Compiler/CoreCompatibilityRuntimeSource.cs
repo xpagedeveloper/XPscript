@@ -276,7 +276,7 @@ internal static class LSArrayRuntime
         }
         if (value is Array managed)
         {
-            if (managed.GetType().GetElementType() == typeof(string))
+            if (managed.GetType().GetElementType() == typeof(string) && managed.Rank == 1)
                 Array.Fill((string[])managed, string.Empty);
             else
             Array.Clear(managed);

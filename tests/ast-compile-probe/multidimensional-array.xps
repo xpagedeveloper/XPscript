@@ -19,4 +19,12 @@ Sub Main()
     Dim texts(1, 1) As String
     texts(1, 1) = "TEXT_OK"
     Print texts(1, 1)
+    Dim doubles(1, 1) As Double
+    doubles(0, 1) = 2.5
+    Print doubles(0, 1)
+    Dim flags(1, 1) As Boolean
+    flags(1, 0) = True
+    Print flags(1, 0)
+    Erase texts
+    Print texts(1, 1)
 End Sub
