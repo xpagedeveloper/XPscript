@@ -211,13 +211,15 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 var element = list.SemanticType!.ElementType!;
                 return new BoundIndexExpression(new BoundNameExpression(list), Bind(syntax.Arguments[0]), element.RuntimeType, element);
             }
-            if (_symbols.TryLookup(name, out var indexedSymbol) && indexedSymbol is LocalSymbol local && local.Type.IsArray && syntax.Arguments.Count > 0)
+            if (_symbols.TryLookup(name, out var indexedSymbol) && indexedSymbol is LocalSymbol local &&
+                (local.Type.IsArray || local.SemanticType?.IsArray == true || local.IsDynamicArray || local.ArrayRank > 1) && syntax.Arguments.Count > 0)
             {
                 var array = new BoundNameExpression(local);
                 var indices = syntax.Arguments.Select(Bind).ToArray();
                 if (indices.Any(index => index.Type != typeof(long)))
                     return Error(syntax, CompilerDiagnosticCodes.ArgumentTypeMismatch, "Array index must be an integer.");
-                return new BoundIndexExpression(array, indices, local.Type.GetElementType()!, XpTypeSymbol.FromClr(local.Type.GetElementType()!));
+                var elementType = local.SemanticType?.ElementType ?? XpTypeSymbol.FromClr(local.Type.GetElementType() ?? typeof(object));
+                return new BoundIndexExpression(array, indices, elementType.RuntimeType, elementType);
             }
             if (_symbols.TryLookup(name, out indexedSymbol) && indexedSymbol is LocalSymbol arrayLocal && arrayLocal.Type.IsArray && syntax.Arguments.Count == 0)
                 return new BoundNameExpression(arrayLocal);

@@ -37,6 +37,12 @@ public sealed class BoundExpressionEmitter
         BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundIndexExpression index when index.Expression.SemanticType.IsArray && index.Expression is BoundNameExpression { Symbol: LocalSymbol }
             => EmitArrayGet(index),
+        BoundIndexExpression index when index.Expression is BoundNameExpression { Symbol: LocalSymbol { IsDynamicArray: true } }
+            => EmitArrayGet(index),
+        BoundIndexExpression index when index.Expression is BoundNameExpression { Symbol: VariableSymbol variable } && variable.SemanticType?.IsArray == true
+            => EmitArrayGet(index),
+        BoundIndexExpression index when index.Indices.Count > 1 && index.Expression is BoundNameExpression
+            => EmitArrayGet(index),
         BoundIndexExpression index when index.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayLowerBound: not 0 } array } && index.Expression.Type.IsArray
             => $"{Emit(index.Expression)}[{Emit(index.Index)} - {array.ArrayLowerBound}]",
         BoundIndexExpression index => index.Expression.Type == typeof(object)

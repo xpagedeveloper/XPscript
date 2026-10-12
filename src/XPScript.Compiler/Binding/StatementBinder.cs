@@ -158,6 +158,11 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         };
         if (isList) return (typeof(object), XpTypeSymbol.ListOf(result.Item2));
         if (!isArray) return result;
+        // A dynamic array can change rank at ReDim time. Keep its array
+        // semantic type for binding, but use System.Array for generated C# so
+        // a later rank-two/rank-three ReDim is assignable to the same slot.
+        if (arrayLength is null && arrayRank > 1)
+            return (typeof(Array), XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(result.Item1), arrayRank));
         var arrayType = arrayRank == 1 ? result.Item1.MakeArrayType() : result.Item1.MakeArrayType(arrayRank);
         return (arrayType, XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(result.Item1), arrayRank));
     }

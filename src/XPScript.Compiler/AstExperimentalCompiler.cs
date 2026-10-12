@@ -23,7 +23,6 @@ public static class AstExperimentalCompiler
 
             RejectUnsupported(sourcePath, source, $@"(?i)\b{Regex.Escape(definition.Name)}\b", definition.Message ?? "The XP object is not implemented by the AST compiler.");
         }
-        RejectUnsupported(sourcePath, source, @"(?im)^\s*ReDim\s+(?:Preserve\s+)?[A-Za-z_]\w*\s*\([^)]*\bTo\b", "AST dynamic ReDim with non-zero lower bounds is not implemented; use zero-based ReDim until dynamic storage is migrated.");
         var optionBase = 0;
         var optionBaseMatch = Regex.Match(source, @"(?im)^\s*Option\s+Base\s+(?<base>[01])\s*(?:\r?$)");
         if (optionBaseMatch.Success)
@@ -56,12 +55,25 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Print\s+p\.[A-Za-z_]\w*\s*$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)ReDim\s+(?<preserve>Preserve\s+)?(?<name>[A-Za-z_]\w*)\s*\((?<bounds>[^)]*)\)(?:\s+As\s+[A-Za-z_]\w*)?\s*$", match =>
         {
-            var bounds = match.Groups["bounds"].Value.Trim();
-            var range = Regex.Match(bounds, @"(?i)^(?<lower>.+?)\s+To\s+(?<upper>.+)$");
-            var lower = range.Success ? range.Groups["lower"].Value : optionBase.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            var upper = range.Success ? range.Groups["upper"].Value : bounds;
-            return $"{match.Groups["indent"].Value}{match.Groups["name"].Value} = ArrayResize({match.Groups["name"].Value}, {upper}, {(match.Groups["preserve"].Success ? "true" : "false")}, {lower})";
+            var dimensions = match.Groups["bounds"].Value.Split(',').Select(item => item.Trim()).ToArray();
+            if (dimensions.Length is < 1 or > 8)
+                throw new InvalidOperationException("AST dynamic arrays support between one and eight dimensions.");
+            var arguments = new List<string> { match.Groups["name"].Value };
+            var parsed = dimensions.Select(dimension =>
+            {
+                var range = Regex.Match(dimension, @"(?i)^(?<lower>.+?)\s+To\s+(?<upper>.+)$");
+                return (Lower: range.Success ? range.Groups["lower"].Value.Trim() : optionBase.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    Upper: range.Success ? range.Groups["upper"].Value.Trim() : dimension);
+            }).ToArray();
+            arguments.AddRange(parsed.SelectMany(pair => new[] { pair.Upper, pair.Lower }));
+            arguments.Insert(2, match.Groups["preserve"].Success ? "true" : "false");
+            return $"{match.Groups["indent"].Value}{match.Groups["name"].Value} = ArrayResize({string.Join(", ", arguments)})";
         });
+        foreach (Match redim in Regex.Matches(fullSource, @"(?im)^\s*ReDim\s+(?:Preserve\s+)?(?<name>[A-Za-z_]\w*)\s*\((?<bounds>[^)]*,[^)]*)\)"))
+        {
+            var name = Regex.Escape(redim.Groups["name"].Value);
+            source = Regex.Replace(source, $@"(?im)(?<prefix>\bDim\s+{name})\s*\(\s*\)\s+As\s+", "${prefix}(,) As ");
+        }
         var declarationStart = System.Text.RegularExpressions.Regex.Match(source, @"(?im)^\s*(Sub|Function|Class)\b");
         if (declarationStart.Success)
             source = source[declarationStart.Index..].TrimStart();
@@ -279,8 +291,8 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("ArraySplice", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("ArraySplice", typeof(object), [typeof(object), typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("ArraySplice", typeof(object), [typeof(object), typeof(object), typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
-        symbols.Declare(new FunctionSymbol("ArrayResize", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
-        symbols.Declare(new FunctionSymbol("ArrayResize", typeof(object), [typeof(object), typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        for (var argumentCount = 4; argumentCount <= 16; argumentCount += 2)
+            symbols.Declare(new FunctionSymbol("ArrayResize", typeof(object), Enumerable.Repeat(typeof(object), argumentCount).ToArray(), XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, argumentCount).ToArray()));
         symbols.Declare(new FunctionSymbol("Explode", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FullTrim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
@@ -813,6 +825,12 @@ internal static class Program
         var upperBound = Convert.ToInt32(upper);
         return LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), lowerBound, upperBound);
     }
+    public static object ArrayResize(object? value, object? upper1, object? preserve, object? lower1, object? upper2, object? lower2)
+        => LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), Convert.ToInt32(upper1), Convert.ToInt32(lower1), Convert.ToInt32(upper2), Convert.ToInt32(lower2));
+    public static object ArrayResize(object? value, object? upper1, object? preserve, object? lower1, object? upper2, object? lower2, object? upper3, object? lower3)
+        => LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), Convert.ToInt32(upper1), Convert.ToInt32(lower1), Convert.ToInt32(upper2), Convert.ToInt32(lower2), Convert.ToInt32(upper3), Convert.ToInt32(lower3));
+    public static object ArrayResize(object? value, object? upper1, object? preserve, object? lower1, object? upper2, object? lower2, object? upper3, object? lower3, object? upper4, object? lower4)
+        => LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), Convert.ToInt32(upper1), Convert.ToInt32(lower1), Convert.ToInt32(upper2), Convert.ToInt32(lower2), Convert.ToInt32(upper3), Convert.ToInt32(lower3), Convert.ToInt32(upper4), Convert.ToInt32(lower4));
     public static object Explode(object? value, object? separator) => (value?.ToString() ?? string.Empty).Split(separator?.ToString() ?? ",");
     public static string FullTrim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
     public static object JsonEncode(object? value) => System.Text.Json.JsonSerializer.Serialize(value);

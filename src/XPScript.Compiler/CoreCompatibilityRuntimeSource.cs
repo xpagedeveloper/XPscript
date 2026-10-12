@@ -204,15 +204,66 @@ internal static class LSArrayRuntime
     }
 
     public static Array ReDimManaged(object? value, bool preserve, int lower, int upper)
+        => ReDimManaged(value, preserve, [lower], [upper]);
+
+    public static Array ReDimManaged(object? value, bool preserve, int[] lower, int[] upper)
     {
+        if (lower.Length == 0 || lower.Length != upper.Length || lower.Length > 8)
+            throw new InvalidOperationException("Arrays must have between one and eight dimensions.");
         var source = value as Array;
-        var elementType = source?.GetType().GetElementType() ?? typeof(object);
-        var length = Math.Max(0, upper - lower + 1);
-        var result = Array.CreateInstance(elementType, [length], [lower]);
         if (preserve && source is not null)
-            Array.Copy(source, result, Math.Min(source.Length, result.Length));
+        {
+            if (source.Rank != lower.Length)
+                throw new InvalidOperationException("ReDim cannot change the number of dimensions.");
+            for (var i = 0; i < lower.Length; i++)
+            {
+                if (source.GetLowerBound(i) != lower[i])
+                    throw new InvalidOperationException("ReDim Preserve cannot change lower bounds.");
+                if (i < lower.Length - 1 && source.GetUpperBound(i) != upper[i])
+                    throw new InvalidOperationException("ReDim Preserve can change only the upper bound of the last dimension.");
+            }
+        }
+        var elementType = source?.GetType().GetElementType() ?? typeof(object);
+        var lengths = lower.Select((bound, i) => checked(upper[i] - bound + 1)).ToArray();
+        if (lengths.Any(length => length < 0))
+            throw new IndexOutOfRangeException("Invalid XPScript array bounds.");
+        var result = Array.CreateInstance(elementType, lengths, lower);
+        if (preserve && source is not null)
+        {
+            var indices = new int[lower.Length];
+            CopyDimension(0);
+
+            void CopyDimension(int dimension)
+            {
+                var low = Math.Max(source.GetLowerBound(dimension), result.GetLowerBound(dimension));
+                var high = Math.Min(source.GetUpperBound(dimension), result.GetUpperBound(dimension));
+                for (var index = low; index <= high; index++)
+                {
+                    indices[dimension] = index;
+                    if (dimension + 1 < indices.Length)
+                        CopyDimension(dimension + 1);
+                    else
+                        result.SetValue(source.GetValue(indices), indices);
+                }
+            }
+        }
         return result;
     }
+
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2)
+        => ReDimManaged(value, preserve, [lower1, lower2], [upper1, upper2]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3], [upper1, upper2, upper3]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4], [upper1, upper2, upper3, upper4]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5], [upper1, upper2, upper3, upper4, upper5]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5, int upper6, int lower6)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5, lower6], [upper1, upper2, upper3, upper4, upper5, upper6]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5, int upper6, int lower6, int upper7, int lower7)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5, lower6, lower7], [upper1, upper2, upper3, upper4, upper5, upper6, upper7]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5, int upper6, int lower6, int upper7, int lower7, int upper8, int lower8)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5, lower6, lower7, lower8], [upper1, upper2, upper3, upper4, upper5, upper6, upper7, upper8]);
 
     public static object? Get(object? value, params object?[] indices)
     {

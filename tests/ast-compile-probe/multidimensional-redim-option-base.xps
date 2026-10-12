@@ -1,0 +1,11 @@
+Option Base 1
+Sub Main()
+    Dim values() As Long
+    ReDim values(2, 3)
+    values(1, 1) = 7
+    Print values(1, 1)
+    Print LBound(values, 1)
+    Print LBound(values, 2)
+    Print UBound(values, 1)
+    Print UBound(values, 2)
+End Sub

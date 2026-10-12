@@ -67,8 +67,14 @@ if ($LASTEXITCODE -ne 0 -or ($redimResult -join "`n") -ne "2`n9`n9") { throw 'AS
 $redimError = Join-Path $output 'redim-array-error'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'redim-array-error.xps') -o $redimError
 if ($LASTEXITCODE -ne 0) { throw 'AST dynamic Erase regression did not compile.' }
-$nonzeroRedimError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'redim-nonzero-error.xps') -o (Join-Path $output 'redim-nonzero-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($nonzeroRedimError -join "`n") -notmatch 'dynamic ReDim with non-zero lower bounds') { throw 'AST did not reject unsupported dynamic non-zero ReDim bounds early.' }
+$multiDimensionalRedimOutput = Join-Path $output 'multidimensional-redim'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-redim.xps') -o $multiDimensionalRedimOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST dynamic multidimensional ReDim compilation failed.' }
+if ((@(& dotnet (Join-Path $multiDimensionalRedimOutput 'Generated.dll')) -join "`n") -ne "1`n4`n11`n22`n1`n5") { throw 'AST dynamic multidimensional ReDim/Preserve bounds or values mismatch.' }
+$multiDimensionalRedimOptionBaseOutput = Join-Path $output 'multidimensional-redim-option-base'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-redim-option-base.xps') -o $multiDimensionalRedimOptionBaseOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST dynamic multidimensional Option Base compilation failed.' }
+if ((@(& dotnet (Join-Path $multiDimensionalRedimOptionBaseOutput 'Generated.dll')) -join "`n") -ne "7`n1`n1`n2`n3") { throw 'AST dynamic multidimensional Option Base bounds mismatch.' }
 $multiDimensionalOutput = Join-Path $output 'multidimensional-array'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-array.xps') -o $multiDimensionalOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST multidimensional array compilation failed.' }
