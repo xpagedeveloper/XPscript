@@ -4,13 +4,14 @@ namespace XPScript.Compiler.Binding;
 
 public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false,
     bool allowDynamicMembers = false, string? functionName = null, LocalSymbol? functionResult = null,
-    string? procedureIdentity = null)
+    string? procedureIdentity = null, int forAllDepth = 0)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly XpTypeSymbol? _returnType = returnType;
     private readonly bool _allowsReturnValue = allowsReturnValue;
     private readonly bool _allowDynamicMembers = allowDynamicMembers;
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
+    private readonly int _forAllDepth = forAllDepth;
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
     public BoundStatement? Bind(StatementSyntax syntax)
@@ -290,7 +291,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             var alias = new LocalSymbol(syntax.IdentifierToken.Text, element.RuntimeType, element) { IsListAlias = true };
             scope.Declare(alias);
             var binder = new StatementBinder(scope, _returnType, _allowsReturnValue, _allowDynamicMembers,
-                functionName, functionResult, procedureIdentity);
+                functionName, functionResult, procedureIdentity, _forAllDepth + 1);
             var body = syntax.Statements.Select(binder.Bind).OfType<BoundStatement>().ToArray();
             _diagnostics.AddRange(binder.Diagnostics);
             return new BoundForAllStatement(new BoundNameExpression(alias), collection, body);
@@ -319,7 +320,11 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                     syntax.IdentifierToken.Span));
         }
 
-        var statements = BindStatements(syntax.Statements);
+        var bodyScope = _symbols.CreateChildScope();
+        var bodyBinder = new StatementBinder(bodyScope, _returnType, _allowsReturnValue, _allowDynamicMembers,
+            functionName, functionResult, procedureIdentity, _forAllDepth + 1);
+        var statements = syntax.Statements.Select(bodyBinder.Bind).OfType<BoundStatement>().ToArray();
+        _diagnostics.AddRange(bodyBinder.Diagnostics);
         return new BoundForAllStatement(variable, collection, statements);
     }
 
@@ -418,6 +423,16 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindExit(ExitStatementSyntax syntax)
     {
+        if (syntax.TargetKeyword.Kind == SyntaxKind.ForAllKeyword)
+        {
+            if (_forAllDepth == 0)
+            {
+                _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
+                    "Exit ForAll is valid only inside ForAll.", syntax.Span));
+                return null;
+            }
+            return new BoundExitForAllStatement();
+        }
         if (syntax.TargetKeyword.Kind is not (SyntaxKind.SubKeyword or SyntaxKind.FunctionKeyword))
             return BindUnsupported(syntax);
         // Exit Function returns the current slot, including its default value.

@@ -1004,10 +1004,9 @@ internal static class Program
                     $"GoTo cannot jump over local declaration to label '{label.Identifier.Text}'. Move the declaration before the GoTo or move the label before the declaration.");
             var sourceScope = InnermostContaining(scopes, transfer.Span);
             var targetScope = InnermostContaining(scopes, label.Span);
-            if (targetScope is not null && !ReferenceEquals(sourceScope, targetScope) &&
-                targetScope.Span.Start > transfer.Span.Start && targetScope.Span.End >= label.Span.End)
+            if (!ReferenceEquals(sourceScope, targetScope))
                 throw MappedDiagnostic(transfer.Span, sourcePath, source,
-                    $"GoTo cannot enter a For or ForAll block at label '{label.Identifier.Text}'. Move the label outside the loop or use structured control flow.");
+                    $"GoTo target '{label.Identifier.Text}' is outside the current For/ForAll scope. GoTo is only allowed within the same loop scope.");
         }
     }
 

@@ -57,6 +57,9 @@ public sealed class BoundStatementEmitter
             case BoundGoToStatement transfer:
                 Line($"goto {Label(transfer.Target)};");
                 break;
+            case BoundExitForAllStatement:
+                Line("break;");
+                break;
             case BoundNoOpStatement:
                 break;
             case BoundAssignmentStatement assignment:
@@ -180,10 +183,15 @@ public sealed class BoundStatementEmitter
                 if (persistent.Initializer is not null)
                 {
                     var storage = persistent.Local.StaticStorageName;
-                    Line($"if (!{storage}_initialized)");
+                    Line($"lock ({storage}_initGate)");
                     Line("{");
-                    output.Write($"{storage} = {_expressions.Emit(persistent.Initializer)};", indent + 1, persistent.Initializer.Span);
-                    output.Write($"{storage}_initialized = true;", indent + 1, persistent.Span);
+                    output.Write($"if ({storage}_initState == 1) throw new InvalidOperationException(\"Recursive Static initialization detected.\");", indent + 1, persistent.Span);
+                    output.Write($"if ({storage}_initState == 0)", indent + 1, persistent.Span);
+                    output.Write("{", indent + 1, persistent.Span);
+                    output.Write($"{storage}_initState = 1;", indent + 2, persistent.Span);
+                    output.Write($"{storage} = {_expressions.Emit(persistent.Initializer)};", indent + 2, persistent.Initializer.Span);
+                    output.Write($"{storage}_initState = 2;", indent + 2, persistent.Span);
+                    output.Write("}", indent + 1, persistent.Span);
                     Line("}");
                 }
                 break;

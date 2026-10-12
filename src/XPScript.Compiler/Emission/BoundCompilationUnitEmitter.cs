@@ -40,7 +40,10 @@ public sealed class BoundCompilationUnitEmitter
             output.Append("private static ").Append(type).Append(' ').Append(declaration.Local.StaticStorageName)
                 .Append(" = ").Append(initialValue).Append(";\n");
             if (declaration.Initializer is not null)
-                output.Append("private static bool ").Append(declaration.Local.StaticStorageName).Append("_initialized;\n");
+            {
+                output.Append("private static int ").Append(declaration.Local.StaticStorageName).Append("_initState;\n");
+                output.Append("private static readonly object ").Append(declaration.Local.StaticStorageName).Append("_initGate = new object();\n");
+            }
         }
         var emitter = new BoundMethodEmitter();
         foreach (var method in methods)
