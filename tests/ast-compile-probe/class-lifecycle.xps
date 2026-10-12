@@ -1,0 +1,20 @@
+Class BaseRecord
+    Public BaseValue As Long
+End Class
+
+Class ChildRecord Extend BaseRecord
+    Public ChildValue As Long
+End Class
+
+Sub Main()
+    Dim item As ChildRecord
+    Set item = New ChildRecord()
+    item.BaseValue = 4
+    item.ChildValue = 5
+    Delete item
+    If item Is Nothing Then
+        Print "LIFECYCLE_OK"
+    Else
+        Print "LIFECYCLE_BAD"
+    End If
+End Sub

@@ -166,11 +166,19 @@ public sealed class BoundStatementEmitter
                     output.Write("}", indent + 1, statement.Span);
                     Line("}");
                 }
-                else if (expression.Expression is BoundCallExpression { Function.Name: "Delete" } delete && delete.Arguments.Count == 1 && delete.Arguments[0] is BoundNameExpression name)
+                else if (expression.Expression is BoundCallExpression { Function.Name: "Delete" } delete && delete.Arguments.Count == 1)
                 {
                     // Delete invokes the object's cleanup hook before releasing the caller's reference.
-                    Line($"if ({name.Symbol.Name} is not null) ((dynamic){name.Symbol.Name}).Delete();");
-                    Line($"{name.Symbol.Name} = null;");
+                    var argument = delete.Arguments[0];
+                    while (argument is BoundConversionExpression conversionArgument) argument = conversionArgument.Expression;
+                    if (argument is BoundNameExpression name)
+                    {
+                        var target = name.Symbol.Name;
+                        Line($"if ({target} is not null) ((dynamic){target}).Delete();");
+                        Line($"{target} = null;");
+                    }
+                    else
+                        Line($"{_expressions.Emit(delete)};");
                 }
                 else if (expression.Expression is BoundCallExpression { Function.Name: "EraseDynamicArray" } dynamicErase && dynamicErase.Arguments.Count == 1)
                 {

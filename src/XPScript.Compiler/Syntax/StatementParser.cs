@@ -133,8 +133,12 @@ public sealed class StatementParser
             return ParseExitStatement();
         if (IsIdentifier("Delete"))
         {
-            NextToken();
-            return new ExpressionStatementSyntax(ParseExpressionUntilLineEnd());
+            var deleteKeyword = NextToken();
+            var argument = ParseExpressionUntilLineEnd();
+            var open = new SyntaxToken(SyntaxKind.OpenParenToken, "(", null, new TextSpan(deleteKeyword.Span.End, 0));
+            var close = new SyntaxToken(SyntaxKind.CloseParenToken, ")", null, new TextSpan(argument.Span.End, 0));
+            var target = new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, "Delete", null, deleteKeyword.Span));
+            return new ExpressionStatementSyntax(new CallExpressionSyntax(target, open, [argument], [], close));
         }
 
         var equalsIndex = FindTopLevelEqualsIndex(_position);

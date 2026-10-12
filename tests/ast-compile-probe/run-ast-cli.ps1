@@ -207,6 +207,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-class-instance.xps
 if ($LASTEXITCODE -ne 0) { throw 'AST static class instance compilation failed.' }
 $staticClassResult = dotnet (Join-Path $staticClassOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($staticClassResult -join "`n") -ne "1`n2") { throw 'AST static class instance lifetime produced the wrong result.' }
+$classLifecycleOutput = Join-Path $output 'class-lifecycle'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-lifecycle.xps') -o $classLifecycleOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST class lifecycle compilation failed.' }
+$classLifecycleResult = dotnet (Join-Path $classLifecycleOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classLifecycleResult -join "`n") -ne 'LIFECYCLE_OK') { throw 'AST class Delete lifecycle did not clear the reference.' }
 $optionalOrder = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-order-error.xps') -o (Join-Path $output 'optional-order-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($optionalOrder -join "`n") -notmatch 'cannot follow an Optional parameter') { throw 'AST accepted a required parameter after Optional.' }
 $optionalDefault = Join-Path $output 'optional-default-name'

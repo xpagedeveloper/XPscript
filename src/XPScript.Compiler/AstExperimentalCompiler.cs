@@ -219,6 +219,7 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("AstKill", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstInputChars", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstNoOp", typeof(void), []));
+        symbols.Declare(new FunctionSymbol("Delete", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Trim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("UCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LCase", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
@@ -449,7 +450,10 @@ public static class AstExperimentalCompiler
             var baseClause = classDeclaration.BaseType is null
                 ? string.Empty
                 : $" : Xp{classDeclaration.BaseType.Identifier.Text}";
-            return $"public class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} }}";
+            var delete = classDeclaration.BaseType is null
+                ? "public virtual void Delete() { }"
+                : "public override void Delete() { base.Delete(); }";
+            return $"public class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} public Xp{classDeclaration.Identifier.Text}() {{ }} {delete} }}";
         }));
         if (userClassSupport.Length == 0)
         {
