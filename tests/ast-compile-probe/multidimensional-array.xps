@@ -14,4 +14,6 @@ Sub Main()
     Print UBound(offset, 1)
     Print LBound(offset, 2)
     Print UBound(offset, 2)
+    Erase offset
+    Print offset(1, 3)
 End Sub
