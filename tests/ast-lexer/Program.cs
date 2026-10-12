@@ -835,7 +835,7 @@ Equal(typeof(long[,]), clrRankedArrayType.RuntimeType, "CLR array semantic runti
 var rankedArrayParser = new StatementParser("Dim matrix(1, 2, 3) As Long");
 var rankedArrayStatement = (DimStatementSyntax)rankedArrayParser.ParseStatement();
 Equal(3, rankedArrayStatement.ArrayRank, "multidimensional Dim rank");
-Equal(1, rankedArrayParser.Diagnostics.Count, "multidimensional Dim diagnostic");
+Equal(0, rankedArrayParser.Diagnostics.Count, "multidimensional Dim diagnostics");
 Equal(new ArrayBound(0, 1), rankedArrayStatement.ArrayBounds[0], "first multidimensional bound");
 Equal(new ArrayBound(0, 2), rankedArrayStatement.ArrayBounds[1], "second multidimensional bound");
 Equal(new ArrayBound(0, 3), rankedArrayStatement.ArrayBounds[2], "third multidimensional bound");

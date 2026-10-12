@@ -150,22 +150,10 @@ if (BindHandlerStatement("On Error Resume Next") is not BoundOnErrorStatement { 
     BindHandlerStatement("Resume Next") is not BoundResumeStatement { Mode: BoundResumeMode.Next } ||
     BindHandlerStatement("Resume Retry") is not BoundResumeStatement { Mode: BoundResumeMode.Label, Target: "Retry" })
     throw new InvalidOperationException("Statement binding did not preserve error-handler syntax semantics.");
-foreach (var unsupportedHandler in new BoundStatement[]
-{
-    resumeNext, disableErrors, handler,
-    resumeCurrent, resumeNextTarget, resumeLabel
-})
-{
-    try
-    {
-        statements.Emit([unsupportedHandler]);
-        throw new InvalidOperationException("Unsupported error-handler statement was emitted silently.");
-    }
-    catch (NotSupportedException)
-    {
-        // Runtime lowering is intentionally deferred; dropping the statement would be unsafe.
-    }
-}
+var handlerCode = statements.Emit([handler, new BoundLabelStatement("ErrorHandler"), resumeNextTarget]);
+if (!handlerCode.Contains("catch (Exception", StringComparison.Ordinal) ||
+    !handlerCode.Contains("Resume without an active error handler", StringComparison.Ordinal))
+    throw new InvalidOperationException("Error handling must emit protected dispatch and validate Resume state.");
 var selectBody = statements.Emit([new BoundSelectStatement(new BoundLiteralExpression(2L, typeof(long)), [new BoundCaseClause(SelectCaseKind.Value, null, new BoundLiteralExpression(2L, typeof(long)), null, [new BoundAssignmentStatement(sum, new BoundLiteralExpression(9L, typeof(long)), false)])])]);
 Equal("var __xpsEmit0 = 2L;\nif (LSCoreCompare.Equal(__xpsEmit0, 2L))\n{\n    number = 9L;\n}\n", selectBody);
 var reservedTemporary = new BoundNameExpression(new VariableSymbol("__xpsEmit0", typeof(long)));

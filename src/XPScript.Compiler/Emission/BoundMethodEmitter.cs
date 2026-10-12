@@ -14,14 +14,17 @@ public sealed class BoundMethodEmitter
     public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements)
         => Emit(methodName, returnType, parameters, statements, isStatic: true);
 
-    public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements, bool isStatic)
+    public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements, bool isStatic,
+        string? source = null, string? sourcePath = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
         ArgumentNullException.ThrowIfNull(returnType);
         ArgumentNullException.ThrowIfNull(statements);
         ArgumentNullException.ThrowIfNull(parameters);
 
-        var body = _statements.Emit(statements);
+        var body = source is not null && sourcePath is not null && BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement)
+            ? _statements.EmitWithSourceMap(statements, source, sourcePath).Code
+            : _statements.Emit(statements);
         var output = new StringBuilder();
         output.Append("public ").Append(isStatic ? "static " : string.Empty).Append(CSharpType(returnType)).Append(' ')
             .Append(methodName).Append('(')
@@ -29,6 +32,8 @@ public sealed class BoundMethodEmitter
             .Append(")\n{\n");
         foreach (var line in body.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             output.Append("    ").Append(line).Append('\n');
+        if (returnType != typeof(void) && BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
+            output.Append("    return default!;\n");
         output.Append("}\n");
         return output.ToString();
     }
@@ -36,7 +41,8 @@ public sealed class BoundMethodEmitter
     private static string Parameter(ParameterSymbol parameter)
     {
         var mode = parameter.IsByRef ? "ref " : string.Empty;
-        return mode + CSharpType(parameter.Type) + " " + parameter.Name;
+        var type = parameter.SemanticType?.IsList == true ? $"LSList<{CSharpType(parameter.SemanticType.ElementType!.RuntimeType)}>" : CSharpType(parameter.Type);
+        return mode + type + " " + parameter.Name;
     }
 
     internal static string CSharpType(Type type) => type == typeof(void) ? "void"

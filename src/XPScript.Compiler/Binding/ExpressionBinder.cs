@@ -206,10 +206,15 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             target = null;
             name = nameSyntax.IdentifierToken.Text;
-            if (_symbols.TryLookup(name, out var listSymbol) && listSymbol is LocalSymbol { SemanticType.IsList: true } list && syntax.Arguments.Count == 1)
+            if (_symbols.TryLookup(name, out var collectionSymbol) && collectionSymbol is LocalSymbol or ParameterSymbol &&
+                new BoundNameExpression(collectionSymbol).SemanticType.IsList && syntax.Arguments.Count != 1)
+                return Error(syntax, CompilerDiagnosticCodes.ArgumentCountMismatch, "List access requires exactly one tag.");
+            if (_symbols.TryLookup(name, out var listSymbol) && listSymbol is LocalSymbol or ParameterSymbol && syntax.Arguments.Count == 1 &&
+                new BoundNameExpression(listSymbol).SemanticType.IsList)
             {
-                var element = list.SemanticType!.ElementType!;
-                return new BoundIndexExpression(new BoundNameExpression(list), Bind(syntax.Arguments[0]), element.RuntimeType, element);
+                var receiver = new BoundNameExpression(listSymbol);
+                var element = receiver.SemanticType.ElementType!;
+                return new BoundIndexExpression(receiver, Bind(syntax.Arguments[0]), element.RuntimeType, element);
             }
             if (_symbols.TryLookup(name, out var indexedSymbol) && indexedSymbol is LocalSymbol local &&
                 (local.Type.IsArray || local.SemanticType?.IsArray == true || local.IsDynamicArray || local.ArrayRank > 1) && syntax.Arguments.Count > 0)
@@ -276,6 +281,10 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindOverloadSet(CallExpressionSyntax syntax, BoundExpression? target, string name, IReadOnlyList<FunctionSymbol> functions)
     {
         var arguments = syntax.Arguments.Select(Bind).ToArray();
+        if (target is null && name.Equals("IsElement", StringComparison.OrdinalIgnoreCase) &&
+            (arguments.Length != 1 || arguments[0] is not BoundIndexExpression element ||
+             !(element.Expression.SemanticType.IsList || element.Expression.SemanticType.IsVariant)))
+            return Error(syntax, CompilerDiagnosticCodes.InvalidSyntax, "IsElement requires one keyed List access, for example IsElement(values(tag)).");
         var candidates = functions
             .Where(function => function.ParameterTypes.Count == arguments.Length)
             .Where(function => ParametersMatch(function, arguments))
@@ -334,8 +343,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             if (!function.ByRefParameters[i])
                 continue;
-            if (ReferenceEquals(syntax, listByRefStatementCall) &&
-                function.ReturnType == typeof(void) &&
+            if ((ReferenceEquals(syntax, listByRefStatementCall) || function.ReturnType != typeof(void)) &&
                 syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
                 (arguments[i] is BoundIndexExpression { Expression.SemanticType.IsList: true } ||
                  arguments[i] is BoundNameExpression { Symbol: LocalSymbol { IsListAlias: true } }) &&
@@ -346,8 +354,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 name.Symbol is not (VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol))
                 return false;
             if (name.Symbol is LocalSymbol { IsListAlias: true } &&
-                !(ReferenceEquals(syntax, listByRefStatementCall) &&
-                  function.ReturnType == typeof(void) && syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
+                !((ReferenceEquals(syntax, listByRefStatementCall) || function.ReturnType != typeof(void)) &&
+                  syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
                   Conversion.Classify(arguments[i].SemanticType,
                       function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(function.ParameterTypes[i])).IsIdentity))
                 return false;

@@ -10,6 +10,23 @@ public sealed class BoundExpressionEmitter
     private readonly Dictionary<Symbol, (string Value, string Tag)> _aliases = [];
     internal bool IsListAlias(Symbol symbol) => _aliases.ContainsKey(symbol);
 
+    internal Action CaptureAliasScope(Action emit)
+    {
+        var scope = _aliases.ToArray();
+        return () =>
+        {
+            var previous = _aliases.ToArray();
+            _aliases.Clear();
+            foreach (var pair in scope) _aliases.Add(pair.Key, pair.Value);
+            try { emit(); }
+            finally
+            {
+                _aliases.Clear();
+                foreach (var pair in previous) _aliases.Add(pair.Key, pair.Value);
+            }
+        };
+    }
+
     // Alias substitution is lexical: nested ForAll blocks restore the outer
     // binding even when body emission fails.
     internal void WithListAlias(Symbol symbol, string value, string tag, Action emitBody)
@@ -103,6 +120,24 @@ public sealed class BoundExpressionEmitter
 
     private string EmitCall(BoundCallExpression call)
     {
+        if (BoundListCallLowering.RequiresWrapper(call))
+        {
+            var wrapperArguments = new List<string>();
+            for (var i = 0; i < call.Arguments.Count; i++)
+            {
+                var argument = call.Arguments[i];
+                var byRef = call.Function.ByRefParameters?[i] == true;
+                var parameterType = BoundMethodEmitter.CSharpType(call.Function.ParameterTypes[i]);
+                if (byRef && argument is BoundIndexExpression { Expression.SemanticType.IsList: true } element)
+                {
+                    wrapperArguments.Add($"new LSListByRef<{parameterType}>({Emit(element.Expression)}, {Emit(element.Index)})");
+                }
+                else if (byRef && argument is BoundNameExpression listAlias && _aliases.TryGetValue(listAlias.Symbol, out var location))
+                    wrapperArguments.Add($"new LSListByRef<{parameterType}>({location.Value[..^".Value".Length]})");
+                else wrapperArguments.Add((byRef ? "ref " : "") + Emit(argument));
+            }
+            return $"{BoundListCallLowering.Name(call)}({string.Join(", ", wrapperArguments)})";
+        }
         var tagArgument = call.Arguments.Count >= 1 ? call.Arguments[0] : null;
         if (tagArgument is BoundConversionExpression conversion) tagArgument = conversion.Expression;
         // IsElement inspects the tag, not the indexed value: reading a missing
@@ -110,6 +145,9 @@ public sealed class BoundExpressionEmitter
         if (call.Target is null && call.Function.Name.Equals("IsElement", StringComparison.OrdinalIgnoreCase) &&
             tagArgument is BoundIndexExpression index && index.Expression.SemanticType.IsList)
             return $"{Emit(index.Expression)}.ContainsTag({Emit(index.Index)})";
+        if (call.Target is null && call.Function.Name.Equals("IsElement", StringComparison.OrdinalIgnoreCase) &&
+            tagArgument is BoundIndexExpression dynamicIndex && dynamicIndex.Expression.SemanticType.IsVariant)
+            return $"LSListRuntime.ContainsTag({Emit(dynamicIndex.Expression)}, {Emit(dynamicIndex.Index)})";
         if (call.Target is null && call.Function.Name.Equals("ListTag", StringComparison.OrdinalIgnoreCase) &&
             tagArgument is BoundNameExpression name && _aliases.TryGetValue(name.Symbol, out var alias))
             return alias.Tag;
@@ -174,6 +212,8 @@ public sealed class BoundExpressionEmitter
     private string EmitConversion(BoundConversionExpression expression)
     {
         var value = Emit(expression.Expression);
+        if (expression.SemanticType.IsList && expression.Conversion.Kind == ConversionKind.FromVariant)
+            return $"(LSList<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!.RuntimeType)}>)({value})";
         if (expression.Expression is BoundNewExpression && expression.Type != typeof(object))
             return value;
         return expression.Conversion.Kind switch

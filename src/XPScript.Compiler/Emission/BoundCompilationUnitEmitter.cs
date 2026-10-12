@@ -18,12 +18,15 @@ public sealed class BoundCompilationUnitEmitter
     }
 
     /// <summary>Allows target hosts to supply runtime support around the same bound procedures.</summary>
-    public string EmitMembers(IReadOnlyList<BoundMethodDefinition> methods)
+    public string EmitMembers(IReadOnlyList<BoundMethodDefinition> methods, string? source = null, string? sourcePath = null)
     {
         ArgumentNullException.ThrowIfNull(methods);
         methods = methods.Where(method => !method.IsOptionalForwarding ||
             !methods.Any(explicitMethod => !explicitMethod.IsOptionalForwarding && SameSignature(method, explicitMethod))).ToArray();
         var output = new StringBuilder();
+        foreach (var call in methods.SelectMany(method => method.Statements).SelectMany(BoundListCallLowering.Calls)
+                     .DistinctBy(BoundListCallLowering.Name))
+            output.Append(BoundListCallLowering.EmitWrapper(call));
         foreach (var declaration in methods.SelectMany(method => BoundStatementTraversal.Descendants(method.Statements))
                      .OfType<BoundVariableDeclarationStatement>().Where(declaration => declaration.Local.StaticStorageName is not null))
         {
@@ -47,7 +50,7 @@ public sealed class BoundCompilationUnitEmitter
         }
         var emitter = new BoundMethodEmitter();
         foreach (var method in methods)
-            output.Append(emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements));
+            output.Append(emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements, true, source, sourcePath));
         return output.ToString();
     }
 

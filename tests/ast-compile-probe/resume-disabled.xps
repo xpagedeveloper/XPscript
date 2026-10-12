@@ -1,0 +1,7 @@
+Sub Main()
+    On Error Resume Next
+    Error 7000, "ignored"
+    On Error GoTo 0
+    Error 7001, "DISABLED_ERROR"
+    Print "BAD"
+End Sub

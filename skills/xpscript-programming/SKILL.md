@@ -68,7 +68,7 @@ For a declared List, `ForAll alias In values` exposes a writable element alias: 
 
 Use `IsElement(values(tag))` to test for a List tag before reading its value. The experimental AST path supports this for declared Lists and returns False for a missing tag; it evaluates the tag expression once. Dynamically supplied Lists and complete argument validation remain migration work.
 
-Experimental AST supports explicit Sub calls with one or more matching typed ByRef List elements or ForAll aliases. It evaluates each List/tag once and copies changed values back, including if the Sub throws. Numeric and string aliases are covered, including nested loops. Function expression calls remain unsupported.
+Experimental AST supports Sub and Function calls with matching typed ByRef List elements or ForAll aliases. It evaluates each List/tag once in argument order and copies changed values back, including if the called procedure throws. Named Function wrappers also support forwarding ordinary ByRef parameters. Declare List parameters as `ByVal values List As Long` or `ByRef values List As Long`: ByVal shares the List object, while ByRef also allows replacing the caller's List reference. Functions can return Lists through `As Variant`; initialize a typed List with that result, for example `Dim values List As Long = MakeValues()`. IsElement accepts one keyed List access and checks dynamically supplied Lists without reading a missing element.
 
 Use `Erase values(tag)` to remove one List entry or `Erase values` to clear all entries. Experimental AST supports these forms for declared Lists, including safe removal of a missing tag and removals during ForAll snapshot iteration. It also supports fixed one-dimensional declared arrays; dynamic and multidimensional array lifecycle remains migration work.
 
@@ -463,6 +463,8 @@ Print "Error " & CStr(Err) & ": " & Error$
 ```
 
 Use `On Error Resume Next` only when the program intentionally handles an expected failure immediately afterward.
+
+Experimental `ast-compile` supports `On Error Resume Next`, `On Error GoTo label`, `On Error GoTo 0`, `Resume`, `Resume Next` and `Resume label`. Handling applies after activation in the current procedure. `Resume` retries the failing statement; repair its cause first. `Resume Next` continues after that statement, including a failing procedure call. `Resume label` continues at a label in the same procedure. A failure in an active handler propagates to the caller; `Resume` without a handled error fails at runtime. CLI and MCP share this compilation path.
 
 ## Cross-platform rules
 

@@ -14,7 +14,6 @@ public static class AstExperimentalCompiler
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
-        RejectUnsupported(sourcePath, source, @"(?im)^\s*(?:On\s+Error\b|Resume\b)", "AST On Error and Resume semantics are not implemented; the source was not lowered silently.");
         RejectUnsupported(sourcePath, source, @"(?im)^\s*With\b|(?im)^\s*(?:Print\s+)?\.[A-Za-z_]", "AST With and implicit member access are not implemented; the source was not lowered silently.");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
@@ -133,15 +132,17 @@ public static class AstExperimentalCompiler
         }
         foreach (var procedure in unit.Declarations.OfType<SubDeclarationSyntax>())
         {
-            var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types, null, null, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
+            var parameterTypes = procedure.Parameters.Select(ResolveParameterType).ToArray();
+            var types = parameterTypes.Select(type => type.RuntimeType).ToArray();
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types, null, parameterTypes, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
             DeclareOptionalSignatures(symbols, procedure.Identifier.Text, typeof(void), procedure.Parameters);
         }
         foreach (var procedure in unit.Declarations.OfType<FunctionDeclarationSyntax>())
         {
-            var types = procedure.Parameters.Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray();
+            var parameterTypes = procedure.Parameters.Select(ResolveParameterType).ToArray();
+            var types = parameterTypes.Select(type => type.RuntimeType).ToArray();
             var resultType = ResolveRuntimeType(procedure.ReturnType?.Identifier.Text);
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, null, null, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, ResolveValueType(procedure.ReturnType), parameterTypes, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
             DeclareOptionalSignatures(symbols, procedure.Identifier.Text, resultType, procedure.Parameters);
         }
         symbols.Declare(new VariableSymbol("BuildState", typeof(object), XpTypeSymbol.Variant));
@@ -331,11 +332,11 @@ public static class AstExperimentalCompiler
             ValidateOptionalDeclarations(procedureParameters, sourcePath, fullSource);
             var scope = symbols.CreateChildScope();
             var parameters = procedureParameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
-                ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef,
-                XpTypeSymbol.FromClr(ResolveRuntimeType(parameter.Type?.Identifier.Text)))).ToArray();
+                ResolveParameterType(parameter).RuntimeType, parameter.IsByRef,
+                ResolveParameterType(parameter))).ToArray();
             foreach (var parameter in parameters) scope.Declare(parameter);
             var returnType = procedureFunction is null ? typeof(void) : ResolveRuntimeType(procedureFunction.ReturnType?.Identifier.Text);
-            var result = procedureFunction is null ? null : new LocalSymbol(resultName, returnType, XpTypeSymbol.FromClr(returnType));
+            var result = procedureFunction is null ? null : new LocalSymbol(resultName, returnType, ResolveValueType(procedureFunction.ReturnType));
             var procedureStatements = procedureSub?.Statements ?? procedureFunction!.Statements;
             var allProcedureStatements = FlattenStatements(procedureStatements).ToArray();
             var labels = allProcedureStatements.OfType<LabelStatementSyntax>()
@@ -349,8 +350,19 @@ public static class AstExperimentalCompiler
             foreach (var transfer in allProcedureStatements.OfType<GoToStatementSyntax>().Where(transfer => !transfer.IsGoSub))
                 if (!labels.ContainsKey(transfer.Target.Text))
                     throw MappedDiagnostic(transfer.Span, sourcePath, fullSource, $"Unknown label '{transfer.Target.Text}'.");
+            foreach (var control in allProcedureStatements)
+            {
+                var target = control switch
+                {
+                    OnErrorStatementSyntax error when error.ActionKeyword.Kind != SyntaxKind.ResumeKeyword && error.TargetToken?.Text != "0" => error.TargetToken,
+                    ResumeStatementSyntax resume when resume.TargetToken?.Kind == SyntaxKind.IdentifierToken => resume.TargetToken,
+                    _ => null
+                };
+                if (target is not null && !labels.ContainsKey(target.Text))
+                    throw MappedDiagnostic(control.Span, sourcePath, fullSource, $"Unknown label '{target.Text}'.");
+            }
             ValidateLoopEntryTransfers(procedureStatements, labels, sourcePath, fullSource);
-            var binder = new StatementBinder(scope, procedureFunction is null ? null : XpTypeSymbol.FromClr(returnType),
+            var binder = new StatementBinder(scope, procedureFunction is null ? null : ResolveValueType(procedureFunction.ReturnType),
                 procedureFunction is not null, true, procedureFunction?.Identifier.Text, result,
                 (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
                 "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName)) + ")");
@@ -398,7 +410,7 @@ public static class AstExperimentalCompiler
         }
         var declarationName = sub?.Identifier.Text ?? function!.Identifier.Text;
         var methodName = declarationName;
-        var body = new BoundCompilationUnitEmitter().EmitMembers(methods);
+        var body = new BoundCompilationUnitEmitter().EmitMembers(methods, source, sourcePath);
         var moduleFields = string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
@@ -496,6 +508,7 @@ using System.Globalization;
 {{XPScriptObjectRuntimeSource.IterableContract}}
 {{XPScriptListRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.", StringComparison.Ordinal)}}
 {{AstArrayRuntimeCode()}}
+{{AstErrorRuntimeCode()}}
 internal static class LSCoreCompare
 {
     public static bool Equal(object? left, object? right) => string.Equals(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
@@ -530,7 +543,7 @@ internal static class Program
     public static dynamic UIForm = new ExpandoObject();
     public static dynamic Database = new ExpandoObject();
     public static dynamic Document = new ExpandoObject();
-    public static dynamic Err = new ExpandoObject();
+    public static dynamic Err => XPScriptErrorRuntime.Err;
     public static dynamic Response = new ExpandoObject();
     public static dynamic SEARCH_DEPTH = 0L;
     public static dynamic Command = string.Empty;
@@ -893,7 +906,7 @@ internal static class Program
     public static long Loc(object? _) => 0;
     public static string Error(object? _) => string.Empty;
     public static string Error() => string.Empty;
-    public static string ErrorValue() => string.Empty;
+    public static string ErrorValue() => XPScriptErrorRuntime.Description;
     public static object ProcedureCounter() => 0L;
     public static class XPScriptRuntime
     {
@@ -965,6 +978,17 @@ internal static class Program
             .Replace("Program.XPScriptRuntime.CDat(value)", "Convert.ToDateTime(value)", StringComparison.Ordinal);
     }
 
+    private static string AstErrorRuntimeCode()
+    {
+        var source = CoreCompatibilityRuntimeSource.Code;
+        var start = source.IndexOf("internal static class XPScriptErrorRuntime", StringComparison.Ordinal);
+        var end = source.IndexOf("internal static class LSCoreCompare", start, StringComparison.Ordinal);
+        var normalizeSource = ExtendedCompatibilityRuntimeSource.Code;
+        var normalizeEnd = normalizeSource.IndexOf("internal static class LSExtendedRuntime", StringComparison.Ordinal);
+        return source[start..end].Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal)
+            .Replace("ls.Number", "ls.ErrorCode", StringComparison.Ordinal) + normalizeSource[..normalizeEnd];
+    }
+
     private static IEnumerable<StatementSyntax> FlattenStatements(IEnumerable<StatementSyntax> statements)
     {
         foreach (var statement in statements)
@@ -1020,9 +1044,18 @@ internal static class Program
         // Explicit empty argument slots require separate call-syntax lowering.
         for (var count = parameters.Count - 1; count >= 0 && parameters[count].IsOptional; count--)
             symbols.Declare(new FunctionSymbol(name, returnType,
-                parameters.Take(count).Select(p => ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
-                null, null, parameters.Take(count).Select(p => p.IsByRef).ToArray()) { IsOptionalForwarding = true });
+                parameters.Take(count).Select(p => ResolveParameterType(p).RuntimeType).ToArray(),
+                null, parameters.Take(count).Select(ResolveParameterType).ToArray(), parameters.Take(count).Select(p => p.IsByRef).ToArray()) { IsOptionalForwarding = true });
     }
+
+    private static XpTypeSymbol ResolveParameterType(ParameterSyntax parameter)
+    {
+        var element = ResolveValueType(parameter.Type);
+        return parameter.IsList ? XpTypeSymbol.ListOf(element) : element;
+    }
+
+    private static XpTypeSymbol ResolveValueType(TypeSyntax? type) => type is null || type.Identifier.Text.Equals("Variant", StringComparison.OrdinalIgnoreCase)
+        ? XpTypeSymbol.Variant : XpTypeSymbol.FromClr(ResolveRuntimeType(type.Identifier.Text));
 
     private static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters, string sourcePath, string source)
     {

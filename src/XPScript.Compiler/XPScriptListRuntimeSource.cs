@@ -12,6 +12,41 @@ internal interface ILSList
     IEnumerable<KeyValuePair<string, object?>> SnapshotEntries();
 }
 
+internal static class LSListRuntime
+{
+    public static bool ContainsTag(object? value, object? tag) => value is ILSList list
+        ? list.ContainsTag(tag) : throw new InvalidOperationException("IsElement requires an XPScript List.");
+}
+
+// Capture the element while evaluating its argument, before later arguments.
+// Named call wrappers retain normal ref parameters and copy back in finally.
+internal sealed class LSListByRef<T>
+{
+    private readonly LSList<T>? _list;
+    private readonly object? _tag;
+    private readonly LSListAlias<T>? _alias;
+    public T Value;
+
+    public LSListByRef(LSList<T> list, object? tag)
+    {
+        _list = list;
+        _tag = tag;
+        Value = list[tag];
+    }
+
+    public LSListByRef(LSListAlias<T> alias)
+    {
+        _alias = alias;
+        Value = alias.Value;
+    }
+
+    public void CopyBack()
+    {
+        if (_alias is not null) _alias.Value = Value;
+        else _list![_tag] = Value;
+    }
+}
+
 internal sealed class LSList<T> : ILSList, IXPScriptIterable, System.Collections.IEnumerable
 {
     private readonly Dictionary<string, T> _values = new(StringComparer.CurrentCulture);

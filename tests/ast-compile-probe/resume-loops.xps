@@ -1,0 +1,22 @@
+Sub Main()
+    Dim i As Long
+    Dim total As Long
+    Dim values List As Long
+    values("a") = 1
+    values("b") = 2
+    On Error GoTo handler
+    For i = 1 To 2
+        Error 7010, "loop"
+        total = total + i
+    Next
+    ForAll entry In values
+        Error 7011, "alias"
+        entry = entry + 10
+    End ForAll
+    Print total
+    Print values("a")
+    Print values("b")
+    Exit Sub
+handler:
+    Resume Next
+End Sub

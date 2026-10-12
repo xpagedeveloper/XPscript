@@ -6,11 +6,15 @@ namespace XPScript.Compiler.Emission;
 /// <summary>Emits an experimental C# method body from already bound statements.</summary>
 public sealed class BoundStatementEmitter
 {
-    private readonly BoundExpressionEmitter _expressions = new();
+    private readonly BoundExpressionEmitter _expressions;
+    public BoundStatementEmitter() : this(new BoundExpressionEmitter()) { }
+    internal BoundStatementEmitter(BoundExpressionEmitter expressions) => _expressions = expressions;
     private bool _flatControlFlow;
 
     public string Emit(IReadOnlyList<BoundStatement> statements)
     {
+        if (BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
+            return new BoundErrorFlowEmitter().Emit(statements);
         _flatControlFlow = Collect(statements).Any();
         var output = new BoundEmissionContext(statements);
         if (_flatControlFlow)
@@ -37,6 +41,8 @@ public sealed class BoundStatementEmitter
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var output = new BoundEmissionContext(statements, source, sourcePath);
+        if (BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
+            return new BoundErrorFlowEmitter().EmitMapped(statements, source, sourcePath);
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
         return output.Finish();
@@ -248,7 +254,7 @@ public sealed class BoundStatementEmitter
                 break;
             case BoundErrorStatement error:
                 var description = error.Description is null ? "\"XPscript Error\"" : _expressions.Emit(error.Description);
-                Line($"throw new Exception($\"XPscript Error {{Convert.ToInt32({_expressions.Emit(error.Number)})}}: {{{description}}}\");");
+                Line($"XPScriptErrorRuntime.Raise(Convert.ToInt32({_expressions.Emit(error.Number)}), {description});");
                 break;
             case BoundPrintStatement print:
                 Line($"Console.WriteLine(XPScriptRuntime.PrintText({_expressions.Emit(print.Expression)}));");
@@ -335,6 +341,9 @@ public sealed class BoundStatementEmitter
                 throw new NotSupportedException($"Statement emission is not implemented for {statement.Kind}.");
         }
     }
+
+    internal void EmitAtomic(BoundEmissionContext output, BoundStatement statement, int indent)
+        => EmitStatement(output, statement, indent);
 
     private static string Label(string name) => "__xps_label_" + name.ToUpperInvariant();
 

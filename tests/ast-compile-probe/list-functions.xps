@@ -1,0 +1,47 @@
+Function Touch(ByRef value As Long, ByRef other As Long) As Long
+    value = value + 10
+    other = other + 1
+    Touch = value + other
+End Function
+
+Function TouchFail(ByRef value As Long) As Long
+    value = value + 1
+    Error 7020, "copy-back"
+End Function
+
+Function CallTouch(ByRef other As Long, ByVal values List As Long) As Long
+    CallTouch = Touch(values("item"), other)
+End Function
+
+Function MakeValues() As Variant
+    Dim values List As Long
+    values("item") = 1
+    MakeValues = values
+End Function
+
+Sub Replace(ByRef values List As Long)
+    Dim replacement List As Long
+    replacement("item") = 50
+    values = replacement
+End Sub
+
+Sub Main()
+    Dim values List As Long = MakeValues()
+    Dim other As Long
+    Print CallTouch(other, values)
+    Print values("item")
+    Print other
+    ForAll entry In values
+        Print Touch(entry, other)
+    End ForAll
+    Print values("item")
+    Call Replace(values)
+    Print values("item")
+    Dim supplied As Variant
+    supplied = MakeValues()
+    Print IsElement(supplied("item"))
+    Print IsElement(supplied("missing"))
+    On Error Resume Next
+    Print TouchFail(values("item"))
+    Print values("item")
+End Sub

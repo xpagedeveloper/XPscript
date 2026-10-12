@@ -28,9 +28,14 @@ if (listMultipleValidation.GetProperty("result").GetProperty("structuredContent"
     throw new Exception("AST MCP rejected multiple List ByRef arguments.");
 var listByRefExpressionSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "list-byref-expression-error.xps"));
 var listByRefExpressionValidation = await CallAsync(new {jsonrpc="2.0",id=30_1,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=listByRefExpressionSource,filename="list-byref-expression-error.xps"}}});
-var listByRefExpressionError = listByRefExpressionValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
-if (listByRefExpressionError.GetProperty("description").GetString() is not { } listByRefExpressionMessage || !listByRefExpressionMessage.Contains("List element ByRef arguments are not implemented", StringComparison.OrdinalIgnoreCase))
-    throw new Exception("AST MCP did not preserve the List ByRef expression binder diagnostic.");
+if (listByRefExpressionValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+    throw new Exception("AST MCP rejected List ByRef function expressions.");
+var listFunctionsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "list-functions.xps"));
+var listFunctionsValidation = await CallAsync(new {jsonrpc="2.0",id=30_2,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=listFunctionsSource,filename="list-functions.xps"}}});
+if (listFunctionsValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected List parameter and return semantics.");
+var isElementValidation = await CallAsync(new {jsonrpc="2.0",id=30_3,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main()\n    Print IsElement(1)\nEnd Sub",filename="list-iselement-invalid.xps"}}});
+var isElementError = isElementValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (isElementError.GetProperty("line").GetInt32() != 2 || !isElementError.GetProperty("description").GetString()!.Contains("IsElement requires one keyed List access")) throw new Exception("MCP lost IsElement argument diagnostics.");
 var aliasByRefSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "forall-list-byref.xps"));
 var aliasByRefValidation = await CallAsync(new {jsonrpc="2.0",id=31,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=aliasByRefSource,filename="forall-list-byref.xps"}}});
 if (aliasByRefValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected the ForAll ByRef CLI fixture.");
@@ -46,7 +51,7 @@ if (gotoNestedError.GetProperty("line").GetInt32() != 4 || gotoNestedError.GetPr
 var gotoIntoForAllSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "goto-into-forall-error.xps"));
 var gotoIntoForAllValidation = await CallAsync(new {jsonrpc="2.0",id=35,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=gotoIntoForAllSource,filename="goto-into-forall-error.xps"}}});
 var gotoIntoForAllError = gotoIntoForAllValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
-if (gotoIntoForAllError.GetProperty("description").GetString() is not { } gotoIntoForAllMessage || !gotoIntoForAllMessage.Contains("GoTo cannot enter a For or ForAll block", StringComparison.OrdinalIgnoreCase) || gotoIntoForAllError.GetProperty("line").GetInt32() != 3)
+if (gotoIntoForAllError.GetProperty("description").GetString() is not { } gotoIntoForAllMessage || !gotoIntoForAllMessage.Contains("same loop scope", StringComparison.OrdinalIgnoreCase) || gotoIntoForAllError.GetProperty("line").GetInt32() != 3)
     throw new Exception("AST MCP did not preserve the ForAll loop-entry diagnostic.");
 var gotoDeclarationSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "goto-declaration-error.xps"));
 var gotoDeclarationValidation = await CallAsync(new {jsonrpc="2.0",id=34,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=gotoDeclarationSource,filename="goto-declaration-error.xps"}}});
@@ -59,12 +64,22 @@ if (optionBaseValidation.GetProperty("result").GetProperty("structuredContent").
     throw new Exception("AST MCP rejected the Option Base array fixture.");
 var errorHandlingSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "on-error-error.xps"));
 var errorHandlingValidation = await CallAsync(new {jsonrpc="2.0",id=36,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=errorHandlingSource,filename="on-error-error.xps"}}});
-var errorHandlingError = errorHandlingValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
-if (errorHandlingError.GetProperty("line").GetInt32() != 2 || errorHandlingError.GetProperty("position").GetInt32() != 1 || errorHandlingError.GetProperty("description").GetString() is not { } message || !message.Contains("On Error and Resume", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP On Error diagnostics lost the source span or stable message.");
+if (errorHandlingValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected On Error Resume Next.");
 var resumeSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "resume-error.xps"));
 var resumeValidation = await CallAsync(new {jsonrpc="2.0",id=37,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=resumeSource,filename="resume-error.xps"}}});
-var resumeError = resumeValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
-if (resumeError.GetProperty("line").GetInt32() != 2 || resumeError.GetProperty("position").GetInt32() != 1 || resumeError.GetProperty("description").GetString() is not { } resumeMessage || !resumeMessage.Contains("On Error and Resume", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP Resume diagnostics lost the source span or stable message.");
+if (resumeValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected Resume syntax.");
+var resumeRuntimeSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "resume-runtime.xps"));
+var resumeRuntimeValidation = await CallAsync(new {jsonrpc="2.0",id=37_1,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=resumeRuntimeSource,filename="resume-runtime.xps"}}});
+if (resumeRuntimeValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected executable Resume fixture.");
+var resumeUnknownValidation = await CallAsync(new {jsonrpc="2.0",id=37_2,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main()\n    On Error GoTo missing\nEnd Sub",filename="resume-unknown-label.xps"}}});
+var resumeUnknownError = resumeUnknownValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (resumeUnknownError.GetProperty("line").GetInt32() != 2 || !resumeUnknownError.GetProperty("description").GetString()!.Contains("Unknown label 'missing'")) throw new Exception("MCP lost unknown error-handler label diagnostics.");
+if (args.Contains("--ast-error-flow-only"))
+{
+    p.Kill(entireProcessTree: true);
+    Console.WriteLine("AST_MCP_ERROR_FLOW_OK");
+    return;
+}
 var withSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "with-error.xps"));
 var withValidation = await CallAsync(new {jsonrpc="2.0",id=38,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=withSource,filename="with-error.xps"}}});
 var withError = withValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
@@ -173,10 +188,8 @@ finally { try { Directory.Delete(cliRoot,true); } catch { } }
 var nonzeroRedimSource=await File.ReadAllTextAsync(Path.Combine(repo,"tests","ast-compile-probe","redim-nonzero-error.xps"));
 var nonzeroRedimValidation=await CallAsync(new {jsonrpc="2.0",id=43,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=nonzeroRedimSource,filename="redim-nonzero-error.xps"}}});
 var nonzeroRedimResult=nonzeroRedimValidation.GetProperty("result");
-if (!nonzeroRedimResult.GetProperty("isError").GetBoolean()) throw new Exception("AST MCP accepted unsupported dynamic non-zero ReDim bounds.");
-var nonzeroRedimErrors=nonzeroRedimResult.GetProperty("structuredContent").GetProperty("errors");
-if (nonzeroRedimErrors.GetArrayLength() == 0 || nonzeroRedimErrors[0].GetProperty("diagnosticCode").GetString() != "XPS1012" || !(nonzeroRedimErrors[0].GetProperty("description").GetString() ?? "").Contains("dynamic ReDim with non-zero lower bounds", StringComparison.OrdinalIgnoreCase))
-    throw new Exception("AST MCP lost the dynamic non-zero ReDim diagnostic contract.");
+if (nonzeroRedimResult.GetProperty("isError").GetBoolean() || nonzeroRedimResult.GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+    throw new Exception("AST MCP rejected implemented dynamic non-zero ReDim bounds.");
 var webValidation=await CallAsync(new {jsonrpc="2.0",id=4,method="tools/call",@params=new{name="xpscript_validate",arguments=new{source="[Anonymous]\n[Get]\nSub Index()\n    Response.Write(\"ok\")\nEnd Sub",filename="web.xps"}}});
 var webResult=webValidation.GetProperty("result");
 if (!webResult.GetProperty("isError").GetBoolean()) throw new Exception("Web source validated as a console application must be an MCP tool error.");

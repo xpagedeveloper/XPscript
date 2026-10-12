@@ -1,0 +1,21 @@
+Function Tag() As String
+    Print "TAG_ONCE"
+    Tag = "item"
+End Function
+
+Function Mutate(ByVal values List As Long) As Long
+    values("item") = 100
+    Mutate = 5
+End Function
+
+Function Add(ByRef value As Long, ByVal increment As Long) As Long
+    value = value + increment
+    Add = value
+End Function
+
+Sub Main()
+    Dim values List As Long
+    values("item") = 1
+    Print Add(values(Tag()), Mutate(values))
+    Print values("item")
+End Sub

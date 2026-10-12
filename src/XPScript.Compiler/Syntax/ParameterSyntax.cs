@@ -1,12 +1,15 @@
 namespace XPScript.Compiler.Syntax;
 
 public sealed class ParameterSyntax(SyntaxToken? modifier, SyntaxToken identifier, SyntaxToken? asKeyword, TypeSyntax? type,
-    SyntaxToken? optionalKeyword = null, SyntaxToken? equalsToken = null, ExpressionSyntax? defaultValue = null) : SyntaxNode
+    SyntaxToken? optionalKeyword = null, SyntaxToken? equalsToken = null, ExpressionSyntax? defaultValue = null,
+    SyntaxToken? listKeyword = null) : SyntaxNode
 {
     public SyntaxToken? Modifier { get; } = modifier;
     public SyntaxToken Identifier { get; } = identifier;
     public SyntaxToken? AsKeyword { get; } = asKeyword;
     public TypeSyntax? Type { get; } = type;
+    public SyntaxToken? ListKeyword { get; } = listKeyword;
+    public bool IsList => ListKeyword is not null;
     public SyntaxToken? OptionalKeyword { get; } = optionalKeyword;
     public SyntaxToken? EqualsToken { get; } = equalsToken;
     public ExpressionSyntax? DefaultValue { get; } = defaultValue;

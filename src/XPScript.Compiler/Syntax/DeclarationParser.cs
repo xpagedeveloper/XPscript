@@ -347,6 +347,9 @@ public sealed class DeclarationParser
                 modifier = tokens[position++];
 
             var identifier = Take(tokens, ref position, SyntaxKind.IdentifierToken);
+            SyntaxToken? listKeyword = null;
+            if (Peek(tokens, position).Text.Equals("List", StringComparison.OrdinalIgnoreCase))
+                listKeyword = tokens[position++];
             SyntaxToken? asKeyword = null;
             TypeSyntax? type = null;
             if (Peek(tokens, position).Kind == SyntaxKind.AsKeyword)
@@ -377,7 +380,7 @@ public sealed class DeclarationParser
                 defaultValue = parser.ParseExpression();
                 _diagnostics.AddRange(parser.Diagnostics);
             }
-            parameters.Add(new ParameterSyntax(modifier, identifier, asKeyword, type, optionalKeyword, equalsToken, defaultValue));
+            parameters.Add(new ParameterSyntax(modifier, identifier, asKeyword, type, optionalKeyword, equalsToken, defaultValue, listKeyword));
             if (Peek(tokens, position).Kind != SyntaxKind.CommaToken)
                 break;
             commas.Add(tokens[position++]);

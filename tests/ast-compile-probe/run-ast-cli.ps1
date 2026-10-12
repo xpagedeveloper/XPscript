@@ -100,8 +100,18 @@ $listInitializerResult = dotnet (Join-Path $listInitializerOutput 'Generated.dll
 if ($LASTEXITCODE -ne 0 -or ($listInitializerResult -join "`n") -ne '7') { throw 'AST List initializer did not preserve the source list.' }
 $listByRef = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-multiple-error.xps') -o (Join-Path $output 'list-byref-error') 2>&1
 if ($LASTEXITCODE -ne 0) { throw 'AST multiple List ByRef copy-back compilation failed.' }
-$listByRefExpression = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-byref-expression-error.xps') -o (Join-Path $output 'list-byref-expression-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($listByRefExpression -join "`n") -notmatch 'No matching overload|List element ByRef') { throw 'AST List ByRef expression calls were not rejected with a stable binder diagnostic.' }
+$listFunctionsOutput = Join-Path $output 'list-functions'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-functions.xps') -o $listFunctionsOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST List Function ByRef/parameter/return compilation failed.' }
+$listFunctionsResult = dotnet (Join-Path $listFunctionsOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listFunctionsResult -join "`n") -ne "12`n11`n1`n23`n21`n50`nTrue`nFalse`n51") { throw 'AST List Function, alias, reference return, parameter replacement or exceptional copy-back failed.' }
+$listOrderOutput = Join-Path $output 'list-function-order'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-function-order.xps') -o $listOrderOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST List Function evaluation-order compilation failed.' }
+$listOrderResult = dotnet (Join-Path $listOrderOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listOrderResult -join "`n") -ne "TAG_ONCE`n6`n6") { throw 'AST List Function did not evaluate the tag once and capture its value before later arguments.' }
+$isElementInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-iselement-invalid.xps') -o (Join-Path $output 'list-iselement-invalid') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($isElementInvalid -join "`n") -notmatch 'IsElement requires one keyed List access') { throw 'AST accepted an invalid IsElement argument.' }
 $listOutput = Join-Path $output 'forall-list'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'forall-list-alias.xps') -o $listOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ForAll List alias compilation failed.' }
@@ -126,10 +136,28 @@ $gotoResult = dotnet (Join-Path $gotoOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($gotoResult -join "`n") -ne "7`nGOTO_PROCEDURE_SCOPE_OK") { throw 'AST procedure-scoped GoTo execution failed.' }
 $unsupportedGoSub = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'unsupported-gosub.xps') -o (Join-Path $output 'unsupported-gosub') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedGoSub -join "`n") -notmatch 'GoSub is not implemented in the AST compiler') { throw 'AST GoSub was not explicitly rejected.' }
-$unsupportedErrorHandling = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'on-error-error.xps') -o (Join-Path $output 'on-error-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($unsupportedErrorHandling -join "`n") -notmatch 'AST On Error and Resume semantics are not implemented') { throw 'AST silently lowered unsupported error handling.' }
-$unsupportedResume = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'resume-error.xps') -o (Join-Path $output 'resume-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($unsupportedResume -join "`n") -notmatch 'AST On Error and Resume semantics are not implemented') { throw 'AST silently lowered unsupported Resume handling.' }
+$resumeOutput = Join-Path $output 'resume-runtime'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'resume-runtime.xps') -o $resumeOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Resume runtime fixture failed to compile.' }
+$resumeResult = dotnet (Join-Path $resumeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($resumeResult -join "`n") -ne "AUTOMATIC_NEXT_OK`nRETRY_OK`n7001`ninner failure`nNEXT_OK`nLABEL_OK") { throw 'AST Resume retry, next, label or nested-call semantics failed.' }
+foreach ($resumeFixture in @('resume-loops', 'resume-handler-error')) {
+    $fixtureOutput = Join-Path $output $resumeFixture
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$resumeFixture.xps") -o $fixtureOutput
+    if ($LASTEXITCODE -ne 0) { throw "AST $resumeFixture compilation failed." }
+    $fixtureResult = dotnet (Join-Path $fixtureOutput 'Generated.dll')
+    $expected = if ($resumeFixture -eq 'resume-loops') { "3`n11`n12" } else { "7001`nPROPAGATION_OK" }
+    if ($LASTEXITCODE -ne 0 -or ($fixtureResult -join "`n") -ne $expected) { throw "AST $resumeFixture execution failed." }
+}
+$resumeUnknown = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'resume-unknown-label.xps') -o (Join-Path $output 'resume-unknown-label') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($resumeUnknown -join "`n") -notmatch "Unknown label 'missing'") { throw 'AST On Error label validation failed.' }
+foreach ($runtimeFailure in @('resume-disabled', 'resume-error')) {
+    $failureOutput = Join-Path $output $runtimeFailure
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$runtimeFailure.xps") -o $failureOutput
+    if ($LASTEXITCODE -ne 0) { throw "AST $runtimeFailure compilation failed." }
+    $failureResult = dotnet (Join-Path $failureOutput 'Generated.dll') 2>&1
+    if ($LASTEXITCODE -eq 0 -or ($failureResult -join "`n") -notmatch 'DISABLED_ERROR|Resume without an active error handler') { throw "AST $runtimeFailure did not raise the expected runtime error." }
+}
 $unsupportedWith = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'with-error.xps') -o (Join-Path $output 'with-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedWith -join "`n") -notmatch 'AST With and implicit member access are not implemented') { throw 'AST silently lowered unsupported With/member access.' }
 $unsupportedImplicitMember = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'implicit-member-error.xps') -o (Join-Path $output 'implicit-member-error') 2>&1
