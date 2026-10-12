@@ -97,6 +97,9 @@ foreach (var jsonFixture in new[] { "json-runtime", "json-reference" })
     var jsonResult = jsonValidation.GetProperty("result").GetProperty("structuredContent");
     if (jsonResult.GetProperty("result").GetString() != "ok" || jsonResult.GetProperty("compiler").GetString() != "ast") throw new Exception("MCP rejected shared JSON runtime fixture: " + jsonFixture);
 }
+var sharedRuntimeSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "shared-runtime.xps"));
+var sharedRuntimeValidation = await CallAsync(new {jsonrpc="2.0",id=3798,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=sharedRuntimeSource,filename="shared-runtime.xps"}}});
+if (sharedRuntimeValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("MCP rejected shared scalar runtime fixture.");
 var jsonInvalidSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "json-member-error.xps"));
 var jsonInvalidValidation = await CallAsync(new {jsonrpc="2.0",id=3799,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=jsonInvalidSource,filename="json-member-error.xps"}}});
 var jsonInvalidError = jsonInvalidValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];

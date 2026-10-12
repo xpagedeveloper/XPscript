@@ -177,10 +177,10 @@ public static class AstExperimentalCompiler
             for (var parameterCount = 1; parameterCount <= 4; parameterCount++)
                 symbols.Declare(new FunctionSymbol(fileFunction, typeof(object), Enumerable.Repeat(typeof(object), parameterCount).ToArray(), XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, parameterCount).ToArray()));
         symbols.Declare(new FunctionSymbol("FreeFile", typeof(long), []));
-        symbols.Declare(new FunctionSymbol("CInt", typeof(long), [typeof(object)]));
-        symbols.Declare(new FunctionSymbol("CLng", typeof(long), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("CInt", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("CLng", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CDbl", typeof(double), [typeof(object)], XpTypeSymbol.FromClr(typeof(double)), [XpTypeSymbol.Variant]));
-        symbols.Declare(new FunctionSymbol("CBool", typeof(bool), [typeof(object)]));
+        symbols.Declare(new FunctionSymbol("CBool", typeof(bool), [typeof(object)], XpTypeSymbol.FromClr(typeof(bool)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Evaluate", typeof(object), [typeof(string), typeof(object)],
             XpTypeSymbol.Variant, [XpTypeSymbol.FromClr(typeof(string)), XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Chr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
@@ -513,12 +513,14 @@ using System.Collections;
 using System.Dynamic;
 using System.Text;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using XpJsonDocument = XPScriptJsonDocument;
 using XpJsonObject = XPScriptJsonObject;
 using XpJsonArray = XPScriptJsonArray;
 using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
-{{XPScriptListRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.", StringComparison.Ordinal)}}
+{{AstRuntimeSource.Code}}
+{{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
 {{AstErrorRuntimeCode()}}
 internal static class LSCoreCompare
@@ -566,7 +568,7 @@ internal static class Program
     public static dynamic XPJsonSchema = new ExpandoObject();
     public static dynamic XPJsonArray = new ExpandoObject();
     public static dynamic XPJsonObject = new ExpandoObject();
-    public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
+    public static string CStr(object? value) => XPScriptRuntime.CStr(value);
     // The shared List runtime requires the date coercion entry point too.
     // Preserve existing XPscript date wrappers and numeric OLE date values.
     public static DateTime CDat(object? value)
@@ -592,9 +594,9 @@ internal static class Program
     public static long[] Array(long first, long second) => [first, second];
     public static object[] Array(object first, object second) => [first, second];
     public static object[] Array(params object?[] values) => values!;
-    public static long Len(object? value) => value is Array array ? array.Length : (value?.ToString()?.Length ?? 0);
-    public static long LenB(object? value) => Len(value);
-    public static string TypeName(object? value) => value?.GetType().Name ?? "Nothing";
+    public static long Len(object? value) => XPScriptRuntime.Len(value);
+    public static long LenB(object? value) => XPScriptRuntime.LenB(value);
+    public static string TypeName(object? value) => XPScriptNullRuntime.TypeName(value);
     public static long FileLen(string path) => new System.IO.FileInfo(path).Length;
     public static object ReadFile(params object?[] a) => System.IO.File.ReadAllText(CStr(a[0]));
     public static object ReadLines(params object?[] a) => System.IO.File.ReadAllLines(CStr(a[0]));
@@ -699,19 +701,19 @@ internal static class Program
     public static object MkDir(params object?[] a) { System.IO.Directory.CreateDirectory(CStr(a[0])); return true; }
     public static object RmDir(params object?[] a) { System.IO.Directory.Delete(CStr(a[0]), true); return true; }
     public static long FreeFile() => 1;
-    public static long CInt(object value) => Convert.ToInt64(value);
-    public static long CLng(object value) => Convert.ToInt64(value);
-    public static double CDbl(object value) => Convert.ToDouble(value);
-    public static bool CBool(object value) => Convert.ToBoolean(value);
+    public static long CInt(object value) => XPScriptRuntime.CInt(value);
+    public static long CLng(object value) => XPScriptRuntime.CLng(value);
+    public static double CDbl(object value) => XPScriptRuntime.CDbl(value);
+    public static bool CBool(object value) => XPScriptRuntime.CBool(value);
     public static object? Evaluate(string expression, object? value) => value;
     public static string Chr(object value) => Convert.ToChar(value).ToString();
     public static long Asc(object value) => Convert.ToChar(value);
     public static string Replace(string value, string oldValue, string newValue) => value.Replace(oldValue, newValue, StringComparison.Ordinal);
     public static long InStr(object? start, object? value, object? search) { var source = value?.ToString() ?? string.Empty; var needle = search?.ToString() ?? string.Empty; var offset = Math.Max(0, Convert.ToInt32(start) - 1); var index = source.IndexOf(needle, offset, StringComparison.OrdinalIgnoreCase); return index < 0 ? 0 : index + 1; }
     public static long InStr(object? value, object? search) => InStr(1L, value, search);
-    public static string Trim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
-    public static string UCase(object? value) => (value?.ToString() ?? string.Empty).ToUpperInvariant();
-    public static string LCase(object? value) => (value?.ToString() ?? string.Empty).ToLowerInvariant();
+    public static string Trim(object? value) => XPScriptRuntime.Trim(value);
+    public static string UCase(object? value) => XPScriptRuntime.UCase(value);
+    public static string LCase(object? value) => XPScriptRuntime.LCase(value);
     public static object? ArraySort(object? value) {
         if (value is not IEnumerable values) return value;
         if (value is string[] strings) { var clone = (string[])strings.Clone(); System.Array.Sort(clone, StringComparer.OrdinalIgnoreCase); return clone; }
@@ -731,34 +733,31 @@ internal static class Program
     }
     public static string Join(object? value, object? separator = null) => value is System.Collections.IEnumerable items ? string.Join(separator is null ? " " : CStr(separator), items.Cast<object?>().Where(item => item is not null).Select(CStr)) : string.Empty;
     public static string Implode(object? value, object? separator = null) => Join(value, separator);
-    public static object CDate(object value) => Convert.ToDateTime(value);
+    public static object CDate(object value) => XPScriptRuntime.CDate(value);
     public static object Base64Decode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.FromBase64String(CStr(values[0]));
     public static object Base64Encode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(CStr(values[0])));
-    public static byte CByte(object value) => Convert.ToByte(value);
-    public static object CCur(object value) => Convert.ToDecimal(value);
-    public static object CSng(object value) => Convert.ToSingle(value);
-    public static object CVar(object value) => value;
-    public static object DataType(object value) => TypeName(value);
+    public static byte CByte(object value) => XPScriptRuntime.CByte(value);
+    public static object CCur(object value) => XPScriptRuntime.CCur(value);
+    public static object CSng(object value) => XPScriptRuntime.CSng(value);
+    public static object CVar(object value) => XPScriptRuntime.CVar(value);
+    public static object DataType(object value) => XPScriptNullRuntime.DataType(value);
     public static object DateAdd(params object?[] values) => CDate(values.Length > 2 ? values[2]! : DateTime.Now);
     public static object DateDiff(params object?[] values) => 0L;
     public static object Day(object value) => Convert.ToDateTime(value).Day;
     public static object FromBase64(object value) => Base64Decode(value);
     public static object InstrB(params object?[] values) => InStr(1L, values.Length > 1 ? values[0] : null, values.Length > 1 ? values[1] : null);
-    public static object IsArray(object value) => value is Array;
+    public static object IsArray(object value) => XPScriptRuntime.IsArray(value);
     public static object IsDate(object value) => DateTime.TryParse(CStr(value), out _);
     public static object IsElement(object value) => value is not null;
     public static object IsEmpty(object value) => value is null;
-    public static object IsObject(object value) => value is not null;
-    public static object IsScalar(object value) => value is not System.Collections.IEnumerable;
+    public static object IsObject(object value) => XPScriptNullRuntime.IsObject(value);
+    public static object IsScalar(object value) => XPScriptNullRuntime.IsScalar(value);
     public static object LeftB(object value, object count) => Left(value, count);
     public static object ListTag(object value) => value is System.Collections.DictionaryEntry entry ? CStr(entry.Key) : value.GetType().GetProperty("Key")?.GetValue(value)?.ToString() ?? string.Empty;
     public static object LSet(object value, object width) => CStr(value).PadRight(Convert.ToInt32(width));
     public static object Mid(object value, object start, object? count = null)
     {
-        var text = CStr(value);
-        var offset = Math.Clamp(Convert.ToInt32(start) - 1, 0, text.Length);
-        var length = count is null ? text.Length - offset : Math.Clamp(Convert.ToInt32(count), 0, text.Length - offset);
-        return text.Substring(offset, length);
+        return count is null ? XPScriptRuntime.Mid(value, Convert.ToInt32(start)) : XPScriptRuntime.Mid(value, Convert.ToInt32(start), Convert.ToInt32(count));
     }
     public static object MidB(object value, object start, object? count = null) => Mid(value, start, count);
     public static object MidBP(object value, object start, object? count = null) => Mid(value, start, count);
@@ -821,8 +820,8 @@ internal static class Program
     public static object Tan(object value) => Math.Tan(Convert.ToDouble(value));
     public static string Hex(object value) => Convert.ToInt64(value).ToString("X");
     public static string Bin(object value) => Convert.ToString(Convert.ToInt64(value), 2) ?? "0";
-    public static string Left(object value, object count) => (value?.ToString() ?? string.Empty)[..Math.Clamp(Convert.ToInt32(count), 0, value?.ToString()?.Length ?? 0)];
-    public static string Right(object value, object count) { var text = value?.ToString() ?? string.Empty; var length = Math.Clamp(Convert.ToInt32(count), 0, text.Length); return text[^length..]; }
+    public static string Left(object value, object count) => XPScriptRuntime.Left(value, Convert.ToInt32(count));
+    public static string Right(object value, object count) => XPScriptRuntime.Right(value, Convert.ToInt32(count));
     public static string LTrim(object? value) => value?.ToString()?.TrimStart() ?? string.Empty;
     public static string RTrim(object? value) => value?.ToString()?.TrimEnd() ?? string.Empty;
     public static object Val(object value) => double.TryParse(value?.ToString(), out var result) ? result : 0d;
@@ -833,7 +832,7 @@ internal static class Program
     public static long Year(object value) => Convert.ToDateTime(value).Year;
     public static bool IsList(object? value) => value is System.Collections.IDictionary;
     public static bool IsUnknown(object? value) => value is null;
-    public static bool IsNumeric(object? value) => double.TryParse(value?.ToString(), out _);
+    public static bool IsNumeric(object? value) => XPScriptRuntime.IsNumeric(value);
     public static bool IsNull(object? value) => value is null;
     public static object RegexMatch(object? value, object? pattern) => System.Text.RegularExpressions.Regex.Matches(value?.ToString() ?? "", pattern?.ToString() ?? "").Select(match => match.Value).ToArray();
     public static object ArrayAppend(object? value, object? item) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Append(item).ToArray() : new object?[] { item };
@@ -903,13 +902,8 @@ internal static class Program
     public static object Erase(object? value) => true;
     public static object JsonParse(object? value) => XPScriptNativeJson.Parse(value);
     public static object JsonStringify(object? value) => XPScriptNativeJson.Stringify(value);
-    public static class XPScriptNullRuntime
-    {
-        public static bool IsNull(object? value) => ReferenceEquals(value, DBNull.Value);
-        public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
-    }
     public static long GetTickCount() => Environment.TickCount64;
-    public static string Environ(object? _) => string.Empty;
+    public static string Environ(object? name) => XPScriptRuntime.Environ(name);
     public static object AstUtf8(object? value) => Encoding.UTF8.GetBytes(Convert.ToString(value) ?? string.Empty);
     public static object AstImageFromBytes(object? _) => new ExpandoObject();
     public static long Loc(object? _) => 0;
@@ -917,7 +911,7 @@ internal static class Program
     public static string Error() => string.Empty;
     public static string ErrorValue() => XPScriptErrorRuntime.Description;
     public static object ProcedureCounter() => 0L;
-    public static class XPScriptRuntime
+    public static class AstCompatibilityHelpers
     {
         public static long GetTickCount() => Environment.TickCount64;
         public static long Loc(object? _) => 0;
@@ -928,19 +922,6 @@ internal static class Program
         public static string LoadFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
         public static string OpenFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
         public static string SaveFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
-        public static long CInt(object value) => Convert.ToInt32(value);
-        public static bool CBool(object value) => Convert.ToBoolean(value);
-        public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";
-        public static IEnumerable<long> Range(long from, long to, long step)
-        {
-            if (step == 0) throw new ArgumentOutOfRangeException(nameof(step));
-            if (step > 0) for (var value = from; value <= to; value += step) yield return value;
-            else for (var value = from; value >= to; value += step) yield return value;
-        }
-        public static long CLng(object value) => Convert.ToInt64(value);
-        public static double CDbl(object value) => Convert.ToDouble(value);
-        public static string CStr(object? value) => Convert.ToString(value) ?? string.Empty;
-        public static object? CObj(object? value) => value;
         public static bool Like(string value, string pattern) => System.Text.RegularExpressions.Regex.IsMatch(value ?? string.Empty, "^" + System.Text.RegularExpressions.Regex.Escape(pattern ?? string.Empty).Replace("\\\\*", ".*").Replace("\\\\?", ".") + "$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 {{moduleFields}}
@@ -949,7 +930,7 @@ internal static class Program
 }
 """;
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
-        var nativeHttp = NativeHttpRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal).Replace("Program.XPScriptRuntime.CInt(", "Convert.ToInt32(", StringComparison.Ordinal);
+        var nativeHttp = NativeHttpRuntimeSource.Code;
         generated += Environment.NewLine + "public sealed class XPScriptRuntimeException : Exception { public int ErrorCode { get; } public XPScriptRuntimeException(int code, string message) : base(message) { ErrorCode = code; } }" + Environment.NewLine + "internal sealed class XPScriptTlsValidationState { public string Mode { get; set; } = \"strict\"; public string LastError { get; private set; } = string.Empty; public void Reset() { LastError = string.Empty; } public Exception Failure(string context) => new XPScriptRuntimeException(1201, context + \" failed: \" + LastError); public bool Validate(object sender, System.Security.Cryptography.X509Certificates.X509Certificate? c, System.Security.Cryptography.X509Certificates.X509Chain? chain, System.Net.Security.SslPolicyErrors errors) => true; }" + Environment.NewLine + nativeHttp;
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
@@ -978,15 +959,9 @@ internal static class Program
         if (start < 0 || end < 0)
             throw new InvalidOperationException("AST array runtime source markers are missing.");
         return source[start..end]
-            .Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal)
             .Replace("value is ILSObjectReference reference && reference.IsNothing", "value is null", StringComparison.Ordinal)
             .Replace("ILSObjectReference reference when reference.IsNothing => NothingArray(),", "null => NothingArray(),", StringComparison.Ordinal)
-            .Replace("null => NothingArray(),\n        null => NothingArray(),", "null => NothingArray(),", StringComparison.Ordinal)
-            .Replace(".Select(Program.XPScriptRuntime.CInt).ToArray()", ".Select(value => Convert.ToInt32(Program.XPScriptRuntime.CInt(value))).ToArray()", StringComparison.Ordinal)
-            .Replace("Program.XPScriptRuntime.CByte(value)", "Convert.ToByte(value)", StringComparison.Ordinal)
-            .Replace("Program.XPScriptRuntime.CSng(value)", "Convert.ToSingle(value)", StringComparison.Ordinal)
-            .Replace("Program.XPScriptRuntime.CCur(value)", "Convert.ToDecimal(value)", StringComparison.Ordinal)
-            .Replace("Program.XPScriptRuntime.CDat(value)", "Convert.ToDateTime(value)", StringComparison.Ordinal);
+            .Replace("null => NothingArray(),\n        null => NothingArray(),", "null => NothingArray(),", StringComparison.Ordinal);
     }
 
     private static string AstErrorRuntimeCode()
@@ -996,7 +971,7 @@ internal static class Program
         var end = source.IndexOf("internal static class LSCoreCompare", start, StringComparison.Ordinal);
         var normalizeSource = ExtendedCompatibilityRuntimeSource.Code;
         var normalizeEnd = normalizeSource.IndexOf("internal static class LSExtendedRuntime", StringComparison.Ordinal);
-        return source[start..end].Replace("XPScriptRuntime.", "Program.XPScriptRuntime.", StringComparison.Ordinal)
+        return source[start..end]
             .Replace("ls.Number", "ls.ErrorCode", StringComparison.Ordinal) + normalizeSource[..normalizeEnd];
     }
 

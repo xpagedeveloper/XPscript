@@ -1,0 +1,26 @@
+Sub Main()
+    Dim emptyValue As Variant
+    Dim nullValue As Variant
+    Dim i As Long
+    Print TypeName(CInt(2))
+    Print TypeName(CLng(2))
+    Print DataType(CByte(2))
+    Print CBool("True")
+    Print CDbl(CDate(2))
+    Print "EMPTY=[" & CStr(emptyValue) & "]"
+    nullValue = Null
+    Print nullValue
+    Print TypeName(nullValue)
+    Print DataType(nullValue)
+    Print IsObject("text")
+    Print IsScalar("text")
+    Print Mid("abcdef", 2, 3)
+    Print Environ("PATH") <> ""
+    For i = 3 To 1 Step -1
+        Print i
+    Next
+    On Error Resume Next
+    Print CInt(2147483648)
+    Print "OVERFLOW=" & CStr(Err)
+    Print "CONTINUED"
+End Sub

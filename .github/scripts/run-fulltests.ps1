@@ -134,6 +134,8 @@ if (Should-Run 'notes') {
 }
 
 if (Should-Run 'runtime') {
+  $scalarRuntime = Run-Xps ./tests/ast-compile-probe/shared-runtime.xps shared-scalar-runtime
+  if ($scalarRuntime.Output -notmatch 'OVERFLOW=6' -or $scalarRuntime.Output -notmatch 'CONTINUED') { throw 'Shared scalar runtime conversion/overflow regression did not complete.' }
   $nativeJson = Run-Xps ./tests/ast-compile-probe/json-runtime.xps native-json-shared-runtime
   if ($nativeJson.Output -notmatch 'Invalid JSON input\.' -or $nativeJson.Output -notmatch 'JSON array index out of range\.') { throw 'Shared native JSON runtime regression did not complete.' }
   Write-Host '=== XP RUNTIME FULLTEST ==='

@@ -4,6 +4,11 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$runtimeOutput = Join-Path $output 'shared-runtime'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'shared-runtime.xps') -o $runtimeOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST shared scalar runtime compilation failed.' }
+$runtimeResult = dotnet (Join-Path $runtimeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($runtimeResult -join "`n") -ne "INTEGER`nLONG`n17`nTrue`n2`nEMPTY=[]`nVariable is null`nNULL`n1`nFalse`nTrue`nbcd`nTrue`n3`n2`n1`nOVERFLOW=6`nCONTINUED") { throw 'AST scalar runtime conversion, Null/Empty, environment or overflow behavior drifted.' }
 foreach ($jsonFixture in @('json-runtime', 'json-reference')) {
     $jsonOutput = Join-Path $output $jsonFixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$jsonFixture.xps") -o $jsonOutput

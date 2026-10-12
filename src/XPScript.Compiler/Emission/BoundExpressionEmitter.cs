@@ -201,8 +201,19 @@ public sealed class BoundExpressionEmitter
         });
         var functionName = call.Function.Name.EndsWith("$", StringComparison.Ordinal) ? call.Function.Name.TrimEnd('$') : call.Function.Name;
         if (functionName.Equals("JsonParse", StringComparison.OrdinalIgnoreCase)) functionName = "XPScriptNativeJson.Parse";
+        if (call.Target is null && functionName.ToUpperInvariant() is "CSTR" or "CINT" or "CLNG" or "CDBL" or "CBOOL" or "CBYTE" or "CCUR" or "CSNG" or "CVAR" or "CDATE" or "LEN" or "LENB" or "TRIM" or "UCASE" or "LCASE" or "ENVIRON" or "ISARRAY" or "ISDATE" or "ISNUMERIC")
+        {
+            functionName = "XPScriptRuntime." + (functionName.ToUpperInvariant() switch
+            {
+                "CSTR" => "CStr", "CINT" => "CInt", "CLNG" => "CLng", "CDBL" => "CDbl", "CBOOL" => "CBool",
+                "CBYTE" => "CByte", "CCUR" => "CCur", "CSNG" => "CSng", "CVAR" => "CVar", "CDATE" => "CDate",
+                "LEN" => "Len", "LENB" => "LenB", "TRIM" => "Trim", "UCASE" => "UCase", "LCASE" => "LCase",
+                "ENVIRON" => "Environ", "ISARRAY" => "IsArray", "ISDATE" => "IsDate", "ISNUMERIC" => "IsNumeric",
+                _ => functionName
+            });
+        }
         if (functionName.Equals("Error", StringComparison.OrdinalIgnoreCase) || functionName.Equals("GetTickCount", StringComparison.OrdinalIgnoreCase) || functionName.Equals("Loc", StringComparison.OrdinalIgnoreCase) || functionName.Equals("ProcedureCounter", StringComparison.OrdinalIgnoreCase) || functionName.Equals("ShowDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("LoadFileDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("OpenFileDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("SaveFileDialog", StringComparison.OrdinalIgnoreCase))
-            functionName = "XPScriptRuntime." + functionName;
+            functionName = "Program.AstCompatibilityHelpers." + functionName;
         return $"{(call.Target is null ? functionName : Emit(call.Target))}({string.Join(", ", arguments)})";
     }
 
@@ -213,7 +224,7 @@ public sealed class BoundExpressionEmitter
         : binary.OperatorKind == SyntaxKind.PlusToken && binary.Type == typeof(string)
         ? $"(Convert.ToString({Emit(binary.Left)}) + Convert.ToString({Emit(binary.Right)}))"
         : binary.OperatorKind == SyntaxKind.LikeKeyword
-            ? $"XPScriptRuntime.Like({Emit(binary.Left)}, {Emit(binary.Right)})"
+            ? $"Program.AstCompatibilityHelpers.Like({Emit(binary.Left)}, {Emit(binary.Right)})"
             : $"({Emit(binary.Left)} {EmitBinaryOperator(binary.OperatorKind, binary.Type)} {Emit(binary.Right)})";
 
     private static string EmitLiteral(BoundLiteralExpression expression) => expression.Value switch
@@ -235,6 +246,8 @@ public sealed class BoundExpressionEmitter
             return $"(LSList<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!.RuntimeType)}>)({value})";
         if (JsonRuntimeType(expression.SemanticType.Name) is { } jsonType && expression.Conversion.Kind == ConversionKind.FromVariant)
             return $"({jsonType})({value})";
+        if (expression.Type == typeof(object) && expression.Conversion.Kind == ConversionKind.FromVariant)
+            return value;
         if (expression.Expression is BoundNewExpression && expression.Type != typeof(object))
             return value;
         return expression.Conversion.Kind switch

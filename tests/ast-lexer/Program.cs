@@ -1299,7 +1299,7 @@ var boundZeroArg = zeroArgBinder.Bind(new ExpressionParser("Error()").ParseExpre
 Equal(BoundNodeKind.CallExpression, boundZeroArg.Kind, "bound zero-argument call root");
 Equal(typeof(string), boundZeroArg.Type, "bound zero-argument call type");
 Equal(0, zeroArgBinder.Diagnostics.Count, "bound zero-argument call diagnostics");
-Equal("XPScriptRuntime.Error()", emitter.Emit(boundZeroArg), "bound zero-argument runtime call C# emission");
+Equal("Program.AstCompatibilityHelpers.Error()", emitter.Emit(boundZeroArg), "bound extended zero-argument runtime call C# emission");
 
 var callBinder = new ExpressionBinder(callSymbols);
 var boundRunCommand = callBinder.Bind(new ExpressionParser("Not RunCommand(\"where.exe\", Array(\"winget\"))").ParseExpression());
