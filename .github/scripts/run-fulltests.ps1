@@ -134,6 +134,8 @@ if (Should-Run 'notes') {
 }
 
 if (Should-Run 'runtime') {
+  $generatedDependencies = Invoke-Bounded 'dotnet' @('run','--project','./tests/GeneratedDependencyProbe/GeneratedDependencyProbe.csproj','-c','Release') 240000 'generated addon packages, native runtime assets and exact license graph'
+  if ($generatedDependencies.ExitCode -ne 0 -or $generatedDependencies.Output -notmatch 'GENERATED_DEPENDENCIES_OK') { throw 'Generated addon dependency packaging regression failed.' }
   $scalarRuntime = Run-Xps ./tests/ast-compile-probe/shared-runtime.xps shared-scalar-runtime
   if ($scalarRuntime.Output -notmatch 'OVERFLOW=6' -or $scalarRuntime.Output -notmatch 'CONTINUED') { throw 'Shared scalar runtime conversion/overflow regression did not complete.' }
   $nativeJson = Run-Xps ./tests/ast-compile-probe/json-runtime.xps native-json-shared-runtime

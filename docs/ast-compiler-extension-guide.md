@@ -1,5 +1,7 @@
 # AST compiler extension guide
 
+Generated dependency builds are shared by AST and normal compilation. Declare each addon package, version and runtime-use detection in `ApplicationDependencyCatalog`; the generated-project builder consumes that catalog without a per-addon backend branch. Emit runtime code only when the feature is used. Package-free programs use framework references directly. Programs requiring NuGet packages use the SDK backend with the current runtime identifier, which restores the selected direct/transitive graph and copies managed/native assets. `Third-party-license.txt` comes from that exact assets file, including persistent restore-cache builds. Test both addon use and absence, native execution and notices; `tests/GeneratedDependencyProbe` covers Magick.NET and SQLite.
+
 New XP objects must be added through the existing compiler pipeline. Do not
 add a second parser or a second machine-interface implementation.
 

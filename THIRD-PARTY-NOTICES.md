@@ -1,5 +1,7 @@
 # Third party reference notices
 
+Generated AST and normal SDK builds select addon packages through the shared `ApplicationDependencyCatalog`. The compiler produces `Third-party-license.txt` from the exact restored direct/transitive package graph, including persistent-cache builds. SDK runtime identifiers select the required native assets. Package-free programs do not restore addon packages; adding future addons requires reviewing their package licenses/notices and updating this document.
+
 XPscript uses the following open source projects as implementation references when mapping the HCL Notes/Domino API. Their source code is not copied into XPscript and neither project is a runtime dependency of an XPscript application.
 
 HCL's open source catalog identifies the Domino C API documentation, Domino JNX, and related Domino open source repositories as Apache License 2.0 projects. XPscript keeps the attribution below and links to the full license text. The HCL Notes and Domino products and native runtime libraries remain commercial HCL software and are not redistributed by XPscript.
@@ -58,6 +60,7 @@ The MIT license text is available at [opensource.org/licenses/MIT](https://opens
 ### Apache License 2.0
 
 - `Magick.NET-Q16-AnyCPU` — [Magick.NET](https://github.com/dlemstra/Magick.NET) (`14.17.1`) is the XPImage runtime backend and is distributed under the Apache License 2.0. Magick.NET packages include the ImageMagick native runtime used for image decoding, encoding, metadata, drawing and image processing. Applications that use XPImage include the applicable Magick.NET/ImageMagick package license and notice material in the compiler-generated `Third-party-license.txt`.
+  AST-generated code that includes the XPImage runtime uses the same generated-project dependency configuration. The SDK resolves Magick.NET and its transitive packages, selects native assets for the build runtime identifier, and stages them with the application. The accompanying `Third-party-license.txt` is generated from the exact restored package graph, including when the build uses the persistent restore cache. Programs without XPImage do not acquire this dependency.
 - [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw), including `bundle_e_sqlite3`, `core`, `lib.e_sqlite3`, and `provider.e_sqlite3` (`2.1.12`)
 
 The Apache License 2.0 text is available at [apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0). SQLite itself is a separate public-domain work; the SQLitePCLRaw package notices apply to the managed package and its native distribution.

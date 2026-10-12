@@ -3,6 +3,7 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace XPScript.Compiler;
 
@@ -165,15 +166,9 @@ internal static class CompilerBuildEnvironment
         var usesUiForm = source.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
         var usesUiListView = source.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal);
         var usesDesktopDialog = source.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
-        var usesSqlite = source.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
-        var usesMsSql = source.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
-        var usesImage = source.Contains("internal sealed class XPImage", StringComparison.Ordinal);
+        var packages = ApplicationDependencyCatalog.Detect(source);
         var usesMySql = source.Contains("XPScriptDbMySql", StringComparison.Ordinal);
         var usesSupabaseDb = source.Contains("XPScriptDbSupabase", StringComparison.Ordinal);
-        var usesExtendedArchive = Regex.IsMatch(
-            source,
-            @"new\s+XPScriptArchive\s*\([^\r\n;]*,\s*true\s*\)",
-            RegexOptions.CultureInvariant);
         var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
         var product = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildProductMarker);
@@ -199,22 +194,32 @@ internal static class CompilerBuildEnvironment
         if (company is not null) propertyEntries += $"    <Company>{EscapeMsBuild(company)}</Company>\n";
         if (version is not null) propertyEntries += $"    <Version>{EscapeMsBuild(version)}</Version>\n    <FileVersion>{EscapeMsBuild(version)}</FileVersion>\n    <AssemblyVersion>{EscapeMsBuild(version)}</AssemblyVersion>\n";
         if (copyright is not null) propertyEntries += $"    <Copyright>{EscapeMsBuild(copyright)}</Copyright>\n";
-        if (usesSqlite || usesMsSql || usesImage) propertyEntries += "    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>\n";
+        if (packages.Count > 0) propertyEntries += "    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>\n";
         var propertyGroup = $"  <PropertyGroup>\n{propertyEntries}  </PropertyGroup>\n";
         var itemEntries = "    <AssemblyMetadata Include=\"XPScriptCompiler\" Value=\"XPScript\" />\n    <AssemblyMetadata Include=\"XPScriptWebsite\" Value=\"https://xpagedeveloper.com\" />\n";
-        if (escapedAssembly is not null) itemEntries += $"    <Reference Include=\"XPScript.UI.Desktop\">\n      <HintPath>{escapedAssembly}</HintPath>\n      <Private>true</Private>\n    </Reference>\n    <PackageReference Include=\"Avalonia\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia", ApplicationDependencyCatalog.AvaloniaVersion)}\" />\n    <PackageReference Include=\"Avalonia.Desktop\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Desktop", ApplicationDependencyCatalog.AvaloniaVersion)}\" />\n    <PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Themes.Fluent", ApplicationDependencyCatalog.AvaloniaVersion)}\" />\n    <PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Avalonia.Controls.WebView", ApplicationDependencyCatalog.AvaloniaWebViewVersion)}\" />\n";
-        if (usesSqlite) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.Sqlite\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Microsoft.Data.Sqlite", ApplicationDependencyCatalog.MicrosoftDataSqliteVersion)}\" />\n";
-        if (usesMsSql) itemEntries += $"    <PackageReference Include=\"Microsoft.Data.SqlClient\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Microsoft.Data.SqlClient", ApplicationDependencyCatalog.MicrosoftDataSqlClientVersion)}\" />\n";
-        if (usesMySql) itemEntries += $"    <PackageReference Include=\"MySqlConnector\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("MySqlConnector", ApplicationDependencyCatalog.MySqlConnectorVersion)}\" />\n";
-        if (usesSupabaseDb) itemEntries += $"    <PackageReference Include=\"Npgsql\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Npgsql", ApplicationDependencyCatalog.NpgsqlVersion)}\" />\n";
-        if (usesExtendedArchive) itemEntries += $"    <PackageReference Include=\"SharpCompress\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("SharpCompress", ApplicationDependencyCatalog.SharpCompressVersion)}\" />\n";
-        if (usesImage) itemEntries += $"    <PackageReference Include=\"Magick.NET-Q16-AnyCPU\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("Magick.NET-Q16-AnyCPU", ApplicationDependencyCatalog.MagickNetVersion)}\" />\n";
+        if (escapedAssembly is not null) itemEntries += $"    <Reference Include=\"XPScript.UI.Desktop\">\n      <HintPath>{escapedAssembly}</HintPath>\n      <Private>true</Private>\n    </Reference>\n";
         var itemGroup = $"  <ItemGroup>\n{itemEntries}  </ItemGroup>\n";
 
         var projectPath = Path.Combine(root, "Generated.csproj");
         if (File.Exists(projectPath))
         {
             var projectText = File.ReadAllText(projectPath);
+            var project = System.Xml.Linq.XDocument.Parse(projectText);
+            var packageItems = new System.Xml.Linq.XElement("ItemGroup");
+            foreach (var package in packages)
+            {
+                var existing = project.Descendants("PackageReference").FirstOrDefault(reference =>
+                    string.Equals((string?)reference.Attribute("Include"), package.Name, StringComparison.OrdinalIgnoreCase));
+                if (existing is not null)
+                {
+                    existing.Elements("Version").Remove();
+                    existing.SetAttributeValue("Version", package.Version);
+                }
+                else packageItems.Add(new System.Xml.Linq.XElement("PackageReference",
+                    new System.Xml.Linq.XAttribute("Include", package.Name), new System.Xml.Linq.XAttribute("Version", package.Version)));
+            }
+            if (packageItems.HasElements) project.Root!.Add(packageItems);
+            projectText = project.ToString();
             var projectMetadata = propertyGroup + itemGroup;
             var closingProject = projectText.LastIndexOf("</Project>", StringComparison.OrdinalIgnoreCase);
             if (closingProject < 0) throw new CompilerException("Generated project is invalid: closing Project element was not found.");

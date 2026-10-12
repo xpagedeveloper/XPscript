@@ -40,6 +40,8 @@ global using System.Threading.Tasks;
     {
         try
         {
+            if (ApplicationDependencyCatalog.Detect(generatedSource).Count > 0)
+                return await RunCompiler.CompileGeneratedWithDependenciesAsync(generatedSource, outputDirectory, debug, cancellationToken).ConfigureAwait(false);
             return await CompileCoreAsync(generatedSource, outputDirectory, debug, cancellationToken).ConfigureAwait(false);
         }
         catch (CompilerException)

@@ -73,11 +73,15 @@ public static class ApplicationDependencyCatalog
             Add(result, "MimeKit", MimeKitVersion, "Notes MIME support");
         if (generatedSource.Contains("internal sealed class XPImage", StringComparison.Ordinal))
             Add(result, "Magick.NET-Q16-AnyCPU", MagickNetVersion, "XPImage runtime");
-        if (generatedSource.Contains("XPScriptExtendedArchive", StringComparison.Ordinal))
+        if (generatedSource.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ||
+            System.Text.RegularExpressions.Regex.IsMatch(generatedSource, @"new\s+XPScriptArchive\s*\([^\r\n;]*,\s*true\s*\)", System.Text.RegularExpressions.RegexOptions.CultureInvariant))
             Add(result, "SharpCompress", SharpCompressVersion, "Extended Archive runtime");
         return result;
     }
 
-    private static void Add(List<ApplicationPackageReference> result, string name, string baselineVersion, string reason) =>
-        result.Add(new(name, ResolveVersion(name, baselineVersion), reason));
+    private static void Add(List<ApplicationPackageReference> result, string name, string baselineVersion, string reason)
+    {
+        if (!result.Any(package => package.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            result.Add(new(name, ResolveVersion(name, baselineVersion), reason));
+    }
 }

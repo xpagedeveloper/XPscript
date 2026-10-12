@@ -101,6 +101,15 @@ internal static class RunCompiler
             cancellationToken).ConfigureAwait(false);
     }
 
+    internal static Task<string> CompileGeneratedWithDependenciesAsync(string generatedSource, string outputDirectory, bool debug, CancellationToken cancellationToken)
+    {
+        var outputRoot = Path.GetFullPath(outputDirectory);
+        Directory.CreateDirectory(outputRoot);
+        CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
+        return CompileWithMsBuildAsync(Path.Combine(outputRoot, "Program.cs"), outputRoot, generatedSource,
+            new ManagedAssemblyReferencePreprocessor.Result(generatedSource, [], []), [], debug, cancellationToken);
+    }
+
     private static async Task<string> CompileWithMsBuildAsync(
         string sourcePath,
         string outputRoot,
@@ -146,8 +155,15 @@ internal static class RunCompiler
                 throw new CompilerException("Run compilation succeeded, but Generated.dll was not produced.");
 
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
-            if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal))
-                StageMimeKit(outputRoot);
+            if (ApplicationDependencyCatalog.Detect(generatedSource).Count > 0)
+            {
+                if (!File.Exists(build.AssetsPath))
+                    throw new CompilerException("Dependency license metadata was not produced by the build.");
+                var noticePath = Path.Combine(tempRoot, ThirdPartyLicenseNoticeGenerator.OutputFileName);
+                await File.WriteAllTextAsync(noticePath,
+                    ThirdPartyLicenseNoticeGenerator.Generate(tempRoot, false, build.AssetsPath), cancellationToken).ConfigureAwait(false);
+                ThirdPartyLicenseNoticeGenerator.PublishSidecar(noticePath, assemblyPath);
+            }
             return assemblyPath;
         }
         finally
@@ -156,7 +172,7 @@ internal static class RunCompiler
         }
     }
 
-    private static async Task<(int ExitCode, string Stdout, string Stderr)> ExecuteBuildAsync(
+    private static async Task<(int ExitCode, string Stdout, string Stderr, string AssetsPath)> ExecuteBuildAsync(
         string tempRoot,
         string projectPath,
         string outputRoot,
@@ -180,13 +196,21 @@ internal static class RunCompiler
         psi.ArgumentList.Add("--nologo");
         psi.ArgumentList.Add("--no-incremental");
         psi.ArgumentList.Add("-p:UseAppHost=false");
+        if (ApplicationDependencyCatalog.Detect(File.ReadAllText(Path.Combine(tempRoot, "Program.cs"))).Count > 0)
+        {
+            psi.ArgumentList.Add("-r");
+            psi.ArgumentList.Add(CompilerDriver.CurrentRuntimeIdentifier());
+        }
         CompilerBuildEnvironment.Configure(psi, tempRoot);
+        const string extensionsPrefix = "-p:MSBuildProjectExtensionsPath=";
+        var extensions = psi.ArgumentList.FirstOrDefault(argument => argument.StartsWith(extensionsPrefix, StringComparison.Ordinal));
+        var assetsPath = Path.Combine(extensions is null ? Path.Combine(tempRoot, "obj") : extensions[extensionsPrefix.Length..], "project.assets.json");
 
         using var process = Process.Start(psi) ?? throw new CompilerException("Unable to start dotnet build.");
         var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        return (process.ExitCode, await stdoutTask.ConfigureAwait(false), await stderrTask.ConfigureAwait(false));
+        return (process.ExitCode, await stdoutTask.ConfigureAwait(false), await stderrTask.ConfigureAwait(false), assetsPath);
     }
 
     private static IReadOnlyList<CompileDiagnostic> ParseGeneratedBuildDiagnostics(string text)
@@ -353,18 +377,6 @@ internal static class RunCompiler
                 }
             }
         }
-    }
-
-    private static void StageMimeKit(string outputRoot)
-    {
-        var source = Path.Combine(Path.GetDirectoryName(typeof(RunCompiler).Assembly.Location) ?? "", "MimeKit.dll");
-        if (!File.Exists(source)) throw new CompilerException("Required MimeKit runtime assembly was not found: " + source);
-        var target = Path.Combine(outputRoot, "MimeKit.dll");
-        var targetInfo = new FileInfo(target);
-        if (targetInfo.LinkTarget is not null || (targetInfo.Exists && (targetInfo.Attributes & FileAttributes.ReparsePoint) != 0))
-            throw new CompilerException("MimeKit runtime dependency target may not be a link: " + target);
-        if (targetInfo.Exists) File.Delete(target);
-        CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Managed runtime dependency");
     }
 
     private static void StageNativeDependencies(
