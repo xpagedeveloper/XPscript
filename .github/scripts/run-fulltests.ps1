@@ -63,7 +63,7 @@ Write-Host "FULLTEST_SUITE=$Suite"
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
   # Run the latest failing AST CLI fixture before the broader probes.
-  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') $compileTimeoutMilliseconds 'AST CLI List Function ByRef, parameter/return, Resume, ForAll aliases, Static, GoTo and Optional regressions'
+  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') $compileTimeoutMilliseconds 'AST CLI shared JSON runtime, List Function ByRef, parameter/return, Resume, ForAll aliases, Static, GoTo and Optional regressions'
   if ($astCliFirst.ExitCode -ne 0 -or $astCliFirst.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
   $astLexer = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-lexer/AstLexerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST lexer and compatibility regression'
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
@@ -134,6 +134,8 @@ if (Should-Run 'notes') {
 }
 
 if (Should-Run 'runtime') {
+  $nativeJson = Run-Xps ./tests/ast-compile-probe/json-runtime.xps native-json-shared-runtime
+  if ($nativeJson.Output -notmatch 'Invalid JSON input\.' -or $nativeJson.Output -notmatch 'JSON array index out of range\.') { throw 'Shared native JSON runtime regression did not complete.' }
   Write-Host '=== XP RUNTIME FULLTEST ==='
   # Keep the smallest regression for managed stack-trace suppression first.
   Compile-Xps ./samples/runtime-error-stacktrace-regression.xps runtime-error-stacktrace-regression

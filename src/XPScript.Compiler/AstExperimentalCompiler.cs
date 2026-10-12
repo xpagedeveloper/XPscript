@@ -155,7 +155,7 @@ public static class AstExperimentalCompiler
         foreach (Match match in Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
         foreach (var typeName in AstObjectSupportRegistry.VariantTypeNames)
-            symbols.Declare(new VariableSymbol(typeName, typeof(object), XpTypeSymbol.Variant));
+            symbols.Declare(new VariableSymbol(typeName, typeof(object), BoundExpressionEmitter.JsonRuntimeType(typeName) is null ? XpTypeSymbol.Variant : XpTypeSymbol.User(typeName)));
         symbols.Declare(new VariableSymbol("Console", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"\bForAll\s+(?<name>[A-Za-z_]\w*)\s+In\b", RegexOptions.IgnoreCase))
@@ -497,10 +497,6 @@ public sealed class XpPerson {
                 return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} public Xp{match.Groups["name"].Value}() {{ }} private Xp{match.Groups["name"].Value}(long value) => Value = value; public static implicit operator Xp{match.Groups["name"].Value}(int value) => new(value); public static implicit operator Xp{match.Groups["name"].Value}(long value) => new(value); {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
             }));
         if (true) classSupport += """
-public sealed class XpJsonElement { public string Name { get; set; } = string.Empty; public string Type { get; set; } = "String"; public object? Value { get; set; } }
-public sealed class XpJsonDocument { public XpJsonElement Root { get; } = new(); public static XpJsonDocument Parse(object? text) => new(); public string Stringify() => Root.Value?.ToString() ?? "{}"; public object ToObject(object target) => target; public void AppendElement(object? value, string name) { Root.Value = value; Root.Name = name; } public XpJsonObject AppendObject(string name) => new(); public XpJsonArray AppendArray(string name) => new(); public XpJsonElement GetElementByName(string name) => new() { Name = name }; public XpJsonElement GetElementByPointer(string pointer) => new(); }
-public sealed class XpJsonObject { internal readonly Dictionary<string,object?> Data = new(); public int Count => Data.Count; public int Size => Data.Count; public void Set(string key, object? value) => Data[key] = value; public void AppendElement(object? value, string key) => Set(key, value); public object? Get(string key) => Data.TryGetValue(key, out var value) ? value : null; public XpJsonElement GetElementByName(string key) => new() { Name = key, Value = Get(key) }; public bool Contains(string key) => Data.ContainsKey(key); public void Remove(string key) => Data.Remove(key); public void Copy(XpJsonObject other) { foreach (var pair in other.Data) Data[pair.Key] = pair.Value; } }
-public sealed class XpJsonArray { internal readonly List<object?> Data = new(); public int Count => Data.Count; public int Size => Data.Count; public void Add(object? value) => Data.Add(value); public void AppendElement(object? value) => Add(value); public void Set(long index, object? value) => Data[Convert.ToInt32(index)] = value; public object? Get(long index) => Data[Convert.ToInt32(index)]; public XpJsonElement GetNthElement(long index) => new() { Value = Get(index - 1) }; public XpJsonElement GetFirstElement() => GetNthElement(1); public XpJsonElement GetNextElement() => GetFirstElement(); public void RemoveAt(long index) => Data.RemoveAt(Convert.ToInt32(index)); }
 public sealed class XpCsvJsonArray { public List<Dictionary<string,string>> Rows { get; } = new(); public int Count => Rows.Count; }
 public sealed class XpCsvRow { internal Dictionary<string,string> Data = new(); public void Set(string key, object? value) => Data[key] = Convert.ToString(value) ?? string.Empty; public object Get(string key) => Data.TryGetValue(key, out var value) ? value : string.Empty; }
 public sealed class XpCsvRows : List<XpCsvRow> { public XpCsvRow this[long index] => base[Convert.ToInt32(index)]; }
@@ -517,7 +513,11 @@ using System.Collections;
 using System.Dynamic;
 using System.Text;
 using System.Globalization;
-{{XPScriptObjectRuntimeSource.IterableContract}}
+using XpJsonDocument = XPScriptJsonDocument;
+using XpJsonObject = XPScriptJsonObject;
+using XpJsonArray = XPScriptJsonArray;
+using XpJsonElement = XPScriptJsonElement;
+{{AstJsonRuntimeSource.Code}}
 {{XPScriptListRuntimeSource.Code.Replace("XPScriptRuntime.", "Program.", StringComparison.Ordinal)}}
 {{AstArrayRuntimeCode()}}
 {{AstErrorRuntimeCode()}}
@@ -858,8 +858,8 @@ internal static class Program
         => LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), Convert.ToInt32(upper1), Convert.ToInt32(lower1), Convert.ToInt32(upper2), Convert.ToInt32(lower2), Convert.ToInt32(upper3), Convert.ToInt32(lower3), Convert.ToInt32(upper4), Convert.ToInt32(lower4));
     public static object Explode(object? value, object? separator) => (value?.ToString() ?? string.Empty).Split(separator?.ToString() ?? ",");
     public static string FullTrim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
-    public static object JsonEncode(object? value) => System.Text.Json.JsonSerializer.Serialize(value);
-    public static object JsonDecode(object? value) => value?.ToString() ?? string.Empty;
+    public static object JsonEncode(object? value) => XPScriptNativeJson.Stringify(value);
+    public static object JsonDecode(object? value) => XPScriptNativeJson.Parse(value);
     public static string Input(object? count) => string.Empty;
     public static string Input(object? count, object? file) => string.Empty;
     public static void Sleep(object? milliseconds) => System.Threading.Thread.Sleep(Math.Max(0, Convert.ToInt32(milliseconds)));
@@ -901,14 +901,11 @@ internal static class Program
     public static object MsgBox(object? prompt = null) { Console.WriteLine(CStr(prompt)); return 0L; }
     public static object ChDrive(object? drive) => true;
     public static object Erase(object? value) => true;
-    public static object JsonParse(object? value) => XpJsonDocument.Parse(value);
-    public static object JsonStringify(object? value) => value switch {
-        XpJsonDocument document => document.Stringify(),
-        XpJsonObject obj => System.Text.Json.JsonSerializer.Serialize(obj.Data),
-        XpJsonArray array => System.Text.Json.JsonSerializer.Serialize(array.Data),
-        _ => value?.ToString() ?? "null" };
+    public static object JsonParse(object? value) => XPScriptNativeJson.Parse(value);
+    public static object JsonStringify(object? value) => XPScriptNativeJson.Stringify(value);
     public static class XPScriptNullRuntime
     {
+        public static bool IsNull(object? value) => ReferenceEquals(value, DBNull.Value);
         public static bool ConditionValue(object? value) => value is bool boolean ? boolean : Convert.ToBoolean(value ?? false);
     }
     public static long GetTickCount() => Environment.TickCount64;
@@ -1069,7 +1066,8 @@ internal static class Program
     }
 
     private static XpTypeSymbol ResolveValueType(TypeSyntax? type) => type is null || type.Identifier.Text.Equals("Variant", StringComparison.OrdinalIgnoreCase)
-        ? XpTypeSymbol.Variant : XpTypeSymbol.FromClr(ResolveRuntimeType(type.Identifier.Text));
+        ? XpTypeSymbol.Variant : BoundExpressionEmitter.JsonRuntimeType(type.Identifier.Text) is not null
+            ? XpTypeSymbol.User(type.Identifier.Text) : XpTypeSymbol.FromClr(ResolveRuntimeType(type.Identifier.Text));
 
     private static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters, string sourcePath, string source)
     {

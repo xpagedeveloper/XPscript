@@ -30,6 +30,7 @@ internal sealed class BoundErrorFlowEmitter
             var type = declaration.Local.SemanticType?.IsList == true
                 ? $"LSList<{BoundMethodEmitter.CSharpType(declaration.Local.SemanticType.ElementType!.RuntimeType)}>"
                 : BoundMethodEmitter.CSharpType(declaration.Local.Type);
+            type = BoundExpressionEmitter.JsonRuntimeType(declaration.Local.SemanticType?.Name ?? "") ?? type;
             _output.Write($"{type} {declaration.Local.Name} = default({type})!;", 0, declaration.Span);
         }
         foreach (var storage in _storage) _output.Write(storage, 0);

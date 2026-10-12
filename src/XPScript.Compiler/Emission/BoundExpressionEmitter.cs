@@ -48,7 +48,8 @@ public sealed class BoundExpressionEmitter
         BoundNameExpression name => _aliases.TryGetValue(name.Symbol, out var alias) ? alias.Value
             : name.Symbol is LocalSymbol { StaticStorageName: { } storage } ? storage : name.Symbol.Name,
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("Console", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("WriteLine", StringComparison.OrdinalIgnoreCase) => "System.Console.WriteLine",
-        BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("Parse", StringComparison.OrdinalIgnoreCase) => "XpJsonDocument.Parse",
+        BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("Parse", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeJson.Parse",
+        BoundMemberAccessExpression member when JsonRuntimeType(member.Receiver.SemanticType.Name) is { } jsonType => $"(({jsonType})({Emit(member.Receiver)})).{JsonMemberName(member.Name)}",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("http", StringComparison.OrdinalIgnoreCase) && member.Receiver.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"http.{member.Name}",
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
@@ -91,6 +92,24 @@ public sealed class BoundExpressionEmitter
             : $"({EmitUnaryOperator(unary.OperatorKind, unary.Type)}{Emit(unary.Operand)})",
         BoundBinaryExpression binary => EmitBinary(binary),
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
+    };
+
+    internal static string? JsonRuntimeType(string name) => name.ToUpperInvariant() switch
+    {
+        "XPJSONDOCUMENT" => "XPScriptJsonDocument",
+        "XPJSONOBJECT" => "XPScriptJsonObject",
+        "XPJSONARRAY" => "XPScriptJsonArray",
+        "XPJSONELEMENT" => "XPScriptJsonElement",
+        _ => null
+    };
+
+    private static string JsonMemberName(string name) => name.ToUpperInvariant() switch
+    {
+        "ROOT" => "Root", "TYPE" => "Type", "VALUE" => "Value", "COUNT" => "Count",
+        "GET" => "Get", "SET" => "Set", "ADD" => "Add", "REMOVE" => "Remove",
+        "REMOVEAT" => "RemoveAt", "CONTAINS" => "Contains", "STRINGIFY" => "Stringify",
+        "ASOBJECT" => "AsObject", "ASARRAY" => "AsArray", "TOOBJECT" => "ToObject",
+        _ => name
     };
 
     private string EmitArrayGet(BoundIndexExpression index)
@@ -181,7 +200,7 @@ public sealed class BoundExpressionEmitter
             return (byRef ? "ref " : "") + Emit(argument);
         });
         var functionName = call.Function.Name.EndsWith("$", StringComparison.Ordinal) ? call.Function.Name.TrimEnd('$') : call.Function.Name;
-        if (functionName.Equals("JsonParse", StringComparison.OrdinalIgnoreCase)) functionName = "XpJsonDocument.Parse";
+        if (functionName.Equals("JsonParse", StringComparison.OrdinalIgnoreCase)) functionName = "XPScriptNativeJson.Parse";
         if (functionName.Equals("Error", StringComparison.OrdinalIgnoreCase) || functionName.Equals("GetTickCount", StringComparison.OrdinalIgnoreCase) || functionName.Equals("Loc", StringComparison.OrdinalIgnoreCase) || functionName.Equals("ProcedureCounter", StringComparison.OrdinalIgnoreCase) || functionName.Equals("ShowDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("LoadFileDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("OpenFileDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("SaveFileDialog", StringComparison.OrdinalIgnoreCase))
             functionName = "XPScriptRuntime." + functionName;
         return $"{(call.Target is null ? functionName : Emit(call.Target))}({string.Join(", ", arguments)})";
@@ -214,6 +233,8 @@ public sealed class BoundExpressionEmitter
         var value = Emit(expression.Expression);
         if (expression.SemanticType.IsList && expression.Conversion.Kind == ConversionKind.FromVariant)
             return $"(LSList<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!.RuntimeType)}>)({value})";
+        if (JsonRuntimeType(expression.SemanticType.Name) is { } jsonType && expression.Conversion.Kind == ConversionKind.FromVariant)
+            return $"({jsonType})({value})";
         if (expression.Expression is BoundNewExpression && expression.Type != typeof(object))
             return value;
         return expression.Conversion.Kind switch

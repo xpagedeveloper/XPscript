@@ -36,6 +36,7 @@ public sealed class BoundCompilationUnitEmitter
             if (declaration.Local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
                 !semantic.IsVariant && !semantic.IsObject && !semantic.IsEmpty && !semantic.IsNothing && !semantic.IsNull && !semantic.IsList)
                 type = $"Xp{semantic.Name}";
+            type = BoundExpressionEmitter.JsonRuntimeType(declaration.Local.SemanticType?.Name ?? "") ?? type;
             var initialValue = declaration.Local.Type.IsArray
                 ? $"new {type[..^2]}[0]"
                 : declaration.Local.SemanticType?.IsList == true ? $"new {type}()"

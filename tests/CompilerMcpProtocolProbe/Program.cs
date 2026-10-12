@@ -90,6 +90,17 @@ if (resumeRuntimeValidation.GetProperty("result").GetProperty("structuredContent
 var resumeUnknownValidation = await CallAsync(new {jsonrpc="2.0",id=37_2,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main()\n    On Error GoTo missing\nEnd Sub",filename="resume-unknown-label.xps"}}});
 var resumeUnknownError = resumeUnknownValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
 if (resumeUnknownError.GetProperty("line").GetInt32() != 2 || !resumeUnknownError.GetProperty("description").GetString()!.Contains("Unknown label 'missing'")) throw new Exception("MCP lost unknown error-handler label diagnostics.");
+foreach (var jsonFixture in new[] { "json-runtime", "json-reference" })
+{
+    var jsonSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", jsonFixture + ".xps"));
+    var jsonValidation = await CallAsync(new {jsonrpc="2.0",id=3700 + jsonFixture.Length,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=jsonSource,filename=jsonFixture + ".xps"}}});
+    var jsonResult = jsonValidation.GetProperty("result").GetProperty("structuredContent");
+    if (jsonResult.GetProperty("result").GetString() != "ok" || jsonResult.GetProperty("compiler").GetString() != "ast") throw new Exception("MCP rejected shared JSON runtime fixture: " + jsonFixture);
+}
+var jsonInvalidSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "json-member-error.xps"));
+var jsonInvalidValidation = await CallAsync(new {jsonrpc="2.0",id=3799,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=jsonInvalidSource,filename="json-member-error.xps"}}});
+var jsonInvalidError = jsonInvalidValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (jsonInvalidError.GetProperty("diagnosticCode").GetString() != "XPS2009" || jsonInvalidError.GetProperty("line").GetInt32() != 3 || jsonInvalidError.GetProperty("position").GetInt32() != 16) throw new Exception("MCP JSON member diagnostic lost its code or source position.");
 if (args.Contains("--ast-error-flow-only"))
 {
     p.Kill(entireProcessTree: true);

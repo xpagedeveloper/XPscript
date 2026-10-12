@@ -1,0 +1,40 @@
+Function MakePayload() As XPJsonObject
+    Dim temporary As New XPJsonObject
+    Call temporary.Set("x", 4)
+    Set MakePayload = temporary
+End Function
+
+Sub Change(ByRef target As XPJsonObject)
+    Set target = New XPJsonObject
+    Call target.Set("x", 8)
+End Sub
+
+Sub Main()
+    Dim json As Long
+    Dim roles As String
+    Dim parsed As Variant
+    Dim value As XPJsonObject
+    Dim document As XPJsonDocument
+    Dim element As XPJsonElement
+    Dim arrayValue As XPJsonArray
+    json = 19
+    roles = "names are ordinary variables"
+    Set value = MakePayload()
+    Print value.Get("x")
+    Call Change(value)
+    Print value.Get("x")
+    Set document = JsonParse("[1,2]")
+    Set element = document.Root
+    Set arrayValue = element.AsArray()
+    Print arrayValue.count
+    ForAll item In arrayValue
+        Print item
+    End ForAll
+    Set parsed = JsonDecode("true")
+    Print parsed.Stringify()
+    Print JsonStringify(Null)
+    Set value = Nothing
+    Print JsonStringify(value)
+    Print json
+    Print roles
+End Sub

@@ -4,6 +4,18 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+foreach ($jsonFixture in @('json-runtime', 'json-reference')) {
+    $jsonOutput = Join-Path $output $jsonFixture
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$jsonFixture.xps") -o $jsonOutput
+    if ($LASTEXITCODE -ne 0) { throw "AST $jsonFixture compilation failed." }
+    $jsonResult = dotnet (Join-Path $jsonOutput 'Generated.dll')
+    $jsonExpected = if ($jsonFixture -eq 'json-runtime') {
+        '{"name":"\u00C5sa","values":[7],"active":true}' + "`nÅsa`nObject`nTrue`n2`n7`n1`n7`n[null,false,3]`nInvalid JSON input.`nJSON array index out of range."
+    } else { "4`n8`n2`n1`n2`ntrue`nnull`nnull`n19`nnames are ordinary variables" }
+    if ($LASTEXITCODE -ne 0 -or ($jsonResult -join "`n") -ne $jsonExpected) { throw "AST $jsonFixture shared runtime output mismatch." }
+}
+$jsonInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'json-member-error.xps') -o (Join-Path $output 'json-member-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($jsonInvalid -join "`n") -notmatch "json-member-error.xps:3:16: XPS2009: Undefined member 'UnknownMember'") { throw 'AST JSON unknown-member diagnostic lost its code or source position.' }
 $textObjectOutput = Join-Path $output 'object-name-text'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-name-text.xps') -o $textObjectOutput
 if ($LASTEXITCODE -ne 0) { throw 'Object names inside strings/comments must not trigger legacy fallback.' }

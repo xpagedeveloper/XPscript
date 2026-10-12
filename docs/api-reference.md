@@ -117,10 +117,15 @@ See [HTTP client](http-client.md) for request limits, UIForm helpers and securit
 
 See the runnable [native HTTP/JSON sample](../samples/native-http-json.xps).
 
+Experimental AST compilation uses the same native JSON runtime for `XPJsonDocument`, `XPJsonObject`, `XPJsonArray` and `XPJsonElement`. `New`, `Dim ... As New`, typed parameters (including ByRef replacement), `Root.AsObject()`/`Root.AsArray()`, mutation, serialization and JSON-array `ForAll` are covered by the executable `tests/ast-compile-probe/json-runtime.xps` and `json-reference.xps` regressions. Parse/depth/resource limits and invalid-index errors are shared with normal compilation; no additional package is required.
+
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `XPJsonDocument.Parse` | `XPJsonDocument.Parse(text)` | JSON `text`. | Parses JSON into a `XPJsonDocument`. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `XPJsonDocument.Stringify` | `document.Stringify()` | none | Serializes the document. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonDocument.Root` | `document.Root` | none | Returns the root as `XPJsonElement`. | [json-reference.xps](../tests/ast-compile-probe/json-reference.xps) |
+| `XPJsonElement.AsObject` | `element.AsObject()` | none | Returns an object wrapper, or Nothing for a non-object element. | [json-reference.xps](../tests/ast-compile-probe/json-reference.xps) |
+| `XPJsonElement.AsArray` | `element.AsArray()` | none | Returns an array wrapper, or Nothing for a non-array element. | [json-reference.xps](../tests/ast-compile-probe/json-reference.xps) |
 | `XPJsonObject.Get` | `obj.Get(name)` | property `name`. | Returns a property value or runtime null. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `XPJsonObject.Set` | `obj.Set(name, value)` | property `name`, JSON-compatible `value`. | Adds or replaces a property. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `XPJsonObject.Remove` | `obj.Remove(name)` | property `name`. | Removes a property. | [native-http-json.xps](../samples/native-http-json.xps) |

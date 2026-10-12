@@ -728,11 +728,13 @@ public sealed class StatementParser
 
         SyntaxToken? asKeyword = null;
         SyntaxToken? typeName = null;
+        ExpressionSyntax? construction = null;
         if (Current.Kind == SyntaxKind.AsKeyword)
         {
             asKeyword = NextToken();
             // `As New TypeName` is a declaration form where New is part of
             // the type construction syntax rather than the type name.
+            var constructionStart = Current.Kind == SyntaxKind.NewKeyword ? _position : -1;
             if (Current.Kind == SyntaxKind.NewKeyword)
                 NextToken();
             typeName = Match(SyntaxKind.IdentifierToken);
@@ -742,9 +744,8 @@ public sealed class StatementParser
                 NextToken();
                 Match(SyntaxKind.CloseBracketToken);
             }
-            // Constructor arguments in `Dim x As New Type(args)` are
-            // currently emitted dynamically. Consume them here so they do
-            // not become stray statement tokens.
+            // Keep constructor tokens in the declaration initializer so binding
+            // and emission retain the construction and its argument spans.
             if (Current.Kind == SyntaxKind.OpenParenToken)
             {
                 var depth = 0;
@@ -755,10 +756,12 @@ public sealed class StatementParser
                     NextToken();
                 } while (depth > 0 && Current.Kind != SyntaxKind.EndOfFileToken);
             }
+            if (constructionStart >= 0)
+                construction = ParseExpressionRange(constructionStart, _position, Current.Span.Start);
         }
 
         SyntaxToken? equalsToken = null;
-        ExpressionSyntax? initializer = null;
+        ExpressionSyntax? initializer = construction;
         if (Current.Kind == SyntaxKind.EqualsToken)
         {
             equalsToken = NextToken();

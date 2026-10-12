@@ -50,6 +50,7 @@ public sealed class BoundMethodEmitter
     {
         var mode = parameter.IsByRef ? "ref " : string.Empty;
         var type = parameter.SemanticType?.IsList == true ? $"LSList<{CSharpType(parameter.SemanticType.ElementType!.RuntimeType)}>" : CSharpType(parameter.Type);
+        type = BoundExpressionEmitter.JsonRuntimeType(parameter.SemanticType?.Name ?? "") ?? type;
         return mode + type + " " + parameter.Name;
     }
 

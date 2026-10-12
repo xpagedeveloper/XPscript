@@ -27,6 +27,7 @@ public sealed class BoundStatementEmitter
                 if (declaration.Local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
                     !semantic.IsVariant && !semantic.IsObject && !semantic.IsNothing && !semantic.IsNull && !semantic.IsEmpty && !semantic.IsList)
                     type = $"Xp{semantic.Name}";
+                type = BoundExpressionEmitter.JsonRuntimeType(declaration.Local.SemanticType?.Name ?? "") ?? type;
                 output.Write($"{type} {declaration.Local.Name} = default({type});", 0, declaration.Span);
             }
         }
@@ -79,11 +80,12 @@ public sealed class BoundStatementEmitter
                     break;
                 }
                 var targetText = _expressions.Emit(assignment.Target);
-                var expressionText = _expressions.Emit(assignment.Expression).Replace("((object)(new XpJsonDocument()))", "new XpJsonDocument()", StringComparison.Ordinal);
+                var expressionText = _expressions.Emit(assignment.Expression);
+                if (BoundExpressionEmitter.JsonRuntimeType(assignment.Target.SemanticType.Name) is { } targetJsonType)
+                    expressionText = $"({targetJsonType})({expressionText})";
                 if (targetText is "http.TimeoutSec" or "http.MaxRedirects" or "http.ResponseCode") expressionText = $"Convert.ToInt64({expressionText})";
                 if (targetText.EndsWith(".Timeout", StringComparison.OrdinalIgnoreCase)) expressionText = $"Convert.ToInt64({expressionText})";
                 if (targetText.Equals("ai", StringComparison.OrdinalIgnoreCase)) expressionText = $"(XpAi){expressionText}";
-                if (targetText is "roles" or "arr" or "jsonRows" or "directArray") expressionText = $"(XpJsonArray){expressionText}";
                 if (targetText is "http.PreferStrings" or "http.PreferJSONNavigator") expressionText = $"Convert.ToBoolean({expressionText})";
                 Line($"{targetText} = {expressionText};");
                 break;
@@ -223,12 +225,6 @@ public sealed class BoundStatementEmitter
                     type = $"Xp{semantic.Name}";
                 if (declaration.Local.Name.Equals("csv", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("copy", StringComparison.OrdinalIgnoreCase)) type = "XpCsvDocument";
                 else if (declaration.Local.Name.Equals("row", StringComparison.OrdinalIgnoreCase)) type = "XpCsvRow";
-                else if (declaration.Local.Name.Equals("jsonRows", StringComparison.OrdinalIgnoreCase)) type = "XpJsonArray";
-                else if (declaration.Local.Name is "json" or "parsed" or "copied") type = "XpJsonDocument";
-                else if (declaration.Local.Name is "directObject" or "copiedObject" or "address") type = "XpJsonObject";
-                else if (declaration.Local.Name is "directArray" or "roles" or "arr") type = "XpJsonArray";
-                else if (declaration.Local.Name is "directElement" or "element" or "secondElement") type = "XpJsonElement";
-                else if (declaration.Local.Name.Equals("responseJson", StringComparison.OrdinalIgnoreCase)) type = "object";
                 else if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase)) type = "XpNotesHttp";
                 else if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase)) type = "XpAi";
                 else if (declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase)) type = "XpAi";
@@ -236,8 +232,13 @@ public sealed class BoundStatementEmitter
                 else if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase)) type = "XpAiTool";
                 else if (declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase)) type = "XpAiTool";
                 var initializer = declaration.Initializer is null
-                    ? (declaration.Local.SemanticType?.IsVariant == true ? "null" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ? "new XpNotesHttp()" : declaration.Local.Name.Equals("http", StringComparison.OrdinalIgnoreCase) ? "new XpHttpClientStub()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase) ? "new XpAi(\"\", \"\")" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase) ? "new XpAiTool(\"\")" : declaration.Local.Name is "csv" or "copy" ? "new XpCsvDocument()" : declaration.Local.Name is "json" or "parsed" or "copied" ? "new XpJsonDocument()" : declaration.Local.Name is "directObject" or "copiedObject" or "address" ? "new XpJsonObject()" : declaration.Local.Name is "directArray" or "roles" or "arr" or "jsonRows" ? "new XpJsonArray()" : declaration.Local.Name is "directElement" or "element" or "secondElement" ? "new XpJsonElement()" : declaration.Local.Name.Equals("row", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) ? "new XpCsvDocument()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : (declaration.ArrayLength ?? 0) - declaration.Local.ArrayLowerBound + 1)}]" : type.StartsWith("Xp", StringComparison.Ordinal) ? $"new {type}()" : $"default({type})")))
-                    : _expressions.Emit(declaration.Initializer).Replace("((object)(new XpJsonDocument()))", "new XpJsonDocument()", StringComparison.Ordinal);
+                    ? (declaration.Local.SemanticType?.IsVariant == true ? "null" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ? "new XpNotesHttp()" : declaration.Local.Name.Equals("http", StringComparison.OrdinalIgnoreCase) ? "new XpHttpClientStub()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase) ? "new XpAi(\"\", \"\")" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase) ? "new XpAiTool(\"\")" : declaration.Local.Name is "csv" or "copy" ? "new XpCsvDocument()" : declaration.Local.Name.Equals("row", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) ? "new XpCsvDocument()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : (declaration.ArrayLength ?? 0) - declaration.Local.ArrayLowerBound + 1)}]" : type.StartsWith("Xp", StringComparison.Ordinal) ? $"new {type}()" : $"default({type})")))
+                    : _expressions.Emit(declaration.Initializer);
+                if (BoundExpressionEmitter.JsonRuntimeType(declaration.Local.SemanticType?.Name ?? "") is { } jsonType)
+                {
+                    type = jsonType;
+                    initializer = declaration.Initializer is null ? "null" : $"({jsonType})({initializer})";
+                }
                 if (declaration.Local.IsDynamicArray && declaration.Initializer is null)
                 {
                     var elementType = declaration.Local.SemanticType?.ElementType?.RuntimeType is { } semanticElement
