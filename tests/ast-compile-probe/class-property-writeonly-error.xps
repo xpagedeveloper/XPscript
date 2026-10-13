@@ -1,0 +1,10 @@
+Class Box
+    Private stored As Long
+    Public Property Let Value(ByVal incoming As Long)
+        stored = incoming
+    End Property
+End Class
+Sub Main()
+    Dim item As New Box
+    Print item.Value
+End Sub

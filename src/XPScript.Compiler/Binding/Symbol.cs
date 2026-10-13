@@ -66,7 +66,8 @@ public sealed record FieldSymbol(string Name, Type FieldType, XpTypeSymbol? Sema
     public override SymbolKind Kind => SymbolKind.Field;
 }
 
-public sealed record PropertySymbol(string Name, Type PropertyType, XpTypeSymbol? SemanticType = null) : Symbol(Name)
+public sealed record PropertySymbol(string Name, Type PropertyType, XpTypeSymbol? SemanticType = null,
+    bool CanRead = true, bool CanWrite = true) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.Property;
 }

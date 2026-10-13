@@ -1,0 +1,43 @@
+Class Counter
+    Private stored As Long
+    Private text As String
+    Public Property Get Total As Long
+        Total = stored
+        stored = stored + 1
+    End Property
+    Public Property Let Total As Long
+        stored = Total * 2
+    End Property
+    Public Property Get Name As String
+        Name = text
+    End Property
+    Public Property Let Name As String
+        text = Name & "!"
+    End Property
+    Public Property Get ReadOnly As Long
+        ReadOnly = stored
+    End Property
+    Public Property Let WriteOnly As Long
+        stored = WriteOnly
+    End Property
+    Private Property Get Secret As Long
+        Secret = stored
+    End Property
+    Public Function Inside() As Long
+        Inside = Secret + Me.ReadOnly
+    End Function
+End Class
+Sub Main()
+    Dim first As New Counter
+    Dim second As New Counter
+    first.Total = 3
+    second.Total = 8
+    If first.Total <> 6 Then Error 5, "getter"
+    If first.ReadOnly <> 7 Then Error 5, "getter continued"
+    If second.ReadOnly <> 16 Then Error 5, "instance state"
+    first.Name = "test"
+    If first.Name <> "test!" Then Error 5, "implicit incoming"
+    first.WriteOnly = 9
+    If first.Inside() <> 18 Then Error 5, "private property"
+    Print "CLASS_PROPERTIES_NATIVE_OK"
+End Sub

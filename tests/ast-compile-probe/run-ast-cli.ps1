@@ -4,6 +4,23 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-properties-capability.xps') -o (Join-Path $output 'class-properties-capability')
+if ($LASTEXITCODE -ne 0) { throw 'AST explicit property setter/With compilation failed.' }
+$propertyCapability = dotnet (Join-Path $output 'class-properties-capability/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($propertyCapability -join "`n") -ne 'CLASS_PROPERTIES_CAPABILITY_OK') { throw 'AST explicit property setter/With execution failed.' }
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-properties-native.xps') -o (Join-Path $output 'class-properties-native')
+if ($LASTEXITCODE -ne 0) { throw 'AST property accessor compilation failed.' }
+$propertyResult = dotnet (Join-Path $output 'class-properties-native/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($propertyResult -join "`n") -ne 'CLASS_PROPERTIES_NATIVE_OK') { throw 'AST property accessor execution failed.' }
+$propertyNormal = Join-Path $output $(if ($IsWindows) { 'class-properties-normal.exe' } else { 'class-properties-normal' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-properties-native.xps') -o $propertyNormal --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal property accessor compilation failed.' }
+$propertyNormalResult = & $propertyNormal
+if ($LASTEXITCODE -ne 0 -or ($propertyNormalResult -join "`n") -ne ($propertyResult -join "`n")) { throw 'Normal/AST property parity failed.' }
+foreach ($propertyInvalid in @('class-property-readonly-error', 'class-property-writeonly-error', 'class-property-private-error', 'class-property-body-error', 'class-property-type-error', 'class-property-indexed-deferred')) {
+    $propertyFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$propertyInvalid.xps") -o (Join-Path $output $propertyInvalid) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($propertyFailure -join "`n") -notmatch "$propertyInvalid.xps:(2|3|5|8|9):") { throw "Property diagnostic source mapping lost: $propertyInvalid" }
+}
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o (Join-Path $output 'class-methods-native')
 if ($LASTEXITCODE -ne 0) { throw 'AST instance class method compilation failed.' }
 $classMethodsResult = dotnet (Join-Path $output 'class-methods-native/Generated.dll')

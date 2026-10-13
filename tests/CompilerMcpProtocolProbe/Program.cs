@@ -13,6 +13,22 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+var propertiesSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-properties-native.xps"));
+var propertyCapabilitySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-properties-capability.xps"));
+var propertyCapability = await CallAsync(new { jsonrpc="2.0",id="property-capability",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=propertyCapabilitySource,filename="class-properties-capability.xps" } } });
+if (propertyCapability.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST property capability failed: " + propertyCapability);
+foreach (var propertyTool in new[] { "xpscript_ast_validate", "xpscript_validate" })
+{
+    var result = await CallAsync(new { jsonrpc="2.0",id="properties-"+propertyTool,method="tools/call",@params=new { name=propertyTool,arguments=new { source=propertiesSource,filename="class-properties-native.xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Property validation failed: " + result);
+}
+foreach (var (fixture, code, line) in new[] { ("class-property-readonly-error", "XPS2001", 8), ("class-property-writeonly-error", "XPS2001", 9), ("class-property-private-error", "XPS2009", 8), ("class-property-body-error", "XPS2008", 3), ("class-property-type-error", "XPS1012", 5), ("class-property-indexed-deferred", "XPS3001", 2) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture+".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (error.GetProperty("diagnosticCode").GetString() != code || error.GetProperty("line").GetInt32() != line) throw new Exception("Property diagnostic lost: " + result);
+}
 var classCaseSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-method-case.xps"));
 var classCaseResult = await CallAsync(new { jsonrpc="2.0",id="class-method-case",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=classCaseSource,filename="class-method-case.xps" } } });
 if (classCaseResult.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST class case regression: " + classCaseResult);

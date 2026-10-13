@@ -104,11 +104,8 @@ public static class AstExperimentalCompiler
                 foreach (var field in current.Members.OfType<FieldDeclarationSyntax>())
                     if (field.Visibility?.Kind != SyntaxKind.PrivateKeyword)
                     symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{field.Identifier.Text}", ResolveRuntimeType(field.Type.Identifier.Text), XpTypeSymbol.FromClr(ResolveRuntimeType(field.Type.Identifier.Text))));
-                foreach (var property in current.Members.OfType<PropertyDeclarationSyntax>())
-                {
-                    var propertyType = ResolveRuntimeType(property.Type?.Identifier.Text);
-                    symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{property.Identifier.Text}", propertyType, XpTypeSymbol.FromClr(propertyType)));
-                }
+                foreach (var property in AstClassMethodSupport.Properties(current, true))
+                    symbols.Declare(property with { Name = classDeclaration.Identifier.Text + "." + property.Name.Split('.').Last() });
                 foreach (var method in current.Members.OfType<SubDeclarationSyntax>())
                     if (method.Visibility?.Kind != SyntaxKind.PrivateKeyword)
                     symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", typeof(void), method.Parameters.Select(parameter => ResolveRuntimeType(parameter.Type?.Identifier.Text)).ToArray(), null, null, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
@@ -423,13 +420,7 @@ public static class AstExperimentalCompiler
             };
             var fields = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>().Select(field =>
                 $"{(field.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public")} {CSharpType(field.Type.Identifier.Text)} {field.Identifier.Text} = {(field.Type.Identifier.Text.Equals("String", StringComparison.OrdinalIgnoreCase) ? "string.Empty" : "default!")};"));
-            var properties = string.Join(" ", classDeclaration.Members.OfType<PropertyDeclarationSyntax>()
-                .GroupBy(property => property.Identifier.Text, StringComparer.OrdinalIgnoreCase)
-                .Select(group =>
-                {
-                    var property = group.First();
-                    return $"public {CSharpType(property.Type?.Identifier.Text ?? "Object")} {property.Identifier.Text} {{ get; set; }}";
-                }));
+            var properties = string.Empty; // Accessor bodies are emitted with class procedures, never fabricated auto-properties.
             var baseClause = classDeclaration.BaseType is null
                 ? string.Empty
                 : $" : Xp{classDeclaration.BaseType.Identifier.Text}";

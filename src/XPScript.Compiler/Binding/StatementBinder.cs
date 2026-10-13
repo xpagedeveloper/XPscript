@@ -66,9 +66,10 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         return null;
     }
 
-    private BoundExpression? BindExpression(ExpressionSyntax syntax)
+    private BoundExpression? BindExpression(ExpressionSyntax syntax, bool assignmentTarget = false)
     {
-        var binder = new ExpressionBinder(_symbols, _allowDynamicMembers, functionName, functionResult, implicitReceiver: _withReceiver);
+        var binder = new ExpressionBinder(_symbols, _allowDynamicMembers, functionName, functionResult, implicitReceiver: _withReceiver,
+            assignmentTarget: assignmentTarget ? syntax : null);
         var expression = binder.Bind(syntax);
         _diagnostics.AddRange(binder.Diagnostics);
         return binder.Diagnostics.Count == 0 ? expression : null;
@@ -216,7 +217,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     {
         if (!syntax.Command.Text.Equals("Print", StringComparison.OrdinalIgnoreCase))
         {
-            var argumentResults = syntax.Arguments.Select(BindExpression).ToArray();
+            var argumentResults = syntax.Arguments.Select(argument => BindExpression(argument)).ToArray();
             if (argumentResults.Any(argument => argument is null))
                 return null;
             var arguments = argumentResults.Select(argument => argument!).ToArray();
@@ -538,7 +539,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             if (receiver is not null && index is not null && receiver.Type == typeof(object))
                 return BindBoundAssignment(new BoundIndexExpression(new BoundMemberAccessExpression(receiver, dynamicMember.NameToken.Text, typeof(object), XpTypeSymbol.Variant), index, typeof(object), XpTypeSymbol.Variant), valueSyntax, isSet, targetSyntax);
         }
-        var target = BindExpression(targetSyntax);
+        var target = BindExpression(targetSyntax, assignmentTarget: true);
         if (target is null)
             return null;
 

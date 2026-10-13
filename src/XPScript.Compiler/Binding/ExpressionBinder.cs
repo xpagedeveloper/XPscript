@@ -4,7 +4,7 @@ namespace XPScript.Compiler.Binding;
 
 public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDynamicMembers = false,
     string? functionName = null, LocalSymbol? functionResult = null, ExpressionSyntax? listByRefStatementCall = null,
-    BoundExpression? implicitReceiver = null)
+    BoundExpression? implicitReceiver = null, ExpressionSyntax? assignmentTarget = null)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly bool _allowDynamicMembers = allowDynamicMembers;
@@ -39,7 +39,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         if (_symbols.TryLookupMember(implicitReceiver.SemanticType, syntax.NameToken.Text, out var symbol))
         {
             if (symbol is PropertySymbol property)
-                return new BoundMemberAccessExpression(implicitReceiver, syntax.NameToken.Text, property.PropertyType, property.SemanticType);
+                return BindProperty(syntax, implicitReceiver, property);
             if (symbol is FunctionSymbol function)
                 return new BoundMemberAccessExpression(implicitReceiver, syntax.NameToken.Text, function.ReturnType, function.SemanticReturnType);
         }
@@ -80,6 +80,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         // the procedure signature, so recursion is unaffected.
         if (functionResult is not null && name.Equals(functionName, StringComparison.OrdinalIgnoreCase))
             return new BoundNameExpression(functionResult);
+        if (_symbols.TryLookup(name, out var ownProperty) && ownProperty is PropertySymbol property &&
+            _symbols.TryLookup("Me", out var me))
+            return BindProperty(syntax, new BoundNameExpression(me), property);
         // Statement-specific parsers can recover an omitted optional argument
         // with a zero-width identifier. Dynamic AST compilation must preserve
         // the surrounding statement and let its runtime helper supply the
@@ -221,7 +224,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                     return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"CSV property '{property.Name.Split('.').Last()}' requires an instance.");
                 if (AstImageSupport.IsImage(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
                     return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"XPImage property '{property.Name.Split('.').Last()}' requires an image instance.");
-                return new BoundMemberAccessExpression(receiver, property.Name.Split('.').Last(), property.PropertyType, property.SemanticType);
+                return BindProperty(syntax, receiver, property);
             }
             if (symbol is FunctionSymbol function)
                 return new BoundMemberAccessExpression(receiver, function.Name.Split('.').Last(), function.ReturnType, function.SemanticReturnType);
@@ -382,6 +385,15 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         return Error(nameSyntax.IdentifierToken, CompilerDiagnosticCodes.UnknownSymbol, $"Undefined function '{name}'.");
         }
         return BindOverloadSet(syntax, target, name, functions);
+    }
+
+    private BoundExpression BindProperty(ExpressionSyntax syntax, BoundExpression receiver, PropertySymbol property)
+    {
+        var writing = ReferenceEquals(syntax, assignmentTarget);
+        if (writing ? !property.CanWrite : !property.CanRead)
+            return Error(syntax, CompilerDiagnosticCodes.TypeMismatch,
+                $"Property '{property.Name.Split('.').Last()}' is {(writing ? "read-only" : "write-only")}.");
+        return new BoundMemberAccessExpression(receiver, property.Name.Split('.').Last(), property.PropertyType, property.SemanticType);
     }
 
     private BoundExpression BindOverloadSet(CallExpressionSyntax syntax, BoundExpression? target, string name, IReadOnlyList<FunctionSymbol> functions)

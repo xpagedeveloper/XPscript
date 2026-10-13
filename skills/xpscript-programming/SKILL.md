@@ -84,6 +84,8 @@ End If
 
 ## Classes and object lifetime
 
+Experimental AST executes scalar, non-indexed Property Get/Let bodies. Get returns the stored property-name result after the entire body runs. Parameterless `Property Let Name As String` exposes the incoming value as `Name`; an explicit setter parameter uses its declared name. Read-only/write-only and private accessor permissions are enforced. Indexed properties, object/reference Set and derived accessor bodies remain deferred; do not assume full class-property migration is complete.
+
 Experimental AST now executes scalar typed instance Sub/Function bodies, private sibling calls, Me, recursion and scalar ByRef, preserving per-instance fields and parameter shadowing. Initialize class objects with parameterless New as supported; String fields start empty. Names are case-insensitive in AST (mixed-case class calls still fail in normal compilation). Private fields and methods are not externally accessible. Object/array/List method signatures, Optional/Static method-local storage and method bodies authored in derived classes remain explicitly deferred; accessor, argumented-constructor, Parent.New and destructor migration is not complete. See docs/ast-csharp-emitter.md and class-methods-native.xps fixtures.
 
 `Dim value As Object` inside a procedure starts as Nothing on every call. `Static value As Object` starts as Nothing once and keeps its reference between calls. Neither declaration creates an object; use `Set value = New Object()` explicitly.

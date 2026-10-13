@@ -1,0 +1,9 @@
+Class Box
+    Public Property Get Value As Long
+        Value = missing
+    End Property
+End Class
+Sub Main()
+    Dim item As New Box
+    Print item.Value
+End Sub
