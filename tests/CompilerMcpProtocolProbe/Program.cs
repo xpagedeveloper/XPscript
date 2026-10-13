@@ -115,7 +115,21 @@ var withValidation = await CallAsync(new {jsonrpc="2.0",id=38,method="tools/call
 if (withValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected the valid With fixture.");
 var imageSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "xpimage-error.xps"));
 var imageValidation = await CallAsync(new {jsonrpc="2.0",id=39,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=imageSource,filename="xpimage-error.xps"}}});
-if (imageValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP did not route XPImage source through the legacy compiler.");
+if (imageValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected native XPImage construction.");
+var imageRuntimeSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "xpimage-runtime.xps"));
+var imageRuntimeValidation = await CallAsync(new {jsonrpc="2.0",id=3901,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=imageRuntimeSource,filename="xpimage-runtime.xps"}}});
+if (imageRuntimeValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected image loaders, effects or ownership.");
+var imageVariantSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "xpimage-variant-return.xps"));
+var imageVariantValidation = await CallAsync(new {jsonrpc="2.0",id=3902,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=imageVariantSource,filename="xpimage-variant-return.xps"}}});
+if (imageVariantValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected image Variant returns.");
+foreach (var imageInvalid in new[] { ("xpimage-constructor-error", "XPS2004"), ("xpimage-member-error", "XPS2009"), ("xpimage-readonly-error", "XPS2001") })
+{
+    var invalidSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", imageInvalid.Item1 + ".xps"));
+    var invalidValidation = await CallAsync(new {jsonrpc="2.0",id="image-"+imageInvalid.Item1,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=invalidSource,filename=imageInvalid.Item1+".xps"}}});
+    var invalidError = invalidValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (invalidError.GetProperty("diagnosticCode").GetString() != imageInvalid.Item2 || invalidError.GetProperty("line").GetInt32() != 3)
+        throw new Exception("MCP image diagnostic lost its code or source line: " + imageInvalid.Item1);
+}
 var implicitMemberSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "implicit-member-error.xps"));
 var implicitMemberValidation = await CallAsync(new {jsonrpc="2.0",id=40,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=implicitMemberSource,filename="implicit-member-error.xps"}}});
 var implicitMemberError = implicitMemberValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];

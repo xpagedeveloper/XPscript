@@ -63,7 +63,7 @@ Write-Host "FULLTEST_SUITE=$Suite"
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
   # Run the latest failing AST CLI fixture before the broader probes.
-  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') $compileTimeoutMilliseconds 'AST CLI shared JSON runtime, List Function ByRef, parameter/return, Resume, ForAll aliases, Static, GoTo and Optional regressions'
+  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 600000 'AST CLI native XPImage/JSON runtime, ownership, List ByRef, Resume, ForAll, Static, GoTo and Optional regressions'
   if ($astCliFirst.ExitCode -ne 0 -or $astCliFirst.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
   $astLexer = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-lexer/AstLexerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST lexer and compatibility regression'
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
@@ -136,6 +136,12 @@ if (Should-Run 'notes') {
 if (Should-Run 'runtime') {
   $generatedDependencies = Invoke-Bounded 'dotnet' @('run','--project','./tests/GeneratedDependencyProbe/GeneratedDependencyProbe.csproj','-c','Release') 240000 'generated addon packages, native runtime assets and exact license graph'
   if ($generatedDependencies.ExitCode -ne 0 -or $generatedDependencies.Output -notmatch 'GENERATED_DEPENDENCIES_OK') { throw 'Generated addon dependency packaging regression failed.' }
+  $imageFixtureDirectory = Join-Path (Resolve-Path './out/fulltest').Path ('xpimage-' + [Guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Force -Path $imageFixtureDirectory | Out-Null
+  $imageFixture = Join-Path $imageFixtureDirectory 'xpimage-parity.xps'
+  Copy-Item './tests/ast-compile-probe/xpimage-parity.xps' $imageFixture
+  $imageParity = Run-Xps $imageFixture xpimage-shared-runtime
+  if ($imageParity.Output.Trim().Replace("`r`n", "`n") -ne "4`n6`n0`n0`n3`n2`nXPIMAGE_PARITY_OK") { throw 'Shared XPImage runtime parity regression did not complete.' }
   $scalarRuntime = Run-Xps ./tests/ast-compile-probe/shared-runtime.xps shared-scalar-runtime
   if ($scalarRuntime.Output -notmatch 'OVERFLOW=6' -or $scalarRuntime.Output -notmatch 'CONTINUED') { throw 'Shared scalar runtime conversion/overflow regression did not complete.' }
   $nativeJson = Run-Xps ./tests/ast-compile-probe/json-runtime.xps native-json-shared-runtime

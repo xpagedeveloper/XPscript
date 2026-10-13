@@ -1,0 +1,4 @@
+Sub Main()
+    Dim picture As New XPImage(2, 2)
+    picture.Width = 7
+End Sub

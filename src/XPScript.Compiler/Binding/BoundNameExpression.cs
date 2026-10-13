@@ -11,6 +11,7 @@ public sealed class BoundNameExpression : BoundExpression
             LocalSymbol local => (local.Type, local.SemanticType ?? XpTypeSymbol.FromClr(local.Type)),
             ParameterSymbol parameter => (parameter.Type, parameter.SemanticType ?? XpTypeSymbol.FromClr(parameter.Type)),
             FieldSymbol field => (field.FieldType, field.SemanticType ?? XpTypeSymbol.FromClr(field.FieldType)),
+            TypeSymbol type => (type.Type, type.SemanticType ?? XpTypeSymbol.User(type.Name)),
             _ => throw new ArgumentException($"Symbol '{symbol.Name}' is not a value symbol.", nameof(symbol))
         };
     }

@@ -6,8 +6,9 @@ silent changes to XPscript semantics.
 
 ## Explicit legacy fallback
 
-- Sources containing `XPImage` are routed through the legacy compiler until
-  the existing image runtime is represented by AST-bound nodes.
+- XPImage uses the shared native runtime through AST-bound nodes and no longer
+  causes legacy fallback. Other registry entries not yet migrated still route
+  the complete source file through the legacy compiler.
 - The fallback is owned by `AstObjectSupportRegistry` and is exercised by the
   AST CLI and MCP probes.
 
@@ -29,7 +30,12 @@ same structured diagnostic as the CLI.
 
 ## Deliberately deferred semantics
 
-Multidimensional arrays, complete error-handler transfer semantics, class
-lowering and the remaining XPImage operations stay deferred until their shared
+Multidimensional arrays, complete error-handler transfer semantics and class
+lowering stay deferred until their shared
 bound/runtime representations are available. These features must not be
 silently approximated with dynamic values or generated C# behavior.
+
+AST image ownership also covers exception exits and evaluates replacements before
+recycling old images. The legacy image preprocessor's end-of-procedure cleanup
+does not guarantee cleanup on thrown errors. `xpimage-runtime.xps` tests AST cleanup
+independently; `xpimage-parity.xps` compares the shared image API and normal exits.

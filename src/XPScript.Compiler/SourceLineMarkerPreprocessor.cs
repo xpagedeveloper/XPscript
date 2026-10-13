@@ -112,7 +112,7 @@ internal sealed class SourceLineMarkerPreprocessor
 
     private static string EscapeXpsString(string value) => value.Replace("\"", "\"\"", StringComparison.Ordinal);
 
-    private static string SafeSourceId(string sourcePath, string rootSourcePath)
+    internal static string SafeSourceId(string sourcePath, string rootSourcePath)
     {
         try
         {

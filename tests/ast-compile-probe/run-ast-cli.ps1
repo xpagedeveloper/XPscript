@@ -4,6 +4,33 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$imageFixtureRoot = Join-Path $output ('xpimage-' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Force -Path $imageFixtureRoot | Out-Null
+$imageSource = Join-Path $imageFixtureRoot 'xpimage-runtime.xps'
+Copy-Item (Join-Path $PSScriptRoot 'xpimage-runtime.xps') $imageSource
+$imageOutput = Join-Path $imageFixtureRoot 'ast'
+dotnet $compiler ast-compile $imageSource -o $imageOutput
+if ($LASTEXITCODE -ne 0) { throw 'Native AST XPImage compilation failed.' }
+$imageResult = dotnet (Join-Path $imageOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageResult -join "`n") -ne "4`n3`n12`n0`n4`n2`n4`n3`n4`n0`n20`n2`n0`nTrue`n5`nTrue`n5`n4`nTrue`nTrue`nTrue`n2`n3`nXPIMAGE_AST_OK") { throw 'Native AST image operations, loading, ByVal/ByRef or cleanup regression failed.' }
+$imageNotice = Get-Content (Join-Path $imageOutput 'Third-party-license.txt') -Raw
+if ($imageNotice -notmatch 'Magick.NET-Q16-AnyCPU' -or $imageNotice -notmatch 'Magick.NET.Core' -or $imageNotice -match 'License text could not be resolved') { throw 'AST image addon notices are incomplete.' }
+$imageVariantOutput = Join-Path $imageFixtureRoot 'variant-return'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-variant-return.xps') -o $imageVariantOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST image Variant return compilation failed.' }
+$imageVariantResult = dotnet (Join-Path $imageVariantOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageVariantResult -join "`n") -ne "3`n4`nTrue") { throw 'AST image Variant return or replaced ByVal ownership failed.' }
+$imageParitySource = Join-Path $imageFixtureRoot 'xpimage-parity.xps'
+Copy-Item (Join-Path $PSScriptRoot 'xpimage-parity.xps') $imageParitySource
+$imageParityOutput = Join-Path $imageFixtureRoot 'parity'
+dotnet $compiler ast-compile $imageParitySource -o $imageParityOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST image parity compilation failed.' }
+$imageParityResult = dotnet (Join-Path $imageParityOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageParityResult -join "`n") -ne "4`n6`n0`n0`n3`n2`nXPIMAGE_PARITY_OK") { throw 'AST image output differs from the shared normal compiler contract.' }
+foreach ($imageInvalid in @('xpimage-constructor-error', 'xpimage-member-error', 'xpimage-readonly-error')) {
+    $invalidResult = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$imageInvalid.xps") -o (Join-Path $imageFixtureRoot $imageInvalid) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($invalidResult -join "`n") -notmatch "$imageInvalid.xps:3:") { throw "AST $imageInvalid lost its source-mapped diagnostic." }
+}
 $runtimeOutput = Join-Path $output 'shared-runtime'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'shared-runtime.xps') -o $runtimeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST shared scalar runtime compilation failed.' }
@@ -191,9 +218,11 @@ $withResult = dotnet (Join-Path $withOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($withResult -join "`n") -ne "`n") { throw 'AST With receiver/member access execution failed.' }
 $unsupportedImplicitMember = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'implicit-member-error.xps') -o (Join-Path $output 'implicit-member-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($unsupportedImplicitMember -join "`n") -notmatch "Implicit member 'Name' requires an active With scope") { throw 'AST accepted an implicit member outside a With scope.' }
-$legacyImageOutput = Join-Path $output 'xpimage-error'
-$legacyImage = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-error.xps') -o $legacyImageOutput 2>&1
-if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $legacyImageOutput 'Generated'))) { throw 'AST did not route XPImage source through the legacy compiler.' }
+$nativeImageOutput = Join-Path $output 'xpimage-error'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-error.xps') -o $nativeImageOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST did not compile XPImage natively.' }
+$nativeImageResult = dotnet (Join-Path $nativeImageOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($nativeImageResult -join "`n") -ne '2') { throw 'AST XPImage construction failed.' }
 $optionBaseOutput = Join-Path $output 'option-base'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'option-base.xps') -o $optionBaseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Option Base compilation failed.' }

@@ -505,6 +505,12 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindBoundAssignment(BoundExpression target, ExpressionSyntax valueSyntax, bool isSet, ExpressionSyntax targetSyntax)
     {
+        if (target is BoundMemberAccessExpression imageMember && AstImageSupport.IsImage(imageMember.Receiver.SemanticType.Name))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
+                $"XPImage property '{AstImageSupport.MemberName(imageMember.Name)}' is read-only.", targetSyntax.Span));
+            return null;
+        }
         if (!IsWritable(target))
         {
             _diagnostics.Add(new SyntaxDiagnostic(

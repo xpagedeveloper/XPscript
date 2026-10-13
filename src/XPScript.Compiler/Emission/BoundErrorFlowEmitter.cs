@@ -6,6 +6,8 @@ namespace XPScript.Compiler.Emission;
 /// <summary>Turns protected procedures into resumable instruction graphs.</summary>
 internal sealed class BoundErrorFlowEmitter
 {
+    private readonly bool _imageScope;
+    internal BoundErrorFlowEmitter(bool imageScope = false) => _imageScope = imageScope;
     private sealed record Instruction(BoundStatement Source, int Next, Action<int> Write);
     private readonly List<Instruction> _instructions = [];
     private readonly Dictionary<string, int> _labels = new(StringComparer.OrdinalIgnoreCase);
@@ -30,7 +32,7 @@ internal sealed class BoundErrorFlowEmitter
             var type = declaration.Local.SemanticType?.IsList == true
                 ? $"LSList<{BoundMethodEmitter.CSharpType(declaration.Local.SemanticType.ElementType!.RuntimeType)}>"
                 : BoundMethodEmitter.CSharpType(declaration.Local.Type);
-            type = BoundExpressionEmitter.JsonRuntimeType(declaration.Local.SemanticType?.Name ?? "") ?? type;
+            type = BoundExpressionEmitter.RuntimeObjectType(declaration.Local.SemanticType?.Name ?? "") ?? type;
             _output.Write($"{type} {declaration.Local.Name} = default({type})!;", 0, declaration.Span);
         }
         foreach (var storage in _storage) _output.Write(storage, 0);
@@ -186,13 +188,13 @@ internal sealed class BoundErrorFlowEmitter
                     if (statement is BoundVariableDeclarationStatement declaration && declaration.Local.StaticStorageName is null)
                     {
                         var temporaryOutput = new BoundEmissionContext([statement]);
-                        new BoundStatementEmitter(_expressions).EmitAtomic(temporaryOutput, statement, 0);
+                        new BoundStatementEmitter(_expressions) { ImageScopeEnabled = _imageScope }.EmitAtomic(temporaryOutput, statement, 0);
                         var code = temporaryOutput.Finish().Code;
                         var start = code.IndexOf(declaration.Local.Name + " = ", StringComparison.Ordinal);
                         foreach (var line in code[start..].TrimEnd().Split('\n'))
                             Write(line, indent, statement);
                     }
-                    else new BoundStatementEmitter(_expressions).EmitAtomic(_output, statement, indent);
+                    else new BoundStatementEmitter(_expressions) { ImageScopeEnabled = _imageScope }.EmitAtomic(_output, statement, indent);
                 });
         }
     }

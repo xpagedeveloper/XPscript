@@ -21,6 +21,7 @@ internal static class AstObjectSupportRegistry
     private static readonly IReadOnlySet<string> AstObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "Application",
+        "XPImage",
         "List",
         "Array",
         "Variant",
@@ -71,7 +72,7 @@ internal static class AstObjectSupportRegistry
     {
         "With", "GoSub", "Worker", "AfterWorker", "SkipLine", "ErrorHandler", "ErrorDone",
         "RetryHandler", "RetryDone", "ResumeTarget", "LabelHandler", "LabelDone",
-        "ProviderError", "InvalidConnection", "System", "XPImage"
+        "ProviderError", "InvalidConnection", "System"
     };
 
     private static IReadOnlyList<ObjectDefinition> BuildObjectDefinitions()
@@ -106,6 +107,9 @@ internal static class AstObjectSupportRegistry
         definition = null;
         return false;
     }
+
+    internal static bool UsesObject(string source, string name) =>
+        Regex.IsMatch(RemoveStringsAndComments(source), $@"(?i)\b{Regex.Escape(name)}\b");
 
     private static string RemoveStringsAndComments(string source)
     {

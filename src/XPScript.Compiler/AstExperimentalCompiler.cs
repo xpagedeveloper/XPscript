@@ -47,7 +47,6 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Line\s+Input\s+#?(?<file>[^,\s]+)\s*,\s*(?<target>[A-Za-z_]\w*)\s*$", "${indent}${target} = AstLineInput(${file})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Kill\s+(?<path>.+)$", "${indent}Call AstKill(${path})");
         source = Regex.Replace(source, @"(?<![\w.])Input\$\s*\(\s*(?<count>[^,()]+)\s*,\s*#\s*(?<file>[^)]+)\)", "AstInputChars(${count}, ${file})", RegexOptions.IgnoreCase);
-        source = Regex.Replace(source, @"(?<!\w)#\s*", string.Empty);
         source = source.Replace("Error$", "ErrorValue()", StringComparison.OrdinalIgnoreCase);
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)p\.[A-Za-z_]\w*(?:\s*=.*)?$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Print\s+p\.[A-Za-z_]\w*\s*$", "${indent}Call AstNoOp()");
@@ -155,7 +154,7 @@ public static class AstExperimentalCompiler
         foreach (Match match in Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
         foreach (var typeName in AstObjectSupportRegistry.VariantTypeNames)
-            symbols.Declare(new VariableSymbol(typeName, typeof(object), BoundExpressionEmitter.JsonRuntimeType(typeName) is null ? XpTypeSymbol.Variant : XpTypeSymbol.User(typeName)));
+            symbols.Declare(new VariableSymbol(typeName, typeof(object), BoundExpressionEmitter.RuntimeObjectType(typeName) is null ? XpTypeSymbol.Variant : XpTypeSymbol.User(typeName)));
         symbols.Declare(new VariableSymbol("Console", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"\bForAll\s+(?<name>[A-Za-z_]\w*)\s+In\b", RegexOptions.IgnoreCase))
@@ -204,7 +203,6 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Loc", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Environ", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstUtf8", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
-        symbols.Declare(new FunctionSymbol("AstImageFromBytes", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstPut", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstLockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstUnlockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -514,12 +512,15 @@ using System.Dynamic;
 using System.Text;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.IO;
+using System.Linq;
 using XpJsonDocument = XPScriptJsonDocument;
 using XpJsonObject = XPScriptJsonObject;
 using XpJsonArray = XPScriptJsonArray;
 using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
 {{AstRuntimeSource.Code}}
+{{AstImageSupport.RuntimeCode(fullSource)}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
 {{AstErrorRuntimeCode()}}
@@ -541,6 +542,7 @@ internal static class LSForAllRuntime
 {{classSupport}}
 internal static class Program
 {
+    {{(AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? "static Program() { XPScriptFileSystemRuntime.SetScriptDirectory(" + Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, true) + "); }" : "")}}
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
     public static bool True = true;
     public static bool False = false;
@@ -905,7 +907,6 @@ internal static class Program
     public static long GetTickCount() => Environment.TickCount64;
     public static string Environ(object? name) => XPScriptRuntime.Environ(name);
     public static object AstUtf8(object? value) => Encoding.UTF8.GetBytes(Convert.ToString(value) ?? string.Empty);
-    public static object AstImageFromBytes(object? _) => new ExpandoObject();
     public static long Loc(object? _) => 0;
     public static string Error(object? _) => string.Empty;
     public static string Error() => string.Empty;
@@ -1041,7 +1042,7 @@ internal static class Program
     }
 
     private static XpTypeSymbol ResolveValueType(TypeSyntax? type) => type is null || type.Identifier.Text.Equals("Variant", StringComparison.OrdinalIgnoreCase)
-        ? XpTypeSymbol.Variant : BoundExpressionEmitter.JsonRuntimeType(type.Identifier.Text) is not null
+        ? XpTypeSymbol.Variant : BoundExpressionEmitter.RuntimeObjectType(type.Identifier.Text) is not null
             ? XpTypeSymbol.User(type.Identifier.Text) : XpTypeSymbol.FromClr(ResolveRuntimeType(type.Identifier.Text));
 
     private static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters, string sourcePath, string source)

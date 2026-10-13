@@ -1,0 +1,110 @@
+Function MakeImage() As XPImage
+    Dim temporary As New XPImage(1, 1)
+    Dim result As New XPImage(5, 4, "#abcdef")
+    Set MakeImage = result
+End Function
+
+Sub MutateByVal(ByVal value As XPImage)
+    value.Resize(1, 1)
+End Sub
+
+Sub ReplaceByRef(value As XPImage)
+    Set value = New XPImage(3, 2, "#123456")
+End Sub
+
+Sub BorrowLocal(outside As Variant)
+    Dim localImage As New XPImage(2, 2)
+    outside = localImage
+    Exit Sub
+End Sub
+
+Sub ThrowWithImage(outside As Variant)
+    Dim localImage As New XPImage(2, 2)
+    outside = localImage
+    Error 5, "image cleanup"
+End Sub
+
+Sub UseStaticImage()
+    Static retained As New XPImage(2, 2)
+    Print retained.Width
+    retained.Resize(3, 3)
+End Sub
+
+Sub Main()
+    Dim picture As New XPImage(4, 3, "#ff0000")
+    Print picture.width
+    Print picture.HEIGHT
+    Print picture.PixelCount
+    Dim duplicate As XPImage
+    Set duplicate = picture.clone()
+    Print picture.Compare(duplicate)
+    duplicate.Resize(2)
+    Print picture.Width
+    Print duplicate.Width
+    Call MutateByVal(picture)
+    Print picture.Width
+    Call ReplaceByRef(picture)
+    Print picture.Width
+    Dim returned As XPImage
+    Set returned = MakeImage()
+    Print returned.Height
+    returned.SetPixel(0, 0, "#000000")
+    Dim encoded As Variant
+    encoded = returned.ToBytes("png")
+    Dim loaded As XPImage
+    Set loaded = xpimage.frombytes(encoded)
+    Print loaded.Compare(returned)
+    Dim statistics As XPJsonObject
+    Set statistics = loaded.Statistics()
+    Print statistics.Get("pixelCount")
+    Dim histogram As XPJsonArray
+    Set histogram = loaded.Histogram()
+    Print histogram.Count
+    loaded.Save("ast-image-roundtrip.png")
+    Dim fromFile As XPImage
+    Set fromFile = XPImage.Load("ast-image-roundtrip.png")
+    Print fromFile.Compare(loaded)
+    On Error Resume Next
+    loaded.Save("ast-image-roundtrip.png")
+    Print Err <> 0
+    On Error GoTo 0
+    loaded.ChangeGamma(1)
+    loaded.Resize(5, 4, "stretch")
+    loaded.FlipHorizontal()
+    loaded.FlipVertical()
+    loaded.Grayscale()
+    loaded.AutoLevel()
+    Dim difference As XPImage
+    Set difference = returned.Difference(fromFile)
+    Print difference.Width
+    returned.Recycle()
+    returned.Recycle()
+    On Error Resume Next
+    Print returned.Width
+    Print Err <> 0
+    On Error GoTo 0
+    Dim fromBase64 As XPImage
+    Set fromBase64 = XPImage.FromBase64("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAEAQMAAAB8/WcDAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGUExURQAAAKvN7z6rXaQAAAABYktHRAH/Ai3eAAAAB3RJTUUH6goNCTg7apQ8aAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNi0xMC0xM1QwOTo1Njo1OSswMDowMJPA5d8AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjYtMTAtMTNUMDk6NTY6NTkrMDA6MDDinV1jAAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDI2LTEwLTEzVDA5OjU2OjU5KzAwOjAwtYh8vAAAAAx0RVh0ZGlzdG9ydGlvbgAwsQv5IQAAAA1JREFUCNdjqGD4AYIADAgDYZPWJ9kAAAAASUVORK5CYII=")
+    Print fromBase64.Width
+    Print fromBase64.Height
+    Dim borrowed As Variant
+    Dim expired As XPImage
+    Call BorrowLocal(borrowed)
+    Set expired = borrowed
+    On Error Resume Next
+    Print expired.Width
+    Print Err <> 0
+    On Error GoTo 0
+    On Error Resume Next
+    Call ThrowWithImage(borrowed)
+    Print Err = 5
+    On Error GoTo 0
+    Set expired = borrowed
+    On Error Resume Next
+    Print expired.Width
+    Print Err <> 0
+    On Error GoTo 0
+    Call UseStaticImage()
+    Call UseStaticImage()
+    Print "XPIMAGE_AST_OK"
+End Sub

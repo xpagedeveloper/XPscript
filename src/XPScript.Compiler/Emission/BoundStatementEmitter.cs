@@ -10,11 +10,12 @@ public sealed class BoundStatementEmitter
     public BoundStatementEmitter() : this(new BoundExpressionEmitter()) { }
     internal BoundStatementEmitter(BoundExpressionEmitter expressions) => _expressions = expressions;
     private bool _flatControlFlow;
+    internal bool ImageScopeEnabled { get; set; }
 
     public string Emit(IReadOnlyList<BoundStatement> statements)
     {
         if (BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
-            return new BoundErrorFlowEmitter().Emit(statements);
+            return new BoundErrorFlowEmitter(ImageScopeEnabled).Emit(statements);
         _flatControlFlow = Collect(statements).Any();
         var output = new BoundEmissionContext(statements);
         if (_flatControlFlow)
@@ -27,7 +28,7 @@ public sealed class BoundStatementEmitter
                 if (declaration.Local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
                     !semantic.IsVariant && !semantic.IsObject && !semantic.IsNothing && !semantic.IsNull && !semantic.IsEmpty && !semantic.IsList)
                     type = $"Xp{semantic.Name}";
-                type = BoundExpressionEmitter.JsonRuntimeType(declaration.Local.SemanticType?.Name ?? "") ?? type;
+                type = BoundExpressionEmitter.RuntimeObjectType(declaration.Local.SemanticType?.Name ?? "") ?? type;
                 output.Write($"{type} {declaration.Local.Name} = default({type});", 0, declaration.Span);
             }
         }
@@ -43,7 +44,7 @@ public sealed class BoundStatementEmitter
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var output = new BoundEmissionContext(statements, source, sourcePath);
         if (BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
-            return new BoundErrorFlowEmitter().EmitMapped(statements, source, sourcePath);
+            return new BoundErrorFlowEmitter(ImageScopeEnabled).EmitMapped(statements, source, sourcePath);
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
         return output.Finish();
@@ -81,8 +82,13 @@ public sealed class BoundStatementEmitter
                 }
                 var targetText = _expressions.Emit(assignment.Target);
                 var expressionText = _expressions.Emit(assignment.Expression);
-                if (BoundExpressionEmitter.JsonRuntimeType(assignment.Target.SemanticType.Name) is { } targetJsonType)
+                if (BoundExpressionEmitter.RuntimeObjectType(assignment.Target.SemanticType.Name) is { } targetJsonType)
                     expressionText = $"({targetJsonType})({expressionText})";
+                if (AstImageSupport.IsImage(assignment.Target.SemanticType.Name) && assignment.Target is BoundNameExpression imageTarget)
+                {
+                    var owns = ImageScopeEnabled && imageTarget.Symbol is LocalSymbol { StaticStorageName: null } or ParameterSymbol { IsByRef: false };
+                    expressionText = $"{(owns ? "__imageScope.Replace" : "AstImageScope.ReplaceBorrowed")}({targetText}, {expressionText})";
+                }
                 if (targetText is "http.TimeoutSec" or "http.MaxRedirects" or "http.ResponseCode") expressionText = $"Convert.ToInt64({expressionText})";
                 if (targetText.EndsWith(".Timeout", StringComparison.OrdinalIgnoreCase)) expressionText = $"Convert.ToInt64({expressionText})";
                 if (targetText.Equals("ai", StringComparison.OrdinalIgnoreCase)) expressionText = $"(XpAi){expressionText}";
@@ -234,11 +240,13 @@ public sealed class BoundStatementEmitter
                 var initializer = declaration.Initializer is null
                     ? (declaration.Local.SemanticType?.IsVariant == true ? "null" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ? "new XpNotesHttp()" : declaration.Local.Name.Equals("http", StringComparison.OrdinalIgnoreCase) ? "new XpHttpClientStub()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase) ? "new XpAi(\"\", \"\")" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase) ? "new XpAiTool(\"\")" : declaration.Local.Name is "csv" or "copy" ? "new XpCsvDocument()" : declaration.Local.Name.Equals("row", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) ? "new XpCsvDocument()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase) ? "new XpCsvRow()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : (declaration.ArrayLength ?? 0) - declaration.Local.ArrayLowerBound + 1)}]" : type.StartsWith("Xp", StringComparison.Ordinal) ? $"new {type}()" : $"default({type})")))
                     : _expressions.Emit(declaration.Initializer);
-                if (BoundExpressionEmitter.JsonRuntimeType(declaration.Local.SemanticType?.Name ?? "") is { } jsonType)
+                if (BoundExpressionEmitter.RuntimeObjectType(declaration.Local.SemanticType?.Name ?? "") is { } jsonType)
                 {
                     type = jsonType;
                     initializer = declaration.Initializer is null ? "null" : $"({jsonType})({initializer})";
                 }
+                if (ImageScopeEnabled && AstImageSupport.IsImage(declaration.Local.SemanticType?.Name) && declaration.Local.StaticStorageName is null)
+                    initializer = $"__imageScope.Own({initializer})";
                 if (declaration.Local.IsDynamicArray && declaration.Initializer is null)
                 {
                     var elementType = declaration.Local.SemanticType?.ElementType?.RuntimeType is { } semanticElement
@@ -258,6 +266,8 @@ public sealed class BoundStatementEmitter
                 if (declaration.Initializer is null && declaration.Local.SemanticType?.IsObject == true)
                     initializer = "null";
                 Line($"{type} {declaration.Local.Name} = {initializer};");
+                if (ImageScopeEnabled && AstImageSupport.IsImage(declaration.Local.SemanticType?.Name) && declaration.Local.StaticStorageName is null)
+                    Line($"__imageScope.Observe(() => {declaration.Local.Name});");
                 if (declaration.Local.Type.IsArray && declaration.Local.Type.GetArrayRank() == 1 && declaration.Initializer is null && declaration.Local.Type.GetElementType() == typeof(string) && !declaration.EmptyArray)
                     Line($"System.Array.Fill((string[]){declaration.Local.Name}, string.Empty);");
                 break;
@@ -269,7 +279,10 @@ public sealed class BoundStatementEmitter
                 Line($"Console.WriteLine(XPScriptRuntime.PrintText({_expressions.Emit(print.Expression)}));");
                 break;
             case BoundReturnStatement @return:
-                Line(@return.Expression is null ? "return;" : $"return {_expressions.Emit(@return.Expression)};");
+                var returnedValue = @return.Expression is null ? null : _expressions.Emit(@return.Expression);
+                if (ImageScopeEnabled && @return.Expression is not null)
+                    returnedValue = $"__imageScope.EscapeValue({returnedValue})";
+                Line(returnedValue is null ? "return;" : $"return {returnedValue};");
                 break;
             case BoundIfStatement @if:
                 Line($"if ({Condition(@if.Condition)})");

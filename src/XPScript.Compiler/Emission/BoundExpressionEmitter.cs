@@ -49,7 +49,9 @@ public sealed class BoundExpressionEmitter
             : name.Symbol is LocalSymbol { StaticStorageName: { } storage } ? storage : name.Symbol.Name,
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("Console", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("WriteLine", StringComparison.OrdinalIgnoreCase) => "System.Console.WriteLine",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("Parse", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeJson.Parse",
-        BoundMemberAccessExpression member when JsonRuntimeType(member.Receiver.SemanticType.Name) is { } jsonType => $"(({jsonType})({Emit(member.Receiver)})).{JsonMemberName(member.Name)}",
+        BoundMemberAccessExpression member when AstImageSupport.IsImage(member.Receiver.SemanticType.Name) =>
+            $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? "XPImage" : $"((XPImage)({Emit(member.Receiver)}))")}.{AstImageSupport.MemberName(member.Name)}",
+        BoundMemberAccessExpression member when RuntimeObjectType(member.Receiver.SemanticType.Name) is { } jsonType => $"(({jsonType})({Emit(member.Receiver)})).{JsonMemberName(member.Name)}",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("http", StringComparison.OrdinalIgnoreCase) && member.Receiver.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"http.{member.Name}",
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
@@ -70,6 +72,8 @@ public sealed class BoundExpressionEmitter
             : $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateClient()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateRequest()",
+        BoundNewExpression @new when AstImageSupport.IsImage(@new.SemanticType.Name) =>
+            $"new XPImage({string.Join(", ", @new.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), i < 2 ? "int" : "string")))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Path", StringComparison.OrdinalIgnoreCase) => $"new XpPath({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Person", StringComparison.OrdinalIgnoreCase) => $"new XpPerson({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) => "new XpCsvDocument()",
@@ -94,8 +98,9 @@ public sealed class BoundExpressionEmitter
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
 
-    internal static string? JsonRuntimeType(string name) => name.ToUpperInvariant() switch
+    internal static string? RuntimeObjectType(string name) => name.ToUpperInvariant() switch
     {
+        "XPIMAGE" => "XPImage",
         "XPJSONDOCUMENT" => "XPScriptJsonDocument",
         "XPJSONOBJECT" => "XPScriptJsonObject",
         "XPJSONARRAY" => "XPScriptJsonArray",
@@ -139,6 +144,8 @@ public sealed class BoundExpressionEmitter
 
     private string EmitCall(BoundCallExpression call)
     {
+        if (call.Function.NativeParameterTypes is { } nativeTypes)
+            return $"{Emit(call.Target!)}({string.Join(", ", call.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), nativeTypes[i])))})";
         if (BoundListCallLowering.RequiresWrapper(call))
         {
             var wrapperArguments = new List<string>();
@@ -244,7 +251,7 @@ public sealed class BoundExpressionEmitter
         var value = Emit(expression.Expression);
         if (expression.SemanticType.IsList && expression.Conversion.Kind == ConversionKind.FromVariant)
             return $"(LSList<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!.RuntimeType)}>)({value})";
-        if (JsonRuntimeType(expression.SemanticType.Name) is { } jsonType && expression.Conversion.Kind == ConversionKind.FromVariant)
+        if (RuntimeObjectType(expression.SemanticType.Name) is { } jsonType && expression.Conversion.Kind == ConversionKind.FromVariant)
             return $"({jsonType})({value})";
         if (expression.Type == typeof(object) && expression.Conversion.Kind == ConversionKind.FromVariant)
             return value;

@@ -2,6 +2,14 @@
 
 XPImage is XPScript's cross-platform raster image object. It uses Magick.NET internally while keeping the public API independent of ImageMagick types. The regression example for the API is [xpimage-runtime.xps](../../samples/xpimage-runtime.xps).
 
+## AST compilation
+
+The AST compiler uses the same XPImage runtime directly, including `New XPImage(width, height [, background])`, `Dim image As New XPImage(...)`, `Load`, `FromBytes`, `FromBase64`, information properties and overloaded editing/encoding methods. Names are case-insensitive; information properties are read-only. Invalid constructors, method arguments and members produce source-mapped diagnostics through both CLI and MCP.
+
+ByVal image parameters receive an independent clone. ByRef parameters can mutate or replace the caller's image. Locally owned images are recycled on procedure exit, including early exit and exceptions; returned image references survive, including Variant results. Static images remain available across calls. Evaluate a replacement before recycling the previous image, so `Set image = image.Clone()` is safe.
+
+Magick.NET and its native libraries are selected only when image runtime code is used. The existing addon build path supplies package references, platform assets and the direct/transitive `Third-party-license.txt`; image-free AST programs do not acquire Magick.NET. Executable AST coverage is in `tests/ast-compile-probe/xpimage-runtime.xps`, and `xpimage-parity.xps` verifies the shared contract against normal compilation.
+
 ## Extended effects
 
 All editing methods mutate the current XPImage unless their description says that they return a new image.

@@ -524,6 +524,8 @@ Host sessions must be enabled. See [REST API development](rest-api.md).
 
 XPImage is the cross-platform raster image runtime backed internally by Magick.NET. Magick.NET types are not exposed to XPscript. The complete processing guide is in [XPImage](xpimage/index.md).
 
+AST compilation binds this same runtime directly, including constructors, loaders, read-only properties and overloaded methods. Magick.NET/native assets and third-party notices are selected on image use, not for image-free programs. See the guide for ByVal/ByRef, local ownership, return and Static behavior.
+
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `XPImage` | `New XPImage(width, height [, background])` | Pixel dimensions and optional color. | Creates a bounded raster image. | [xpimage-runtime.xps](../samples/xpimage-runtime.xps) |

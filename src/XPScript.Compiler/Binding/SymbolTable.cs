@@ -22,6 +22,8 @@ public sealed class SymbolTable
     {
         foreach (var definition in CompilerSymbolCatalog.All)
         {
+            if (definition.Name.StartsWith("XPImage.", StringComparison.OrdinalIgnoreCase))
+                continue; // Import every native overload from the shared runtime below.
             if (definition.Kind.Equals("class", StringComparison.OrdinalIgnoreCase))
             {
                 Declare(new TypeSymbol(definition.Name, typeof(object), XpTypeSymbol.User(definition.Name)));
@@ -37,6 +39,7 @@ public sealed class SymbolTable
             var semanticReturnType = definition.ReturnType is null ? null : ResolveSemanticType(definition.ReturnType);
             Declare(new FunctionSymbol(definition.Name, returnType, parameterTypes, semanticReturnType, semanticParameterTypes));
         }
+        AstImageSupport.Import(this);
     }
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch

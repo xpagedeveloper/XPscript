@@ -23,6 +23,9 @@ public sealed class BoundMethodEmitter
         ArgumentNullException.ThrowIfNull(parameters);
 
         string body;
+        _statements.ImageScopeEnabled = parameters.Any(p => AstImageSupport.IsImage(p.SemanticType?.Name)) ||
+            BoundStatementTraversal.Descendants(statements).OfType<BoundVariableDeclarationStatement>()
+                .Any(d => AstImageSupport.IsImage(d.Local.SemanticType?.Name));
         try
         {
             body = source is not null && sourcePath is not null && BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement)
@@ -38,6 +41,15 @@ public sealed class BoundMethodEmitter
             .Append(methodName).Append('(')
             .Append(string.Join(", ", parameters.Select(Parameter)))
             .Append(")\n{\n");
+        if (_statements.ImageScopeEnabled)
+        {
+            output.Append("    using var __imageScope = new AstImageScope();\n");
+            foreach (var parameter in parameters.Where(p => !p.IsByRef && AstImageSupport.IsImage(p.SemanticType?.Name)))
+            {
+                output.Append("    ").Append(parameter.Name).Append(" = __imageScope.Own(").Append(parameter.Name).Append("?.Clone());\n");
+                output.Append("    __imageScope.Observe(() => ").Append(parameter.Name).Append(");\n");
+            }
+        }
         foreach (var line in body.Split('\n', StringSplitOptions.RemoveEmptyEntries))
             output.Append("    ").Append(line).Append('\n');
         if (returnType != typeof(void) && BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
@@ -50,7 +62,7 @@ public sealed class BoundMethodEmitter
     {
         var mode = parameter.IsByRef ? "ref " : string.Empty;
         var type = parameter.SemanticType?.IsList == true ? $"LSList<{CSharpType(parameter.SemanticType.ElementType!.RuntimeType)}>" : CSharpType(parameter.Type);
-        type = BoundExpressionEmitter.JsonRuntimeType(parameter.SemanticType?.Name ?? "") ?? type;
+        type = BoundExpressionEmitter.RuntimeObjectType(parameter.SemanticType?.Name ?? "") ?? type;
         return mode + type + " " + parameter.Name;
     }
 

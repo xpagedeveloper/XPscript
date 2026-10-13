@@ -96,19 +96,6 @@ public static class CompilerSymbolCatalog
             Define("XPJsonElement.Type", "method", "XPJsonElement.Type As String", [], "String", "api.XPJsonElement.Type"),
             Define("XPJsonElement.Value", "method", "XPJsonElement.Value As Variant", [], "Variant", "api.XPJsonElement.Value"),
             Define("XPImage", "class", "XPImage", [], null, "api.XPImage"),
-            Define("XPImage.ChangeGamma", "method", "XPImage.ChangeGamma(value As Double)", [new("value", "Double")], null, "api.XPImage.ChangeGamma"),
-            Define("XPImage.Compare", "method", "XPImage.Compare(other As XPImage) As Double", [new("other", "XPImage")], "Double", "api.XPImage.Compare"),
-            Define("XPImage.Difference", "method", "XPImage.Difference(other As XPImage) As XPImage", [new("other", "XPImage")], "XPImage", "api.XPImage.Difference"),
-            Define("XPImage.Statistics", "method", "XPImage.Statistics() As XPJsonObject", [], "XPJsonObject", "api.XPImage.Statistics"),
-            Define("XPImage.Histogram", "method", "XPImage.Histogram(maxColors As Integer) As XPJsonArray", [new("maxColors", "Integer")], "XPJsonArray", "api.XPImage.Histogram"),
-            Define("XPImage.HasAlpha", "property", "XPImage.HasAlpha As Boolean", [], "Boolean", "api.XPImage.HasAlpha"),
-            Define("XPImage.ColorSpace", "property", "XPImage.ColorSpace As String", [], "String", "api.XPImage.ColorSpace"),
-            Define("XPImage.ColorType", "property", "XPImage.ColorType As String", [], "String", "api.XPImage.ColorType"),
-            Define("XPImage.Gamma", "property", "XPImage.Gamma As Double", [], "Double", "api.XPImage.Gamma"),
-            Define("XPImage.Depth", "property", "XPImage.Depth As Integer", [], "Integer", "api.XPImage.Depth"),
-            Define("XPImage.Quality", "property", "XPImage.Quality As Integer", [], "Integer", "api.XPImage.Quality"),
-            Define("XPImage.Orientation", "property", "XPImage.Orientation As String", [], "String", "api.XPImage.Orientation"),
-            Define("XPImage.PixelCount", "property", "XPImage.PixelCount As Long", [], "Long", "api.XPImage.PixelCount"),
             Define("XPDBSQLite", "class", "XPDBSQLite", [], null, "api.XPDBSQLite"),
             Define("XPDBSQLite.Open", "method", "XPDBSQLite.Open()", [], null, "api.XPDBSQLite.Open"),
             Define("XPDBSQLite.Close", "method", "XPDBSQLite.Close()", [], null, "api.XPDBSQLite.Close"),
@@ -138,7 +125,7 @@ public static class CompilerSymbolCatalog
             Define("XPAi.SessionRequestProperty", "property", "XPAi.SessionRequestProperty As String", [], "String", "api.XPAi.SessionRequestProperty"),
             Define("XPAi.ResetSession", "method", "XPAi.ResetSession()", [], null, "api.XPAi.ResetSession"),
             Define("XPAi.NewRequest", "method", "XPAi.NewRequest() As XPAiRequest", [], "XPAiRequest", "api.XPAi.NewRequest")
-        }.ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
+        }.Concat(AstImageSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerSymbolDefinition? Find(string name)
     {

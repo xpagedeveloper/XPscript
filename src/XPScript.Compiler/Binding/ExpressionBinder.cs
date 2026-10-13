@@ -74,6 +74,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindName(NameExpressionSyntax syntax)
     {
         var name = syntax.IdentifierToken.Text;
+        if (_symbols.TryLookup(name, out var nativeType) && nativeType is TypeSymbol && AstImageSupport.IsImage(name))
+            return new BoundNameExpression(nativeType);
         // A bare function name denotes its result slot; a call still resolves
         // the procedure signature, so recursion is unaffected.
         if (functionResult is not null && name.Equals(functionName, StringComparison.OrdinalIgnoreCase))
@@ -98,6 +100,18 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindNew(NewExpressionSyntax syntax)
     {
         var typeName = syntax.TypeName.Text;
+        if (AstImageSupport.IsImage(typeName))
+        {
+            var imageArguments = syntax.Arguments.Select(Bind).ToArray();
+            var imageConstructor = AstImageSupport.Constructors.FirstOrDefault(c => c.NativeTypes.Length == imageArguments.Length &&
+                c.NativeTypes.Select(AstImageSupport.SemanticType).Zip(imageArguments,
+                    (parameter, argument) => Conversion.Classify(argument.SemanticType, parameter).IsImplicit).All(matches => matches));
+            if (imageConstructor is null)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "No matching constructor for 'XPImage'.");
+            var function = new FunctionSymbol("XPImage.New", typeof(object), imageConstructor.NativeTypes.Select(AstImageSupport.SemanticType).Select(t => t.RuntimeType).ToArray(),
+                XpTypeSymbol.User("XPImage"), imageConstructor.NativeTypes.Select(AstImageSupport.SemanticType).ToArray());
+            return new BoundNewExpression(typeof(object), ConvertArguments(function, imageArguments), XpTypeSymbol.User("XPImage"));
+        }
         if (_allowDynamicMembers && (!_symbols.TryLookup(typeName, out var knownSymbol) || knownSymbol is not TypeSymbol))
         {
             var dynamicArguments = syntax.Arguments.Select(Bind).ToArray();
@@ -153,7 +167,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         if (_symbols.TryLookupMember(receiver.SemanticType, syntax.NameToken.Text, out var symbol))
         {
             if (symbol is PropertySymbol property)
+            {
+                if (AstImageSupport.IsImage(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
+                    return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"XPImage property '{property.Name.Split('.').Last()}' requires an image instance.");
                 return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, property.PropertyType, property.SemanticType);
+            }
             if (symbol is FunctionSymbol function)
                 return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType, function.SemanticReturnType);
         }
@@ -270,6 +288,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (indexedProperty is not null)
                 return BindIndexedProperty(syntax, receiver, indexedProperty);
             var memberFunctions = memberSymbols.OfType<FunctionSymbol>().ToArray();
+            if (AstImageSupport.IsImage(receiver.SemanticType.Name))
+                memberFunctions = memberFunctions.Where(f => f.IsNativeStatic == (receiver is BoundNameExpression { Symbol: TypeSymbol })).ToArray();
             if (memberFunctions.Length == 0)
                 return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Member '{name}' on '{receiver.SemanticType.Name}' is not callable.");
             target = new BoundMemberAccessExpression(receiver, name, memberFunctions[0].ReturnType, memberFunctions[0].SemanticReturnType);

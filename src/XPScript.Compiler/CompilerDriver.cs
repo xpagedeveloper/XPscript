@@ -216,6 +216,7 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
+            CompilerSourceDocuments.Stage(sourcePath, includeResult.Map, tempRoot);
 
             var psi = new ProcessStartInfo
             {

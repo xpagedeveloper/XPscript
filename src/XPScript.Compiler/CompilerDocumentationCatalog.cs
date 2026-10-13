@@ -65,19 +65,6 @@ public static class CompilerDocumentationCatalog
             Define("api.XPHttpResponse.IsSuccess", "api", "XPHttpResponse.IsSuccess"),
             Define("api.XPHttpResponse.Json", "api", "XPHttpResponse.Json"),
             Define("api.XPImage", "api", "XPImage"),
-            Define("api.XPImage.ChangeGamma", "api", "XPImage.ChangeGamma"),
-            Define("api.XPImage.Compare", "api", "XPImage.Compare"),
-            Define("api.XPImage.Difference", "api", "XPImage.Difference"),
-            Define("api.XPImage.Statistics", "api", "XPImage.Statistics"),
-            Define("api.XPImage.Histogram", "api", "XPImage.Histogram"),
-            Define("api.XPImage.HasAlpha", "api", "XPImage.HasAlpha"),
-            Define("api.XPImage.ColorSpace", "api", "XPImage.ColorSpace"),
-            Define("api.XPImage.ColorType", "api", "XPImage.ColorType"),
-            Define("api.XPImage.Gamma", "api", "XPImage.Gamma"),
-            Define("api.XPImage.Depth", "api", "XPImage.Depth"),
-            Define("api.XPImage.Quality", "api", "XPImage.Quality"),
-            Define("api.XPImage.Orientation", "api", "XPImage.Orientation"),
-            Define("api.XPImage.PixelCount", "api", "XPImage.PixelCount"),
             Define("api.XPJsonArray", "api", "XPJsonArray"),
             Define("api.XPJsonArray.Add", "api", "XPJsonArray.Add"),
             Define("api.XPJsonArray.Get", "api", "XPJsonArray.Get"),
@@ -119,7 +106,8 @@ public static class CompilerDocumentationCatalog
             Define("target.ServerSide", "target", "ServerSide"),
             Define("security.Shell", "security", "Shell"),
             Define("security.DependencyAudit", "security", "dependency-audit")
-        }.ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
+        }.Concat(AstImageSupport.Catalog.Select(x => Define(x.DocumentationId, "api", x.Name)))
+        .DistinctBy(x => x.Id, StringComparer.OrdinalIgnoreCase).ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerDocumentationDefinition? Find(string id)
     {

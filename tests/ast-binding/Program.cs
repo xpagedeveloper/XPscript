@@ -1,5 +1,6 @@
 using XPScript.Compiler.Binding;
 using XPScript.Compiler.Syntax;
+using XPScript.Compiler;
 
 static ExpressionSyntax Parse(string text)
 {
@@ -11,6 +12,27 @@ static ExpressionSyntax Parse(string text)
 }
 
 // Type diagnostics run first so semantic type regressions fail before the broader binder probe.
+var imageSymbols = SymbolTable.CreateWithCompilerCatalog();
+imageSymbols.Declare(new LocalSymbol("image", typeof(object), XpTypeSymbol.User("XPImage")));
+foreach (var text in new[] { "New XPImage(2, 3)", "New XPImage(2, 3, \"#123456\")", "image.width", "image.Resize(2)",
+    "image.Resize(2, 3)", "image.Resize(2, 3, \"stretch\")", "image.Histogram()", "image.Histogram(1)",
+    "XPImage.Load(\"picture.png\")", "xpimage.frombase64(\"data\")", "image.ToBytes(\"png\", 90)" })
+{
+    var binder = new ExpressionBinder(imageSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 0) throw new InvalidOperationException("Native image signature failed to bind: " + text);
+}
+foreach (var text in new[] { "New XPImage(2)", "New XPImage(\"wrong\", 2)", "image.Resize(1, 2, 3)",
+    "image.Missing", "XPImage.Width", "XPImage.Clone()", "image.Load(\"picture.png\")" })
+{
+    var binder = new ExpressionBinder(imageSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 1) throw new InvalidOperationException("Invalid native image signature escaped binding: " + text);
+}
+foreach (var symbol in CompilerSymbolCatalog.All.Where(s => s.Name.StartsWith("XPImage.", StringComparison.Ordinal)))
+    if (CompilerDocumentationCatalog.Find(symbol.DocumentationId) is null)
+        throw new InvalidOperationException("Image API documentation is missing: " + symbol.Name);
+Console.WriteLine("AST_BINDING_XPIMAGE_NATIVE_OK");
 var receiverSymbols = new SymbolTable();
 receiverSymbols.Declare(new VariableSymbol("widget", typeof(object), XpTypeSymbol.User("Widget")));
 receiverSymbols.Declare(new VariableSymbol("variant", typeof(object), XpTypeSymbol.Variant));
