@@ -58,7 +58,7 @@ public readonly record struct RuntimeFeatures(
             JsonSchema: jsonSchema || PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm"),
             Xml: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPXml") ||
                  PreprocessorFeatureGate.ContainsCall(code, "XPXmlDocument.Parse", "XmlParse", "XmlStringify", "XmlEscape"),
-            Csv: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPCsv") ||
+            Csv: AstSpreadsheetSupport.UsesWorksheetCsv(source) || PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPCsv") ||
                  PreprocessorFeatureGate.ContainsCall(
                      code, "XPCsvDocument.Parse", "XPCsvDocument.ParseBytes", "XPCsvDocument.Load", "CsvParse", "CsvParseBytes",
                      "CsvStringify", "CsvEscape", "ToCsv"),
@@ -70,7 +70,7 @@ public readonly record struct RuntimeFeatures(
             Ui: PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm", "UIListView"),
             Ai: PreprocessorFeatureGate.ContainsAny(code, "XPAi", "XPAiResponse", "AITool"),
             Archive: PreprocessorFeatureGate.ContainsTypeReference(code, "Archive", "ArchiveEntry"),
-            Spreadsheet: PreprocessorFeatureGate.ContainsTypeReference(code, "XPSpreadsheet", "XPWorksheet", "XPCell"),
+            Spreadsheet: AstSpreadsheetSupport.UsesSpreadsheet(source),
             NetworkTools: PreprocessorFeatureGate.ContainsTypeReference(code, "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo"),
             Image: PreprocessorFeatureGate.ContainsTypeReference(code, "XPImage") || PreprocessorFeatureGate.ContainsCall(code, "XPImage.Load", "XPImage.FromBytes", "XPImage.FromBase64"));
     }

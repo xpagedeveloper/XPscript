@@ -4,7 +4,7 @@ This is the searchable runtime-object reference for XPScript. Use [commands.md](
 
 Every row contains the member title, accepted syntax, parameters and their purpose, a short behavior description, and a complete `.xps` example that can be copied and compiled. The linked topical pages provide longer explanations and security guidance.
 
-For native CSV documents and header/row/column collections, see [native-csv.md](native-csv.md). Normal and AST compilation share the same runtime; unused CSV code is omitted and CSV-only programs add no external packages. Spreadsheet interop retains the legacy compilation route.
+For native CSV documents and header/row/column collections, see [native-csv.md](native-csv.md). Normal and AST compilation share the same runtime; unused CSV code is omitted and CSV-only programs add no external packages. Native spreadsheet objects and CSV interoperability also compile through AST; see [xpspreadsheet.md](xpspreadsheet.md).
 
 For the native XML document/DOM/DTD API, see [native-xml.md](native-xml.md). AST and normal compilation use the same secure XML runtime, included only on actual use without external addons.
 

@@ -340,7 +340,7 @@ Collections:
 
 CSV runtime code is included only when CSV types or global CSV functions are actually used. Names inside strings and comments do not activate it. `CsvEscape` alone includes only the existing escaping helpers, not document parsing or file loading. Pure CSV use adds no external NuGet packages or addon notices. `Load`/`Save` retain normal compilation's working-directory file behavior.
 
-`ToSpreadsheet` and `FromWorksheet` still route the entire source through the legacy compiler until spreadsheet objects are migrated; spreadsheet dependencies and notices remain selected by the existing shared packaging path.
+`ToSpreadsheet`, worksheet `ToCsv` and static `XPCsvDocument.FromWorksheet` compile directly through AST using the shared spreadsheet/CSV interoperability helpers. Only programs using this interoperability include both engines; CSV-only programs omit spreadsheet code. The spreadsheet engine is package-free, so no additional NuGet package or third-party notice is required.
 
 ## Resource limit
 

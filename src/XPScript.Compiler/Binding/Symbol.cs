@@ -107,6 +107,7 @@ public sealed record FunctionSymbol(
     public IReadOnlyList<string>? NativeParameterTypes { get; init; }
     public bool IsNativeStatic { get; init; }
     public string? NativeTargetName { get; init; }
+    public bool NativeReceiverArgument { get; init; }
 }
 
 public sealed record ClassSymbol(

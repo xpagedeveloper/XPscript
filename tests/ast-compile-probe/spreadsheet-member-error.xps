@@ -1,0 +1,4 @@
+Sub Main()
+    Dim book As New XPSpreadsheet
+    Print book.UnknownMember
+End Sub

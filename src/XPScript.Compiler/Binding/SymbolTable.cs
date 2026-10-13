@@ -22,7 +22,7 @@ public sealed class SymbolTable
     {
         foreach (var definition in CompilerSymbolCatalog.All)
         {
-            if (AstHttpSupport.OwnsSymbol(definition.Name) || definition.Name.StartsWith("XPCsv", StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith("Csv", StringComparison.OrdinalIgnoreCase) ||
+            if (AstSpreadsheetSupport.Names.Any(n => definition.Name.Equals(n, StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith(n + ".", StringComparison.OrdinalIgnoreCase)) || AstHttpSupport.OwnsSymbol(definition.Name) || definition.Name.StartsWith("XPCsv", StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith("Csv", StringComparison.OrdinalIgnoreCase) ||
                 definition.Name.StartsWith("XPXml", StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith("Xml", StringComparison.OrdinalIgnoreCase))
             {
                 if (definition.Kind == "class") Declare(new TypeSymbol(definition.Name, typeof(object), XpTypeSymbol.User(definition.Name)));
@@ -49,6 +49,7 @@ public sealed class SymbolTable
         AstCsvSupport.Import(this);
         AstXmlSupport.Import(this);
         AstHttpSupport.Import(this);
+        AstSpreadsheetSupport.Import(this);
     }
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch

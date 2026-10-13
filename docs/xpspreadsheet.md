@@ -451,6 +451,16 @@ Set csv = sheet.ToCsv(True)
 Call csv.Save("output.csv")
 ```
 
+## AST compilation and runtime selection
+
+`XPSpreadsheet`, `XPWorksheet`, `XPCell` and `XPRange` compile directly through AST, reusing the normal compiler's ZIP/XML runtime. This engine uses framework libraries, not ClosedXML or an external NuGet package. Pure spreadsheet programs omit CSV code; CSV interoperability includes both engines only when used. Unused object names in comments or strings do not include spreadsheet code. Existing addon packaging and third-party notices remain unchanged.
+
+Only the workbook is directly constructible. Worksheet/cell/range results are typed, including procedure parameters, return values, initialized declarations and Static storage. ByVal shares the same reference; ByRef can replace it. Worksheet `Name` and `Index` are read-only: rename through the workbook. Relative XLSX filenames resolve against the source script directory, consistently with normal compilation.
+
+CSV conversion uses the existing shared helpers: `csv.ToSpreadsheet([sheetName])`, `worksheet.ToCsv([hasHeaders])` and `XPCsvDocument.FromWorksheet(worksheet[, hasHeaders])`. No separate converter is introduced. `Range.Values` returns a native, zero-based, one-dimensional LSArray; indexing, bounds and ForAll use the shared runtime. Multidimensional range extraction remains unsupported by this runtime.
+
+Permanent tests compile and execute the existing basic, worksheet, style, range, formatting, autofilter and CSV-interoperability demos through both normal and AST compilers. Focused tests also exercise reference semantics, byte/file round trips, conditional inclusion, XLSX safety guards and source-mapped CLI/MCP diagnostics. See `tests/AstSpreadsheetRuntimeProbe` and `tests/ast-compile-probe/spreadsheet-*.xps`.
+
 ## XLSX input safety limits
 
 XPSpreadsheet validates XLSX packages before parsing workbook XML. Current hard limits are 64 MiB total expanded package data, 16 MiB for an individual ZIP part, and 4096 ZIP entries. The reader also requires the XLSX content-types part and `xl/workbook.xml`.

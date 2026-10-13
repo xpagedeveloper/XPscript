@@ -40,12 +40,10 @@ internal static class AstCsvSupport
         "XPCSVROWCOLLECTION" => XpTypeSymbol.User("XPCsvRow"), "XPCSVCOLUMNCOLLECTION" => XpTypeSymbol.User("XPCsvColumn"), _ => null
     };
     internal static XpTypeSymbol? IterationType(string name) => name.Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase) ? null : IndexType(name);
-    internal static bool UsesCsv(string source) => Names.Any(name => AstObjectSupportRegistry.UsesObject(source, name)) ||
+    internal static bool UsesCsv(string source) => AstSpreadsheetSupport.UsesWorksheetCsv(source) || Names.Any(name => AstObjectSupportRegistry.UsesObject(source, name)) ||
         new[] { "CsvParse", "CsvParseBytes", "CsvStringify", "CsvEscape" }.Any(name => AstObjectSupportRegistry.UsesObject(source, name));
-    internal static bool UsesDocument(string source) => Names.Any(name => AstObjectSupportRegistry.UsesObject(source, name)) ||
+    internal static bool UsesDocument(string source) => AstSpreadsheetSupport.UsesWorksheetCsv(source) || Names.Any(name => AstObjectSupportRegistry.UsesObject(source, name)) ||
         new[] { "CsvParse", "CsvParseBytes", "CsvStringify" }.Any(name => AstObjectSupportRegistry.UsesObject(source, name));
-    internal static bool RequiresLegacyInterop(string source) => UsesCsv(source) && System.Text.RegularExpressions.Regex.IsMatch(
-        AstObjectSupportRegistry.RemoveStringsAndComments(source), @"(?i)\.\s*(?:ToSpreadsheet|FromWorksheet)\s*\(");
     internal static string RuntimeCode(string source)
     {
         if (!UsesCsv(source)) return "";

@@ -4,6 +4,12 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+dotnet run --project (Join-Path $root 'tests/AstSpreadsheetRuntimeProbe') -c Release
+if ($LASTEXITCODE -ne 0) { throw 'AST native spreadsheet runtime regression failed.' }
+foreach ($sheetInvalid in @('spreadsheet-member-error', 'spreadsheet-constructor-error', 'spreadsheet-readonly-error', 'spreadsheet-private-setter-error', 'spreadsheet-arity-error')) {
+    $sheetFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$sheetInvalid.xps") -o (Join-Path $output $sheetInvalid) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($sheetFailure -join "`n") -notmatch "$sheetInvalid.xps:(2|3):") { throw "Spreadsheet diagnostic or source span lost: $sheetInvalid" }
+}
 dotnet run --project (Join-Path $root 'tests/AstHttpRuntimeProbe') -c Release
 if ($LASTEXITCODE -ne 0) { throw 'AST native HTTP/TLS runtime regression failed.' }
 foreach ($httpInvalid in @('http-member-error', 'http-constructor-error', 'http-readonly-error', 'http-arity-error')) {

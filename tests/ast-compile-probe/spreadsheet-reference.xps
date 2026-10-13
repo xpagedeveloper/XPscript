@@ -1,0 +1,33 @@
+Function MakeBook() As XPSpreadsheet
+    Set MakeBook = New XPSpreadsheet
+End Function
+
+Sub Mutate(ByVal book As XPSpreadsheet)
+    Call book.AddWorksheet("Shared")
+End Sub
+
+Sub ReplaceBook(ByRef book As XPSpreadsheet)
+    Set book = New XPSpreadsheet
+End Sub
+
+Function Retain() As XPSpreadsheet
+    Static book As XPSpreadsheet = New XPSpreadsheet
+    Set Retain = book
+End Function
+
+Sub Main()
+    Dim book As XPSpreadsheet = MakeBook()
+    Call Mutate(book)
+    If book.WorksheetCount <> 1 Then Error 9995, "ByVal reference lost"
+    Dim old As XPSpreadsheet
+    Set old = book
+    Call ReplaceBook(book)
+    If book Is old Then Error 9996, "ByRef replacement lost"
+    If old.WorksheetCount <> 1 Or book.WorksheetCount <> 0 Then Error 9997, "Old reference changed"
+    If Not (Retain() Is Retain()) Then Error 9998, "Static reference lost"
+    Dim sheet As XPWorksheet = old.Worksheet(1)
+    Dim cell As XPCell = sheet.Cell("A1")
+    cell.Value = "typed"
+    If sheet.Cell("A1").Text <> "typed" Then Error 9999, "Typed cell reference lost"
+    Print "SPREADSHEET_REFERENCE_OK"
+End Sub

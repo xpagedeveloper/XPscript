@@ -1,0 +1,9 @@
+Sub Main()
+    Dim document As New XPCsvDocument
+    Call document.AddHeader("id")
+    Call document.AddHeader("name")
+    Call document.AddRow(Array("001", "Åsa"))
+    Dim book As Variant
+    Set book = document.ToSpreadsheet("Data")
+    Print book.Worksheet("Data").Cell("B2").Text
+End Sub

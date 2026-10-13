@@ -59,11 +59,24 @@ internal sealed class SpreadsheetObjectPreprocessor
         var ranges = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var temporaryCellId = 0;
         var temporaryRangeId = 0;
+        var lineNumber = 0;
 
         foreach (var raw in lines)
         {
+            lineNumber++;
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
+            var forbiddenNew = Regex.Match(line, @"^Dim\s+\w+\s+As\s+New\s+(XPWorksheet|XPCell|XPRange)\b", RegexOptions.IgnoreCase);
+            if (forbiddenNew.Success)
+            {
+                var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(raw);
+                var position = Math.Max(1, raw.IndexOf("New", StringComparison.OrdinalIgnoreCase) + 1);
+                throw new CompilerException(AstSpreadsheetSupport.ConstructorMessage, CompilerDiagnosticCodes.InvalidNativeConstructor, "syntax",
+                    [new CompileDiagnostic { File = Path.GetFileName(ExpandedSourceContext.Current?.SourcePath ?? "script.xps"), Line = lineNumber, Position = position,
+                        EndLine = lineNumber, EndColumn = position + 3, Description = AstSpreadsheetSupport.ConstructorMessage,
+                        DiagnosticCode = CompilerDiagnosticCodes.InvalidNativeConstructor, Category = "syntax", SourceCode = safeSource,
+                        MarkedCode = safeSource + Environment.NewLine + new string(' ', position - 1) + "^" }]);
+            }
 
             var dimNew = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+XPSpreadsheet\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
             if (dimNew.Success)

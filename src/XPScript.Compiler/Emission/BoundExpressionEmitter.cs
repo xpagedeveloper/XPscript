@@ -53,6 +53,8 @@ public sealed class BoundExpressionEmitter
             $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? "XPImage" : $"((XPImage)({Emit(member.Receiver)}))")}.{AstImageSupport.MemberName(member.Name)}",
         BoundMemberAccessExpression member when AstHttpSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } httpType =>
             $"(({httpType})({Emit(member.Receiver)})).{AstHttpSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
+        BoundMemberAccessExpression member when AstSpreadsheetSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } sheetType =>
+            $"(({sheetType})({Emit(member.Receiver)})).{AstSpreadsheetSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
         BoundMemberAccessExpression member when AstCsvSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } csvType =>
             $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? csvType : $"(({csvType})({Emit(member.Receiver)}))")}.{AstCsvSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
         BoundMemberAccessExpression member when AstXmlSupport.RequiresElement(member.Receiver.SemanticType.Name, member.Name) =>
@@ -63,6 +65,7 @@ public sealed class BoundExpressionEmitter
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("http", StringComparison.OrdinalIgnoreCase) && member.Receiver.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"http.{member.Name}",
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
+        BoundIndexExpression index when index.Expression.SemanticType.IsVariant => $"LSArrayRuntime.Index({Emit(index.Expression)}, {Emit(index.Index)})",
         BoundIndexExpression index when AstCsvSupport.RuntimeType(index.Expression.SemanticType.Name) is { } csvType =>
             $"(({csvType})({Emit(index.Expression)}))[{Emit(index.Index)}]",
         BoundIndexExpression index when AstXmlSupport.RuntimeType(index.Expression.SemanticType.Name) is { } xmlType =>
@@ -84,6 +87,8 @@ public sealed class BoundExpressionEmitter
             : $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateClient()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateRequest()",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPSpreadsheet", StringComparison.OrdinalIgnoreCase) =>
+            $"XPScriptSpreadsheetFactory.Create({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when AstImageSupport.IsImage(@new.SemanticType.Name) =>
             $"new XPImage({string.Join(", ", @new.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), i < 2 ? "int" : "string")))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Path", StringComparison.OrdinalIgnoreCase) => $"new XpPath({string.Join(", ", @new.Arguments.Select(Emit))})",
@@ -114,7 +119,7 @@ public sealed class BoundExpressionEmitter
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
 
-    internal static string? RuntimeObjectType(string name) => AstHttpSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
+    internal static string? RuntimeObjectType(string name) => AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
     {
         "XPIMAGE" => "XPImage",
         "XPJSONDOCUMENT" => "XPScriptJsonDocument",
@@ -165,7 +170,12 @@ public sealed class BoundExpressionEmitter
     private string EmitCall(BoundCallExpression call)
     {
         if (call.Function.NativeParameterTypes is { } nativeTypes)
-            return $"{(call.Function.NativeTargetName ?? Emit(call.Target!))}({string.Join(", ", call.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), nativeTypes[i])))})";
+        {
+            var nativeArguments = call.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), nativeTypes[i]));
+            if (call.Function.NativeReceiverArgument && call.Target is BoundMemberAccessExpression extension)
+                nativeArguments = nativeArguments.Prepend(Emit(extension.Receiver));
+            return $"{(call.Function.NativeTargetName ?? Emit(call.Target!))}({string.Join(", ", nativeArguments)})";
+        }
         if (BoundListCallLowering.RequiresWrapper(call))
         {
             var wrapperArguments = new List<string>();

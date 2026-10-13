@@ -12,6 +12,27 @@ static ExpressionSyntax Parse(string text)
 }
 
 // Type diagnostics run first so semantic type regressions fail before the broader binder probe.
+var sheetSymbols = SymbolTable.CreateWithCompilerCatalog();
+sheetSymbols.Declare(new LocalSymbol("book", typeof(object), XpTypeSymbol.User("XPSpreadsheet")));
+sheetSymbols.Declare(new LocalSymbol("sheet", typeof(object), XpTypeSymbol.User("XPWorksheet")));
+sheetSymbols.Declare(new LocalSymbol("csv", typeof(object), XpTypeSymbol.User("XPCsvDocument")));
+foreach (var text in new[] { "New XPSpreadsheet", "New XPSpreadsheet(\"file.xlsx\")", "book.AddWorksheet()", "book.AddWorksheet(\"Data\")",
+    "book.Worksheet(1).Cell(2, 3).Value", "sheet.Range(\"A1:C2\").FontSize", "sheet.ToCsv()", "sheet.ToCsv(False)",
+    "csv.ToSpreadsheet()", "csv.ToSpreadsheet(\"Data\")", "XPCsvDocument.FromWorksheet(sheet)" })
+{
+    var binder = new ExpressionBinder(sheetSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 0) throw new Exception("Native spreadsheet signature failed: " + text);
+}
+foreach (var text in new[] { "New XPWorksheet", "New XPCell", "New XPRange", "book.UnknownMember", "book.Worksheet()", "XPSpreadsheet.Worksheet(1)" })
+{
+    var binder = new ExpressionBinder(sheetSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 1) throw new Exception("Invalid spreadsheet signature escaped binding: " + text);
+}
+foreach (var definition in CompilerSymbolCatalog.All.Where(d => d.Name.StartsWith("XPSpreadsheet") || d.Name.StartsWith("XPWorksheet") || d.Name.StartsWith("XPCell") || d.Name.StartsWith("XPRange")))
+    if (CompilerDocumentationCatalog.Find(definition.DocumentationId) is null) throw new Exception("Spreadsheet API documentation missing.");
+Console.WriteLine("AST_BINDING_SPREADSHEET_NATIVE_OK");
 var httpSymbols = SymbolTable.CreateWithCompilerCatalog();
 httpSymbols.Declare(new LocalSymbol("client", typeof(object), XpTypeSymbol.User("XPHttpClient")));
 httpSymbols.Declare(new LocalSymbol("response", typeof(object), XpTypeSymbol.User("XPHttpResponse")));
@@ -79,8 +100,8 @@ var csvRoute = typeof(CompilerSymbolCatalog).Assembly.GetType("XPScript.Compiler
     .GetMethod("UsesUnsupportedObject")!;
 foreach (var (source, legacy) in new[]
 {
-    ("Dim document As XPCsvDocument\nSet result = document.ToSpreadsheet()", true),
-    ("Dim document As XPCsvDocument\ndocument.FromWorksheet(sheet)", true),
+    ("Dim document As XPCsvDocument\nSet result = document.ToSpreadsheet()", false),
+    ("Dim document As XPCsvDocument\nSet document = XPCsvDocument.FromWorksheet(sheet)", false),
     ("Dim document As XPCsvDocument\nPrint document.ToString()", false),
     ("Print \"XPCsvDocument.ToSpreadsheet()\"\nRem XPCsvDocument.FromWorksheet(sheet)", false)
 })

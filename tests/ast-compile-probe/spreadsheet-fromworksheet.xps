@@ -1,0 +1,10 @@
+Sub Main()
+    Dim book As New XPSpreadsheet
+    Dim sheet As XPWorksheet
+    Set sheet = book.AddWorksheet("Data")
+    sheet.Cell("A1").Value = "name"
+    sheet.Cell("A2").Value = "Åsa"
+    Dim document As XPCsvDocument
+    Set document = XPCsvDocument.FromWorksheet(sheet)
+    Print document.Rows[0].Get("name")
+End Sub

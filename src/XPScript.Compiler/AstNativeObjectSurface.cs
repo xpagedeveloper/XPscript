@@ -9,7 +9,7 @@ namespace XPScript.Compiler;
 internal static class AstNativeObjectSurface
 {
     internal sealed record Member(string Owner, string Name, string Result, string[] Parameters,
-        string[] ArgumentNames, bool IsStatic, bool IsProperty, bool Writable, string? NativeTarget = null);
+        string[] ArgumentNames, bool IsStatic, bool IsProperty, bool Writable, string? NativeTarget = null, bool ReceiverArgument = false);
 
     internal static XpTypeSymbol SemanticType(string type, Func<string, string> languageType) => type.TrimEnd('?') switch
     {
@@ -32,7 +32,7 @@ internal static class AstNativeObjectSurface
                 foreach (var p in current.Members.OfType<PropertyDeclarationSyntax>().Where(p => p.Modifiers.Any(SyntaxKind.PublicKeyword)))
                     if (seen.Add(p.Identifier.ValueText))
                         yield return new(languageType(owner.Identifier.ValueText), p.Identifier.ValueText, p.Type.ToString(), [], [],
-                            p.Modifiers.Any(SyntaxKind.StaticKeyword), true, p.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)) == true);
+                            p.Modifiers.Any(SyntaxKind.StaticKeyword), true, p.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration) && !a.Modifiers.Any()) == true);
                 foreach (var m in current.Members.OfType<MethodDeclarationSyntax>().Where(m => m.Modifiers.Any(SyntaxKind.PublicKeyword) && m.Identifier.ValueText != "GetEnumerator"))
                     foreach (var member in ReadMethod(languageType(owner.Identifier.ValueText), m))
                         if (seen.Add(member.Name + "(" + string.Join(",", member.Parameters) + ")")) yield return member;
@@ -75,7 +75,7 @@ internal static class AstNativeObjectSurface
                 var args = member.Parameters.Select(t => SemanticType(t, languageType)).ToArray();
                 symbols.Declare(new FunctionSymbol(name, result.RuntimeType, args.Select(a => a.RuntimeType).ToArray(), result, args)
                 {
-                    NativeParameterTypes = member.Parameters, IsNativeStatic = member.IsStatic, NativeTargetName = member.NativeTarget
+                    NativeParameterTypes = member.Parameters, IsNativeStatic = member.IsStatic, NativeTargetName = member.NativeTarget, NativeReceiverArgument = member.ReceiverArgument
                 });
             }
         }

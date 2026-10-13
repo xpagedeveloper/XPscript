@@ -537,7 +537,9 @@ For targeted web troubleshooting, set `Application.Log.CaptureExchange = True` o
 
 ## Native CSV in AST
 
-`XPCsvDocument` and its header/row/column types use the shared native CSV engine in AST. ByVal shares the document; ByRef and `FromBytes` can replace the reference. `FromBytes` leaves existing aliases pointing to the previous document. Use `Load`, `Save` or `SaveFile` for encoded files, and `Get`/`Set` or row indexes for cells. CSV implementation code is selected only on use; `CsvEscape` alone does not include document/file runtime. CSV-to-spreadsheet interop still takes the whole-file legacy route. See `docs/native-csv.md` and `tests/ast-compile-probe/csv-*.xps`.
+`XPCsvDocument` and its header/row/column types use the shared native CSV engine in AST. ByVal shares the document; ByRef and `FromBytes` can replace the reference. `FromBytes` leaves existing aliases pointing to the previous document. Use `Load`, `Save` or `SaveFile` for encoded files, and `Get`/`Set` or row indexes for cells. CSV implementation code is selected only on use; `CsvEscape` alone does not include document/file runtime. CSV-to-spreadsheet interop compiles directly through AST using the shared helpers. See `docs/native-csv.md` and `tests/ast-compile-probe/csv-*.xps`.
+
+`XPSpreadsheet`, `XPWorksheet`, `XPCell` and `XPRange` compile directly through AST without external packages. Construct the workbook only; obtain worksheets/cells/ranges from its methods. ByVal shares references and ByRef can replace them; worksheet Name/Index are read-only (use RenameWorksheet). XLSX relative paths are script-relative. External/unmarked workbooks cannot be overwritten; SaveAsSimple explicitly converts them. Formulas are stored, not evaluated. Range.Values currently returns a rank-one LSArray; use LBound/UBound and ForAll. Use csv.ToSpreadsheet, sheet.ToCsv or XPCsvDocument.FromWorksheet for native conversion. Only actual use includes the relevant engines. See `docs/xpspreadsheet.md`.
 
 ## XPImage
 

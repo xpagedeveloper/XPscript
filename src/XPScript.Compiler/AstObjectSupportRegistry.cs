@@ -22,6 +22,7 @@ internal static class AstObjectSupportRegistry
     {
         "Application",
         "XPImage",
+        "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
         "XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPHttpPart", "XPHttpFile", "XPHttpPartCollection", "XPHttpFileCollection",
         "XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
         "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection",
@@ -101,11 +102,6 @@ internal static class AstObjectSupportRegistry
         if (AstHttpSupport.RequiresLegacy(source))
         {
             definition = new ObjectDefinition("XPHttpClient callbacks/UIForm", CompilationRoute.LegacyFallback, null);
-            return true;
-        }
-        if (AstCsvSupport.RequiresLegacyInterop(source))
-        {
-            definition = new ObjectDefinition("XPSpreadsheet", CompilationRoute.LegacyFallback, null);
             return true;
         }
         var code = RemoveStringsAndComments(source);

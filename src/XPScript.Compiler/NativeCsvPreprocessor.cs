@@ -67,6 +67,7 @@ internal sealed class NativeCsvPreprocessor
             var rewritten = line;
             rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.Load\s*\(([^)]*)\)", m => RewriteLoad(m.Groups[1].Value), RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.ParseBytes\s*\(", "XPScriptNativeCsv.ParseBytes(", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.FromWorksheet\s*\(", "XPScriptSpreadsheetCsvInterop.FromWorksheet(", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bXPCsvDocument\.Parse\s*\(", "XPScriptNativeCsv.Parse(", RegexOptions.IgnoreCase);
             rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "CsvParseBytes", "XPScriptNativeCsv.ParseBytes");
             rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "CsvParse", "XPScriptNativeCsv.Parse");

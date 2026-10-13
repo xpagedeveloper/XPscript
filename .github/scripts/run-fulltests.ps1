@@ -69,7 +69,7 @@ if (Should-Run 'language') {
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
   $astBinding = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-binding/AstBindingProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST semantic binder regression'
   if ($astBinding.ExitCode -ne 0) { exit $astBinding.ExitCode }
-  foreach ($marker in @('AST_BINDING_HTTP_NATIVE_OK','AST_BINDING_XML_NATIVE_OK','AST_BINDING_CSV_NATIVE_OK','AST_BINDING_RECEIVER_DIAGNOSTICS_OK','AST_BINDING_DECLARED_CALL_DIAGNOSTICS_OK','AST_BINDING_TYPE_DIAGNOSTICS_OK','AST_BINDING_COLLECTION_TYPES_OK','AST_BINDING_VARIANT_SEMANTICS_OK','AST_BINDING_OBJECT_SEMANTICS_OK','AST_BINDING_NULL_EMPTY_NOTHING_SEMANTICS_OK')) {
+  foreach ($marker in @('AST_BINDING_SPREADSHEET_NATIVE_OK','AST_BINDING_HTTP_NATIVE_OK','AST_BINDING_XML_NATIVE_OK','AST_BINDING_CSV_NATIVE_OK','AST_BINDING_RECEIVER_DIAGNOSTICS_OK','AST_BINDING_DECLARED_CALL_DIAGNOSTICS_OK','AST_BINDING_TYPE_DIAGNOSTICS_OK','AST_BINDING_COLLECTION_TYPES_OK','AST_BINDING_VARIANT_SEMANTICS_OK','AST_BINDING_OBJECT_SEMANTICS_OK','AST_BINDING_NULL_EMPTY_NOTHING_SEMANTICS_OK')) {
     if ($astBinding.Output -notmatch $marker) { throw "AST semantic binder regression missing: $marker" }
   }
   $emission = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-emission/AstEmissionProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'bound C# emission'
@@ -134,6 +134,8 @@ if (Should-Run 'notes') {
 }
 
 if (Should-Run 'runtime') {
+  $sheetAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstSpreadsheetRuntimeProbe','-c','Release') 300000 'native spreadsheet AST/normal, XLSX safety and CSV parity'
+  if ($sheetAst.ExitCode -ne 0 -or $sheetAst.Output -notmatch 'AST_SPREADSHEET_RUNTIME_OK') { throw 'Native spreadsheet runtime parity failed.' }
   $httpAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstHttpRuntimeProbe','-c','Release') 180000 'native HTTP/TLS AST and normal runtime parity'
   if ($httpAst.ExitCode -ne 0 -or $httpAst.Output -notmatch 'AST_HTTP_TLS_RUNTIME_OK') { throw 'Native HTTP/TLS runtime parity failed.' }
   $generatedDependencies = Invoke-Bounded 'dotnet' @('run','--project','./tests/GeneratedDependencyProbe/GeneratedDependencyProbe.csproj','-c','Release') 240000 'generated addon packages, native runtime assets and exact license graph'

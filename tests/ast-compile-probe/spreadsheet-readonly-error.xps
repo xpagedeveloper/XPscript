@@ -1,0 +1,4 @@
+Sub Main()
+    Dim book As New XPSpreadsheet
+    book.WorksheetCount = 1
+End Sub

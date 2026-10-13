@@ -518,7 +518,8 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstImageSupport.RuntimeCode(fullSource)}}
 {{AstCsvSupport.RuntimeCode(fullSource)}}
 {{AstXmlSupport.RuntimeCode(fullSource)}}
-{{(AstCsvSupport.UsesDocument(fullSource) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
+{{AstSpreadsheetSupport.RuntimeCode(fullSource)}}
+{{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
 {{AstErrorRuntimeCode()}}
@@ -533,14 +534,11 @@ internal static class LSCoreCompare
         "<" => Convert.ToDouble(value) < Convert.ToDouble(other), "<=" => Convert.ToDouble(value) <= Convert.ToDouble(other), _ => false
     };
 }
-internal static class LSForAllRuntime
-{
-    public static IEnumerable Enumerate(object? value) => value as IEnumerable ?? System.Array.Empty<object>();
-}
+{{ForAllRuntimeSource.Code}}
 {{classSupport}}
 internal static class Program
 {
-    {{(AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? "static Program() { XPScriptFileSystemRuntime.SetScriptDirectory(" + Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, true) + "); }" : "")}}
+    {{(AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") || AstSpreadsheetSupport.UsesSpreadsheet(fullSource) ? "static Program() { XPScriptFileSystemRuntime.SetScriptDirectory(" + Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, true) + "); }" : "")}}
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
     public static bool True = true;
     public static bool False = false;
@@ -582,9 +580,10 @@ internal static class Program
         return double.TryParse(text, System.Globalization.NumberStyles.Any, CultureInfo.CurrentCulture, out var number)
             ? DateTime.FromOADate(number) : DateTime.Parse(text, CultureInfo.CurrentCulture);
     }
-    public static long LBound(object value) => 0;
+    public static long LBound(object value) => LSArrayRuntime.LBound(value);
     public static long UBound(object value)
     {
+        if (value is IXPScriptArrayStorage storage) return LSArrayRuntime.UBound(storage);
         if (value is not System.Array array || array.Length == 0)
             throw new InvalidOperationException("Array has not been allocated. Use ReDim first.");
         return array.Length - 1;

@@ -12,6 +12,25 @@ await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new {jsonrpc="2.0"
 var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new{}});
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP tool: "+name);
+foreach (var sheetFixture in new[] { "spreadsheet-runtime", "spreadsheet-reference", "spreadsheet-unused", "spreadsheet-csv-inferred", "spreadsheet-tocsv-inferred", "spreadsheet-fromworksheet" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", sheetFixture + ".xps"));
+    var result = await CallAsync(new {jsonrpc="2.0",id=sheetFixture,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source,filename=sheetFixture+".xps"}}});
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected spreadsheet fixture: " + sheetFixture);
+}
+foreach (var sheetFixture in new[] { ("spreadsheet-member-error", "XPS2009", 3), ("spreadsheet-constructor-error", "XPS1009", 2),
+    ("spreadsheet-readonly-error", "XPS2001", 3), ("spreadsheet-private-setter-error", "XPS2001", 3), ("spreadsheet-arity-error", "XPS2004", 3) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", sheetFixture.Item1 + ".xps"));
+    var result = await CallAsync(new {jsonrpc="2.0",id="sheet-invalid-"+sheetFixture.Item1,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source,filename=sheetFixture.Item1+".xps"}}});
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (error.GetProperty("diagnosticCode").GetString() != sheetFixture.Item2 || error.GetProperty("line").GetInt32() != sheetFixture.Item3) throw new Exception("Spreadsheet diagnostic code/span lost.");
+    if (sheetFixture.Item1 == "spreadsheet-constructor-error")
+    {
+        var normal = await CallAsync(new {jsonrpc="2.0",id="sheet-normal-invalid",method="tools/call",@params=new{name="xpscript_validate",arguments=new{source,filename=sheetFixture.Item1+".xps"}}});
+        if (normal.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0].GetProperty("diagnosticCode").GetString() != sheetFixture.Item2) throw new Exception("Normal spreadsheet constructor diagnostic drifted.");
+    }
+}
 foreach (var httpFixture in new[] { "http-runtime", "http-unused" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", httpFixture + ".xps"));
