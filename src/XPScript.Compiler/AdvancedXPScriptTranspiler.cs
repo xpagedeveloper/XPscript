@@ -1191,10 +1191,24 @@ internal static class LSForAllRuntime
         return TransformFluentClassChains(result.ToString()).Trim();
     }
 
+    private static string RewriteClassReferences(string expression)
+    {
+        var code = PreprocessorFeatureGate.CodeOnly(expression);
+        return Regex.Replace(expression, @"\b(?:Me|Parent)\b", match =>
+        {
+            if (match.Index + match.Length > code.Length ||
+                !code.AsSpan(match.Index, match.Length).Equals(match.Value.AsSpan(), StringComparison.OrdinalIgnoreCase))
+                return match.Value; // Strings/comments must retain their text.
+            var previous = match.Index - 1;
+            while (previous >= 0 && char.IsWhiteSpace(code[previous])) previous--;
+            if (previous >= 0 && code[previous] == '.') return match.Value; // XML/other object member.
+            return match.Value.Equals("Me", StringComparison.OrdinalIgnoreCase) ? "this" : "base";
+        }, RegexOptions.IgnoreCase);
+    }
+
     private string TransformListSyntax(string expression)
     {
-        var text = Regex.Replace(expression, @"\bMe\b", "this", RegexOptions.IgnoreCase);
-        text = Regex.Replace(text, @"\bParent\b", "base", RegexOptions.IgnoreCase);
+        var text = RewriteClassReferences(expression);
         foreach (var alias in _forAll)
             text = Regex.Replace(text, $@"\bListTag\s*\(\s*{Regex.Escape(alias.Alias)}\s*\)", $"__LSLISTTAG_{alias.Alias}__", RegexOptions.IgnoreCase);
 
@@ -1212,8 +1226,7 @@ internal static class LSForAllRuntime
         text = text.Replace("<>", "!=", StringComparison.Ordinal);
         text = Regex.Replace(text, @"(?<![<>=!])=(?![=>])", "==");
         text = text.Replace("__LS_BYREF_ASSIGN__", "=", StringComparison.Ordinal);
-        text = Regex.Replace(text, @"\bMe\b", "this", RegexOptions.IgnoreCase);
-        text = Regex.Replace(text, @"\bParent\b", "base", RegexOptions.IgnoreCase);
+        text = RewriteClassReferences(text);
 
         foreach (var objectVariable in _objectVariables)
         {

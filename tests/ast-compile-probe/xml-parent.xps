@@ -1,0 +1,5 @@
+Sub Main()
+    Dim doc As New XPXmlDocument("<root><child /></root>")
+    Print doc.Root.GetElement("child").Parent.Name
+    Print "Parent Me"
+End Sub

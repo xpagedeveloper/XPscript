@@ -53,12 +53,18 @@ public sealed class BoundExpressionEmitter
             $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? "XPImage" : $"((XPImage)({Emit(member.Receiver)}))")}.{AstImageSupport.MemberName(member.Name)}",
         BoundMemberAccessExpression member when AstCsvSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } csvType =>
             $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? csvType : $"(({csvType})({Emit(member.Receiver)}))")}.{AstCsvSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
+        BoundMemberAccessExpression member when AstXmlSupport.RequiresElement(member.Receiver.SemanticType.Name, member.Name) =>
+            $"XPScriptNativeXml.RequireElement({Emit(member.Receiver)}).{AstXmlSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
+        BoundMemberAccessExpression member when AstXmlSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } xmlType =>
+            $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? xmlType : $"(({xmlType})({Emit(member.Receiver)}))")}.{AstXmlSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
         BoundMemberAccessExpression member when RuntimeObjectType(member.Receiver.SemanticType.Name) is { } jsonType => $"(({jsonType})({Emit(member.Receiver)})).{JsonMemberName(member.Name)}",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("http", StringComparison.OrdinalIgnoreCase) && member.Receiver.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"http.{member.Name}",
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundIndexExpression index when AstCsvSupport.RuntimeType(index.Expression.SemanticType.Name) is { } csvType =>
             $"(({csvType})({Emit(index.Expression)}))[{Emit(index.Index)}]",
+        BoundIndexExpression index when AstXmlSupport.RuntimeType(index.Expression.SemanticType.Name) is { } xmlType =>
+            $"(({xmlType})({Emit(index.Expression)})).Get({Emit(index.Index)})",
         BoundIndexExpression index when index.Expression.SemanticType.IsArray && index.Expression is BoundNameExpression { Symbol: LocalSymbol }
             => EmitArrayGet(index),
         BoundIndexExpression index when index.Expression is BoundNameExpression { Symbol: LocalSymbol { IsDynamicArray: true } }
@@ -82,6 +88,10 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Person", StringComparison.OrdinalIgnoreCase) => $"new XpPerson({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) => @new.Arguments.Count == 0
             ? "XPScriptNativeCsv.CreateDocument()" : $"XPScriptNativeCsv.Parse({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPXmlDocument", StringComparison.OrdinalIgnoreCase) => @new.Arguments.Count == 0
+            ? "XPScriptNativeXml.CreateDocument()" : $"XPScriptNativeXml.Parse({Emit(@new.Arguments[0])})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPXmlElement", StringComparison.OrdinalIgnoreCase) =>
+            $"XPScriptNativeXml.CreateElement({Emit(@new.Arguments[0])})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) => "new XpJsonArray()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesJSONNavigator", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
@@ -102,7 +112,7 @@ public sealed class BoundExpressionEmitter
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
 
-    internal static string? RuntimeObjectType(string name) => AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
+    internal static string? RuntimeObjectType(string name) => AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
     {
         "XPIMAGE" => "XPImage",
         "XPJSONDOCUMENT" => "XPScriptJsonDocument",
@@ -153,7 +163,7 @@ public sealed class BoundExpressionEmitter
     private string EmitCall(BoundCallExpression call)
     {
         if (call.Function.NativeParameterTypes is { } nativeTypes)
-            return $"{(call.Target is null ? call.Function.NativeTargetName : Emit(call.Target))}({string.Join(", ", call.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), nativeTypes[i])))})";
+            return $"{(call.Function.NativeTargetName ?? Emit(call.Target!))}({string.Join(", ", call.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), nativeTypes[i])))})";
         if (BoundListCallLowering.RequiresWrapper(call))
         {
             var wrapperArguments = new List<string>();
@@ -262,7 +272,7 @@ public sealed class BoundExpressionEmitter
         var value = Emit(expression.Expression);
         if (expression.SemanticType.IsList && expression.Conversion.Kind == ConversionKind.FromVariant)
             return $"(LSList<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!.RuntimeType)}>)({value})";
-        if (RuntimeObjectType(expression.SemanticType.Name) is { } jsonType && expression.Conversion.Kind == ConversionKind.FromVariant)
+        if (RuntimeObjectType(expression.SemanticType.Name) is { } jsonType && expression.Conversion.Kind is ConversionKind.FromVariant or ConversionKind.ReferenceUpcast)
             return $"({jsonType})({value})";
         if (expression.Type == typeof(object) && expression.Conversion.Kind == ConversionKind.FromVariant)
             return value;

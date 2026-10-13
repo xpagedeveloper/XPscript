@@ -226,6 +226,7 @@ public sealed class ExpressionParser
         SyntaxKind.NewKeyword or
         SyntaxKind.ByValKeyword or
         SyntaxKind.ByRefKeyword or
+        SyntaxKind.ParentKeyword or
         SyntaxKind.MeKeyword;
 
     private SyntaxToken Match(SyntaxKind kind)

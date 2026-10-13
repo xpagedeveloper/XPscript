@@ -22,6 +22,8 @@ internal static class AstObjectSupportRegistry
     {
         "Application",
         "XPImage",
+        "XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
+        "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection",
         "XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn",
         "List",
         "Array",

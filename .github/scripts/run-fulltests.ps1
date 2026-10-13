@@ -63,13 +63,13 @@ Write-Host "FULLTEST_SUITE=$Suite"
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
   # Run the latest failing AST CLI fixture before the broader probes.
-  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 600000 'AST CLI native CSV/XPImage/JSON runtime, conditional inclusion, ownership, List ByRef, Resume, ForAll, Static, GoTo and Optional regressions'
+  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 600000 'AST CLI native XML/CSV/XPImage/JSON runtime, conditional inclusion, ownership, List ByRef, Resume, ForAll, Static, GoTo and Optional regressions'
   if ($astCliFirst.ExitCode -ne 0 -or $astCliFirst.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
   $astLexer = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-lexer/AstLexerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST lexer and compatibility regression'
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
   $astBinding = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-binding/AstBindingProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST semantic binder regression'
   if ($astBinding.ExitCode -ne 0) { exit $astBinding.ExitCode }
-  foreach ($marker in @('AST_BINDING_CSV_NATIVE_OK','AST_BINDING_RECEIVER_DIAGNOSTICS_OK','AST_BINDING_DECLARED_CALL_DIAGNOSTICS_OK','AST_BINDING_TYPE_DIAGNOSTICS_OK','AST_BINDING_COLLECTION_TYPES_OK','AST_BINDING_VARIANT_SEMANTICS_OK','AST_BINDING_OBJECT_SEMANTICS_OK','AST_BINDING_NULL_EMPTY_NOTHING_SEMANTICS_OK')) {
+  foreach ($marker in @('AST_BINDING_XML_NATIVE_OK','AST_BINDING_CSV_NATIVE_OK','AST_BINDING_RECEIVER_DIAGNOSTICS_OK','AST_BINDING_DECLARED_CALL_DIAGNOSTICS_OK','AST_BINDING_TYPE_DIAGNOSTICS_OK','AST_BINDING_COLLECTION_TYPES_OK','AST_BINDING_VARIANT_SEMANTICS_OK','AST_BINDING_OBJECT_SEMANTICS_OK','AST_BINDING_NULL_EMPTY_NOTHING_SEMANTICS_OK')) {
     if ($astBinding.Output -notmatch $marker) { throw "AST semantic binder regression missing: $marker" }
   }
   $emission = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-emission/AstEmissionProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'bound C# emission'
@@ -183,6 +183,10 @@ if (Should-Run 'runtime') {
   $csvJson = Run-Xps ./samples/csv-json-roundtrip.xps csv-json-roundtrip
   if ($csvJson.Output -notmatch 'CSV-JSON-ROUNDTRIP=OK') { throw 'CSV JSON round-trip regression did not complete.' }
   Run-Xps ./samples/native-xml-dom-regression.xps native-xml-dom-regression | Out-Null
+  $xmlNativeParity = Run-Xps ./tests/ast-compile-probe/xml-parity.xps xml-native-parity
+  if ($xmlNativeParity.Output.Trim().Replace("`r`n", "`n") -ne "root`nÅsa & Anna`n43`nFalse`n<root id=`"43`"><child>Åsa &amp; Anna</child></root>`nreplaced`n5 &lt; 10 &amp; 20 &gt; 10`nXML_PARITY_OK") { throw 'Native XML document/node/attribute parity failed.' }
+  $xmlDtd = Run-Xps ./samples/native-xml-regression.xps native-xml-regression
+  if ($xmlDtd.Output -notmatch 'VALID=True' -or $xmlDtd.Output -notmatch 'INVALID=False' -or $xmlDtd.Output -notmatch 'ERRORSEVERITY=Error') { throw 'Native XML DTD validation regression failed.' }
   $r = Run-Xps ./samples/xpai-structured-output.xps xpai-structured
   if ($r.Output -notmatch 'XPAI-STRUCTURED-RUNTIME=OK') { throw 'XPAi structured output runtime regression did not complete.' }
   Write-Host 'XP_RUNTIME_FULLTEST: passed'

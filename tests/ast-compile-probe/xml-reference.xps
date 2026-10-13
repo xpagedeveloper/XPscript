@@ -1,0 +1,36 @@
+Function MakeDocument() As XPXmlDocument
+    Set MakeDocument = XPXmlDocument.Parse("<root>initial</root>")
+End Function
+
+Sub Mutate(ByVal document As XPXmlDocument)
+    document.Root.Value = "shared"
+End Sub
+
+Sub ReplaceDocument(ByRef document As XPXmlDocument)
+    Set document = XmlParse("<replacement />")
+End Sub
+
+Function NodeText(ByVal node As XPXmlNode) As String
+    NodeText = node.Value
+End Function
+
+Function Retain() As XPXmlDocument
+    Static document As XPXmlDocument = New XPXmlDocument("<static />")
+    Set Retain = document
+End Function
+
+Sub Main()
+    Dim document As XPXmlDocument = MakeDocument()
+    Call Mutate(document)
+    If NodeText(document.Root) <> "shared" Then Error 9923, "XML ByVal reference or element upcast lost"
+    Dim alias As XPXmlDocument
+    Set alias = document
+    Call document.LoadXml("<loaded />")
+    If alias.Root.Name <> "loaded" Then Error 9924, "LoadXml replaced the reference"
+    Call ReplaceDocument(document)
+    If document Is alias Then Error 9925, "ByRef did not replace reference"
+    If alias.Root.Name <> "loaded" Then Error 9926, "ByRef changed old alias"
+    If Not (Retain() Is Retain()) Then Error 9927, "Static XML reference lost"
+    Call Mutate(MakeDocument())
+    Print "XML_REFERENCE_OK"
+End Sub

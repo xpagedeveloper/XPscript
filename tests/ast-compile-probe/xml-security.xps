@@ -1,0 +1,69 @@
+Sub Main()
+    Dim document As XPXmlDocument
+    Dim code As Long
+    Dim message As String
+    On Error Resume Next
+    Set document = XmlParse("<broken>")
+    code = Err
+    message = Error$
+    On Error GoTo 0
+    If code <> 5 Then Error 9928, "Malformed XML accepted"
+    Print message
+    On Error Resume Next
+    Set document = XmlParse("<!DOCTYPE root [<!ENTITY x SYSTEM 'file:///xpscript-xml-must-not-be-read'>]><root>&x;</root>")
+    code = Err
+    message = Error$
+    On Error GoTo 0
+    If code <> 5 Then Error 9929, "External XML entity accepted"
+    Print message
+    On Error Resume Next
+    Set document = XmlParse("<!DOCTYPE root [<!ELEMENT root EMPTY>]><root />")
+    code = Err
+    message = Error$
+    On Error GoTo 0
+    If code <> 5 Then Error 9930, "Normal parser accepted a DTD"
+    Print message
+    On Error Resume Next
+    Set document = XmlParse(Space(8388609))
+    code = Err
+    message = Error$
+    On Error GoTo 0
+    If code <> 5 Then Error 9931, "Parse input limit lost"
+    Print message
+    Set document = XmlParse("<root />")
+    On Error Resume Next
+    Call document.ValidateDTD("<!ENTITY x SYSTEM 'https://example.invalid/xml-dtd'>")
+    code = Err
+    message = Error$
+    On Error GoTo 0
+    If code <> 5 Then Error 9932, "External DTD accepted"
+    Print message
+    On Error Resume Next
+    Call document.ValidateDTD(Space(1048577))
+    code = Err
+    message = Error$
+    On Error GoTo 0
+    If code <> 5 Then Error 9933, "DTD input limit lost"
+    Print message
+    On Error Resume Next
+    Call document.SelectNodes("[")
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9934, "Invalid XPath accepted"
+    Dim node As XPXmlNode
+    Set node = document.CreateTextNode("text")
+    On Error Resume Next
+    Call node.GetAttribute("id")
+    code = Err
+    message = Error$
+    On Error GoTo 0
+    If code <> 13 Then Error 9935, "Non-element call accepted"
+    Print message
+    Dim value As Variant
+    On Error Resume Next
+    Set value = document.ChildNodes.Get(99)
+    code = Err
+    On Error GoTo 0
+    If code <> 9 Then Error 9936, "Invalid node index accepted"
+    Print "XML_SECURITY_OK"
+End Sub

@@ -121,6 +121,8 @@ Use `New XPJsonObject` or `New XPJsonArray`, and `XPJsonDocument.Parse(text)` or
 
 ## Native XML
 
+The XML API also compiles directly through AST using the existing native runtime, with no XML NuGet addon. XML code is emitted only on actual use; `XmlEscape` alone does not include the DOM/DTD engine. Typed XML parameters/results, Static references and ByRef replacement are supported. ByVal shares the object; `LoadXml` mutates that document and remains visible through existing aliases. `XPXmlElement` can flow into a ByVal `XPXmlNode` parameter. XML nodes containing elements support runtime-checked element operations; other node kinds raise error 13. Use documented native methods, not arbitrary dynamic members. Both `Call .Method(...)` and `.Method(...)` work inside With.
+
 Use the native XML classes documented in `docs/native-xml.md`; do not infer MSXML, browser DOM, or .NET `XPXmlDocument` members that XPscript does not expose.
 
 Create documents with `New XPXmlDocument`, parse with `XPXmlDocument.Parse`, `XmlParse`, or a constructor string, and replace an existing document with `LoadXml`:

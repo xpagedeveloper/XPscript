@@ -1,0 +1,7 @@
+Sub Main()
+    Dim xml As String
+    xml = "XPXmlDocument XmlParse XmlEscape"
+    Rem XPXmlDocument.Parse("ignored")
+    ' XmlParse("ignored")
+    Print xml
+End Sub

@@ -206,7 +206,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     private BoundStatement? BindCallStatement(CallStatementSyntax syntax)
     {
         var binder = new ExpressionBinder(_symbols, _allowDynamicMembers, functionName, functionResult,
-            listByRefStatementCall: syntax.Expression);
+            listByRefStatementCall: syntax.Expression, implicitReceiver: _withReceiver);
         var expression = binder.Bind(syntax.Expression);
         _diagnostics.AddRange(binder.Diagnostics);
         return binder.Diagnostics.Count == 0 ? LowerCallStatement(expression) : null;
@@ -318,12 +318,13 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     {
         var collection = BindExpression(syntax.CollectionExpression);
         if (collection is null) return null;
-        if (AstCsvSupport.IsCsv(collection.SemanticType.Name))
+        if (AstCsvSupport.IsCsv(collection.SemanticType.Name) || AstXmlSupport.IsXml(collection.SemanticType.Name))
         {
-            if (AstCsvSupport.IterationType(collection.SemanticType.Name) is not { } csvElement)
+            var family = AstXmlSupport.IsXml(collection.SemanticType.Name) ? "XML" : "CSV";
+            if ((AstCsvSupport.IterationType(collection.SemanticType.Name) ?? AstXmlSupport.IterationType(collection.SemanticType.Name)) is not { } csvElement)
             {
                 _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
-                    "CSV ForAll requires a header, row or column collection.", syntax.CollectionExpression.Span));
+                    $"{family} ForAll requires a supported collection.", syntax.CollectionExpression.Span));
                 return null;
             }
             if (_symbols.TryLookup(syntax.IdentifierToken.Text, out var existing))
@@ -332,7 +333,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                 if (!previous.SemanticType.IsVariant && !Conversion.Classify(csvElement, previous.SemanticType).IsImplicit)
                 {
                     _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
-                        $"ForAll variable {previous.SemanticType.Name} is incompatible with CSV element type {csvElement.Name}.", syntax.IdentifierToken.Span));
+                        $"ForAll variable {previous.SemanticType.Name} is incompatible with {family} element type {csvElement.Name}.", syntax.IdentifierToken.Span));
                     return null;
                 }
             }
@@ -552,6 +553,12 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindBoundAssignment(BoundExpression target, ExpressionSyntax valueSyntax, bool isSet, ExpressionSyntax targetSyntax)
     {
+        if (target is BoundMemberAccessExpression xmlMember && AstXmlSupport.IsReadOnly(xmlMember.Receiver.SemanticType.Name, xmlMember.Name) ||
+            target is BoundIndexExpression xmlIndex && AstXmlSupport.IterationType(xmlIndex.Expression.SemanticType.Name) is not null)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "XML collection or property is read-only.", targetSyntax.Span));
+            return null;
+        }
         if (target is BoundMemberAccessExpression csvMember && AstCsvSupport.IsReadOnly(csvMember.Receiver.SemanticType.Name, csvMember.Name) ||
             target is BoundIndexExpression csvIndex && AstCsvSupport.IndexType(csvIndex.Expression.SemanticType.Name) is not null &&
                 !csvIndex.Expression.SemanticType.Name.Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase))

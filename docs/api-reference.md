@@ -6,6 +6,8 @@ Every row contains the member title, accepted syntax, parameters and their purpo
 
 For native CSV documents and header/row/column collections, see [native-csv.md](native-csv.md). Normal and AST compilation share the same runtime; unused CSV code is omitted and CSV-only programs add no external packages. Spreadsheet interop retains the legacy compilation route.
 
+For the native XML document/DOM/DTD API, see [native-xml.md](native-xml.md). AST and normal compilation use the same secure XML runtime, included only on actual use without external addons.
+
 ## Process execution
 
 Use `Shell` for compatibility command-string process startup and `ShellArgs` when a process should be started with structured arguments without waiting. Use `ShellExecute` when the caller needs completion, captured output, or the child exit code.

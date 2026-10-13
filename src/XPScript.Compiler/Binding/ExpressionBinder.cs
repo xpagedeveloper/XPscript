@@ -74,7 +74,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindName(NameExpressionSyntax syntax)
     {
         var name = syntax.IdentifierToken.Text;
-        if (_symbols.TryLookup(name, out var nativeType) && nativeType is TypeSymbol && (AstImageSupport.IsImage(name) || AstCsvSupport.IsCsv(name)))
+        if (_symbols.TryLookup(name, out var nativeType) && nativeType is TypeSymbol && (AstImageSupport.IsImage(name) || AstCsvSupport.IsCsv(name) || AstXmlSupport.IsXml(name)))
             return new BoundNameExpression(nativeType);
         // A bare function name denotes its result slot; a call still resolves
         // the procedure signature, so recursion is unaffected.
@@ -100,6 +100,17 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindNew(NewExpressionSyntax syntax)
     {
         var typeName = syntax.TypeName.Text;
+        if (AstXmlSupport.IsXml(typeName))
+        {
+            if (!typeName.Equals("XPXmlDocument", StringComparison.OrdinalIgnoreCase) && !typeName.Equals("XPXmlElement", StringComparison.OrdinalIgnoreCase))
+                return Error(syntax.TypeName, CompilerDiagnosticCodes.InvalidNativeConstructor, "Only XPXmlDocument and XPXmlElement can be created with New.");
+            if (typeName.Equals("XPXmlElement", StringComparison.OrdinalIgnoreCase) && syntax.Arguments.Count == 0)
+                return Error(syntax.TypeName, CompilerDiagnosticCodes.MissingConstructorArgument, "XPXmlElement requires an element name argument.");
+            if (syntax.Arguments.Count > 1)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
+            return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(),
+                XpTypeSymbol.User(typeName.Equals("XPXmlDocument", StringComparison.OrdinalIgnoreCase) ? "XPXmlDocument" : "XPXmlElement"));
+        }
         if (AstCsvSupport.IsCsv(typeName))
         {
             if (!typeName.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase))
@@ -154,6 +165,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     {
         var expression = Bind(syntax.Expression);
         var index = Bind(syntax.Index);
+        if (AstXmlSupport.IterationType(expression.SemanticType.Name) is { } xmlElement)
+            return new BoundIndexExpression(expression, index, xmlElement.RuntimeType, xmlElement);
         if (AstCsvSupport.IndexType(expression.SemanticType.Name) is { } csvElement)
             return new BoundIndexExpression(expression, index, csvElement.RuntimeType, csvElement);
         if (expression.SemanticType is { IsList: true, ElementType: { } element })
@@ -178,6 +191,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             if (symbol is PropertySymbol property)
             {
+                if (AstXmlSupport.IsXml(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
+                    return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"XML property '{property.Name.Split('.').Last()}' requires an instance.");
                 if (AstCsvSupport.IsCsv(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
                     return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"CSV property '{property.Name.Split('.').Last()}' requires an instance.");
                 if (AstImageSupport.IsImage(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
@@ -284,12 +299,16 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return new BoundIndexExpression(new BoundNameExpression(dynamicLocal), index, typeof(object), XpTypeSymbol.Variant);
             }
         }
-        else if (syntax.Target is MemberAccessExpressionSyntax memberSyntax)
+        else if (syntax.Target is MemberAccessExpressionSyntax or ImplicitMemberAccessExpressionSyntax)
         {
-            var receiver = Bind(memberSyntax.Expression);
-            name = memberSyntax.NameToken.Text;
+            var memberSyntax = syntax.Target as MemberAccessExpressionSyntax;
+            var memberName = memberSyntax?.NameToken ?? ((ImplicitMemberAccessExpressionSyntax)syntax.Target).NameToken;
+            var receiver = memberSyntax is null ? implicitReceiver : Bind(memberSyntax.Expression);
+            if (receiver is null)
+                return Error(memberName, CompilerDiagnosticCodes.UnknownMember, $"Implicit member '{memberName.Text}' requires an active With scope.");
+            name = memberName.Text;
             if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) && name.Equals("WriteFile", StringComparison.OrdinalIgnoreCase))
-                return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.RemovedNativeApi, "XPCsvDocument.WriteFile was removed. Use Save or SaveFile.");
+                return Error(memberName, CompilerDiagnosticCodes.RemovedNativeApi, "XPCsvDocument.WriteFile was removed. Use Save or SaveFile.");
             if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) && name.Equals("Load", StringComparison.OrdinalIgnoreCase) && syntax.Arguments.Count is < 1 or > 4)
                 return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.Load requires path and optional encoding, delimiter, and hasHeaders arguments.");
             if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) &&
@@ -307,17 +326,17 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return new BoundCallExpression(target, dynamicFunction, arguments);
             }
             if (memberSymbols.Count == 0)
-                return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{name}' on '{receiver.SemanticType.Name}'.");
+                return Error(memberName, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{name}' on '{receiver.SemanticType.Name}'.");
             var indexedProperty = memberSymbols.OfType<IndexedPropertySymbol>().LastOrDefault();
             if (indexedProperty is not null)
                 return BindIndexedProperty(syntax, receiver, indexedProperty);
             var memberFunctions = memberSymbols.OfType<FunctionSymbol>().ToArray();
-            if (AstImageSupport.IsImage(receiver.SemanticType.Name) || AstCsvSupport.IsCsv(receiver.SemanticType.Name))
+            if (AstImageSupport.IsImage(receiver.SemanticType.Name) || AstCsvSupport.IsCsv(receiver.SemanticType.Name) || AstXmlSupport.IsXml(receiver.SemanticType.Name))
                 memberFunctions = memberFunctions.Where(f => f.IsNativeStatic == (receiver is BoundNameExpression { Symbol: TypeSymbol })).ToArray();
             if (AstCsvSupport.IsCsv(receiver.SemanticType.Name) && name.Equals("FromBytes", StringComparison.OrdinalIgnoreCase) && receiver is not BoundNameExpression)
                 return Error(syntax, CompilerDiagnosticCodes.InvalidSyntax, "XPCsvDocument.FromBytes requires a writable document variable.");
             if (memberFunctions.Length == 0)
-                return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Member '{name}' on '{receiver.SemanticType.Name}' is not callable.");
+                return Error(memberName, CompilerDiagnosticCodes.UnknownMember, $"Member '{name}' on '{receiver.SemanticType.Name}' is not callable.");
             target = new BoundMemberAccessExpression(receiver, name, memberFunctions[0].ReturnType, memberFunctions[0].SemanticReturnType);
             return BindOverloadSet(syntax, target, memberKey, memberFunctions);
         }

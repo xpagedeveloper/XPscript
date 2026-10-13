@@ -12,6 +12,33 @@ static ExpressionSyntax Parse(string text)
 }
 
 // Type diagnostics run first so semantic type regressions fail before the broader binder probe.
+var xmlSymbols = SymbolTable.CreateWithCompilerCatalog();
+xmlSymbols.Declare(new LocalSymbol("document", typeof(object), XpTypeSymbol.User("XPXmlDocument")));
+xmlSymbols.Declare(new LocalSymbol("element", typeof(object), XpTypeSymbol.User("XPXmlElement")));
+xmlSymbols.Declare(new LocalSymbol("node", typeof(object), XpTypeSymbol.User("XPXmlNode")));
+foreach (var text in new[] { "New XPXmlDocument", "New XPXmlDocument(\"<root />\")", "New XPXmlElement(\"root\")",
+    "XPXmlDocument.Parse(\"<root />\")", "XmlParse(\"<root />\")", "XmlStringify(document)", "XmlEscape(\"<&>\")",
+    "document.AddRoot(\"root\")", "document.AddRoot(\"root\", \"value\")", "element.Parent.Name", "element.Clone()",
+    "element.AddElement(\"child\")", "element.AddElement(\"child\", 1)", "document.Root.Attributes[\"id\"].Value",
+    "node.GetAttribute(\"id\")", "document.ValidateDTD(\"<!ELEMENT root EMPTY>\").Errors.Get(0).Message" })
+{
+    var binder = new ExpressionBinder(xmlSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 0) throw new InvalidOperationException("Native XML failed to bind: " + text);
+}
+foreach (var text in new[] { "New XPXmlNode", "New XPXmlElement", "New XPXmlDocument(1, 2)", "document.NoSuchMember",
+    "document.LoadXml()", "document.Parse(\"<root />\")", "XPXmlDocument.HasRoot", "XPXmlDocument.AddRoot(\"root\")", "node.UnknownMethod()" })
+{
+    var binder = new ExpressionBinder(xmlSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 1) throw new InvalidOperationException("Invalid XML signature escaped binding: " + text);
+}
+if (!Conversion.Classify(XpTypeSymbol.User("XPXmlElement"), XpTypeSymbol.User("XPXmlNode")).IsImplicit ||
+    Conversion.Classify(XpTypeSymbol.User("XPXmlNode"), XpTypeSymbol.User("XPXmlElement")).IsImplicit)
+    throw new InvalidOperationException("XML element/node inheritance conversion lost its direction.");
+foreach (var definition in CompilerSymbolCatalog.All.Where(d => d.Name.StartsWith("XPXml", StringComparison.Ordinal) || d.Name.StartsWith("Xml", StringComparison.Ordinal)))
+    if (CompilerDocumentationCatalog.Find(definition.DocumentationId) is null) throw new InvalidOperationException("XML API documentation missing: " + definition.Name);
+Console.WriteLine("AST_BINDING_XML_NATIVE_OK");
 var csvSymbols = SymbolTable.CreateWithCompilerCatalog();
 csvSymbols.Declare(new LocalSymbol("data", typeof(object), XpTypeSymbol.User("XPCsvDocument")));
 foreach (var text in new[] { "New XPCsvDocument", "New XPCsvDocument(\"a;b\", \";\")", "CsvParse(\"a\")", "data.Headers[0]",

@@ -43,6 +43,9 @@ Equal(111, nestedOptional.Parameters[0].Span.Start, "Optional absolute start spa
 Equal(nestedOptional.Parameters[0].DefaultValue!.Span.End, nestedOptional.Parameters[0].Span.End, "Default included in parameter span");
 
 var moduleMeParser = new DeclarationParser("Sub Main()\nPrint Me.Name\nEnd Sub");
+var memberParentParser = new DeclarationParser("Sub Main()\nPrint node.Parent.Name\nWith node\nPrint .Parent.Name\nEnd With\nEnd Sub");
+_ = memberParentParser.ParseDeclaration();
+Equal(0, memberParentParser.Diagnostics.Count, "XML Parent member is not a class reference");
 _ = moduleMeParser.ParseDeclaration();
 Equal(1, moduleMeParser.Diagnostics.Count(d => d.Message == "'Me' is only valid inside class instance members."), "module Me context diagnostic");
 

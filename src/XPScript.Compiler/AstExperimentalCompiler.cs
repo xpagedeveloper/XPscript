@@ -518,6 +518,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstRuntimeSource.Code}}
 {{AstImageSupport.RuntimeCode(fullSource)}}
 {{AstCsvSupport.RuntimeCode(fullSource)}}
+{{AstXmlSupport.RuntimeCode(fullSource)}}
 {{(AstCsvSupport.UsesDocument(fullSource) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}

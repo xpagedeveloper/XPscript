@@ -1,0 +1,22 @@
+Option Declare
+Sub Main()
+    Dim document As New XPXmlDocument("<root><child>Åsa &amp; Anna</child></root>")
+    Dim root As XPXmlElement
+    Dim node As XPXmlNode
+    Dim attribute As XPXmlAttribute
+    Set root = document.Root
+    Call root.SetAttribute("id", 42)
+    Set attribute = root.Attributes.Get("id")
+    attribute.Value = "43"
+    Set node = root.FirstChild
+    Print node.Parent.Name
+    Print node.Value
+    Print attribute.Value
+    Print node.Clone().HasParent
+    document.Indent = False
+    Print XmlStringify(document)
+    Call document.LoadXml("<replaced />")
+    Print document.DocumentElement.Name
+    Print XmlEscape("5 < 10 & 20 > 10")
+    Print "XML_PARITY_OK"
+End Sub

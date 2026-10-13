@@ -60,6 +60,9 @@ internal static class XPScriptNativeXml
     public static string Escape(object? value)
         => new System.Xml.Linq.XText(XPScriptRuntime.CStr(value)).ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
 
+    internal static XPScriptXmlElement RequireElement(object? value) => value as XPScriptXmlElement
+        ?? throw new XPScriptRuntimeException(13, "XML operation requires an element node.");
+
     internal static string RequireName(object? value)
     {
         var name = XPScriptRuntime.CStr(value).Trim();
@@ -496,6 +499,7 @@ internal sealed class XPScriptXmlAttributeCollection : System.Collections.IEnume
     public int Count => _items.Count;
     public XPScriptXmlAttribute? First => _items.Count == 0 ? null : new XPScriptXmlAttribute(_items[0]);
     public XPScriptXmlAttribute? Last => _items.Count == 0 ? null : new XPScriptXmlAttribute(_items[^1]);
+    public XPScriptXmlAttribute this[object? indexOrName] => Get(indexOrName);
 
     public XPScriptXmlAttribute Get(object? indexOrName)
     {
@@ -662,6 +666,7 @@ internal sealed class XPScriptXmlNodeCollection : System.Collections.IEnumerable
     public int Count => _items.Count;
     public XPScriptXmlNode? First => _items.Count == 0 ? null : _items[0];
     public XPScriptXmlNode? Last => _items.Count == 0 ? null : _items[^1];
+    public XPScriptXmlNode? this[object? index] => Get(index);
 
     public XPScriptXmlNode? Get(object? indexValue)
     {
@@ -697,6 +702,7 @@ internal sealed class XPScriptXmlValidationErrorCollection : System.Collections.
         if (index < 0 || index >= _items.Count) throw new XPScriptRuntimeException(9, "XML validation error index out of range.");
         return _items[index];
     }
+    public XPScriptXmlValidationError this[object? index] => Get(index);
     public System.Collections.IEnumerator GetEnumerator() => _items.GetEnumerator();
 }
 

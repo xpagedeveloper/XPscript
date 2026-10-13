@@ -12,6 +12,34 @@ await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new {jsonrpc="2.0"
 var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new{}});
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP tool: "+name);
+foreach (var xmlFixture in new[] { "xml-parent", "xml-with-call", "xml-runtime", "xml-reference", "xml-security", "xml-parity", "xml-unused", "xml-escape-only" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", xmlFixture + ".xps"));
+    var result = await CallAsync(new {jsonrpc="2.0",id="xml-"+xmlFixture,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source,filename=xmlFixture+".xps"}}});
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+        throw new Exception("AST MCP rejected XML fixture: " + xmlFixture);
+}
+foreach (var xmlFixture in new[] { ("xml-member-error", "XPS2009", 3), ("xml-constructor-error", "XPS1009", 2),
+    ("xml-element-constructor-error", "XPS1008", 2), ("xml-readonly-error", "XPS2001", 3),
+    ("xml-index-readonly-error", "XPS2001", 3), ("xml-arity-error", "XPS2004", 3), ("xml-static-error", "XPS2009", 2) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", xmlFixture.Item1 + ".xps"));
+    var result = await CallAsync(new {jsonrpc="2.0",id="xml-invalid-"+xmlFixture.Item1,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source,filename=xmlFixture.Item1+".xps"}}});
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (error.GetProperty("diagnosticCode").GetString() != xmlFixture.Item2 || error.GetProperty("line").GetInt32() != xmlFixture.Item3)
+        throw new Exception("AST MCP XML diagnostic lost its code or span: " + xmlFixture.Item1);
+}
+var xmlParitySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "xml-parity.xps"));
+var xmlParityValidation = await CallAsync(new {jsonrpc="2.0",id="xml-normal-parity",method="tools/call",@params=new{name="xpscript_validate",arguments=new{source=xmlParitySource,filename="xml-parity.xps"}}});
+if (xmlParityValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+    throw new Exception("Normal MCP rejected native XML parity.");
+foreach (var xmlFixture in new[] { ("xml-constructor-error", "XPS1009"), ("xml-element-constructor-error", "XPS1008") })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", xmlFixture.Item1 + ".xps"));
+    var result = await CallAsync(new {jsonrpc="2.0",id="xml-normal-invalid-"+xmlFixture.Item1,method="tools/call",@params=new{name="xpscript_validate",arguments=new{source,filename=xmlFixture.Item1+".xps"}}});
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (error.GetProperty("diagnosticCode").GetString() != xmlFixture.Item2) throw new Exception("Normal XML constructor diagnostic drifted.");
+}
 foreach (var csvFixture in new[] { "csv-runtime", "csv-reference", "csv-parity", "csv-unused", "csv-escape-only" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", csvFixture + ".xps"));

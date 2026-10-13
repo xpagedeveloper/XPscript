@@ -4,6 +4,7 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+& (Join-Path $PSScriptRoot 'run-ast-xml.ps1')
 $csvRoot = Join-Path $output ('csv-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $csvRoot | Out-Null
 foreach ($csvFixture in @('csv-runtime', 'csv-reference', 'csv-parity', 'csv-unused', 'csv-escape-only')) {

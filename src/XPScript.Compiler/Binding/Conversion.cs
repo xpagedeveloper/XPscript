@@ -8,6 +8,7 @@ public enum ConversionKind
     ToVariant,
     FromVariant,
     ToObject,
+    ReferenceUpcast,
     EmptyToVariant,
     NullToVariant,
     NothingToObject
@@ -24,6 +25,9 @@ public readonly record struct Conversion(ConversionKind Kind)
         if (source.RuntimeType == target.RuntimeType &&
             string.Equals(source.Name, target.Name, StringComparison.OrdinalIgnoreCase))
             return new Conversion(ConversionKind.Identity);
+
+        if (AstXmlSupport.IsUpcast(source.Name, target.Name))
+            return new Conversion(ConversionKind.ReferenceUpcast);
 
         // EMPTY and NULL are Variant states. NOTHING is exclusively an object-reference state.
         if (source.IsNothing)

@@ -1,0 +1,4 @@
+Sub Main()
+    Dim document As New XPXmlDocument
+    Set document.ChildNodes[0] = document.CreateTextNode("text")
+End Sub

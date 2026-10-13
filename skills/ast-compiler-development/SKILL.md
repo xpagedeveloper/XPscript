@@ -28,6 +28,8 @@ Use this workflow when adding support for an XP object or AST-only language feat
 
 ## Design rule
 
+For native XML, use `AstXmlSupport` with `AstNativeObjectSurface`, shared by CSV. The source-derived surface must retain inherited members and optional native arities. XML element-to-node conversion is a reference upcast, not a Variant coercion; ByRef still requires an exact type. Reuse `NativeXmlRuntimeSource` with its DTD/entity restrictions and resource limits. Test actual normal/AST execution, typed collections, reference semantics, implicit With calls and member names such as `.Parent` that must not be rewritten as class references. Verify unused/escape-only XML does not include the DOM or addon dependencies.
+
 Object detection belongs in the registry. Binding, emission and runtime implementation remain separate layers so adding another XP object does not require expanding `AstExperimentalCompiler` with more object-specific regex logic.
 
 For CSV, use `AstCsvSupport` and the existing `NativeCsvRuntimeSource`; do not introduce another CSV parser. Its conditional runtime selection is tested for actual use, strings/comments and escape-only programs. CSV uses shared managed references (not XPImage's ByVal cloning/disposal). Lower reference-replacing operations such as `FromBytes` through bound statements for both ordinary and `Call` syntax, preserving argument evaluation order. Unsupported CSV/spreadsheet interop must retain whole-file legacy fallback and existing dependency/notice selection.
