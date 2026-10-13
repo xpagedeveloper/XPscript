@@ -1,0 +1,4 @@
+Sub Main()
+    Dim client As New XPHttpClient
+    Call client.Post("https://example.invalid")
+End Sub

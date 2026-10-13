@@ -51,6 +51,8 @@ public sealed class BoundExpressionEmitter
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("Parse", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeJson.Parse",
         BoundMemberAccessExpression member when AstImageSupport.IsImage(member.Receiver.SemanticType.Name) =>
             $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? "XPImage" : $"((XPImage)({Emit(member.Receiver)}))")}.{AstImageSupport.MemberName(member.Name)}",
+        BoundMemberAccessExpression member when AstHttpSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } httpType =>
+            $"(({httpType})({Emit(member.Receiver)})).{AstHttpSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
         BoundMemberAccessExpression member when AstCsvSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } csvType =>
             $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? csvType : $"(({csvType})({Emit(member.Receiver)}))")}.{AstCsvSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
         BoundMemberAccessExpression member when AstXmlSupport.RequiresElement(member.Receiver.SemanticType.Name, member.Name) =>
@@ -112,7 +114,7 @@ public sealed class BoundExpressionEmitter
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
 
-    internal static string? RuntimeObjectType(string name) => AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
+    internal static string? RuntimeObjectType(string name) => AstHttpSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
     {
         "XPIMAGE" => "XPImage",
         "XPJSONDOCUMENT" => "XPScriptJsonDocument",

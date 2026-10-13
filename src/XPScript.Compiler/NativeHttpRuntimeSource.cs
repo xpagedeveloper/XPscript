@@ -110,6 +110,15 @@ internal sealed class XPScriptHttpClient : IDisposable
     public XPScriptHttpResponse Put(object? url, object? body) => SendCore(System.Net.Http.HttpMethod.Put, url, body);
     public XPScriptHttpResponse Patch(object? url, object? body) => SendCore(System.Net.Http.HttpMethod.Patch, url, body);
 
+    public void SetBearerToken(object? token) => XPScriptHttpCoreHelpers.SetBearerToken(this, token);
+    public void SetBasicAuth(object? username, object? password) => XPScriptHttpCoreHelpers.SetBasicAuth(this, username, password);
+    public string AddQuery(object? url, object? name, object? value) => XPScriptHttpCoreHelpers.AddQuery(this, url, name, value);
+    public XPScriptJsonDocument GetJson(object? url) => XPScriptHttpJsonHelpers.GetJson(this, url);
+    public XPScriptHttpResponse PostJson(object? url, object? data) => XPScriptHttpJsonHelpers.PostJson(this, url, data);
+    public XPScriptHttpResponse PutJson(object? url, object? data) => XPScriptHttpJsonHelpers.PutJson(this, url, data);
+    public XPScriptHttpResponse PatchJson(object? url, object? data) => XPScriptHttpJsonHelpers.PatchJson(this, url, data);
+    public XPScriptHttpResponse PostForm(object? url, object? data) => XPScriptHttpJsonHelpers.PostForm(this, url, data);
+
     public XPScriptHttpResponse Send(object? requestValue)
     {
         EnsureNotDisposed();
@@ -439,6 +448,7 @@ internal sealed class XPScriptHttpResponse
     public XPScriptHttpPart GetFile(object? indexValue) => Files.Get(indexValue);
 
     public void SaveBodyToFile(object? pathValue) => XPScriptHttpFileStorage.Save(pathValue, RawBodyBytes);
+    public XPScriptJsonDocument Json() => XPScriptHttpCoreHelpers.ResponseJson(this);
 }
 
 internal sealed class XPScriptHttpPartCollection

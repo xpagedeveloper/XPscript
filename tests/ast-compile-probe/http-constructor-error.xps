@@ -1,0 +1,3 @@
+Sub Main()
+    Dim response As New XPHttpResponse
+End Sub

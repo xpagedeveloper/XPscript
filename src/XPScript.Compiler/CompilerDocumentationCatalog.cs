@@ -106,7 +106,7 @@ public static class CompilerDocumentationCatalog
             Define("target.ServerSide", "target", "ServerSide"),
             Define("security.Shell", "security", "Shell"),
             Define("security.DependencyAudit", "security", "dependency-audit")
-        }.Concat(AstImageSupport.Catalog.Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).Select(x => Define(x.DocumentationId, "api", x.Name)))
+        }.Concat(AstImageSupport.Catalog.Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).Concat(AstHttpSupport.Catalog).Select(x => Define(x.DocumentationId, "api", x.Name)))
         .DistinctBy(x => x.Id, StringComparer.OrdinalIgnoreCase).ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerDocumentationDefinition? Find(string id)

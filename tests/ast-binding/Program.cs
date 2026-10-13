@@ -12,6 +12,24 @@ static ExpressionSyntax Parse(string text)
 }
 
 // Type diagnostics run first so semantic type regressions fail before the broader binder probe.
+var httpSymbols = SymbolTable.CreateWithCompilerCatalog();
+httpSymbols.Declare(new LocalSymbol("client", typeof(object), XpTypeSymbol.User("XPHttpClient")));
+httpSymbols.Declare(new LocalSymbol("response", typeof(object), XpTypeSymbol.User("XPHttpResponse")));
+foreach (var text in new[] { "New XPHttpClient", "New XPHttpRequest", "client.Timeout", "client.Get(\"https://example.invalid\")",
+    "client.Post(\"https://example.invalid\", \"body\")", "client.Send(\"HEAD\", \"https://example.invalid\")",
+    "client.PostJson(\"https://example.invalid\", 1)", "response.Json()", "response.Headers[\"X-Test\"]", "response.StatusCode" })
+{
+    var binder = new ExpressionBinder(httpSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 0) throw new Exception("Native HTTP signature failed: " + text);
+}
+foreach (var text in new[] { "New XPHttpResponse", "client.Get()", "client.Post(\"url\")", "XPHttpClient.Get(\"url\")", "client.UnknownMember" })
+{
+    var binder = new ExpressionBinder(httpSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 1) throw new Exception("Invalid HTTP signature escaped binding: " + text);
+}
+Console.WriteLine("AST_BINDING_HTTP_NATIVE_OK");
 var xmlSymbols = SymbolTable.CreateWithCompilerCatalog();
 xmlSymbols.Declare(new LocalSymbol("document", typeof(object), XpTypeSymbol.User("XPXmlDocument")));
 xmlSymbols.Declare(new LocalSymbol("element", typeof(object), XpTypeSymbol.User("XPXmlElement")));

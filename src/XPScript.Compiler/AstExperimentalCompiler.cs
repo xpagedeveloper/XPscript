@@ -498,7 +498,6 @@ public sealed class XpPerson {
 public sealed class XpNotesHttp { public long TimeoutSec { get; set; } public long MaxRedirects { get; set; } public bool PreferStrings { get; set; } public bool PreferJSONNavigator { get; set; } public long ResponseCode { get; private set; } public void SetHeaderField(string name, object? value) { } public object Get(string url) { ResponseCode = 0; return PreferJSONNavigator ? new XpJsonDocument() : string.Empty; } public object Post(string url, object? body) { ResponseCode = 0; return PreferJSONNavigator ? new XpJsonDocument() : string.Empty; } public object Put(string url, object? body) => Post(url, body); public object Patch(string url, object? body) => Post(url, body); public object DeleteResource(string url) => Get(url); public object GetResponseHeaders() => Array.Empty<object>(); public void ResetHeaders() { } public void SetProxy(string host, long port) { } public void SetProxyUser(string user, string password) { } public void ResetProxy() { } }
 public sealed class XpAiTool { private readonly XpJsonObject context = new(); public string Name { get; } public long Timeout { get; set; } public string Description { get; set; } = string.Empty; public XpAiTool(object? name) { Name = Convert.ToString(name) ?? string.Empty; } public void SetRequestProperty(string name, object? value) => context.Set(name, value); public object GetRequestContext() => context; public void AddFunction(string name, string description) { } public void AddParameter(string name, string type, bool required) { } public long FunctionCount() => 0; public bool HasFunction(string name) => false; }
 public sealed class XpAi { private readonly Dictionary<string,XpAiTool> tools = new(StringComparer.OrdinalIgnoreCase); public string Endpoint { get; } public string Provider { get; } public XpAi(object? provider, object? key = null, object? endpoint = null) { Provider = Convert.ToString(provider) ?? string.Empty; Endpoint = Convert.ToString(endpoint ?? provider) ?? string.Empty; } public void AddTool(XpAiTool tool) => tools[tool.Name] = tool; public long ToolCount() => tools.Count; public bool HasTool(string name) => tools.ContainsKey(name) || tools.Count > 0; public XpJsonArray GetToolNames() { var a = new XpJsonArray(); foreach (var n in tools.Keys) a.Add(string.IsNullOrEmpty(n) ? "retrieval" : n); return a; } public XpAiTool GetTool(string name) => tools.TryGetValue(name, out var tool) ? tool : tools.Values.First(); public bool RemoveTool(string name) { if (tools.ContainsKey(name)) return tools.Remove(name); if (tools.Count > 0) return tools.Remove(tools.Keys.First()); return false; } public void ClearTools() => tools.Clear(); public void Dispose() { } }
-public sealed class XpHttpClientStub { public bool AllowPrivateNetwork { get; set; } public object GetAsync(string url, string callback, string context) => new ExpandoObject(); public void Dispose() { } }
 """;
         var generated = $$"""
 using System;
@@ -930,8 +929,7 @@ internal static class Program
 }
 """;
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
-        var nativeHttp = NativeHttpRuntimeSource.Code;
-        generated += Environment.NewLine + "public sealed class XPScriptRuntimeException : Exception { public int ErrorCode { get; } public XPScriptRuntimeException(int code, string message) : base(message) { ErrorCode = code; } }" + Environment.NewLine + "internal sealed class XPScriptTlsValidationState { public string Mode { get; set; } = \"strict\"; public string LastError { get; private set; } = string.Empty; public void Reset() { LastError = string.Empty; } public Exception Failure(string context) => new XPScriptRuntimeException(1201, context + \" failed: \" + LastError); public bool Validate(object sender, System.Security.Cryptography.X509Certificates.X509Certificate? c, System.Security.Cryptography.X509Certificates.X509Chain? chain, System.Net.Security.SslPolicyErrors errors) => true; }" + Environment.NewLine + nativeHttp;
+        generated += Environment.NewLine + AstHttpSupport.ExceptionCode + Environment.NewLine + AstHttpSupport.RuntimeCode(fullSource);
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -971,8 +969,7 @@ internal static class Program
         var end = source.IndexOf("internal static class LSCoreCompare", start, StringComparison.Ordinal);
         var normalizeSource = ExtendedCompatibilityRuntimeSource.Code;
         var normalizeEnd = normalizeSource.IndexOf("internal static class LSExtendedRuntime", StringComparison.Ordinal);
-        return source[start..end]
-            .Replace("ls.Number", "ls.ErrorCode", StringComparison.Ordinal) + normalizeSource[..normalizeEnd];
+        return source[start..end] + normalizeSource[..normalizeEnd];
     }
 
     private static IEnumerable<StatementSyntax> FlattenStatements(IEnumerable<StatementSyntax> statements)

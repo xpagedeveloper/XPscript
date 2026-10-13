@@ -74,7 +74,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindName(NameExpressionSyntax syntax)
     {
         var name = syntax.IdentifierToken.Text;
-        if (_symbols.TryLookup(name, out var nativeType) && nativeType is TypeSymbol && (AstImageSupport.IsImage(name) || AstCsvSupport.IsCsv(name) || AstXmlSupport.IsXml(name)))
+        if (_symbols.TryLookup(name, out var nativeType) && nativeType is TypeSymbol && (AstHttpSupport.IsHttp(name) || AstImageSupport.IsImage(name) || AstCsvSupport.IsCsv(name) || AstXmlSupport.IsXml(name)))
             return new BoundNameExpression(nativeType);
         // A bare function name denotes its result slot; a call still resolves
         // the procedure signature, so recursion is unaffected.
@@ -100,6 +100,14 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindNew(NewExpressionSyntax syntax)
     {
         var typeName = syntax.TypeName.Text;
+        if (AstHttpSupport.IsHttp(typeName))
+        {
+            if (!typeName.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) && !typeName.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase))
+                return Error(syntax.TypeName, CompilerDiagnosticCodes.InvalidNativeConstructor, "Only XPHttpClient and XPHttpRequest can be created with New.");
+            if (syntax.Arguments.Count != 0)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
+            return new BoundNewExpression(typeof(object), [], XpTypeSymbol.User(typeName.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) ? "XPHttpClient" : "XPHttpRequest"));
+        }
         if (AstXmlSupport.IsXml(typeName))
         {
             if (!typeName.Equals("XPXmlDocument", StringComparison.OrdinalIgnoreCase) && !typeName.Equals("XPXmlElement", StringComparison.OrdinalIgnoreCase))
@@ -171,6 +179,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return new BoundIndexExpression(expression, index, csvElement.RuntimeType, csvElement);
         if (expression.SemanticType is { IsList: true, ElementType: { } element })
             return new BoundIndexExpression(expression, index, element.RuntimeType, element);
+        if (_allowDynamicMembers && expression.SemanticType.IsVariant)
+            return new BoundIndexExpression(expression, index, typeof(object), XpTypeSymbol.Variant);
         if (index.Type != typeof(long))
             return Error(syntax.Index, CompilerDiagnosticCodes.ArgumentTypeMismatch, "Array index must be an integer.");
         if (expression.SemanticType.IsArray && expression.SemanticType.ElementType is not null)
@@ -191,6 +201,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             if (symbol is PropertySymbol property)
             {
+                if (AstHttpSupport.IsHttp(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
+                    return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, "HTTP property requires an instance.");
                 if (AstXmlSupport.IsXml(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
                     return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"XML property '{property.Name.Split('.').Last()}' requires an instance.");
                 if (AstCsvSupport.IsCsv(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
@@ -331,7 +343,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (indexedProperty is not null)
                 return BindIndexedProperty(syntax, receiver, indexedProperty);
             var memberFunctions = memberSymbols.OfType<FunctionSymbol>().ToArray();
-            if (AstImageSupport.IsImage(receiver.SemanticType.Name) || AstCsvSupport.IsCsv(receiver.SemanticType.Name) || AstXmlSupport.IsXml(receiver.SemanticType.Name))
+            if (AstHttpSupport.IsHttp(receiver.SemanticType.Name) || AstImageSupport.IsImage(receiver.SemanticType.Name) || AstCsvSupport.IsCsv(receiver.SemanticType.Name) || AstXmlSupport.IsXml(receiver.SemanticType.Name))
                 memberFunctions = memberFunctions.Where(f => f.IsNativeStatic == (receiver is BoundNameExpression { Symbol: TypeSymbol })).ToArray();
             if (AstCsvSupport.IsCsv(receiver.SemanticType.Name) && name.Equals("FromBytes", StringComparison.OrdinalIgnoreCase) && receiver is not BoundNameExpression)
                 return Error(syntax, CompilerDiagnosticCodes.InvalidSyntax, "XPCsvDocument.FromBytes requires a writable document variable.");

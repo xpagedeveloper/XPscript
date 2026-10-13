@@ -1,0 +1,6 @@
+Sub Main()
+    Dim http As String
+    http = "XPHttpClient XPHttpRequest XPHttpResponse"
+    ' XPHttpClient.Get("ignored")
+    Print http
+End Sub

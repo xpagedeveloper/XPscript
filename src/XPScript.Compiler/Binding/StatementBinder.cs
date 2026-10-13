@@ -553,6 +553,11 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindBoundAssignment(BoundExpression target, ExpressionSyntax valueSyntax, bool isSet, ExpressionSyntax targetSyntax)
     {
+        if (target is BoundMemberAccessExpression httpMember && AstHttpSupport.IsReadOnly(httpMember.Receiver.SemanticType.Name, httpMember.Name))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "HTTP response or property is read-only.", targetSyntax.Span));
+            return null;
+        }
         if (target is BoundMemberAccessExpression xmlMember && AstXmlSupport.IsReadOnly(xmlMember.Receiver.SemanticType.Name, xmlMember.Name) ||
             target is BoundIndexExpression xmlIndex && AstXmlSupport.IterationType(xmlIndex.Expression.SemanticType.Name) is not null)
         {

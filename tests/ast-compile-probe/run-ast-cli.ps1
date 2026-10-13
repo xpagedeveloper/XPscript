@@ -4,6 +4,12 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+dotnet run --project (Join-Path $root 'tests/AstHttpRuntimeProbe') -c Release
+if ($LASTEXITCODE -ne 0) { throw 'AST native HTTP/TLS runtime regression failed.' }
+foreach ($httpInvalid in @('http-member-error', 'http-constructor-error', 'http-readonly-error', 'http-arity-error')) {
+    $httpFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$httpInvalid.xps") -o (Join-Path $output $httpInvalid) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($httpFailure -join "`n") -notmatch "$httpInvalid.xps:(2|3):") { throw "HTTP diagnostic or source span lost: $httpInvalid" }
+}
 & (Join-Path $PSScriptRoot 'run-ast-xml.ps1')
 $csvRoot = Join-Path $output ('csv-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $csvRoot | Out-Null

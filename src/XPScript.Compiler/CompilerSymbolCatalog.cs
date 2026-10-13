@@ -125,7 +125,7 @@ public static class CompilerSymbolCatalog
             Define("XPAi.SessionRequestProperty", "property", "XPAi.SessionRequestProperty As String", [], "String", "api.XPAi.SessionRequestProperty"),
             Define("XPAi.ResetSession", "method", "XPAi.ResetSession()", [], null, "api.XPAi.ResetSession"),
             Define("XPAi.NewRequest", "method", "XPAi.NewRequest() As XPAiRequest", [], "XPAiRequest", "api.XPAi.NewRequest")
-        }.Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
+        }.Where(x => !AstHttpSupport.OwnsSymbol(x.Name)).Concat(AstHttpSupport.Catalog).Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerSymbolDefinition? Find(string name)
     {

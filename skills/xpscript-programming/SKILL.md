@@ -216,6 +216,8 @@ Root, direct-child and nested `GetNthHeader(name, occurrence)` support standard 
 
 ## HTTP client security
 
+Native HTTP client/request/response APIs compile directly through AST and use the same secure transport/TLS runtime as normal compilation. `CertificateValidation` defaults to `Strict`; `AllowSelfSigned` is only for deliberately trusted self-signed endpoints and still validates hostname and expiry. Keep `Insecure` out of production code. Fractional `Timeout` values are supported. ByVal shares HTTP references; ByRef can replace them. Call `Dispose()` when a client is no longer needed. HTTP code is included only on actual use without external NuGet addons. Async callbacks and HTTP/UIForm helpers retain whole-file legacy compilation until migrated. See `docs/http-client.md`.
+
 `XPHttpClient` blocks private and local network destinations by default. Leave this protection enabled when a URL may contain request data or other untrusted input.
 
 For a trusted application-controlled intranet or local endpoint, opt in on that client instance:

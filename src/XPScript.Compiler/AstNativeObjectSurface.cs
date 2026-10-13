@@ -15,6 +15,7 @@ internal static class AstNativeObjectSurface
     {
         "object" or "byte[]" => XpTypeSymbol.Variant,
         "int" or "long" => XpTypeSymbol.FromClr(typeof(long)),
+        "double" or "float" => XpTypeSymbol.FromClr(typeof(double)),
         "string" => XpTypeSymbol.FromClr(typeof(string)), "bool" => XpTypeSymbol.FromClr(typeof(bool)),
         "void" => XpTypeSymbol.FromClr(typeof(void)), _ => XpTypeSymbol.User(languageType(type.TrimEnd('?')))
     };

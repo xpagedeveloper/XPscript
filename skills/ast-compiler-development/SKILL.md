@@ -28,6 +28,8 @@ Use this workflow when adding support for an XP object or AST-only language feat
 
 ## Design rule
 
+For HTTP use `AstHttpSupport` and the shared native metadata importer. Compose the real TLS validator and runtime exception from `CoreCompatibilityRuntimeSource`; never introduce an always-successful certificate callback or duplicate transport logic. Normal/AST JSON and authentication facades must delegate to existing helpers. Preserve whole-file legacy routing for async callbacks and UIForm. Test real local HTTP/TLS traffic, Strict/self-signed hostname/expiry rejection, SSRF restrictions, fractional timeouts, mapped diagnostics and absence of HTTP/TLS code when unused. Header dictionaries are dynamic Variant-indexed values, not integer-only arrays.
+
 For native XML, use `AstXmlSupport` with `AstNativeObjectSurface`, shared by CSV. The source-derived surface must retain inherited members and optional native arities. XML element-to-node conversion is a reference upcast, not a Variant coercion; ByRef still requires an exact type. Reuse `NativeXmlRuntimeSource` with its DTD/entity restrictions and resource limits. Test actual normal/AST execution, typed collections, reference semantics, implicit With calls and member names such as `.Parent` that must not be rewritten as class references. Verify unused/escape-only XML does not include the DOM or addon dependencies.
 
 Object detection belongs in the registry. Binding, emission and runtime implementation remain separate layers so adding another XP object does not require expanding `AstExperimentalCompiler` with more object-specific regex logic.

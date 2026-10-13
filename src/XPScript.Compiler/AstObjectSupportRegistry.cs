@@ -22,6 +22,7 @@ internal static class AstObjectSupportRegistry
     {
         "Application",
         "XPImage",
+        "XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPHttpPart", "XPHttpFile", "XPHttpPartCollection", "XPHttpFileCollection",
         "XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
         "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection",
         "XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn",
@@ -97,6 +98,11 @@ internal static class AstObjectSupportRegistry
 
     public static bool UsesUnsupportedObject(string source, out ObjectDefinition? definition)
     {
+        if (AstHttpSupport.RequiresLegacy(source))
+        {
+            definition = new ObjectDefinition("XPHttpClient callbacks/UIForm", CompilationRoute.LegacyFallback, null);
+            return true;
+        }
         if (AstCsvSupport.RequiresLegacyInterop(source))
         {
             definition = new ObjectDefinition("XPSpreadsheet", CompilationRoute.LegacyFallback, null);
