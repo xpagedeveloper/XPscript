@@ -9,6 +9,7 @@ internal static class XPScriptNativeCsv
 
     public static XPScriptCsvDocument CreateDocument() => new();
 
+
     public static XPScriptCsvDocument Parse(object? value)
         => Parse(value, ",", true);
 
@@ -226,7 +227,7 @@ internal sealed class XPScriptCsvDocument
 
     internal XPScriptCsvDocument()
     {
-        Headers = new XPScriptCsvHeaderCollection(_headers);
+        Headers = new XPScriptCsvHeaderCollection(_headers, this);
         Rows = new XPScriptCsvRowCollection(_rows);
     }
 
@@ -234,6 +235,22 @@ internal sealed class XPScriptCsvDocument
     public XPScriptCsvRowCollection Rows { get; }
     public int RowCount => _rows.Count;
     public int ColumnCount => _hasHeaders ? _headers.Count : (_rows.Count == 0 ? 0 : _rows.Max(row => row.Count));
+
+    public static XPScriptCsvDocument Parse(object? text) => XPScriptNativeCsv.Parse(text);
+    public static XPScriptCsvDocument Parse(object? text, object? delimiter) => XPScriptNativeCsv.Parse(text, delimiter);
+    public static XPScriptCsvDocument Parse(object? text, object? delimiter, object? hasHeaders) => XPScriptNativeCsv.Parse(text, delimiter, hasHeaders);
+    public static XPScriptCsvDocument ParseBytes(object? bytes, object? encoding) => XPScriptNativeCsv.ParseBytes(bytes, encoding);
+    public static XPScriptCsvDocument ParseBytes(object? bytes, object? encoding, object? delimiter) => XPScriptNativeCsv.ParseBytes(bytes, encoding, delimiter);
+    public static XPScriptCsvDocument ParseBytes(object? bytes, object? encoding, object? delimiter, object? hasHeaders) => XPScriptNativeCsv.ParseBytes(bytes, encoding, delimiter, hasHeaders);
+    public static XPScriptCsvDocument Load(object? path) => (XPScriptCsvDocument)XPScriptCsvFileRuntime.LoadCsv(path);
+    public static XPScriptCsvDocument Load(object? path, object? encoding) => (XPScriptCsvDocument)XPScriptCsvFileRuntime.LoadCsv(path, encoding);
+    public static XPScriptCsvDocument Load(object? path, object? encoding, object? delimiter) => (XPScriptCsvDocument)XPScriptCsvFileRuntime.LoadCsv(path, encoding, delimiter);
+    public static XPScriptCsvDocument Load(object? path, object? encoding, object? delimiter, object? hasHeaders) => (XPScriptCsvDocument)XPScriptCsvFileRuntime.LoadCsv(path, encoding, delimiter, hasHeaders);
+    public string FileEncoding { get => Encoding; set => Encoding = value; }
+    public void Save(object? path) => XPScriptFileSystemRuntime.WriteBytes(path, ToBytes());
+    public void Save(object? path, object? encoding) => XPScriptFileSystemRuntime.WriteBytes(path, ToBytes(encoding));
+    public void SaveFile(object? path) => Save(path);
+    public void SaveFile(object? path, object? encoding) => Save(path, encoding);
 
     public bool HasHeaders
     {
@@ -541,8 +558,11 @@ internal sealed class XPScriptCsvDocument
 internal sealed class XPScriptCsvHeaderCollection : System.Collections.Generic.IEnumerable<string>
 {
     private readonly System.Collections.Generic.List<string> _items;
-    internal XPScriptCsvHeaderCollection(System.Collections.Generic.List<string> items) => _items = items;
+    private readonly XPScriptCsvDocument _document;
+    internal XPScriptCsvHeaderCollection(System.Collections.Generic.List<string> items, XPScriptCsvDocument document) { _items = items; _document = document; }
     public int Count => _items.Count;
+    public void Add(object? name) => _document.AddHeader(name);
+    public string this[object? index] => Get(index);
     public string Get(object? indexValue)
     {
         var index = XPScriptRuntime.CInt(indexValue);
@@ -558,6 +578,7 @@ internal sealed class XPScriptCsvRowCollection : System.Collections.Generic.IEnu
     private readonly System.Collections.Generic.List<XPScriptCsvRow> _items;
     internal XPScriptCsvRowCollection(System.Collections.Generic.List<XPScriptCsvRow> items) => _items = items;
     public int Count => _items.Count;
+    public XPScriptCsvRow this[object? index] => Get(index);
     public XPScriptCsvRow Get(object? indexValue)
     {
         var index = XPScriptRuntime.CInt(indexValue);
@@ -582,6 +603,7 @@ internal sealed class XPScriptCsvRow
     internal System.Collections.Generic.List<string> Values => _values;
     public XPScriptCsvColumnCollection Columns { get; }
     public int Count => _values.Count;
+    public string this[object? key] { get => Get(key); set => Set(key, value); }
 
     public string Get(object? key)
     {
@@ -612,6 +634,7 @@ internal sealed class XPScriptCsvColumnCollection : System.Collections.Generic.I
     private readonly XPScriptCsvRow _row;
     internal XPScriptCsvColumnCollection(XPScriptCsvRow row) => _row = row;
     public int Count => _row.Count;
+    public XPScriptCsvColumn this[object? index] => Get(index);
     public XPScriptCsvColumn Get(object? indexValue)
     {
         var index = XPScriptRuntime.CInt(indexValue);

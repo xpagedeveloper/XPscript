@@ -22,6 +22,7 @@ internal static class AstObjectSupportRegistry
     {
         "Application",
         "XPImage",
+        "XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn",
         "List",
         "Array",
         "Variant",
@@ -94,6 +95,11 @@ internal static class AstObjectSupportRegistry
 
     public static bool UsesUnsupportedObject(string source, out ObjectDefinition? definition)
     {
+        if (AstCsvSupport.RequiresLegacyInterop(source))
+        {
+            definition = new ObjectDefinition("XPSpreadsheet", CompilationRoute.LegacyFallback, null);
+            return true;
+        }
         var code = RemoveStringsAndComments(source);
         foreach (var candidate in Objects.Where(item => item.Route != CompilationRoute.Ast))
         {
@@ -111,7 +117,7 @@ internal static class AstObjectSupportRegistry
     internal static bool UsesObject(string source, string name) =>
         Regex.IsMatch(RemoveStringsAndComments(source), $@"(?i)\b{Regex.Escape(name)}\b");
 
-    private static string RemoveStringsAndComments(string source)
+    internal static string RemoveStringsAndComments(string source)
     {
         source = Regex.Replace(source, @"(?im)^[ \t]*Rem\b[^\r\n]*", match => new string(' ', match.Length));
         var result = new System.Text.StringBuilder(source.Length);

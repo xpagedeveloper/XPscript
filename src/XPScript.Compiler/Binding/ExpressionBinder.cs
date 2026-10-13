@@ -74,7 +74,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindName(NameExpressionSyntax syntax)
     {
         var name = syntax.IdentifierToken.Text;
-        if (_symbols.TryLookup(name, out var nativeType) && nativeType is TypeSymbol && AstImageSupport.IsImage(name))
+        if (_symbols.TryLookup(name, out var nativeType) && nativeType is TypeSymbol && (AstImageSupport.IsImage(name) || AstCsvSupport.IsCsv(name)))
             return new BoundNameExpression(nativeType);
         // A bare function name denotes its result slot; a call still resolves
         // the procedure signature, so recursion is unaffected.
@@ -100,6 +100,14 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindNew(NewExpressionSyntax syntax)
     {
         var typeName = syntax.TypeName.Text;
+        if (AstCsvSupport.IsCsv(typeName))
+        {
+            if (!typeName.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase))
+                return Error(syntax.TypeName, CompilerDiagnosticCodes.InvalidNativeConstructor, "Only XPCsvDocument can be created with New.");
+            if (syntax.Arguments.Count > 3)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "No matching constructor for 'XPCsvDocument'.");
+            return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User("XPCsvDocument"));
+        }
         if (AstImageSupport.IsImage(typeName))
         {
             var imageArguments = syntax.Arguments.Select(Bind).ToArray();
@@ -146,6 +154,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     {
         var expression = Bind(syntax.Expression);
         var index = Bind(syntax.Index);
+        if (AstCsvSupport.IndexType(expression.SemanticType.Name) is { } csvElement)
+            return new BoundIndexExpression(expression, index, csvElement.RuntimeType, csvElement);
         if (expression.SemanticType is { IsList: true, ElementType: { } element })
             return new BoundIndexExpression(expression, index, element.RuntimeType, element);
         if (index.Type != typeof(long))
@@ -168,6 +178,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             if (symbol is PropertySymbol property)
             {
+                if (AstCsvSupport.IsCsv(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
+                    return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"CSV property '{property.Name.Split('.').Last()}' requires an instance.");
                 if (AstImageSupport.IsImage(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
                     return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"XPImage property '{property.Name.Split('.').Last()}' requires an image instance.");
                 return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, property.PropertyType, property.SemanticType);
@@ -241,6 +253,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             target = null;
             name = nameSyntax.IdentifierToken.Text;
+            if (name.Equals("CsvSave", StringComparison.OrdinalIgnoreCase) || name.Equals("CsvWriteFile", StringComparison.OrdinalIgnoreCase))
+                return Error(nameSyntax.IdentifierToken, CompilerDiagnosticCodes.RemovedNativeApi,
+                    "CSV file output is available only through XPCsvDocument.Save or XPCsvDocument.SaveFile.");
             if (_symbols.TryLookup(name, out var collectionSymbol) && collectionSymbol is LocalSymbol or ParameterSymbol &&
                 new BoundNameExpression(collectionSymbol).SemanticType.IsList && syntax.Arguments.Count != 1)
                 return Error(syntax, CompilerDiagnosticCodes.ArgumentCountMismatch, "List access requires exactly one tag.");
@@ -273,6 +288,15 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             var receiver = Bind(memberSyntax.Expression);
             name = memberSyntax.NameToken.Text;
+            if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) && name.Equals("WriteFile", StringComparison.OrdinalIgnoreCase))
+                return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.RemovedNativeApi, "XPCsvDocument.WriteFile was removed. Use Save or SaveFile.");
+            if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) && name.Equals("Load", StringComparison.OrdinalIgnoreCase) && syntax.Arguments.Count is < 1 or > 4)
+                return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.Load requires path and optional encoding, delimiter, and hasHeaders arguments.");
+            if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) &&
+                (name.Equals("Save", StringComparison.OrdinalIgnoreCase) || name.Equals("SaveFile", StringComparison.OrdinalIgnoreCase)) && syntax.Arguments.Count is < 1 or > 2)
+                return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.Save requires path and optional encoding arguments.");
+            if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) && name.Equals("FromBytes", StringComparison.OrdinalIgnoreCase) && syntax.Arguments.Count is < 1 or > 2)
+                return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.FromBytes requires bytes and an optional encoding argument.");
             var memberKey = receiver.SemanticType.Name + "." + name;
             var memberSymbols = _symbols.LookupMembers(receiver.SemanticType, name);
             if (memberSymbols.Count == 0 && _allowDynamicMembers && receiver.SemanticType.IsVariant)
@@ -288,8 +312,10 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (indexedProperty is not null)
                 return BindIndexedProperty(syntax, receiver, indexedProperty);
             var memberFunctions = memberSymbols.OfType<FunctionSymbol>().ToArray();
-            if (AstImageSupport.IsImage(receiver.SemanticType.Name))
+            if (AstImageSupport.IsImage(receiver.SemanticType.Name) || AstCsvSupport.IsCsv(receiver.SemanticType.Name))
                 memberFunctions = memberFunctions.Where(f => f.IsNativeStatic == (receiver is BoundNameExpression { Symbol: TypeSymbol })).ToArray();
+            if (AstCsvSupport.IsCsv(receiver.SemanticType.Name) && name.Equals("FromBytes", StringComparison.OrdinalIgnoreCase) && receiver is not BoundNameExpression)
+                return Error(syntax, CompilerDiagnosticCodes.InvalidSyntax, "XPCsvDocument.FromBytes requires a writable document variable.");
             if (memberFunctions.Length == 0)
                 return Error(memberSyntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Member '{name}' on '{receiver.SemanticType.Name}' is not callable.");
             target = new BoundMemberAccessExpression(receiver, name, memberFunctions[0].ReturnType, memberFunctions[0].SemanticReturnType);

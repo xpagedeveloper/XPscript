@@ -63,13 +63,13 @@ Write-Host "FULLTEST_SUITE=$Suite"
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
   # Run the latest failing AST CLI fixture before the broader probes.
-  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 600000 'AST CLI native XPImage/JSON runtime, ownership, List ByRef, Resume, ForAll, Static, GoTo and Optional regressions'
+  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 600000 'AST CLI native CSV/XPImage/JSON runtime, conditional inclusion, ownership, List ByRef, Resume, ForAll, Static, GoTo and Optional regressions'
   if ($astCliFirst.ExitCode -ne 0 -or $astCliFirst.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
   $astLexer = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-lexer/AstLexerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST lexer and compatibility regression'
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
   $astBinding = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-binding/AstBindingProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST semantic binder regression'
   if ($astBinding.ExitCode -ne 0) { exit $astBinding.ExitCode }
-  foreach ($marker in @('AST_BINDING_RECEIVER_DIAGNOSTICS_OK','AST_BINDING_DECLARED_CALL_DIAGNOSTICS_OK','AST_BINDING_TYPE_DIAGNOSTICS_OK','AST_BINDING_COLLECTION_TYPES_OK','AST_BINDING_VARIANT_SEMANTICS_OK','AST_BINDING_OBJECT_SEMANTICS_OK','AST_BINDING_NULL_EMPTY_NOTHING_SEMANTICS_OK')) {
+  foreach ($marker in @('AST_BINDING_CSV_NATIVE_OK','AST_BINDING_RECEIVER_DIAGNOSTICS_OK','AST_BINDING_DECLARED_CALL_DIAGNOSTICS_OK','AST_BINDING_TYPE_DIAGNOSTICS_OK','AST_BINDING_COLLECTION_TYPES_OK','AST_BINDING_VARIANT_SEMANTICS_OK','AST_BINDING_OBJECT_SEMANTICS_OK','AST_BINDING_NULL_EMPTY_NOTHING_SEMANTICS_OK')) {
     if ($astBinding.Output -notmatch $marker) { throw "AST semantic binder regression missing: $marker" }
   }
   $emission = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-emission/AstEmissionProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'bound C# emission'
@@ -178,6 +178,8 @@ if (Should-Run 'runtime') {
     try { $marker = $zip.GetEntry('docProps/custom.xml'); if ($null -eq $marker) { throw 'XPSpreadsheet workbook marker is missing.' }; $reader = [System.IO.StreamReader]::new($marker.Open()); try { $text = $reader.ReadToEnd() } finally { $reader.Dispose() }; if ($text -notmatch 'XPScriptWorkbookVersion' -or $text -notmatch '>2<') { throw 'XPSpreadsheet workbook marker is invalid.' } } finally { $zip.Dispose() }
   }
   Run-Xps ./samples/native-csv-regression.xps native-csv-regression | Out-Null
+  $csvNativeParity = Run-Xps ./tests/ast-compile-probe/csv-parity.xps csv-native-parity
+  if ($csvNativeParity.Output.Trim().Replace("`r`n", "`n") -ne "utf-8-bom`nÅsa`nFalse`nwindows-1252`nutf-8-bom`n001`nCSV_PARITY_OK") { throw 'Native CSV file loading or reference replacement parity failed.' }
   $csvJson = Run-Xps ./samples/csv-json-roundtrip.xps csv-json-roundtrip
   if ($csvJson.Output -notmatch 'CSV-JSON-ROUNDTRIP=OK') { throw 'CSV JSON round-trip regression did not complete.' }
   Run-Xps ./samples/native-xml-dom-regression.xps native-xml-dom-regression | Out-Null

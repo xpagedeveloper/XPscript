@@ -151,7 +151,7 @@ internal sealed class BoundErrorFlowEmitter
                 Add(statement, next, indent =>
                 {
                     Write($"if ({itemIndex} < {items}.Length) {{", indent, statement);
-                    if (!isList) Write($"{E(loop.Variable)} = {(loop.Variable.Type == typeof(long) ? $"XPScriptRuntime.CLng({items}[{itemIndex}])" : $"{items}[{itemIndex}]")};", indent + 1, statement);
+                    if (!isList) Write($"{E(loop.Variable)} = {_expressions.IterationValue(loop.Variable, $"{items}[{itemIndex}]")};", indent + 1, statement);
                     Write($"{itemIndex}++; {_next} = {allBody}; }}", indent + 1, statement);
                 });
                 if (isList)

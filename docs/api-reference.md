@@ -4,6 +4,8 @@ This is the searchable runtime-object reference for XPScript. Use [commands.md](
 
 Every row contains the member title, accepted syntax, parameters and their purpose, a short behavior description, and a complete `.xps` example that can be copied and compiled. The linked topical pages provide longer explanations and security guidance.
 
+For native CSV documents and header/row/column collections, see [native-csv.md](native-csv.md). Normal and AST compilation share the same runtime; unused CSV code is omitted and CSV-only programs add no external packages. Spreadsheet interop retains the legacy compilation route.
+
 ## Process execution
 
 Use `Shell` for compatibility command-string process startup and `ShellArgs` when a process should be started with structured arguments without waiting. Use `ShellExecute` when the caller needs completion, captured output, or the child exit code.

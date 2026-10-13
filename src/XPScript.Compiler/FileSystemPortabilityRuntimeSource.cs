@@ -5,6 +5,10 @@ internal static class FileSystemPortabilityRuntimeSource
     public const string Code = """
 internal static class XPScriptFileSystemRuntime
 {
+    // Shared primitive used by byte-file APIs and CSV output. Preserve the
+    // existing current-directory path policy rather than image source-directory policy.
+    public static void WriteBytes(object? path, byte[] bytes) =>
+        System.IO.File.WriteAllBytes(System.IO.Path.GetFullPath(XPScriptRuntime.CStr(path)), bytes);
     public static Encoding LegacyEncoding { get; } = Encoding.Latin1;
     private static string _scriptDirectory = Environment.CurrentDirectory;
 

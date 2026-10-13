@@ -495,10 +495,6 @@ public sealed class XpPerson {
                 return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} public Xp{match.Groups["name"].Value}() {{ }} private Xp{match.Groups["name"].Value}(long value) => Value = value; public static implicit operator Xp{match.Groups["name"].Value}(int value) => new(value); public static implicit operator Xp{match.Groups["name"].Value}(long value) => new(value); {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
             }));
         if (true) classSupport += """
-public sealed class XpCsvJsonArray { public List<Dictionary<string,string>> Rows { get; } = new(); public int Count => Rows.Count; }
-public sealed class XpCsvRow { internal Dictionary<string,string> Data = new(); public void Set(string key, object? value) => Data[key] = Convert.ToString(value) ?? string.Empty; public object Get(string key) => Data.TryGetValue(key, out var value) ? value : string.Empty; }
-public sealed class XpCsvRows : List<XpCsvRow> { public XpCsvRow this[long index] => base[Convert.ToInt32(index)]; }
-public sealed class XpCsvDocument { public List<string> Headers { get; } = new(); public XpCsvRows Rows { get; } = new(); public int RowCount => Rows.Count; public XpCsvRow AddRow() { var row = new XpCsvRow(); Rows.Add(row); return row; } public XpCsvJsonArray ToJson() { var result = new XpCsvJsonArray(); result.Rows.AddRange(Rows.Select(row => new Dictionary<string,string>(row.Data))); return result; } public void FromJson(XpCsvJsonArray json) { Rows.Clear(); foreach (var item in json.Rows) { var row = new XpCsvRow(); foreach (var pair in item) row.Data[pair.Key] = pair.Value; Rows.Add(row); } } }
 public sealed class XpNotesHttp { public long TimeoutSec { get; set; } public long MaxRedirects { get; set; } public bool PreferStrings { get; set; } public bool PreferJSONNavigator { get; set; } public long ResponseCode { get; private set; } public void SetHeaderField(string name, object? value) { } public object Get(string url) { ResponseCode = 0; return PreferJSONNavigator ? new XpJsonDocument() : string.Empty; } public object Post(string url, object? body) { ResponseCode = 0; return PreferJSONNavigator ? new XpJsonDocument() : string.Empty; } public object Put(string url, object? body) => Post(url, body); public object Patch(string url, object? body) => Post(url, body); public object DeleteResource(string url) => Get(url); public object GetResponseHeaders() => Array.Empty<object>(); public void ResetHeaders() { } public void SetProxy(string host, long port) { } public void SetProxyUser(string user, string password) { } public void ResetProxy() { } }
 public sealed class XpAiTool { private readonly XpJsonObject context = new(); public string Name { get; } public long Timeout { get; set; } public string Description { get; set; } = string.Empty; public XpAiTool(object? name) { Name = Convert.ToString(name) ?? string.Empty; } public void SetRequestProperty(string name, object? value) => context.Set(name, value); public object GetRequestContext() => context; public void AddFunction(string name, string description) { } public void AddParameter(string name, string type, bool required) { } public long FunctionCount() => 0; public bool HasFunction(string name) => false; }
 public sealed class XpAi { private readonly Dictionary<string,XpAiTool> tools = new(StringComparer.OrdinalIgnoreCase); public string Endpoint { get; } public string Provider { get; } public XpAi(object? provider, object? key = null, object? endpoint = null) { Provider = Convert.ToString(provider) ?? string.Empty; Endpoint = Convert.ToString(endpoint ?? provider) ?? string.Empty; } public void AddTool(XpAiTool tool) => tools[tool.Name] = tool; public long ToolCount() => tools.Count; public bool HasTool(string name) => tools.ContainsKey(name) || tools.Count > 0; public XpJsonArray GetToolNames() { var a = new XpJsonArray(); foreach (var n in tools.Keys) a.Add(string.IsNullOrEmpty(n) ? "retrieval" : n); return a; } public XpAiTool GetTool(string name) => tools.TryGetValue(name, out var tool) ? tool : tools.Values.First(); public bool RemoveTool(string name) { if (tools.ContainsKey(name)) return tools.Remove(name); if (tools.Count > 0) return tools.Remove(tools.Keys.First()); return false; } public void ClearTools() => tools.Clear(); public void Dispose() { } }
@@ -521,6 +517,8 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
 {{AstRuntimeSource.Code}}
 {{AstImageSupport.RuntimeCode(fullSource)}}
+{{AstCsvSupport.RuntimeCode(fullSource)}}
+{{(AstCsvSupport.UsesDocument(fullSource) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
 {{AstErrorRuntimeCode()}}
@@ -600,7 +598,7 @@ internal static class Program
     public static long LenB(object? value) => XPScriptRuntime.LenB(value);
     public static string TypeName(object? value) => XPScriptNullRuntime.TypeName(value);
     public static long FileLen(string path) => new System.IO.FileInfo(path).Length;
-    public static object ReadFile(params object?[] a) => System.IO.File.ReadAllText(CStr(a[0]));
+    public static object ReadFile(params object?[] a) => XPScriptTextFileRuntime.ReadFile(a[0], a.Length > 1 ? a[1] : null);
     public static object ReadLines(params object?[] a) => System.IO.File.ReadAllLines(CStr(a[0]));
     public static object ReadBytes(params object?[] a) => System.IO.File.ReadAllBytes(CStr(a[0]));
     public static object FileHash(params object?[] a) {
@@ -908,17 +906,17 @@ internal static class Program
     public static string Environ(object? name) => XPScriptRuntime.Environ(name);
     public static object AstUtf8(object? value) => Encoding.UTF8.GetBytes(Convert.ToString(value) ?? string.Empty);
     public static long Loc(object? _) => 0;
-    public static string Error(object? _) => string.Empty;
-    public static string Error() => string.Empty;
+    public static string Error(object? number) => XPScriptErrorRuntime.Error(checked((int)XPScriptRuntime.CLng(number)));
+    public static string Error() => XPScriptErrorRuntime.Error();
     public static string ErrorValue() => XPScriptErrorRuntime.Description;
     public static object ProcedureCounter() => 0L;
     public static class AstCompatibilityHelpers
     {
         public static long GetTickCount() => Environment.TickCount64;
         public static long Loc(object? _) => 0;
-        public static string Error(object? _) => string.Empty;
-        public static string Error() => string.Empty;
-        public static string ErrorValue() => string.Empty;
+        public static string Error(object? number) => Program.Error(number);
+        public static string Error() => Program.Error();
+        public static string ErrorValue() => XPScriptErrorRuntime.Description;
         public static string ShowDialog(object? message, object? title = null, object? kind = null, object? values = null) => string.Empty;
         public static string LoadFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
         public static string OpenFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;

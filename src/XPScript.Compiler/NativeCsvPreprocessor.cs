@@ -144,7 +144,7 @@ internal sealed class NativeCsvPreprocessor
         var args = SplitTopLevelArguments(rawArguments);
         if (args.Count is < 1 or > 4)
             throw CsvDiagnostic(CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.Load requires path and optional encoding, delimiter, and hasHeaders arguments.", ("symbol", "XPCsvDocument.Load"), ("expectedArgumentCount", "1..4"), ("actualArgumentCount", args.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-        return "XPScriptSpreadsheetCsvInterop.LoadCsv(" + string.Join(", ", args) + ")";
+        return "XPScriptCsvFileRuntime.LoadCsv(" + string.Join(", ", args) + ")";
     }
 
     private static void RejectRemovedFileWriteApis(string line, HashSet<string> documentVariables)

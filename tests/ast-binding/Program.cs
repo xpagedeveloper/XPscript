@@ -12,6 +12,39 @@ static ExpressionSyntax Parse(string text)
 }
 
 // Type diagnostics run first so semantic type regressions fail before the broader binder probe.
+var csvSymbols = SymbolTable.CreateWithCompilerCatalog();
+csvSymbols.Declare(new LocalSymbol("data", typeof(object), XpTypeSymbol.User("XPCsvDocument")));
+foreach (var text in new[] { "New XPCsvDocument", "New XPCsvDocument(\"a;b\", \";\")", "CsvParse(\"a\")", "data.Headers[0]",
+    "data.Rows[0].Columns[1].Value", "data.Rows[0][\"name\"]", "data.Headers.Add(\"name\")", "data.FromBytes(Array(1))",
+    "XPCsvDocument.Load(\"data.csv\", \"auto\", \";\", True)", "CsvEscape(\"a;b\", \";\")" })
+{
+    var binder = new ExpressionBinder(csvSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 0) throw new InvalidOperationException("Native CSV failed to bind: " + text);
+}
+foreach (var text in new[] { "New XPCsvRow", "data.NoSuchMember", "data.Sort()", "XPCsvDocument.AddRow()", "data.Load(\"data.csv\")", "data.Save()" })
+{
+    var binder = new ExpressionBinder(csvSymbols, allowDynamicMembers: true);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 1) throw new InvalidOperationException("Invalid CSV signature escaped binding: " + text);
+}
+foreach (var definition in CompilerSymbolCatalog.All.Where(d => d.Name.StartsWith("XPCsv", StringComparison.Ordinal) || d.Name.StartsWith("Csv", StringComparison.Ordinal)))
+    if (CompilerDocumentationCatalog.Find(definition.DocumentationId) is null) throw new InvalidOperationException("CSV API documentation missing: " + definition.Name);
+var csvRoute = typeof(CompilerSymbolCatalog).Assembly.GetType("XPScript.Compiler.AstObjectSupportRegistry")!
+    .GetMethod("UsesUnsupportedObject")!;
+foreach (var (source, legacy) in new[]
+{
+    ("Dim document As XPCsvDocument\nSet result = document.ToSpreadsheet()", true),
+    ("Dim document As XPCsvDocument\ndocument.FromWorksheet(sheet)", true),
+    ("Dim document As XPCsvDocument\nPrint document.ToString()", false),
+    ("Print \"XPCsvDocument.ToSpreadsheet()\"\nRem XPCsvDocument.FromWorksheet(sheet)", false)
+})
+{
+    object?[] arguments = [source, null];
+    if ((bool)csvRoute.Invoke(null, arguments)! != legacy)
+        throw new InvalidOperationException("CSV spreadsheet interop compilation route drifted: " + source);
+}
+Console.WriteLine("AST_BINDING_CSV_NATIVE_OK");
 var imageSymbols = SymbolTable.CreateWithCompilerCatalog();
 imageSymbols.Declare(new LocalSymbol("image", typeof(object), XpTypeSymbol.User("XPImage")));
 foreach (var text in new[] { "New XPImage(2, 3)", "New XPImage(2, 3, \"#123456\")", "image.width", "image.Resize(2)",

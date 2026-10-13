@@ -2,7 +2,7 @@ namespace XPScript.Compiler;
 
 internal static class CrossPlatformRuntimeSource
 {
-    public const string Code = """
+    public const string Code = TextFileRuntimeSource.Code + """
 internal static class XPCrossPlatformRuntime
 {
     private static IEnumerator<string>? DirEnumerator;
@@ -316,12 +316,7 @@ internal static class XPCrossPlatformRuntime
         }
     }
 
-    public static string ReadFile(object? path, object? charset = null)
-    {
-        var encoding = ResolveTextEncoding(charset);
-        using var reader = new StreamReader(Path.GetFullPath(XPScriptRuntime.CStr(path)), encoding, detectEncodingFromByteOrderMarks: true);
-        return reader.ReadToEnd();
-    }
+    public static string ReadFile(object? path, object? charset = null) => XPScriptTextFileRuntime.ReadFile(path, charset);
 
     public static void WriteFile(object? path, object? content, object? charset = null) =>
         File.WriteAllText(Path.GetFullPath(XPScriptRuntime.CStr(path)), XPScriptRuntime.CStr(content), ResolveTextEncoding(charset));
@@ -351,7 +346,7 @@ internal static class XPCrossPlatformRuntime
     }
 
     public static void WriteBytes(object? path, object? values) =>
-        File.WriteAllBytes(Path.GetFullPath(XPScriptRuntime.CStr(path)), ToBytes(values));
+        XPScriptFileSystemRuntime.WriteBytes(path, ToBytes(values));
 
     private static LSArray ToXPScriptArray(string elementType, IEnumerable<object?> values)
     {
@@ -388,18 +383,7 @@ internal static class XPCrossPlatformRuntime
         return result.ToArray();
     }
 
-    private static Encoding ResolveTextEncoding(object? charset)
-    {
-        if (charset is null || string.IsNullOrWhiteSpace(XPScriptRuntime.CStr(charset))) return new UTF8Encoding(false);
-        var name = XPScriptRuntime.CStr(charset).Trim();
-        var normalized = name.Replace("_", "-", StringComparison.Ordinal).ToLowerInvariant();
-        if (normalized is "utf8" or "utf-8") return new UTF8Encoding(false);
-        if (normalized is "utf16" or "utf-16" or "unicode") return new UnicodeEncoding(false, true);
-        if (normalized is "utf-16be" or "unicodefffe") return new UnicodeEncoding(true, true);
-        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-        try { return System.Text.Encoding.GetEncoding(name); }
-        catch (ArgumentException) { throw new XPScriptRuntimeException(5, "Unsupported text charset: " + name); }
-    }
+    private static Encoding ResolveTextEncoding(object? charset) => XPScriptTextFileRuntime.ResolveTextEncoding(charset);
 
     public static string StrTemplate(object? template, object? values)
     {

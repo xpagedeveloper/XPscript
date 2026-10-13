@@ -1,0 +1,4 @@
+Sub Main()
+    Dim table As New XPCsvDocument
+    table.Headers[0] = "invalid"
+End Sub

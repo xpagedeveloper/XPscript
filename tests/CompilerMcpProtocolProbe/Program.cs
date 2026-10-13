@@ -12,6 +12,26 @@ await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new {jsonrpc="2.0"
 var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new{}});
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP tool: "+name);
+foreach (var csvFixture in new[] { "csv-runtime", "csv-reference", "csv-parity", "csv-unused", "csv-escape-only" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", csvFixture + ".xps"));
+    var result = await CallAsync(new {jsonrpc="2.0",id="csv-"+csvFixture,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source,filename=csvFixture+".xps"}}});
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+        throw new Exception("AST MCP rejected CSV fixture: " + csvFixture);
+}
+foreach (var csvFixture in new[] { ("csv-member-error", "XPS2009", 3), ("csv-constructor-error", "XPS1009", 2),
+    ("csv-readonly-error", "XPS2001", 3), ("csv-writefile-error", "XPS1011", 3), ("csv-load-arity-error", "XPS1010", 3) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", csvFixture.Item1 + ".xps"));
+    var result = await CallAsync(new {jsonrpc="2.0",id="csv-invalid-"+csvFixture.Item1,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source,filename=csvFixture.Item1+".xps"}}});
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (error.GetProperty("diagnosticCode").GetString() != csvFixture.Item2 || error.GetProperty("line").GetInt32() != csvFixture.Item3)
+        throw new Exception("AST MCP CSV diagnostic lost its code or span: " + csvFixture.Item1);
+}
+var csvParitySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "csv-parity.xps"));
+var csvParityValidation = await CallAsync(new {jsonrpc="2.0",id="csv-normal-parity",method="tools/call",@params=new{name="xpscript_validate",arguments=new{source=csvParitySource,filename="csv-parity.xps"}}});
+if (csvParityValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+    throw new Exception("Normal MCP rejected native CSV loader/reference parity.");
 var astValidation=await CallAsync(new {jsonrpc="2.0",id=25,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main()\n    Print \"AST_MCP_OK\"\nEnd Sub",filename="ast-agent.xps"}}});
 var astResult=astValidation.GetProperty("result").GetProperty("structuredContent");
 if (astResult.GetProperty("result").GetString()!="ok" || astResult.GetProperty("compiler").GetString()!="ast") throw new Exception("MCP AST validation did not use the experimental AST compiler.");

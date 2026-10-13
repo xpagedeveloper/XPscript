@@ -29,3 +29,5 @@ Use this workflow when adding support for an XP object or AST-only language feat
 ## Design rule
 
 Object detection belongs in the registry. Binding, emission and runtime implementation remain separate layers so adding another XP object does not require expanding `AstExperimentalCompiler` with more object-specific regex logic.
+
+For CSV, use `AstCsvSupport` and the existing `NativeCsvRuntimeSource`; do not introduce another CSV parser. Its conditional runtime selection is tested for actual use, strings/comments and escape-only programs. CSV uses shared managed references (not XPImage's ByVal cloning/disposal). Lower reference-replacing operations such as `FromBytes` through bound statements for both ordinary and `Call` syntax, preserving argument evaluation order. Unsupported CSV/spreadsheet interop must retain whole-file legacy fallback and existing dependency/notice selection.

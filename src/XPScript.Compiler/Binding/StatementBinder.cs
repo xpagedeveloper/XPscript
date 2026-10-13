@@ -104,7 +104,27 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         var expression = BindExpression(syntax.Expression);
         if (_allowDynamicMembers && expression is BoundNameExpression or BoundLiteralExpression or BoundMemberAccessExpression or BoundIndexedPropertyExpression)
             return new BoundNoOpStatement();
-        return expression is null ? null : new BoundExpressionStatement(expression);
+        return expression is null ? null : LowerCallStatement(expression);
+    }
+
+    private BoundStatement LowerCallStatement(BoundExpression expression)
+    {
+        if (expression is BoundCallExpression { Function.Name: "XPCsvDocument.FromBytes", Target: BoundMemberAccessExpression csvCall } fromBytes)
+        {
+            // Preserve the legacy assignment and evaluation order: evaluate
+            // bytes/override first, then read the current document settings.
+            var receiver = csvCall.Receiver;
+            var encoding = fromBytes.Arguments.Count == 2 ? fromBytes.Arguments[1]
+                : new BoundMemberAccessExpression(receiver, "Encoding", typeof(string));
+            BoundExpression[] arguments = [fromBytes.Arguments[0], encoding,
+                new BoundMemberAccessExpression(receiver, "Delimiter", typeof(string)),
+                new BoundMemberAccessExpression(receiver, "HasHeaders", typeof(bool))];
+            var parser = _symbols.LookupAll("XPCsvDocument.ParseBytes").OfType<FunctionSymbol>().Single(f => f.ParameterTypes.Count == 4);
+            var type = new BoundNameExpression(new TypeSymbol("XPCsvDocument", typeof(object), XpTypeSymbol.User("XPCsvDocument")));
+            var target = new BoundMemberAccessExpression(type, "ParseBytes", typeof(object), XpTypeSymbol.User("XPCsvDocument"));
+            return new BoundAssignmentStatement(receiver, new BoundCallExpression(target, parser, arguments), true);
+        }
+        return new BoundExpressionStatement(expression);
     }
 
     private BoundStatement? BindDim(DimStatementSyntax syntax)
@@ -189,7 +209,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             listByRefStatementCall: syntax.Expression);
         var expression = binder.Bind(syntax.Expression);
         _diagnostics.AddRange(binder.Diagnostics);
-        return binder.Diagnostics.Count == 0 ? new BoundExpressionStatement(expression) : null;
+        return binder.Diagnostics.Count == 0 ? LowerCallStatement(expression) : null;
     }
 
     private BoundStatement? BindRuntimeStatement(RuntimeFileStatementSyntax syntax)
@@ -298,6 +318,33 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     {
         var collection = BindExpression(syntax.CollectionExpression);
         if (collection is null) return null;
+        if (AstCsvSupport.IsCsv(collection.SemanticType.Name))
+        {
+            if (AstCsvSupport.IterationType(collection.SemanticType.Name) is not { } csvElement)
+            {
+                _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
+                    "CSV ForAll requires a header, row or column collection.", syntax.CollectionExpression.Span));
+                return null;
+            }
+            if (_symbols.TryLookup(syntax.IdentifierToken.Text, out var existing))
+            {
+                var previous = new BoundNameExpression(existing);
+                if (!previous.SemanticType.IsVariant && !Conversion.Classify(csvElement, previous.SemanticType).IsImplicit)
+                {
+                    _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
+                        $"ForAll variable {previous.SemanticType.Name} is incompatible with CSV element type {csvElement.Name}.", syntax.IdentifierToken.Span));
+                    return null;
+                }
+            }
+            var scope = _symbols.CreateChildScope();
+            var alias = new VariableSymbol(syntax.IdentifierToken.Text, csvElement.RuntimeType, csvElement);
+            scope.Declare(alias);
+            var binder = new StatementBinder(scope, _returnType, _allowsReturnValue, _allowDynamicMembers,
+                functionName, functionResult, procedureIdentity, _forAllDepth + 1);
+            var body = syntax.Statements.Select(binder.Bind).OfType<BoundStatement>().ToArray();
+            _diagnostics.AddRange(binder.Diagnostics);
+            return new BoundForAllStatement(new BoundNameExpression(alias), collection, body);
+        }
         if (collection.SemanticType is { IsList: true, ElementType: { } element })
         {
             // A List alias is a typed view of its entry, not a copied Variant.
@@ -505,6 +552,13 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindBoundAssignment(BoundExpression target, ExpressionSyntax valueSyntax, bool isSet, ExpressionSyntax targetSyntax)
     {
+        if (target is BoundMemberAccessExpression csvMember && AstCsvSupport.IsReadOnly(csvMember.Receiver.SemanticType.Name, csvMember.Name) ||
+            target is BoundIndexExpression csvIndex && AstCsvSupport.IndexType(csvIndex.Expression.SemanticType.Name) is not null &&
+                !csvIndex.Expression.SemanticType.Name.Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "CSV collection or property is read-only.", targetSyntax.Span));
+            return null;
+        }
         if (target is BoundMemberAccessExpression imageMember && AstImageSupport.IsImage(imageMember.Receiver.SemanticType.Name))
         {
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,

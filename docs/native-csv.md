@@ -334,6 +334,14 @@ Collections:
 - `Get(indexOrName)`
 - `Set(indexOrName, value)`
 
+## AST compilation and conditional inclusion
+
+`XPCsvDocument`, headers, rows and columns compile directly through AST using the same native CSV runtime as normal compilation, not a second parser or placeholder. Typed parameters/returns, ByRef replacement, Static references, case-insensitive members, collection iteration and row indexing are supported. `FromBytes` replaces the document reference, preserving old aliases and argument evaluation order; both ordinary and `Call` statements use that lowering.
+
+CSV runtime code is included only when CSV types or global CSV functions are actually used. Names inside strings and comments do not activate it. `CsvEscape` alone includes only the existing escaping helpers, not document parsing or file loading. Pure CSV use adds no external NuGet packages or addon notices. `Load`/`Save` retain normal compilation's working-directory file behavior.
+
+`ToSpreadsheet` and `FromWorksheet` still route the entire source through the legacy compiler until spreadsheet objects are migrated; spreadsheet dependencies and notices remain selected by the existing shared packaging path.
+
 ## Resource limit
 
 Native CSV parsing accepts at most 32 MiB of input. The byte limit is checked directly for byte input and as UTF-8 size for String input.

@@ -51,10 +51,14 @@ public sealed class BoundExpressionEmitter
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("Parse", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeJson.Parse",
         BoundMemberAccessExpression member when AstImageSupport.IsImage(member.Receiver.SemanticType.Name) =>
             $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? "XPImage" : $"((XPImage)({Emit(member.Receiver)}))")}.{AstImageSupport.MemberName(member.Name)}",
+        BoundMemberAccessExpression member when AstCsvSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } csvType =>
+            $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? csvType : $"(({csvType})({Emit(member.Receiver)}))")}.{AstCsvSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
         BoundMemberAccessExpression member when RuntimeObjectType(member.Receiver.SemanticType.Name) is { } jsonType => $"(({jsonType})({Emit(member.Receiver)})).{JsonMemberName(member.Name)}",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("http", StringComparison.OrdinalIgnoreCase) && member.Receiver.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"http.{member.Name}",
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
+        BoundIndexExpression index when AstCsvSupport.RuntimeType(index.Expression.SemanticType.Name) is { } csvType =>
+            $"(({csvType})({Emit(index.Expression)}))[{Emit(index.Index)}]",
         BoundIndexExpression index when index.Expression.SemanticType.IsArray && index.Expression is BoundNameExpression { Symbol: LocalSymbol }
             => EmitArrayGet(index),
         BoundIndexExpression index when index.Expression is BoundNameExpression { Symbol: LocalSymbol { IsDynamicArray: true } }
@@ -76,8 +80,8 @@ public sealed class BoundExpressionEmitter
             $"new XPImage({string.Join(", ", @new.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), i < 2 ? "int" : "string")))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Path", StringComparison.OrdinalIgnoreCase) => $"new XpPath({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Person", StringComparison.OrdinalIgnoreCase) => $"new XpPerson({string.Join(", ", @new.Arguments.Select(Emit))})",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) => "new XpCsvDocument()",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPCsvRow", StringComparison.OrdinalIgnoreCase) => "new XpCsvRow()",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) => @new.Arguments.Count == 0
+            ? "XPScriptNativeCsv.CreateDocument()" : $"XPScriptNativeCsv.Parse({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) => "new XpJsonArray()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesJSONNavigator", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
@@ -98,7 +102,7 @@ public sealed class BoundExpressionEmitter
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
 
-    internal static string? RuntimeObjectType(string name) => name.ToUpperInvariant() switch
+    internal static string? RuntimeObjectType(string name) => AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
     {
         "XPIMAGE" => "XPImage",
         "XPJSONDOCUMENT" => "XPScriptJsonDocument",
@@ -106,7 +110,11 @@ public sealed class BoundExpressionEmitter
         "XPJSONARRAY" => "XPScriptJsonArray",
         "XPJSONELEMENT" => "XPScriptJsonElement",
         _ => null
-    };
+    });
+
+    internal string IterationValue(BoundNameExpression variable, string value) => RuntimeObjectType(variable.SemanticType.Name) is { } nativeType
+        ? $"({nativeType})({value})" : variable.Type == typeof(long) ? $"XPScriptRuntime.CLng({value})"
+        : variable.Type == typeof(string) ? $"(string)({value})" : value;
 
     private static string JsonMemberName(string name) => name.ToUpperInvariant() switch
     {
@@ -145,7 +153,7 @@ public sealed class BoundExpressionEmitter
     private string EmitCall(BoundCallExpression call)
     {
         if (call.Function.NativeParameterTypes is { } nativeTypes)
-            return $"{Emit(call.Target!)}({string.Join(", ", call.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), nativeTypes[i])))})";
+            return $"{(call.Target is null ? call.Function.NativeTargetName : Emit(call.Target))}({string.Join(", ", call.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), nativeTypes[i])))})";
         if (BoundListCallLowering.RequiresWrapper(call))
         {
             var wrapperArguments = new List<string>();
@@ -204,6 +212,9 @@ public sealed class BoundExpressionEmitter
             var byRef = call.Function.ByRefParameters?[index] == true;
             if (byRef && argument is not BoundNameExpression)
                 throw new NotSupportedException("ByRef conversion requires temporary and copy-back lowering.");
+            if (!byRef && call.Function.SemanticParameterTypes is { } parameterTypes &&
+                RuntimeObjectType(parameterTypes[index].Name) is { } nativeType)
+                return $"({nativeType})({Emit(argument)})";
             return (byRef ? "ref " : "") + Emit(argument);
         });
         var functionName = call.Function.Name.EndsWith("$", StringComparison.Ordinal) ? call.Function.Name.TrimEnd('$') : call.Function.Name;

@@ -4,6 +4,45 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$csvRoot = Join-Path $output ('csv-' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Force -Path $csvRoot | Out-Null
+foreach ($csvFixture in @('csv-runtime', 'csv-reference', 'csv-parity', 'csv-unused', 'csv-escape-only')) {
+    $csvSource = Join-Path $csvRoot "$csvFixture.xps"
+    Copy-Item (Join-Path $PSScriptRoot "$csvFixture.xps") $csvSource
+    $csvOutput = Join-Path $csvRoot $csvFixture
+    dotnet $compiler ast-compile $csvSource -o $csvOutput
+    if ($LASTEXITCODE -ne 0) { throw "AST $csvFixture compilation failed." }
+    Push-Location $csvRoot
+    try { $csvResult = dotnet (Join-Path $csvOutput 'Generated.dll'); $csvExit = $LASTEXITCODE } finally { Pop-Location }
+    $csvExpected = switch ($csvFixture) {
+        'csv-runtime' { "2`n3`nname`nÅsa`nFredrik`nquoted `"value`"`nid`nname`nnote`n002`n001`n4`n001`nFredrik`nwindows-1252`n002`nFredrik`nutf-8-bom`nFredrik`nutf-16be`nFalse`nwindows-1252`nutf-16be`n3`n2`n5`nCSV column name 'missing' not found.`n9`nCSV row index out of range.`n5`nCSV header name 'ID' already exists.`n`"a;b`"`nCSV_AST_OK" }
+        'csv-reference' { "shared`nreplacement`n2`n2`n1`n5`nordinary name`n7`nordinary row" }
+        'csv-parity' { "utf-8-bom`nÅsa`nFalse`nwindows-1252`nutf-8-bom`n001`nCSV_PARITY_OK" }
+        'csv-unused' { "XPCsvDocument CsvParse CsvEscape`nordinary row`n7" }
+        'csv-escape-only' { '"a;b"' }
+    }
+    if ($csvExit -ne 0 -or ($csvResult -join "`n") -ne $csvExpected) { throw "AST $csvFixture output mismatch." }
+    $csvAssembly = [System.Reflection.Assembly]::LoadFile((Join-Path $csvOutput 'Generated.dll'))
+    if ($csvFixture -in @('csv-unused', 'csv-escape-only')) {
+        if ($null -ne $csvAssembly.GetType('XPScriptCsvDocument', $false) -or $null -ne $csvAssembly.GetType('XPScriptCsvFileRuntime', $false)) { throw 'Unused CSV document/file runtime leaked into output.' }
+        if ($csvFixture -eq 'csv-unused' -and $null -ne $csvAssembly.GetType('XPScriptNativeCsv', $false)) { throw 'Unused CSV helper runtime leaked into output.' }
+    } elseif ($null -eq $csvAssembly.GetType('XPScriptCsvDocument', $false)) { throw 'CSV document unexpectedly used a fallback/placeholder.' }
+    if ($csvAssembly.GetReferencedAssemblies().Name -match 'ClosedXML|Magick.NET|Microsoft.Data.Sqlite') { throw 'Pure CSV output acquired unrelated addon dependencies.' }
+}
+foreach ($csvSample in @('native-csv-regression', 'csv-json-roundtrip')) {
+    $csvSampleOutput = Join-Path $csvRoot $csvSample
+    dotnet $compiler ast-compile (Join-Path $root "samples/$csvSample.xps") -o $csvSampleOutput
+    if ($LASTEXITCODE -ne 0) { throw "AST existing $csvSample compilation failed." }
+    Push-Location $csvRoot
+    try { $csvSampleResult = dotnet (Join-Path $csvSampleOutput 'Generated.dll'); $csvSampleExit = $LASTEXITCODE } finally { Pop-Location }
+    if ($csvSampleExit -ne 0) { throw "AST existing $csvSample execution failed." }
+    if ($csvSample -eq 'native-csv-regression' -and (($csvSampleResult -join "`n") -notmatch "MISSING_TEXT=CSV column name 'missing' not found\." -or ($csvSampleResult -join "`n") -notmatch 'FILE_OVERRIDE=Åsa:Malmö; Sweden')) { throw 'CSV runtime error text or file charset parity drifted.' }
+    if ($csvSample -eq 'csv-json-roundtrip' -and ($csvSampleResult -join "`n") -ne 'CSV-JSON-ROUNDTRIP=OK') { throw 'CSV/JSON round trip drifted.' }
+}
+foreach ($csvInvalid in @('csv-member-error', 'csv-constructor-error', 'csv-readonly-error', 'csv-writefile-error', 'csv-load-arity-error')) {
+    $csvFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$csvInvalid.xps") -o (Join-Path $csvRoot $csvInvalid) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($csvFailure -join "`n") -notmatch "$csvInvalid.xps:(2|3):") { throw "AST $csvInvalid lost its diagnostic or source position." }
+}
 $imageFixtureRoot = Join-Path $output ('xpimage-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $imageFixtureRoot | Out-Null
 $imageSource = Join-Path $imageFixtureRoot 'xpimage-runtime.xps'

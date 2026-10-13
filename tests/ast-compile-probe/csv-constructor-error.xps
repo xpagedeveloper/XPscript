@@ -1,0 +1,3 @@
+Sub Main()
+    Dim row As New XPCsvRow
+End Sub

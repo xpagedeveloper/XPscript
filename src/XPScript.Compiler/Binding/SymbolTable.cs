@@ -22,6 +22,11 @@ public sealed class SymbolTable
     {
         foreach (var definition in CompilerSymbolCatalog.All)
         {
+            if (definition.Name.StartsWith("XPCsv", StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith("Csv", StringComparison.OrdinalIgnoreCase))
+            {
+                if (definition.Kind == "class") Declare(new TypeSymbol(definition.Name, typeof(object), XpTypeSymbol.User(definition.Name)));
+                continue;
+            }
             if (definition.Name.StartsWith("XPImage.", StringComparison.OrdinalIgnoreCase))
                 continue; // Import every native overload from the shared runtime below.
             if (definition.Kind.Equals("class", StringComparison.OrdinalIgnoreCase))
@@ -40,6 +45,7 @@ public sealed class SymbolTable
             Declare(new FunctionSymbol(definition.Name, returnType, parameterTypes, semanticReturnType, semanticParameterTypes));
         }
         AstImageSupport.Import(this);
+        AstCsvSupport.Import(this);
     }
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch

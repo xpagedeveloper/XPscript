@@ -531,6 +531,10 @@ Web hosts always emit protected JSONL access, security and error logs. Use `Appl
 For targeted web troubleshooting, set `Application.Log.CaptureExchange = True` only in the affected request. It writes a redacted, 256 KiB-per-body exchange record. Use the automatic hashed `session.id` to group requests from one browser or client and `request.id` for one request. Never log the raw `XPSLOGID` cookie.
 
 
+## Native CSV in AST
+
+`XPCsvDocument` and its header/row/column types use the shared native CSV engine in AST. ByVal shares the document; ByRef and `FromBytes` can replace the reference. `FromBytes` leaves existing aliases pointing to the previous document. Use `Load`, `Save` or `SaveFile` for encoded files, and `Get`/`Set` or row indexes for cells. CSV implementation code is selected only on use; `CsvEscape` alone does not include document/file runtime. CSV-to-spreadsheet interop still takes the whole-file legacy route. See `docs/native-csv.md` and `tests/ast-compile-probe/csv-*.xps`.
+
 ## XPImage
 
 XPImage also compiles directly through AST, without legacy fallback. `Dim image As New XPImage(...)` retains its constructor arguments; member names are case-insensitive and information properties are read-only. ByVal parameters clone the image; ByRef can replace it. AST recycles local images on normal, early and exceptional exits, while preserving returned images, including Variant returns. Static images survive across calls. Use `Recycle()` for explicit disposal; do not keep a borrowed alias to a procedure-local image after that procedure exits. Image dependencies/native assets and notices are included only when image support is used.

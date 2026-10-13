@@ -203,6 +203,7 @@ public sealed partial class XPScriptTranspiler
         if (runtimeFeatures.JsonSchema) generated += "\n\n" + JsonSchemaRuntimeSource.Code + "\n";
         if (runtimeFeatures.Xml) generated += "\n\n" + NativeXmlRuntimeSource.Code + "\n";
         if (runtimeFeatures.Csv) generated += "\n\n" + NativeCsvRuntimeSource.Code + "\n";
+        if (runtimeFeatures.Csv || runtimeFeatures.Spreadsheet) generated += "\n\n" + CsvFileRuntimeSource.Code + "\n";
         generated += "\n\n" + TextIoCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + FileIoExtensionsRuntimeSource.Code + "\n";
         generated += "\n\n" + ReferenceRuntimeExtensionsSource.Code + "\n";
