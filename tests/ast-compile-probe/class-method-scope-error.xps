@@ -1,0 +1,12 @@
+Class Other
+    Private secret As Long
+End Class
+Class Counter
+    Public Function Total() As Long
+        Total = secret
+    End Function
+End Class
+Sub Main()
+    Dim item As New Counter
+    Print item.Total()
+End Sub

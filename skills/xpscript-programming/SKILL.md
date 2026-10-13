@@ -84,6 +84,8 @@ End If
 
 ## Classes and object lifetime
 
+Experimental AST now executes scalar typed instance Sub/Function bodies, private sibling calls, Me, recursion and scalar ByRef, preserving per-instance fields and parameter shadowing. Initialize class objects with parameterless New as supported; String fields start empty. Names are case-insensitive in AST (mixed-case class calls still fail in normal compilation). Private fields and methods are not externally accessible. Object/array/List method signatures, Optional/Static method-local storage and method bodies authored in derived classes remain explicitly deferred; accessor, argumented-constructor, Parent.New and destructor migration is not complete. See docs/ast-csharp-emitter.md and class-methods-native.xps fixtures.
+
 `Dim value As Object` inside a procedure starts as Nothing on every call. `Static value As Object` starts as Nothing once and keeps its reference between calls. Neither declaration creates an object; use `Set value = New Object()` explicitly.
 
 Experimental AST also supports `Dim value As Object = New Object()` and `Static value As Object = New Object()`. Dim executes the initializer each time the declaration is reached; Static executes it once at the first reached declaration, using that call's parameters and earlier locals. Clearing a Static reference does not rerun its initializer. To recreate an object after clearing it, use `Static value As Object` without an initializer and `If value Is Nothing Then` with an explicit Set. Recursive initialization and simultaneous first calls are not covered by the current contract.

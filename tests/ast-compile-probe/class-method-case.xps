@@ -1,0 +1,14 @@
+Class Counter
+    Private value As Long
+    Public Sub Add(ByVal amount As Long)
+        Me.VaLuE = Me.vAlUe + amount
+    End Sub
+    Public Function Total() As Long
+        Total = value
+    End Function
+End Class
+Sub Main()
+    Dim item As New Counter
+    Call item.aDd(3)
+    Print item.tOtAl()
+End Sub

@@ -12,6 +12,22 @@ await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new {jsonrpc="2.0"
 var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new{}});
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
+var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+var classCaseSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-method-case.xps"));
+var classCaseResult = await CallAsync(new { jsonrpc="2.0",id="class-method-case",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=classCaseSource,filename="class-method-case.xps" } } });
+if (classCaseResult.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST class case regression: " + classCaseResult);
+foreach (var classTool in new[] { "xpscript_ast_validate", "xpscript_validate" })
+{
+    var result = await CallAsync(new { jsonrpc="2.0",id="class-methods-"+classTool,method="tools/call",@params=new { name=classTool,arguments=new { source=classMethodsSource,filename="class-methods-native.xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("MCP class method compilation failed: " + result);
+}
+foreach (var (fixture, code, line) in new[] { ("class-method-scope-error", "XPS2008", 6), ("class-method-private-error", "XPS2009", 7), ("class-field-private-error", "XPS2009", 6), ("class-method-body-error", "XPS2008", 3) })
+{
+    var classSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture+".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=classSource,filename=fixture+".xps" } } });
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (error.GetProperty("diagnosticCode").GetString() != code || error.GetProperty("line").GetInt32() != line) throw new Exception("Class method diagnostic span/code lost: " + result);
+}
 foreach (var appFixture in new[] { "application-with", "application-native", "application-services", "application-metadata", "application-unused" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", appFixture + ".xps"));

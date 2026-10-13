@@ -1,5 +1,13 @@
 # Bound C# emitter
 
+## Instance class-method increment
+
+AST emits scalar typed Sub/Function bodies in user classes through `AstClassMethodSupport`, the same procedure binder/label/loop validation used by module routines, and `BoundMethodEmitter` in instance mode. Supported coverage includes per-instance scalar fields, private sibling calls, Me, recursion, scalar ByRef, result assignment/fall-through and parameter shadowing. Private members are omitted from external lookup; class declarations are excluded from module-field scanning. Default String fields start empty. Existing parameterless construction and inherited-field behavior remain in place.
+
+Bound member names are canonicalized case-insensitively. `class-method-case.xps` is AST-only because normal compilation currently rejects that casing. `class-methods-native.xps` compares real normal/AST execution; negative fixtures cover private access, foreign class fields and diagnostics inside method bodies. Language FullTest and MCP run these early.
+
+This does not close full class migration. Object/array/List signatures, Optional parameters, Static method-local storage and bodies declared in derived classes are explicitly deferred with XPS3001. Property accessors, constructor arguments/base-constructor forwarding and user destructor dispatch remain separate TODO items. No additional parser, runtime engine or NuGet addon is introduced. Program helper imports are scoped to generated user classes, not runtime code.
+
 AST output includes the full shared `XPScriptRuntimeSource` and `TypeCoercionRuntimeSource`. Conversion, printing, Null/Empty, type inspection, scalar/string helpers, environment lookup and loop ranges use the production runtime; the former nested scalar substitute is removed. `tests/ast-compile-probe/shared-runtime.xps` compares runtime output with normal compilation and is covered by CLI/MCP and permanent FullTest regressions. Extended UI/helper placeholders remain tracked separately.
 
 Object locals without an initializer start as Nothing. `Dim value As Object` resets its reference on every procedure call, while `Static value As Object` retains assignments across calls. Both require explicit object creation, for example `Set value = New Object()`. `object-local-lifetime.xps` compares both declarations over repeated calls in Language FullTest.

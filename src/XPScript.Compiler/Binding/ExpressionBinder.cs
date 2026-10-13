@@ -221,10 +221,10 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                     return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"CSV property '{property.Name.Split('.').Last()}' requires an instance.");
                 if (AstImageSupport.IsImage(receiver.SemanticType.Name) && receiver is BoundNameExpression { Symbol: TypeSymbol })
                     return Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"XPImage property '{property.Name.Split('.').Last()}' requires an image instance.");
-                return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, property.PropertyType, property.SemanticType);
+                return new BoundMemberAccessExpression(receiver, property.Name.Split('.').Last(), property.PropertyType, property.SemanticType);
             }
             if (symbol is FunctionSymbol function)
-                return new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, function.ReturnType, function.SemanticReturnType);
+                return new BoundMemberAccessExpression(receiver, function.Name.Split('.').Last(), function.ReturnType, function.SemanticReturnType);
         }
         // CLR object storage also backs declared user types. Only the XPscript
         // Variant semantic type authorizes unresolved dynamic member lookup.
@@ -361,7 +361,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return Error(syntax, CompilerDiagnosticCodes.InvalidSyntax, "XPCsvDocument.FromBytes requires a writable document variable.");
             if (memberFunctions.Length == 0)
                 return Error(memberName, CompilerDiagnosticCodes.UnknownMember, $"Member '{name}' on '{receiver.SemanticType.Name}' is not callable.");
-            target = new BoundMemberAccessExpression(receiver, name, memberFunctions[0].ReturnType, memberFunctions[0].SemanticReturnType);
+            target = new BoundMemberAccessExpression(receiver, memberFunctions[0].Name.Split('.').Last(), memberFunctions[0].ReturnType, memberFunctions[0].SemanticReturnType);
             return BindOverloadSet(syntax, target, memberKey, memberFunctions);
         }
         else

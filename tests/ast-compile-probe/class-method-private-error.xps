@@ -1,0 +1,8 @@
+Class Counter
+    Private Sub Hidden()
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Counter
+    Call item.Hidden()
+End Sub

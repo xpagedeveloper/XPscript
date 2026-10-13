@@ -1,0 +1,7 @@
+Class Counter
+    Private value As Long
+End Class
+Sub Main()
+    Dim item As New Counter
+    Print item.value
+End Sub

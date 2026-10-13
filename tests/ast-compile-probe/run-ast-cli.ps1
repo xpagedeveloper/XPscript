@@ -4,6 +4,23 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o (Join-Path $output 'class-methods-native')
+if ($LASTEXITCODE -ne 0) { throw 'AST instance class method compilation failed.' }
+$classMethodsResult = dotnet (Join-Path $output 'class-methods-native/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classMethodsResult -join "`n") -ne 'CLASS_METHODS_NATIVE_OK') { throw 'AST instance class method execution failed.' }
+$classNormalPath = Join-Path $output $(if ($IsWindows) { 'class-methods-normal.exe' } else { 'class-methods-normal' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o $classNormalPath --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal instance class method compilation failed.' }
+$classNormalResult = & $classNormalPath
+if ($LASTEXITCODE -ne 0 -or ($classNormalResult -join "`n") -ne ($classMethodsResult -join "`n")) { throw 'Normal/AST class method parity failed.' }
+foreach ($classInvalid in @('class-method-scope-error', 'class-method-private-error', 'class-field-private-error', 'class-method-body-error')) {
+    $classFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$classInvalid.xps") -o (Join-Path $output $classInvalid) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($classFailure -join "`n") -notmatch "$classInvalid.xps:(3|6|7):") { throw "Class diagnostic source span lost: $classInvalid" }
+}
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-case.xps') -o (Join-Path $output 'class-method-case')
+if ($LASTEXITCODE -ne 0) { throw 'AST case-insensitive class method compilation failed.' }
+$classCaseResult = dotnet (Join-Path $output 'class-method-case/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classCaseResult -join "`n") -ne '3') { throw 'AST case-insensitive class member execution failed.' }
 dotnet run --project (Join-Path $root 'tests/AstApplicationRuntimeProbe') -c Release
 if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime regression failed.' }
 dotnet run --project (Join-Path $root 'tests/AstSpreadsheetRuntimeProbe') -c Release

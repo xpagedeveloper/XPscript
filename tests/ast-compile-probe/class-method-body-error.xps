@@ -1,0 +1,9 @@
+Class Counter
+    Public Function Total() As Long
+        Total = missing
+    End Function
+End Class
+Sub Main()
+    Dim item As New Counter
+    Print item.Total()
+End Sub

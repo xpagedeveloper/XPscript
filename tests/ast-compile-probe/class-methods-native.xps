@@ -1,0 +1,42 @@
+Class Counter
+    Private value As Long
+    Public Name As String
+    Private Sub Increase(ByVal amount As Long)
+        value = value + amount
+    End Sub
+    Public Sub Add(ByVal amount As Long)
+        Call Increase(amount)
+    End Sub
+    Public Function Total() As Long
+        Total = Me.value
+    End Function
+    Public Function Recursive(ByVal n As Long) As Long
+        If n = 0 Then
+            Recursive = 1
+        Else
+            Recursive = n * Me.Recursive(n - 1)
+        End If
+    End Function
+    Public Sub Copy(ByRef destination As Long)
+        destination = value
+    End Sub
+    Public Function Shadow(ByVal value As Long) As Long
+        Shadow = value + Me.value
+    End Function
+End Class
+
+Sub Main()
+    Dim first As New Counter
+    Dim second As New Counter
+    Call first.Add(4)
+    Call second.Add(9)
+    If first.Total() <> 4 Then Error 9900, "First instance lost"
+    If second.Total() <> 9 Then Error 9901, "Second instance lost"
+    If first.Name <> "" Then Error 9902, "String field not initialized"
+    Dim copy As Long
+    Call first.Copy(copy)
+    If copy <> 4 Then Error 9903, "ByRef lost"
+    If first.Recursive(4) <> 24 Then Error 9904, "Recursion lost"
+    If first.Shadow(3) <> 7 Then Error 9905, "Parameter shadow lost"
+    Print "CLASS_METHODS_NATIVE_OK"
+End Sub

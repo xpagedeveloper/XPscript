@@ -78,6 +78,7 @@ public static class AstExperimentalCompiler
         var unit = parser.ParseCompilationUnit();
         if (parser.Diagnostics.Count > 0)
             throw SyntaxDiagnosticException(parser.Diagnostics[0], sourcePath, fullSource);
+        var moduleSource = AstClassMethodSupport.ModuleSource(fullSource);
         // The experimental path keeps going when a non-selected declaration
         // contains syntax outside the current AST slice. Binding diagnostics
         // for the selected procedure remain authoritative below.
@@ -101,6 +102,7 @@ public static class AstExperimentalCompiler
             for (var current = classDeclaration; current is not null; current = current.BaseType is not null && classes.TryGetValue(current.BaseType.Identifier.Text, out var baseClass) ? baseClass : null)
             {
                 foreach (var field in current.Members.OfType<FieldDeclarationSyntax>())
+                    if (field.Visibility?.Kind != SyntaxKind.PrivateKeyword)
                     symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{field.Identifier.Text}", ResolveRuntimeType(field.Type.Identifier.Text), XpTypeSymbol.FromClr(ResolveRuntimeType(field.Type.Identifier.Text))));
                 foreach (var property in current.Members.OfType<PropertyDeclarationSyntax>())
                 {
@@ -108,9 +110,11 @@ public static class AstExperimentalCompiler
                     symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{property.Identifier.Text}", propertyType, XpTypeSymbol.FromClr(propertyType)));
                 }
                 foreach (var method in current.Members.OfType<SubDeclarationSyntax>())
+                    if (method.Visibility?.Kind != SyntaxKind.PrivateKeyword)
                     symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", typeof(void), method.Parameters.Select(parameter => ResolveRuntimeType(parameter.Type?.Identifier.Text)).ToArray(), null, null, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
                 foreach (var method in current.Members.OfType<FunctionDeclarationSyntax>())
                 {
+                    if (method.Visibility?.Kind == SyntaxKind.PrivateKeyword) continue;
                     var returnType = ResolveRuntimeType(method.ReturnType?.Identifier.Text);
                     symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", returnType, method.Parameters.Select(parameter => ResolveRuntimeType(parameter.Type?.Identifier.Text)).ToArray(), XpTypeSymbol.FromClr(returnType), null, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
                 }
@@ -149,7 +153,7 @@ public static class AstExperimentalCompiler
         symbols.Declare(new LocalSymbol("matrix", typeof(object), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$", RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(long), XpTypeSymbol.Variant));
-        foreach (Match match in Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
+        foreach (Match match in Regex.Matches(moduleSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, ResolveRuntimeType(match.Groups["type"].Value), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
@@ -336,44 +340,11 @@ public static class AstExperimentalCompiler
             var returnType = procedureFunction is null ? typeof(void) : ResolveRuntimeType(procedureFunction.ReturnType?.Identifier.Text);
             var result = procedureFunction is null ? null : new LocalSymbol(resultName, returnType, ResolveValueType(procedureFunction.ReturnType));
             var procedureStatements = procedureSub?.Statements ?? procedureFunction!.Statements;
-            var allProcedureStatements = FlattenStatements(procedureStatements).ToArray();
-            var labels = allProcedureStatements.OfType<LabelStatementSyntax>()
-                .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-            var duplicateLabel = allProcedureStatements.OfType<LabelStatementSyntax>()
-                .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
-                .FirstOrDefault(group => group.Count() > 1)?.Skip(1).FirstOrDefault();
-            if (duplicateLabel is not null)
-                throw MappedDiagnostic(duplicateLabel.Span, sourcePath, fullSource, $"Duplicate label '{duplicateLabel.Identifier.Text}'.");
-            foreach (var transfer in allProcedureStatements.OfType<GoToStatementSyntax>().Where(transfer => !transfer.IsGoSub))
-                if (!labels.ContainsKey(transfer.Target.Text))
-                    throw MappedDiagnostic(transfer.Span, sourcePath, fullSource, $"Unknown label '{transfer.Target.Text}'.");
-            foreach (var control in allProcedureStatements)
-            {
-                var target = control switch
-                {
-                    OnErrorStatementSyntax error when error.ActionKeyword.Kind != SyntaxKind.ResumeKeyword && error.TargetToken?.Text != "0" => error.TargetToken,
-                    ResumeStatementSyntax resume when resume.TargetToken?.Kind == SyntaxKind.IdentifierToken => resume.TargetToken,
-                    _ => null
-                };
-                if (target is not null && !labels.ContainsKey(target.Text))
-                    throw MappedDiagnostic(control.Span, sourcePath, fullSource, $"Unknown label '{target.Text}'.");
-            }
-            ValidateLoopEntryTransfers(procedureStatements, labels, sourcePath, fullSource);
-            var binder = new StatementBinder(scope, procedureFunction is null ? null : ResolveValueType(procedureFunction.ReturnType),
-                procedureFunction is not null, true, procedureFunction?.Identifier.Text, result,
+            var bound = BindProcedure(procedureStatements, scope, parameters,
+                procedureFunction is null ? null : ResolveValueType(procedureFunction.ReturnType), procedureFunction?.Identifier.Text, result,
                 (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
-                "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName + ":" + parameter.SemanticType?.Name)) + ")");
-            var bound = procedureStatements.Select(binder.Bind).OfType<BoundStatement>().ToList();
-            if (binder.Diagnostics.Count > 0)
-                throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, fullSource);
-            if (result is not null)
-            {
-                // Function-name assignment is ordinary state mutation, never
-                // an early return. Fall-through returns the same slot as Exit.
-                bound.Insert(0, new BoundVariableDeclarationStatement(result, null));
-                bound.Add(new BoundReturnStatement(new BoundNameExpression(result)));
-            }
+                "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName + ":" + parameter.SemanticType?.Name)) + ")",
+                sourcePath, fullSource);
             var name = procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text;
             // Roslyn's console entry point is case-sensitive; XPscript is not.
             if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0)
@@ -420,7 +391,7 @@ public static class AstExperimentalCompiler
             var span = ex.Span ?? sub?.Span ?? function?.Span ?? new TextSpan(0, 0);
             throw MappedDiagnostic(span, sourcePath, fullSource, ex.Message, CompilerDiagnosticCodes.InvalidSyntax, "emission");
         }
-        var moduleFields = string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
+        var moduleFields = string.Join(Environment.NewLine, Regex.Matches(moduleSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ToCSharpLiteral(match.Groups["value"].Value.Trim())};"));
@@ -451,7 +422,7 @@ public static class AstExperimentalCompiler
                 _ => "object?"
             };
             var fields = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>().Select(field =>
-                $"public {CSharpType(field.Type.Identifier.Text)} {field.Identifier.Text} {{ get; set; }}"));
+                $"{(field.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public")} {CSharpType(field.Type.Identifier.Text)} {field.Identifier.Text} = {(field.Type.Identifier.Text.Equals("String", StringComparison.OrdinalIgnoreCase) ? "string.Empty" : "default!")};"));
             var properties = string.Join(" ", classDeclaration.Members.OfType<PropertyDeclarationSyntax>()
                 .GroupBy(property => property.Identifier.Text, StringComparer.OrdinalIgnoreCase)
                 .Select(group =>
@@ -465,7 +436,8 @@ public static class AstExperimentalCompiler
             var delete = classDeclaration.BaseType is null
                 ? "public virtual void Delete() { }"
                 : "public override void Delete() { base.Delete(); }";
-            return $"public class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} public Xp{classDeclaration.Identifier.Text}() {{ }} {delete} }}";
+            var memberBodies = AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource);
+            return $"public class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} public Xp{classDeclaration.Identifier.Text}() {{ }} {delete} {memberBodies} }}";
         }));
         if (userClassSupport.Length == 0)
         {
@@ -477,7 +449,7 @@ public static class AstExperimentalCompiler
                     return $"public sealed class Xp{match.Groups["name"].Value} {{ {fields} }}";
                 }));
         }
-        var classSupport = userClassSupport + Environment.NewLine + (Regex.IsMatch(fullSource, @"(?im)^\s*Class\s+Person\b") ? """
+        var classSupport = "namespace __xps_user_classes { using static global::Program; " + userClassSupport + " }" + Environment.NewLine + (Regex.IsMatch(fullSource, @"(?im)^\s*Class\s+Person\b") ? """
 public sealed class XpPerson {
     public string Name { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
@@ -506,6 +478,7 @@ public sealed class XpAi { private readonly Dictionary<string,XpAiTool> tools = 
 """;
         var generated = $$"""
 using System;
+using __xps_user_classes;
 using System.Collections.Generic;
 using System.Collections;
 using System.Dynamic;
@@ -978,7 +951,49 @@ internal static class Program
         return source[start..end] + normalizeSource[..normalizeEnd];
     }
 
-    private static IEnumerable<StatementSyntax> FlattenStatements(IEnumerable<StatementSyntax> statements)
+    internal static IReadOnlyList<BoundStatement> BindProcedure(IReadOnlyList<StatementSyntax> procedureStatements, SymbolTable scope,
+        IReadOnlyList<ParameterSymbol> parameters, XpTypeSymbol? returnType, string? functionName, LocalSymbol? result,
+        string identity, string sourcePath, string fullSource)
+    {
+            var allProcedureStatements = FlattenStatements(procedureStatements).ToArray();
+            var labels = allProcedureStatements.OfType<LabelStatementSyntax>()
+                .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+            var duplicateLabel = allProcedureStatements.OfType<LabelStatementSyntax>()
+                .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(group => group.Count() > 1)?.Skip(1).FirstOrDefault();
+            if (duplicateLabel is not null)
+                throw MappedDiagnostic(duplicateLabel.Span, sourcePath, fullSource, $"Duplicate label '{duplicateLabel.Identifier.Text}'.");
+            foreach (var transfer in allProcedureStatements.OfType<GoToStatementSyntax>().Where(transfer => !transfer.IsGoSub))
+                if (!labels.ContainsKey(transfer.Target.Text))
+                    throw MappedDiagnostic(transfer.Span, sourcePath, fullSource, $"Unknown label '{transfer.Target.Text}'.");
+            foreach (var control in allProcedureStatements)
+            {
+                var target = control switch
+                {
+                    OnErrorStatementSyntax error when error.ActionKeyword.Kind != SyntaxKind.ResumeKeyword && error.TargetToken?.Text != "0" => error.TargetToken,
+                    ResumeStatementSyntax resume when resume.TargetToken?.Kind == SyntaxKind.IdentifierToken => resume.TargetToken,
+                    _ => null
+                };
+                if (target is not null && !labels.ContainsKey(target.Text))
+                    throw MappedDiagnostic(control.Span, sourcePath, fullSource, $"Unknown label '{target.Text}'.");
+            }
+            ValidateLoopEntryTransfers(procedureStatements, labels, sourcePath, fullSource);
+            var binder = new StatementBinder(scope, returnType, returnType is not null, true, functionName, result, identity);
+            var bound = procedureStatements.Select(binder.Bind).OfType<BoundStatement>().ToList();
+            if (binder.Diagnostics.Count > 0)
+                throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, fullSource);
+            if (result is not null)
+            {
+                // Function-name assignment is ordinary state mutation, never
+                // an early return. Fall-through returns the same slot as Exit.
+                bound.Insert(0, new BoundVariableDeclarationStatement(result, null));
+                bound.Add(new BoundReturnStatement(new BoundNameExpression(result)));
+            }
+        return bound;
+    }
+
+    internal static IEnumerable<StatementSyntax> FlattenStatements(IEnumerable<StatementSyntax> statements)
     {
         foreach (var statement in statements)
         {
@@ -1081,7 +1096,7 @@ internal static class Program
         return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "semantic", [diagnostic]);
     }
 
-    private static CompilerException SyntaxDiagnosticException(SyntaxDiagnostic diagnostic, string sourcePath, string source)
+    internal static CompilerException SyntaxDiagnosticException(SyntaxDiagnostic diagnostic, string sourcePath, string source)
     {
         var start = SourceTextMap.GetPosition(source, diagnostic.Span.Start);
         var end = SourceTextMap.GetPosition(source, diagnostic.Span.End);
@@ -1095,7 +1110,7 @@ internal static class Program
         return new CompilerException(diagnostic.Message, diagnostic.Code, mapped.Category, [mapped]);
     }
 
-    private static CompilerException MappedDiagnostic(TextSpan span, string sourcePath, string source, string message,
+    internal static CompilerException MappedDiagnostic(TextSpan span, string sourcePath, string source, string message,
         string code = CompilerDiagnosticCodes.InvalidSyntax, string category = "semantic")
     {
         var start = SourceTextMap.GetPosition(source, span.Start);
@@ -1124,7 +1139,7 @@ internal static class Program
         throw new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "semantic", [diagnostic]);
     }
 
-    private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch
+    internal static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch
     {
         "BOOLEAN" => typeof(bool), "BYTE" => typeof(byte), "STRING" => typeof(string), "INTEGER" or "LONG" => typeof(long),
         "SINGLE" or "DOUBLE" or "CURRENCY" => typeof(double), _ => typeof(object)
