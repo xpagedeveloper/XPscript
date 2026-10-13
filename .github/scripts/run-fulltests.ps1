@@ -69,7 +69,7 @@ if (Should-Run 'language') {
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
   $astBinding = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-binding/AstBindingProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST semantic binder regression'
   if ($astBinding.ExitCode -ne 0) { exit $astBinding.ExitCode }
-  foreach ($marker in @('AST_BINDING_SPREADSHEET_NATIVE_OK','AST_BINDING_HTTP_NATIVE_OK','AST_BINDING_XML_NATIVE_OK','AST_BINDING_CSV_NATIVE_OK','AST_BINDING_RECEIVER_DIAGNOSTICS_OK','AST_BINDING_DECLARED_CALL_DIAGNOSTICS_OK','AST_BINDING_TYPE_DIAGNOSTICS_OK','AST_BINDING_COLLECTION_TYPES_OK','AST_BINDING_VARIANT_SEMANTICS_OK','AST_BINDING_OBJECT_SEMANTICS_OK','AST_BINDING_NULL_EMPTY_NOTHING_SEMANTICS_OK')) {
+  foreach ($marker in @('AST_BINDING_APPLICATION_NATIVE_OK','AST_BINDING_SPREADSHEET_NATIVE_OK','AST_BINDING_HTTP_NATIVE_OK','AST_BINDING_XML_NATIVE_OK','AST_BINDING_CSV_NATIVE_OK','AST_BINDING_RECEIVER_DIAGNOSTICS_OK','AST_BINDING_DECLARED_CALL_DIAGNOSTICS_OK','AST_BINDING_TYPE_DIAGNOSTICS_OK','AST_BINDING_COLLECTION_TYPES_OK','AST_BINDING_VARIANT_SEMANTICS_OK','AST_BINDING_OBJECT_SEMANTICS_OK','AST_BINDING_NULL_EMPTY_NOTHING_SEMANTICS_OK')) {
     if ($astBinding.Output -notmatch $marker) { throw "AST semantic binder regression missing: $marker" }
   }
   $emission = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-emission/AstEmissionProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'bound C# emission'
@@ -134,6 +134,12 @@ if (Should-Run 'notes') {
 }
 
 if (Should-Run 'runtime') {
+  $applicationAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstApplicationRuntimeProbe','-c','Release') 180000 'native Application AST/normal runtime, services, metadata and diagnostics'
+  if ($applicationAst.ExitCode -ne 0 -or $applicationAst.Output -notmatch 'AST_APPLICATION_RUNTIME_OK') { throw 'Native Application runtime parity failed.' }
+  foreach ($applicationProbe in @('ApplicationRuntimeIsolationProbe','ApplicationRuntimeConcurrencyProbe','ApplicationDebugRuntimeProbe')) {
+    $probe = Invoke-Bounded 'dotnet' @('run','--project',"./tests/$applicationProbe",'-c','Release') 180000 $applicationProbe
+    if ($probe.ExitCode -ne 0) { throw "$applicationProbe failed." }
+  }
   $sheetAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstSpreadsheetRuntimeProbe','-c','Release') 300000 'native spreadsheet AST/normal, XLSX safety and CSV parity'
   if ($sheetAst.ExitCode -ne 0 -or $sheetAst.Output -notmatch 'AST_SPREADSHEET_RUNTIME_OK') { throw 'Native spreadsheet runtime parity failed.' }
   $httpAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstHttpRuntimeProbe','-c','Release') 180000 'native HTTP/TLS AST and normal runtime parity'

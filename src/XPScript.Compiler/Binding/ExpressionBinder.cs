@@ -100,6 +100,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindNew(NewExpressionSyntax syntax)
     {
         var typeName = syntax.TypeName.Text;
+        if (AstApplicationSupport.OwnsSymbol(typeName))
+            return Error(syntax.TypeName, CompilerDiagnosticCodes.InvalidNativeConstructor, "Application is runtime state and cannot be created with New.");
         if (AstSpreadsheetSupport.IsSpreadsheet(typeName))
         {
             if (!typeName.Equals("XPSpreadsheet", StringComparison.OrdinalIgnoreCase))

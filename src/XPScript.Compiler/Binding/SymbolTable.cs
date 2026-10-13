@@ -22,6 +22,7 @@ public sealed class SymbolTable
     {
         foreach (var definition in CompilerSymbolCatalog.All)
         {
+            if (AstApplicationSupport.OwnsSymbol(definition.Name)) continue;
             if (AstSpreadsheetSupport.Names.Any(n => definition.Name.Equals(n, StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith(n + ".", StringComparison.OrdinalIgnoreCase)) || AstHttpSupport.OwnsSymbol(definition.Name) || definition.Name.StartsWith("XPCsv", StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith("Csv", StringComparison.OrdinalIgnoreCase) ||
                 definition.Name.StartsWith("XPXml", StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith("Xml", StringComparison.OrdinalIgnoreCase))
             {
@@ -50,6 +51,7 @@ public sealed class SymbolTable
         AstXmlSupport.Import(this);
         AstHttpSupport.Import(this);
         AstSpreadsheetSupport.Import(this);
+        AstApplicationSupport.Import(this);
     }
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch

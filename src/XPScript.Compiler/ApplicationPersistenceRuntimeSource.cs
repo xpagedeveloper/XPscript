@@ -153,7 +153,7 @@ internal sealed class XPScriptApplicationRegistryStore
         {
             root = _system
                 ? "/etc"
-                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
+                : UserConfigRoot();
         }
         else
         {
@@ -165,6 +165,13 @@ internal sealed class XPScriptApplicationRegistryStore
         var current = Path.Combine(root, app);
         foreach (var segment in SplitPath(path)) current = Path.Combine(current, EncodeSegment(segment));
         return Path.Combine(current, EncodeSegment(name) + ".xpsreg");
+    }
+
+    private static string UserConfigRoot()
+    {
+        var configured = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        return !string.IsNullOrWhiteSpace(configured) && Path.IsPathRooted(configured)
+            ? configured : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
     }
 
     private static object ConvertForStorage(object? value, string type) => type switch

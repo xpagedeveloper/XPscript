@@ -1,0 +1,11 @@
+Sub Main()
+    Application.Executable.Product = "AST Application Test"
+    Application.Executable.Company = "XPageDeveloper"
+    Application.Executable.Version = "1.2.3"
+    Application.Executable.FileDescription = "Application metadata test"
+    Application.Executable.Comments = "test comments"
+    Application.Executable.Copyright = "test copyright"
+    If CStr(Application.Executable.Product) <> "AST Application Test" Then Error 9921, "Executable metadata lost"
+    Application.ExitCode = 7
+    Print "APPLICATION_METADATA_OK"
+End Sub

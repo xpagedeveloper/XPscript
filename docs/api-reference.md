@@ -67,6 +67,8 @@ Stdout and stderr are drained concurrently to avoid pipe-buffer deadlocks. `Shel
 
 ## Application runtime
 
+Normal and AST compilation share Application runtime, state and services. For typed AST behavior, Args snapshots, conditional inclusion, platform/host guards and executable metadata, see [application-reference.md](application-reference.md).
+
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `Application.ArgCount` | `Application.ArgCount` | none | Returns the number of program command-line arguments. | [application-runtime.xps](../samples/application-runtime.xps) |

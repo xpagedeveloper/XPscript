@@ -1,0 +1,3 @@
+Sub Main()
+    Dim value As New Application
+End Sub

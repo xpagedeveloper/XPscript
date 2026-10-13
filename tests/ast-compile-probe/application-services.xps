@@ -1,0 +1,35 @@
+Sub Main()
+    Dim key As String
+    Dim envelope As String
+    key = Application.Crypto.GenerateKey()
+    envelope = Application.Crypto.EncryptWithKey("Åsa", key, "test-context")
+    If Application.Crypto.DecryptWithKey(envelope, key, "test-context") <> "Åsa" Then Error 9914, "Crypto roundtrip lost"
+    If Not Application.Crypto.IsEncrypted(envelope) Then Error 9915, "Envelope lost"
+    Dim code As Long
+    On Error Resume Next
+    Print Application.Crypto.DecryptWithKey(envelope, key, "wrong-context")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9916, "Context authentication lost"
+    Call Application.Registry.User.Set("ast-application-test", "name", "Åsa")
+    If CStr(Application.Registry.User.Get("ast-application-test", "name")) <> "Åsa" Then Error 9917, "Registry lost"
+    On Error Resume Next
+    Print Application.Secrets.Exists("test-service", "test-account")
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9918, "Secrets accessed without Id"
+    On Error Resume Next
+    Call Application.Log.Info("test.event", "test message")
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9919, "Web-only log accepted outside host"
+    On Error Resume Next
+    Call Application.SystemLog.Info("test", -1)
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9920, "System log event validation lost"
+    Call Application.Debug.Print("diagnostic")
+    If Application.IsDebugging Then Error 9920, "Compiler debugging unexpectedly enabled"
+    If Application.Debug.Enabled Then Print "APPDEBUG_ENABLED"
+    Print "APPLICATION_SERVICES_OK"
+End Sub

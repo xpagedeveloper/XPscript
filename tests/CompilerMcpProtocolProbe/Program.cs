@@ -11,7 +11,26 @@ if (init.GetProperty("result").GetProperty("protocolVersion").GetString() != "20
 await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new {jsonrpc="2.0",method="notifications/initialized"})); await p.StandardInput.FlushAsync();
 var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new{}});
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
-foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP tool: "+name);
+foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
+foreach (var appFixture in new[] { "application-with", "application-native", "application-services", "application-metadata", "application-unused" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", appFixture + ".xps"));
+    foreach (var appTool in appFixture == "application-with" ? new[] { "xpscript_ast_validate" } : new[] { "xpscript_ast_validate", "xpscript_validate" })
+    {
+        var result = await CallAsync(new { jsonrpc="2.0",id=appFixture+appTool,method="tools/call",@params=new { name=appTool,arguments=new { source,filename=appFixture+".xps" } } });
+        if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("MCP Application rejected: " + appFixture + appTool + result);
+    }
+}
+foreach (var (appFixture, code) in new[] { ("application-member-error", "XPS2009"), ("application-readonly-error", "XPS2001"), ("application-args-readonly-error", "XPS2001"), ("application-arity-error", "XPS2004"), ("application-constructor-error", "XPS1009") })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", appFixture + ".xps"));
+    foreach (var appTool in appFixture is "application-readonly-error" or "application-args-readonly-error" or "application-constructor-error" ? new[] { "xpscript_ast_validate", "xpscript_validate" } : new[] { "xpscript_ast_validate" })
+    {
+        var result = await CallAsync(new { jsonrpc="2.0",id=appFixture+appTool,method="tools/call",@params=new { name=appTool,arguments=new { source,filename=appFixture+".xps" } } });
+        var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+        if (error.GetProperty("diagnosticCode").GetString() != code || error.GetProperty("line").GetInt32() != 2) throw new Exception("Application MCP code/span lost: " + appFixture + appTool + result);
+    }
+}
 foreach (var sheetFixture in new[] { "spreadsheet-runtime", "spreadsheet-reference", "spreadsheet-unused", "spreadsheet-csv-inferred", "spreadsheet-tocsv-inferred", "spreadsheet-fromworksheet" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", sheetFixture + ".xps"));

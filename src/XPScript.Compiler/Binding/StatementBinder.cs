@@ -553,6 +553,21 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindBoundAssignment(BoundExpression target, ExpressionSyntax valueSyntax, bool isSet, ExpressionSyntax targetSyntax)
     {
+        if (target is BoundIndexExpression { Expression: BoundMemberAccessExpression argsProperty } && argsProperty.Receiver.SemanticType.Name == "Application" && argsProperty.Name.Equals("Args", StringComparison.OrdinalIgnoreCase))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "Application is read-only runtime state.", targetSyntax.Span));
+            return null;
+        }
+        if (target is BoundCallExpression { Target: BoundMemberAccessExpression argsMember } && argsMember.Receiver.SemanticType.Name == "Application" && argsMember.Name.Equals("Args", StringComparison.OrdinalIgnoreCase))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "Application is read-only runtime state.", targetSyntax.Span));
+            return null;
+        }
+        if (target is BoundMemberAccessExpression appMember && AstApplicationSupport.IsReadOnly(appMember.Receiver.SemanticType.Name, appMember.Name))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "Application is read-only runtime state.", targetSyntax.Span));
+            return null;
+        }
         if (target is BoundMemberAccessExpression sheetMember && AstSpreadsheetSupport.IsReadOnly(sheetMember.Receiver.SemanticType.Name, sheetMember.Name))
         {
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "Spreadsheet property is read-only.", targetSyntax.Span));

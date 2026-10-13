@@ -71,7 +71,7 @@ internal sealed class SourceLineMarkerPreprocessor
         return string.Join(Environment.NewLine, output);
     }
 
-    private static string? BuildApplicationExecutableMetadata(string code, string sourceName, int lineNumber)
+    internal static string? BuildApplicationExecutableMetadata(string code, string sourceName, int lineNumber)
     {
         var match = ApplicationExecutableMetadataPattern.Match(code);
         if (!match.Success) return null;

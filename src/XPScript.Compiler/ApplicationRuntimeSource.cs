@@ -2,7 +2,7 @@ namespace XPScript.Compiler;
 
 internal static class ApplicationRuntimeSource
 {
-    public const string Code = """
+    public const string CoreCode = """
 internal sealed class XPScriptStateScope
 {
     private readonly object _sync = new();
@@ -242,6 +242,7 @@ internal static class XPScriptRequestRuntime
 
 internal static class XPScriptApplicationRuntime
 {
+    internal static object Namespace { get; } = new();
     private static readonly object Sync = new();
     private static readonly XPScriptStateScope LocalState = new();
     private static string[] _args = [];
@@ -298,6 +299,14 @@ internal static class XPScriptApplicationRuntime
 
     public static string Path => ExecutablePath;
     public static string FileName => ExecutableFileName;
+    public static string TempFolder => TempPath;
+    public static int ExitCode { get => Environment.ExitCode; set => Environment.ExitCode = value; }
+    public static object? Id { get => State.Get("__xps_application_id"); set => State.Set("__xps_application_id", value); }
+    public static object? Title { get => State.Get("__xps_application_title"); set => State.Set("__xps_application_title", value); }
+    public static object? Icon { get => XPScriptApplicationExecutableRuntime.Icon; set => XPScriptApplicationExecutableRuntime.Icon = value; }
+    public static object? Width { get => State.Get("__xps_application_width"); set => State.Set("__xps_application_width", value); }
+    public static object? Height { get => State.Get("__xps_application_height"); set => State.Set("__xps_application_height", value); }
 }
-""" + ApplicationPersistenceRuntimeSource.Code + ApplicationSystemLogRuntimeSource.Code + ApplicationLogRuntimeSource.Code + ApplicationDebugRuntimeSource.Code;
+""" + ApplicationMetadataRuntimeSource.Code;
+    public const string Code = CoreCode + ApplicationPersistenceRuntimeSource.Code + ApplicationSystemLogRuntimeSource.Code + ApplicationLogRuntimeSource.Code + ApplicationDebugRuntimeSource.Code;
 }

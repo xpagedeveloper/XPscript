@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using System.Reflection;
-using XPScript.Compiler;
 
-var runtimeSourceType = typeof(CompilerDriver).Assembly.GetType("XPScript.Compiler.ApplicationRuntimeSource", throwOnError: true)!;
-var codeField = runtimeSourceType.GetField("Code", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
-    ?? throw new InvalidOperationException("ApplicationRuntimeSource.Code was not found.");
+var compiler = Assembly.LoadFile(Path.GetFullPath("src/XPScript.Compiler/bin/Release/net10.0/XPScript.Compiler.Core.dll"));
+var runtimeSourceType = compiler.GetType("XPScript.Compiler.ApplicationRuntimeSource", throwOnError: true)!;
+var codeField = runtimeSourceType.GetField("CoreCode", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+    ?? throw new InvalidOperationException("ApplicationRuntimeSource.CoreCode was not found.");
 var runtimeSource = codeField.GetRawConstantValue() as string
     ?? throw new InvalidOperationException("ApplicationRuntimeSource.Code was not a constant string.");
 

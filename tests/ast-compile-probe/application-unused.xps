@@ -1,0 +1,4 @@
+Sub Main()
+    ' Application.Crypto Application.State
+    Print "Application.Debug Application.Registry"
+End Sub

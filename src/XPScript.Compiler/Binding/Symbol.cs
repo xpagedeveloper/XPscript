@@ -106,7 +106,7 @@ public sealed record FunctionSymbol(
     public bool IsOptionalForwarding { get; init; }
     public IReadOnlyList<string>? NativeParameterTypes { get; init; }
     public bool IsNativeStatic { get; init; }
-    public string? NativeTargetName { get; init; }
+    public string? NativeTargetName { get; set; }
     public bool NativeReceiverArgument { get; init; }
 }
 

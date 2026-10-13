@@ -1,0 +1,3 @@
+Sub Main()
+    Application.ArgCount = 3
+End Sub

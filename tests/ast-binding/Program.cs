@@ -1,4 +1,5 @@
 using XPScript.Compiler.Binding;
+using XPScript.Compiler.Emission;
 using XPScript.Compiler.Syntax;
 using XPScript.Compiler;
 
@@ -12,6 +13,27 @@ static ExpressionSyntax Parse(string text)
 }
 
 // Type diagnostics run first so semantic type regressions fail before the broader binder probe.
+foreach (var text in new[] { "Application.Secrets.Get(\"service\", \"account\")", "Application.Secrets.Set(\"service\", \"account\", \"test value\")" })
+{
+    var appBinder = new ExpressionBinder(SymbolTable.CreateWithCompilerCatalog(), allowDynamicMembers: true);
+    var secretCall = appBinder.Bind(Parse(text));
+    var generatedSecretCall = new BoundExpressionEmitter().Emit(secretCall);
+    if (appBinder.Diagnostics.Count != 0 || !generatedSecretCall.StartsWith("XPScriptApplicationSecretsEncryptionRuntime.", StringComparison.Ordinal))
+        throw new Exception("Secrets bypassed the shared encryption/password guard: " + text);
+}
+foreach (var text in new[] { "Application.ArgCount", "Application.Args", "Application.Args(0)", "Application.State.Get(\"key\")", "Application.Registry.User.Get(\"path\", \"name\")", "Application.Crypto.GenerateKey()", "Application.Debug.Enabled", "Application.Executable.Product" })
+{
+    var appBinder = new ExpressionBinder(SymbolTable.CreateWithCompilerCatalog(), allowDynamicMembers: true);
+    _ = appBinder.Bind(Parse(text));
+    if (appBinder.Diagnostics.Count != 0) throw new Exception("Application binding failed: " + text);
+}
+foreach (var text in new[] { "Application.UnknownMember", "Application.SetArgs(\"hidden\")", "Application.State.Set(\"missing\")", "New Application", "Application.Debug.UnknownMember" })
+{
+    var appBinder = new ExpressionBinder(SymbolTable.CreateWithCompilerCatalog(), allowDynamicMembers: true);
+    _ = appBinder.Bind(Parse(text));
+    if (appBinder.Diagnostics.Count != 1) throw new Exception("Invalid Application escaped binding: " + text);
+}
+Console.WriteLine("AST_BINDING_APPLICATION_NATIVE_OK");
 var sheetSymbols = SymbolTable.CreateWithCompilerCatalog();
 sheetSymbols.Declare(new LocalSymbol("book", typeof(object), XpTypeSymbol.User("XPSpreadsheet")));
 sheetSymbols.Declare(new LocalSymbol("sheet", typeof(object), XpTypeSymbol.User("XPWorksheet")));

@@ -6,7 +6,4 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\XPScript.Compiler\XPScript.Compiler.csproj" />
-  </ItemGroup>
 </Project>

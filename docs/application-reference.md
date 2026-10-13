@@ -4,6 +4,18 @@ This page documents the complete XPScript `Application` runtime surface plus the
 
 The complete runnable reference is [samples/application-object.xps](../samples/application-object.xps).
 
+## AST compilation
+
+Application compiles directly through AST using the same runtime as normal compilation, not an ExpandoObject placeholder. Members and overloads are derived from the shared source; unknown members, invalid construction and read-only writes are diagnosed with source spans. `Application` is provided by the runtime, not created with `New`. Both `With Application` and `With Application.State` support implicit members.
+
+`With Application` is an AST capability extension: normal compilation currently rejects that namespace-value form. It has a dedicated AST-only executable/MCP fixture; shared runtime APIs are compared separately through both compilers.
+
+The generated entry point initializes the shared argument runtimes before invoking `Sub Main`. Bare `Application.Args` (or `Application.Args()`) returns an independent native LSArray snapshot; `Application.Args(index)` reads an argument with bounds error 9. The argument property itself is read-only, but editing a snapshot does not change the process arguments. `Application.NewLine` uses the active platform's line ending.
+
+The shared state proxies, metadata, Debug, SystemLog, Registry, Crypto, Secrets, Log and Audit retain their existing platform/host/security contracts. Log/Audit still require the web host, and Secrets still requires an Application.Id and the OS credential service; AST does not replace them with permissive stubs. Subsystem code is selected only on actual use. Pure argument/state programs omit registry/crypto/secrets code, and unused names in strings/comments omit Application runtime. No external NuGet addon is introduced.
+
+Literal executable metadata uses the existing generated-project packaging path, including version/product/company and platform icon handling. Runtime-only metadata assignments remain shared state. Permanent tests in `tests/AstApplicationRuntimeProbe` compare real normal/AST execution, isolated registry storage, crypto context validation, credential/host guards, debug activation, assembly metadata and ExitCode; the binder/MCP probes cover mapped errors.
+
 ## Application runtime information
 
 | Member | Syntax | Parameters | Description | Example |

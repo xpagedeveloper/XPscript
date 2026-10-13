@@ -71,6 +71,11 @@ public sealed class BoundStatementEmitter
             case BoundNoOpStatement:
                 break;
             case BoundAssignmentStatement assignment:
+                if (assignment.Target is BoundIndexExpression { Expression.SemanticType.IsVariant: true } variantIndex && variantIndex.Indices.Count == 1)
+                {
+                    Line($"LSArrayRuntime.SetIndex({_expressions.Emit(variantIndex.Expression)}, {_expressions.Emit(variantIndex.Index)}, {_expressions.Emit(assignment.Expression)});");
+                    break;
+                }
                 if (assignment.Target is BoundIndexedPropertyExpression)
                     throw new NotSupportedException("Indexed property assignment requires accessor lowering.");
                 if (assignment.Target is BoundIndexExpression arrayTarget &&
@@ -82,6 +87,8 @@ public sealed class BoundStatementEmitter
                 }
                 var targetText = _expressions.Emit(assignment.Target);
                 var expressionText = _expressions.Emit(assignment.Expression);
+                if (assignment.Target is BoundMemberAccessExpression property)
+                    expressionText = AstApplicationSupport.ConvertPropertyValue(property.Receiver.SemanticType.Name, property.Name, expressionText);
                 if (BoundExpressionEmitter.RuntimeObjectType(assignment.Target.SemanticType.Name) is { } targetJsonType)
                     expressionText = $"({targetJsonType})({expressionText})";
                 if (AstImageSupport.IsImage(assignment.Target.SemanticType.Name) && assignment.Target is BoundNameExpression imageTarget)

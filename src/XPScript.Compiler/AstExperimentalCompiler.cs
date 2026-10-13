@@ -302,11 +302,11 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Date", typeof(object), [], XpTypeSymbol.Variant, []));
         symbols.Declare(new FunctionSymbol("Date$", typeof(object), [], XpTypeSymbol.Variant, []));
         symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [], XpTypeSymbol.Variant, []));
-        symbols.Declare(new VariableSymbol("Application", typeof(object), XpTypeSymbol.Variant));
+        var usesApplication = AstApplicationSupport.UsesApplication(fullSource);
+        if (usesApplication)
+            foreach (var mainSymbol in symbols.LookupAll("Main").OfType<FunctionSymbol>())
+                mainSymbol.NativeTargetName = "__xps_application_main";
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
-        symbols.Declare(new VariableSymbol("Process", typeof(object), XpTypeSymbol.Variant));
-        symbols.Declare(new VariableSymbol("Session", typeof(object), XpTypeSymbol.Variant));
-        symbols.Declare(new VariableSymbol("Request", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("RequestScope", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("NotesSession", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("UIForm", typeof(object), XpTypeSymbol.Variant));
@@ -378,6 +378,8 @@ public static class AstExperimentalCompiler
             // Roslyn's console entry point is case-sensitive; XPscript is not.
             if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0)
                 name = "Main";
+            if (usesApplication && name.Equals("Main", StringComparison.OrdinalIgnoreCase))
+                name = "__xps_application_main";
             methods.Add(new BoundMethodDefinition(name, returnType, parameters, bound));
             var defaults = new BoundExpression?[parameters.Length];
             // Defaults are expressions in the procedure's declaration scope:
@@ -432,7 +434,10 @@ public static class AstExperimentalCompiler
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?im)^\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*\([^\r\n]+\)\s+As\s+\w+", RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = new ExpandoObject();"));
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
-        var entryPoint = methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
+        var entryPoint = usesApplication
+            ? "public static void Main(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
+                (methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void)) ? "__xps_application_main();" : "") + " }"
+            : methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
         var userClassSupport = string.Join(Environment.NewLine, unit.Declarations.OfType<ClassDeclarationSyntax>().Select(classDeclaration =>
         {
@@ -519,6 +524,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstCsvSupport.RuntimeCode(fullSource)}}
 {{AstXmlSupport.RuntimeCode(fullSource)}}
 {{AstSpreadsheetSupport.RuntimeCode(fullSource)}}
+{{AstApplicationSupport.RuntimeCode(fullSource)}}
 {{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
@@ -542,8 +548,6 @@ internal static class Program
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
     public static bool True = true;
     public static bool False = false;
-    public static dynamic Application = CreateApplication();
-    private static dynamic CreateApplication() { dynamic application = new ExpandoObject(); application.NewLine = Environment.NewLine; return application; }
     public static dynamic Console = CreateConsole();
     private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.WriteLine = (Action<object?>)(value => System.Console.WriteLine(value)); return console; }
     public static dynamic Debugger = new ExpandoObject();
@@ -929,6 +933,9 @@ internal static class Program
 """;
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode + Environment.NewLine + AstHttpSupport.RuntimeCode(fullSource);
+        var applicationMarkers = AstApplicationSupport.BuildMarkers(fullSource, sourcePath);
+        if (applicationMarkers.Length != 0)
+            return await RunCompiler.CompileGeneratedWithDependenciesAsync(generated + Environment.NewLine + applicationMarkers, outputDirectory, false, cancellationToken).ConfigureAwait(false);
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 

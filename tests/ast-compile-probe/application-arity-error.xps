@@ -1,0 +1,3 @@
+Sub Main()
+    Call Application.State.Set("missing value")
+End Sub

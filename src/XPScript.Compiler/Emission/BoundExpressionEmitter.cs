@@ -45,10 +45,14 @@ public sealed class BoundExpressionEmitter
     {
         BoundLiteralExpression literal => EmitLiteral(literal),
         BoundConversionExpression conversion => EmitConversion(conversion),
+        BoundNameExpression name when name.Symbol is VariableSymbol && name.SemanticType.Name == "Application" => "XPScriptApplicationRuntime.Namespace",
         BoundNameExpression name => _aliases.TryGetValue(name.Symbol, out var alias) ? alias.Value
             : name.Symbol is LocalSymbol { StaticStorageName: { } storage } ? storage : name.Symbol.Name,
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("Console", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("WriteLine", StringComparison.OrdinalIgnoreCase) => "System.Console.WriteLine",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("Parse", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeJson.Parse",
+        BoundMemberAccessExpression member when AstApplicationSupport.PropertyTarget(member.Receiver.SemanticType.Name, member.Name) is { } appTarget => appTarget,
+        BoundMemberAccessExpression member when AstApplicationSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } appType =>
+            $"(({appType})({Emit(member.Receiver)})).{AstApplicationSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
         BoundMemberAccessExpression member when AstImageSupport.IsImage(member.Receiver.SemanticType.Name) =>
             $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? "XPImage" : $"((XPImage)({Emit(member.Receiver)}))")}.{AstImageSupport.MemberName(member.Name)}",
         BoundMemberAccessExpression member when AstHttpSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } httpType =>
@@ -119,7 +123,7 @@ public sealed class BoundExpressionEmitter
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
 
-    internal static string? RuntimeObjectType(string name) => AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
+    internal static string? RuntimeObjectType(string name) => AstApplicationSupport.RuntimeType(name) ?? AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
     {
         "XPIMAGE" => "XPImage",
         "XPJSONDOCUMENT" => "XPScriptJsonDocument",
@@ -254,7 +258,7 @@ public sealed class BoundExpressionEmitter
         }
         if (functionName.Equals("Error", StringComparison.OrdinalIgnoreCase) || functionName.Equals("GetTickCount", StringComparison.OrdinalIgnoreCase) || functionName.Equals("Loc", StringComparison.OrdinalIgnoreCase) || functionName.Equals("ProcedureCounter", StringComparison.OrdinalIgnoreCase) || functionName.Equals("ShowDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("LoadFileDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("OpenFileDialog", StringComparison.OrdinalIgnoreCase) || functionName.Equals("SaveFileDialog", StringComparison.OrdinalIgnoreCase))
             functionName = "Program.AstCompatibilityHelpers." + functionName;
-        return $"{(call.Target is null ? functionName : Emit(call.Target))}({string.Join(", ", arguments)})";
+        return $"{(call.Function.NativeTargetName ?? (call.Target is null ? functionName : Emit(call.Target)))}({string.Join(", ", arguments)})";
     }
 
     private string EmitBinary(BoundBinaryExpression binary) => binary.OperatorKind == SyntaxKind.IsKeyword

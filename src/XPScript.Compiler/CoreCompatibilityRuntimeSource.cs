@@ -287,6 +287,12 @@ internal static class LSArrayRuntime
         return ((dynamic)value!)[(dynamic)index!];
     }
 
+    public static void SetIndex(object? value, object? index, object? newValue)
+    {
+        if (value is IXPScriptArrayStorage or Array) Set(value, newValue, index);
+        else ((dynamic)value!)[(dynamic)index!] = newValue;
+    }
+
     public static void Set(object? value, object? newValue, params object?[] indices)
     {
         Storage(value).Set(newValue, indices);
