@@ -1,0 +1,12 @@
+Sub Main()
+    Dim entries List As String
+    entries("a") = "first"
+    entries("b") = "second"
+    ForAll item In entries
+        item = item & "!"
+    End ForAll
+    If entries("a") <> "first!" Or entries("b") <> "second!" Then Error 6, "List alias storage"
+    Erase entries("b")
+    If IsElement(entries("b")) Then Error 6, "List erase"
+    Print "LIST_STABLE_STORAGE_OK"
+End Sub

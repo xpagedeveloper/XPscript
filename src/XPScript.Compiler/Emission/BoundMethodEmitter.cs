@@ -68,6 +68,7 @@ public sealed class BoundMethodEmitter
 
     internal static string SemanticStorageType(LocalSymbol local, string fallback)
     {
+        if (local.IsDynamicArray) return "System.Array";
         if (BoundExpressionEmitter.RuntimeObjectType(local.SemanticType?.Name ?? "") is { } native) return native;
         return local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
             !semantic.IsVariant && !semantic.IsObject && !semantic.IsNothing && !semantic.IsNull && !semantic.IsEmpty && !semantic.IsList

@@ -49,7 +49,7 @@ internal sealed class LSListByRef<T>
 
 internal sealed class LSList<T> : ILSList, IXPScriptIterable, System.Collections.IEnumerable
 {
-    private readonly Dictionary<string, T> _values = new(StringComparer.CurrentCulture);
+    private readonly Dictionary<string, System.Runtime.CompilerServices.StrongBox<T>> _values = new(StringComparer.CurrentCulture);
     private readonly List<string> _order = [];
 
     public T this[object? tag]
@@ -59,15 +59,26 @@ internal sealed class LSList<T> : ILSList, IXPScriptIterable, System.Collections
             var key = NormalizeTag(tag);
             if (!_values.TryGetValue(key, out var value))
                 throw new KeyNotFoundException("List element does not exist: " + key);
-            return value;
+            return value.Value;
         }
         set
         {
             var key = NormalizeTag(tag);
-            if (!_values.ContainsKey(key))
+            if (!_values.TryGetValue(key, out var cell))
+            {
                 _order.Add(key);
-            _values[key] = value;
+                _values[key] = new System.Runtime.CompilerServices.StrongBox<T>(value);
+            }
+            else cell.Value = value;
         }
+    }
+
+    public ref T Reference(object? tag)
+    {
+        var key = NormalizeTag(tag);
+        if (!_values.TryGetValue(key, out var cell))
+            throw new KeyNotFoundException("List element does not exist: " + key);
+        return ref cell.Value;
     }
 
     public bool ContainsTag(object? tag) => _values.ContainsKey(NormalizeTag(tag));
@@ -106,7 +117,7 @@ internal sealed class LSList<T> : ILSList, IXPScriptIterable, System.Collections
         foreach (var tag in _order.ToArray())
         {
             if (_values.TryGetValue(tag, out var value))
-                yield return new KeyValuePair<string, object?>(tag, value);
+                yield return new KeyValuePair<string, object?>(tag, value.Value);
         }
     }
 
@@ -136,11 +147,7 @@ internal sealed class LSListAlias<T>
 
     public string Tag { get; }
 
-    public T Value
-    {
-        get => _list[Tag];
-        set => _list[Tag] = value;
-    }
+    public ref T Value => ref _list.Reference(Tag);
 
     public LSListAlias(LSList<T> list, string tag)
     {

@@ -4,6 +4,31 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-array.xps') -o (Join-Path $output 'static-array-early')
+if ($LASTEXITCODE -ne 0) { throw 'AST Static array storage compilation failed.' }
+$staticEarlyResult = dotnet (Join-Path $output 'static-array-early/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($staticEarlyResult -join "`n") -ne "1`n2") { throw 'AST Static array storage lifecycle failed.' }
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-elements-runtime.xps') -o (Join-Path $output 'indexed-byref-elements-runtime')
+if ($LASTEXITCODE -ne 0) { throw 'AST element ByRef index compilation failed.' }
+$elementIndexResult = dotnet (Join-Path $output 'indexed-byref-elements-runtime/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($elementIndexResult -join "`n") -ne 'INDEXED_BYREF_ELEMENTS_OK') { throw 'AST element ByRef index alias/order/bounds/exception execution failed.' }
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-elements-simple.xps') -o (Join-Path $output 'indexed-byref-elements-simple')
+if ($LASTEXITCODE -ne 0) { throw 'AST ordinary/flat element ByRef index compilation failed.' }
+$elementSimpleResult = dotnet (Join-Path $output 'indexed-byref-elements-simple/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($elementSimpleResult -join "`n") -ne 'INDEXED_BYREF_ELEMENTS_SIMPLE_OK') { throw 'AST ordinary/flat element alias execution failed.' }
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-stable-storage.xps') -o (Join-Path $output 'list-stable-storage')
+if ($LASTEXITCODE -ne 0) { throw 'AST shared List storage compilation failed.' }
+$listStorageResult = dotnet (Join-Path $output 'list-stable-storage/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listStorageResult -join "`n") -ne 'LIST_STABLE_STORAGE_OK') { throw 'AST shared List storage failed.' }
+$listStorageNormal = Join-Path $output $(if ($IsWindows) { 'list-stable-normal.exe' } else { 'list-stable-normal' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'list-stable-storage.xps') -o $listStorageNormal --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal shared List storage compilation failed.' }
+$listStorageNormalResult = & $listStorageNormal
+if ($LASTEXITCODE -ne 0 -or ($listStorageNormalResult -join "`n") -ne 'LIST_STABLE_STORAGE_OK') { throw 'Normal/AST shared List storage parity failed.' }
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-list-lifetime.xps') -o (Join-Path $output 'indexed-byref-list-lifetime')
+if ($LASTEXITCODE -ne 0) { throw 'AST captured List reference compilation failed.' }
+$listLifetimeResult = dotnet (Join-Path $output 'indexed-byref-list-lifetime/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listLifetimeResult -join "`n") -ne 'INDEXED_BYREF_LIST_LIFETIME_OK') { throw 'AST captured List reference lifetime failed.' }
 $moduleStorageFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-module-storage-error.xps') -o (Join-Path $output 'indexed-byref-module-storage-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($moduleStorageFailure -join "`n") -notmatch 'indexed-byref-module-storage-error.xps:9:') { throw 'Module header diagnostic source mapping lost.' }
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-module-runtime.xps') -o (Join-Path $output 'indexed-byref-module-runtime')

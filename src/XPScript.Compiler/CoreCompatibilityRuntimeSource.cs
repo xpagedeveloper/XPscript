@@ -203,6 +203,28 @@ internal sealed class LSArray : IXPScriptArrayStorage
 
 internal static class LSArrayRuntime
 {
+    // Obtain a managed reference only after exact element-type and complete bounds checks.
+    // This also supports non-zero-based arrays without a snapshot/copy-back wrapper.
+    public static ref T Reference<T>(object? value, params object?[] indices)
+    {
+        if (value is not Array array || array.GetType().GetElementType() != typeof(T))
+            throw new InvalidCastException("ByRef requires an array with the matching element type.");
+        if (indices.Length != array.Rank)
+            throw new IndexOutOfRangeException("Wrong number of array subscripts.");
+        long offset = 0;
+        for (var dimension = 0; dimension < indices.Length; dimension++)
+        {
+            var index = XPScriptRuntime.CInt(indices[dimension]);
+            var lower = array.GetLowerBound(dimension);
+            if (index < lower || index > array.GetUpperBound(dimension))
+                throw new IndexOutOfRangeException("Subscript out of range.");
+            offset = checked(offset * array.GetLength(dimension) + ((long)index - lower));
+        }
+        return ref System.Runtime.CompilerServices.Unsafe.Add(
+            ref System.Runtime.CompilerServices.Unsafe.As<byte, T>(
+                ref System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(array)), checked((nint)offset));
+    }
+
     public static LSArray Fixed(string type, int[] lower, int[] upper) => new(type, false, lower, upper);
     public static LSArray Dynamic(string type) => new(type, true);
     public static LSArray Dynamic(string type, int[] lower, int[] upper) => new(type, true, lower, upper);

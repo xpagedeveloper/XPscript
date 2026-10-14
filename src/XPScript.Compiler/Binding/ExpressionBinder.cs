@@ -528,15 +528,14 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 if (!conversion.IsIdentity || arguments[i].Type != property.ParameterTypes[i])
                     return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch,
                         $"ByRef index {i + 1} to '{property.Name}' requires exactly {targetType.Name}.");
-                if (arguments[i] is BoundNameExpression { Symbol: LocalSymbol { IsListAlias: true } })
+                if (arguments[i] is BoundIndexExpression location && !location.Expression.SemanticType.IsArray && !location.Expression.SemanticType.IsList
+                    || arguments[i] is BoundMemberAccessExpression { IsFieldStorage: false })
                     return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TargetApiUnavailable,
-                        "List alias ByRef index arguments are not implemented yet; use a scalar local.");
-                if (arguments[i] is BoundIndexExpression or BoundMemberAccessExpression { IsFieldStorage: false })
-                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TargetApiUnavailable,
-                        "Array/List entries and accessor-backed ByRef index arguments are not implemented yet; use writable scalar storage.");
+                        "Accessor-backed ByRef index arguments are not implemented yet; use writable scalar storage.");
                 if (arguments[i] is not BoundNameExpression { Symbol: LocalSymbol or ParameterSymbol or FieldSymbol }
                     and not BoundNameExpression { Symbol: VariableSymbol { HasTypedStorage: true } }
-                    and not BoundMemberAccessExpression { IsFieldStorage: true })
+                    and not BoundMemberAccessExpression { IsFieldStorage: true }
+                    and not BoundIndexExpression)
                     return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TypeMismatch,
                         "A ByRef index requires a writable scalar local, parameter, class field or typed module variable.");
             }

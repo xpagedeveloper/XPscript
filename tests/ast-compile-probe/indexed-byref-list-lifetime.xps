@@ -1,0 +1,29 @@
+Class Counter
+    Public Property Get Item(ByRef value As Long, ByVal extra As Long) As Long
+        value = value + extra
+        Item = value
+    End Property
+End Class
+Function Recreate(ByVal values List As Long) As Long
+    Erase values("x")
+    values("x") = 100
+    Recreate = 2
+End Function
+Function Grow(ByVal values List As Long) As Long
+    Dim i As Long
+    For i = 1 To 128
+        values(CStr(i)) = i
+    Next
+    Grow = 3
+End Function
+Sub Main()
+    Dim counter As New Counter
+    Dim values List As Long
+    Dim result As Long
+    values("x") = 1
+    result = counter.Item(values("x"), Recreate(values))
+    If result <> 3 Or values("x") <> 100 Then Error 6, "captured removed cell must stay detached"
+    result = counter.Item(values("x"), Grow(values))
+    If result <> 103 Or values("x") <> 103 Then Error 6, "captured cell must survive dictionary growth"
+    Print "INDEXED_BYREF_LIST_LIFETIME_OK"
+End Sub

@@ -66,3 +66,66 @@ var unitEmit = unitCompilation.Emit(unitStream);
 if (!unitEmit.Success) throw new InvalidOperationException(string.Join("\n", unitEmit.Diagnostics));
 Assembly.Load(unitStream.ToArray()).GetType("Program")!.GetMethod("Main")!.Invoke(null, null);
 Console.WriteLine("AST_COMPILATION_UNIT_OK");
+
+// Compile the production reference helper itself; never reproduce its address arithmetic in a test helper.
+var runtimeSource = XPScript.Compiler.CoreCompatibilityRuntimeSource.Code;
+var referenceStart = runtimeSource.IndexOf("internal static class LSArrayRuntime", StringComparison.Ordinal);
+var referenceEnd = runtimeSource.IndexOf("    public static LSArray Fixed", referenceStart, StringComparison.Ordinal);
+var referenceProbe = $$"""
+using System;
+using System.Linq;
+internal static class XPScriptRuntime { public static int CInt(object? value) => Convert.ToInt32(value); }
+{{runtimeSource[referenceStart..referenceEnd]}}
+}
+public static class Guard
+{
+    private static void Reject(Action action, Type expected)
+    {
+        try { action(); } catch (Exception ex) when (ex.GetType() == expected) { return; }
+        throw new Exception("Array reference guard failed: " + expected.Name);
+    }
+    public static void Main()
+    {
+        Reject(() => { ref var slot = ref LSArrayRuntime.Reference<long>(new object[] { 1L }, 0); }, typeof(InvalidCastException));
+        Reject(() => { ref var slot = ref LSArrayRuntime.Reference<object>(new string[] { "x" }, 0); }, typeof(InvalidCastException));
+        Reject(() => { ref var slot = ref LSArrayRuntime.Reference<long>(null, 0); }, typeof(InvalidCastException));
+        Reject(() => { ref var slot = ref LSArrayRuntime.Reference<long>(new long[0], 0); }, typeof(IndexOutOfRangeException));
+        Reject(() => { ref var slot = ref LSArrayRuntime.Reference<long>(new long[1], -1); }, typeof(IndexOutOfRangeException));
+        Reject(() => { ref var slot = ref LSArrayRuntime.Reference<long>(new long[1], 1); }, typeof(IndexOutOfRangeException));
+        Reject(() => { ref var slot = ref LSArrayRuntime.Reference<long>(new long[1,1], 0); }, typeof(IndexOutOfRangeException));
+        for (var rank = 1; rank <= 8; rank++)
+        {
+            var lengths = Enumerable.Repeat(2, rank).ToArray();
+            var lower = Enumerable.Repeat(-1, rank).ToArray();
+            var array = Array.CreateInstance(typeof(long), lengths, lower);
+            var last = Enumerable.Repeat<object?>(0, rank).ToArray();
+            ref var slot = ref LSArrayRuntime.Reference<long>(array, last);
+            slot = 41;
+            if ((long)array.GetValue(new int[rank])! != 41 || (long)array.GetValue(lower)! != 0)
+                throw new Exception("Array reference layout/bounds failed.");
+            ref var same = ref LSArrayRuntime.Reference<long>(array, last);
+            same++;
+            if (slot != 42) throw new Exception("Array shared reference failed.");
+        }
+        var strings = new[] { "a" };
+        ref var text = ref LSArrayRuntime.Reference<string>(strings, 0);
+        text = "changed";
+        if (strings[0] != "changed") throw new Exception("Reference-valued array slot failed.");
+        var bytes = new byte[2];
+        LSArrayRuntime.Reference<byte>(bytes, 1) = 7;
+        var flags = new bool[2];
+        LSArrayRuntime.Reference<bool>(flags, 1) = true;
+        var doubles = new double[2];
+        LSArrayRuntime.Reference<double>(doubles, 1) = 0.5;
+        if (bytes[0] != 0 || bytes[1] != 7 || flags[0] || !flags[1] || doubles[0] != 0 || doubles[1] != 0.5)
+            throw new Exception("Scalar element layout failed.");
+    }
+}
+""";
+var guardCompilation = CSharpCompilation.Create("AstArrayReferenceGuards", [CSharpSyntaxTree.ParseText(referenceProbe)], references,
+    new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+using var guardStream = new MemoryStream();
+var guardEmit = guardCompilation.Emit(guardStream);
+if (!guardEmit.Success) throw new InvalidOperationException(string.Join("\n", guardEmit.Diagnostics));
+Assembly.Load(guardStream.ToArray()).GetType("Guard")!.GetMethod("Main")!.Invoke(null, null);
+Console.WriteLine("AST_BYREF_STORAGE_GUARDS_OK");

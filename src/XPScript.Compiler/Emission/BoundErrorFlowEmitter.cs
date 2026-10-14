@@ -145,7 +145,7 @@ internal sealed class BoundErrorFlowEmitter
                 var items = _output.Temporary(); var itemIndex = _output.Temporary();
                 var isList = loop.Collection.SemanticType.IsList;
                 _storage.Add(isList
-                    ? $"dynamic[] {items} = []; int {itemIndex} = 0;"
+                    ? $"LSListAlias<{BoundMethodEmitter.CSharpType(loop.Collection.SemanticType.ElementType!.RuntimeType)}>[] {items} = []; int {itemIndex} = 0;"
                     : $"object?[] {items} = []; int {itemIndex} = 0;");
                 var allTest = _instructions.Count; var allBody = -1;
                 Add(statement, next, indent =>
@@ -158,7 +158,7 @@ internal sealed class BoundErrorFlowEmitter
                     _expressions.WithListAlias(loop.Variable.Symbol, $"{items}[{itemIndex} - 1].Value", $"{items}[{itemIndex} - 1].Tag",
                         () => allBody = Sequence(loop.Statements, allTest, next));
                 else allBody = Sequence(loop.Statements, allTest, next);
-                return Add(statement, next, indent => Write($"{items} = {(isList ? $"{E(loop.Collection)}.Aliases().Cast<dynamic>().ToArray()" : $"System.Linq.Enumerable.Cast<object?>(LSForAllRuntime.Enumerate({E(loop.Collection)})).ToArray()")}; {itemIndex} = 0; {_next} = {allTest};", indent, statement));
+                return Add(statement, next, indent => Write($"{items} = {(isList ? $"{E(loop.Collection)}.Aliases().ToArray()" : $"System.Linq.Enumerable.Cast<object?>(LSForAllRuntime.Enumerate({E(loop.Collection)})).ToArray()")}; {itemIndex} = 0; {_next} = {allTest};", indent, statement));
             case BoundExitForAllStatement:
                 return Add(statement, next, indent => Write($"{_next} = {exit};", indent, statement));
             case BoundSelectStatement select:

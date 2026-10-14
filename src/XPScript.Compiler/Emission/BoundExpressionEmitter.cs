@@ -162,8 +162,8 @@ public sealed class BoundExpressionEmitter
     {
         var offsets = index.Indices.Select((item, dimension) =>
         {
-            var lower = index.Expression is BoundNameExpression { Symbol: LocalSymbol local } && dimension < local.ArrayBounds.Count
-                ? local.ArrayBounds[dimension].Lower
+            var lower = index.Expression is BoundNameExpression { Symbol: LocalSymbol local }
+                ? dimension < local.ArrayBounds.Count ? local.ArrayBounds[dimension].Lower : dimension == 0 ? local.ArrayLowerBound : 0
                 : 0;
             var emitted = Emit(item);
             var multidimensional = index.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayRank: > 1 } };
@@ -173,7 +173,17 @@ public sealed class BoundExpressionEmitter
     }
 
     internal string EmitIndexedArguments(BoundIndexedPropertyExpression indexed) =>
-        string.Join(", ", indexed.Arguments.Select((argument, i) => (indexed.Property.ByRefIndexes?[i] == true ? "ref " : "") + Emit(argument)));
+        string.Join(", ", indexed.Arguments.Select((argument, i) => indexed.Property.ByRefIndexes?[i] == true
+            ? "ref " + EmitIndexedReference(argument) : Emit(argument)));
+
+    private string EmitIndexedReference(BoundExpression argument) => argument switch
+    {
+        BoundIndexExpression index when index.Expression.SemanticType.IsList =>
+            $"{Emit(index.Expression)}.Reference({Emit(index.Index)})",
+        BoundIndexExpression index when index.Expression.SemanticType.IsArray =>
+            $"LSArrayRuntime.Reference<{BoundMethodEmitter.CSharpType(index.Type)}>({Emit(index.Expression)}, {EmitArrayIndexArguments(index)})",
+        _ => Emit(argument)
+    };
 
     private string EmitCall(BoundCallExpression call)
     {

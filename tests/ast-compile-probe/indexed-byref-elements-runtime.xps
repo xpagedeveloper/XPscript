@@ -1,0 +1,119 @@
+Private evaluations As Long
+Class Counter
+    Public Property Get Item(ByRef index As Long) As Long
+        index = index + 1
+        Item = index
+    End Property
+    Public Property Let Item(ByRef index As Long, ByVal incoming As Long)
+        index = index + incoming
+    End Property
+    Public Property Get Both(ByRef left As Long, ByRef right As Long) As Long
+        left = left + 1
+        right = right + 2
+        Both = left + right
+    End Property
+    Public Property Get Mixed(ByRef index As Long, ByVal extra As Long) As Long
+        index = index + extra
+        Mixed = index
+    End Property
+    Public Property Get Text(ByRef value As String) As String
+        value = value & "x"
+        Text = value
+    End Property
+    Public Property Get Failing(ByRef index As Long) As Long
+        index = index + 10
+        Error 3121, "getter failed"
+    End Property
+    Public Property Let Failing(ByRef index As Long, ByVal incoming As Long)
+        index = index + incoming
+        Error 3122, "setter failed"
+    End Property
+End Class
+Function Position() As Long
+    evaluations = evaluations + 1
+    Position = 0
+End Function
+Function Tag() As String
+    evaluations = evaluations + 1
+    Tag = "x"
+End Function
+Function Mutate(ByVal values List As Long) As Long
+    values("x") = 10
+    Mutate = 2
+End Function
+Sub Main()
+    Dim counter As New Counter
+    Dim values(1) As Long
+    Dim bounded(3 To 4) As Long
+    Dim dynamicValues() As Long
+    Dim matrix(1 To 2, 3 To 4) As Long
+    Dim entries List As Long
+    Dim texts List As String
+    Dim words(1) As String
+    Dim result As Long
+    Dim text As String
+    values(0) = 1
+    result = counter.Both(values(Position()), values(Position()))
+    If result <> 8 Or values(0) <> 4 Or evaluations <> 2 Then Error 6, "array shared alias/order"
+    counter.Item(values(0)) = counter.Item(values(0))
+    If values(0) <> 10 Then Error 6, "array RHS alias order"
+    bounded(3) = 1
+    result = counter.Item(bounded(3))
+    If result <> 2 Or bounded(3) <> 2 Then Error 6, "fixed lower bound alias"
+    ReDim dynamicValues(3 To 4)
+    dynamicValues(3) = 1
+    result = counter.Both(dynamicValues(3), dynamicValues(3))
+    If result <> 8 Or dynamicValues(3) <> 4 Then Error 6, "dynamic lower bound alias"
+    ReDim Preserve dynamicValues(3 To 5)
+    result = counter.Item(dynamicValues(3))
+    If result <> 5 Or dynamicValues(3) <> 5 Then Error 6, "preserved array alias"
+    matrix(1, 3) = 1
+    result = counter.Both(matrix(1, 3), matrix(1, 3))
+    If result <> 8 Or matrix(1, 3) <> 4 Then Error 6, "multidimensional alias"
+    entries("x") = 1
+    evaluations = 0
+    result = counter.Both(entries(Tag()), entries(Tag()))
+    If result <> 8 Or entries("x") <> 4 Or evaluations <> 2 Then Error 6, "List shared alias/order"
+    result = counter.Mixed(entries("x"), Mutate(entries))
+    If result <> 12 Or entries("x") <> 12 Then Error 6, "List write during later argument"
+    With counter
+        .Item(entries("x")) = .Item(entries("x"))
+    End With
+    If entries("x") <> 26 Then Error 6, "List RHS alias order"
+    ForAll item In entries
+        result = counter.Both(item, entries("x"))
+    End ForAll
+    If result <> 58 Or entries("x") <> 29 Then Error 6, "ForAll shared element alias"
+    words(0) = "a"
+    text = counter.Text(words(0))
+    If text <> "ax" Or words(0) <> "ax" Then Error 6, "array reference-valued slot"
+    texts("x") = "a"
+    text = counter.Text(texts("x"))
+    If text <> "ax" Or texts("x") <> "ax" Then Error 6, "List reference-valued slot"
+    On Error Resume Next
+    result = counter.Failing(values(0))
+    On Error GoTo 0
+    If Err <> 3121 Or values(0) <> 20 Then Error 6, "array getter exception"
+    On Error Resume Next
+    counter.Failing(values(0)) = 7
+    On Error GoTo 0
+    If Err <> 3122 Or values(0) <> 27 Then Error 6, "array setter exception"
+    On Error Resume Next
+    result = counter.Failing(entries("x"))
+    On Error GoTo 0
+    If Err <> 3121 Or entries("x") <> 39 Then Error 6, "List getter exception"
+    On Error Resume Next
+    counter.Failing(entries("x")) = 7
+    On Error GoTo 0
+    If Err <> 3122 Or entries("x") <> 46 Then Error 6, "List setter exception"
+    evaluations = 0
+    On Error Resume Next
+    result = counter.Both(values(99), values(Position()))
+    On Error GoTo 0
+    If Err <> 9 Or evaluations <> 0 Then Error 6, "array bounds/order guard"
+    On Error Resume Next
+    result = counter.Both(entries("missing"), entries(Tag()))
+    On Error GoTo 0
+    If Err = 0 Or evaluations <> 0 Then Error 6, "List missing/order guard"
+    Print "INDEXED_BYREF_ELEMENTS_OK"
+End Sub

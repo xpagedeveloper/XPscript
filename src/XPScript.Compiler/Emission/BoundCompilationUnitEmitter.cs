@@ -37,7 +37,10 @@ public sealed class BoundCompilationUnitEmitter
                 !semantic.IsVariant && !semantic.IsObject && !semantic.IsEmpty && !semantic.IsNothing && !semantic.IsNull && !semantic.IsList)
                 type = $"Xp{semantic.Name}";
             type = BoundExpressionEmitter.RuntimeObjectType(declaration.Local.SemanticType?.Name ?? "") ?? type;
-            var initialValue = declaration.Local.Type.IsArray
+            type = BoundMethodEmitter.SemanticStorageType(declaration.Local, type);
+            var initialValue = declaration.Local.IsDynamicArray
+                ? $"new {BoundMethodEmitter.CSharpType(declaration.Local.SemanticType!.ElementType!.RuntimeType)}[0]"
+                : declaration.Local.Type.IsArray
                 ? $"new {type[..^2]}[0]"
                 : declaration.Local.SemanticType?.IsList == true ? $"new {type}()"
                 : declaration.Local.Type == typeof(string) ? "string.Empty" : $"default({type})";

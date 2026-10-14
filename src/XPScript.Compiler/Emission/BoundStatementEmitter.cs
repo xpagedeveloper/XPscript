@@ -68,6 +68,12 @@ public sealed class BoundStatementEmitter
             case BoundNoOpStatement:
                 break;
             case BoundAssignmentStatement assignment:
+                if (assignment.Target is BoundNameExpression { Symbol: LocalSymbol { IsDynamicArray: true } })
+                {
+                    var value = assignment.Expression is BoundConversionExpression dynamicArrayConversion ? dynamicArrayConversion.Expression : assignment.Expression;
+                    Line($"{_expressions.Emit(assignment.Target)} = (System.Array)({_expressions.Emit(value)});");
+                    break;
+                }
                 if (assignment.Target is BoundIndexExpression { Expression.SemanticType.IsVariant: true } variantIndex && variantIndex.Indices.Count == 1)
                 {
                     Line($"LSArrayRuntime.SetIndex({_expressions.Emit(variantIndex.Expression)}, {_expressions.Emit(variantIndex.Index)}, {_expressions.Emit(assignment.Expression)});");
@@ -241,7 +247,7 @@ public sealed class BoundStatementEmitter
                 else if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase)) type = "XpAiTool";
                 else if (declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase)) type = "XpAiTool";
                 var initializer = declaration.Initializer is null
-                    ? (declaration.Local.SemanticType?.IsVariant == true ? "null" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ? "new XpNotesHttp()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase) ? "new XpAi(\"\", \"\")" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase) ? "new XpAiTool(\"\")" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : (declaration.ArrayLength ?? 0) - declaration.Local.ArrayLowerBound + 1)}]" : type.StartsWith("Xp", StringComparison.Ordinal) ? $"new {type}()" : $"default({type})")))
+                    ? (declaration.Local.SemanticType?.IsVariant == true ? "null" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ? "new XpNotesHttp()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase) ? "new XpAi(\"\", \"\")" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase) ? "new XpAiTool(\"\")" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : (declaration.Local.ArrayBounds.Count > 0 ? declaration.Local.ArrayBounds[0].Upper : (declaration.ArrayLength ?? 0)) - declaration.Local.ArrayLowerBound + 1)}]" : type.StartsWith("Xp", StringComparison.Ordinal) ? $"new {type}()" : $"default({type})")))
                     : _expressions.Emit(declaration.Initializer);
                 if (BoundExpressionEmitter.RuntimeObjectType(declaration.Local.SemanticType?.Name ?? "") is { } jsonType)
                 {
@@ -434,7 +440,9 @@ public sealed class BoundStatementEmitter
                     : $"System.Linq.Enumerable.Cast<object?>(LSForAllRuntime.Enumerate({_expressions.Emit(value.Collection)})).ToArray()";
                 Line($"var {items} = {collection};");
                 Line($"var {itemIndex} = 0;");
-                Line($"object? {itemValue} = null;");
+                var itemType = value.Collection.SemanticType.IsList
+                    ? $"LSListAlias<{BoundMethodEmitter.CSharpType(value.Collection.SemanticType.ElementType!.RuntimeType)}>" : "object?";
+                Line($"{itemType} {itemValue} = null;");
                 Line($"{itemStart}:;");
                 Line($"if ({itemIndex} >= {items}.Length) goto {itemDone};");
                 Line($"{itemValue} = {items}[{itemIndex}++];");
