@@ -84,7 +84,9 @@ End If
 
 ## Classes and object lifetime
 
-Experimental AST supports scalar indexed Get/Let: `store.Item(index) = value` and `Print store.Item(index)`, including multiple typed indexes, internal access and With. Index inputs are snapshots for ByVal or unmodified declarations; explicit ByRef indexes and Optional index signatures remain unimplemented. Private/read-only/write-only restrictions are enforced. Object/reference Property Set and derived accessor bodies still require migration. See `indexed-properties-runtime.xps` and `docs/ast-csharp-emitter.md`.
+For AST indexed properties, an explicit `ByRef index As Long` can alias a matching scalar local, parameter or bare class field name. Getter and setter declarations must use the same index mode. Changes are visible in the caller, including when the accessor raises an error; passing the same variable to two indexes preserves one shared location. Pass a declared scalar variable, not a literal. Complex array/List/member/module-variable targets remain unsupported, as do Optional index signatures. ByVal and unmodified indexes retain snapshot behavior.
+
+Experimental AST supports scalar indexed Get/Let: `store.Item(index) = value` and `Print store.Item(index)`, including multiple typed indexes, internal access and With. Index inputs are snapshots for ByVal or unmodified declarations; complex ByRef locations and Optional index signatures remain unimplemented. Private/read-only/write-only restrictions are enforced. Object/reference Property Set and derived accessor bodies still require migration. See `indexed-properties-runtime.xps` and `docs/ast-csharp-emitter.md`.
 
 Experimental AST executes scalar, non-indexed Property Get/Let bodies. Get returns the stored property-name result after the entire body runs. Parameterless `Property Let Name As String` exposes the incoming value as `Name`; an explicit setter parameter uses its declared name. Read-only/write-only and private accessor permissions are enforced. Object/reference Set and derived accessor bodies remain deferred; do not assume full class-property migration is complete.
 

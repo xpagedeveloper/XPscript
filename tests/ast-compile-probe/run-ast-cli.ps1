@@ -4,6 +4,14 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-runtime.xps') -o (Join-Path $output 'indexed-byref-runtime')
+if ($LASTEXITCODE -ne 0) { throw 'AST ByRef index compilation failed.' }
+$byRefIndexResult = dotnet (Join-Path $output 'indexed-byref-runtime/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($byRefIndexResult -join "`n") -ne 'INDEXED_BYREF_RUNTIME_OK') { throw 'AST ByRef index alias/exception execution failed.' }
+foreach ($byRefInvalid in @('indexed-byref-literal-error', 'indexed-byref-type-error', 'indexed-byref-mode-error', 'indexed-byref-complex-error')) {
+    $byRefFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$byRefInvalid.xps") -o (Join-Path $output $byRefInvalid) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($byRefFailure -join "`n") -notmatch "$byRefInvalid.xps:(5|8|9):") { throw "ByRef index diagnostic source mapping lost: $byRefInvalid" }
+}
 foreach ($indexedFixture in @('indexed-properties-runtime', 'indexed-get-parity')) {
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$indexedFixture.xps") -o (Join-Path $output $indexedFixture)
     if ($LASTEXITCODE -ne 0) { throw "AST indexed property compilation failed: $indexedFixture" }

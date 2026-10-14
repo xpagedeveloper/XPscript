@@ -28,7 +28,9 @@ Use this workflow when adding support for an XP object or AST-only language feat
 
 ## Design rule
 
-Scalar indexed properties reuse IndexedPropertySymbol/BoundIndexedPropertyExpression and the common accessor-body binder/emitter. Register independent read/write permissions, typed index signatures and canonical getter/setter targets. Evaluate receiver, indexes and incoming value once in order. Current wrappers snapshot ByVal/unmodified scalar indexes; explicit ByRef alias/copy-back, Optional indexes and object Set remain explicit deferrals. Keep semantic local storage types shared across ordinary, flat and error-flow emission.
+IndexedPropertySymbol now carries explicit ByRef index modes. Preserve them in both bound call emission and generated accessor wrapper signatures, sharing index argument emission for Get/Let. Require matching scalar types and named writable locals/parameters/bare class fields, reject mismatched getter/setter modes, and defer complex locations explicitly. Verify same-variable aliases, forwarding, RHS order and exceptional exits; never implement a second copy-back engine for named storage.
+
+Scalar indexed properties reuse IndexedPropertySymbol/BoundIndexedPropertyExpression and the common accessor-body binder/emitter. Register independent read/write permissions, typed index signatures and canonical getter/setter targets. Evaluate receiver, indexes and incoming value once in order. Current wrappers snapshot ByVal/unmodified scalar indexes; complex ByRef locations, Optional indexes and object Set remain explicit deferrals. Keep semantic local storage types shared across ordinary, flat and error-flow emission.
 
 Scalar non-indexed class properties reuse the same procedure binder/emitter as class methods, with property wrappers calling bound Get/Let bodies. Register grouped property symbols with independent CanRead/CanWrite permissions; preserve private accessor visibility and canonical names, including implicit With. Parameterless Let uses the property name for the incoming value. Do not fabricate auto-property storage or close indexed/object Set migration from this subset.
 

@@ -77,7 +77,7 @@ public sealed class BoundStatementEmitter
                 {
                     if (indexedProperty.Property.SetterName is null)
                         throw new NotSupportedException("Indexed property assignment requires accessor lowering.");
-                    Line($"{_expressions.Emit(indexedProperty.Receiver)}.{indexedProperty.Property.SetterName}({string.Join(", ", indexedProperty.Arguments.Select(_expressions.Emit).Append(_expressions.Emit(assignment.Expression)))});");
+                    Line($"{_expressions.Emit(indexedProperty.Receiver)}.{indexedProperty.Property.SetterName}({_expressions.EmitIndexedArguments(indexedProperty)}, {_expressions.Emit(assignment.Expression)});");
                     break;
                 }
                 if (assignment.Target is BoundIndexExpression arrayTarget &&

@@ -115,7 +115,7 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new => @new.Type == typeof(object)
             ? "new System.Dynamic.ExpandoObject()"
             : $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
-        BoundIndexedPropertyExpression indexed => $"{Emit(indexed.Receiver)}.{indexed.Property.GetterName ?? indexed.Property.Name.Split('.').Last()}({string.Join(", ", indexed.Arguments.Select(Emit))})",
+        BoundIndexedPropertyExpression indexed => $"{Emit(indexed.Receiver)}.{indexed.Property.GetterName ?? indexed.Property.Name.Split('.').Last()}({EmitIndexedArguments(indexed)})",
         BoundCallExpression call => EmitCall(call),
         BoundUnaryExpression unary => unary.OperatorKind == SyntaxKind.NotKeyword && unary.Type == typeof(object)
             ? $"(!Convert.ToBoolean({Emit(unary.Operand)}))"
@@ -171,6 +171,9 @@ public sealed class BoundExpressionEmitter
         });
         return string.Join(", ", offsets);
     }
+
+    internal string EmitIndexedArguments(BoundIndexedPropertyExpression indexed) =>
+        string.Join(", ", indexed.Arguments.Select((argument, i) => (indexed.Property.ByRefIndexes?[i] == true ? "ref " : "") + Emit(argument)));
 
     private string EmitCall(BoundCallExpression call)
     {

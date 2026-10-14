@@ -1,0 +1,76 @@
+Class Counter
+    Private fieldIndex As Long
+    Public Property Get Item(ByRef index As Long) As Long
+        index = index + 1
+        Item = index
+    End Property
+    Public Property Let Item(ByRef index As Long, ByVal incoming As Long)
+        index = index + incoming
+    End Property
+    Public Property Get Both(ByRef left As Long, ByRef right As Long) As Long
+        left = left + 1
+        right = right + 2
+        Both = left + right
+    End Property
+    Public Property Get Mixed(ByRef index As Long, ByVal extra As Long) As Long
+        index = index + extra
+        Mixed = index
+    End Property
+    Public Property Get Failing(ByRef index As Long) As Long
+        index = index + 10
+        Error 3105, "getter failed"
+    End Property
+    Public Property Let Failing(ByRef index As Long, ByVal incoming As Long)
+        index = index + incoming
+        Error 3106, "setter failed"
+    End Property
+    Public Function Internal() As Long
+        fieldIndex = 1
+        Internal = Item(fieldIndex)
+        If fieldIndex <> 2 Then Error 6, "field alias"
+    End Function
+End Class
+Sub Forward(ByRef index As Long)
+    Dim counter As New Counter
+    Dim result As Long
+    result = counter.Item(index)
+End Sub
+Sub Main()
+    Dim counter As New Counter
+    Dim index As Long
+    Dim result As Long
+    index = 1
+    result = counter.Item(index)
+    If result <> 2 Or index <> 2 Then Error 6, "getter alias"
+    counter.Item(index) = 3
+    If index <> 5 Then Error 6, "setter alias"
+    Call Forward(index)
+    If index <> 6 Then Error 6, "parameter forwarding"
+    If counter.Internal() <> 2 Then Error 6, "internal field"
+    index = 1
+    counter.Item(index) = counter.Item(index)
+    If index <> 4 Then Error 6, "setter RHS alias order"
+    index = 1
+    result = counter.Both(index, index)
+    If result <> 8 Or index <> 4 Then Error 6, "shared alias"
+    With counter
+        result = .mIxEd(index, 2)
+    End With
+    If result <> 6 Or index <> 6 Then Error 6, "mixed modes"
+    On Error GoTo GetterFailed
+    result = counter.Failing(index)
+    Error 6, "getter did not fail"
+GetterFailed:
+    If Err <> 3105 Or index <> 16 Then Error 6, "getter exception alias"
+    Resume AfterGetter
+AfterGetter:
+    On Error GoTo SetterFailed
+    counter.Failing(index) = 7
+    Error 6, "setter did not fail"
+SetterFailed:
+    If Err <> 3106 Or index <> 23 Then Error 6, "setter exception alias"
+    Resume Done
+Done:
+    On Error GoTo 0
+    Print "INDEXED_BYREF_RUNTIME_OK"
+End Sub

@@ -520,6 +520,21 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 ? property.SemanticParameterTypes[i]
                 : XpTypeSymbol.FromClr(property.ParameterTypes[i]);
             var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
+            if (property.ByRefIndexes?[i] == true)
+            {
+                if (!conversion.IsIdentity || arguments[i].Type != property.ParameterTypes[i])
+                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch,
+                        $"ByRef index {i + 1} to '{property.Name}' requires exactly {targetType.Name}.");
+                if (arguments[i] is BoundNameExpression { Symbol: LocalSymbol { IsListAlias: true } })
+                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TargetApiUnavailable,
+                        "List alias ByRef index arguments are not implemented yet; use a scalar local.");
+                if (arguments[i] is BoundIndexExpression or BoundMemberAccessExpression || arguments[i] is BoundNameExpression { Symbol: VariableSymbol })
+                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TargetApiUnavailable,
+                        "Complex or module-variable ByRef index arguments are not implemented yet; use a scalar local.");
+                if (arguments[i] is not BoundNameExpression { Symbol: LocalSymbol or ParameterSymbol or FieldSymbol })
+                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TypeMismatch,
+                        "A ByRef index requires a writable scalar local, parameter or class field name.");
+            }
             if (!conversion.IsImplicit)
                 return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch, $"Argument {i + 1} to '{property.Name}' must be {targetType.Name}, not {arguments[i].SemanticType.Name}.");
             if (!conversion.IsIdentity)

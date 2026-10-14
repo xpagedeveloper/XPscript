@@ -78,7 +78,8 @@ public sealed record IndexedPropertySymbol(
     IReadOnlyList<Type> ParameterTypes,
     XpTypeSymbol? SemanticReturnType = null,
     IReadOnlyList<XpTypeSymbol>? SemanticParameterTypes = null,
-    bool CanRead = true, bool CanWrite = true, string? GetterName = null, string? SetterName = null) : Symbol(Name)
+    bool CanRead = true, bool CanWrite = true, string? GetterName = null, string? SetterName = null,
+    IReadOnlyList<bool>? ByRefIndexes = null) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.IndexedProperty;
 }

@@ -13,6 +13,16 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+var byRefIndexSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/indexed-byref-runtime.xps"));
+var byRefIndexResult = await CallAsync(new { jsonrpc="2.0",id="indexed-byref-runtime",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=byRefIndexSource,filename="indexed-byref-runtime.xps" } } });
+if (byRefIndexResult.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST ByRef index validation failed: " + byRefIndexResult);
+foreach (var (fixture, code, line) in new[] { ("indexed-byref-literal-error", "XPS2001", 8), ("indexed-byref-type-error", "XPS2003", 9), ("indexed-byref-mode-error", "XPS1012", 5), ("indexed-byref-complex-error", "XPS3001", 9) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture+".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (error.GetProperty("diagnosticCode").GetString() != code || error.GetProperty("line").GetInt32() != line) throw new Exception("ByRef index diagnostic lost: " + result);
+}
 foreach (var indexedFixture in new[] { "indexed-properties-runtime", "indexed-get-parity" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", indexedFixture+".xps"));

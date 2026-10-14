@@ -22,7 +22,8 @@ internal static class AstClassMethodSupport
             if (indexes.Count > 0)
                 yield return new IndexedPropertySymbol(declaration.Identifier.Text + "." + name, type,
                     indexes.Select(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
-                    XpTypeSymbol.FromClr(type), null, readable, writable, "__xps_index_get_" + name, "__xps_index_let_" + name);
+                    XpTypeSymbol.FromClr(type), null, readable, writable, "__xps_index_get_" + name, "__xps_index_let_" + name,
+                    indexes.Select(p => p.IsExplicitByRef).ToArray());
             else yield return new PropertySymbol(declaration.Identifier.Text + "." + name,
                 type, XpTypeSymbol.FromClr(type), readable, writable);
         }
@@ -51,6 +52,9 @@ internal static class AstClassMethodSupport
             if (getter is not null && setter is not null && getter.Parameters.Count != Math.Max(0, setter.Parameters.Count - 1))
                 throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
                     $"Property '{group.Key}' accessors must use compatible index parameter signatures.", "XPS1012", "semantic");
+            if (getter is not null && setter is not null && getter.Parameters.Where((p, i) => p.IsExplicitByRef != setter.Parameters[i].IsExplicitByRef).Any())
+                throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
+                    $"Property '{group.Key}' accessors must use compatible index passing modes.", "XPS1012", "semantic");
             if (getter is not null && setter is not null &&
                 !string.Equals(getter.Type?.Identifier.Text, setter.Type?.Identifier.Text ?? setter.Parameters.LastOrDefault()?.Type?.Identifier.Text, StringComparison.OrdinalIgnoreCase))
                 throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
@@ -68,10 +72,9 @@ internal static class AstClassMethodSupport
                     "Method bodies declared in derived classes are not implemented by the AST compiler yet.", "XPS3001", "ast");
             var syntaxParameters = sub?.Parameters ?? function?.Parameters ?? property!.Parameters;
             var statements = sub?.Statements ?? function?.Statements ?? property!.Statements;
-            if (property is not null && (property.AccessorKeyword.Kind == SyntaxKind.SetKeyword ||
-                property.Parameters.Take(property.IsGetter ? property.Parameters.Count : Math.Max(0, property.Parameters.Count - 1)).Any(p => p.IsExplicitByRef)))
+            if (property?.AccessorKeyword.Kind == SyntaxKind.SetKeyword)
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "Object Set properties and explicit ByRef index parameters are not implemented by the AST compiler yet.", "XPS3001", "ast");
+                    "Object Set properties are not implemented by the AST compiler yet.", "XPS3001", "ast");
             if (property?.IsSetter == true && syntaxParameters.Count == 0)
                 syntaxParameters = new[] { new ParameterSyntax(new SyntaxToken(SyntaxKind.ByValKeyword, "ByVal", null, property.Identifier.Span),
                     property.Identifier, property.AsKeyword, property.Type) };
@@ -141,7 +144,7 @@ internal static class AstClassMethodSupport
                     output.Append(accessor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private " : "public ")
                         .Append(accessor.IsGetter ? BoundMethodEmitter.CSharpType(type) : "void")
                         .Append(accessor.IsGetter ? " __xps_index_get_" : " __xps_index_let_").Append(name).Append('(')
-                        .Append(string.Join(", ", accessor.Parameters.Select(p => BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)) + " " + p.Identifier.Text)))
+                        .Append(string.Join(", ", accessor.Parameters.Select((p, i) => (i < indexes.Count && p.IsExplicitByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)) + " " + p.Identifier.Text)))
                         .Append(") => __xps_property_").Append(accessor.IsGetter ? "get_" : "let_").Append(accessor.Identifier.Text)
                         .Append('(').Append(arguments).Append(");\n");
                 }

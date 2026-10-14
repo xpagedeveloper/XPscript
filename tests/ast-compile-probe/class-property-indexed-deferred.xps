@@ -1,5 +1,5 @@
 Class Box
-    Public Property Get Value(ByRef index As Long) As Long
+    Public Property Get Value(Optional ByVal index As Long = 1) As Long
         Value = index
     End Property
 End Class
