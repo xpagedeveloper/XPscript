@@ -375,7 +375,9 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [ ] Lower complex ByRef index locations.
           - [x] Verify qualified scalar user-class fields and implicit With fields through direct aliases, shared targets and exceptional exits; keep accessor-backed properties non-addressable.
             Verified 2026-10-14: release build, executable qualified-field Get/Let/shared-alias/With/exception coverage, complete AST CLI and MCP suites, and binding/lexer/emission/compilation probes passed. The smaller field capability fixture also executes successfully in AST; normal compilation succeeds but legacy execution fails on numeric-field Value access, so no full legacy parity is claimed. Field provenance is retained through optional-call rewrites, with no duplicate emitter or copy-back engine.
-          - [ ] Lower array/List entries and module-variable targets.
+          - [x] Verify typed uninitialized scalar Private/Public module-variable targets, shared aliases, defaults, shadowing and exceptional exits with mapped CLI/MCP diagnostics.
+            Verified 2026-10-14: release build, executable Get/Let/shared-alias/forwarding/class-access/shadowing/RHS/exception regressions, complete AST CLI and MCP suites, and binding/lexer/emission/compilation probes passed. One shared module-storage description supplies symbols and emitted fields with no extra runtime/addons. A failing MCP header-offset regression was fixed by masking rather than slicing module prefixes and now runs before the broad CLI suite. The smaller module fixture compiles normally but still fails in legacy numeric Value access at runtime, so it remains an AST capability claim rather than full legacy parity. Initialized/Date/reference-type module storage remains open.
+          - [ ] Lower array/List entries and initialized/other module-variable types, including Date and references.
         - [ ] Implement Optional index signatures/defaults.
       - [ ] Bind object/reference Get/Set, including indexed object values.
   - [ ] Bind constructors/arguments, Parent.New forwarding and user destructor bodies; finish full lifecycle dispatch.

@@ -84,7 +84,9 @@ End If
 
 ## Classes and object lifetime
 
-For AST indexed properties, an explicit `ByRef index As Long` can alias a matching scalar local, parameter or user-class field, including `holder.Index` and implicit With field access. Getter and setter declarations must use the same index mode. Changes are visible in the caller, including when the accessor raises an error; passing the same field or variable to two indexes preserves one shared location. Pass writable storage, not a literal or accessor-backed property. Array/List entries and module-variable targets remain unsupported, as do Optional index signatures. ByVal and unmodified indexes retain snapshot behavior.
+Typed AST module storage currently supports Boolean, Byte, String, Integer/Long and Single/Double/Currency. Date and other module types are not yet supported as indexed ByRef targets.
+
+For AST indexed properties, an explicit `ByRef index As Long` can alias a matching scalar local, parameter, user-class field or scalar module variable declared with Private/Public without an initializer. Module scalars start at zero/False/empty String. Qualified fields such as `holder.Index` and implicit With field access are supported. Getter and setter declarations must use the same index mode. Changes are visible in the caller, including when the accessor raises an error; passing the same field or variable to two indexes preserves one shared location. Pass writable storage, not a literal or accessor-backed property. Array/List entries, initialized/reference-type module targets and Optional index signatures remain unsupported. ByVal and unmodified indexes retain snapshot behavior.
 
 Experimental AST supports scalar indexed Get/Let: `store.Item(index) = value` and `Print store.Item(index)`, including multiple typed indexes, internal access and With. Index inputs are snapshots for ByVal or unmodified declarations; complex ByRef locations and Optional index signatures remain unimplemented. Private/read-only/write-only restrictions are enforced. Object/reference Property Set and derived accessor bodies still require migration. See `indexed-properties-runtime.xps` and `docs/ast-csharp-emitter.md`.
 

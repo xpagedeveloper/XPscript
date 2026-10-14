@@ -1,0 +1,83 @@
+Private moduleIndex As Long
+Public moduleText As String ' defaults to empty
+Private moduleFlag As Boolean
+Private moduleByte As Byte
+Private moduleAmount As Double
+Class ModuleCounter
+    Public Property Get Item(ByRef index As Long) As Long
+        index = index + 1
+        Item = index
+    End Property
+    Public Property Let Item(ByRef index As Long, ByVal incoming As Long)
+        index = index + incoming
+    End Property
+    Public Property Get Both(ByRef left As Long, ByRef right As Long) As Long
+        left = left + 1
+        right = right + 2
+        Both = left + right
+    End Property
+    Public Property Get Kinds(ByRef text As String, ByRef flag As Boolean, ByRef small As Byte, ByRef amount As Double) As Long
+        text = text & "changed"
+        flag = True
+        small = CByte(7)
+        amount = amount + 0.5
+        Kinds = 1
+    End Property
+    Public Property Get Failing(ByRef index As Long) As Long
+        index = index + 10
+        Error 3111, "getter failed"
+    End Property
+    Public Property Let Failing(ByRef index As Long, ByVal incoming As Long)
+        index = index + incoming
+        Error 3112, "setter failed"
+    End Property
+    Public Function Internal() As Long
+        Internal = Item(moduleIndex)
+    End Function
+End Class
+Sub Forward(ByRef index As Long)
+    Dim counter As New ModuleCounter
+    Dim result As Long
+    result = counter.Item(index)
+End Sub
+Sub Shadow()
+    Dim moduleIndex As Long
+    Dim counter As New ModuleCounter
+    Dim result As Long
+    moduleIndex = 100
+    result = counter.Item(moduleIndex)
+    If moduleIndex <> 101 Then Error 6, "local shadow alias"
+End Sub
+Sub Main()
+    Dim counter As New ModuleCounter
+    Dim result As Long
+    If moduleIndex <> 0 Or moduleText <> "" Or moduleFlag Or moduleByte <> CByte(0) Or moduleAmount <> 0 Then Error 6, "module defaults"
+    moduleIndex = 1
+    result = counter.Item(moduleIndex)
+    If result <> 2 Or moduleIndex <> 2 Then Error 6, "module getter alias"
+    counter.Item(moduleIndex) = 3
+    If moduleIndex <> 5 Then Error 6, "module setter alias"
+    Call Forward(moduleIndex)
+    If moduleIndex <> 6 Then Error 6, "module forwarding"
+    result = counter.Internal()
+    If result <> 7 Or moduleIndex <> 7 Then Error 6, "module alias in class"
+    Call Shadow()
+    If moduleIndex <> 7 Then Error 6, "module shadow isolation"
+    moduleIndex = 1
+    result = counter.Both(moduleIndex, moduleIndex)
+    If result <> 8 Or moduleIndex <> 4 Then Error 6, "module shared alias"
+    moduleIndex = 1
+    With counter
+        .Item(moduleIndex) = .Item(moduleIndex)
+    End With
+    If moduleIndex <> 4 Then Error 6, "module RHS alias order"
+    result = counter.Kinds(moduleText, moduleFlag, moduleByte, moduleAmount)
+    If result <> 1 Or moduleText <> "changed" Or Not moduleFlag Or moduleByte <> CByte(7) Or moduleAmount <> 0.5 Then Error 6, "module scalar kinds"
+    On Error Resume Next
+    result = counter.Failing(moduleIndex)
+    If Err <> 3111 Or moduleIndex <> 14 Then Error 6, "module getter exception"
+    counter.Failing(moduleIndex) = 7
+    If Err <> 3112 Or moduleIndex <> 21 Then Error 6, "module setter exception"
+    On Error GoTo 0
+    Print "INDEXED_BYREF_MODULE_OK"
+End Sub

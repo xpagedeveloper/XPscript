@@ -73,12 +73,15 @@ public static class AstExperimentalCompiler
         }
         var declarationStart = System.Text.RegularExpressions.Regex.Match(source, @"(?im)^\s*(Sub|Function|Class)\b");
         if (declarationStart.Success)
-            source = source[declarationStart.Index..].TrimStart();
+            // Ignore module headers without moving declaration/body spans away from the source.
+            source = new string(source[..declarationStart.Index].Select(c => c is '\r' or '\n' ? c : ' ').ToArray())
+                + source[declarationStart.Index..];
         var parser = new DeclarationParser(source);
         var unit = parser.ParseCompilationUnit();
         if (parser.Diagnostics.Count > 0)
             throw SyntaxDiagnosticException(parser.Diagnostics[0], sourcePath, fullSource);
         var moduleSource = AstClassMethodSupport.ModuleSource(fullSource);
+        var moduleFieldStorage = AstModuleFieldSupport.Find(moduleSource);
         // The experimental path keeps going when a non-selected declaration
         // contains syntax outside the current AST slice. Binding diagnostics
         // for the selected procedure remain authoritative below.
@@ -150,8 +153,8 @@ public static class AstExperimentalCompiler
         symbols.Declare(new LocalSymbol("matrix", typeof(object), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$", RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(long), XpTypeSymbol.Variant));
-        foreach (Match match in Regex.Matches(moduleSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline))
-            symbols.Declare(new VariableSymbol(match.Groups["name"].Value, ResolveRuntimeType(match.Groups["type"].Value), XpTypeSymbol.Variant));
+        foreach (var field in moduleFieldStorage)
+            symbols.Declare(field.Symbol);
         foreach (Match match in Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase | RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
         foreach (var typeName in AstObjectSupportRegistry.VariantTypeNames)
@@ -388,8 +391,7 @@ public static class AstExperimentalCompiler
             var span = ex.Span ?? sub?.Span ?? function?.Span ?? new TextSpan(0, 0);
             throw MappedDiagnostic(span, sourcePath, fullSource, ex.Message, CompilerDiagnosticCodes.InvalidSyntax, "emission");
         }
-        var moduleFields = string.Join(Environment.NewLine, Regex.Matches(moduleSource, @"^\s*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
-            .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = null;"));
+        var moduleFields = string.Join(Environment.NewLine, moduleFieldStorage.Select(field => field.Declaration));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ToCSharpLiteral(match.Groups["value"].Value.Trim())};"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"\bForAll\s+(?<name>[A-Za-z_]\w*)\s+In\b", RegexOptions.IgnoreCase)

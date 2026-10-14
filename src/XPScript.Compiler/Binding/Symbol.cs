@@ -29,6 +29,7 @@ public abstract record Symbol(string Name)
 public sealed record VariableSymbol(string Name, Type Type, XpTypeSymbol? SemanticType = null) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.Variable;
+    public bool HasTypedStorage { get; init; }
 }
 
 public sealed record LocalSymbol(string Name, Type Type, XpTypeSymbol? SemanticType = null) : Symbol(Name)
