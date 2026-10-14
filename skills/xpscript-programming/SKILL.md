@@ -84,7 +84,7 @@ End If
 
 ## Classes and object lifetime
 
-For AST indexed properties, an explicit `ByRef index As Long` can alias a matching scalar local, parameter or bare class field name. Getter and setter declarations must use the same index mode. Changes are visible in the caller, including when the accessor raises an error; passing the same variable to two indexes preserves one shared location. Pass a declared scalar variable, not a literal. Complex array/List/member/module-variable targets remain unsupported, as do Optional index signatures. ByVal and unmodified indexes retain snapshot behavior.
+For AST indexed properties, an explicit `ByRef index As Long` can alias a matching scalar local, parameter or user-class field, including `holder.Index` and implicit With field access. Getter and setter declarations must use the same index mode. Changes are visible in the caller, including when the accessor raises an error; passing the same field or variable to two indexes preserves one shared location. Pass writable storage, not a literal or accessor-backed property. Array/List entries and module-variable targets remain unsupported, as do Optional index signatures. ByVal and unmodified indexes retain snapshot behavior.
 
 Experimental AST supports scalar indexed Get/Let: `store.Item(index) = value` and `Print store.Item(index)`, including multiple typed indexes, internal access and With. Index inputs are snapshots for ByVal or unmodified declarations; complex ByRef locations and Optional index signatures remain unimplemented. Private/read-only/write-only restrictions are enforced. Object/reference Property Set and derived accessor bodies still require migration. See `indexed-properties-runtime.xps` and `docs/ast-csharp-emitter.md`.
 

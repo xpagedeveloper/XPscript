@@ -395,7 +395,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         if (writing ? !property.CanWrite : !property.CanRead)
             return Error(syntax, CompilerDiagnosticCodes.TypeMismatch,
                 $"Property '{property.Name.Split('.').Last()}' is {(writing ? "read-only" : "write-only")}.");
-        return new BoundMemberAccessExpression(receiver, property.Name.Split('.').Last(), property.PropertyType, property.SemanticType);
+        return new BoundMemberAccessExpression(receiver, property.Name.Split('.').Last(), property.PropertyType, property.SemanticType, property.IsFieldStorage);
     }
 
     private BoundExpression BindOverloadSet(CallExpressionSyntax syntax, BoundExpression? target, string name, IReadOnlyList<FunctionSymbol> functions)
@@ -528,10 +528,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 if (arguments[i] is BoundNameExpression { Symbol: LocalSymbol { IsListAlias: true } })
                     return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TargetApiUnavailable,
                         "List alias ByRef index arguments are not implemented yet; use a scalar local.");
-                if (arguments[i] is BoundIndexExpression or BoundMemberAccessExpression || arguments[i] is BoundNameExpression { Symbol: VariableSymbol })
+                if (arguments[i] is BoundIndexExpression or BoundMemberAccessExpression { IsFieldStorage: false } || arguments[i] is BoundNameExpression { Symbol: VariableSymbol })
                     return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TargetApiUnavailable,
                         "Complex or module-variable ByRef index arguments are not implemented yet; use a scalar local.");
-                if (arguments[i] is not BoundNameExpression { Symbol: LocalSymbol or ParameterSymbol or FieldSymbol })
+                if (arguments[i] is not BoundNameExpression { Symbol: LocalSymbol or ParameterSymbol or FieldSymbol }
+                    and not BoundMemberAccessExpression { IsFieldStorage: true })
                     return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TypeMismatch,
                         "A ByRef index requires a writable scalar local, parameter or class field name.");
             }

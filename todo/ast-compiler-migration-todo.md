@@ -372,7 +372,10 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
       - [ ] Complete explicit ByRef index alias/copy-back semantics and Optional index signatures.
         - [x] Preserve named scalar local/parameter/class-field aliases through Get/Let, mixed modes, shared aliases, forwarding and exceptional exits; verify mapped mode/type/location errors in CLI/MCP.
           Verified 2026-10-14: release build, executable alias/RHS/exception fixture, full AST CLI and MCP suites, and focused binding/lexer/emission/compilation probes passed. The full fixture's normal compilation still fails in legacy Resume/Goto label scope, so it is an AST capability test; existing ByVal getter parity remains verified. Disk-full test failures were resolved by removing two regenerable old image builds and a failed package cache, then rerunning the complete suites with existing signed packages and unchanged source.
-        - [ ] Lower complex ByRef index locations (array/List entries, member and module-variable targets).
+        - [ ] Lower complex ByRef index locations.
+          - [x] Verify qualified scalar user-class fields and implicit With fields through direct aliases, shared targets and exceptional exits; keep accessor-backed properties non-addressable.
+            Verified 2026-10-14: release build, executable qualified-field Get/Let/shared-alias/With/exception coverage, complete AST CLI and MCP suites, and binding/lexer/emission/compilation probes passed. The smaller field capability fixture also executes successfully in AST; normal compilation succeeds but legacy execution fails on numeric-field Value access, so no full legacy parity is claimed. Field provenance is retained through optional-call rewrites, with no duplicate emitter or copy-back engine.
+          - [ ] Lower array/List entries and module-variable targets.
         - [ ] Implement Optional index signatures/defaults.
       - [ ] Bind object/reference Get/Set, including indexed object values.
   - [ ] Bind constructors/arguments, Parent.New forwarding and user destructor bodies; finish full lifecycle dispatch.

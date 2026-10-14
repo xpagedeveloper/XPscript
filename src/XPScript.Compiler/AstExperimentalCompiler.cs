@@ -103,7 +103,7 @@ public static class AstExperimentalCompiler
             {
                 foreach (var field in current.Members.OfType<FieldDeclarationSyntax>())
                     if (field.Visibility?.Kind != SyntaxKind.PrivateKeyword)
-                    symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{field.Identifier.Text}", ResolveRuntimeType(field.Type.Identifier.Text), XpTypeSymbol.FromClr(ResolveRuntimeType(field.Type.Identifier.Text))));
+                    symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{field.Identifier.Text}", ResolveRuntimeType(field.Type.Identifier.Text), XpTypeSymbol.FromClr(ResolveRuntimeType(field.Type.Identifier.Text)), IsFieldStorage: true));
                 foreach (var property in AstClassMethodSupport.Properties(current, true))
                     symbols.Declare(property with { Name = classDeclaration.Identifier.Text + "." + property.Name.Split('.').Last() });
                 foreach (var method in current.Members.OfType<SubDeclarationSyntax>())

@@ -8,15 +8,15 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-runtime.xps
 if ($LASTEXITCODE -ne 0) { throw 'AST ByRef index compilation failed.' }
 $byRefIndexResult = dotnet (Join-Path $output 'indexed-byref-runtime/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($byRefIndexResult -join "`n") -ne 'INDEXED_BYREF_RUNTIME_OK') { throw 'AST ByRef index alias/exception execution failed.' }
-foreach ($byRefInvalid in @('indexed-byref-literal-error', 'indexed-byref-type-error', 'indexed-byref-mode-error', 'indexed-byref-complex-error')) {
+foreach ($byRefInvalid in @('indexed-byref-property-error', 'indexed-byref-literal-error', 'indexed-byref-type-error', 'indexed-byref-mode-error', 'indexed-byref-complex-error')) {
     $byRefFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$byRefInvalid.xps") -o (Join-Path $output $byRefInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($byRefFailure -join "`n") -notmatch "$byRefInvalid.xps:(5|8|9):") { throw "ByRef index diagnostic source mapping lost: $byRefInvalid" }
+    if ($LASTEXITCODE -ne 2 -or ($byRefFailure -join "`n") -notmatch "$byRefInvalid.xps:(5|8|9|16):") { throw "ByRef index diagnostic source mapping lost: $byRefInvalid" }
 }
-foreach ($indexedFixture in @('indexed-properties-runtime', 'indexed-get-parity')) {
+foreach ($indexedFixture in @('indexed-byref-field-capability', 'indexed-properties-runtime', 'indexed-get-parity')) {
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$indexedFixture.xps") -o (Join-Path $output $indexedFixture)
     if ($LASTEXITCODE -ne 0) { throw "AST indexed property compilation failed: $indexedFixture" }
     $indexedResult = dotnet (Join-Path $output "$indexedFixture/Generated.dll")
-    $indexedExpected = if ($indexedFixture -eq 'indexed-get-parity') { '6' } else { 'INDEXED_PROPERTIES_RUNTIME_OK' }
+    $indexedExpected = if ($indexedFixture -eq 'indexed-get-parity') { '6' } elseif ($indexedFixture -eq 'indexed-byref-field-capability') { 'INDEXED_BYREF_FIELD_OK' } else { 'INDEXED_PROPERTIES_RUNTIME_OK' }
     if ($LASTEXITCODE -ne 0 -or ($indexedResult -join "`n") -ne $indexedExpected) { throw "AST indexed property execution failed: $indexedFixture" }
 }
 $indexedNormal = Join-Path $output $(if ($IsWindows) { 'indexed-get-normal.exe' } else { 'indexed-get-normal' })

@@ -98,7 +98,7 @@ internal static class AstClassMethodSupport
             {
                 var type = AstExperimentalCompiler.ResolveRuntimeType(field.Type.Identifier.Text);
                 classScope.Declare(new FieldSymbol(field.Identifier.Text, type, XpTypeSymbol.FromClr(type)));
-                classScope.Declare(new PropertySymbol(declaration.Identifier.Text + "." + field.Identifier.Text, type, XpTypeSymbol.FromClr(type)));
+                classScope.Declare(new PropertySymbol(declaration.Identifier.Text + "." + field.Identifier.Text, type, XpTypeSymbol.FromClr(type), IsFieldStorage: true));
             }
             foreach (var own in declaration.Members.Where(m => m is SubDeclarationSyntax or FunctionDeclarationSyntax))
             {

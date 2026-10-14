@@ -1,3 +1,6 @@
+Class IndexHolder
+    Public Index As Long
+End Class
 Class Counter
     Private fieldIndex As Long
     Public Property Get Item(ByRef index As Long) As Long
@@ -38,7 +41,24 @@ End Sub
 Sub Main()
     Dim counter As New Counter
     Dim index As Long
+    Dim holder As New IndexHolder
     Dim result As Long
+    holder.Index = 1
+    result = counter.Item(holder.Index)
+    If result <> 2 Or holder.Index <> 2 Then Error 6, "qualified getter alias"
+    counter.Item(holder.Index) = 3
+    If holder.Index <> 5 Then Error 6, "qualified setter alias"
+    holder.Index = 1
+    result = counter.Both(holder.Index, holder.Index)
+    If result <> 8 Or holder.Index <> 4 Then Error 6, "qualified shared alias"
+    With holder
+        result = counter.Item(.Index)
+    End With
+    If result <> 5 Or holder.Index <> 5 Then Error 6, "implicit field alias"
+    On Error Resume Next
+    result = counter.Failing(holder.Index)
+    If holder.Index <> 15 Then Error 6, "qualified exception alias"
+    On Error GoTo 0
     index = 1
     result = counter.Item(index)
     If result <> 2 Or index <> 2 Then Error 6, "getter alias"
