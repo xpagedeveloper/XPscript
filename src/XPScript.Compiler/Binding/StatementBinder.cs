@@ -536,7 +536,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         {
             var receiver = BindExpression(dynamicMember.Expression);
             var index = BindExpression(dynamicIndex.Arguments[0]);
-            if (receiver is not null && index is not null && receiver.Type == typeof(object))
+            if (receiver is not null && index is not null && receiver.SemanticType.IsVariant)
                 return BindBoundAssignment(new BoundIndexExpression(new BoundMemberAccessExpression(receiver, dynamicMember.NameToken.Text, typeof(object), XpTypeSymbol.Variant), index, typeof(object), XpTypeSymbol.Variant), valueSyntax, isSet, targetSyntax);
         }
         var target = BindExpression(targetSyntax, assignmentTarget: true);
@@ -598,7 +598,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                 $"XPImage property '{AstImageSupport.MemberName(imageMember.Name)}' is read-only.", targetSyntax.Span));
             return null;
         }
-        if (!IsWritable(target))
+        if (!IsWritable(target) && target is not BoundIndexedPropertyExpression { Property.CanWrite: true, Property.SetterName: not null })
         {
             _diagnostics.Add(new SyntaxDiagnostic(
                 CompilerDiagnosticCodes.TypeMismatch,

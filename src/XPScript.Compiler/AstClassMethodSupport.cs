@@ -7,7 +7,7 @@ namespace XPScript.Compiler;
 /// <summary>Instance procedure bodies use the same binder/flow validation and emitter as module procedures.</summary>
 internal static class AstClassMethodSupport
 {
-    internal static IEnumerable<PropertySymbol> Properties(ClassDeclarationSyntax declaration, bool external)
+    internal static IEnumerable<Symbol> Properties(ClassDeclarationSyntax declaration, bool external)
     {
         foreach (var group in declaration.Members.OfType<PropertyDeclarationSyntax>().GroupBy(p => p.Identifier.Text, StringComparer.OrdinalIgnoreCase))
         {
@@ -17,7 +17,13 @@ internal static class AstClassMethodSupport
             var writable = setter is not null && (!external || setter.Visibility?.Kind != SyntaxKind.PrivateKeyword);
             if (!readable && !writable) continue;
             var type = AstExperimentalCompiler.ResolveRuntimeType(getter?.Type?.Identifier.Text ?? setter?.Type?.Identifier.Text ?? setter?.Parameters.LastOrDefault()?.Type?.Identifier.Text);
-            yield return new PropertySymbol(declaration.Identifier.Text + "." + group.First().Identifier.Text,
+            var name = group.First().Identifier.Text;
+            var indexes = getter?.Parameters ?? setter!.Parameters.Take(Math.Max(0, setter.Parameters.Count - 1)).ToArray();
+            if (indexes.Count > 0)
+                yield return new IndexedPropertySymbol(declaration.Identifier.Text + "." + name, type,
+                    indexes.Select(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
+                    XpTypeSymbol.FromClr(type), null, readable, writable, "__xps_index_get_" + name, "__xps_index_let_" + name);
+            else yield return new PropertySymbol(declaration.Identifier.Text + "." + name,
                 type, XpTypeSymbol.FromClr(type), readable, writable);
         }
     }
@@ -42,6 +48,9 @@ internal static class AstClassMethodSupport
             if (group.Count(p => p.IsGetter) > 1 || group.Count(p => p.IsSetter) > 1)
                 throw AstExperimentalCompiler.MappedDiagnostic(group.Last().Span, sourcePath, source,
                     $"Property '{group.Key}' has duplicate accessors.", "XPS1012", "semantic");
+            if (getter is not null && setter is not null && getter.Parameters.Count != Math.Max(0, setter.Parameters.Count - 1))
+                throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
+                    $"Property '{group.Key}' accessors must use compatible index parameter signatures.", "XPS1012", "semantic");
             if (getter is not null && setter is not null &&
                 !string.Equals(getter.Type?.Identifier.Text, setter.Type?.Identifier.Text ?? setter.Parameters.LastOrDefault()?.Type?.Identifier.Text, StringComparison.OrdinalIgnoreCase))
                 throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
@@ -60,9 +69,9 @@ internal static class AstClassMethodSupport
             var syntaxParameters = sub?.Parameters ?? function?.Parameters ?? property!.Parameters;
             var statements = sub?.Statements ?? function?.Statements ?? property!.Statements;
             if (property is not null && (property.AccessorKeyword.Kind == SyntaxKind.SetKeyword ||
-                property.Parameters.Count > (property.IsGetter ? 0 : 1)))
+                property.Parameters.Take(property.IsGetter ? property.Parameters.Count : Math.Max(0, property.Parameters.Count - 1)).Any(p => p.IsExplicitByRef)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "Indexed and object Set class properties are not implemented by the AST compiler yet.", "XPS3001", "ast");
+                    "Object Set properties and explicit ByRef index parameters are not implemented by the AST compiler yet.", "XPS3001", "ast");
             if (property?.IsSetter == true && syntaxParameters.Count == 0)
                 syntaxParameters = new[] { new ParameterSyntax(new SyntaxToken(SyntaxKind.ByValKeyword, "ByVal", null, property.Identifier.Span),
                     property.Identifier, property.AsKeyword, property.Type) };
@@ -123,10 +132,25 @@ internal static class AstClassMethodSupport
             var setter = group.FirstOrDefault(p => p.IsSetter);
             var name = group.First().Identifier.Text;
             var type = AstExperimentalCompiler.ResolveRuntimeType(getter?.Type?.Identifier.Text ?? setter?.Type?.Identifier.Text ?? setter?.Parameters.LastOrDefault()?.Type?.Identifier.Text);
+            var indexes = getter?.Parameters ?? setter!.Parameters.Take(Math.Max(0, setter.Parameters.Count - 1)).ToArray();
+            if (indexes.Count > 0)
+            {
+                foreach (var accessor in group)
+                {
+                    var arguments = string.Join(", ", accessor.Parameters.Select(p => (p.IsByRef ? "ref " : "") + p.Identifier.Text));
+                    output.Append(accessor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private " : "public ")
+                        .Append(accessor.IsGetter ? BoundMethodEmitter.CSharpType(type) : "void")
+                        .Append(accessor.IsGetter ? " __xps_index_get_" : " __xps_index_let_").Append(name).Append('(')
+                        .Append(string.Join(", ", accessor.Parameters.Select(p => BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)) + " " + p.Identifier.Text)))
+                        .Append(") => __xps_property_").Append(accessor.IsGetter ? "get_" : "let_").Append(accessor.Identifier.Text)
+                        .Append('(').Append(arguments).Append(");\n");
+                }
+                continue;
+            }
             var publicProperty = group.Any(p => p.Visibility?.Kind != SyntaxKind.PrivateKeyword);
             var getterVisibility = publicProperty && getter?.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private " : "";
             var setterVisibility = publicProperty && setter?.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private " : "";
-            output.Append(publicProperty ? "public " : "private ").Append(type == typeof(string) ? "string" : type == typeof(long) ? "long" : type == typeof(bool) ? "bool" : type == typeof(byte) ? "byte" : "double")
+            output.Append(publicProperty ? "public " : "private ").Append(BoundMethodEmitter.CSharpType(type))
                 .Append(' ').Append(name).Append(" { ");
             if (getter is not null) output.Append(getterVisibility).Append("get => __xps_property_get_").Append(getter.Identifier.Text).Append("(); ");
             if (setter is not null) output.Append(setterVisibility).Append("set => __xps_property_let_").Append(setter.Identifier.Text)

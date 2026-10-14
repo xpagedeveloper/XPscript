@@ -295,6 +295,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             target = null;
             name = nameSyntax.IdentifierToken.Text;
+            if (_symbols.TryLookup(name, out var ownIndexed) && ownIndexed is IndexedPropertySymbol indexed && _symbols.TryLookup("Me", out var me))
+                return BindIndexedProperty(syntax, new BoundNameExpression(me), indexed);
             if (name.Equals("CsvSave", StringComparison.OrdinalIgnoreCase) || name.Equals("CsvWriteFile", StringComparison.OrdinalIgnoreCase))
                 return Error(nameSyntax.IdentifierToken, CompilerDiagnosticCodes.RemovedNativeApi,
                     "CSV file output is available only through XPCsvDocument.Save or XPCsvDocument.SaveFile.");
@@ -505,6 +507,10 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
     private BoundExpression BindIndexedProperty(CallExpressionSyntax syntax, BoundExpression receiver, IndexedPropertySymbol property)
     {
+        var writing = ReferenceEquals(syntax, assignmentTarget);
+        if (writing ? !property.CanWrite : !property.CanRead)
+            return Error(syntax, CompilerDiagnosticCodes.TypeMismatch,
+                $"Property '{property.Name.Split('.').Last()}' is {(writing ? "read-only" : "write-only")}.");
         var arguments = syntax.Arguments.Select(Bind).ToArray();
         if (arguments.Length != property.ParameterTypes.Count)
             return Error(syntax, CompilerDiagnosticCodes.ArgumentCountMismatch, $"Indexed property '{property.Name}' expects {property.ParameterTypes.Count} argument(s), but received {arguments.Length}.");

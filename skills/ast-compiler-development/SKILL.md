@@ -28,6 +28,8 @@ Use this workflow when adding support for an XP object or AST-only language feat
 
 ## Design rule
 
+Scalar indexed properties reuse IndexedPropertySymbol/BoundIndexedPropertyExpression and the common accessor-body binder/emitter. Register independent read/write permissions, typed index signatures and canonical getter/setter targets. Evaluate receiver, indexes and incoming value once in order. Current wrappers snapshot ByVal/unmodified scalar indexes; explicit ByRef alias/copy-back, Optional indexes and object Set remain explicit deferrals. Keep semantic local storage types shared across ordinary, flat and error-flow emission.
+
 Scalar non-indexed class properties reuse the same procedure binder/emitter as class methods, with property wrappers calling bound Get/Let bodies. Register grouped property symbols with independent CanRead/CanWrite permissions; preserve private accessor visibility and canonical names, including implicit With. Parameterless Let uses the property name for the incoming value. Do not fabricate auto-property storage or close indexed/object Set migration from this subset.
 
 User class procedures use `AstClassMethodSupport`, shared `AstExperimentalCompiler.BindProcedure` control-flow validation and the instance mode of BoundMethodEmitter. Keep lexical class/member/parameter scopes separate, canonicalize declared member casing, omit private members externally and never scan class fields as module globals. Scope Program helper imports to generated user classes. Scalar typed bodies are verified; object/array/List signatures, Optional/Static and derived bodies remain explicit XPS3001 deferrals. Do not close the parent class TODO until accessors, constructors, inheritance and destructor dispatch are migrated.

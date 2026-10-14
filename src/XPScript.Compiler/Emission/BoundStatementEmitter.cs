@@ -25,10 +25,7 @@ public sealed class BoundStatementEmitter
                          .Where(item => item.Initializer is null && item.Local.StaticStorageName is null))
             {
                 var type = CSharpType(declaration.Local.Type);
-                if (declaration.Local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
-                    !semantic.IsVariant && !semantic.IsObject && !semantic.IsNothing && !semantic.IsNull && !semantic.IsEmpty && !semantic.IsList)
-                    type = $"Xp{semantic.Name}";
-                type = BoundExpressionEmitter.RuntimeObjectType(declaration.Local.SemanticType?.Name ?? "") ?? type;
+                type = BoundMethodEmitter.SemanticStorageType(declaration.Local, type);
                 output.Write($"{type} {declaration.Local.Name} = default({type});", 0, declaration.Span);
             }
         }
@@ -76,8 +73,13 @@ public sealed class BoundStatementEmitter
                     Line($"LSArrayRuntime.SetIndex({_expressions.Emit(variantIndex.Expression)}, {_expressions.Emit(variantIndex.Index)}, {_expressions.Emit(assignment.Expression)});");
                     break;
                 }
-                if (assignment.Target is BoundIndexedPropertyExpression)
-                    throw new NotSupportedException("Indexed property assignment requires accessor lowering.");
+                if (assignment.Target is BoundIndexedPropertyExpression indexedProperty)
+                {
+                    if (indexedProperty.Property.SetterName is null)
+                        throw new NotSupportedException("Indexed property assignment requires accessor lowering.");
+                    Line($"{_expressions.Emit(indexedProperty.Receiver)}.{indexedProperty.Property.SetterName}({string.Join(", ", indexedProperty.Arguments.Select(_expressions.Emit).Append(_expressions.Emit(assignment.Expression)))});");
+                    break;
+                }
                 if (assignment.Target is BoundIndexExpression arrayTarget &&
                     (arrayTarget.Indices.Count > 1 || arrayTarget.Expression.SemanticType.IsArray || arrayTarget.Expression is BoundNameExpression { Symbol: LocalSymbol { IsDynamicArray: true } } ||
                      arrayTarget.Expression is BoundNameExpression { Symbol: VariableSymbol { SemanticType.IsArray: true } }))
@@ -232,9 +234,7 @@ public sealed class BoundStatementEmitter
                 var type = CSharpType(declaration.Local.Type);
                 if (declaration.Local.IsDynamicArray)
                     type = "System.Array";
-                if (declaration.Local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
-                    !semantic.IsVariant && !semantic.IsObject && !semantic.IsNothing && !semantic.IsNull && !semantic.IsEmpty)
-                    type = $"Xp{semantic.Name}";
+                type = BoundMethodEmitter.SemanticStorageType(declaration.Local, type);
                 if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase)) type = "XpNotesHttp";
                 else if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase)) type = "XpAi";
                 else if (declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase)) type = "XpAi";

@@ -66,6 +66,14 @@ public sealed class BoundMethodEmitter
         return mode + type + " " + parameter.Name;
     }
 
+    internal static string SemanticStorageType(LocalSymbol local, string fallback)
+    {
+        if (BoundExpressionEmitter.RuntimeObjectType(local.SemanticType?.Name ?? "") is { } native) return native;
+        return local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
+            !semantic.IsVariant && !semantic.IsObject && !semantic.IsNothing && !semantic.IsNull && !semantic.IsEmpty && !semantic.IsList
+            ? "Xp" + semantic.Name : fallback;
+    }
+
     internal static string CSharpType(Type type) => type == typeof(void) ? "void"
         : type == typeof(long) ? "long"
         : type == typeof(double) ? "double"

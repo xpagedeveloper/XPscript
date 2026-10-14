@@ -115,7 +115,7 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new => @new.Type == typeof(object)
             ? "new System.Dynamic.ExpandoObject()"
             : $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
-        BoundIndexedPropertyExpression indexed => $"{Emit(indexed.Receiver)}.{indexed.Property.Name.Split('.').Last()}({string.Join(", ", indexed.Arguments.Select(Emit))})",
+        BoundIndexedPropertyExpression indexed => $"{Emit(indexed.Receiver)}.{indexed.Property.GetterName ?? indexed.Property.Name.Split('.').Last()}({string.Join(", ", indexed.Arguments.Select(Emit))})",
         BoundCallExpression call => EmitCall(call),
         BoundUnaryExpression unary => unary.OperatorKind == SyntaxKind.NotKeyword && unary.Type == typeof(object)
             ? $"(!Convert.ToBoolean({Emit(unary.Operand)}))"

@@ -1,0 +1,9 @@
+Class Store
+    Private Property Get Item(ByVal index As Long) As Long
+        Item = index
+    End Property
+End Class
+Sub Main()
+    Dim item As New Store
+    Print item.Item(1)
+End Sub

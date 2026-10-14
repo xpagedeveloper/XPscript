@@ -13,6 +13,22 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+foreach (var indexedFixture in new[] { "indexed-properties-runtime", "indexed-get-parity" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", indexedFixture+".xps"));
+    foreach (var indexedTool in indexedFixture == "indexed-get-parity" ? new[] { "xpscript_ast_validate", "xpscript_validate" } : new[] { "xpscript_ast_validate" })
+    {
+        var result = await CallAsync(new { jsonrpc="2.0",id=indexedFixture+indexedTool,method="tools/call",@params=new { name=indexedTool,arguments=new { source,filename=indexedFixture+".xps" } } });
+        if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Indexed property validation failed: " + result);
+    }
+}
+foreach (var (fixture, code, line) in new[] { ("indexed-signature-error", "XPS1012", 5), ("indexed-readonly-error", "XPS2001", 8), ("indexed-writeonly-error", "XPS2001", 7), ("indexed-arity-error", "XPS2002", 8), ("indexed-type-error", "XPS2003", 8), ("indexed-private-error", "XPS2009", 8) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture+".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (error.GetProperty("diagnosticCode").GetString() != code || error.GetProperty("line").GetInt32() != line) throw new Exception("Indexed diagnostic lost: " + result);
+}
 var propertiesSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-properties-native.xps"));
 var propertyCapabilitySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-properties-capability.xps"));
 var propertyCapability = await CallAsync(new { jsonrpc="2.0",id="property-capability",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=propertyCapabilitySource,filename="class-properties-capability.xps" } } });

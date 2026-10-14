@@ -4,6 +4,26 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+foreach ($indexedFixture in @('indexed-properties-runtime', 'indexed-get-parity')) {
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$indexedFixture.xps") -o (Join-Path $output $indexedFixture)
+    if ($LASTEXITCODE -ne 0) { throw "AST indexed property compilation failed: $indexedFixture" }
+    $indexedResult = dotnet (Join-Path $output "$indexedFixture/Generated.dll")
+    $indexedExpected = if ($indexedFixture -eq 'indexed-get-parity') { '6' } else { 'INDEXED_PROPERTIES_RUNTIME_OK' }
+    if ($LASTEXITCODE -ne 0 -or ($indexedResult -join "`n") -ne $indexedExpected) { throw "AST indexed property execution failed: $indexedFixture" }
+}
+$indexedNormal = Join-Path $output $(if ($IsWindows) { 'indexed-get-normal.exe' } else { 'indexed-get-normal' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'indexed-get-parity.xps') -o $indexedNormal --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal indexed getter compilation failed.' }
+$indexedNormalResult = & $indexedNormal
+if ($LASTEXITCODE -ne 0 -or ($indexedNormalResult -join "`n") -ne '6') { throw 'Normal/AST indexed getter parity failed.' }
+dotnet $compiler ast-compile (Join-Path $root 'samples/indexed-properties.xps') -o (Join-Path $output 'indexed-existing-sample')
+if ($LASTEXITCODE -ne 0) { throw 'Existing indexed scalar sample compilation failed.' }
+$indexedSampleResult = dotnet (Join-Path $output 'indexed-existing-sample/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($indexedSampleResult -join "`n") -ne "INDEX1=first`nINDEX2=second") { throw 'Existing indexed scalar sample execution failed.' }
+foreach ($indexedInvalid in @('indexed-signature-error', 'indexed-readonly-error', 'indexed-writeonly-error', 'indexed-arity-error', 'indexed-type-error', 'indexed-private-error')) {
+    $indexedFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$indexedInvalid.xps") -o (Join-Path $output $indexedInvalid) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($indexedFailure -join "`n") -notmatch "$indexedInvalid.xps:(5|7|8):") { throw "Indexed diagnostic source mapping lost: $indexedInvalid" }
+}
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-properties-capability.xps') -o (Join-Path $output 'class-properties-capability')
 if ($LASTEXITCODE -ne 0) { throw 'AST explicit property setter/With compilation failed.' }
 $propertyCapability = dotnet (Join-Path $output 'class-properties-capability/Generated.dll')
