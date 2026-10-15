@@ -13,6 +13,9 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+var objectPropertySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/object-property-set.xps"));
+var objectPropertyResult = await CallAsync(new { jsonrpc="2.0",id="object-property-set",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=objectPropertySource,filename="object-property-set.xps" } } });
+if (objectPropertyResult.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Object Property Set validation failed: " + objectPropertyResult);
 foreach (var fixture in new[] { "indexed-optional-simple", "indexed-optional-runtime" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));

@@ -78,15 +78,13 @@ internal static class AstClassMethodSupport
                     "Method bodies declared in derived classes are not implemented by the AST compiler yet.", "XPS3001", "ast");
             var syntaxParameters = sub?.Parameters ?? function?.Parameters ?? property!.Parameters;
             var statements = sub?.Statements ?? function?.Statements ?? property!.Statements;
-            if (property?.AccessorKeyword.Kind == SyntaxKind.SetKeyword)
-                throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "Object Set properties are not implemented by the AST compiler yet.", "XPS3001", "ast");
+            var isObjectSetter = property?.AccessorKeyword.Kind == SyntaxKind.SetKeyword;
             if (property?.IsSetter == true && syntaxParameters.Count == 0)
                 syntaxParameters = new[] { new ParameterSyntax(new SyntaxToken(SyntaxKind.ByValKeyword, "ByVal", null, property.Identifier.Span),
                     property.Identifier, property.AsKeyword, property.Type) };
             var resultTypeName = function?.ReturnType?.Identifier.Text ?? (property?.IsGetter == true ? property.Type?.Identifier.Text : null);
-            if (syntaxParameters.Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object)) ||
-                (function is not null || property?.IsGetter == true) && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object))
+            if (syntaxParameters.Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) && !isObjectSetter) ||
+                function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar typed parameters and results; object/array signatures are not implemented yet.", "XPS3001", "ast");
             if (syntaxParameters.Any(p => p.IsList || p.IsOptional && property is null) ||

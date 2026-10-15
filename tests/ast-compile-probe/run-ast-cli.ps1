@@ -4,6 +4,10 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-property-set.xps') -o (Join-Path $output 'object-property-set')
+if ($LASTEXITCODE -ne 0) { throw 'AST object Property Set compilation failed.' }
+$objectPropertyResult = dotnet (Join-Path $output 'object-property-set/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($objectPropertyResult -join "`n") -ne 'OBJECT_PROPERTY_SET_OK') { throw 'AST object Property Set execution failed.' }
 foreach ($fixture in @('indexed-optional-simple', 'indexed-optional-runtime')) {
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture)
     if ($LASTEXITCODE -ne 0) { throw "AST Optional index compilation failed: $fixture" }
