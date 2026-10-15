@@ -395,7 +395,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         if (writing ? !property.CanWrite : !property.CanRead)
             return Error(syntax, CompilerDiagnosticCodes.TypeMismatch,
                 $"Property '{property.Name.Split('.').Last()}' is {(writing ? "read-only" : "write-only")}.");
-        return new BoundMemberAccessExpression(receiver, property.Name.Split('.').Last(), property.PropertyType, property.SemanticType, property.IsFieldStorage);
+        return new BoundMemberAccessExpression(receiver, property.Name.Split('.').Last(), property.PropertyType, property.SemanticType, property.IsFieldStorage, property.AssignmentKind);
     }
 
     private BoundExpression BindOverloadSet(CallExpressionSyntax syntax, BoundExpression? target, string name, IReadOnlyList<FunctionSymbol> functions)

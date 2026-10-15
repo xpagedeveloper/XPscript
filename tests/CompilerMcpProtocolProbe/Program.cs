@@ -13,6 +13,21 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+foreach (var fixture in new[] { "indexed-object-runtime", "indexed-object-properties" })
+{
+    var path = fixture == "indexed-object-properties" ? Path.Combine(repo, "samples", fixture + ".xps") : Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps");
+    var source = await File.ReadAllTextAsync(path);
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Typed/indexed object validation failed: " + result);
+}
+foreach (var (fixture, line) in new[] { ("object-property-member-mode-error", 7), ("object-property-declaration-error", 2), ("object-property-mode-error", 7), ("object-property-scalar-error", 7), ("object-property-type-error", 11), ("object-property-let-error", 7), ("object-property-call-target-error", 4) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (!result.GetProperty("result").GetProperty("isError").GetBoolean() || error.GetProperty("diagnosticCode").GetString() != "XPS2001" || error.GetProperty("line").GetInt32() != line)
+        throw new Exception("Object accessor diagnostic lost: " + result);
+}
 var objectPropertySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/object-property-set.xps"));
 var objectPropertyResult = await CallAsync(new { jsonrpc="2.0",id="object-property-set",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=objectPropertySource,filename="object-property-set.xps" } } });
 if (objectPropertyResult.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Object Property Set validation failed: " + objectPropertyResult);

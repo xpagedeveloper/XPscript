@@ -4,6 +4,18 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+foreach ($fixture in @('indexed-object-runtime', 'indexed-object-properties')) {
+    $fixtureSource = if ($fixture -eq 'indexed-object-properties') { Join-Path $root 'samples/indexed-object-properties.xps' } else { Join-Path $PSScriptRoot "$fixture.xps" }
+    dotnet $compiler ast-compile $fixtureSource -o (Join-Path $output $fixture)
+    if ($LASTEXITCODE -ne 0) { throw "AST typed/indexed object compilation failed: $fixture" }
+    $result = dotnet (Join-Path $output "$fixture/Generated.dll")
+    $expected = if ($fixture -eq 'indexed-object-runtime') { 'INDEXED_OBJECT_RUNTIME_OK' } else { "OBJECT1=first-object`nOBJECT2=second-object" }
+    if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST typed/indexed object execution failed: $fixture" }
+}
+foreach ($fixture in @('object-property-member-mode-error', 'object-property-declaration-error', 'object-property-mode-error', 'object-property-scalar-error', 'object-property-type-error', 'object-property-let-error', 'object-property-call-target-error')) {
+    $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:(2|4|7|11):\d+: XPS2001:") { throw "Object accessor diagnostic lost: $fixture" }
+}
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-property-set.xps') -o (Join-Path $output 'object-property-set')
 if ($LASTEXITCODE -ne 0) { throw 'AST object Property Set compilation failed.' }
 $objectPropertyResult = dotnet (Join-Path $output 'object-property-set/Generated.dll')

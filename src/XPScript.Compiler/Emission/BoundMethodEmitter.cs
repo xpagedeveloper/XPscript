@@ -15,7 +15,7 @@ public sealed class BoundMethodEmitter
         => Emit(methodName, returnType, parameters, statements, isStatic: true);
 
     public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements, bool isStatic,
-        string? source = null, string? sourcePath = null)
+        string? source = null, string? sourcePath = null, XpTypeSymbol? semanticReturnType = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
         ArgumentNullException.ThrowIfNull(returnType);
@@ -37,7 +37,7 @@ public sealed class BoundMethodEmitter
             throw new BoundEmissionException(ex.Message, statements.FirstOrDefault()?.Span, ex);
         }
         var output = new StringBuilder();
-        output.Append("public ").Append(isStatic ? "static " : string.Empty).Append(CSharpType(returnType)).Append(' ')
+        output.Append("public ").Append(isStatic ? "static " : string.Empty).Append(semanticReturnType is null ? CSharpType(returnType) : CSharpType(semanticReturnType)).Append(' ')
             .Append(methodName).Append('(')
             .Append(string.Join(", ", parameters.Select(Parameter)))
             .Append(")\n{\n");
@@ -62,7 +62,7 @@ public sealed class BoundMethodEmitter
     {
         var mode = parameter.IsByRef ? "ref " : string.Empty;
         var type = parameter.SemanticType?.IsList == true ? $"LSList<{CSharpType(parameter.SemanticType.ElementType!.RuntimeType)}>" : CSharpType(parameter.Type);
-        type = BoundExpressionEmitter.RuntimeObjectType(parameter.SemanticType?.Name ?? "") ?? type;
+        type = parameter.SemanticType is { } semantic ? CSharpType(semantic) : type;
         return mode + type + " " + parameter.Name;
     }
 
@@ -82,4 +82,10 @@ public sealed class BoundMethodEmitter
         : type == typeof(string) ? "string"
         : type == typeof(object) ? "object"
         : type.FullName?.Replace('+', '.') ?? type.Name;
+
+    internal static string CSharpType(XpTypeSymbol type) => type.IsList
+        ? $"LSList<{CSharpType(type.ElementType!.RuntimeType)}>"
+        : BoundExpressionEmitter.RuntimeObjectType(type.Name) ??
+          (type.RuntimeType == typeof(object) && !type.IsVariant && !type.IsObject && !type.IsNothing && !type.IsNull && !type.IsEmpty
+              ? "Xp" + type.Name : CSharpType(type.RuntimeType));
 }

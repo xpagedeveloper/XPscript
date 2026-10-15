@@ -48,7 +48,7 @@ public static class OptionalCallLowering
             BoundUnaryExpression unary => new BoundUnaryExpression(unary.OperatorKind, ReplaceParameters(unary.Operand, replacements), unary.Type),
             BoundConversionExpression conversion => new BoundConversionExpression(ReplaceParameters(conversion.Expression, replacements), conversion.SemanticType, conversion.Conversion),
             BoundCallExpression call => new BoundCallExpression(call.Target is null ? null : ReplaceParameters(call.Target, replacements), call.Function, call.Arguments.Select(argument => ReplaceParameters(argument, replacements)).ToArray()),
-            BoundMemberAccessExpression member => new BoundMemberAccessExpression(ReplaceParameters(member.Receiver, replacements), member.Name, member.Type, member.SemanticType, member.IsFieldStorage),
+            BoundMemberAccessExpression member => new BoundMemberAccessExpression(ReplaceParameters(member.Receiver, replacements), member.Name, member.Type, member.SemanticType, member.IsFieldStorage, member.AssignmentKind),
             BoundIndexExpression index => new BoundIndexExpression(ReplaceParameters(index.Expression, replacements), ReplaceParameters(index.Index, replacements), index.Type, index.SemanticType),
             BoundIndexedPropertyExpression indexed => new BoundIndexedPropertyExpression(ReplaceParameters(indexed.Receiver, replacements), indexed.Property, indexed.Arguments.Select(argument => ReplaceParameters(argument, replacements)).ToArray()),
             BoundNewExpression @new => new BoundNewExpression(@new.Type, @new.Arguments.Select(argument => ReplaceParameters(argument, replacements)).ToArray(), @new.SemanticType),

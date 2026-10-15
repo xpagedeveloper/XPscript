@@ -305,7 +305,8 @@ public sealed class BoundExpressionEmitter
         if (RuntimeObjectType(expression.SemanticType.Name) is { } jsonType && expression.Conversion.Kind is ConversionKind.FromVariant or ConversionKind.ReferenceUpcast)
             return $"({jsonType})({value})";
         if (expression.Type == typeof(object) && expression.Conversion.Kind == ConversionKind.FromVariant)
-            return value;
+            return expression.SemanticType.IsVariant || expression.SemanticType.IsObject ? value
+                : $"({BoundMethodEmitter.CSharpType(expression.SemanticType)})({value})";
         if (expression.Expression is BoundNewExpression && expression.Type != typeof(object))
             return value;
         return expression.Conversion.Kind switch

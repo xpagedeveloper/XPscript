@@ -554,6 +554,18 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindBoundAssignment(BoundExpression target, ExpressionSyntax valueSyntax, bool isSet, ExpressionSyntax targetSyntax)
     {
+        var propertyMode = target switch
+        {
+            BoundMemberAccessExpression member => member.AssignmentKind,
+            BoundIndexedPropertyExpression indexed => indexed.Property.AssignmentKind,
+            _ => PropertyAssignmentKind.Unspecified
+        };
+        if (propertyMode != PropertyAssignmentKind.Unspecified && (propertyMode == PropertyAssignmentKind.Set) != isSet)
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
+                propertyMode == PropertyAssignmentKind.Set ? "Property Set assignment requires Set." : "Property Let assignment cannot use Set.", targetSyntax.Span));
+            return null;
+        }
         if (target is BoundIndexExpression { Expression: BoundMemberAccessExpression argsProperty } && argsProperty.Receiver.SemanticType.Name == "Application" && argsProperty.Name.Equals("Args", StringComparison.OrdinalIgnoreCase))
         {
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "Application is read-only runtime state.", targetSyntax.Span));
@@ -611,6 +623,13 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         if (value is null)
             return null;
 
+        if (propertyMode == PropertyAssignmentKind.Set && !IsReferenceType(value))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
+                "Property Set requires an object/reference value.", valueSyntax.Span));
+            return null;
+        }
+
         if (isSet && !IsReferenceType(target))
         {
             _diagnostics.Add(new SyntaxDiagnostic(
@@ -627,7 +646,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                 $"Cannot assign {value.SemanticType.Name} to {target.SemanticType.Name}.", valueSyntax.Span));
             return null;
         }
-        if (!conversion.IsImplicit && _allowDynamicMembers)
+        if (!conversion.IsImplicit && _allowDynamicMembers && propertyMode != PropertyAssignmentKind.Set)
             value = new BoundConversionExpression(value, target.SemanticType, new Conversion(ConversionKind.FromVariant)) { Span = value.Span };
         else if (!conversion.IsImplicit)
             _diagnostics.Add(new SyntaxDiagnostic(

@@ -1,0 +1,5 @@
+Function Make(ByVal index As Long) As Object
+End Function
+Sub Main()
+    Set Make(1) = Nothing
+End Sub

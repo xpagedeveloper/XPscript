@@ -7,6 +7,8 @@ public enum AstArrayStorageKind
     AstArray
 }
 
+public enum PropertyAssignmentKind { Unspecified, Let, Set }
+
 public enum SymbolKind
 {
     Variable,
@@ -71,6 +73,7 @@ public sealed record PropertySymbol(string Name, Type PropertyType, XpTypeSymbol
     bool CanRead = true, bool CanWrite = true, bool IsFieldStorage = false) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.Property;
+    public PropertyAssignmentKind AssignmentKind { get; init; }
 }
 
 public sealed record IndexedPropertySymbol(
@@ -84,6 +87,7 @@ public sealed record IndexedPropertySymbol(
 {
     public override SymbolKind Kind => SymbolKind.IndexedProperty;
     public int RequiredArgumentCount { get; init; } = ParameterTypes.Count;
+    public PropertyAssignmentKind AssignmentKind { get; init; }
 }
 
 public sealed record ProcedureSymbol(

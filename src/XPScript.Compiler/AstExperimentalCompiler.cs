@@ -106,8 +106,8 @@ public static class AstExperimentalCompiler
             {
                 foreach (var field in current.Members.OfType<FieldDeclarationSyntax>())
                     if (field.Visibility?.Kind != SyntaxKind.PrivateKeyword)
-                    symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{field.Identifier.Text}", ResolveRuntimeType(field.Type.Identifier.Text), XpTypeSymbol.FromClr(ResolveRuntimeType(field.Type.Identifier.Text)), IsFieldStorage: true));
-                foreach (var property in AstClassMethodSupport.Properties(current, true))
+                    symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{field.Identifier.Text}", ResolveRuntimeType(field.Type.Identifier.Text), AstClassMethodSupport.DeclaredType(field.Type, symbols), IsFieldStorage: true));
+                foreach (var property in AstClassMethodSupport.Properties(current, true, symbols))
                     symbols.Declare(property with { Name = classDeclaration.Identifier.Text + "." + property.Name.Split('.').Last() });
                 foreach (var method in current.Members.OfType<SubDeclarationSyntax>())
                     if (method.Visibility?.Kind != SyntaxKind.PrivateKeyword)
@@ -411,17 +411,8 @@ public static class AstExperimentalCompiler
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
         var userClassSupport = string.Join(Environment.NewLine, unit.Declarations.OfType<ClassDeclarationSyntax>().Select(classDeclaration =>
         {
-            static string CSharpType(string name) => name.Trim().ToUpperInvariant() switch
-            {
-                "BOOLEAN" => "bool",
-                "INTEGER" or "LONG" => "long",
-                "SINGLE" or "DOUBLE" or "CURRENCY" => "double",
-                "BYTE" => "byte",
-                "STRING" => "string",
-                _ => "object?"
-            };
             var fields = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>().Select(field =>
-                $"{(field.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public")} {CSharpType(field.Type.Identifier.Text)} {field.Identifier.Text} = {(field.Type.Identifier.Text.Equals("String", StringComparison.OrdinalIgnoreCase) ? "string.Empty" : "default!")};"));
+                $"{(field.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public")} {BoundMethodEmitter.CSharpType(AstClassMethodSupport.DeclaredType(field.Type, symbols))} {field.Identifier.Text} = {(field.Type.Identifier.Text.Equals("String", StringComparison.OrdinalIgnoreCase) ? "string.Empty" : "default!")};"));
             var properties = string.Empty; // Accessor bodies are emitted with class procedures, never fabricated auto-properties.
             var baseClause = classDeclaration.BaseType is null
                 ? string.Empty
@@ -980,7 +971,8 @@ internal static class Program
             {
                 // Function-name assignment is ordinary state mutation, never
                 // an early return. Fall-through returns the same slot as Exit.
-                bound.Insert(0, new BoundVariableDeclarationStatement(result, null));
+                bound.Insert(0, new BoundVariableDeclarationStatement(result, result.Type == typeof(object)
+                    ? new BoundLiteralExpression(null, typeof(object), result.SemanticType) : null));
                 bound.Add(new BoundReturnStatement(new BoundNameExpression(result)));
             }
         return bound;

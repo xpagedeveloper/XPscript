@@ -810,6 +810,11 @@ var setSyntax = (SetStatementSyntax)setStatement;
 Equal(SyntaxKind.NameExpression, setSyntax.Target.Kind, "Set target kind");
 Equal(SyntaxKind.NewExpression, setSyntax.Expression.Kind, "Set value kind");
 
+var indexedSetParser = new StatementParser("Set store.Item(1) = Nothing");
+var indexedSetStatement = (SetStatementSyntax)indexedSetParser.ParseStatement();
+Equal(0, indexedSetParser.Diagnostics.Count, "indexed Set parser diagnostics");
+Equal(SyntaxKind.CallExpression, indexedSetStatement.Target.Kind, "indexed Set defers writable-target validation to binder");
+
 var dimParser = new StatementParser("Dim count");
 var dimStatement = dimParser.ParseStatement();
 Equal(SyntaxKind.DimStatement, dimStatement.Kind, "Dim statement kind");

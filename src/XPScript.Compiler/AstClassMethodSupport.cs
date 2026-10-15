@@ -7,7 +7,17 @@ namespace XPScript.Compiler;
 /// <summary>Instance procedure bodies use the same binder/flow validation and emitter as module procedures.</summary>
 internal static class AstClassMethodSupport
 {
-    internal static IEnumerable<Symbol> Properties(ClassDeclarationSyntax declaration, bool external)
+    internal static XpTypeSymbol DeclaredType(TypeSyntax? syntax, SymbolTable symbols)
+    {
+        var name = syntax?.Identifier.Text;
+        if (string.IsNullOrEmpty(name) || name.Equals("Variant", StringComparison.OrdinalIgnoreCase)) return XpTypeSymbol.Variant;
+        if (symbols.TryLookup(name, out var symbol) && symbol is TypeSymbol { SemanticType: not null } type) return type.SemanticType;
+        var runtime = AstExperimentalCompiler.ResolveRuntimeType(name);
+        return runtime == typeof(object) && !name.Equals("Object", StringComparison.OrdinalIgnoreCase)
+            ? XpTypeSymbol.User(name) : XpTypeSymbol.FromClr(runtime);
+    }
+
+    internal static IEnumerable<Symbol> Properties(ClassDeclarationSyntax declaration, bool external, SymbolTable symbols)
     {
         foreach (var group in declaration.Members.OfType<PropertyDeclarationSyntax>().GroupBy(p => p.Identifier.Text, StringComparer.OrdinalIgnoreCase))
         {
@@ -16,17 +26,20 @@ internal static class AstClassMethodSupport
             var readable = getter is not null && (!external || getter.Visibility?.Kind != SyntaxKind.PrivateKeyword);
             var writable = setter is not null && (!external || setter.Visibility?.Kind != SyntaxKind.PrivateKeyword);
             if (!readable && !writable) continue;
-            var type = AstExperimentalCompiler.ResolveRuntimeType(getter?.Type?.Identifier.Text ?? setter?.Type?.Identifier.Text ?? setter?.Parameters.LastOrDefault()?.Type?.Identifier.Text);
+            var semanticType = DeclaredType(getter?.Type ?? setter?.Type ?? setter?.Parameters.LastOrDefault()?.Type, symbols);
+            var type = semanticType.RuntimeType;
+            var assignmentKind = setter is null ? PropertyAssignmentKind.Unspecified
+                : setter.AccessorKeyword.Kind == SyntaxKind.SetKeyword ? PropertyAssignmentKind.Set : PropertyAssignmentKind.Let;
             var name = group.First().Identifier.Text;
             var indexes = getter?.Parameters ?? setter!.Parameters.Take(Math.Max(0, setter.Parameters.Count - 1)).ToArray();
             if (indexes.Count > 0)
                 yield return new IndexedPropertySymbol(declaration.Identifier.Text + "." + name, type,
                     indexes.Select(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
-                    XpTypeSymbol.FromClr(type), null, readable, writable, "__xps_index_get_" + name, "__xps_index_let_" + name,
+                    semanticType, null, readable, writable, "__xps_index_get_" + name, "__xps_index_let_" + name,
                     indexes.Select(p => p.IsExplicitByRef).ToArray())
-                    { RequiredArgumentCount = indexes.TakeWhile(p => !p.IsOptional).Count() };
+                    { RequiredArgumentCount = indexes.TakeWhile(p => !p.IsOptional).Count(), AssignmentKind = assignmentKind };
             else yield return new PropertySymbol(declaration.Identifier.Text + "." + name,
-                type, XpTypeSymbol.FromClr(type), readable, writable);
+                type, semanticType, readable, writable) { AssignmentKind = assignmentKind };
         }
     }
 
@@ -83,8 +96,14 @@ internal static class AstClassMethodSupport
                 syntaxParameters = new[] { new ParameterSyntax(new SyntaxToken(SyntaxKind.ByValKeyword, "ByVal", null, property.Identifier.Span),
                     property.Identifier, property.AsKeyword, property.Type) };
             var resultTypeName = function?.ReturnType?.Identifier.Text ?? (property?.IsGetter == true ? property.Type?.Identifier.Text : null);
-            if (syntaxParameters.Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) && !isObjectSetter) ||
-                function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object))
+            if (isObjectSetter && DeclaredType(property!.Type ?? syntaxParameters.Last().Type, globals).RuntimeType != typeof(object))
+                throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
+                    "Property Set requires an object/reference value type.", "XPS2001", "semantic");
+            if (syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
+                    .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object)) ||
+                function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) ||
+                property is not null && (BoundExpressionEmitter.RuntimeObjectType(resultTypeName ?? "") is not null ||
+                    isObjectSetter && BoundExpressionEmitter.RuntimeObjectType(syntaxParameters.Last().Type?.Identifier.Text ?? "") is not null))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar typed parameters and results; object/array signatures are not implemented yet.", "XPS3001", "ast");
             if (syntaxParameters.Any(p => p.IsList || p.IsOptional && property is null) ||
@@ -101,16 +120,16 @@ internal static class AstClassMethodSupport
             }
             var classScope = globals.CreateChildScope();
             classScope.Declare(new VariableSymbol("Me", typeof(object), XpTypeSymbol.User(declaration.Identifier.Text)));
-            foreach (var ownProperty in Properties(declaration, false))
+            foreach (var ownProperty in Properties(declaration, false, globals))
             {
                 classScope.Declare(ownProperty);
                 classScope.Declare(ownProperty with { Name = ownProperty.Name.Split('.').Last() });
             }
             foreach (var field in declaration.Members.OfType<FieldDeclarationSyntax>())
             {
-                var type = AstExperimentalCompiler.ResolveRuntimeType(field.Type.Identifier.Text);
-                classScope.Declare(new FieldSymbol(field.Identifier.Text, type, XpTypeSymbol.FromClr(type)));
-                classScope.Declare(new PropertySymbol(declaration.Identifier.Text + "." + field.Identifier.Text, type, XpTypeSymbol.FromClr(type), IsFieldStorage: true));
+                var type = DeclaredType(field.Type, globals);
+                classScope.Declare(new FieldSymbol(field.Identifier.Text, type.RuntimeType, type));
+                classScope.Declare(new PropertySymbol(declaration.Identifier.Text + "." + field.Identifier.Text, type.RuntimeType, type, IsFieldStorage: true));
             }
             foreach (var own in declaration.Members.Where(m => m is SubDeclarationSyntax or FunctionDeclarationSyntax))
             {
@@ -125,7 +144,7 @@ internal static class AstClassMethodSupport
             }
             var scope = classScope.CreateChildScope();
             var parameters = syntaxParameters.Select(p => new ParameterSymbol(p.Identifier.Text,
-                AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text), p.IsByRef)).ToArray();
+                AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text), p.IsByRef, DeclaredType(p.Type, globals))).ToArray();
             // Bind defaults in the instance declaration scope, exposing only earlier
             // indexes. Accessor locals and the incoming setter value are unavailable.
             var defaults = new BoundExpression?[parameters.Length];
@@ -151,13 +170,14 @@ internal static class AstClassMethodSupport
             foreach (var parameter in parameters) scope.Declare(parameter);
             var hasResult = function is not null || property?.IsGetter == true;
             var returnType = hasResult ? AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) : typeof(void);
-            var result = hasResult ? new LocalSymbol("__xps_class_result", returnType, XpTypeSymbol.FromClr(returnType)) : null;
+            var semanticResult = property?.IsGetter == true ? DeclaredType(property.Type, globals) : XpTypeSymbol.FromClr(returnType);
+            var result = hasResult ? new LocalSymbol("__xps_class_result", returnType, semanticResult) : null;
             var bound = AstExperimentalCompiler.BindProcedure(statements, scope, parameters,
-                hasResult ? XpTypeSymbol.FromClr(returnType) : null, hasResult ? name : null, result,
+                hasResult ? semanticResult : null, hasResult ? name : null, result,
                 declaration.Identifier.Text + "." + name, sourcePath, source);
             var emittedName = property is null ? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
             string body;
-            try { body = new BoundMethodEmitter().Emit(emittedName, returnType, parameters, bound, false, source, sourcePath); }
+            try { body = new BoundMethodEmitter().Emit(emittedName, returnType, parameters, bound, false, source, sourcePath, semanticResult); }
             catch (BoundEmissionException ex) { throw AstExperimentalCompiler.MappedDiagnostic(ex.Span ?? member.Span, sourcePath, source, ex.Message); }
             if (property is not null || (sub?.Visibility ?? function?.Visibility)?.Kind == SyntaxKind.PrivateKeyword)
                 body = "private " + body["public ".Length..];
@@ -169,7 +189,7 @@ internal static class AstClassMethodSupport
                 {
                     var forward = OptionalCallLowering.Forward(emittedName, returnType, parameters, defaults, count, property.IsSetter ? 1 : 0);
                     output.Append("private ").Append(new BoundMethodEmitter().Emit(emittedName, returnType,
-                        forward.Parameters, forward.Statements, false, source, sourcePath)["public ".Length..]);
+                        forward.Parameters, forward.Statements, false, source, sourcePath, semanticResult)["public ".Length..]);
                 }
             }
         }
@@ -178,7 +198,7 @@ internal static class AstClassMethodSupport
             var getter = group.FirstOrDefault(p => p.IsGetter);
             var setter = group.FirstOrDefault(p => p.IsSetter);
             var name = group.First().Identifier.Text;
-            var type = AstExperimentalCompiler.ResolveRuntimeType(getter?.Type?.Identifier.Text ?? setter?.Type?.Identifier.Text ?? setter?.Parameters.LastOrDefault()?.Type?.Identifier.Text);
+            var type = DeclaredType(getter?.Type ?? setter?.Type ?? setter?.Parameters.LastOrDefault()?.Type, globals);
             var indexes = getter?.Parameters ?? setter!.Parameters.Take(Math.Max(0, setter.Parameters.Count - 1)).ToArray();
             if (indexes.Count > 0)
             {
@@ -192,7 +212,7 @@ internal static class AstClassMethodSupport
                         output.Append(accessor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private " : "public ")
                             .Append(accessor.IsGetter ? BoundMethodEmitter.CSharpType(type) : "void")
                             .Append(accessor.IsGetter ? " __xps_index_get_" : " __xps_index_let_").Append(name).Append('(')
-                            .Append(string.Join(", ", supplied.Select((p, i) => (i < count && p.IsExplicitByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)) + " " + p.Identifier.Text)))
+                            .Append(string.Join(", ", supplied.Select((p, i) => (i < count && p.IsExplicitByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(DeclaredType(p.Type, globals)) + " " + p.Identifier.Text)))
                             .Append(") => __xps_property_").Append(accessor.IsGetter ? "get_" : "let_").Append(accessor.Identifier.Text)
                             .Append('(').Append(arguments).Append(");\n");
                     }

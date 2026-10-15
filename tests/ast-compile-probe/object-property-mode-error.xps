@@ -1,0 +1,8 @@
+Class Store
+    Public Property Set Item(ByVal index As Long, ByVal incoming As Object)
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    store.Item(1) = New Object()
+End Sub

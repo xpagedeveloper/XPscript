@@ -1,0 +1,156 @@
+Class Box
+    Public Value As Long
+End Class
+Class Store
+    Private firstValue As Box
+    Private secondValue As Box
+    Private getCalls As Long
+    Public Property Get Item(ByVal index As Long) As Box
+        getCalls = getCalls + 1
+        If index = 1 Then
+            Set Item = firstValue
+        Else
+            Set Item = secondValue
+        End If
+    End Property
+    Public Property Set Item(ByVal index As Long, ByVal incoming As Box)
+        If index = 1 Then
+            Set firstValue = incoming
+        Else
+            Set secondValue = incoming
+        End If
+        Set incoming = Nothing
+    End Property
+    Public Property Get Current As Box
+        Set Current = firstValue
+    End Property
+    Public Property Set Current As Box
+        Set firstValue = Current
+    End Property
+    Public Property Get Missing As Box
+    End Property
+    Public Property Get Recovered As Box
+        On Error Resume Next
+        Error 3203, "handled inside getter"
+        On Error GoTo 0
+        Set Recovered = firstValue
+    End Property
+    Public Property Get Calls As Long
+        Calls = getCalls
+    End Property
+    Public Property Get Aliased(ByRef left As Long, ByRef right As Long) As Box
+        left = left + 1
+        right = right + 2
+        Set Aliased = firstValue
+    End Property
+    Public Property Set Aliased(ByRef left As Long, ByRef right As Long, ByRef incoming As Box)
+        left = left + 1
+        right = right + 2
+        Set firstValue = incoming
+        Set incoming = Nothing
+    End Property
+    Public Property Get OptionalItem(Optional ByRef index As Long = 1) As Box
+        index = index + 1
+        Set OptionalItem = firstValue
+    End Property
+    Public Property Set OptionalItem(Optional ByRef index As Long = 1, ByVal incoming As Box)
+        index = index + 1
+        Set firstValue = incoming
+    End Property
+    Public Property Get Failing(ByRef index As Long) As Box
+        index = index + 1
+        Error 3201, "getter"
+    End Property
+    Public Property Set Failing(ByRef index As Long, ByVal incoming As Box)
+        index = index + 1
+        Set firstValue = incoming
+        Error 3202, "setter"
+    End Property
+    Private Property Get Hidden As Box
+        Set Hidden = firstValue
+    End Property
+    Public Function Internal() As Long
+        Internal = Hidden.Value + Me.Item(1).Value
+    End Function
+End Class
+Sub Main()
+    Dim store As New Store
+    Dim other As New Store
+    Dim first As New Box
+    Dim second As New Box
+    Dim result As Box
+    Dim index As Long
+    Dim failure As Long
+    If store.Current Is Nothing Then
+    Else
+        Error 6, "uninitialized field"
+    End If
+    If store.Missing Is Nothing Then
+    Else
+        Error 6, "unassigned getter result"
+    End If
+    first.Value = 7
+    second.Value = 11
+    Set store.Item(1) = first
+    If first Is Nothing Then Error 6, "ByVal setter replaced caller"
+    Set result = store.Item(1)
+    If result Is first Then
+    Else
+        Error 6, "getter identity"
+    End If
+    result.Value = 9
+    If store.Item(1).Value <> 9 Then Error 6, "typed chained access"
+    If store.Recovered.Value <> 9 Then Error 6, "reference result with accessor error flow"
+    Set store.Item(2) = second
+    If store.Item(2).Value <> 11 Then Error 6, "second index"
+    If other.Current Is Nothing Then
+    Else
+        Error 6, "per-instance storage"
+    End If
+    With store
+        Set .cUrReNt = second
+        Set result = .iTeM(1)
+    End With
+    If result Is second Then
+    Else
+        Error 6, "With Set/Get"
+    End If
+    If store.Internal() <> 22 Then Error 6, "internal property"
+    If store.Calls <> 5 Then Error 6, "getter evaluated more than once"
+    Set store.OptionalItem() = first
+    Set result = store.OptionalItem()
+    If result Is first Then
+    Else
+        Error 6, "omitted Optional indexes"
+    End If
+    index = 1
+    Set store.Aliased(index, index) = store.Aliased(index, index)
+    If index <> 7 Or first Is Nothing Or store.Current.Value <> 9 Then Error 6, "shared indexes and RHS order"
+    Dim entries List As Long
+    entries("a") = 1
+    ForAll entry In entries
+        Set result = store.Aliased(entry, entry)
+    End ForAll
+    If entries("a") <> 4 Then Error 6, "ForAll indexed reference"
+    Dim values(0) As Long
+    values(0) = 1
+    Set result = store.Aliased(values(0), values(0))
+    If values(0) <> 4 Then Error 6, "array indexed reference"
+    index = 1
+    On Error Resume Next
+    Set result = store.Failing(index)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3201 Or index <> 2 Then Error 6, "getter exception alias"
+    On Error Resume Next
+    Set store.Failing(index) = second
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3202 Or index <> 3 Or store.Current.Value <> 11 Then Error 6, "setter exception state"
+    Set store.Item(1) = Nothing
+    If store.Current Is Nothing Then
+    Else
+        Error 6, "clear reference"
+    End If
+    Print "INDEXED_OBJECT_RUNTIME_OK"
+End Sub
