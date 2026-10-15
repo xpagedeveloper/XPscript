@@ -1,5 +1,7 @@
 # XPSpreadsheet
 
+Experimental AST supports user-class Get/Set properties typed as XPSpreadsheet, XPWorksheet, XPCell or XPRange, including scalar Optional/ByRef indexes. Use Set for reference assignment; getter member chains preserve the native type and shared mutations. Replacing the setter's incoming parameter does not replace the caller's variable. Unassigned reference results start as Nothing. Existing constructor and read-only-member restrictions still apply. See [tabular accessor regression](../tests/ast-compile-probe/tabular-reference-properties.xps).
+
 `XPSpreadsheet` is XPScript's native API for creating and working with simple `.xlsx` workbooks.
 
 > **Supported model:** XPSpreadsheet supports workbook data, multiple worksheets/tabs, formulas, ranges, AutoFilter, cell/range formatting, row heights, column widths, and AutoFit. Existing external `.xlsx` files can be opened and read, but are read-only by default so XPSpreadsheet does not accidentally remove spreadsheet features it does not understand.

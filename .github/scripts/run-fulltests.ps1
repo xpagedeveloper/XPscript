@@ -62,8 +62,8 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
-  # Run the latest failing AST CLI fixture before the broader probes.
-  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 600000 'AST CLI native JSON/XML reference accessors, signatures and diagnostics first, inherited conversions, cycle/base validation, Optional defaults, ByRef aliases, Static lifecycle, shared List storage parity, native runtime, ownership, Resume and GoTo regressions'
+  # Run the latest accessor fixtures first; keep the growing complete CLI suite bounded to 15 minutes.
+  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 900000 'AST CLI CSV/spreadsheet and JSON/XML reference accessors, signatures and diagnostics first, inherited conversions, cycle/base validation, Optional defaults, ByRef aliases, Static lifecycle, shared List storage parity, native runtime, ownership, Resume and GoTo regressions'
   if ($astCliFirst.ExitCode -ne 0 -or $astCliFirst.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
   $astLexer = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-lexer/AstLexerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST lexer and compatibility regression'
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }

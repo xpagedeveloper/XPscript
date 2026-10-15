@@ -1,0 +1,217 @@
+Class TableSignatures
+    Private backing0 As XPCsvDocument
+    Public Property Get Item0 As XPCsvDocument
+        Set Item0 = backing0
+    End Property
+    Public Property Set Item0 As XPCsvDocument
+        Set backing0 = Item0
+    End Property
+    Private backing1 As XPCsvHeaderCollection
+    Public Property Get Item1 As XPCsvHeaderCollection
+        Set Item1 = backing1
+    End Property
+    Public Property Set Item1 As XPCsvHeaderCollection
+        Set backing1 = Item1
+    End Property
+    Private backing2 As XPCsvRowCollection
+    Public Property Get Item2 As XPCsvRowCollection
+        Set Item2 = backing2
+    End Property
+    Public Property Set Item2 As XPCsvRowCollection
+        Set backing2 = Item2
+    End Property
+    Private backing3 As XPCsvRow
+    Public Property Get Item3 As XPCsvRow
+        Set Item3 = backing3
+    End Property
+    Public Property Set Item3 As XPCsvRow
+        Set backing3 = Item3
+    End Property
+    Private backing4 As XPCsvColumnCollection
+    Public Property Get Item4 As XPCsvColumnCollection
+        Set Item4 = backing4
+    End Property
+    Public Property Set Item4 As XPCsvColumnCollection
+        Set backing4 = Item4
+    End Property
+    Private backing5 As XPCsvColumn
+    Public Property Get Item5 As XPCsvColumn
+        Set Item5 = backing5
+    End Property
+    Public Property Set Item5 As XPCsvColumn
+        Set backing5 = Item5
+    End Property
+    Private backing6 As XPSpreadsheet
+    Public Property Get Item6 As XPSpreadsheet
+        Set Item6 = backing6
+    End Property
+    Public Property Set Item6 As XPSpreadsheet
+        Set backing6 = Item6
+    End Property
+    Private backing7 As XPWorksheet
+    Public Property Get Item7 As XPWorksheet
+        Set Item7 = backing7
+    End Property
+    Public Property Set Item7 As XPWorksheet
+        Set backing7 = Item7
+    End Property
+    Private backing8 As XPCell
+    Public Property Get Item8 As XPCell
+        Set Item8 = backing8
+    End Property
+    Public Property Set Item8 As XPCell
+        Set backing8 = Item8
+    End Property
+    Private backing9 As XPRange
+    Public Property Get Item9 As XPRange
+        Set Item9 = backing9
+    End Property
+    Public Property Set Item9 As XPRange
+        Set backing9 = Item9
+    End Property
+End Class
+Sub Main()
+    Dim store As New TableSignatures
+    Dim csv As New XPCsvDocument("name" & Chr(10) & "initial")
+    Dim row As XPCsvRow = csv.Rows[0]
+    Dim column As XPCsvColumn = row.Columns[0]
+    Dim book As New XPSpreadsheet
+    Dim sheet As XPWorksheet = book.AddWorksheet("Shared")
+    Dim cell As XPCell = sheet.Cell("A1")
+    Dim area As XPRange = sheet.Range("A1:A2")
+    If store.Item0 Is Nothing Then
+    Else
+        Error 6, "XPCsvDocument default"
+    End If
+    Set store.Item0 = csv
+    If store.Item1 Is Nothing Then
+    Else
+        Error 6, "XPCsvHeaderCollection default"
+    End If
+    Set store.Item1 = csv.Headers
+    If store.Item2 Is Nothing Then
+    Else
+        Error 6, "XPCsvRowCollection default"
+    End If
+    Set store.Item2 = csv.Rows
+    If store.Item3 Is Nothing Then
+    Else
+        Error 6, "XPCsvRow default"
+    End If
+    Set store.Item3 = row
+    If store.Item4 Is Nothing Then
+    Else
+        Error 6, "XPCsvColumnCollection default"
+    End If
+    Set store.Item4 = row.Columns
+    If store.Item5 Is Nothing Then
+    Else
+        Error 6, "XPCsvColumn default"
+    End If
+    Set store.Item5 = column
+    If store.Item6 Is Nothing Then
+    Else
+        Error 6, "XPSpreadsheet default"
+    End If
+    Set store.Item6 = book
+    If store.Item7 Is Nothing Then
+    Else
+        Error 6, "XPWorksheet default"
+    End If
+    Set store.Item7 = sheet
+    If store.Item8 Is Nothing Then
+    Else
+        Error 6, "XPCell default"
+    End If
+    Set store.Item8 = cell
+    If store.Item9 Is Nothing Then
+    Else
+        Error 6, "XPRange default"
+    End If
+    Set store.Item9 = area
+    If store.Item0 Is csv Then
+    Else
+        Error 6, "XPCsvDocument identity"
+    End If
+    If store.Item3 Is row Then
+    Else
+        Error 6, "XPCsvRow identity"
+    End If
+    If store.Item5 Is column Then
+    Else
+        Error 6, "XPCsvColumn identity"
+    End If
+    If store.Item6 Is book Then
+    Else
+        Error 6, "XPSpreadsheet identity"
+    End If
+    If store.Item7 Is sheet Then
+    Else
+        Error 6, "XPWorksheet identity"
+    End If
+    If store.Item8 Is cell Then
+    Else
+        Error 6, "XPCell identity"
+    End If
+    If store.Item9 Is area Then
+    Else
+        Error 6, "XPRange identity"
+    End If
+    store.Item5.Value = "shared"
+    If csv.Rows[0].Get("name") <> "shared" Then Error 6, "column mutation"
+    store.Item8.Value = "cell"
+    If sheet.Cell("A1").Text <> "cell" Then Error 6, "cell mutation"
+    store.Item9.Bold = True
+    If area.Bold <> True Then Error 6, "range mutation"
+    Set store.Item0 = Nothing
+    If store.Item0 Is Nothing Then
+    Else
+        Error 6, "XPCsvDocument clear"
+    End If
+    Set store.Item1 = Nothing
+    If store.Item1 Is Nothing Then
+    Else
+        Error 6, "XPCsvHeaderCollection clear"
+    End If
+    Set store.Item2 = Nothing
+    If store.Item2 Is Nothing Then
+    Else
+        Error 6, "XPCsvRowCollection clear"
+    End If
+    Set store.Item3 = Nothing
+    If store.Item3 Is Nothing Then
+    Else
+        Error 6, "XPCsvRow clear"
+    End If
+    Set store.Item4 = Nothing
+    If store.Item4 Is Nothing Then
+    Else
+        Error 6, "XPCsvColumnCollection clear"
+    End If
+    Set store.Item5 = Nothing
+    If store.Item5 Is Nothing Then
+    Else
+        Error 6, "XPCsvColumn clear"
+    End If
+    Set store.Item6 = Nothing
+    If store.Item6 Is Nothing Then
+    Else
+        Error 6, "XPSpreadsheet clear"
+    End If
+    Set store.Item7 = Nothing
+    If store.Item7 Is Nothing Then
+    Else
+        Error 6, "XPWorksheet clear"
+    End If
+    Set store.Item8 = Nothing
+    If store.Item8 Is Nothing Then
+    Else
+        Error 6, "XPCell clear"
+    End If
+    Set store.Item9 = Nothing
+    If store.Item9 Is Nothing Then
+    Else
+        Error 6, "XPRange clear"
+    End If
+    Print "TABULAR_REFERENCE_SIGNATURES_OK"
+End Sub

@@ -1,0 +1,8 @@
+Class Store
+    Public Property Get Sheet As XPWorksheet
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    store.Sheet.Name = "changed"
+End Sub

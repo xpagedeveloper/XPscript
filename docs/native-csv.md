@@ -1,5 +1,7 @@
 # Native CSV
 
+Experimental AST supports user-class Get/Set properties typed as XPCsvDocument and any native CSV header/row/column collection or item type, with scalar Optional/ByRef indexes. Values share references and mutations; changing the setter's incoming parameter does not replace the caller's variable. Use Set for assignment. FromBytes still requires a writable document variable: read the property into a local, call FromBytes on that local, and Set the property to the replacement. Other aliases keep the previous document. See [tabular accessor regression](../tests/ast-compile-probe/tabular-reference-properties.xps).
+
 XPscript provides a native CSV API for parsing, building, iterating, sorting, serializing and saving CSV data without external runtime dependencies.
 
 CSV values are text. Parsing does not infer Integer, Boolean or Date values, so values such as `00123` are preserved exactly.

@@ -7,11 +7,13 @@ namespace XPScript.Compiler;
 /// <summary>Instance procedure bodies use the same binder/flow validation and emitter as module procedures.</summary>
 internal static class AstClassMethodSupport
 {
-    // JSON and XML share references. Other native families (notably image ownership)
+    // These managed native families share references. Other families (notably image ownership)
     // retain their explicit deferral until their accessor lifetime contract is covered.
     private static bool UnsupportedNativeAccessorType(string? name) =>
         BoundExpressionEmitter.RuntimeObjectType(name ?? "") is not null &&
         !AstXmlSupport.IsXml(name) &&
+        !AstCsvSupport.IsCsv(name) &&
+        !AstSpreadsheetSupport.IsSpreadsheet(name) &&
         !(new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }
             .Contains(name, StringComparer.OrdinalIgnoreCase));
 
