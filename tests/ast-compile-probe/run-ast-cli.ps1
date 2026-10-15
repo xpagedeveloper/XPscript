@@ -4,11 +4,14 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
-foreach ($fixture in @('tabular-reference-properties', 'tabular-reference-signatures', 'native-reference-properties', 'native-reference-signatures')) {
+dotnet run --project (Join-Path $root 'tests/AstHttpRuntimeProbe') -c Release -- $root --accessors-only
+if ($LASTEXITCODE -ne 0) { throw 'AST HTTP accessor reference/security regression failed.' }
+foreach ($fixture in @('http-property-signature-only', 'tabular-reference-properties', 'tabular-reference-signatures', 'native-reference-properties', 'native-reference-signatures')) {
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture)
     if ($LASTEXITCODE -ne 0) { throw "AST native reference accessor compilation failed: $fixture" }
     $result = dotnet (Join-Path $output "$fixture/Generated.dll")
     $expected = switch ($fixture) {
+        'http-property-signature-only' { 'HTTP_PROPERTY_SIGNATURE_ONLY_OK' }
         'tabular-reference-properties' { 'TABULAR_REFERENCE_PROPERTIES_OK' }
         'tabular-reference-signatures' { 'TABULAR_REFERENCE_SIGNATURES_OK' }
         'native-reference-properties' { 'NATIVE_REFERENCE_PROPERTIES_OK' }
@@ -16,7 +19,20 @@ foreach ($fixture in @('tabular-reference-properties', 'tabular-reference-signat
     }
     if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST native reference accessor execution failed: $fixture" }
 }
-foreach ($case in @(@('tabular-property-type-error', 'XPS2001', 8), @('tabular-property-mode-error', 'XPS2001', 8), @('tabular-property-frombytes-error', 'XPS1012', 7), @('tabular-property-readonly-error', 'XPS2001', 7), @('native-property-http-deferred', 'XPS3001', 2), @('native-property-type-error', 'XPS2001', 8), @('native-property-mode-error', 'XPS2001', 8), @('native-property-image-deferred', 'XPS3001', 2))) {
+foreach ($case in @(
+    @('http-property-type-error', 'XPS2001', 8),
+    @('http-property-mode-error', 'XPS2001', 8),
+    @('http-property-readonly-error', 'XPS2001', 7),
+    @('http-property-file-type-error', 'XPS2001', 8),
+    @('http-property-index-deferred', 'XPS3001', 2),
+    @('tabular-property-type-error', 'XPS2001', 8),
+    @('tabular-property-mode-error', 'XPS2001', 8),
+    @('tabular-property-frombytes-error', 'XPS1012', 7),
+    @('tabular-property-readonly-error', 'XPS2001', 7),
+    @('native-property-type-error', 'XPS2001', 8),
+    @('native-property-mode-error', 'XPS2001', 8),
+    @('native-property-image-deferred', 'XPS3001', 2)
+)) {
     $fixture = $case[0]
     $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Native accessor diagnostic lost: $fixture" }

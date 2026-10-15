@@ -1,6 +1,0 @@
-Class Store
-    Public Property Get Item As XPHttpClient
-    End Property
-End Class
-Sub Main()
-End Sub

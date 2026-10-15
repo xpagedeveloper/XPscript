@@ -63,7 +63,7 @@ Write-Host "FULLTEST_SUITE=$Suite"
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
   # Run the latest accessor fixtures first; keep the growing complete CLI suite bounded to 15 minutes.
-  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 900000 'AST CLI CSV/spreadsheet and JSON/XML reference accessors, signatures and diagnostics first, inherited conversions, cycle/base validation, Optional defaults, ByRef aliases, Static lifecycle, shared List storage parity, native runtime, ownership, Resume and GoTo regressions'
+  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 900000 'AST CLI HTTP reference/security accessors first, native reference signatures and diagnostics, inherited conversions, cycle/base validation, Optional defaults, ByRef aliases, Static lifecycle, shared List storage parity, native runtime, ownership, Resume and GoTo regressions'
   if ($astCliFirst.ExitCode -ne 0 -or $astCliFirst.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
   $astLexer = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-lexer/AstLexerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST lexer and compatibility regression'
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
@@ -142,8 +142,8 @@ if (Should-Run 'runtime') {
   }
   $sheetAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstSpreadsheetRuntimeProbe','-c','Release') 300000 'native spreadsheet AST/normal, XLSX safety and CSV parity'
   if ($sheetAst.ExitCode -ne 0 -or $sheetAst.Output -notmatch 'AST_SPREADSHEET_RUNTIME_OK') { throw 'Native spreadsheet runtime parity failed.' }
-  $httpAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstHttpRuntimeProbe','-c','Release') 180000 'native HTTP/TLS AST and normal runtime parity'
-  if ($httpAst.ExitCode -ne 0 -or $httpAst.Output -notmatch 'AST_HTTP_TLS_RUNTIME_OK') { throw 'Native HTTP/TLS runtime parity failed.' }
+  $httpAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstHttpRuntimeProbe','-c','Release') 180000 'native HTTP accessor reference/multipart/disposal/security coverage and HTTP/TLS AST/normal parity'
+  if ($httpAst.ExitCode -ne 0 -or $httpAst.Output -notmatch 'AST_HTTP_ACCESSORS_OK' -or $httpAst.Output -notmatch 'AST_HTTP_TLS_RUNTIME_OK') { throw 'Native HTTP accessor/TLS runtime regression failed.' }
   $generatedDependencies = Invoke-Bounded 'dotnet' @('run','--project','./tests/GeneratedDependencyProbe/GeneratedDependencyProbe.csproj','-c','Release') 240000 'generated addon packages, native runtime assets and exact license graph'
   if ($generatedDependencies.ExitCode -ne 0 -or $generatedDependencies.Output -notmatch 'GENERATED_DEPENDENCIES_OK') { throw 'Generated addon dependency packaging regression failed.' }
   $imageFixtureDirectory = Join-Path (Resolve-Path './out/fulltest').Path ('xpimage-' + [Guid]::NewGuid().ToString('N'))

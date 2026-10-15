@@ -1,0 +1,6 @@
+Class Store
+    Public Property Get Item(ByVal index As XPHttpRequest) As XPHttpResponse
+    End Property
+End Class
+Sub Main()
+End Sub

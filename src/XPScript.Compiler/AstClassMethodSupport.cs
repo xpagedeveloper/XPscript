@@ -14,6 +14,7 @@ internal static class AstClassMethodSupport
         !AstXmlSupport.IsXml(name) &&
         !AstCsvSupport.IsCsv(name) &&
         !AstSpreadsheetSupport.IsSpreadsheet(name) &&
+        !AstHttpSupport.IsHttp(name) &&
         !(new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }
             .Contains(name, StringComparer.OrdinalIgnoreCase));
 

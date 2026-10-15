@@ -24,6 +24,12 @@ var arguments = new[] { $"http://127.0.0.1:{Port(plain)}", $"https://localhost:{
 try
 {
     var compiler = Path.Combine(repo, "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll");
+    var accessors = Path.Combine(output, "accessors");
+    await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/http-reference-properties.xps"), "-o", accessors]);
+    if ((await Run("dotnet", [Path.Combine(accessors, "Generated.dll"), ..arguments])).Trim() != "HTTP_REFERENCE_PROPERTIES_OK")
+        throw new Exception("HTTP accessor reference/security regression failed.");
+    Console.WriteLine("AST_HTTP_ACCESSORS_OK");
+    if (args.Contains("--accessors-only")) return;
     var source = Path.Combine(repo, "tests/ast-compile-probe/http-runtime.xps");
     await Run("dotnet", [compiler, "ast-compile", source, "-o", Path.Combine(output, "ast")]);
     var assembly = System.Reflection.Assembly.LoadFile(Path.Combine(output, "ast", "Generated.dll"));
@@ -106,9 +112,16 @@ async Task Handle(TcpClient connection, X509Certificate2? certificate)
             var status = request[1] == "/fail" ? "418 Teapot" : request[1] == "/redirect" ? "302 Found" : "200 OK";
             var payload = request[1] == "/json" ? body : request[1] == "/redirect" ? "redirect-not-followed" :
                 request[0] + "|" + headers.GetValueOrDefault("X-XPScript-Test", "") + (body.Length > 0 ? "|" + body : "");
+            var contentType = request[1] == "/json" ? "application/json" : "text/plain; charset=utf-8";
+            if (request[1] == "/multipart")
+            {
+                contentType = "multipart/mixed; boundary=xps-accessor-boundary";
+                payload = "--xps-accessor-boundary\r\nContent-Disposition: form-data; name=\"note\"\r\nContent-Type: text/plain\r\n\r\nshared\r\n" +
+                    "--xps-accessor-boundary\r\nContent-Disposition: attachment; name=\"upload\"; filename=\"report.txt\"\r\nContent-Type: text/plain\r\n\r\nfile-body\r\n--xps-accessor-boundary--\r\n";
+            }
             var data = Encoding.UTF8.GetBytes(payload);
             var size = request[1] == "/declared-oversized" ? 64 * 1024 * 1024 + 1 : data.Length;
-            var response = Encoding.ASCII.GetBytes($"HTTP/1.1 {status}\r\nContent-Type: {(request[1] == "/json" ? "application/json" : "text/plain; charset=utf-8")}\r\nX-Regression: native-http\r\nLocation: /get\r\nContent-Length: {size}\r\nConnection: close\r\n\r\n");
+            var response = Encoding.ASCII.GetBytes($"HTTP/1.1 {status}\r\nContent-Type: {contentType}\r\nX-Regression: native-http\r\nLocation: /get\r\nContent-Length: {size}\r\nConnection: close\r\n\r\n");
             await stream.WriteAsync(response, cancellation.Token); await stream.WriteAsync(data, cancellation.Token);
         }
         catch (Exception ex) when (ex is IOException or AuthenticationException or OperationCanceledException) { }
