@@ -63,7 +63,7 @@ Write-Host "FULLTEST_SUITE=$Suite"
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
   # Run the latest accessor fixtures first; keep the growing complete CLI suite bounded to 15 minutes.
-  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 900000 'AST CLI HTTP reference/security accessors first, native reference signatures and diagnostics, inherited conversions, cycle/base validation, Optional defaults, ByRef aliases, Static lifecycle, shared List storage parity, native runtime, ownership, Resume and GoTo regressions'
+  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 900000 'AST CLI image getter ownership/cleanup and mapped diagnostics first, HTTP reference/security accessors, native signatures, inherited conversions, cycle/base validation, Optional defaults, ByRef aliases, Static lifecycle, shared List storage parity, native runtime, Resume and GoTo regressions'
   if ($astCliFirst.ExitCode -ne 0 -or $astCliFirst.Output -notmatch 'AST CLI compilation probe passed') { throw 'xpscriptc AST CLI compilation probe failed.' }
   $astLexer = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-lexer/AstLexerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST lexer and compatibility regression'
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
@@ -134,6 +134,8 @@ if (Should-Run 'notes') {
 }
 
 if (Should-Run 'runtime') {
+  $imageGetters = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compile-probe/run-ast-image-get.ps1') 180000 'AST image getter transfer, replacement and exceptional cleanup; setter ownership deferrals'
+  if ($imageGetters.ExitCode -ne 0 -or $imageGetters.Output -notmatch 'AST_IMAGE_GETTERS_OK') { throw 'AST image getter lifetime regression failed.' }
   $applicationAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstApplicationRuntimeProbe','-c','Release') 180000 'native Application AST/normal runtime, services, metadata and diagnostics'
   if ($applicationAst.ExitCode -ne 0 -or $applicationAst.Output -notmatch 'AST_APPLICATION_RUNTIME_OK') { throw 'Native Application runtime parity failed.' }
   foreach ($applicationProbe in @('ApplicationRuntimeIsolationProbe','ApplicationRuntimeConcurrencyProbe','ApplicationDebugRuntimeProbe')) {

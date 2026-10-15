@@ -1,0 +1,6 @@
+Class Store
+    Public Property Set Item(ByRef incoming As XPImage)
+    End Property
+End Class
+Sub Main()
+End Sub

@@ -1,0 +1,6 @@
+Class Factory
+    Public Property Get Image(ByVal index As XPImage) As XPImage
+    End Property
+End Class
+Sub Main()
+End Sub

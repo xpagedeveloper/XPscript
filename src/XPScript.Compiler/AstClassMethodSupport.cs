@@ -110,10 +110,15 @@ internal static class AstClassMethodSupport
             if (isObjectSetter && DeclaredType(property!.Type ?? syntaxParameters.Last().Type, globals).RuntimeType != typeof(object))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Property Set requires an object/reference value type.", "XPS2001", "semantic");
+            if (isObjectSetter && AstImageSupport.IsImage(syntaxParameters.Last().Type?.Identifier.Text))
+                throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
+                    "XPImage Property Set ownership is not implemented yet; use a Property Get image factory.", "XPS3001", "ast");
             if (syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
                     .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object)) ||
                 function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) ||
-                property is not null && (UnsupportedNativeAccessorType(resultTypeName) ||
+                // Image getters reuse function-result ownership/escape. Setters remain
+                // deferred: storing an accessor-local image needs a field lifetime contract.
+                property is not null && (UnsupportedNativeAccessorType(resultTypeName) && !AstImageSupport.IsImage(resultTypeName) ||
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar typed parameters and results; object/array signatures are not implemented yet.", "XPS3001", "ast");

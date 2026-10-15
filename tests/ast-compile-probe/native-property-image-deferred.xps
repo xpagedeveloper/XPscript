@@ -1,5 +1,5 @@
 Class Store
-    Public Property Get Item As XPImage
+    Public Property Set Item(ByVal incoming As XPImage)
     End Property
 End Class
 Sub Main()

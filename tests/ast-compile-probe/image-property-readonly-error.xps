@@ -1,0 +1,8 @@
+Class Factory
+    Public Property Get Image As XPImage
+    End Property
+End Class
+Sub Main()
+    Dim factory As New Factory
+    Set factory.Image = Nothing
+End Sub
