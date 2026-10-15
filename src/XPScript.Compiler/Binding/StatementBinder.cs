@@ -169,7 +169,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             initializer = BindExpression(syntax.Initializer);
             if (initializer is null)
                 return null;
-            var conversion = Conversion.Classify(initializer.SemanticType, semanticType);
+            var conversion = _symbols.ClassifyConversion(initializer.SemanticType, semanticType);
             if (!conversion.IsImplicit)
             {
                 _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
@@ -331,7 +331,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             if (_symbols.TryLookup(syntax.IdentifierToken.Text, out var existing))
             {
                 var previous = new BoundNameExpression(existing);
-                if (!previous.SemanticType.IsVariant && !Conversion.Classify(csvElement, previous.SemanticType).IsImplicit)
+                if (!previous.SemanticType.IsVariant && !_symbols.ClassifyConversion(csvElement, previous.SemanticType).IsImplicit)
                 {
                     _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                         $"ForAll variable {previous.SemanticType.Name} is incompatible with {family} element type {csvElement.Name}.", syntax.IdentifierToken.Span));
@@ -475,7 +475,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         if (value is null)
             return new BoundReturnStatement(null);
 
-        var conversion = Conversion.Classify(value.SemanticType, _returnType);
+        var conversion = _symbols.ClassifyConversion(value.SemanticType, _returnType);
         if (!conversion.IsImplicit)
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 $"Cannot return {value.SemanticType.Name} from a Function returning {_returnType.Name}.", syntax.Expression.Span));
@@ -639,7 +639,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             return new BoundAssignmentStatement(target, value, true);
         }
 
-        var conversion = Conversion.Classify(value.SemanticType, target.SemanticType);
+        var conversion = _symbols.ClassifyConversion(value.SemanticType, target.SemanticType);
         if ((value.SemanticType.IsList || target.SemanticType.IsList) && !conversion.IsImplicit)
         {
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,

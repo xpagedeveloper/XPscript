@@ -4,6 +4,22 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inherited-reference-runtime.xps') -o (Join-Path $output 'inherited-reference-runtime')
+if ($LASTEXITCODE -ne 0) { throw 'AST inherited reference compilation failed.' }
+$inheritedReferenceResult = dotnet (Join-Path $output 'inherited-reference-runtime/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($inheritedReferenceResult -join "`n") -ne 'INHERITED_REFERENCE_RUNTIME_OK') { throw 'AST inherited reference execution failed.' }
+foreach ($case in @(
+    @('inherited-reference-downcast-error', 'XPS2001', 11),
+    @('inherited-reference-sibling-error', 'XPS2001', 13),
+    @('inherited-reference-isolation-error', 'XPS2001', 11),
+    @('inheritance-cycle-error', 'XPS1012', 1),
+    @('inheritance-self-cycle-error', 'XPS1012', 1),
+    @('inheritance-unknown-base-error', 'XPS2008', 1)
+)) {
+    $fixture = $case[0]
+    $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Inherited reference diagnostic lost: $fixture" }
+}
 foreach ($fixture in @('indexed-object-runtime', 'indexed-object-properties')) {
     $fixtureSource = if ($fixture -eq 'indexed-object-properties') { Join-Path $root 'samples/indexed-object-properties.xps' } else { Join-Path $PSScriptRoot "$fixture.xps" }
     dotnet $compiler ast-compile $fixtureSource -o (Join-Path $output $fixture)

@@ -159,7 +159,7 @@ internal static class AstClassMethodSupport
                         : new BoundLiteralExpression(parameters[i].Type == typeof(string) ? "" : Activator.CreateInstance(parameters[i].Type), parameters[i].Type, type);
                     if (binder.Diagnostics.Count > 0)
                         throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, source);
-                    var conversion = Conversion.Classify(value.SemanticType, type);
+                    var conversion = defaultScope.ClassifyConversion(value.SemanticType, type);
                     if (!conversion.IsImplicit)
                         throw AstExperimentalCompiler.MappedDiagnostic(syntaxParameters[i].Span, sourcePath, source,
                             $"Default value for Optional parameter '{parameters[i].Name}' is incompatible with its type.", "XPS2001", "semantic");

@@ -100,6 +100,23 @@ public static class AstExperimentalCompiler
             symbols.Declare(new TypeSymbol(classDeclaration.Identifier.Text, typeof(object), XpTypeSymbol.User(classDeclaration.Identifier.Text)));
         var classes = unit.Declarations.OfType<ClassDeclarationSyntax>()
             .ToDictionary(item => item.Identifier.Text, StringComparer.OrdinalIgnoreCase);
+        // Validate all edges before any inherited-member walk. This metadata is
+        // owned by this compilation's scopes, never shared with another MCP call.
+        foreach (var item in classes.Values)
+        {
+            if (item.BaseType is { } parent && !classes.ContainsKey(parent.Identifier.Text))
+                throw MappedDiagnostic(parent.Span, sourcePath, fullSource,
+                    $"Unknown base class '{parent.Identifier.Text}'.", CompilerDiagnosticCodes.UnknownSymbol, "semantic");
+        }
+        foreach (var item in classes.Values)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (var current = item; current is not null; current = current.BaseType is { } parent ? classes[parent.Identifier.Text] : null)
+                if (!seen.Add(current.Identifier.Text))
+                    throw MappedDiagnostic(item.BaseType?.Span ?? item.Identifier.Span, sourcePath, fullSource,
+                        $"Inheritance cycle in base chain for class '{item.Identifier.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
+            symbols.DeclareUserClassInheritance(item.Identifier.Text, item.BaseType?.Identifier.Text);
+        }
         foreach (var classDeclaration in classes.Values)
         {
             for (var current = classDeclaration; current is not null; current = current.BaseType is not null && classes.TryGetValue(current.BaseType.Identifier.Text, out var baseClass) ? baseClass : null)
@@ -367,7 +384,7 @@ public static class AstExperimentalCompiler
                         parameters[i].Type.IsValueType ? Activator.CreateInstance(parameters[i].Type) : null, parameters[i].Type, type);
                 if (defaultBinder.Diagnostics.Count > 0)
                     throw SyntaxDiagnosticException(defaultBinder.Diagnostics[0], sourcePath, fullSource);
-                var conversion = Conversion.Classify(value.SemanticType, type);
+                var conversion = scope.ClassifyConversion(value.SemanticType, type);
                 if (!conversion.IsImplicit)
                     throw MappedDiagnostic(procedureParameters[i].Span, sourcePath, fullSource,
                         $"Default value for Optional parameter '{parameters[i].Name}' is incompatible with its type.",
@@ -416,7 +433,7 @@ public static class AstExperimentalCompiler
             var properties = string.Empty; // Accessor bodies are emitted with class procedures, never fabricated auto-properties.
             var baseClause = classDeclaration.BaseType is null
                 ? string.Empty
-                : $" : Xp{classDeclaration.BaseType.Identifier.Text}";
+                : $" : Xp{classes[classDeclaration.BaseType.Identifier.Text].Identifier.Text}";
             var delete = classDeclaration.BaseType is null
                 ? "public virtual void Delete() { }"
                 : "public override void Delete() { base.Delete(); }";

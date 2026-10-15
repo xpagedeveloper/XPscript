@@ -12,6 +12,43 @@ static ExpressionSyntax Parse(string text)
     return syntax;
 }
 
+// Declared ancestry is compilation-local and never makes ByRef storage covariant.
+var ancestrySymbols = new SymbolTable();
+ancestrySymbols.DeclareUserClassInheritance("Root", null);
+ancestrySymbols.DeclareUserClassInheritance("Middle", "rOoT");
+ancestrySymbols.DeclareUserClassInheritance("Leaf", "Middle");
+ancestrySymbols.DeclareUserClassInheritance("Other", "Root");
+var rootReference = XpTypeSymbol.User("Root");
+var leafReference = XpTypeSymbol.User("Leaf");
+if (ancestrySymbols.CreateChildScope().ClassifyConversion(leafReference, rootReference).Kind != ConversionKind.ReferenceUpcast ||
+    ancestrySymbols.ClassifyConversion(rootReference, leafReference).Exists ||
+    ancestrySymbols.ClassifyConversion(leafReference, XpTypeSymbol.User("Other")).Exists ||
+    ancestrySymbols.ClassifyConversion(XpTypeSymbol.ArrayOf(leafReference), XpTypeSymbol.ArrayOf(rootReference)).Exists ||
+    ancestrySymbols.ClassifyConversion(XpTypeSymbol.ListOf(leafReference), XpTypeSymbol.ListOf(rootReference)).Exists ||
+    new SymbolTable().ClassifyConversion(leafReference, rootReference).Exists ||
+    Conversion.Classify(leafReference, rootReference).Exists)
+    throw new Exception("User reference conversions escaped the declared scalar ancestry graph.");
+ancestrySymbols.Declare(new LocalSymbol("leaf", typeof(object), leafReference));
+ancestrySymbols.Declare(new FunctionSymbol("View", typeof(void), [typeof(object)],
+    SemanticParameterTypes: [rootReference], ByRefParameters: [false]));
+ancestrySymbols.Declare(new FunctionSymbol("Mutate", typeof(void), [typeof(object)],
+    SemanticParameterTypes: [rootReference], ByRefParameters: [true]));
+var upcastBinder = new ExpressionBinder(ancestrySymbols);
+var upcastCall = (BoundCallExpression)upcastBinder.Bind(Parse("View(leaf)"));
+if (upcastBinder.Diagnostics.Count != 0 || upcastCall.Arguments[0] is not BoundConversionExpression { Conversion.Kind: ConversionKind.ReferenceUpcast })
+    throw new Exception("ByVal call did not bind its declared reference upcast.");
+var invariantBinder = new ExpressionBinder(ancestrySymbols);
+_ = invariantBinder.Bind(Parse("Mutate(leaf)"));
+if (invariantBinder.Diagnostics.Count != 1 || invariantBinder.Diagnostics[0].Code != "XPS2004")
+    throw new Exception("ByRef call accepted covariant user-reference storage.");
+var malformedAncestry = new SymbolTable();
+malformedAncestry.DeclareUserClassInheritance("A", "B");
+malformedAncestry.DeclareUserClassInheritance("B", "A");
+malformedAncestry.DeclareUserClassInheritance("Root", null);
+if (malformedAncestry.ClassifyConversion(XpTypeSymbol.User("A"), rootReference).Exists)
+    throw new Exception("Malformed ancestry created an unrelated conversion.");
+Console.WriteLine("AST_BINDING_USER_REFERENCE_UPCAST_OK");
+
 // Optional index arity and supplied ByRef validation precede the broader probe.
 var optionalIndexSymbols = SymbolTable.CreateWithCompilerCatalog();
 optionalIndexSymbols.Declare(new LocalSymbol("store", typeof(object), XpTypeSymbol.User("OptionalStore")));

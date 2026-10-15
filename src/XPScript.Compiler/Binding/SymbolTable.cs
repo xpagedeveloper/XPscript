@@ -11,6 +11,37 @@ public sealed class SymbolTable
 
     public SymbolTable CreateChildScope() => new(this);
 
+    private readonly Dictionary<string, string?> _userClassBases = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Registers a class edge after compilation-unit hierarchy validation.</summary>
+    public void DeclareUserClassInheritance(string className, string? baseClassName) => _userClassBases[className] = baseClassName;
+
+    private bool TryLookupUserClassBase(string name, out string? baseName)
+    {
+        if (_userClassBases.TryGetValue(name, out baseName)) return true;
+        if (Parent is not null) return Parent.TryLookupUserClassBase(name, out baseName);
+        return false;
+    }
+
+    public Conversion ClassifyConversion(XpTypeSymbol source, XpTypeSymbol target)
+    {
+        var conversion = Conversion.Classify(source, target);
+        if (conversion.Exists || source.Shape != XpTypeShape.Scalar || target.Shape != XpTypeShape.Scalar ||
+            source.RuntimeType != typeof(object) || target.RuntimeType != typeof(object) ||
+            !TryLookupUserClassBase(target.Name, out _)) return conversion;
+
+        // Only declared ancestry authorizes a user-reference upcast. The visited
+        // set also bounds this public helper if handed a malformed registry.
+        var current = source.Name;
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (visited.Add(current) && TryLookupUserClassBase(current, out var parent) && parent is not null)
+        {
+            if (parent.Equals(target.Name, StringComparison.OrdinalIgnoreCase)) return new Conversion(ConversionKind.ReferenceUpcast);
+            current = parent;
+        }
+        return conversion;
+    }
+
     public static SymbolTable CreateWithCompilerCatalog()
     {
         var table = new SymbolTable();

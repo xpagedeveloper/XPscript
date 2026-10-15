@@ -13,6 +13,17 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+var inheritedSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/inherited-reference-runtime.xps"));
+var inheritedResult = await CallAsync(new { jsonrpc="2.0",id="inherited-reference-runtime",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=inheritedSource,filename="inherited-reference-runtime.xps" } } });
+if (inheritedResult.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Inherited reference validation failed: " + inheritedResult);
+foreach (var (fixture, code, line) in new[] { ("inherited-reference-downcast-error", "XPS2001", 11), ("inherited-reference-sibling-error", "XPS2001", 13), ("inherited-reference-isolation-error", "XPS2001", 11), ("inheritance-cycle-error", "XPS1012", 1), ("inheritance-self-cycle-error", "XPS1012", 1), ("inheritance-unknown-base-error", "XPS2008", 1) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (!result.GetProperty("result").GetProperty("isError").GetBoolean() || error.GetProperty("diagnosticCode").GetString() != code || error.GetProperty("line").GetInt32() != line)
+        throw new Exception("Inherited reference diagnostic lost: " + result);
+}
 foreach (var fixture in new[] { "indexed-object-runtime", "indexed-object-properties" })
 {
     var path = fixture == "indexed-object-properties" ? Path.Combine(repo, "samples", fixture + ".xps") : Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps");

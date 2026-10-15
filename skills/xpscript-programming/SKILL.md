@@ -122,6 +122,8 @@ Each instance must keep its own state.
 
 For class inheritance, use `Class Child Extend ParentType`. When a child constructor must initialize a base class that requires constructor arguments, put `Call Parent.New(...)` first in the child `Sub New`. Do not invent C#-style `: base(...)` syntax in XPscript.
 
+Experimental AST supports implicit user-class reference upcasts through direct/transitive ancestry in supported value assignments, initializers, properties and ByVal calls. A property declared As Root can store a Leaf instance when Leaf Extends Root; the reference still shares identity and mutations. This does not make ByRef parameters covariant: pass an exact declared type to ByRef parameters, and do not assume array/List covariance. Implicit downcasts and sibling conversions remain invalid. Unknown bases and inheritance cycles are diagnosed early. Bodies authored in derived classes, explicit constructor forwarding and complete lifecycle dispatch remain deferred in AST; do not infer full inheritance migration from reference conversion support. See `inherited-reference-runtime.xps` and `docs/ast-csharp-emitter.md`.
+
 
 When using XPDB or XPAI, follow the exact constructor/member names shown by the current database/AI docs and samples. Never infer those signatures from older examples or another language.
 

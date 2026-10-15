@@ -1,0 +1,14 @@
+Class Root
+End Class
+Class Left Extend Root
+End Class
+Class Right Extend Root
+End Class
+Class Store
+    Public Property Set Current(ByVal incoming As Left)
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    Set store.Current = New Right()
+End Sub

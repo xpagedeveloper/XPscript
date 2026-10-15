@@ -145,7 +145,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             var imageArguments = syntax.Arguments.Select(Bind).ToArray();
             var imageConstructor = AstImageSupport.Constructors.FirstOrDefault(c => c.NativeTypes.Length == imageArguments.Length &&
                 c.NativeTypes.Select(AstImageSupport.SemanticType).Zip(imageArguments,
-                    (parameter, argument) => Conversion.Classify(argument.SemanticType, parameter).IsImplicit).All(matches => matches));
+                    (parameter, argument) => _symbols.ClassifyConversion(argument.SemanticType, parameter).IsImplicit).All(matches => matches));
             if (imageConstructor is null)
                 return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "No matching constructor for 'XPImage'.");
             var function = new FunctionSymbol("XPImage.New", typeof(object), imageConstructor.NativeTypes.Select(AstImageSupport.SemanticType).Select(t => t.RuntimeType).ToArray(),
@@ -436,7 +436,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         return new BoundCallExpression(target, candidates[0], ConvertArguments(candidates[0], arguments));
     }
 
-    private static BoundExpression[] ConvertArguments(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
+    private BoundExpression[] ConvertArguments(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
     {
         var converted = new BoundExpression[arguments.Count];
         for (var i = 0; i < arguments.Count; i++)
@@ -444,7 +444,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             var targetType = function.SemanticParameterTypes is not null
                 ? function.SemanticParameterTypes[i]
                 : XpTypeSymbol.FromClr(function.ParameterTypes[i]);
-            var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
+            var conversion = _symbols.ClassifyConversion(arguments[i].SemanticType, targetType);
             converted[i] = conversion.IsIdentity
                 ? arguments[i]
                 : new BoundConversionExpression(arguments[i], targetType, conversion) { Span = arguments[i].Span };
@@ -467,7 +467,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
                 (arguments[i] is BoundIndexExpression { Expression.SemanticType.IsList: true } ||
                  arguments[i] is BoundNameExpression { Symbol: LocalSymbol { IsListAlias: true } }) &&
-                Conversion.Classify(arguments[i].SemanticType,
+                _symbols.ClassifyConversion(arguments[i].SemanticType,
                     function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(function.ParameterTypes[i])).IsIdentity)
                 continue;
             if (arguments[i] is not BoundNameExpression name ||
@@ -476,7 +476,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (name.Symbol is LocalSymbol { IsListAlias: true } &&
                 !((ReferenceEquals(syntax, listByRefStatementCall) || function.ReturnType != typeof(void)) &&
                   syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
-                  Conversion.Classify(arguments[i].SemanticType,
+                  _symbols.ClassifyConversion(arguments[i].SemanticType,
                       function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(function.ParameterTypes[i])).IsIdentity))
                 return false;
         }
@@ -484,7 +484,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         return true;
     }
 
-    private static bool ParametersMatch(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
+    private bool ParametersMatch(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
     {
         if (function.ParameterTypes.Count != arguments.Count)
             return false;
@@ -494,7 +494,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             var targetType = function.SemanticParameterTypes is not null
                 ? function.SemanticParameterTypes[i]
                 : XpTypeSymbol.FromClr(function.ParameterTypes[i]);
-            var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
+            var conversion = _symbols.ClassifyConversion(arguments[i].SemanticType, targetType);
             var isByRef = function.ByRefParameters is not null && function.ByRefParameters[i];
             if (targetType.IsVariant)
                 continue;
@@ -524,7 +524,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             var targetType = property.SemanticParameterTypes is not null
                 ? property.SemanticParameterTypes[i]
                 : XpTypeSymbol.FromClr(property.ParameterTypes[i]);
-            var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
+            var conversion = _symbols.ClassifyConversion(arguments[i].SemanticType, targetType);
             if (property.ByRefIndexes?[i] == true)
             {
                 if (arguments[i] is BoundNameExpression { Symbol: VariableSymbol { HasTypedStorage: false } })
@@ -563,7 +563,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             var targetType = function.SemanticParameterTypes is not null
                 ? function.SemanticParameterTypes[i]
                 : XpTypeSymbol.FromClr(function.ParameterTypes[i]);
-            var conversion = Conversion.Classify(arguments[i].SemanticType, targetType);
+            var conversion = _symbols.ClassifyConversion(arguments[i].SemanticType, targetType);
             if (!conversion.IsImplicit)
                 return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch, $"Argument {i + 1} to '{function.Name}' must be {targetType.Name}, not {arguments[i].SemanticType.Name}.");
             if (!conversion.IsIdentity)
