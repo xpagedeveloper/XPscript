@@ -271,6 +271,8 @@ See [Date and time](date-time.md) for Date object extensions.
 
 ## Classes, types and properties
 
+Experimental AST `Delete owner` clears and recycles typed XPImage fields through the virtual deletion chain, including private and inherited storage. It clears the named caller variable; other object aliases retain the object with empty image fields. Original source images and borrowed Variant fields remain untouched. Repeated deletion is safe. This is explicit Delete cleanup, not GC finalization, scope-exit cleanup or execution of user-authored destructor bodies. See `image-field-delete.xps` and [image ownership](xpimage/index.md).
+
 | Command | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `Enum` | `Enum Name ... End Enum` | enum name and members. | Declares enum. | [language-extensions.xps](../samples/language-extensions.xps) |
@@ -293,7 +295,7 @@ Experimental AST accepts a reference to a derived user class wherever a compatib
 
 ## Native and managed interop
 
-XPImage Set uses snapshot-owned typed class fields, unlike shared JSON/XML/CSV/spreadsheet/HTTP references. Field assignment clones before recycling the previous value; Nothing clears the field and a failed clone preserves it. ByVal setter values clone at entry; ByRef values are borrowed reference snapshots whose reassignment cannot replace or recycle the source variable. Mutations and explicit Recycle through borrowed references remain shared. Clear typed image fields explicitly when finished: no automatic class destructor is supplied. Variant fields do not acquire image ownership. See [the storage contract](xpimage/index.md) and `image-property-set.xps`.
+XPImage Set uses snapshot-owned typed class fields, unlike shared JSON/XML/CSV/spreadsheet/HTTP references. Field assignment clones before recycling the previous value; Nothing clears the field and a failed clone preserves it. ByVal setter values clone at entry; ByRef values are borrowed reference snapshots whose reassignment cannot replace or recycle the source variable. Mutations and explicit Recycle through borrowed references remain shared. Release typed image fields explicitly or Delete their owner; no GC/scope-exit cleanup is supplied. Variant fields do not acquire image ownership. See [the storage contract](xpimage/index.md) and `image-property-set.xps`.
 
 Experimental AST also supports XPImage Property Get factories, including scalar Optional/ByRef indexes. Capture the result in a typed XPImage local so normal caller-scope cleanup owns it. Returned images survive the getter; other locals, replaced results and results in a throwing getter are recycled. A missing result is Nothing. This is the image-function ownership contract, not shared-reference Get/Set: no automatic getter clone is introduced. Clone explicitly when exposing an image that must remain owned by another scope, and do not discard an owning result in a member chain. Image Set uses the snapshot-storage contract above. See [XPImage accessor regression](../tests/ast-compile-probe/image-property-get.xps) and [image lifetime guidance](xpimage/index.md).
 

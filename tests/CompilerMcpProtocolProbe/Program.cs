@@ -13,7 +13,7 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
-foreach (var fixture in new[] { "image-property-set", "image-property-set-byval-signature", "image-property-set-byref-signature", "image-property-get", "image-property-signature-only", "http-reference-properties", "http-property-signature-only", "tabular-reference-properties", "tabular-reference-signatures", "native-reference-properties", "native-reference-signatures" })
+foreach (var fixture in new[] { "image-field-delete", "image-property-set", "image-property-set-byval-signature", "image-property-set-byref-signature", "image-property-get", "image-property-signature-only", "http-reference-properties", "http-property-signature-only", "tabular-reference-properties", "tabular-reference-signatures", "native-reference-properties", "native-reference-signatures" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
     var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });

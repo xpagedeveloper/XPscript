@@ -434,9 +434,12 @@ public static class AstExperimentalCompiler
             var baseClause = classDeclaration.BaseType is null
                 ? string.Empty
                 : $" : Xp{classes[classDeclaration.BaseType.Identifier.Text].Identifier.Text}";
+            var imageCleanup = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>()
+                .Where(field => AstImageSupport.IsImage(field.Type.Identifier.Text))
+                .Select(field => $"AstImageScope.StoreField(ref this.{field.Identifier.Text}, null);"));
             var delete = classDeclaration.BaseType is null
-                ? "public virtual void Delete() { }"
-                : "public override void Delete() { base.Delete(); }";
+                ? $"public virtual void Delete() {{ {imageCleanup} }}"
+                : $"public override void Delete() {{ {imageCleanup} base.Delete(); }}";
             var memberBodies = AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource);
             // Script classes are assembly-local implementation types, like the native
             // runtime types exposed by their fields and accessor signatures.
