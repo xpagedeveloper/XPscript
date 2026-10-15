@@ -1,0 +1,16 @@
+Class Box
+    Private stored As Long
+    Public Property Get Item(Optional ByVal index As Long = 4) As Long
+        Item = stored + index
+    End Property
+    Public Property Let Item(Optional ByVal index As Long = 4, ByVal incoming As Long)
+        stored = incoming + index
+    End Property
+End Class
+Sub Main()
+    Dim box As New Box
+    If box.Item() <> 4 Then Error 6, "omitted getter"
+    box.Item() = 10
+    If box.Item(0) <> 14 Then Error 6, "omitted setter"
+    Print "INDEXED_OPTIONAL_SIMPLE_OK"
+End Sub

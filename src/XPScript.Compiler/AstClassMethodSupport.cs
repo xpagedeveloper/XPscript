@@ -23,7 +23,8 @@ internal static class AstClassMethodSupport
                 yield return new IndexedPropertySymbol(declaration.Identifier.Text + "." + name, type,
                     indexes.Select(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
                     XpTypeSymbol.FromClr(type), null, readable, writable, "__xps_index_get_" + name, "__xps_index_let_" + name,
-                    indexes.Select(p => p.IsExplicitByRef).ToArray());
+                    indexes.Select(p => p.IsExplicitByRef).ToArray())
+                    { RequiredArgumentCount = indexes.TakeWhile(p => !p.IsOptional).Count() };
             else yield return new PropertySymbol(declaration.Identifier.Text + "." + name,
                 type, XpTypeSymbol.FromClr(type), readable, writable);
         }
@@ -55,6 +56,11 @@ internal static class AstClassMethodSupport
             if (getter is not null && setter is not null && getter.Parameters.Where((p, i) => p.IsExplicitByRef != setter.Parameters[i].IsExplicitByRef).Any())
                 throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
                     $"Property '{group.Key}' accessors must use compatible index passing modes.", "XPS1012", "semantic");
+            if (getter is not null && setter is not null && getter.Parameters.Where((p, i) =>
+                    AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) != AstExperimentalCompiler.ResolveRuntimeType(setter.Parameters[i].Type?.Identifier.Text) ||
+                    p.IsOptional != setter.Parameters[i].IsOptional).Any())
+                throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
+                    $"Property '{group.Key}' accessors must use compatible index types and Optional signatures.", "XPS1012", "semantic");
             if (getter is not null && setter is not null &&
                 !string.Equals(getter.Type?.Identifier.Text, setter.Type?.Identifier.Text ?? setter.Parameters.LastOrDefault()?.Type?.Identifier.Text, StringComparison.OrdinalIgnoreCase))
                 throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
@@ -83,10 +89,18 @@ internal static class AstClassMethodSupport
                 (function is not null || property?.IsGetter == true) && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar typed parameters and results; object/array signatures are not implemented yet.", "XPS3001", "ast");
-            if (syntaxParameters.Any(p => p.IsOptional || p.IsList) ||
+            if (syntaxParameters.Any(p => p.IsList || p.IsOptional && property is null) ||
                 AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Optional/List parameters and Static storage in class methods are not implemented by the AST compiler yet.", "XPS3001", "ast");
+            if (property is not null)
+            {
+                var indexParameters = property.IsGetter ? syntaxParameters : syntaxParameters.Take(syntaxParameters.Count - 1).ToArray();
+                AstExperimentalCompiler.ValidateOptionalDeclarations(indexParameters, sourcePath, source);
+                if (property.IsSetter && (syntaxParameters[^1].IsOptional || syntaxParameters[^1].DefaultValue is not null))
+                    throw AstExperimentalCompiler.MappedDiagnostic(syntaxParameters[^1].Span, sourcePath, source,
+                        "A Property Let value parameter must be required and cannot have a default value.", "XPS1012", "semantic");
+            }
             var classScope = globals.CreateChildScope();
             classScope.Declare(new VariableSymbol("Me", typeof(object), XpTypeSymbol.User(declaration.Identifier.Text)));
             foreach (var ownProperty in Properties(declaration, false))
@@ -114,6 +128,28 @@ internal static class AstClassMethodSupport
             var scope = classScope.CreateChildScope();
             var parameters = syntaxParameters.Select(p => new ParameterSymbol(p.Identifier.Text,
                 AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text), p.IsByRef)).ToArray();
+            // Bind defaults in the instance declaration scope, exposing only earlier
+            // indexes. Accessor locals and the incoming setter value are unavailable.
+            var defaults = new BoundExpression?[parameters.Length];
+            var defaultScope = classScope.CreateChildScope();
+            for (var i = 0; i < parameters.Length; i++)
+            {
+                if (syntaxParameters[i].IsOptional)
+                {
+                    var binder = new ExpressionBinder(defaultScope);
+                    var type = XpTypeSymbol.FromClr(parameters[i].Type);
+                    var value = syntaxParameters[i].DefaultValue is { } syntax ? binder.Bind(syntax)
+                        : new BoundLiteralExpression(parameters[i].Type == typeof(string) ? "" : Activator.CreateInstance(parameters[i].Type), parameters[i].Type, type);
+                    if (binder.Diagnostics.Count > 0)
+                        throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, source);
+                    var conversion = Conversion.Classify(value.SemanticType, type);
+                    if (!conversion.IsImplicit)
+                        throw AstExperimentalCompiler.MappedDiagnostic(syntaxParameters[i].Span, sourcePath, source,
+                            $"Default value for Optional parameter '{parameters[i].Name}' is incompatible with its type.", "XPS2001", "semantic");
+                    defaults[i] = conversion.IsIdentity ? value : new BoundConversionExpression(value, type, conversion) { Span = value.Span };
+                }
+                defaultScope.Declare(parameters[i]);
+            }
             foreach (var parameter in parameters) scope.Declare(parameter);
             var hasResult = function is not null || property?.IsGetter == true;
             var returnType = hasResult ? AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) : typeof(void);
@@ -128,6 +164,16 @@ internal static class AstClassMethodSupport
             if (property is not null || (sub?.Visibility ?? function?.Visibility)?.Kind == SyntaxKind.PrivateKeyword)
                 body = "private " + body["public ".Length..];
             output.Append(body);
+            if (property is not null)
+            {
+                var end = parameters.Length - (property.IsSetter ? 1 : 0);
+                for (var count = end - 1; count >= 0 && syntaxParameters[count].IsOptional; count--)
+                {
+                    var forward = OptionalCallLowering.Forward(emittedName, returnType, parameters, defaults, count, property.IsSetter ? 1 : 0);
+                    output.Append("private ").Append(new BoundMethodEmitter().Emit(emittedName, returnType,
+                        forward.Parameters, forward.Statements, false, source, sourcePath)["public ".Length..]);
+                }
+            }
         }
         foreach (var group in declaration.Members.OfType<PropertyDeclarationSyntax>().GroupBy(p => p.Identifier.Text, StringComparer.OrdinalIgnoreCase))
         {
@@ -140,13 +186,18 @@ internal static class AstClassMethodSupport
             {
                 foreach (var accessor in group)
                 {
-                    var arguments = string.Join(", ", accessor.Parameters.Select(p => (p.IsByRef ? "ref " : "") + p.Identifier.Text));
-                    output.Append(accessor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private " : "public ")
-                        .Append(accessor.IsGetter ? BoundMethodEmitter.CSharpType(type) : "void")
-                        .Append(accessor.IsGetter ? " __xps_index_get_" : " __xps_index_let_").Append(name).Append('(')
-                        .Append(string.Join(", ", accessor.Parameters.Select((p, i) => (i < indexes.Count && p.IsExplicitByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)) + " " + p.Identifier.Text)))
-                        .Append(") => __xps_property_").Append(accessor.IsGetter ? "get_" : "let_").Append(accessor.Identifier.Text)
-                        .Append('(').Append(arguments).Append(");\n");
+                    var required = indexes.TakeWhile(p => !p.IsOptional).Count();
+                    for (var count = indexes.Count; count >= required; count--)
+                    {
+                        var supplied = accessor.Parameters.Take(count).Concat(accessor.IsSetter ? accessor.Parameters.TakeLast(1) : []).ToArray();
+                        var arguments = string.Join(", ", supplied.Select(p => (p.IsByRef ? "ref " : "") + p.Identifier.Text));
+                        output.Append(accessor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private " : "public ")
+                            .Append(accessor.IsGetter ? BoundMethodEmitter.CSharpType(type) : "void")
+                            .Append(accessor.IsGetter ? " __xps_index_get_" : " __xps_index_let_").Append(name).Append('(')
+                            .Append(string.Join(", ", supplied.Select((p, i) => (i < count && p.IsExplicitByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)) + " " + p.Identifier.Text)))
+                            .Append(") => __xps_property_").Append(accessor.IsGetter ? "get_" : "let_").Append(accessor.Identifier.Text)
+                            .Append('(').Append(arguments).Append(");\n");
+                    }
                 }
                 continue;
             }

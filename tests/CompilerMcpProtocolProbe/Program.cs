@@ -13,6 +13,20 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+foreach (var fixture in new[] { "indexed-optional-simple", "indexed-optional-runtime" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Optional index validation failed: " + result);
+}
+foreach (var (fixture, code, line) in new[] { ("indexed-optional-order-error", "XPS1012", 2), ("indexed-optional-default-error", "XPS2001", 2), ("indexed-optional-name-error", "XPS2008", 2), ("indexed-optional-later-error", "XPS2008", 2), ("indexed-optional-signature-error", "XPS1012", 5), ("indexed-optional-value-error", "XPS1012", 2), ("indexed-optional-required-error", "XPS2002", 8), ("indexed-optional-marker-error", "XPS1012", 2) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (!result.GetProperty("result").GetProperty("isError").GetBoolean() || error.GetProperty("diagnosticCode").GetString() != code || error.GetProperty("line").GetInt32() != line)
+        throw new Exception("Optional index diagnostic lost: " + result);
+}
 var staticEarlySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/static-array.xps"));
 var staticEarlyValidation = await CallAsync(new { jsonrpc="2.0",id="static-array-early",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=staticEarlySource,filename="static-array.xps" } } });
 if (staticEarlyValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST Static array storage failed: " + staticEarlyValidation);
@@ -57,7 +71,7 @@ foreach (var propertyTool in new[] { "xpscript_ast_validate", "xpscript_validate
     var result = await CallAsync(new { jsonrpc="2.0",id="properties-"+propertyTool,method="tools/call",@params=new { name=propertyTool,arguments=new { source=propertiesSource,filename="class-properties-native.xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Property validation failed: " + result);
 }
-foreach (var (fixture, code, line) in new[] { ("class-property-readonly-error", "XPS2001", 8), ("class-property-writeonly-error", "XPS2001", 9), ("class-property-private-error", "XPS2009", 8), ("class-property-body-error", "XPS2008", 3), ("class-property-type-error", "XPS1012", 5), ("class-property-indexed-deferred", "XPS3001", 2) })
+foreach (var (fixture, code, line) in new[] { ("class-property-readonly-error", "XPS2001", 8), ("class-property-writeonly-error", "XPS2001", 9), ("class-property-private-error", "XPS2009", 8), ("class-property-body-error", "XPS2008", 3), ("class-property-type-error", "XPS1012", 5) })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture+".xps"));
     var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });

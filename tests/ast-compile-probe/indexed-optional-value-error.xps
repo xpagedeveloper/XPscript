@@ -1,0 +1,6 @@
+Class Box
+    Public Property Let Item(Optional ByVal index As Long = 1, Optional ByVal incoming As Long = 2)
+    End Property
+End Class
+Sub Main()
+End Sub

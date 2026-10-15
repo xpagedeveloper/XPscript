@@ -285,6 +285,8 @@ See [Date and time](date-time.md) for Date object extensions.
 | `Property Let` | `Property Let Name(...)` | property/index parameters and scalar value. | Declares scalar property assignment. | [indexed-properties.xps](../samples/indexed-properties.xps) |
 | `Property Set` | `Property Set Name(...)` | property/index parameters and object value. | Declares object-reference property assignment. | [indexed-object-properties.xps](../samples/indexed-object-properties.xps) |
 
+Experimental `ast-compile` supports trailing Optional scalar indexes in Get/Let, for example `Property Get Item(Optional ByVal index As Long = 4) As Long` and `Property Let Item(Optional ByVal index As Long = 4, ByVal incoming As Long)`. Call `box.Item()` or assign `box.Item() = 10` to omit every Optional index. The setter value is always required. Paired accessors must agree on index types, modes and Optional positions. Each accessor evaluates its own defaults once, in order, after the supplied arguments (and setter RHS); defaults can reference instance members and earlier indexes. Omitted ByRef defaults have fresh storage; supplied ByRef arguments retain aliases. Explicit empty slots remain unsupported in AST. See [AST emitter contract](ast-csharp-emitter.md) and [executable Optional-index regression](../tests/ast-compile-probe/indexed-optional-runtime.xps).
+
 ## Native and managed interop
 
 | Command | Syntax | Parameters | Description | Example |

@@ -1055,7 +1055,7 @@ internal static class Program
         ? XpTypeSymbol.Variant : BoundExpressionEmitter.RuntimeObjectType(type.Identifier.Text) is not null
             ? XpTypeSymbol.User(type.Identifier.Text) : XpTypeSymbol.FromClr(ResolveRuntimeType(type.Identifier.Text));
 
-    private static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters, string sourcePath, string source)
+    internal static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters, string sourcePath, string source)
     {
         var optionalSeen = false;
         foreach (var parameter in parameters)

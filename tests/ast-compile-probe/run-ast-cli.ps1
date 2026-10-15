@@ -4,6 +4,17 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+foreach ($fixture in @('indexed-optional-simple', 'indexed-optional-runtime')) {
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture)
+    if ($LASTEXITCODE -ne 0) { throw "AST Optional index compilation failed: $fixture" }
+    $result = dotnet (Join-Path $output "$fixture/Generated.dll")
+    $expected = if ($fixture -eq 'indexed-optional-simple') { 'INDEXED_OPTIONAL_SIMPLE_OK' } else { 'INDEXED_OPTIONAL_RUNTIME_OK' }
+    if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST Optional index execution failed: $fixture" }
+}
+foreach ($fixture in @('indexed-optional-order-error', 'indexed-optional-default-error', 'indexed-optional-name-error', 'indexed-optional-later-error', 'indexed-optional-signature-error', 'indexed-optional-value-error', 'indexed-optional-required-error', 'indexed-optional-marker-error')) {
+    $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:(2|5|8):") { throw "Optional index diagnostic lost: $fixture" }
+}
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-array.xps') -o (Join-Path $output 'static-array-early')
 if ($LASTEXITCODE -ne 0) { throw 'AST Static array storage compilation failed.' }
 $staticEarlyResult = dotnet (Join-Path $output 'static-array-early/Generated.dll')
@@ -76,7 +87,7 @@ dotnet $compiler compile (Join-Path $PSScriptRoot 'class-properties-native.xps')
 if ($LASTEXITCODE -ne 0) { throw 'Normal property accessor compilation failed.' }
 $propertyNormalResult = & $propertyNormal
 if ($LASTEXITCODE -ne 0 -or ($propertyNormalResult -join "`n") -ne ($propertyResult -join "`n")) { throw 'Normal/AST property parity failed.' }
-foreach ($propertyInvalid in @('class-property-readonly-error', 'class-property-writeonly-error', 'class-property-private-error', 'class-property-body-error', 'class-property-type-error', 'class-property-indexed-deferred')) {
+foreach ($propertyInvalid in @('class-property-readonly-error', 'class-property-writeonly-error', 'class-property-private-error', 'class-property-body-error', 'class-property-type-error')) {
     $propertyFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$propertyInvalid.xps") -o (Join-Path $output $propertyInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($propertyFailure -join "`n") -notmatch "$propertyInvalid.xps:(2|3|5|8|9):") { throw "Property diagnostic source mapping lost: $propertyInvalid" }
 }

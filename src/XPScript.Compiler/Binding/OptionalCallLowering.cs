@@ -6,21 +6,22 @@ namespace XPScript.Compiler.Binding;
 public static class OptionalCallLowering
 {
     public static BoundMethodDefinition Forward(string name, Type returnType,
-        IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundExpression?> defaults, int suppliedCount)
+        IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundExpression?> defaults, int suppliedCount, int requiredTailCount = 0)
     {
-        if (defaults.Count != parameters.Count || suppliedCount < 0 || suppliedCount >= parameters.Count)
+        var optionalEnd = parameters.Count - requiredTailCount;
+        if (defaults.Count != parameters.Count || requiredTailCount < 0 || suppliedCount < 0 || suppliedCount >= optionalEnd)
             throw new ArgumentException("Optional forwarding requires one default slot per parameter and a shorter signature.");
         var statements = new List<BoundStatement>();
         var arguments = parameters.Take(suppliedCount).Select(p => (BoundExpression)new BoundNameExpression(p)).ToList();
         var names = parameters.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var omittedLocals = new Dictionary<Symbol, LocalSymbol>();
-        for (var i = suppliedCount; i < parameters.Count; i++)
+        for (var i = suppliedCount; i < optionalEnd; i++)
         {
             var localName = "__xpsOptional" + i;
             while (!names.Add(localName)) localName += "_";
             omittedLocals[parameters[i]] = new LocalSymbol(localName, parameters[i].Type, parameters[i].SemanticType);
         }
-        for (var i = suppliedCount; i < parameters.Count; i++)
+        for (var i = suppliedCount; i < optionalEnd; i++)
         {
             // Every omitted argument gets fresh storage. A callee may mutate
             // its ByRef default without sharing state with another invocation.
@@ -29,12 +30,14 @@ public static class OptionalCallLowering
             statements.Add(new BoundVariableDeclarationStatement(local, initializer));
             arguments.Add(new BoundNameExpression(local));
         }
+        // A Property Let's incoming value is required, even after Optional indexes.
+        arguments.AddRange(parameters.Skip(optionalEnd).Select(p => new BoundNameExpression(p)));
         var function = new FunctionSymbol(name, returnType, parameters.Select(p => p.Type).ToArray(),
             null, parameters.Select(p => p.SemanticType ?? XpTypeSymbol.FromClr(p.Type)).ToArray(),
             parameters.Select(p => p.IsByRef).ToArray());
         var call = new BoundCallExpression(null, function, arguments);
         statements.Add(returnType == typeof(void) ? new BoundExpressionStatement(call) : new BoundReturnStatement(call));
-        return new BoundMethodDefinition(name, returnType, parameters.Take(suppliedCount).ToArray(), statements, true);
+        return new BoundMethodDefinition(name, returnType, parameters.Take(suppliedCount).Concat(parameters.Skip(optionalEnd)).ToArray(), statements, true);
     }
 
     private static BoundExpression ReplaceParameters(BoundExpression expression, IReadOnlyDictionary<Symbol, LocalSymbol> replacements)

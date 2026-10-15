@@ -83,6 +83,7 @@ public sealed record IndexedPropertySymbol(
     IReadOnlyList<bool>? ByRefIndexes = null) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.IndexedProperty;
+    public int RequiredArgumentCount { get; init; } = ParameterTypes.Count;
 }
 
 public sealed record ProcedureSymbol(

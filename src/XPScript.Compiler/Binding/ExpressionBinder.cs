@@ -512,8 +512,13 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return Error(syntax, CompilerDiagnosticCodes.TypeMismatch,
                 $"Property '{property.Name.Split('.').Last()}' is {(writing ? "read-only" : "write-only")}.");
         var arguments = syntax.Arguments.Select(Bind).ToArray();
-        if (arguments.Length != property.ParameterTypes.Count)
-            return Error(syntax, CompilerDiagnosticCodes.ArgumentCountMismatch, $"Indexed property '{property.Name}' expects {property.ParameterTypes.Count} argument(s), but received {arguments.Length}.");
+        if (arguments.Length < property.RequiredArgumentCount || arguments.Length > property.ParameterTypes.Count)
+        {
+            var expected = property.RequiredArgumentCount == property.ParameterTypes.Count
+                ? property.ParameterTypes.Count.ToString()
+                : $"{property.RequiredArgumentCount} to {property.ParameterTypes.Count}";
+            return Error(syntax, CompilerDiagnosticCodes.ArgumentCountMismatch, $"Indexed property '{property.Name}' expects {expected} argument(s), but received {arguments.Length}.");
+        }
         for (var i = 0; i < arguments.Length; i++)
         {
             var targetType = property.SemanticParameterTypes is not null

@@ -1,0 +1,9 @@
+Class Box
+    Public Property Get Item(ByVal index As Long, Optional ByVal extra As Long = 1) As Long
+        Item = index + extra
+    End Property
+End Class
+Sub Main()
+    Dim box As New Box
+    Print box.Item()
+End Sub

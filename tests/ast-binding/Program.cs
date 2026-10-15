@@ -12,6 +12,29 @@ static ExpressionSyntax Parse(string text)
     return syntax;
 }
 
+// Optional index arity and supplied ByRef validation precede the broader probe.
+var optionalIndexSymbols = SymbolTable.CreateWithCompilerCatalog();
+optionalIndexSymbols.Declare(new LocalSymbol("store", typeof(object), XpTypeSymbol.User("OptionalStore")));
+optionalIndexSymbols.Declare(new LocalSymbol("index", typeof(long), XpTypeSymbol.FromClr(typeof(long))));
+optionalIndexSymbols.Declare(new IndexedPropertySymbol("OptionalStore.Item", typeof(long), [typeof(long), typeof(long)],
+    GetterName: "__xps_index_get_Item", ByRefIndexes: [true, true]) { RequiredArgumentCount = 1 });
+foreach (var text in new[] { "store.Item(index)", "store.Item(index, index)" })
+{
+    var binder = new ExpressionBinder(optionalIndexSymbols);
+    var bound = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 0 || bound is not BoundIndexedPropertyExpression indexed ||
+        indexed.Arguments.Count != (text.Contains(',') ? 2 : 1))
+        throw new Exception("Optional indexes lost supplied argument shape: " + text);
+}
+foreach (var (text, code) in new[] { ("store.Item()", "XPS2002"), ("store.Item(index, index, index)", "XPS2002"), ("store.Item(index, 1)", "XPS2001") })
+{
+    var binder = new ExpressionBinder(optionalIndexSymbols);
+    _ = binder.Bind(Parse(text));
+    if (binder.Diagnostics.Count != 1 || binder.Diagnostics[0].Code != code)
+        throw new Exception("Invalid Optional indexed argument escaped binding: " + text);
+}
+Console.WriteLine("AST_BINDING_OPTIONAL_INDEXES_OK");
+
 // Type diagnostics run first so semantic type regressions fail before the broader binder probe.
 foreach (var text in new[] { "Application.Secrets.Get(\"service\", \"account\")", "Application.Secrets.Set(\"service\", \"account\", \"test value\")" })
 {
