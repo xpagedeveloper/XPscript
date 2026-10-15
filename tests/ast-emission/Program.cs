@@ -8,6 +8,20 @@ using SyntaxKind = XPScript.Compiler.Syntax.SyntaxKind;
 using Conversion = XPScript.Compiler.Binding.Conversion;
 
 var expressions = new BoundExpressionEmitter();
+var imageSemantic = XpTypeSymbol.User("XPImage");
+var imageField = new BoundNameExpression(new FieldSymbol("picture", typeof(object), imageSemantic));
+var createdImage = new BoundNewExpression(typeof(object), [new BoundLiteralExpression(2L, typeof(long)), new BoundLiteralExpression(2L, typeof(long))], imageSemantic);
+var imageStoreCode = new BoundMethodEmitter().Emit("StoreImage", typeof(void), [new BoundAssignmentStatement(imageField, createdImage, true)]);
+if (!imageStoreCode.Contains("using var __imageScope") || !imageStoreCode.Contains("AstImageScope.StoreField(ref picture") || !imageStoreCode.Contains("__imageScope.Own((XPImage)("))
+    throw new Exception("Image field storage lost temporary ownership or managed-reference emission.");
+var borrowedImage = new ParameterSymbol("incoming", typeof(object), true, imageSemantic) { IsBorrowedImageSnapshot = true };
+var snapshotCode = new BoundMethodEmitter().Emit("Snapshot", typeof(void), [borrowedImage],
+    [new BoundAssignmentStatement(new BoundNameExpression(borrowedImage), new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Nothing), true)]);
+if (!snapshotCode.Contains("__imageScope.Borrow(incoming)") || !snapshotCode.Contains("__imageScope.Replace(incoming") || snapshotCode.Contains("ReplaceBorrowed(incoming"))
+    throw new Exception("Borrowed image setter input became caller-owning storage.");
+var byvalImage = new ParameterSymbol("incoming", typeof(object), false, imageSemantic);
+var forwardCode = new BoundMethodEmitter().Emit("Forward", typeof(void), [byvalImage], [], false, cloneImageParameters: false);
+if (forwardCode.Contains("?.Clone()")) throw new Exception("An Optional property forwarder cloned the image input twice.");
 var copybackList = new BoundNameExpression(new LocalSymbol("copybackValues", typeof(object), XpTypeSymbol.ListOf(XpTypeSymbol.FromClr(typeof(long)))));
 var copybackElement = new BoundIndexExpression(copybackList, new BoundLiteralExpression("item", typeof(string)), typeof(long), XpTypeSymbol.FromClr(typeof(long)));
 var copybackCall = new BoundCallExpression(null, new FunctionSymbol("MutateThenThrow", typeof(void), [typeof(long)], ByRefParameters: [true]), [copybackElement]);

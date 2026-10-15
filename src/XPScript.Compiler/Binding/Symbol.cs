@@ -61,6 +61,8 @@ public sealed record ParameterSymbol(
     bool IsByRef = true,
     XpTypeSymbol? SemanticType = null) : Symbol(Name)
 {
+    /// <summary>A setter value is a borrowed reference snapshot, never caller storage.</summary>
+    public bool IsBorrowedImageSnapshot { get; init; }
     public override SymbolKind Kind => SymbolKind.Parameter;
 }
 

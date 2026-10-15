@@ -77,17 +77,39 @@ internal static class AstImageSupport
     internal static string RuntimeCode(string source) => AstObjectSupportRegistry.UsesObject(source, "XPImage")
         ? FileSystemPortabilityRuntimeSource.Code + Environment.NewLine + XPImageRuntimeSource.Code + Environment.NewLine + OwnershipCode : "";
 
+    internal static bool IsImageStorage(BoundExpression target) => IsImage(target.SemanticType.Name) &&
+        target is BoundNameExpression { Symbol: FieldSymbol } or BoundMemberAccessExpression or BoundIndexedPropertyExpression;
+
+    internal static bool IsOwningValue(BoundExpression value) => value switch
+    {
+        BoundConversionExpression conversion => IsOwningValue(conversion.Expression),
+        BoundNewExpression or BoundCallExpression or BoundIndexedPropertyExpression => true,
+        BoundMemberAccessExpression { IsFieldStorage: false } => true,
+        _ => false
+    };
+
     private const string OwnershipCode = """
 internal sealed class AstImageScope : System.IDisposable
 {
     private readonly HashSet<XPImage> _owned = new(System.Collections.Generic.ReferenceEqualityComparer.Instance);
     private readonly HashSet<XPImage> _escaped = new(System.Collections.Generic.ReferenceEqualityComparer.Instance);
+    private readonly HashSet<XPImage> _borrowed = new(System.Collections.Generic.ReferenceEqualityComparer.Instance);
     private readonly List<Func<XPImage?>> _locations = new();
-    public XPImage? Own(XPImage? image) { if (image is not null) _owned.Add(image); return image; }
+    public XPImage? Own(XPImage? image) { if (image is not null && !_borrowed.Contains(image)) _owned.Add(image); return image; }
+    public void Borrow(XPImage? image) { if (image is not null) _borrowed.Add(image); }
     public void Observe(Func<XPImage?> location) => _locations.Add(location);
     public XPImage? Escape(XPImage? image) { if (image is not null) _escaped.Add(image); return image; }
     public T EscapeValue<T>(T value) { if (value is XPImage image) Escape(image); return value; }
-    public XPImage? Replace(XPImage? previous, XPImage? next) => Own(ReplaceBorrowed(previous, next));
+    public XPImage? Replace(XPImage? previous, XPImage? next) => Own(previous is not null && _borrowed.Contains(previous) ? next : ReplaceBorrowed(previous, next));
+    public static void StoreField(ref XPImage? field, XPImage? value)
+    {
+        if (object.ReferenceEquals(field, value)) return;
+        // Clone before replacing/recycling so a failed clone preserves the old field.
+        var snapshot = value?.Clone();
+        var previous = field;
+        field = snapshot;
+        previous?.Recycle();
+    }
     public static XPImage? ReplaceBorrowed(XPImage? previous, XPImage? next)
     {
         if (!object.ReferenceEquals(previous, next)) previous?.Recycle();
@@ -97,7 +119,7 @@ internal sealed class AstImageScope : System.IDisposable
     {
         foreach (var location in _locations) Own(location());
         foreach (var image in _owned) if (!_escaped.Contains(image)) image.Recycle();
-        _owned.Clear(); _escaped.Clear(); _locations.Clear();
+        _owned.Clear(); _escaped.Clear(); _borrowed.Clear(); _locations.Clear();
     }
 }
 """;

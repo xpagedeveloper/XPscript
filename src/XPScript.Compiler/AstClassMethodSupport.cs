@@ -7,14 +7,15 @@ namespace XPScript.Compiler;
 /// <summary>Instance procedure bodies use the same binder/flow validation and emitter as module procedures.</summary>
 internal static class AstClassMethodSupport
 {
-    // These managed native families share references. Other families (notably image ownership)
-    // retain their explicit deferral until their accessor lifetime contract is covered.
+    // Managed native families share references; images use their explicit snapshot ownership contract.
+    // Other families retain their deferral until their accessor contract is covered.
     private static bool UnsupportedNativeAccessorType(string? name) =>
         BoundExpressionEmitter.RuntimeObjectType(name ?? "") is not null &&
         !AstXmlSupport.IsXml(name) &&
         !AstCsvSupport.IsCsv(name) &&
         !AstSpreadsheetSupport.IsSpreadsheet(name) &&
         !AstHttpSupport.IsHttp(name) &&
+        !AstImageSupport.IsImage(name) &&
         !(new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }
             .Contains(name, StringComparer.OrdinalIgnoreCase));
 
@@ -110,15 +111,10 @@ internal static class AstClassMethodSupport
             if (isObjectSetter && DeclaredType(property!.Type ?? syntaxParameters.Last().Type, globals).RuntimeType != typeof(object))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Property Set requires an object/reference value type.", "XPS2001", "semantic");
-            if (isObjectSetter && AstImageSupport.IsImage(syntaxParameters.Last().Type?.Identifier.Text))
-                throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "XPImage Property Set ownership is not implemented yet; use a Property Get image factory.", "XPS3001", "ast");
             if (syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
                     .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object)) ||
                 function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) ||
-                // Image getters reuse function-result ownership/escape. Setters remain
-                // deferred: storing an accessor-local image needs a field lifetime contract.
-                property is not null && (UnsupportedNativeAccessorType(resultTypeName) && !AstImageSupport.IsImage(resultTypeName) ||
+                property is not null && (UnsupportedNativeAccessorType(resultTypeName) ||
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar typed parameters and results; object/array signatures are not implemented yet.", "XPS3001", "ast");
@@ -159,8 +155,11 @@ internal static class AstClassMethodSupport
                 classScope.Declare(symbol with { Name = declaration.Identifier.Text + "." + methodName });
             }
             var scope = classScope.CreateChildScope();
-            var parameters = syntaxParameters.Select(p => new ParameterSymbol(p.Identifier.Text,
-                AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text), p.IsByRef, DeclaredType(p.Type, globals))).ToArray();
+            var parameters = syntaxParameters.Select((p, i) => new ParameterSymbol(p.Identifier.Text,
+                AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text), p.IsByRef, DeclaredType(p.Type, globals))
+            {
+                IsBorrowedImageSnapshot = isObjectSetter && i == syntaxParameters.Count - 1 && p.IsByRef && AstImageSupport.IsImage(p.Type?.Identifier.Text)
+            }).ToArray();
             // Bind defaults in the instance declaration scope, exposing only earlier
             // indexes. Accessor locals and the incoming setter value are unavailable.
             var defaults = new BoundExpression?[parameters.Length];
@@ -205,7 +204,7 @@ internal static class AstClassMethodSupport
                 {
                     var forward = OptionalCallLowering.Forward(emittedName, returnType, parameters, defaults, count, property.IsSetter ? 1 : 0);
                     output.Append("private ").Append(new BoundMethodEmitter().Emit(emittedName, returnType,
-                        forward.Parameters, forward.Statements, false, source, sourcePath, semanticResult)["public ".Length..]);
+                        forward.Parameters, forward.Statements, false, source, sourcePath, semanticResult, cloneImageParameters: false)["public ".Length..]);
                 }
             }
         }

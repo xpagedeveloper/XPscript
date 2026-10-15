@@ -15,7 +15,7 @@ public sealed class BoundMethodEmitter
         => Emit(methodName, returnType, parameters, statements, isStatic: true);
 
     public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements, bool isStatic,
-        string? source = null, string? sourcePath = null, XpTypeSymbol? semanticReturnType = null)
+        string? source = null, string? sourcePath = null, XpTypeSymbol? semanticReturnType = null, bool cloneImageParameters = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
         ArgumentNullException.ThrowIfNull(returnType);
@@ -25,7 +25,9 @@ public sealed class BoundMethodEmitter
         string body;
         _statements.ImageScopeEnabled = parameters.Any(p => AstImageSupport.IsImage(p.SemanticType?.Name)) ||
             BoundStatementTraversal.Descendants(statements).OfType<BoundVariableDeclarationStatement>()
-                .Any(d => AstImageSupport.IsImage(d.Local.SemanticType?.Name));
+                .Any(d => AstImageSupport.IsImage(d.Local.SemanticType?.Name)) ||
+            BoundStatementTraversal.Descendants(statements).OfType<BoundAssignmentStatement>()
+                .Any(a => AstImageSupport.IsImageStorage(a.Target));
         try
         {
             body = source is not null && sourcePath is not null && BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement)
@@ -44,7 +46,9 @@ public sealed class BoundMethodEmitter
         if (_statements.ImageScopeEnabled)
         {
             output.Append("    using var __imageScope = new AstImageScope();\n");
-            foreach (var parameter in parameters.Where(p => !p.IsByRef && AstImageSupport.IsImage(p.SemanticType?.Name)))
+            foreach (var parameter in parameters.Where(p => p.IsBorrowedImageSnapshot))
+                output.Append("    __imageScope.Borrow(").Append(parameter.Name).Append(");\n");
+            foreach (var parameter in parameters.Where(p => cloneImageParameters && !p.IsByRef && AstImageSupport.IsImage(p.SemanticType?.Name)))
             {
                 output.Append("    ").Append(parameter.Name).Append(" = __imageScope.Own(").Append(parameter.Name).Append("?.Clone());\n");
                 output.Append("    __imageScope.Observe(() => ").Append(parameter.Name).Append(");\n");

@@ -32,7 +32,7 @@ foreach ($case in @(
     @('tabular-property-readonly-error', 'XPS2001', 7),
     @('native-property-type-error', 'XPS2001', 8),
     @('native-property-mode-error', 'XPS2001', 8),
-    @('native-property-image-deferred', 'XPS3001', 2)
+    @('image-property-set-mode-error', 'XPS2001', 8)
 )) {
     $fixture = $case[0]
     $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1

@@ -84,7 +84,7 @@ public sealed class BoundStatementEmitter
                     if (indexedProperty.Property.SetterName is null)
                         throw new NotSupportedException("Indexed property assignment requires accessor lowering.");
                     var indexes = _expressions.EmitIndexedArguments(indexedProperty);
-                    Line($"{_expressions.Emit(indexedProperty.Receiver)}.{indexedProperty.Property.SetterName}({indexes}{(indexes.Length == 0 ? "" : ", ")}{_expressions.Emit(assignment.Expression)});");
+                    Line($"{_expressions.Emit(indexedProperty.Receiver)}.{indexedProperty.Property.SetterName}({indexes}{(indexes.Length == 0 ? "" : ", ")}{ImageStorageValue(assignment)});");
                     break;
                 }
                 if (assignment.Target is BoundIndexExpression arrayTarget &&
@@ -95,14 +95,20 @@ public sealed class BoundStatementEmitter
                     break;
                 }
                 var targetText = _expressions.Emit(assignment.Target);
-                var expressionText = _expressions.Emit(assignment.Expression);
+                var expressionText = ImageStorageValue(assignment);
                 if (assignment.Target is BoundMemberAccessExpression property)
                     expressionText = AstApplicationSupport.ConvertPropertyValue(property.Receiver.SemanticType.Name, property.Name, expressionText);
                 if (BoundExpressionEmitter.RuntimeObjectType(assignment.Target.SemanticType.Name) is { } targetJsonType)
                     expressionText = $"({targetJsonType})({expressionText})";
+                if (AstImageSupport.IsImage(assignment.Target.SemanticType.Name) &&
+                    assignment.Target is BoundNameExpression { Symbol: FieldSymbol } or BoundMemberAccessExpression { IsFieldStorage: true })
+                {
+                    Line($"AstImageScope.StoreField(ref {targetText}, {expressionText});");
+                    break;
+                }
                 if (AstImageSupport.IsImage(assignment.Target.SemanticType.Name) && assignment.Target is BoundNameExpression imageTarget)
                 {
-                    var owns = ImageScopeEnabled && imageTarget.Symbol is LocalSymbol { StaticStorageName: null } or ParameterSymbol { IsByRef: false };
+                    var owns = ImageScopeEnabled && imageTarget.Symbol is LocalSymbol { StaticStorageName: null } or ParameterSymbol { IsByRef: false } or ParameterSymbol { IsBorrowedImageSnapshot: true };
                     expressionText = $"{(owns ? "__imageScope.Replace" : "AstImageScope.ReplaceBorrowed")}({targetText}, {expressionText})";
                 }
                 if (targetText is "http.TimeoutSec" or "http.MaxRedirects" or "http.ResponseCode") expressionText = $"Convert.ToInt64({expressionText})";
@@ -527,6 +533,13 @@ public sealed class BoundStatementEmitter
         SyntaxKind.GreaterOrEqualsToken => ">=",
         _ => throw new NotSupportedException($"Case operator {kind} is not supported.")
     };
+
+    private string ImageStorageValue(BoundAssignmentStatement assignment)
+    {
+        var value = _expressions.Emit(assignment.Expression);
+        return ImageScopeEnabled && AstImageSupport.IsImageStorage(assignment.Target) && AstImageSupport.IsOwningValue(assignment.Expression)
+            ? $"__imageScope.Own((XPImage)({value}))" : value;
+    }
 
     private void Block(BoundEmissionContext output, IReadOnlyList<BoundStatement> statements, int indent)
     {

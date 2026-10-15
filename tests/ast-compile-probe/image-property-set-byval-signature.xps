@@ -3,4 +3,7 @@ Class Store
     End Property
 End Class
 Sub Main()
+    Dim store As New Store
+    Set store.Item = Nothing
+    Print "IMAGE_SET_BYVAL_SIGNATURE_OK"
 End Sub
