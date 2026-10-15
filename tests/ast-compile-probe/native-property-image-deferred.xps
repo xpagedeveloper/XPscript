@@ -1,0 +1,6 @@
+Class Store
+    Public Property Get Item As XPImage
+    End Property
+End Class
+Sub Main()
+End Sub

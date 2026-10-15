@@ -7,6 +7,14 @@ namespace XPScript.Compiler;
 /// <summary>Instance procedure bodies use the same binder/flow validation and emitter as module procedures.</summary>
 internal static class AstClassMethodSupport
 {
+    // JSON and XML share references. Other native families (notably image ownership)
+    // retain their explicit deferral until their accessor lifetime contract is covered.
+    private static bool UnsupportedNativeAccessorType(string? name) =>
+        BoundExpressionEmitter.RuntimeObjectType(name ?? "") is not null &&
+        !AstXmlSupport.IsXml(name) &&
+        !(new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }
+            .Contains(name, StringComparer.OrdinalIgnoreCase));
+
     internal static XpTypeSymbol DeclaredType(TypeSyntax? syntax, SymbolTable symbols)
     {
         var name = syntax?.Identifier.Text;
@@ -102,8 +110,8 @@ internal static class AstClassMethodSupport
             if (syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
                     .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object)) ||
                 function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) ||
-                property is not null && (BoundExpressionEmitter.RuntimeObjectType(resultTypeName ?? "") is not null ||
-                    isObjectSetter && BoundExpressionEmitter.RuntimeObjectType(syntaxParameters.Last().Type?.Identifier.Text ?? "") is not null))
+                property is not null && (UnsupportedNativeAccessorType(resultTypeName) ||
+                    isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar typed parameters and results; object/array signatures are not implemented yet.", "XPS3001", "ast");
             if (syntaxParameters.Any(p => p.IsList || p.IsOptional && property is null) ||

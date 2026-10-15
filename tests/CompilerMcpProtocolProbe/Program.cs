@@ -13,6 +13,20 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+foreach (var fixture in new[] { "native-reference-properties", "native-reference-signatures" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Native accessor validation failed: " + result);
+}
+foreach (var (fixture, code, line) in new[] { ("native-property-type-error", "XPS2001", 8), ("native-property-mode-error", "XPS2001", 8), ("native-property-image-deferred", "XPS3001", 2) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (!result.GetProperty("result").GetProperty("isError").GetBoolean() || error.GetProperty("diagnosticCode").GetString() != code || error.GetProperty("line").GetInt32() != line)
+        throw new Exception("Native accessor diagnostic lost: " + result);
+}
 var inheritedSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/inherited-reference-runtime.xps"));
 var inheritedResult = await CallAsync(new { jsonrpc="2.0",id="inherited-reference-runtime",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=inheritedSource,filename="inherited-reference-runtime.xps" } } });
 if (inheritedResult.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Inherited reference validation failed: " + inheritedResult);

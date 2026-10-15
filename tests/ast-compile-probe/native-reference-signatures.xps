@@ -1,0 +1,162 @@
+Class NativeSignatures
+    Private backing0 As XPJsonDocument
+    Public Property Get Item0 As XPJsonDocument
+        Set Item0 = backing0
+    End Property
+    Public Property Set Item0 As XPJsonDocument
+        Set backing0 = Item0
+    End Property
+    Private backing1 As XPJsonObject
+    Public Property Get Item1 As XPJsonObject
+        Set Item1 = backing1
+    End Property
+    Public Property Set Item1 As XPJsonObject
+        Set backing1 = Item1
+    End Property
+    Private backing2 As XPJsonArray
+    Public Property Get Item2 As XPJsonArray
+        Set Item2 = backing2
+    End Property
+    Public Property Set Item2 As XPJsonArray
+        Set backing2 = Item2
+    End Property
+    Private backing3 As XPJsonElement
+    Public Property Get Item3 As XPJsonElement
+        Set Item3 = backing3
+    End Property
+    Public Property Set Item3 As XPJsonElement
+        Set backing3 = Item3
+    End Property
+    Private backing4 As XPXmlDocument
+    Public Property Get Item4 As XPXmlDocument
+        Set Item4 = backing4
+    End Property
+    Public Property Set Item4 As XPXmlDocument
+        Set backing4 = Item4
+    End Property
+    Private backing5 As XPXmlNode
+    Public Property Get Item5 As XPXmlNode
+        Set Item5 = backing5
+    End Property
+    Public Property Set Item5 As XPXmlNode
+        Set backing5 = Item5
+    End Property
+    Private backing6 As XPXmlElement
+    Public Property Get Item6 As XPXmlElement
+        Set Item6 = backing6
+    End Property
+    Public Property Set Item6 As XPXmlElement
+        Set backing6 = Item6
+    End Property
+    Private backing7 As XPXmlNodeCollection
+    Public Property Get Item7 As XPXmlNodeCollection
+        Set Item7 = backing7
+    End Property
+    Public Property Set Item7 As XPXmlNodeCollection
+        Set backing7 = Item7
+    End Property
+    Private backing8 As XPXmlAttribute
+    Public Property Get Item8 As XPXmlAttribute
+        Set Item8 = backing8
+    End Property
+    Public Property Set Item8 As XPXmlAttribute
+        Set backing8 = Item8
+    End Property
+    Private backing9 As XPXmlAttributeCollection
+    Public Property Get Item9 As XPXmlAttributeCollection
+        Set Item9 = backing9
+    End Property
+    Public Property Set Item9 As XPXmlAttributeCollection
+        Set backing9 = Item9
+    End Property
+    Private backing10 As XPXmlValidationResult
+    Public Property Get Item10 As XPXmlValidationResult
+        Set Item10 = backing10
+    End Property
+    Public Property Set Item10 As XPXmlValidationResult
+        Set backing10 = Item10
+    End Property
+    Private backing11 As XPXmlValidationError
+    Public Property Get Item11 As XPXmlValidationError
+        Set Item11 = backing11
+    End Property
+    Public Property Set Item11 As XPXmlValidationError
+        Set backing11 = Item11
+    End Property
+    Private backing12 As XPXmlValidationErrorCollection
+    Public Property Get Item12 As XPXmlValidationErrorCollection
+        Set Item12 = backing12
+    End Property
+    Public Property Set Item12 As XPXmlValidationErrorCollection
+        Set backing12 = Item12
+    End Property
+End Class
+Sub Main()
+    Dim store As New NativeSignatures
+    Set store.Item0 = Nothing
+    If store.Item0 Is Nothing Then
+    Else
+        Error 6, "XPJsonDocument default"
+    End If
+    Set store.Item1 = Nothing
+    If store.Item1 Is Nothing Then
+    Else
+        Error 6, "XPJsonObject default"
+    End If
+    Set store.Item2 = Nothing
+    If store.Item2 Is Nothing Then
+    Else
+        Error 6, "XPJsonArray default"
+    End If
+    Set store.Item3 = Nothing
+    If store.Item3 Is Nothing Then
+    Else
+        Error 6, "XPJsonElement default"
+    End If
+    Set store.Item4 = Nothing
+    If store.Item4 Is Nothing Then
+    Else
+        Error 6, "XPXmlDocument default"
+    End If
+    Set store.Item5 = Nothing
+    If store.Item5 Is Nothing Then
+    Else
+        Error 6, "XPXmlNode default"
+    End If
+    Set store.Item6 = Nothing
+    If store.Item6 Is Nothing Then
+    Else
+        Error 6, "XPXmlElement default"
+    End If
+    Set store.Item7 = Nothing
+    If store.Item7 Is Nothing Then
+    Else
+        Error 6, "XPXmlNodeCollection default"
+    End If
+    Set store.Item8 = Nothing
+    If store.Item8 Is Nothing Then
+    Else
+        Error 6, "XPXmlAttribute default"
+    End If
+    Set store.Item9 = Nothing
+    If store.Item9 Is Nothing Then
+    Else
+        Error 6, "XPXmlAttributeCollection default"
+    End If
+    Set store.Item10 = Nothing
+    If store.Item10 Is Nothing Then
+    Else
+        Error 6, "XPXmlValidationResult default"
+    End If
+    Set store.Item11 = Nothing
+    If store.Item11 Is Nothing Then
+    Else
+        Error 6, "XPXmlValidationError default"
+    End If
+    Set store.Item12 = Nothing
+    If store.Item12 Is Nothing Then
+    Else
+        Error 6, "XPXmlValidationErrorCollection default"
+    End If
+    Print "NATIVE_REFERENCE_SIGNATURES_OK"
+End Sub

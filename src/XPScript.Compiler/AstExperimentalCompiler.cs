@@ -438,7 +438,9 @@ public static class AstExperimentalCompiler
                 ? "public virtual void Delete() { }"
                 : "public override void Delete() { base.Delete(); }";
             var memberBodies = AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource);
-            return $"public class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} public Xp{classDeclaration.Identifier.Text}() {{ }} {delete} {memberBodies} }}";
+            // Script classes are assembly-local implementation types, like the native
+            // runtime types exposed by their fields and accessor signatures.
+            return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} public Xp{classDeclaration.Identifier.Text}() {{ }} {delete} {memberBodies} }}";
         }));
         if (userClassSupport.Length == 0)
         {

@@ -4,6 +4,18 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+foreach ($fixture in @('native-reference-properties', 'native-reference-signatures')) {
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture)
+    if ($LASTEXITCODE -ne 0) { throw "AST native reference accessor compilation failed: $fixture" }
+    $result = dotnet (Join-Path $output "$fixture/Generated.dll")
+    $expected = if ($fixture -eq 'native-reference-properties') { 'NATIVE_REFERENCE_PROPERTIES_OK' } else { 'NATIVE_REFERENCE_SIGNATURES_OK' }
+    if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST native reference accessor execution failed: $fixture" }
+}
+foreach ($case in @(@('native-property-type-error', 'XPS2001', 8), @('native-property-mode-error', 'XPS2001', 8), @('native-property-image-deferred', 'XPS3001', 2))) {
+    $fixture = $case[0]
+    $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Native accessor diagnostic lost: $fixture" }
+}
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inherited-reference-runtime.xps') -o (Join-Path $output 'inherited-reference-runtime')
 if ($LASTEXITCODE -ne 0) { throw 'AST inherited reference compilation failed.' }
 $inheritedReferenceResult = dotnet (Join-Path $output 'inherited-reference-runtime/Generated.dll')
