@@ -22,9 +22,9 @@ internal static class AstClassConstructorSupport
                 var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
                 var sharedReference = type.IsObject || classes.ContainsKey(type.Name);
                 if (parameter.IsList || type.RuntimeType == typeof(object) &&
-                    (!sharedReference || parameter.IsByRef || parameter.IsOptional))
+                    (!sharedReference || parameter.IsOptional))
                     throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
-                        "AST constructors support scalar parameters and required ByVal Object/user-class references; other reference/List signatures are not implemented yet.", "XPS3001", "ast");
+                        "AST constructors support scalar parameters and required Object/user-class references; Optional/native reference and List signatures are not implemented yet.", "XPS3001", "ast");
             }
             var types = parameters.Select(p => AstClassMethodSupport.DeclaredType(p.Type, symbols)).ToArray();
             symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select(t => t.RuntimeType).ToArray(),

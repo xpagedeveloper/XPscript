@@ -1,7 +1,7 @@
 Class Box
 End Class
 Class Record
-    Public Sub New(ByRef value As Box)
+    Public Sub New(Optional ByRef value As Box = Nothing)
     End Sub
 End Class
 Sub Main()

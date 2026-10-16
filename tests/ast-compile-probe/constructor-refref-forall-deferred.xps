@@ -1,0 +1,11 @@
+Class Record
+    Public Sub New(ByRef value As Object)
+    End Sub
+End Class
+Sub Main()
+    Dim values List As Object
+    Set values("a") = New Object()
+    ForAll entry In values
+        Dim item As New Record(entry)
+    End ForAll
+End Sub

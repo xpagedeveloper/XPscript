@@ -1,0 +1,12 @@
+Class Record
+    Public Sub New(value As Object)
+        Set value = New Object()
+    End Sub
+End Class
+Sub Main()
+    Dim value As New Object
+    Dim original As Object = value
+    Dim item As New Record(value)
+    If value Is original Then Error 6, "implicit reference replacement lost"
+    Print "CONSTRUCTOR_REFERENCE_IMPLICIT_OK"
+End Sub

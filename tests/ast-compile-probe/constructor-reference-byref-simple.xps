@@ -1,0 +1,16 @@
+Class Box
+    Public Value As Long
+End Class
+Class Record
+    Public Sub New(ByRef value As Box)
+        Set value = New Box()
+        value.Value = 7
+    End Sub
+End Class
+Sub Main()
+    Dim value As Box
+    Set value = New Box()
+    Dim item As New Record(value)
+    Print value.Value
+    Print "REFERENCE_BYREF_SIMPLE_OK"
+End Sub

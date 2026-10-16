@@ -1,0 +1,10 @@
+Class Box
+End Class
+Class Record
+    Public Sub New(ByRef value As Object)
+    End Sub
+End Class
+Sub Main()
+    Dim value As New Box
+    Dim item As New Record(value)
+End Sub

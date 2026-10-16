@@ -1,0 +1,161 @@
+Public replacement As Variant
+Public escaped As Variant
+Public rootImage As Variant
+Public childImage As Variant
+Public rootLocal As Variant
+Public childLocal As Variant
+Public defaultLocal As Variant
+Public deletes As Long
+Public trace As String
+Class Source
+    Public Picture As XPImage
+    Public Value As Long
+End Class
+Class Root
+    Public Picture As XPImage
+    Public Borrowed As Source
+    Public Sub New(ByRef value As Object, ByVal nextValue As Object, Optional ByVal mode As Long = ReplaceBeforeBody(value, nextValue))
+        trace = trace & "R"
+        Dim snapshot As Variant = value
+        Dim typed As Source = snapshot
+        Set Borrowed = typed
+        typed.Value = typed.Value + 1
+        escaped = Me
+        Dim local As New XPImage(3, 2)
+        rootLocal = local
+        Set Picture = typed.Picture
+        rootImage = Picture
+        If mode = 1 Then Error 4001, "root failed"
+    End Sub
+    Public Sub Delete()
+        deletes = deletes + 1
+    End Sub
+End Class
+Class Child Extend Root
+    Public Other As XPImage
+    Public Sub New(ByRef value As Object, ByVal nextValue As Object, ByVal mode As Long)
+        Call Parent.New(value, nextValue, Forward(value, nextValue, mode))
+        trace = trace & "C"
+        Dim snapshot As Variant = value
+        Dim typed As Source = snapshot
+        typed.Value = typed.Value + 100
+        Dim local As New XPImage(4, 2)
+        childLocal = local
+        Set Other = typed.Picture
+        childImage = Other
+        If mode = 2 Then Error 4002, "child failed"
+    End Sub
+    Public Sub Delete()
+        deletes = deletes + 1
+    End Sub
+End Class
+Class TypedOwner
+    Public Picture As XPImage
+    Public Sub New(ByRef value As Source, ByVal nextValue As Source, ByVal fail As Boolean)
+        Set value = nextValue
+        Set Picture = value.Picture
+        rootImage = Picture
+        escaped = Me
+        If fail Then Error 4004, "typed reference body failed"
+    End Sub
+End Class
+Function Forward(ByRef value As Object, ByVal nextValue As Object, ByVal mode As Long) As Long
+    trace = trace & "F"
+    Set value = nextValue
+    replacement = value
+    Dim local As New XPImage(2, 2)
+    defaultLocal = local
+    If mode = 3 Then Error 4003, "forward failed"
+    Forward = mode
+End Function
+Function ReplaceBeforeBody(ByRef value As Object, ByVal nextValue As Object) As Long
+    ReplaceBeforeBody = Forward(value, nextValue, 3)
+End Function
+Sub AssertExpired(ByVal value As Variant)
+    If value Is Nothing Then
+        Exit Sub
+    End If
+    Dim image As XPImage = value
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "ByRef reference constructor image leaked"
+End Sub
+Sub Main()
+    Dim first As New Source
+    Dim nextValue As New Source
+    Dim picture As New XPImage(5, 3)
+    Set first.Picture = picture
+    Set nextValue.Picture = picture
+    Dim value As Object = first
+    Dim item As New Child(value, nextValue, 0)
+    Dim original As Child = item
+    If Not (value Is nextValue) Or nextValue.Value <> 101 Or trace <> "FRC" Then Error 6, "successful reference forwarding failed"
+    Call AssertExpired(rootLocal)
+    Call AssertExpired(childLocal)
+    Call AssertExpired(defaultLocal)
+    Dim mode As Long
+    For mode = 1 To 3
+        Set value = first
+        nextValue.Value = 0
+        trace = ""
+        escaped = Nothing
+        rootImage = Nothing
+        childImage = Nothing
+        rootLocal = Nothing
+        childLocal = Nothing
+        Dim failure As Long
+        On Error Resume Next
+        Set item = New Child(value, nextValue, mode)
+        failure = Err
+        On Error GoTo 0
+        If failure <> 4000 + mode Or Not (value Is nextValue) Or Not (item Is original) Or deletes <> 0 Then Error 6, "error lost replacement or old target"
+        If mode = 1 And (trace <> "FR" Or nextValue.Value <> 1) Then Error 6, "base error lost mutation"
+        If mode = 2 And (trace <> "FRC" Or nextValue.Value <> 101) Then Error 6, "child error lost mutation"
+        If mode = 3 Then
+            If trace <> "F" Or Not (escaped Is Nothing) Then Error 6, "argument error entered body"
+        Else
+            Dim failed As Child = escaped
+            If Not (failed.Picture Is Nothing) Or Not (failed.Other Is Nothing) Or Not (failed.Borrowed Is nextValue) Then Error 6, "owned/borrowed cleanup confused"
+        End If
+        If first.Picture.Width <> 5 Or nextValue.Picture.Width <> 5 Or picture.Width <> 5 Then Error 6, "borrowed input images consumed"
+        Call AssertExpired(rootImage)
+        Call AssertExpired(childImage)
+        Call AssertExpired(rootLocal)
+        Call AssertExpired(childLocal)
+        Call AssertExpired(defaultLocal)
+    Next
+    Set value = first
+    Dim root As Root
+    Dim defaultFailure As Long
+    On Error Resume Next
+    Set root = New Root(value, nextValue)
+    defaultFailure = Err
+    On Error GoTo 0
+    If defaultFailure <> 4003 Or Not (value Is nextValue) Or Not (root Is Nothing) Then Error 6, "default lost replacement"
+    Call AssertExpired(defaultLocal)
+    If item.Picture.Width <> 5 Or item.Other.Width <> 5 Then Error 6, "failed replacement damaged old fields"
+    Dim typedValue As Source = first
+    Dim typedItem As New TypedOwner(typedValue, nextValue, False)
+    If Not (typedValue Is nextValue) Then Error 6, "typed reference replacement failed"
+    Dim oldTyped As TypedOwner = typedItem
+    Set typedValue = first
+    On Error Resume Next
+    Set typedItem = New TypedOwner(typedValue, nextValue, True)
+    defaultFailure = Err
+    On Error GoTo 0
+    If defaultFailure <> 4004 Or Not (typedValue Is nextValue) Or Not (typedItem Is oldTyped) Then Error 6, "typed reference error lost replacement/target"
+    Dim failedTyped As TypedOwner = escaped
+    If Not (failedTyped.Picture Is Nothing) Or typedItem.Picture.Width <> 5 Or nextValue.Picture.Width <> 5 Then Error 6, "typed reference cleanup consumed input/old fields"
+    Call AssertExpired(rootImage)
+    Delete typedItem
+    Delete item
+    If deletes <> 2 Or first.Picture.Width <> 5 Or nextValue.Picture.Width <> 5 Then Error 6, "Delete consumed borrowed source"
+    Delete first
+    Delete nextValue
+    If picture.Width <> 5 Then Error 6, "source image consumed"
+    Print "IMAGE_BYREF_REFERENCE_CONSTRUCTORS_OK"
+End Sub

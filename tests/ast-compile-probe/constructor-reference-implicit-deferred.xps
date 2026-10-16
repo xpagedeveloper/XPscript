@@ -1,6 +1,0 @@
-Class Record
-    Public Sub New(value As Object)
-    End Sub
-End Class
-Sub Main()
-End Sub
