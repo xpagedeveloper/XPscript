@@ -1,0 +1,17 @@
+Class Record
+    Public Value As Long
+    Public Text As String
+    Public Sub New(ByVal seed As Long, Optional ByVal label As String = "default")
+        Value = seed + 1
+        Text = label
+    End Sub
+End Class
+Sub Main()
+    Dim first As New Record(4, "default")
+    Dim second As New Record(8, "supplied")
+    Print first.Value
+    Print first.Text
+    Print second.Value
+    Print second.Text
+    Print "OPTIONAL_CONSTRUCTOR_PARITY_OK"
+End Sub

@@ -16,16 +16,18 @@ internal static class AstClassConstructorSupport
                     "Constructor overloads are not implemented by the AST compiler yet.", "XPS3001", "ast");
             var constructor = constructors.SingleOrDefault();
             var parameters = constructor?.Parameters ?? Array.Empty<ParameterSyntax>();
+            AstExperimentalCompiler.ValidateOptionalDeclarations(parameters, path, source);
             foreach (var parameter in parameters)
-                if (parameter.IsByRef || parameter.IsOptional || parameter.IsList || parameter.DefaultValue is not null ||
+                if (parameter.IsByRef || parameter.IsList ||
                     AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text) == typeof(object))
                     throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
-                        "AST class constructors currently require non-Optional scalar ByVal parameters.", "XPS3001", "ast");
+                        "AST class constructors currently require scalar ByVal parameters.", "XPS3001", "ast");
             var types = parameters.Select(p => AstClassMethodSupport.DeclaredType(p.Type, symbols)).ToArray();
             symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select(t => t.RuntimeType).ToArray(),
                 XpTypeSymbol.User(declaration.Identifier.Text), types)
             {
                 IsUserConstructor = true,
+                RequiredConstructorArgumentCount = parameters.TakeWhile(parameter => !parameter.IsOptional).Count(),
                 IsPrivateConstructor = constructor?.Visibility?.Kind == SyntaxKind.PrivateKeyword
             });
         }
@@ -82,6 +84,59 @@ internal static class AstClassConstructorSupport
         var arguments = string.Join(", ", constructor.Parameters.Select(p => p.Identifier.Text));
         var visibility = constructor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public";
         // A failed construction owns its fields, but must not invoke user Delete.
-        return $"{visibility} {name}({parameters}){initializer} {{ try {{ __xps_constructor_body({arguments}); }} catch {{ __xps_cleanup_failed_construction(); throw; }} }}";
+        return $"{visibility} {name}({parameters}){initializer} {{ try {{ __xps_constructor_body({arguments}); }} catch {{ __xps_cleanup_failed_construction(); throw; }} }}" +
+            EmitOptionalForwarders(constructor, name, visibility, symbols, path, source);
+    }
+
+    private static string EmitOptionalForwarders(ConstructorDeclarationSyntax constructor, string name, string visibility,
+        SymbolTable symbols, string path, string source)
+    {
+        if (!constructor.Parameters.Any(parameter => parameter.IsOptional)) return string.Empty;
+        var parameters = constructor.Parameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
+            AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text), false,
+            AstClassMethodSupport.DeclaredType(parameter.Type, symbols))).ToArray();
+        var scope = symbols.CreateChildScope();
+        var defaults = new BoundExpression?[parameters.Length];
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            if (constructor.Parameters[i].IsOptional)
+            {
+                var binder = new ExpressionBinder(scope);
+                var type = parameters[i].SemanticType!;
+                var value = constructor.Parameters[i].DefaultValue is { } syntax ? binder.Bind(syntax)
+                    : new BoundLiteralExpression(type.RuntimeType == typeof(string) ? "" : Activator.CreateInstance(type.RuntimeType), type.RuntimeType, type);
+                if (binder.Diagnostics.Count > 0)
+                    throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], path, source);
+                var conversion = scope.ClassifyConversion(value.SemanticType, type);
+                if (!conversion.IsImplicit)
+                    throw AstExperimentalCompiler.MappedDiagnostic(constructor.Parameters[i].Span, path, source,
+                        $"Default value for Optional parameter '{parameters[i].Name}' is incompatible with its type.", "XPS2001", "semantic");
+                defaults[i] = conversion.IsIdentity ? value : new BoundConversionExpression(value, type, conversion) { Span = value.Span };
+            }
+            scope.Declare(parameters[i]);
+        }
+        string Signature(IEnumerable<ParameterSymbol> values) => string.Join(", ", values.Select(parameter =>
+            BoundMethodEmitter.CSharpType(parameter.Type) + " " + parameter.Name));
+        string Arguments(IEnumerable<ParameterSymbol> values) => string.Join(", ", values.Select(parameter => parameter.Name));
+        // A private scalar argument carrier crosses C# constructor initializers.
+        // Default evaluation itself remains the shared Optional forwarding body;
+        // do not inline/substitute expressions and evaluate earlier defaults twice.
+        const string carrier = "__xps_constructor_arguments";
+        const string helper = "__xps_constructor_defaults";
+        var fields = string.Join(" ", parameters.Select((parameter, i) => $"public {BoundMethodEmitter.CSharpType(parameter.Type)} P{i};"));
+        var stores = string.Join(" ", parameters.Select((parameter, i) => $"this.P{i} = {parameter.Name};"));
+        var unpacked = string.Join(", ", parameters.Select((_, i) => $"__xpsValues.P{i}"));
+        var output = new System.Text.StringBuilder();
+        output.Append($"private sealed class {carrier} {{ {fields} public {carrier}({Signature(parameters)}) {{ {stores} }} }}");
+        output.Append($"private {name}({carrier} __xpsValues) : this({unpacked}) {{ }}");
+        output.Append($"private static object {helper}({Signature(parameters)}) {{ return new {carrier}({Arguments(parameters)}); }}");
+        for (var count = parameters.Length - 1; count >= 0 && constructor.Parameters[count].IsOptional; count--)
+        {
+            var forward = OptionalCallLowering.Forward(helper, typeof(object), parameters, defaults, count);
+            output.Append($"{visibility} {name}({Signature(forward.Parameters)}) : this(({carrier}){helper}({Arguments(forward.Parameters)})) {{ }}");
+            var body = new BoundMethodEmitter().Emit(helper, typeof(object), forward.Parameters, forward.Statements, true, source, path);
+            output.Append("private ").Append(body["public ".Length..]);
+        }
+        return output.ToString();
     }
 }

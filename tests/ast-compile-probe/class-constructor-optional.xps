@@ -1,0 +1,80 @@
+Public trace As String
+Public bodies As Long
+Class record
+    Public Value As Long
+    Public Text As String
+    Public Amount As Double
+    Public Sub New(Optional ByVal seed As Long = NextValue(3), Optional ByVal label As String = NextLabel(seed), Optional ByVal amount As Double = NextAmount(seed))
+        Value = seed
+        Text = label
+        Me.Amount = amount
+        seed = 90
+        bodies = bodies + 1
+        trace = trace & "R"
+    End Sub
+End Class
+Class Child Extend record
+    Public Extra As Long
+    Public Sub New(Optional ByVal seed As Long = NextValue(5))
+        Call Parent.New(seed)
+        Extra = seed
+        trace = trace & "C"
+    End Sub
+End Class
+Class Automatic Extend record
+End Class
+Class Zero
+    Public Flag As Boolean
+    Public Text As String
+    Public Value As Long
+    Public Sub New(Optional ByVal flag As Boolean, Optional ByVal text As String, Optional ByVal value As Long)
+        Me.Flag = flag
+        Me.Text = text
+        Me.Value = value
+    End Sub
+End Class
+Class Names
+    Public Value As Long
+    Public Sub New(Optional ByVal P0 As Long = 7, Optional ByVal __xpsOptional1 As Long = P0 + 1)
+        Value = __xpsOptional1
+    End Sub
+End Class
+Function NextValue(ByVal seed As Long) As Long
+    trace = trace & "V"
+    NextValue = seed + 1
+End Function
+Function NextLabel(ByVal seed As Long) As String
+    trace = trace & "L"
+    NextLabel = "value:" & CStr(seed)
+End Function
+Function NextAmount(ByVal seed As Long) As Long
+    trace = trace & "A"
+    NextAmount = seed + 2
+End Function
+Function Make(Optional ByVal seed As Long = 9, Optional ByVal value As Variant = New record(seed)) As Long
+    Dim typed As record = value
+    Make = typed.Value
+End Function
+Sub Main()
+    Dim first As New rEcOrD
+    If trace <> "VLAR" Or first.Value <> 4 Or first.Text <> "value:4" Or first.Amount <> 6 Then Error 6, "ordered defaults or conversion"
+    trace = ""
+    Dim second As New record(NextValue(7), NextLabel(8))
+    If trace <> "VLAR" Or second.Value <> 8 Or second.Amount <> 10 Then Error 6, "supplied/default order"
+    trace = ""
+    Dim full As New record(1, "supplied", 2)
+    If trace <> "R" Then Error 6, "supplied defaults were evaluated"
+    trace = ""
+    Dim child As New Child
+    If trace <> "VLARC" Or child.Value <> 6 Or child.Extra <> 6 Or child.Text <> "value:6" Then Error 6, "child/parent defaults or ByVal snapshot"
+    trace = ""
+    Dim automatic As New Automatic
+    If trace <> "VLAR" Or automatic.Value <> 4 Then Error 6, "implicit optional base"
+    Dim zero As New Zero
+    If zero.Flag Or zero.Text <> "" Or zero.Value <> 0 Then Error 6, "missing scalar defaults"
+    Dim names As New Names
+    If names.Value <> 8 Then Error 6, "generated argument storage collided with parameter names"
+    If Make() <> 9 Then Error 6, "constructor metadata lost in Optional caller rewrite"
+    If bodies <> 6 Then Error 6, "constructor body skipped or duplicated"
+    Print "OPTIONAL_CONSTRUCTORS_OK"
+End Sub

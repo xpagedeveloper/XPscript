@@ -136,7 +136,7 @@ internal static class AstClassMethodSupport
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar typed parameters and results; object/array signatures are not implemented yet.", "XPS3001", "ast");
-            if (syntaxParameters.Any(p => p.IsList || p.IsOptional && property is null) ||
+            if (syntaxParameters.Any(p => p.IsList || p.IsOptional && property is null && constructor is null) ||
                 AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Optional/List parameters and Static storage in class methods are not implemented by the AST compiler yet.", "XPS3001", "ast");
@@ -192,7 +192,7 @@ internal static class AstClassMethodSupport
             var defaultScope = classScope.CreateChildScope();
             for (var i = 0; i < parameters.Length; i++)
             {
-                if (syntaxParameters[i].IsOptional)
+                if (syntaxParameters[i].IsOptional && constructor is null)
                 {
                     var binder = new ExpressionBinder(defaultScope);
                     var type = XpTypeSymbol.FromClr(parameters[i].Type);

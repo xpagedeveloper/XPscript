@@ -1,0 +1,7 @@
+Class Record
+    Private Sub New(Optional ByVal seed As Long = 1)
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Record
+End Sub

@@ -157,7 +157,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (userConstructor.IsPrivateConstructor)
                 return Error(syntax, CompilerDiagnosticCodes.UnknownMember, $"Constructor for '{typeName}' is private.");
             var values = syntax.Arguments.Select(Bind).ToArray();
-            if (values.Length != userConstructor.ParameterTypes.Count || values.Where((value, i) =>
+            if (values.Length < (userConstructor.RequiredConstructorArgumentCount ?? userConstructor.ParameterTypes.Count) ||
+                values.Length > userConstructor.ParameterTypes.Count || values.Where((value, i) =>
                     !_symbols.ClassifyConversion(value.SemanticType, userConstructor.SemanticParameterTypes![i]).IsImplicit).Any())
                 return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
             return new BoundNewExpression(typeof(object), ConvertArguments(userConstructor, values), userConstructor.SemanticReturnType)
