@@ -1,0 +1,135 @@
+Option Declare
+Private trace As String
+Private failDefault As Boolean
+Private evaluations As Long
+Private moduleValue As Long
+Class Holder
+    Public Value As Long
+    Public Property Get Current As Holder
+        evaluations = evaluations + 1
+        Set Current = Me
+    End Property
+End Class
+Class Ordered
+    Public Value As Long
+    Public Sub New(ByRef seed As Long, ByVal snapshot As Long, Optional ByVal extra As Long = NextValue(seed))
+        seed = seed + 1
+        Value = snapshot + extra
+    End Sub
+End Class
+Class Record
+    Public Value As Long
+    Public Sub New(ByRef left As Long, ByRef right As Long, Optional ByVal extra As Long = NextValue(left), Optional ByVal total As Long = extra + right)
+        trace = trace & "R"
+        left = left + 1
+        right = right + total
+        Value = left + right
+    End Sub
+End Class
+Class Child Extend Record
+    Public Sub New(ByRef seed As Long, Optional ByVal extra As Long = NextValue(seed))
+        Call Parent.New(seed, seed)
+        trace = trace & "C"
+        seed = seed + extra
+    End Sub
+End Class
+Class Snapshot Extend Record
+    Public Sub New(ByVal seed As Long, Optional ByVal extra As Long = 1)
+        Call Parent.New(seed, seed)
+        trace = trace & "S"
+    End Sub
+End Class
+Class TextRecord
+    Public Sub New(ByRef text As String, Optional ByVal suffix As String = text & "x")
+        text = text & suffix
+    End Sub
+End Class
+Class Names
+    Public Value As Long
+    Public Sub New(ByRef P0 As Long, Optional ByVal __xpsOptional1 As Long = P0 + 1)
+        P0 = P0 + __xpsOptional1
+        Value = P0
+    End Sub
+End Class
+Function NextValue(ByRef value As Long) As Long
+    trace = trace & "D"
+    value = value + 10
+    If failDefault Then
+        Error 3871, "default failed"
+    End If
+    NextValue = value
+End Function
+Function Position() As Long
+    evaluations = evaluations + 1
+    Position = 0
+End Function
+Sub Make(Optional ByVal seed As Long = 2, Optional ByVal item As Variant = New Names(seed))
+    If seed <> 5 Then Error 3872, "caller default reference lost"
+End Sub
+Sub Main()
+    Dim seed As Long = 1
+    Dim item As Record
+    Set item = New Record(seed, seed)
+    If seed <> 34 Or item.Value <> 68 Or trace <> "DR" Then Error 3873, "duplicate/default alias lost"
+    seed = 1
+    trace = ""
+    Set item = New Record(seed, seed, 2)
+    If seed <> 5 Or item.Value <> 10 Or trace <> "R" Then Error 3874, "partial omission failed"
+    seed = 1
+    Set item = New Record(seed, seed, 2, 3)
+    If seed <> 5 Or item.Value <> 10 Then Error 3875, "full arity failed"
+    seed = 1
+    trace = ""
+    Dim child As New Child(seed)
+    If seed <> 75 Or child.Value <> 128 Or trace <> "DDRC" Then Error 3876, "parent alias failed"
+    seed = 1
+    trace = ""
+    Dim snapshot As New Snapshot(seed)
+    If seed <> 1 Or snapshot.Value <> 68 Or trace <> "DRS" Then Error 3877, "ByVal child leaked"
+    Dim values(0) As Long
+    values(0) = 1
+    evaluations = 0
+    Set item = New Record(values(Position()), values(Position()))
+    If values(0) <> 34 Or evaluations <> 2 Then Error 3878, "array alias/order lost"
+    Dim holder As New Holder
+    holder.Value = 1
+    evaluations = 0
+    Set item = New Record(holder.Current.Value, holder.Current.Value)
+    If holder.Value <> 34 Or evaluations <> 2 Then Error 3886, "field alias/receiver lost"
+    moduleValue = 1
+    Set item = New Record(moduleValue, moduleValue)
+    If moduleValue <> 34 Then Error 3887, "module alias lost"
+    seed = 1
+    Dim ordered As New Ordered(seed, seed)
+    If seed <> 12 Or ordered.Value <> 12 Then Error 3888, "supplied ByVal snapshot lost"
+    Dim entries List As Long
+    entries("a") = 1
+    Set item = New Record(entries("a"), entries("a"))
+    If entries("a") <> 34 Then Error 3879, "List alias lost"
+    entries("a") = 1
+    ForAll entry In entries
+        Set item = New Record(entry, entry)
+    End ForAll
+    If entries("a") <> 34 Then Error 3880, "ForAll alias lost"
+    Dim text As String = "a"
+    Dim textItem As New TextRecord(text)
+    If text <> "aax" Then Error 3881, "String reference lost"
+    seed = 2
+    Dim names As New Names(seed)
+    If seed <> 5 Or names.Value <> 5 Then Error 3882, "generated name collision"
+    Call Make()
+    seed = 1
+    trace = ""
+    failDefault = True
+    Dim old As Record
+    Dim failure As Long
+    Set old = item
+    On Error Resume Next
+    Set item = New Record(seed, seed)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3871 Then Error 3883, "default error lost"
+    If seed <> 11 Or trace <> "D" Then Error 3884, "error lost writes or entered body"
+    If Not (item Is old) Then Error 3885, "old target lost"
+    Print "MIXED_CONSTRUCTORS_OK"
+End Sub

@@ -17,14 +17,16 @@ internal static class AstClassConstructorSupport
             var constructor = constructors.SingleOrDefault();
             var parameters = constructor?.Parameters ?? Array.Empty<ParameterSyntax>();
             AstExperimentalCompiler.ValidateOptionalDeclarations(parameters, path, source);
-            if (parameters.Any(parameter => parameter.IsByRef) && parameters.Any(parameter => parameter.IsOptional))
-                throw AstExperimentalCompiler.MappedDiagnostic(constructor!.Span, path, source,
-                    "Combining ByRef and Optional constructor parameters is not implemented yet.", "XPS3001", "ast");
             foreach (var parameter in parameters)
+            {
+                if (parameter.IsByRef && parameter.IsOptional)
+                    throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
+                        "Optional ByRef constructor parameters are not implemented yet.", "XPS3001", "ast");
                 if (parameter.IsList ||
                     AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text) == typeof(object))
                     throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
                         "AST class constructors currently require scalar parameters.", "XPS3001", "ast");
+            }
             var types = parameters.Select(p => AstClassMethodSupport.DeclaredType(p.Type, symbols)).ToArray();
             symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select(t => t.RuntimeType).ToArray(),
                 XpTypeSymbol.User(declaration.Identifier.Text), types, parameters.Select(parameter => parameter.IsByRef).ToArray())
@@ -96,7 +98,7 @@ internal static class AstClassConstructorSupport
     {
         if (!constructor.Parameters.Any(parameter => parameter.IsOptional)) return string.Empty;
         var parameters = constructor.Parameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
-            AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text), false,
+            AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef,
             AstClassMethodSupport.DeclaredType(parameter.Type, symbols))).ToArray();
         var scope = symbols.CreateChildScope();
         var defaults = new BoundExpression?[parameters.Length];
@@ -119,25 +121,30 @@ internal static class AstClassConstructorSupport
             scope.Declare(parameters[i]);
         }
         string Signature(IEnumerable<ParameterSymbol> values) => string.Join(", ", values.Select(parameter =>
-            BoundMethodEmitter.CSharpType(parameter.Type) + " " + parameter.Name));
-        string Arguments(IEnumerable<ParameterSymbol> values) => string.Join(", ", values.Select(parameter => parameter.Name));
+            (parameter.IsByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(parameter.Type) + " " + parameter.Name));
+        string Arguments(IEnumerable<ParameterSymbol> values) => string.Join(", ", values.Select(parameter => (parameter.IsByRef ? "ref " : "") + parameter.Name));
         // A private scalar argument carrier crosses C# constructor initializers.
         // Default evaluation itself remains the shared Optional forwarding body;
         // do not inline/substitute expressions and evaluate earlier defaults twice.
-        const string carrier = "__xps_constructor_arguments";
+        var hasReferences = parameters.Any(parameter => parameter.IsByRef);
+        var carrierType = hasReferences ? XpTypeSymbol.User("__xps_constructor_arguments") : null;
+        var carrier = carrierType is null ? "__xps_constructor_arguments" : BoundMethodEmitter.CSharpType(carrierType);
+        var resultType = hasReferences ? carrier : "object";
         const string helper = "__xps_constructor_defaults";
-        var fields = string.Join(" ", parameters.Select((parameter, i) => $"public {BoundMethodEmitter.CSharpType(parameter.Type)} P{i};"));
-        var stores = string.Join(" ", parameters.Select((parameter, i) => $"this.P{i} = {parameter.Name};"));
-        var unpacked = string.Join(", ", parameters.Select((_, i) => $"__xpsValues.P{i}"));
+        var fields = string.Join(" ", parameters.Select((parameter, i) => $"public {(parameter.IsByRef ? "ref " : "")}{BoundMethodEmitter.CSharpType(parameter.Type)} P{i};"));
+        var stores = string.Join(" ", parameters.Select((parameter, i) => $"this.P{i} = {(parameter.IsByRef ? "ref " : "")}{parameter.Name};"));
+        var unpacked = string.Join(", ", parameters.Select((parameter, i) => $"{(parameter.IsByRef ? "ref " : "")}__xpsValues.P{i}"));
         var output = new System.Text.StringBuilder();
-        output.Append($"private sealed class {carrier} {{ {fields} public {carrier}({Signature(parameters)}) {{ {stores} }} }}");
+        // Required references stay managed references in a stack-only carrier.
+        // Optional ByVal locals are copied; no reference to a default local escapes.
+        output.Append($"private {(hasReferences ? "ref struct" : "sealed class")} {carrier} {{ {fields} public {carrier}({Signature(parameters)}) {{ {stores} }} }}");
         output.Append($"private {name}({carrier} __xpsValues) : this({unpacked}) {{ }}");
-        output.Append($"private static object {helper}({Signature(parameters)}) {{ return new {carrier}({Arguments(parameters)}); }}");
+        output.Append($"private static {resultType} {helper}({Signature(parameters)}) {{ return new {carrier}({Arguments(parameters)}); }}");
         for (var count = parameters.Length - 1; count >= 0 && constructor.Parameters[count].IsOptional; count--)
         {
-            var forward = OptionalCallLowering.Forward(helper, typeof(object), parameters, defaults, count);
+            var forward = OptionalCallLowering.Forward(helper, typeof(object), parameters, defaults, count, semanticReturnType: carrierType);
             output.Append($"{visibility} {name}({Signature(forward.Parameters)}) : this(({carrier}){helper}({Arguments(forward.Parameters)})) {{ }}");
-            var body = new BoundMethodEmitter().Emit(helper, typeof(object), forward.Parameters, forward.Statements, true, source, path);
+            var body = new BoundMethodEmitter().Emit(helper, typeof(object), forward.Parameters, forward.Statements, true, source, path, semanticReturnType: carrierType);
             output.Append("private ").Append(body["public ".Length..]);
         }
         return output.ToString();

@@ -2,12 +2,13 @@ $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $output = Join-Path $root ('out/constructor-' + [Guid]::NewGuid().ToString('N'))
-foreach ($fixture in @('class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
+foreach ($fixture in @('class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
     if ($LASTEXITCODE -ne 0) { throw "AST constructor compilation failed: $fixture" }
     $result = dotnet (Join-Path $target 'Generated.dll')
     $expected = switch ($fixture) {
+        'class-constructor-mixed' { 'MIXED_CONSTRUCTORS_OK' }
         'class-constructor-byref' { 'BYREF_CONSTRUCTORS_OK' }
         'class-constructor-byref-simple' { "5`n5`nBYREF_CONSTRUCTOR_SIMPLE_OK" }
         'constructor-byref' { 'CONSTRUCTOR_BYREF_OK' }
@@ -42,6 +43,9 @@ if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`ndefault`n9`nsupplied`nO
 # Normal compilation currently fails the simple ByRef constructor at runtime
 # ('long' has no Value member); retain the existing valid ByVal parity above.
 foreach ($case in @(
+    @('constructor-mixed-literal-error', 'XPS2001', 6),
+    @('constructor-mixed-type-error', 'XPS2003', 7),
+    @('constructor-mixed-default-error', 'XPS2008', 2),
     @('constructor-arity-error', 'XPS2004', 6),
     @('constructor-type-error', 'XPS2004', 6),
     @('constructor-private-error', 'XPS2009', 6),
@@ -82,6 +86,7 @@ foreach ($case in @(
     if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Constructor diagnostic lost: $fixture`n$failure" }
 }
 Write-Host 'AST_CONSTRUCTORS_OK'
+Write-Host 'AST_MIXED_CONSTRUCTORS_OK'
 Write-Host 'AST_DERIVED_CONSTRUCTORS_OK'
 Write-Host 'AST_OPTIONAL_CONSTRUCTORS_OK'
 Write-Host 'AST_BYREF_CONSTRUCTORS_OK'

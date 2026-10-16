@@ -6,7 +6,8 @@ namespace XPScript.Compiler.Binding;
 public static class OptionalCallLowering
 {
     public static BoundMethodDefinition Forward(string name, Type returnType,
-        IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundExpression?> defaults, int suppliedCount, int requiredTailCount = 0)
+        IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundExpression?> defaults, int suppliedCount, int requiredTailCount = 0,
+        XpTypeSymbol? semanticReturnType = null)
     {
         var optionalEnd = parameters.Count - requiredTailCount;
         if (defaults.Count != parameters.Count || requiredTailCount < 0 || suppliedCount < 0 || suppliedCount >= optionalEnd)
@@ -33,7 +34,7 @@ public static class OptionalCallLowering
         // A Property Let's incoming value is required, even after Optional indexes.
         arguments.AddRange(parameters.Skip(optionalEnd).Select(p => new BoundNameExpression(p)));
         var function = new FunctionSymbol(name, returnType, parameters.Select(p => p.Type).ToArray(),
-            null, parameters.Select(p => p.SemanticType ?? XpTypeSymbol.FromClr(p.Type)).ToArray(),
+            semanticReturnType, parameters.Select(p => p.SemanticType ?? XpTypeSymbol.FromClr(p.Type)).ToArray(),
             parameters.Select(p => p.IsByRef).ToArray());
         var call = new BoundCallExpression(null, function, arguments);
         statements.Add(returnType == typeof(void) ? new BoundExpressionStatement(call) : new BoundReturnStatement(call));
