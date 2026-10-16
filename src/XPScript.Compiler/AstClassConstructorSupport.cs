@@ -17,14 +17,17 @@ internal static class AstClassConstructorSupport
             var constructor = constructors.SingleOrDefault();
             var parameters = constructor?.Parameters ?? Array.Empty<ParameterSyntax>();
             AstExperimentalCompiler.ValidateOptionalDeclarations(parameters, path, source);
+            if (parameters.Any(parameter => parameter.IsByRef) && parameters.Any(parameter => parameter.IsOptional))
+                throw AstExperimentalCompiler.MappedDiagnostic(constructor!.Span, path, source,
+                    "Combining ByRef and Optional constructor parameters is not implemented yet.", "XPS3001", "ast");
             foreach (var parameter in parameters)
-                if (parameter.IsByRef || parameter.IsList ||
+                if (parameter.IsList ||
                     AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text) == typeof(object))
                     throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
-                        "AST class constructors currently require scalar ByVal parameters.", "XPS3001", "ast");
+                        "AST class constructors currently require scalar parameters.", "XPS3001", "ast");
             var types = parameters.Select(p => AstClassMethodSupport.DeclaredType(p.Type, symbols)).ToArray();
             symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select(t => t.RuntimeType).ToArray(),
-                XpTypeSymbol.User(declaration.Identifier.Text), types)
+                XpTypeSymbol.User(declaration.Identifier.Text), types, parameters.Select(parameter => parameter.IsByRef).ToArray())
             {
                 IsUserConstructor = true,
                 RequiredConstructorArgumentCount = parameters.TakeWhile(parameter => !parameter.IsOptional).Count(),
@@ -67,7 +70,7 @@ internal static class AstClassConstructorSupport
             var scope = symbols.CreateChildScope();
             foreach (var parameter in constructor?.Parameters ?? Array.Empty<ParameterSyntax>())
                 scope.Declare(new ParameterSymbol(parameter.Identifier.Text,
-                    AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text), false,
+                    AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef,
                     AstClassMethodSupport.DeclaredType(parameter.Type, symbols)));
             var binder = new ExpressionBinder(scope);
             var syntax = new NewExpressionSyntax(new SyntaxToken(SyntaxKind.NewKeyword, "New", null, call?.Span ?? parent.Span),
@@ -76,12 +79,12 @@ internal static class AstClassConstructorSupport
             if (binder.Diagnostics.Count > 0)
                 throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], path, source);
             var bound = (BoundNewExpression)expression;
-            initializer = " : base(" + string.Join(", ", bound.Arguments.Select(new BoundExpressionEmitter().Emit)) + ")";
+            initializer = " : base(" + new BoundExpressionEmitter().EmitReferenceArguments(bound.Arguments, bound.Constructor!.ByRefParameters) + ")";
         }
         if (constructor is null) return $"public {name}(){initializer} {{ }}";
         var parameters = string.Join(", ", constructor.Parameters.Select(p =>
-            BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)) + " " + p.Identifier.Text));
-        var arguments = string.Join(", ", constructor.Parameters.Select(p => p.Identifier.Text));
+            (p.IsByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)) + " " + p.Identifier.Text));
+        var arguments = string.Join(", ", constructor.Parameters.Select(p => (p.IsByRef ? "ref " : "") + p.Identifier.Text));
         var visibility = constructor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public";
         // A failed construction owns its fields, but must not invoke user Delete.
         return $"{visibility} {name}({parameters}){initializer} {{ try {{ __xps_constructor_body({arguments}); }} catch {{ __xps_cleanup_failed_construction(); throw; }} }}" +

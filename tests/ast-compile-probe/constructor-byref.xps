@@ -1,0 +1,11 @@
+Class Record
+    Public Sub New(ByRef value As Long)
+        value = value + 1
+    End Sub
+End Class
+Sub Main()
+    Dim value As Long = 3
+    Dim item As New Record(value)
+    If value <> 4 Then Error 6, "constructor ByRef mutation"
+    Print "CONSTRUCTOR_BYREF_OK"
+End Sub

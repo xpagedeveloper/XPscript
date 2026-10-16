@@ -90,7 +90,7 @@ public sealed class BoundExpressionEmitter
             : index.Expression.Type == typeof(Dictionary<string, object?>)
                 ? $"{Emit(index.Expression)}[Convert.ToString({Emit(index.Index)}) ?? string.Empty]"
             : $"{Emit(index.Expression)}[{Emit(index.Index)}]",
-        BoundNewExpression @new when @new.Constructor is not null => $"new Xp{@new.SemanticType.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.Constructor is not null => $"new Xp{@new.SemanticType.Name}({EmitReferenceArguments(@new.Arguments, @new.Constructor.ByRefParameters)})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateClient()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateRequest()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPSpreadsheet", StringComparison.OrdinalIgnoreCase) =>
@@ -174,7 +174,10 @@ public sealed class BoundExpressionEmitter
     }
 
     internal string EmitIndexedArguments(BoundIndexedPropertyExpression indexed) =>
-        string.Join(", ", indexed.Arguments.Select((argument, i) => indexed.Property.ByRefIndexes?[i] == true
+        EmitReferenceArguments(indexed.Arguments, indexed.Property.ByRefIndexes);
+
+    internal string EmitReferenceArguments(IReadOnlyList<BoundExpression> arguments, IReadOnlyList<bool>? byRef) =>
+        string.Join(", ", arguments.Select((argument, i) => byRef?[i] == true
             ? "ref " + EmitIndexedReference(argument) : Emit(argument)));
 
     private string EmitIndexedReference(BoundExpression argument) => argument switch

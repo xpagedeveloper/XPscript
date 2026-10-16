@@ -1,0 +1,11 @@
+Class Root
+    Public Sub New(ByRef value As Double)
+    End Sub
+End Class
+Class Child Extend Root
+    Public Sub New(ByRef value As Long)
+        Call Parent.New(value)
+    End Sub
+End Class
+Sub Main()
+End Sub

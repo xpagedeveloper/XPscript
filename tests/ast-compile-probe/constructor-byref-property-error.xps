@@ -1,0 +1,12 @@
+Class Holder
+    Public Property Get Value As Long
+    End Property
+End Class
+Class Record
+    Public Sub New(ByRef value As Long)
+    End Sub
+End Class
+Sub Main()
+    Dim holder As New Holder
+    Dim item As New Record(holder.Value)
+End Sub

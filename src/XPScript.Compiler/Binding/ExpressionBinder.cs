@@ -158,9 +158,19 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return Error(syntax, CompilerDiagnosticCodes.UnknownMember, $"Constructor for '{typeName}' is private.");
             var values = syntax.Arguments.Select(Bind).ToArray();
             if (values.Length < (userConstructor.RequiredConstructorArgumentCount ?? userConstructor.ParameterTypes.Count) ||
-                values.Length > userConstructor.ParameterTypes.Count || values.Where((value, i) =>
-                    !_symbols.ClassifyConversion(value.SemanticType, userConstructor.SemanticParameterTypes![i]).IsImplicit).Any())
+                values.Length > userConstructor.ParameterTypes.Count)
                 return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
+            for (var i = 0; i < values.Length; i++)
+            {
+                var target = userConstructor.SemanticParameterTypes![i];
+                if (userConstructor.ByRefParameters?[i] == true)
+                {
+                    if (ValidateScalarReference(syntax.Arguments[i], values[i], userConstructor.ParameterTypes[i], target,
+                        $"constructor argument {i + 1} to '{typeName}'") is { } failure) return failure;
+                }
+                else if (!_symbols.ClassifyConversion(values[i].SemanticType, target).IsImplicit)
+                    return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
+            }
             return new BoundNewExpression(typeof(object), ConvertArguments(userConstructor, values), userConstructor.SemanticReturnType)
                 { Constructor = userConstructor };
         }
@@ -539,22 +549,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             var conversion = _symbols.ClassifyConversion(arguments[i].SemanticType, targetType);
             if (property.ByRefIndexes?[i] == true)
             {
-                if (arguments[i] is BoundNameExpression { Symbol: VariableSymbol { HasTypedStorage: false } })
-                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TargetApiUnavailable,
-                        "ByRef index arguments require typed writable storage; initialized or reference-type module variables are not implemented yet.");
-                if (!conversion.IsIdentity || arguments[i].Type != property.ParameterTypes[i])
-                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch,
-                        $"ByRef index {i + 1} to '{property.Name}' requires exactly {targetType.Name}.");
-                if (arguments[i] is BoundIndexExpression location && !location.Expression.SemanticType.IsArray && !location.Expression.SemanticType.IsList
-                    || arguments[i] is BoundMemberAccessExpression { IsFieldStorage: false })
-                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TargetApiUnavailable,
-                        "Accessor-backed ByRef index arguments are not implemented yet; use writable scalar storage.");
-                if (arguments[i] is not BoundNameExpression { Symbol: LocalSymbol or ParameterSymbol or FieldSymbol }
-                    and not BoundNameExpression { Symbol: VariableSymbol { HasTypedStorage: true } }
-                    and not BoundMemberAccessExpression { IsFieldStorage: true }
-                    and not BoundIndexExpression)
-                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.TypeMismatch,
-                        "A ByRef index requires a writable scalar local, parameter, class field or typed module variable.");
+                if (ValidateScalarReference(syntax.Arguments[i], arguments[i], property.ParameterTypes[i], targetType,
+                    $"index {i + 1} to '{property.Name}'") is { } failure) return failure;
             }
             if (!conversion.IsImplicit)
                 return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentTypeMismatch, $"Argument {i + 1} to '{property.Name}' must be {targetType.Name}, not {arguments[i].SemanticType.Name}.");
@@ -562,6 +558,29 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 arguments[i] = new BoundConversionExpression(arguments[i], targetType, conversion);
         }
         return new BoundIndexedPropertyExpression(receiver, property, arguments);
+    }
+
+    // Indexed accessors and constructors share the same addressable scalar
+    // contract. Passing a value-converted or accessor-backed temporary is unsafe.
+    private BoundExpression? ValidateScalarReference(ExpressionSyntax syntax, BoundExpression argument, Type runtimeType,
+        XpTypeSymbol targetType, string description)
+    {
+        if (argument is BoundNameExpression { Symbol: VariableSymbol { HasTypedStorage: false } })
+            return Error(syntax, CompilerDiagnosticCodes.TargetApiUnavailable,
+                "ByRef arguments require typed writable storage; initialized or reference-type module variables are not implemented yet.");
+        if (!_symbols.ClassifyConversion(argument.SemanticType, targetType).IsIdentity || argument.Type != runtimeType)
+            return Error(syntax, CompilerDiagnosticCodes.ArgumentTypeMismatch, $"ByRef {description} requires exactly {targetType.Name}.");
+        if (argument is BoundIndexExpression location && !location.Expression.SemanticType.IsArray && !location.Expression.SemanticType.IsList
+            || argument is BoundMemberAccessExpression { IsFieldStorage: false } or BoundIndexedPropertyExpression)
+            return Error(syntax, CompilerDiagnosticCodes.TargetApiUnavailable,
+                "Accessor-backed ByRef arguments are not implemented yet; use writable scalar storage.");
+        if (argument is not BoundNameExpression { Symbol: LocalSymbol or ParameterSymbol or FieldSymbol }
+            and not BoundNameExpression { Symbol: VariableSymbol { HasTypedStorage: true } }
+            and not BoundMemberAccessExpression { IsFieldStorage: true }
+            and not BoundIndexExpression)
+            return Error(syntax, CompilerDiagnosticCodes.TypeMismatch,
+                "A ByRef argument requires a writable scalar local, parameter, class field or typed module variable.");
+        return null;
     }
 
     private BoundExpression BindCallTarget(CallExpressionSyntax syntax, BoundExpression? target, FunctionSymbol function)
