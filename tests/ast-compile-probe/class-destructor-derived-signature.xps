@@ -1,0 +1,12 @@
+Class Root
+End Class
+Class Child Extend Root
+    Public Sub Delete()
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Child
+    Delete item
+    If Not (item Is Nothing) Then Error 6, "derived-only destructor"
+    Print "DERIVED_DESTRUCTOR_SIGNATURE_OK"
+End Sub

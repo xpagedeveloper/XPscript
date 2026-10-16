@@ -440,11 +440,15 @@ public static class AstExperimentalCompiler
             var delete = classDeclaration.BaseType is null
                 ? $"public virtual void Delete() {{ {imageCleanup} }}"
                 : $"public override void Delete() {{ {imageCleanup} base.Delete(); }}";
-            var memberBodies = AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource);
+            var memberBodies = AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource, classes);
             if (classDeclaration.Members.OfType<DestructorDeclarationSyntax>().Any())
-                delete = "private bool __xps_destructor_started; public virtual void Delete() { " +
+            {
+                var cleanup = classDeclaration.BaseType is null ? imageCleanup
+                    : $"try {{ {imageCleanup} }} finally {{ base.Delete(); }}";
+                delete = "private bool __xps_destructor_started; public " + (classDeclaration.BaseType is null ? "virtual" : "override") + " void Delete() { " +
                     "if (__xps_destructor_started) return; __xps_destructor_started = true; " +
-                    $"try {{ __xps_destructor_body(); }} finally {{ {imageCleanup} }} }}";
+                    $"try {{ __xps_destructor_body(); }} finally {{ {cleanup} }} }}";
+            }
             // Script classes are assembly-local implementation types, like the native
             // runtime types exposed by their fields and accessor signatures.
             return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} public Xp{classDeclaration.Identifier.Text}() {{ }} {delete} {memberBodies} }}";

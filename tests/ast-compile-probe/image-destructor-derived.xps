@@ -1,0 +1,89 @@
+Public trace As String
+Class RootImage
+    Public BaseImage As XPImage
+    Public RootCalls As Long
+    Public FailRoot As Boolean
+    Public Sub Delete()
+        RootCalls = RootCalls + 1
+        If BaseImage.Width <> 4 Then Error 6, "root field cleared before body"
+        trace = trace & "R"
+        If FailRoot Then Error 3813, "root destructor failure"
+    End Sub
+End Class
+Class MiddleImage Extend RootImage
+    Public MiddlePicture As XPImage
+    Public MiddleCalls As Long
+    Public FailMiddle As Boolean
+    Public Sub Delete()
+        MiddleCalls = MiddleCalls + 1
+        If MiddlePicture.Width <> 4 Then Error 6, "middle field cleared before body"
+        trace = trace & "M"
+        If FailMiddle Then Error 3812, "middle destructor failure"
+    End Sub
+End Class
+Class LeafImage Extend MiddleImage
+    Public ChildImage As XPImage
+    Private owned As XPImage
+    Public Stored As Variant
+    Public LocalImage As Variant
+    Public LeafCalls As Long
+    Public Sub Delete()
+        LeafCalls = LeafCalls + 1
+        If ChildImage.Width <> 4 Then Error 6, "child field cleared before body"
+        Set owned = New XPImage(3, 1)
+        Stored = owned
+        Dim picture As New XPImage(2, 2)
+        LocalImage = picture
+        trace = trace & "L"
+        Error 3811, "leaf destructor failure"
+    End Sub
+End Class
+Sub AssertExpired(ByVal value As Variant)
+    Dim image As XPImage = value
+    If image Is Nothing Then Error 6, "missing image cleanup observation"
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "derived destructor image not recycled"
+End Sub
+Sub RunCase(ByVal mode As Long)
+    trace = ""
+    Dim source As New XPImage(4, 3)
+    Dim item As New LeafImage
+    Dim alias As LeafImage = item
+    Dim baseAlias As RootImage = item
+    Set item.BaseImage = source
+    Set item.MiddlePicture = source
+    Set item.ChildImage = source
+    item.FailMiddle = mode > 0
+    item.FailRoot = mode > 1
+    Dim rootPicture As Variant = item.BaseImage
+    Dim middlePicture As Variant = item.MiddlePicture
+    Dim childPicture As Variant = item.ChildImage
+    Dim failure As Long
+    On Error Resume Next
+    Delete baseAlias
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3811 + mode Or Not (baseAlias Is Nothing) Then Error 6, "finally error precedence or caller cleanup"
+    If trace <> "LMR" Then Error 6, "base destructors skipped after error"
+    If alias.RootCalls <> 1 Or alias.MiddleCalls <> 1 Or alias.LeafCalls <> 1 Then Error 6, "destructor count"
+    If Not (alias.BaseImage Is Nothing) Or Not (alias.MiddlePicture Is Nothing) Or Not (alias.ChildImage Is Nothing) Then Error 6, "inherited fields not cleared"
+    Call AssertExpired(rootPicture)
+    Call AssertExpired(middlePicture)
+    Call AssertExpired(childPicture)
+    Call AssertExpired(alias.Stored)
+    Call AssertExpired(alias.LocalImage)
+    Delete item
+    Delete alias
+    If trace <> "LMR" Or source.Width <> 4 Then Error 6, "repeated Delete or source ownership"
+End Sub
+Sub Main()
+    Call RunCase(0)
+    Call RunCase(1)
+    Call RunCase(2)
+    Print "IMAGE_DERIVED_DESTRUCTORS_OK"
+End Sub

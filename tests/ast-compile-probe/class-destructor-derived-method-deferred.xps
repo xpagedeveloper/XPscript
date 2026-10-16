@@ -1,0 +1,8 @@
+Class Root
+End Class
+Class Child Extend Root
+    Public Sub Run()
+    End Sub
+End Class
+Sub Main()
+End Sub

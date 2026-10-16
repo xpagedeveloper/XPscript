@@ -1,0 +1,61 @@
+Public trace As String
+Class Root
+    Private secret As Long
+    Public Number As Long
+    Public RootSeen As Long
+    Public Property Get Snapshot As Long
+        Snapshot = Number
+    End Property
+    Public Sub Bump(ByRef value As Long)
+        value = value + 1
+    End Sub
+    Public Sub Delete()
+        secret = secret + 1
+        RootSeen = secret
+        trace = trace & "R"
+    End Sub
+End Class
+Class Middle Extend Root
+    Private secret As Long
+    Public MiddleSeen As Long
+    Private Sub Delete()
+        secret = secret + 1
+        MiddleSeen = secret
+        trace = trace & "M"
+        Exit Sub
+        Error 6, "unreachable destructor statement"
+    End Sub
+End Class
+Class Leaf Extend Middle
+    Private secret As Long
+    Public LeafSeen As Long
+    Public Sub Delete()
+        On Error Resume Next
+        Error 3810, "handled child failure"
+        On Error GoTo 0
+        secret = secret + 1
+        LeafSeen = secret
+        Call Bump(Number)
+        With Me
+            .Number = .Number + 1
+        End With
+        If Snapshot <> 6 Then Error 6, "inherited getter or field binding"
+        trace = trace & "L"
+        Dim self As Root = Me
+        Delete self
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Leaf
+    Dim alias As Leaf = item
+    Dim baseAlias As Root = item
+    item.Number = 4
+    Delete baseAlias
+    If Not (baseAlias Is Nothing) Or trace <> "LMR" Then Error 6, "destructor chain order"
+    If alias.RootSeen <> 1 Or alias.MiddleSeen <> 1 Or alias.LeafSeen <> 1 Then Error 6, "private state or duplicate bodies"
+    If alias.Number <> 6 Then Error 6, "inherited ByRef field"
+    Delete item
+    Delete alias
+    If trace <> "LMR" Then Error 6, "destructor chain repeated"
+    Print "CLASS_DERIVED_DESTRUCTORS_OK"
+End Sub

@@ -65,10 +65,16 @@ internal static class AstClassMethodSupport
                 if (text[i] is not ('\r' or '\n')) text[i] = ' ';
         return new string(text);
     }
-    internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable globals, string sourcePath, string source)
+    internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable globals, string sourcePath, string source,
+        IReadOnlyDictionary<string, ClassDeclarationSyntax> classes)
     {
         var output = new System.Text.StringBuilder();
         var destructorSeen = false;
+        // The compilation unit already validated this hierarchy. Declare ancestors
+        // first so the current class's fields and private members keep precedence.
+        var lineage = new Stack<ClassDeclarationSyntax>();
+        for (var owner = declaration; owner is not null; owner = owner.BaseType is { } parent ? classes[parent.Identifier.Text] : null)
+            lineage.Push(owner);
         foreach (var group in declaration.Members.OfType<PropertyDeclarationSyntax>().GroupBy(p => p.Identifier.Text, StringComparer.OrdinalIgnoreCase))
         {
             var getter = group.FirstOrDefault(p => p.IsGetter);
@@ -108,7 +114,7 @@ internal static class AstClassMethodSupport
                         "A class destructor must be a single parameterless Sub Delete.", "XPS1012", "semantic");
                 destructorSeen = true;
             }
-            if (declaration.BaseType is not null)
+            if (declaration.BaseType is not null && !isDestructor)
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Method bodies declared in derived classes are not implemented by the AST compiler yet.", "XPS3001", "ast");
             var syntaxParameters = sub?.Parameters ?? function?.Parameters ?? property?.Parameters ?? Array.Empty<ParameterSyntax>();
@@ -142,27 +148,33 @@ internal static class AstClassMethodSupport
             }
             var classScope = globals.CreateChildScope();
             classScope.Declare(new VariableSymbol("Me", typeof(object), XpTypeSymbol.User(declaration.Identifier.Text)));
-            foreach (var ownProperty in Properties(declaration, false, globals))
+            foreach (var owner in lineage)
             {
-                classScope.Declare(ownProperty);
-                classScope.Declare(ownProperty with { Name = ownProperty.Name.Split('.').Last() });
-            }
-            foreach (var field in declaration.Members.OfType<FieldDeclarationSyntax>())
-            {
-                var type = DeclaredType(field.Type, globals);
-                classScope.Declare(new FieldSymbol(field.Identifier.Text, type.RuntimeType, type));
-                classScope.Declare(new PropertySymbol(declaration.Identifier.Text + "." + field.Identifier.Text, type.RuntimeType, type, IsFieldStorage: true));
-            }
-            foreach (var own in declaration.Members.Where(m => m is SubDeclarationSyntax or FunctionDeclarationSyntax))
-            {
-                var ownSub = own as SubDeclarationSyntax; var ownFunction = own as FunctionDeclarationSyntax;
-                var methodName = ownSub?.Identifier.Text ?? ownFunction!.Identifier.Text;
-                var ps = ownSub?.Parameters ?? ownFunction!.Parameters;
-                var rt = ownFunction is null ? typeof(void) : AstExperimentalCompiler.ResolveRuntimeType(ownFunction.ReturnType?.Identifier.Text);
-                var symbol = new FunctionSymbol(methodName, rt, ps.Select(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
-                    XpTypeSymbol.FromClr(rt), ps.Select(p => XpTypeSymbol.FromClr(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text))).ToArray(), ps.Select(p => p.IsByRef).ToArray());
-                classScope.Declare(symbol);
-                classScope.Declare(symbol with { Name = declaration.Identifier.Text + "." + methodName });
+                var inherited = owner != declaration;
+                foreach (var ownProperty in Properties(owner, inherited, globals))
+                {
+                    var propertyName = ownProperty.Name.Split('.').Last();
+                    classScope.Declare(ownProperty with { Name = declaration.Identifier.Text + "." + propertyName });
+                    classScope.Declare(ownProperty with { Name = propertyName });
+                }
+                foreach (var field in owner.Members.OfType<FieldDeclarationSyntax>().Where(f => !inherited || f.Visibility?.Kind != SyntaxKind.PrivateKeyword))
+                {
+                    var type = DeclaredType(field.Type, globals);
+                    classScope.Declare(new FieldSymbol(field.Identifier.Text, type.RuntimeType, type));
+                    classScope.Declare(new PropertySymbol(declaration.Identifier.Text + "." + field.Identifier.Text, type.RuntimeType, type, IsFieldStorage: true));
+                }
+                foreach (var own in owner.Members.Where(m => m is SubDeclarationSyntax or FunctionDeclarationSyntax))
+                {
+                    var ownSub = own as SubDeclarationSyntax; var ownFunction = own as FunctionDeclarationSyntax;
+                    if (inherited && (ownSub?.Visibility ?? ownFunction?.Visibility)?.Kind == SyntaxKind.PrivateKeyword) continue;
+                    var methodName = ownSub?.Identifier.Text ?? ownFunction!.Identifier.Text;
+                    var ps = ownSub?.Parameters ?? ownFunction!.Parameters;
+                    var rt = ownFunction is null ? typeof(void) : AstExperimentalCompiler.ResolveRuntimeType(ownFunction.ReturnType?.Identifier.Text);
+                    var symbol = new FunctionSymbol(methodName, rt, ps.Select(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
+                        XpTypeSymbol.FromClr(rt), ps.Select(p => XpTypeSymbol.FromClr(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text))).ToArray(), ps.Select(p => p.IsByRef).ToArray());
+                    classScope.Declare(symbol);
+                    classScope.Declare(symbol with { Name = declaration.Identifier.Text + "." + methodName });
+                }
             }
             var scope = classScope.CreateChildScope();
             var parameters = syntaxParameters.Select((p, i) => new ParameterSymbol(p.Identifier.Text,
