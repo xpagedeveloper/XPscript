@@ -271,7 +271,9 @@ See [Date and time](date-time.md) for Date object extensions.
 
 ## Classes, types and properties
 
-Experimental AST `Delete owner` clears and recycles typed XPImage fields through the virtual deletion chain, including private and inherited storage. It clears the named caller variable; other object aliases retain the object with empty image fields. Original source images and borrowed Variant fields remain untouched. Repeated deletion is safe. This is explicit Delete cleanup, not GC finalization, scope-exit cleanup or execution of user-authored destructor bodies. See `image-field-delete.xps` and [image ownership](xpimage/index.md).
+Experimental AST supports one parameterless `Sub Delete()` in a root class. Use `Delete objectVariable` to invoke it, including through a derived instance; do not call a GC finalizer or depend on leaving scope. The body runs at most once per instance, even through surviving aliases or after a failed call. It may use private helpers, Me, Exit Sub and ordinary On Error handling. The named caller variable is cleared even if the body throws, while the error propagates normally and typed image fields are recycled. Other AST aliases still refer to the object; they do not become Nothing automatically. Destructors authored in derived classes remain unsupported with XPS3001; parameters, duplicate destructors and Function/Property Delete forms are invalid. Constructor arguments and full lifecycle migration remain separate work. See `class-destructor.xps`, `class-destructor-parity.xps` and `image-destructor.xps`.
+
+Experimental AST `Delete owner` clears and recycles typed XPImage fields through the virtual deletion chain, including private and inherited storage. It clears the named caller variable; other object aliases retain the object with empty image fields. Original source images and borrowed Variant fields remain untouched. Repeated deletion is safe. This is explicit Delete cleanup, not GC finalization, scope-exit cleanup or support for derived destructor bodies. See `image-field-delete.xps` and [image ownership](xpimage/index.md).
 
 | Command | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|

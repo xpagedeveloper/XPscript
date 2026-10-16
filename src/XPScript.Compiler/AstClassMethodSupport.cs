@@ -68,6 +68,7 @@ internal static class AstClassMethodSupport
     internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable globals, string sourcePath, string source)
     {
         var output = new System.Text.StringBuilder();
+        var destructorSeen = false;
         foreach (var group in declaration.Members.OfType<PropertyDeclarationSyntax>().GroupBy(p => p.Identifier.Text, StringComparer.OrdinalIgnoreCase))
         {
             var getter = group.FirstOrDefault(p => p.IsGetter);
@@ -91,18 +92,27 @@ internal static class AstClassMethodSupport
                 throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
                     $"Property '{group.Key}' accessors must use compatible value types.", "XPS1012", "semantic");
         }
-        foreach (var member in declaration.Members.Where(m => m is SubDeclarationSyntax or FunctionDeclarationSyntax or PropertyDeclarationSyntax))
+        foreach (var member in declaration.Members.Where(m => m is SubDeclarationSyntax or FunctionDeclarationSyntax or PropertyDeclarationSyntax or DestructorDeclarationSyntax))
         {
             var sub = member as SubDeclarationSyntax;
             var function = member as FunctionDeclarationSyntax;
             var property = member as PropertyDeclarationSyntax;
-            var name = sub?.Identifier.Text ?? function?.Identifier.Text ?? property!.Identifier.Text;
-            if (name.Equals("New", StringComparison.OrdinalIgnoreCase) || name.Equals("Delete", StringComparison.OrdinalIgnoreCase)) continue;
+            var destructor = member as DestructorDeclarationSyntax;
+            var name = sub?.Identifier.Text ?? function?.Identifier.Text ?? property?.Identifier.Text ?? destructor!.Identifier.Text;
+            if (name.Equals("New", StringComparison.OrdinalIgnoreCase)) continue;
+            var isDestructor = name.Equals("Delete", StringComparison.OrdinalIgnoreCase);
+            if (isDestructor)
+            {
+                if (destructor is null || destructorSeen)
+                    throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
+                        "A class destructor must be a single parameterless Sub Delete.", "XPS1012", "semantic");
+                destructorSeen = true;
+            }
             if (declaration.BaseType is not null)
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Method bodies declared in derived classes are not implemented by the AST compiler yet.", "XPS3001", "ast");
-            var syntaxParameters = sub?.Parameters ?? function?.Parameters ?? property!.Parameters;
-            var statements = sub?.Statements ?? function?.Statements ?? property!.Statements;
+            var syntaxParameters = sub?.Parameters ?? function?.Parameters ?? property?.Parameters ?? Array.Empty<ParameterSyntax>();
+            var statements = sub?.Statements ?? function?.Statements ?? property?.Statements ?? destructor!.Statements;
             var isObjectSetter = property?.AccessorKeyword.Kind == SyntaxKind.SetKeyword;
             if (property?.IsSetter == true && syntaxParameters.Count == 0)
                 syntaxParameters = new[] { new ParameterSyntax(new SyntaxToken(SyntaxKind.ByValKeyword, "ByVal", null, property.Identifier.Span),
@@ -190,11 +200,11 @@ internal static class AstClassMethodSupport
             var bound = AstExperimentalCompiler.BindProcedure(statements, scope, parameters,
                 hasResult ? semanticResult : null, hasResult ? name : null, result,
                 declaration.Identifier.Text + "." + name, sourcePath, source);
-            var emittedName = property is null ? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
+            var emittedName = isDestructor ? "__xps_destructor_body" : property is null ? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
             string body;
             try { body = new BoundMethodEmitter().Emit(emittedName, returnType, parameters, bound, false, source, sourcePath, semanticResult); }
             catch (BoundEmissionException ex) { throw AstExperimentalCompiler.MappedDiagnostic(ex.Span ?? member.Span, sourcePath, source, ex.Message); }
-            if (property is not null || (sub?.Visibility ?? function?.Visibility)?.Kind == SyntaxKind.PrivateKeyword)
+            if (isDestructor || property is not null || (sub?.Visibility ?? function?.Visibility)?.Kind == SyntaxKind.PrivateKeyword)
                 body = "private " + body["public ".Length..];
             output.Append(body);
             if (property is not null)

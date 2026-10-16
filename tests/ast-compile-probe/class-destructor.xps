@@ -1,0 +1,65 @@
+Public calls As Long
+Class Resource
+    Public Value As Long
+    Private Sub Touch()
+        Value = Value + 1
+    End Sub
+    Public Sub Delete()
+        Call Touch()
+        calls = calls + 1
+        Dim self As Resource = Me
+        Delete self
+        Exit Sub
+        Error 6, "destructor Exit Sub failed"
+    End Sub
+End Class
+Class ChildResource Extend Resource
+    Public Extra As Long
+End Class
+Class FailedResource
+    Public Calls As Long
+    Public Sub Delete()
+        Calls = Calls + 1
+        Error 3804, "destructor failure"
+    End Sub
+End Class
+Class ProtectedResource
+    Public Calls As Long
+    Public Sub Delete()
+        On Error Resume Next
+        Error 3805, "handled destructor failure"
+        On Error GoTo 0
+        Calls = Calls + 1
+    End Sub
+End Class
+Sub Main()
+    Dim item As New ChildResource
+    Dim alias As Resource = item
+    item.Value = 8
+    Delete item
+    If Not (item Is Nothing) Then Error 6, "Delete did not clear item"
+    If alias.Value <> 9 Then Error 6, "destructor private method did not update field"
+    If calls <> 1 Then Error 6, "destructor did not update module field"
+    Delete alias
+    If calls <> 1 Then Error 6, "destructor repeated through alias"
+    Delete alias
+    Dim other As New Resource
+    Delete other
+    If calls <> 2 Then Error 6, "destructor state crossed instances"
+    Dim failed As New FailedResource
+    Dim failedAlias As FailedResource = failed
+    Dim failure As Long
+    On Error Resume Next
+    Delete failed
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3804 Or Not (failed Is Nothing) Then Error 6, "failed destructor did not clear reference"
+    If failedAlias.Calls <> 1 Then Error 6, "failed destructor skipped body"
+    Delete failedAlias
+    Dim handled As New ProtectedResource
+    Dim handledAlias As ProtectedResource = handled
+    Delete handled
+    If Not (handled Is Nothing) Or handledAlias.Calls <> 1 Then Error 6, "protected destructor body"
+    Delete handledAlias
+    Print "CLASS_DESTRUCTOR_OK"
+End Sub

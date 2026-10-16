@@ -203,8 +203,7 @@ public sealed class BoundStatementEmitter
                     if (argument is BoundNameExpression name)
                     {
                         var target = name.Symbol.Name;
-                        Line($"if ({target} is not null) ((dynamic){target}).Delete();");
-                        Line($"{target} = null;");
+                        Line($"try {{ if ({target} is not null) ((dynamic){target}).Delete(); }} finally {{ {target} = null; }}");
                     }
                     else
                         Line($"{_expressions.Emit(delete)};");

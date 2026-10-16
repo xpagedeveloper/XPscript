@@ -1,0 +1,8 @@
+Class Invalid
+    Public Sub Delete()
+    End Sub
+    Public Sub Delete()
+    End Sub
+End Class
+Sub Main()
+End Sub

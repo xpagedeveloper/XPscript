@@ -2,12 +2,13 @@ $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $output = Join-Path $root ('out/image-get-' + [Guid]::NewGuid().ToString('N'))
-foreach ($fixture in @('image-field-delete', 'image-property-set', 'image-property-set-byval-signature', 'image-property-set-byref-signature', 'image-property-get', 'image-property-signature-only')) {
+foreach ($fixture in @('image-destructor', 'image-field-delete', 'image-property-set', 'image-property-set-byval-signature', 'image-property-set-byref-signature', 'image-property-get', 'image-property-signature-only')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
     if ($LASTEXITCODE -ne 0) { throw "AST image getter compilation failed: $fixture" }
     $result = dotnet (Join-Path $target 'Generated.dll')
     $expected = switch ($fixture) {
+        'image-destructor' { 'IMAGE_DESTRUCTOR_OK' }
         'image-field-delete' { 'IMAGE_FIELD_DELETE_OK' }
         'image-property-set' { 'IMAGE_PROPERTY_SET_OK' }
         'image-property-set-byval-signature' { 'IMAGE_SET_BYVAL_SIGNATURE_OK' }
@@ -34,3 +35,4 @@ foreach ($case in @(
 Write-Host 'AST_IMAGE_SETTERS_OK'
 Write-Host 'AST_IMAGE_GETTERS_OK'
 Write-Host 'AST_IMAGE_FIELD_DELETE_OK'
+Write-Host 'AST_IMAGE_DESTRUCTORS_OK'

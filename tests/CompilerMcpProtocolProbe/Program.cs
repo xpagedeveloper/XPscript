@@ -13,6 +13,20 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+foreach (var fixture in new[] { "class-destructor", "class-destructor-parity", "image-destructor" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Destructor validation failed: " + result);
+}
+foreach (var (fixture, code, line) in new[] { ("class-destructor-parameter-error", "XPS1012", 2), ("class-destructor-duplicate-error", "XPS1012", 4), ("class-destructor-function-error", "XPS1012", 2), ("class-destructor-derived-deferred", "XPS3001", 4), ("class-destructor-body-error", "XPS2008", 3) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (!result.GetProperty("result").GetProperty("isError").GetBoolean() || error.GetProperty("diagnosticCode").GetString() != code || error.GetProperty("line").GetInt32() != line)
+        throw new Exception("Destructor diagnostic lost: " + result);
+}
 foreach (var fixture in new[] { "image-field-delete", "image-property-set", "image-property-set-byval-signature", "image-property-set-byref-signature", "image-property-get", "image-property-signature-only", "http-reference-properties", "http-property-signature-only", "tabular-reference-properties", "tabular-reference-signatures", "native-reference-properties", "native-reference-signatures" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));

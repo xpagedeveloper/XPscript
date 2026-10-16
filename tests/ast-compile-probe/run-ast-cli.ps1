@@ -4,6 +4,7 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $output = Join-Path $root 'out/ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+& (Join-Path $PSScriptRoot 'run-ast-destructor.ps1')
 & (Join-Path $PSScriptRoot 'run-ast-image-get.ps1')
 dotnet run --project (Join-Path $root 'tests/AstHttpRuntimeProbe') -c Release -- $root --accessors-only
 if ($LASTEXITCODE -ne 0) { throw 'AST HTTP accessor reference/security regression failed.' }

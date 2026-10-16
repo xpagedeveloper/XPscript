@@ -441,6 +441,10 @@ public static class AstExperimentalCompiler
                 ? $"public virtual void Delete() {{ {imageCleanup} }}"
                 : $"public override void Delete() {{ {imageCleanup} base.Delete(); }}";
             var memberBodies = AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource);
+            if (classDeclaration.Members.OfType<DestructorDeclarationSyntax>().Any())
+                delete = "private bool __xps_destructor_started; public virtual void Delete() { " +
+                    "if (__xps_destructor_started) return; __xps_destructor_started = true; " +
+                    $"try {{ __xps_destructor_body(); }} finally {{ {imageCleanup} }} }}";
             // Script classes are assembly-local implementation types, like the native
             // runtime types exposed by their fields and accessor signatures.
             return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} public Xp{classDeclaration.Identifier.Text}() {{ }} {delete} {memberBodies} }}";

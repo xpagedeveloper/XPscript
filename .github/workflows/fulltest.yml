@@ -214,7 +214,7 @@ jobs:
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       # Language includes executable Optional forwarding/defaults, syntax/spans and declared-call/receiver diagnostics.
       # XP Runtime includes typed HTTP accessor references, multipart/disposal and real local TLS/security checks.
-      # XP Runtime also runs AST image field Delete through inheritance, accessor snapshots and exceptional-cleanup regressions.
+      # XP Runtime also runs AST root destructor bodies, image cleanup on destructor errors and inherited field Delete.
       - name: Run Windows ${{ matrix.name }} FullTest
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite ${{ matrix.suite }}

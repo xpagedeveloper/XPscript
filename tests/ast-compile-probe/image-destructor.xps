@@ -1,0 +1,59 @@
+Class ImageResource
+    Private backing As XPImage
+    Public Stored As Variant
+    Public LocalImage As Variant
+    Public Calls As Long
+    Public Property Set Picture(ByRef incoming As XPImage)
+        Set backing = incoming
+        Stored = backing
+    End Property
+    Public Property Get Cleared As Boolean
+        Cleared = backing Is Nothing
+    End Property
+    Public Sub Delete()
+        Calls = Calls + 1
+        If backing.Width <> 4 Then Error 6, "field cleared before destructor body"
+        Dim image As New XPImage(2, 2)
+        LocalImage = image
+        Error 3811, "image destructor failure"
+    End Sub
+End Class
+Class ImageChild Extend ImageResource
+    Public ChildImage As XPImage
+End Class
+Sub AssertExpired(ByVal value As Variant)
+    Dim image As XPImage = value
+    If image Is Nothing Then Error 6, "missing cleanup observation"
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "destructor did not recycle image"
+End Sub
+Sub Main()
+    Dim source As New XPImage(4, 3)
+    Dim item As New ImageChild
+    Set item.Picture = source
+    Set item.ChildImage = source
+    Dim alias As ImageChild = item
+    Dim baseAlias As ImageResource = item
+    Dim childImage As Variant = item.ChildImage
+    Dim fieldImage As Variant = item.Stored
+    Dim failure As Long
+    On Error Resume Next
+    Delete baseAlias
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3811 Or Not (baseAlias Is Nothing) Then Error 6, "destructor error or caller reference"
+    If alias.Calls <> 1 Or Not alias.Cleared Then Error 6, "destructor body or private field cleanup"
+    If Not (alias.ChildImage Is Nothing) Then Error 6, "derived field cleanup"
+    Call AssertExpired(fieldImage)
+    Call AssertExpired(childImage)
+    Call AssertExpired(alias.LocalImage)
+    Delete item
+    Delete alias
+    If source.Width <> 4 Then Error 6, "destructor consumed original source"
+    Print "IMAGE_DESTRUCTOR_OK"
+End Sub
