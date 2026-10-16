@@ -1,0 +1,12 @@
+Class Root
+End Class
+Class Leaf Extend Root
+End Class
+Class Record
+    Public Sub New(ByVal value As Leaf)
+    End Sub
+End Class
+Sub Main()
+    Dim value As New Root
+    Dim item As New Record(value)
+End Sub

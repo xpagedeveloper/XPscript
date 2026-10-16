@@ -1,0 +1,22 @@
+Class Box
+    Public Value As Long
+End Class
+Class Record
+    Public Stored As Box
+    Public Seen As Long
+    Public Sub New(ByVal value As Box)
+        Set Stored = value
+        value.Value = value.Value + 1
+        Seen = value.Value
+        Set value = Nothing
+    End Sub
+End Class
+Sub Main()
+    Dim box As New Box
+    box.Value = 4
+    Dim item As New Record(box)
+    If Not (item.Stored Is box) Then Error 6, "reference identity lost"
+    Print box.Value
+    Print item.Seen
+    Print "REFERENCE_CONSTRUCTOR_PARITY_OK"
+End Sub

@@ -1,0 +1,6 @@
+Class Record
+    Public Sub New(ByVal value As Variant)
+    End Sub
+End Class
+Sub Main()
+End Sub

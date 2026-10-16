@@ -129,7 +129,7 @@ internal static class AstClassMethodSupport
             if (isObjectSetter && DeclaredType(property!.Type ?? syntaxParameters.Last().Type, globals).RuntimeType != typeof(object))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Property Set requires an object/reference value type.", "XPS2001", "semantic");
-            if (syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
+            if (constructor is null && syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
                     .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object)) ||
                 function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) ||
                 property is not null && (UnsupportedNativeAccessorType(resultTypeName) ||

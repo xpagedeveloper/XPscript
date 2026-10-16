@@ -2,12 +2,15 @@ $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $output = Join-Path $root ('out/constructor-' + [Guid]::NewGuid().ToString('N'))
-foreach ($fixture in @('constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
+foreach ($fixture in @('class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
     if ($LASTEXITCODE -ne 0) { throw "AST constructor compilation failed: $fixture" }
     $result = dotnet (Join-Path $target 'Generated.dll')
     $expected = switch ($fixture) {
+        'class-constructor-reference' { 'REFERENCE_CONSTRUCTORS_OK' }
+        'constructor-reference-byval' { 'CONSTRUCTOR_REFERENCE_BYVAL_OK' }
+        'class-constructor-reference-parity' { "5`n5`nREFERENCE_CONSTRUCTOR_PARITY_OK" }
         'constructor-optional-byref-zero' { 'OPTIONAL_BYREF_ZERO_OK' }
         'class-constructor-optional-byref' { 'OPTIONAL_BYREF_CONSTRUCTORS_OK' }
         'constructor-byref-optional' { 'CONSTRUCTOR_BYREF_OPTIONAL_OK' }
@@ -46,6 +49,12 @@ $result = & $normalOptional
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`ndefault`n9`nsupplied`nOPTIONAL_CONSTRUCTOR_PARITY_OK") { throw 'Normal/AST Optional constructor parity failed.' }
 # Normal compilation currently fails the simple ByRef constructor at runtime
 # ('long' has no Value member); retain the existing valid ByVal parity above.
+$normalReference = Join-Path $output $(if ($IsWindows) { 'normal-reference.exe' } else { 'normal-reference' })
+# Concrete-class parameter mutation/snapshot parity; broader Object/default/error cases are AST capability tests.
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-reference-parity.xps') -o $normalReference --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal reference constructor parity compilation failed.' }
+$result = & $normalReference
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`n5`nREFERENCE_CONSTRUCTOR_PARITY_OK") { throw 'Normal/AST concrete-reference constructor parity failed.' }
 foreach ($case in @(
     @('constructor-mixed-literal-error', 'XPS2001', 6),
     @('constructor-mixed-type-error', 'XPS2003', 7),
@@ -76,7 +85,17 @@ foreach ($case in @(
     @('constructor-optional-required-error', 'XPS2004', 6),
     @('constructor-optional-slot-error', 'XPS1012', 6),
     @('constructor-optional-private-error', 'XPS2009', 6),
-    @('constructor-reference-deferred', 'XPS3001', 2),
+    @('constructor-reference-byref-deferred', 'XPS3001', 4),
+    @('constructor-reference-implicit-deferred', 'XPS3001', 2),
+    @('constructor-reference-optional-deferred', 'XPS3001', 2),
+    @('constructor-reference-native-deferred', 'XPS3001', 2),
+    @('constructor-reference-variant-deferred', 'XPS3001', 2),
+    @('constructor-reference-list-deferred', 'XPS3001', 2),
+    @('constructor-reference-unknown-deferred', 'XPS3001', 2),
+    @('constructor-reference-scalar-error', 'XPS2004', 6),
+    @('constructor-reference-class-error', 'XPS2004', 11),
+    @('constructor-reference-downcast-error', 'XPS2004', 11),
+    @('constructor-reference-method-deferred', 'XPS3001', 6),
     @('constructor-parent-late-error', 'XPS1012', 6),
     @('constructor-parent-duplicate-error', 'XPS1012', 6),
     @('constructor-parent-root-error', 'XPS1012', 3),
@@ -93,6 +112,7 @@ foreach ($case in @(
     if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Constructor diagnostic lost: $fixture`n$failure" }
 }
 Write-Host 'AST_CONSTRUCTORS_OK'
+Write-Host 'AST_REFERENCE_CONSTRUCTORS_OK'
 Write-Host 'AST_MIXED_CONSTRUCTORS_OK'
 Write-Host 'AST_OPTIONAL_BYREF_CONSTRUCTORS_OK'
 Write-Host 'AST_DERIVED_CONSTRUCTORS_OK'

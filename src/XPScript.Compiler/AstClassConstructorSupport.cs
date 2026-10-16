@@ -19,10 +19,12 @@ internal static class AstClassConstructorSupport
             AstExperimentalCompiler.ValidateOptionalDeclarations(parameters, path, source);
             foreach (var parameter in parameters)
             {
-                if (parameter.IsList ||
-                    AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text) == typeof(object))
+                var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
+                var sharedReference = type.IsObject || classes.ContainsKey(type.Name);
+                if (parameter.IsList || type.RuntimeType == typeof(object) &&
+                    (!sharedReference || parameter.IsByRef || parameter.IsOptional))
                     throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
-                        "AST class constructors currently require scalar parameters.", "XPS3001", "ast");
+                        "AST constructors support scalar parameters and required ByVal Object/user-class references; other reference/List signatures are not implemented yet.", "XPS3001", "ast");
             }
             var types = parameters.Select(p => AstClassMethodSupport.DeclaredType(p.Type, symbols)).ToArray();
             symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select(t => t.RuntimeType).ToArray(),
@@ -82,7 +84,7 @@ internal static class AstClassConstructorSupport
         }
         if (constructor is null) return $"public {name}(){initializer} {{ }}";
         var parameters = string.Join(", ", constructor.Parameters.Select(p =>
-            (p.IsByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)) + " " + p.Identifier.Text));
+            (p.IsByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstClassMethodSupport.DeclaredType(p.Type, symbols)) + " " + p.Identifier.Text));
         var arguments = string.Join(", ", constructor.Parameters.Select(p => (p.IsByRef ? "ref " : "") + p.Identifier.Text));
         var visibility = constructor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public";
         // A failed construction owns its fields, but must not invoke user Delete.
@@ -118,7 +120,7 @@ internal static class AstClassConstructorSupport
             scope.Declare(parameters[i]);
         }
         string Signature(IEnumerable<ParameterSymbol> values) => string.Join(", ", values.Select(parameter =>
-            (parameter.IsByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(parameter.Type) + " " + parameter.Name));
+            (parameter.IsByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(parameter.SemanticType ?? XpTypeSymbol.FromClr(parameter.Type)) + " " + parameter.Name));
         string Arguments(IEnumerable<ParameterSymbol> values) => string.Join(", ", values.Select(parameter => (parameter.IsByRef ? "ref " : "") + parameter.Name));
         // A private scalar argument carrier crosses C# constructor initializers.
         // Default evaluation itself remains the shared Optional forwarding body;
@@ -128,7 +130,7 @@ internal static class AstClassConstructorSupport
         var carrier = carrierType is null ? "__xps_constructor_arguments" : BoundMethodEmitter.CSharpType(carrierType);
         var resultType = hasReferences ? carrier : "object";
         const string helper = "__xps_constructor_defaults";
-        var fields = string.Join(" ", parameters.Select((parameter, i) => $"public {(parameter.IsByRef ? "ref " : "")}{BoundMethodEmitter.CSharpType(parameter.Type)} P{i};"));
+        var fields = string.Join(" ", parameters.Select((parameter, i) => $"public {(parameter.IsByRef ? "ref " : "")}{BoundMethodEmitter.CSharpType(parameter.SemanticType ?? XpTypeSymbol.FromClr(parameter.Type))} P{i};"));
         var stores = string.Join(" ", parameters.Select((parameter, i) => $"this.P{i} = {(parameter.IsByRef ? "ref " : "")}{parameter.Name};"));
         var unpacked = string.Join(", ", parameters.Select((parameter, i) => $"{(parameter.IsByRef ? "ref " : "")}__xpsValues.P{i}"));
         var output = new System.Text.StringBuilder();

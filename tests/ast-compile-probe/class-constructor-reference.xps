@@ -1,0 +1,114 @@
+Option Declare
+Private trace As String
+Private evaluations As Long
+Class Box
+    Public Value As Long
+End Class
+Class Leaf Extend Box
+End Class
+Class Picker
+    Public Stored As Box
+    Public Property Get Current As Box
+        evaluations = evaluations + 1
+        trace = trace & "P"
+        Set Current = Stored
+    End Property
+End Class
+Class Record
+    Public Stored As Box
+    Public Any As Object
+    Public Sub New(ByVal value As Box, ByVal other As Object, Optional ByRef count As Long = Touch(value))
+        Set Stored = value
+        Set Any = other
+        If Not (value Is Nothing) Then
+            value.Value = value.Value + count
+        End If
+        Set value = Nothing
+        Set other = Nothing
+        count = count + 1
+        trace = trace & "R"
+    End Sub
+End Class
+Class Child Extend Record
+    Public Sub New(ByVal value As Box, ByVal other As Object)
+        Call Parent.New(value, other)
+        If value Is Nothing Then Error 3950, "base replacement leaked"
+        value.Value = value.Value + 100
+        Set value = Nothing
+        trace = trace & "C"
+    End Sub
+End Class
+Class ValueCarrier
+    Public Stored As Box
+    Public Sub New(ByVal value As bOx, Optional ByVal extra As Long = 1)
+        Set Stored = value
+        If Not (value Is Nothing) Then
+            value.Value = value.Value + extra
+        End If
+    End Sub
+End Class
+Class Failed
+    Public Sub New(ByVal value As Box)
+        value.Value = value.Value + 10
+        Set value = Nothing
+        Error 3951, "reference body failed"
+    End Sub
+End Class
+Class Reader
+    Public Seen As Long
+    Public Sub New(ByVal value As Box, Optional ByVal extra As Long = value.Value)
+        Seen = extra
+    End Sub
+End Class
+Function Touch(ByVal value As Variant) As Long
+    trace = trace & "D"
+    If Not (value Is Nothing) Then
+        Dim typed As Box = value
+        typed.Value = typed.Value + 1
+    End If
+    Touch = 2
+End Function
+Sub Make(Optional ByVal item As Variant = New ValueCarrier(New Box()))
+    If item.Stored.Value <> 1 Then Error 3952, "Optional caller reference type erased"
+End Sub
+Sub Main()
+    Dim leaf As New Leaf
+    leaf.Value = 1
+    Dim other As New Object
+    Dim item As New Record(leaf, other)
+    If leaf.Value <> 4 Or Not (item.Stored Is leaf) Or Not (item.Any Is other) Or trace <> "DR" Then Error 3953, "reference identity/mutation failed"
+    Dim count As Long = 3
+    trace = ""
+    Set item = New Record(leaf, leaf, count)
+    If leaf.Value <> 7 Or count <> 4 Or Not (item.Any Is leaf) Or trace <> "R" Then Error 3954, "mixed supplied reference/scalar alias failed"
+    trace = ""
+    Dim child As New Child(leaf, other)
+    If leaf.Value <> 110 Or Not (child.Stored Is leaf) Or trace <> "DRC" Then Error 3955, "Parent.New reference snapshot failed"
+    Dim carrier As New ValueCarrier(leaf)
+    If leaf.Value <> 111 Or Not (carrier.Stored Is leaf) Then Error 3956, "heap carrier erased reference type"
+    Set carrier = New ValueCarrier(Nothing)
+    If Not (carrier.Stored Is Nothing) Then Error 3957, "Nothing reference failed"
+    Set item = New Record(Nothing, Nothing)
+    If Not (item.Stored Is Nothing) Or Not (item.Any Is Nothing) Then Error 3958, "Nothing forwarding failed"
+    Dim dynamic As Variant = leaf
+    Set carrier = New ValueCarrier(dynamic)
+    If leaf.Value <> 112 Then Error 3959, "Variant reference conversion failed"
+    Call Make()
+    Dim reader As New Reader(leaf)
+    Dim fresh As New Reader(New Box())
+    If reader.Seen <> 112 Or fresh.Seen <> 0 Then Error 3962, "earlier reference member/default typing lost"
+    Dim picker As New Picker
+    Set picker.Stored = leaf
+    trace = ""
+    evaluations = 0
+    Set item = New Record(picker.Current, picker.Current)
+    If leaf.Value <> 115 Or evaluations <> 2 Or trace <> "PPDR" Or Not (item.Any Is leaf) Then Error 3961, "reference arguments/defaults evaluated out of order or twice"
+    Dim old As Failed
+    Dim failure As Long
+    On Error Resume Next
+    Set old = New Failed(leaf)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3951 Or leaf.Value <> 125 Or Not (old Is Nothing) Then Error 3960, "failed constructor lost shared mutation or replaced caller"
+    Print "REFERENCE_CONSTRUCTORS_OK"
+End Sub

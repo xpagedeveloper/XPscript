@@ -1,0 +1,121 @@
+Public rootImage As Variant
+Public childImage As Variant
+Public rootLocal As Variant
+Public childLocal As Variant
+Public defaultLocal As Variant
+Public escaped As Variant
+Public deletes As Long
+Public trace As String
+Class Source
+    Public Picture As XPImage
+    Public Value As Long
+End Class
+Class Root
+    Public Picture As XPImage
+    Public Borrowed As Source
+    Public Sub New(ByVal incoming As Source, Optional ByVal mode As Long = DefaultMode(incoming))
+        trace = trace & "R"
+        incoming.Value = incoming.Value + 1
+        Set Borrowed = incoming
+        escaped = Me
+        Dim local As New XPImage(3, 2)
+        rootLocal = local
+        Set Picture = incoming.Picture
+        rootImage = Picture
+        Set incoming = Nothing
+        If mode = 1 Then Error 3971, "root failed"
+    End Sub
+    Public Sub Delete()
+        deletes = deletes + 1
+    End Sub
+End Class
+Class Child Extend Root
+    Public Other As XPImage
+    Public Sub New(ByVal incoming As Source, ByVal mode As Long)
+        Call Parent.New(incoming, mode)
+        trace = trace & "C"
+        incoming.Value = incoming.Value + 100
+        Dim local As New XPImage(4, 2)
+        childLocal = local
+        Set Other = incoming.Picture
+        childImage = Other
+        Set incoming = Nothing
+        If mode = 2 Then Error 3972, "child failed"
+    End Sub
+    Public Sub Delete()
+        deletes = deletes + 1
+    End Sub
+End Class
+Function DefaultMode(ByVal incoming As Variant) As Long
+    trace = trace & "D"
+    Dim borrowed As Source = incoming
+    borrowed.Value = borrowed.Value + 10
+    Dim local As New XPImage(2, 2)
+    defaultLocal = local
+    Error 3973, "default failed"
+End Function
+Sub AssertExpired(ByVal value As Variant)
+    If value Is Nothing Then
+        Exit Sub
+    End If
+    Dim image As XPImage = value
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "reference constructor owned image leaked"
+End Sub
+Sub Main()
+    Dim source As New Source
+    Dim picture As New XPImage(5, 3)
+    Set source.Picture = picture
+    Dim item As New Child(source, 0)
+    Dim original As Child = item
+    If source.Value <> 101 Or trace <> "RC" Or Not (item.Borrowed Is source) Then Error 6, "reference constructor snapshot/mutation failed"
+    If item.Picture.Width <> 5 Or item.Other.Width <> 5 Then Error 6, "successful image snapshots lost"
+    Call AssertExpired(rootLocal)
+    Call AssertExpired(childLocal)
+    Dim mode As Long
+    For mode = 1 To 2
+        trace = ""
+        source.Value = 0
+        rootLocal = Nothing
+        childLocal = Nothing
+        rootImage = Nothing
+        childImage = Nothing
+        Dim failure As Long
+        On Error Resume Next
+        Set item = New Child(source, mode)
+        failure = Err
+        On Error GoTo 0
+        If failure <> 3970 + mode Or Not (item Is original) Or deletes <> 0 Then Error 6, "reference error replaced target or called Delete"
+        If mode = 1 And (source.Value <> 1 Or trace <> "R") Then Error 6, "base failure lost shared mutation"
+        If mode = 2 And (source.Value <> 101 Or trace <> "RC") Then Error 6, "child failure lost shared mutation"
+        Dim failed As Child = escaped
+        If Not (failed.Picture Is Nothing) Or Not (failed.Other Is Nothing) Then Error 6, "completed fields not cleared"
+        If Not (failed.Borrowed Is source) Then Error 6, "borrowed user reference cleared"
+        If source.Picture.Width <> 5 Or picture.Width <> 5 Then Error 6, "borrowed input/source images disposed"
+        Call AssertExpired(rootLocal)
+        Call AssertExpired(childLocal)
+        Call AssertExpired(rootImage)
+        Call AssertExpired(childImage)
+    Next
+    trace = ""
+    source.Value = 0
+    Dim root As Root
+    Dim defaultFailure As Long
+    On Error Resume Next
+    Set root = New Root(source)
+    defaultFailure = Err
+    On Error GoTo 0
+    If defaultFailure <> 3973 Or source.Value <> 10 Or trace <> "D" Or Not (root Is Nothing) Then Error 6, "reference default error lost snapshot/mutation"
+    Call AssertExpired(defaultLocal)
+    If source.Picture.Width <> 5 Or item.Picture.Width <> 5 Or item.Other.Width <> 5 Then Error 6, "failed replacement damaged borrowed or old images"
+    Delete item
+    If deletes <> 2 Or source.Picture.Width <> 5 Then Error 6, "Delete disposed constructor input"
+    Delete source
+    If picture.Width <> 5 Then Error 6, "source image alias owned incorrectly"
+    Print "IMAGE_REFERENCE_CONSTRUCTORS_OK"
+End Sub

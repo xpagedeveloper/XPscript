@@ -1,0 +1,10 @@
+Class Box
+End Class
+Class Record
+    Public Sub New(ByVal value As Box)
+    End Sub
+    Public Sub Unsupported(ByVal value As Box)
+    End Sub
+End Class
+Sub Main()
+End Sub
