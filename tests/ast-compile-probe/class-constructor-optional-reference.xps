@@ -1,0 +1,98 @@
+Public calls As Long
+Class Box
+    Public Value As Long
+End Class
+Class Leaf Extend Box
+End Class
+Class Record
+    Public Stored As Box
+    Public Any As Object
+    Public Sub New(Optional ByVal value As Box = New Leaf(), Optional ByVal same As Box = value, Optional ByVal anyValue As Object)
+        calls = calls + 1
+        If Not (value Is same) Then Error 4010, "dependent default identity"
+        Set Stored = same
+        Set Any = anyValue
+        If Not (value Is Nothing) Then
+            value.Value = value.Value + 1
+        End If
+        Set value = Nothing
+    End Sub
+End Class
+Class Vacant
+    Public Stored As Box
+    Public Any As Object
+    Public Sub New(Optional ByVal value As Box, Optional ByVal anyValue As Object = Nothing)
+        If Not (value Is Nothing) Then Error 4011, "implicit Nothing"
+        If Not (anyValue Is Nothing) Then Error 4012, "explicit Nothing"
+        Set Stored = value
+        Set Any = anyValue
+    End Sub
+End Class
+Class Child Extend Record
+    Public Sub New()
+        Call Parent.New()
+    End Sub
+End Class
+Class ImplicitChild Extend Vacant
+End Class
+Class Mixed
+    Public Stored As Box
+    Public Sub New(ByRef count As Long, Optional ByVal value As Box = New Box(), Optional ByRef amount As Long = 2)
+        count = count + amount
+        value.Value = count
+        Set Stored = value
+    End Sub
+End Class
+Class Broken
+    Public Sub New(ByRef value As Object, Optional ByVal nextValue As Box = Fail(value))
+        calls = calls + 100
+    End Sub
+End Class
+Function Fail(ByRef value As Object) As Variant
+    Set value = New Object()
+    Error 4014, "default failed"
+End Function
+Function Make(Optional ByVal value As Variant = New Record()) As Variant
+    Make = value
+End Function
+Sub Main()
+    Dim zero As New Vacant()
+    Dim inherited As New ImplicitChild()
+    Dim first As New Record()
+    Dim second As New Record()
+    If first.Stored Is second.Stored Then Error 4015, "shared default"
+    If first.Stored.Value <> 1 Then Error 4016, "default value"
+    If Not (first.Any Is Nothing) Then Error 4017, "Object must start Nothing"
+    Dim supplied As New Leaf()
+    Dim explicitValue As New Record(supplied)
+    If Not (explicitValue.Stored Is supplied) Then Error 4018, "snapshot identity"
+    If supplied.Value <> 1 Then Error 4019, "shared mutation"
+    Dim objectValue As New Object()
+    Dim full As New Record(supplied, supplied, objectValue)
+    If Not (full.Any Is objectValue) Then Error 4020, "supplied Object"
+    Dim nothingValue As New Record(Nothing)
+    If Not (nothingValue.Stored Is Nothing) Then Error 4021, "Nothing argument"
+    Dim child As New Child()
+    If child.Stored.Value <> 1 Then Error 4022, "Parent.New omission"
+    Dim count As Long = 3
+    Dim mixed As New Mixed(count)
+    If count <> 5 Then Error 4023, "mixed carrier alias"
+    If mixed.Stored.Value <> 5 Then Error 4024, "typed mixed carrier"
+    Dim returned As Variant = Make()
+    Dim rewritten As Record = returned
+    If rewritten.Stored.Value <> 1 Then Error 4025, "Optional caller rewrite"
+    If calls <> 7 Then Error 4013, "body entry count"
+    Dim borrowed As Object = New Object()
+    Dim old As Object = borrowed
+    Dim target As New Broken(borrowed, New Box())
+    Dim original As Broken = target
+    Dim failure As Long
+    On Error Resume Next
+    Set target = New Broken(borrowed)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4014 Then Error 4026, "default error"
+    If borrowed Is old Then Error 4027, "lost ByRef write on error"
+    If Not (target Is original) Or calls <> 107 Then Error 4028, "entered failed body or replaced old target"
+    Print "OPTIONAL_REFERENCE_CONSTRUCTORS_OK"
+End Sub

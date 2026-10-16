@@ -2,8 +2,12 @@ $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
-$output = Join-Path $root 'out/ast-cli'
+$outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
+$output = Join-Path $outputRoot 'ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+# Exercise the previously failing Application metadata/build path before broad regressions.
+dotnet run --project (Join-Path $root 'tests/AstApplicationRuntimeProbe') -c Release
+if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime regression failed.' }
 & (Join-Path $PSScriptRoot 'run-ast-constructor.ps1')
 & (Join-Path $PSScriptRoot 'run-ast-destructor.ps1')
 & (Join-Path $PSScriptRoot 'run-ast-image-get.ps1')
@@ -176,8 +180,6 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-case.xps') -
 if ($LASTEXITCODE -ne 0) { throw 'AST case-insensitive class method compilation failed.' }
 $classCaseResult = dotnet (Join-Path $output 'class-method-case/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($classCaseResult -join "`n") -ne '3') { throw 'AST case-insensitive class member execution failed.' }
-dotnet run --project (Join-Path $root 'tests/AstApplicationRuntimeProbe') -c Release
-if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime regression failed.' }
 dotnet run --project (Join-Path $root 'tests/AstSpreadsheetRuntimeProbe') -c Release
 if ($LASTEXITCODE -ne 0) { throw 'AST native spreadsheet runtime regression failed.' }
 foreach ($sheetInvalid in @('spreadsheet-member-error', 'spreadsheet-constructor-error', 'spreadsheet-readonly-error', 'spreadsheet-private-setter-error', 'spreadsheet-arity-error')) {

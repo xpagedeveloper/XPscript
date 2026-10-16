@@ -1,13 +1,15 @@
 $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
-$output = Join-Path $root ('out/image-get-' + [Guid]::NewGuid().ToString('N'))
-foreach ($fixture in @('image-constructor-reference-byref', 'image-constructor-reference', 'image-constructor-optional-byref', 'image-constructor-mixed', 'image-constructor-byref', 'image-constructor-optional', 'image-constructor-derived', 'image-constructor', 'image-destructor-derived', 'image-destructor', 'image-field-delete', 'image-property-set', 'image-property-set-byval-signature', 'image-property-set-byref-signature', 'image-property-get', 'image-property-signature-only')) {
+$outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
+$output = Join-Path $outputRoot ('image-get-' + [Guid]::NewGuid().ToString('N'))
+foreach ($fixture in @('image-constructor-optional-reference', 'image-constructor-reference-byref', 'image-constructor-reference', 'image-constructor-optional-byref', 'image-constructor-mixed', 'image-constructor-byref', 'image-constructor-optional', 'image-constructor-derived', 'image-constructor', 'image-destructor-derived', 'image-destructor', 'image-field-delete', 'image-property-set', 'image-property-set-byval-signature', 'image-property-set-byref-signature', 'image-property-get', 'image-property-signature-only')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
     if ($LASTEXITCODE -ne 0) { throw "AST image getter compilation failed: $fixture" }
     $result = dotnet (Join-Path $target 'Generated.dll')
     $expected = switch ($fixture) {
+        'image-constructor-optional-reference' { 'IMAGE_OPTIONAL_REFERENCE_CONSTRUCTORS_OK' }
         'image-constructor-reference-byref' { 'IMAGE_BYREF_REFERENCE_CONSTRUCTORS_OK' }
         'image-constructor-reference' { 'IMAGE_REFERENCE_CONSTRUCTORS_OK' }
         'image-constructor-optional-byref' { 'IMAGE_OPTIONAL_BYREF_CONSTRUCTORS_OK' }
@@ -54,3 +56,4 @@ Write-Host 'AST_IMAGE_MIXED_CONSTRUCTORS_OK'
 Write-Host 'AST_IMAGE_OPTIONAL_BYREF_CONSTRUCTORS_OK'
 Write-Host 'AST_IMAGE_REFERENCE_CONSTRUCTORS_OK'
 Write-Host 'AST_IMAGE_BYREF_REFERENCE_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_OPTIONAL_REFERENCE_CONSTRUCTORS_OK'

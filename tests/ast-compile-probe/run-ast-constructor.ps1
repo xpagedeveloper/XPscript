@@ -1,13 +1,16 @@
 $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
-$output = Join-Path $root ('out/constructor-' + [Guid]::NewGuid().ToString('N'))
-foreach ($fixture in @('class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
+$outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
+$output = Join-Path $outputRoot ('constructor-' + [Guid]::NewGuid().ToString('N'))
+foreach ($fixture in @('class-constructor-optional-reference', 'constructor-reference-optional', 'class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
     if ($LASTEXITCODE -ne 0) { throw "AST constructor compilation failed: $fixture" }
     $result = dotnet (Join-Path $target 'Generated.dll')
     $expected = switch ($fixture) {
+        'class-constructor-optional-reference' { 'OPTIONAL_REFERENCE_CONSTRUCTORS_OK' }
+        'constructor-reference-optional' { 'CONSTRUCTOR_REFERENCE_OPTIONAL_OK' }
         'class-constructor-reference-byref' { 'BYREF_REFERENCE_CONSTRUCTORS_OK' }
         'constructor-reference-byref-simple' { "7`nREFERENCE_BYREF_SIMPLE_OK" }
         'constructor-reference-byref' { 'CONSTRUCTOR_REFERENCE_BYREF_OK' }
@@ -101,7 +104,8 @@ foreach ($case in @(
     @('constructor-refref-parent-error', 'XPS2003', 11),
     @('constructor-refref-optional-deferred', 'XPS3001', 4),
     @('constructor-refref-module-deferred', 'XPS3001', 8),
-    @('constructor-reference-optional-deferred', 'XPS3001', 2),
+    @('constructor-optional-reference-type-error', 'XPS2001', 2),
+    @('constructor-optional-reference-name-error', 'XPS2008', 4),
     @('constructor-reference-native-deferred', 'XPS3001', 2),
     @('constructor-reference-variant-deferred', 'XPS3001', 2),
     @('constructor-reference-list-deferred', 'XPS3001', 2),
@@ -128,6 +132,7 @@ foreach ($case in @(
 Write-Host 'AST_CONSTRUCTORS_OK'
 Write-Host 'AST_REFERENCE_CONSTRUCTORS_OK'
 Write-Host 'AST_BYREF_REFERENCE_CONSTRUCTORS_OK'
+Write-Host 'AST_OPTIONAL_REFERENCE_CONSTRUCTORS_OK'
 Write-Host 'AST_MIXED_CONSTRUCTORS_OK'
 Write-Host 'AST_OPTIONAL_BYREF_CONSTRUCTORS_OK'
 Write-Host 'AST_DERIVED_CONSTRUCTORS_OK'

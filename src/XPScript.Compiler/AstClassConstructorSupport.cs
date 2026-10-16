@@ -22,9 +22,9 @@ internal static class AstClassConstructorSupport
                 var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
                 var sharedReference = type.IsObject || classes.ContainsKey(type.Name);
                 if (parameter.IsList || type.RuntimeType == typeof(object) &&
-                    (!sharedReference || parameter.IsOptional))
+                    (!sharedReference || parameter.IsOptional && parameter.IsByRef))
                     throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
-                        "AST constructors support scalar parameters and required Object/user-class references; Optional/native reference and List signatures are not implemented yet.", "XPS3001", "ast");
+                        "AST constructors support scalar parameters and ByVal/required ByRef Object/user-class references; Optional ByRef/native reference and List signatures are not implemented yet.", "XPS3001", "ast");
             }
             var types = parameters.Select(p => AstClassMethodSupport.DeclaredType(p.Type, symbols)).ToArray();
             symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select(t => t.RuntimeType).ToArray(),
@@ -108,7 +108,9 @@ internal static class AstClassConstructorSupport
                 var binder = new ExpressionBinder(scope);
                 var type = parameters[i].SemanticType!;
                 var value = constructor.Parameters[i].DefaultValue is { } syntax ? binder.Bind(syntax)
-                    : new BoundLiteralExpression(type.RuntimeType == typeof(string) ? "" : Activator.CreateInstance(type.RuntimeType), type.RuntimeType, type);
+                    : type.RuntimeType == typeof(object)
+                        ? new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Nothing)
+                        : new BoundLiteralExpression(type.RuntimeType == typeof(string) ? "" : Activator.CreateInstance(type.RuntimeType), type.RuntimeType, type);
                 if (binder.Diagnostics.Count > 0)
                     throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], path, source);
                 var conversion = scope.ClassifyConversion(value.SemanticType, type);
