@@ -117,6 +117,7 @@ public static class AstExperimentalCompiler
                         $"Inheritance cycle in base chain for class '{item.Identifier.Text}'.", CompilerDiagnosticCodes.InvalidSyntax, "semantic");
             symbols.DeclareUserClassInheritance(item.Identifier.Text, item.BaseType?.Identifier.Text);
         }
+        AstClassConstructorSupport.Register(classes, symbols, sourcePath, fullSource);
         foreach (var classDeclaration in classes.Values)
         {
             for (var current = classDeclaration; current is not null; current = current.BaseType is not null && classes.TryGetValue(current.BaseType.Identifier.Text, out var baseClass) ? baseClass : null)
@@ -451,7 +452,8 @@ public static class AstExperimentalCompiler
             }
             // Script classes are assembly-local implementation types, like the native
             // runtime types exposed by their fields and accessor signatures.
-            return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} public Xp{classDeclaration.Identifier.Text}() {{ }} {delete} {memberBodies} }}";
+            var constructorBody = AstClassConstructorSupport.Emit(classDeclaration, imageCleanup);
+            return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} {constructorBody} {delete} {memberBodies} }}";
         }));
         if (userClassSupport.Length == 0)
         {

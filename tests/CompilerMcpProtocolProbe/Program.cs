@@ -13,6 +13,20 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+foreach (var fixture in new[] { "class-constructor", "class-constructor-parity", "image-constructor" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Constructor validation failed: " + result);
+}
+foreach (var (fixture, code, line) in new[] { ("constructor-arity-error", "XPS2004", 6), ("constructor-type-error", "XPS2004", 6), ("constructor-private-error", "XPS2009", 6), ("constructor-body-error", "XPS2008", 3), ("constructor-byref-deferred", "XPS3001", 2), ("constructor-optional-deferred", "XPS3001", 2), ("constructor-reference-deferred", "XPS3001", 2), ("constructor-parent-deferred", "XPS3001", 6), ("constructor-required-base-deferred", "XPS3001", 5), ("constructor-overloads-deferred", "XPS3001", 4) })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    var error = result.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+    if (!result.GetProperty("result").GetProperty("isError").GetBoolean() || error.GetProperty("diagnosticCode").GetString() != code || error.GetProperty("line").GetInt32() != line)
+        throw new Exception("Constructor diagnostic lost: " + result);
+}
 foreach (var fixture in new[] { "class-destructor-derived", "class-destructor-derived-parity", "class-destructor-derived-signature", "image-destructor-derived", "class-destructor", "class-destructor-parity", "image-destructor" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));

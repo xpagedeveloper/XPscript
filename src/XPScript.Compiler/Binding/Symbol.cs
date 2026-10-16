@@ -115,6 +115,8 @@ public sealed record FunctionSymbol(
     // Optional forwarding signatures are compiler-generated compatibility
     // candidates. An explicit source overload has precedence when both match.
     public bool IsOptionalForwarding { get; init; }
+    public bool IsUserConstructor { get; init; }
+    public bool IsPrivateConstructor { get; init; }
     public IReadOnlyList<string>? NativeParameterTypes { get; init; }
     public bool IsNativeStatic { get; init; }
     public string? NativeTargetName { get; set; }

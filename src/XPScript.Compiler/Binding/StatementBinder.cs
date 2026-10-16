@@ -131,6 +131,9 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     private BoundStatement? BindDim(DimStatementSyntax syntax)
     {
         var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text, syntax.IsArray, syntax.ArrayLength, syntax.IsList, syntax.ArrayRank);
+        var userConstructor = !syntax.IsArray && !syntax.IsList
+            ? AstClassConstructorSupport.Find(_symbols, syntax.TypeNameToken?.Text ?? "") : null;
+        if (userConstructor is not null) semanticType = userConstructor.SemanticReturnType!;
         var local = new LocalSymbol(syntax.IdentifierToken.Text, type, semanticType)
         {
             ArrayLowerBound = syntax.ArrayLowerBound,
@@ -179,6 +182,10 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             if (!conversion.IsIdentity)
                 initializer = new BoundConversionExpression(initializer, semanticType, conversion) { Span = initializer.Span };
         }
+        // A declared class reference without New starts as Nothing, not an
+        // implicit parameterless construction (which may not even exist).
+        if (initializer is null && userConstructor is not null)
+            initializer = new BoundLiteralExpression(null, typeof(object), semanticType);
         return new BoundVariableDeclarationStatement(local, initializer, syntax.IsArray && syntax.ArrayLength is null, syntax.ArrayLength);
     }
 

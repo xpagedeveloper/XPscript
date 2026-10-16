@@ -1,0 +1,57 @@
+Public escaped As Variant
+Public destructorCalls As Long
+Class ImageRecord
+    Private picture As XPImage
+    Public Stored As Variant
+    Public LocalImage As Variant
+    Public Property Get Width As Long
+        If Not (picture Is Nothing) Then
+            Width = picture.Width
+        End If
+    End Property
+    Public Sub New(ByVal fail As Boolean)
+        escaped = Me
+        Dim local As New XPImage(4, 3)
+        LocalImage = local
+        Set picture = local
+        Stored = picture
+        If fail Then Error 3821, "constructor failed"
+    End Sub
+    Public Sub Delete()
+        destructorCalls = destructorCalls + 1
+    End Sub
+End Class
+Sub AssertExpired(ByVal value As Variant)
+    Dim image As XPImage = value
+    If image Is Nothing Then Error 6, "missing cleanup observation"
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "constructor image not recycled"
+End Sub
+Sub Main()
+    Dim item As New ImageRecord(False)
+    Dim original As ImageRecord = item
+    If item.Width <> 4 Then Error 6, "successful constructor lost stored image"
+    Call AssertExpired(item.LocalImage)
+    Dim failure As Long
+    On Error Resume Next
+    Set item = New ImageRecord(True)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3821 Then Error 6, "constructor error was lost"
+    If Not (item Is original) Or item.Width <> 4 Then Error 6, "failed construction replaced old reference"
+    Dim failed As ImageRecord = escaped
+    If failed.Width <> 0 Then Error 6, "failed constructor retained image field"
+    Call AssertExpired(failed.Stored)
+    Call AssertExpired(failed.LocalImage)
+    If destructorCalls <> 0 Then Error 6, "failed constructor invoked user destructor"
+    Dim stored As Variant = item.Stored
+    Delete item
+    Call AssertExpired(stored)
+    If destructorCalls <> 1 Then Error 6, "successful instance destructor"
+    Print "IMAGE_CONSTRUCTOR_OK"
+End Sub

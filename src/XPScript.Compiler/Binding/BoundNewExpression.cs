@@ -15,4 +15,5 @@ public sealed class BoundNewExpression : BoundExpression
     public override Type Type { get; }
     public override XpTypeSymbol SemanticType => _semanticType ?? XpTypeSymbol.FromClr(Type);
     public IReadOnlyList<BoundExpression> Arguments { get; }
+    public FunctionSymbol? Constructor { get; init; }
 }

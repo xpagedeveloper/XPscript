@@ -152,6 +152,17 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 XpTypeSymbol.User("XPImage"), imageConstructor.NativeTypes.Select(AstImageSupport.SemanticType).ToArray());
             return new BoundNewExpression(typeof(object), ConvertArguments(function, imageArguments), XpTypeSymbol.User("XPImage"));
         }
+        if (AstClassConstructorSupport.Find(_symbols, typeName) is { } userConstructor)
+        {
+            if (userConstructor.IsPrivateConstructor)
+                return Error(syntax, CompilerDiagnosticCodes.UnknownMember, $"Constructor for '{typeName}' is private.");
+            var values = syntax.Arguments.Select(Bind).ToArray();
+            if (values.Length != userConstructor.ParameterTypes.Count || values.Where((value, i) =>
+                    !_symbols.ClassifyConversion(value.SemanticType, userConstructor.SemanticParameterTypes![i]).IsImplicit).Any())
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
+            return new BoundNewExpression(typeof(object), ConvertArguments(userConstructor, values), userConstructor.SemanticReturnType)
+                { Constructor = userConstructor };
+        }
         if (_allowDynamicMembers && (!_symbols.TryLookup(typeName, out var knownSymbol) || knownSymbol is not TypeSymbol))
         {
             var dynamicArguments = syntax.Arguments.Select(Bind).ToArray();

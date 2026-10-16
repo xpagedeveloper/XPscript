@@ -1,0 +1,7 @@
+Class Record
+    Public Sub New(ByVal value As Long)
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Record("wrong")
+End Sub

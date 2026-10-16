@@ -98,14 +98,14 @@ internal static class AstClassMethodSupport
                 throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
                     $"Property '{group.Key}' accessors must use compatible value types.", "XPS1012", "semantic");
         }
-        foreach (var member in declaration.Members.Where(m => m is SubDeclarationSyntax or FunctionDeclarationSyntax or PropertyDeclarationSyntax or DestructorDeclarationSyntax))
+        foreach (var member in declaration.Members.Where(m => m is SubDeclarationSyntax or FunctionDeclarationSyntax or PropertyDeclarationSyntax or DestructorDeclarationSyntax or ConstructorDeclarationSyntax))
         {
             var sub = member as SubDeclarationSyntax;
             var function = member as FunctionDeclarationSyntax;
             var property = member as PropertyDeclarationSyntax;
             var destructor = member as DestructorDeclarationSyntax;
-            var name = sub?.Identifier.Text ?? function?.Identifier.Text ?? property?.Identifier.Text ?? destructor!.Identifier.Text;
-            if (name.Equals("New", StringComparison.OrdinalIgnoreCase)) continue;
+            var constructor = member as ConstructorDeclarationSyntax;
+            var name = sub?.Identifier.Text ?? function?.Identifier.Text ?? property?.Identifier.Text ?? destructor?.Identifier.Text ?? constructor!.NewKeyword.Text;
             var isDestructor = name.Equals("Delete", StringComparison.OrdinalIgnoreCase);
             if (isDestructor)
             {
@@ -117,8 +117,8 @@ internal static class AstClassMethodSupport
             if (declaration.BaseType is not null && !isDestructor)
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Method bodies declared in derived classes are not implemented by the AST compiler yet.", "XPS3001", "ast");
-            var syntaxParameters = sub?.Parameters ?? function?.Parameters ?? property?.Parameters ?? Array.Empty<ParameterSyntax>();
-            var statements = sub?.Statements ?? function?.Statements ?? property?.Statements ?? destructor!.Statements;
+            var syntaxParameters = sub?.Parameters ?? function?.Parameters ?? property?.Parameters ?? constructor?.Parameters ?? Array.Empty<ParameterSyntax>();
+            var statements = sub?.Statements ?? function?.Statements ?? property?.Statements ?? destructor?.Statements ?? constructor!.Statements;
             var isObjectSetter = property?.AccessorKeyword.Kind == SyntaxKind.SetKeyword;
             if (property?.IsSetter == true && syntaxParameters.Count == 0)
                 syntaxParameters = new[] { new ParameterSyntax(new SyntaxToken(SyntaxKind.ByValKeyword, "ByVal", null, property.Identifier.Span),
@@ -147,6 +147,8 @@ internal static class AstClassMethodSupport
                         "A Property Let value parameter must be required and cannot have a default value.", "XPS1012", "semantic");
             }
             var classScope = globals.CreateChildScope();
+            if (AstClassConstructorSupport.Find(globals, declaration.Identifier.Text) is { } ownConstructor)
+                classScope.Declare(ownConstructor with { IsPrivateConstructor = false });
             classScope.Declare(new VariableSymbol("Me", typeof(object), XpTypeSymbol.User(declaration.Identifier.Text)));
             foreach (var owner in lineage)
             {
@@ -212,11 +214,11 @@ internal static class AstClassMethodSupport
             var bound = AstExperimentalCompiler.BindProcedure(statements, scope, parameters,
                 hasResult ? semanticResult : null, hasResult ? name : null, result,
                 declaration.Identifier.Text + "." + name, sourcePath, source);
-            var emittedName = isDestructor ? "__xps_destructor_body" : property is null ? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
+            var emittedName = constructor is not null ? "__xps_constructor_body" : isDestructor ? "__xps_destructor_body" : property is null ? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
             string body;
             try { body = new BoundMethodEmitter().Emit(emittedName, returnType, parameters, bound, false, source, sourcePath, semanticResult); }
             catch (BoundEmissionException ex) { throw AstExperimentalCompiler.MappedDiagnostic(ex.Span ?? member.Span, sourcePath, source, ex.Message); }
-            if (isDestructor || property is not null || (sub?.Visibility ?? function?.Visibility)?.Kind == SyntaxKind.PrivateKeyword)
+            if (constructor is not null || isDestructor || property is not null || (sub?.Visibility ?? function?.Visibility)?.Kind == SyntaxKind.PrivateKeyword)
                 body = "private " + body["public ".Length..];
             output.Append(body);
             if (property is not null)
