@@ -1,0 +1,116 @@
+Public escaped As Variant
+Public rootImage As Variant
+Public middleImage As Variant
+Public leafImage As Variant
+Public rootLocal As Variant
+Public middleLocal As Variant
+Public leafLocal As Variant
+Public destructorCalls As Long
+Public trace As String
+Class Root
+    Private RootPicture As XPImage
+    Public Property Get RootWidth As Long
+        If Not (RootPicture Is Nothing) Then
+            RootWidth = RootPicture.Width
+        End If
+    End Property
+    Public Sub New(ByVal mode As Long)
+        escaped = Me
+        trace = trace & "R"
+        Dim local As New XPImage(4, 3)
+        rootLocal = local
+        Set RootPicture = local
+        rootImage = RootPicture
+        If mode = 1 Then Error 3831, "root failed"
+    End Sub
+    Public Sub Delete()
+        destructorCalls = destructorCalls + 1
+    End Sub
+End Class
+Class Middle Extend Root
+    Public MiddlePicture As XPImage
+    Public Sub New(ByVal mode As Long)
+        Call Parent.New(Forward(mode))
+        trace = trace & "M"
+        Dim local As New XPImage(5, 3)
+        middleLocal = local
+        Set MiddlePicture = local
+        middleImage = MiddlePicture
+        If mode = 2 Then Error 3832, "middle failed"
+    End Sub
+    Public Sub Delete()
+        destructorCalls = destructorCalls + 1
+    End Sub
+End Class
+Class Leaf Extend Middle
+    Public LeafPicture As XPImage
+    Public Sub New(ByVal mode As Long)
+        Call Parent.New(mode)
+        trace = trace & "L"
+        Dim local As New XPImage(6, 3)
+        leafLocal = local
+        Set LeafPicture = local
+        leafImage = LeafPicture
+        If mode = 3 Then Error 3833, "leaf failed"
+    End Sub
+    Public Sub Delete()
+        destructorCalls = destructorCalls + 1
+    End Sub
+End Class
+Function Forward(ByVal mode As Long) As Long
+    trace = trace & "A"
+    If mode = 4 Then Error 3834, "argument failed"
+    Forward = mode
+End Function
+Sub AssertExpired(ByVal value As Variant)
+    If value Is Nothing Then
+        Exit Sub
+    End If
+    Dim image As XPImage = value
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "inherited constructor image leaked"
+End Sub
+Sub Main()
+    Dim item As New Leaf(0)
+    Dim original As Leaf = item
+    If trace <> "ARML" Or item.RootWidth <> 4 Or item.MiddlePicture.Width <> 5 Or item.LeafPicture.Width <> 6 Then Error 6, "successful fields or order"
+    Dim mode As Long
+    For mode = 1 To 4
+        trace = ""
+        escaped = Nothing
+        rootImage = Nothing
+        middleImage = Nothing
+        leafImage = Nothing
+        rootLocal = Nothing
+        middleLocal = Nothing
+        leafLocal = Nothing
+        Dim failure As Long
+        On Error Resume Next
+        Set item = New Leaf(mode)
+        failure = Err
+        On Error GoTo 0
+        If failure <> 3830 + mode Or Not (item Is original) Then Error 6, "constructor error or old target lost"
+        If mode = 4 Then
+            If Not (escaped Is Nothing) Or trace <> "A" Then Error 6, "argument failure entered a constructor"
+        Else
+            Dim failed As Leaf = escaped
+            If failed.RootWidth <> 0 Or Not (failed.MiddlePicture Is Nothing) Or Not (failed.LeafPicture Is Nothing) Then Error 6, "inherited fields not cleared"
+        End If
+        Call AssertExpired(rootImage)
+        Call AssertExpired(middleImage)
+        Call AssertExpired(leafImage)
+        Call AssertExpired(rootLocal)
+        Call AssertExpired(middleLocal)
+        Call AssertExpired(leafLocal)
+        If destructorCalls <> 0 Then Error 6, "failed construction invoked Delete"
+    Next
+    If item.RootWidth <> 4 Or item.MiddlePicture.Width <> 5 Or item.LeafPicture.Width <> 6 Then Error 6, "failed replacement damaged original"
+    Delete item
+    If destructorCalls <> 3 Then Error 6, "explicit Delete chain missing"
+    Print "IMAGE_DERIVED_CONSTRUCTORS_OK"
+End Sub

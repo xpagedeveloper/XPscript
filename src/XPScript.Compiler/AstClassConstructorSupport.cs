@@ -15,9 +15,6 @@ internal static class AstClassConstructorSupport
                 throw AstExperimentalCompiler.MappedDiagnostic(constructors[1].Span, path, source,
                     "Constructor overloads are not implemented by the AST compiler yet.", "XPS3001", "ast");
             var constructor = constructors.SingleOrDefault();
-            if (constructor is not null && declaration.BaseType is not null)
-                throw AstExperimentalCompiler.MappedDiagnostic(constructor.Span, path, source,
-                    "Derived constructor bodies and Parent.New forwarding are not implemented by the AST compiler yet.", "XPS3001", "ast");
             var parameters = constructor?.Parameters ?? Array.Empty<ParameterSyntax>();
             foreach (var parameter in parameters)
                 if (parameter.IsByRef || parameter.IsOptional || parameter.IsList || parameter.DefaultValue is not null ||
@@ -32,29 +29,59 @@ internal static class AstClassConstructorSupport
                 IsPrivateConstructor = constructor?.Visibility?.Kind == SyntaxKind.PrivateKeyword
             });
         }
-        foreach (var declaration in classes.Values)
-            if (declaration.BaseType is { } parent)
-            {
-                var constructor = Find(symbols, parent.Identifier.Text)!;
-                if (constructor.ParameterTypes.Count > 0 || constructor.IsPrivateConstructor)
-                    throw AstExperimentalCompiler.MappedDiagnostic(parent.Span, path, source,
-                        "A base constructor requiring arguments or private access needs constructor forwarding, which is not implemented by this AST increment.", "XPS3001", "ast");
-            }
     }
 
     internal static FunctionSymbol? Find(SymbolTable symbols, string name) =>
         symbols.LookupAll(name + ".New").OfType<FunctionSymbol>().FirstOrDefault(s => s.IsUserConstructor);
 
-    internal static string Emit(ClassDeclarationSyntax declaration, string imageCleanup)
+    private static CallExpressionSyntax? ParentCall(StatementSyntax statement) =>
+        (statement is CallStatementSyntax call ? call.Expression : (statement as ExpressionStatementSyntax)?.Expression)
+        is CallExpressionSyntax { Target: MemberAccessExpressionSyntax { Expression: NameExpressionSyntax receiver } member } invocation &&
+        receiver.IdentifierToken.Text.Equals("Parent", StringComparison.OrdinalIgnoreCase) &&
+        member.NameToken.Text.Equals("New", StringComparison.OrdinalIgnoreCase) ? invocation : null;
+
+    internal static IReadOnlyList<StatementSyntax> Body(ClassDeclarationSyntax declaration, ConstructorDeclarationSyntax constructor,
+        string path, string source)
+    {
+        var calls = AstExperimentalCompiler.FlattenStatements(constructor.Statements).Where(s => ParentCall(s) is not null).ToArray();
+        if (calls.Length > 0 && (declaration.BaseType is null || calls.Length != 1 ||
+            constructor.Statements.Count == 0 || !ReferenceEquals(calls[0], constructor.Statements[0])))
+            throw AstExperimentalCompiler.MappedDiagnostic(calls[^1].Span, path, source,
+                "Parent.New must occur exactly once as the first statement of a derived constructor.", "XPS1012", "semantic");
+        return calls.Length == 0 ? constructor.Statements : constructor.Statements.Skip(1).ToArray();
+    }
+
+    internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable symbols, string path, string source)
     {
         var constructor = declaration.Members.OfType<ConstructorDeclarationSyntax>().SingleOrDefault();
         var name = "Xp" + declaration.Identifier.Text;
-        if (constructor is null) return $"public {name}() {{ }}";
+        if (constructor is not null) Body(declaration, constructor, path, source);
+        var initializer = string.Empty;
+        if (declaration.BaseType is { } parent)
+        {
+            var call = constructor?.Statements.FirstOrDefault() is { } first ? ParentCall(first) : null;
+            // Initializer arguments see constructor parameters and module declarations,
+            // never Me, fields or body locals: the instance does not exist yet.
+            var scope = symbols.CreateChildScope();
+            foreach (var parameter in constructor?.Parameters ?? Array.Empty<ParameterSyntax>())
+                scope.Declare(new ParameterSymbol(parameter.Identifier.Text,
+                    AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text), false,
+                    AstClassMethodSupport.DeclaredType(parameter.Type, symbols)));
+            var binder = new ExpressionBinder(scope);
+            var syntax = new NewExpressionSyntax(new SyntaxToken(SyntaxKind.NewKeyword, "New", null, call?.Span ?? parent.Span),
+                parent.Identifier, call?.OpenParenToken, call?.Arguments ?? [], call?.CommaTokens ?? [], call?.CloseParenToken);
+            var expression = binder.Bind(syntax);
+            if (binder.Diagnostics.Count > 0)
+                throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], path, source);
+            var bound = (BoundNewExpression)expression;
+            initializer = " : base(" + string.Join(", ", bound.Arguments.Select(new BoundExpressionEmitter().Emit)) + ")";
+        }
+        if (constructor is null) return $"public {name}(){initializer} {{ }}";
         var parameters = string.Join(", ", constructor.Parameters.Select(p =>
             BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)) + " " + p.Identifier.Text));
         var arguments = string.Join(", ", constructor.Parameters.Select(p => p.Identifier.Text));
         var visibility = constructor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public";
         // A failed construction owns its fields, but must not invoke user Delete.
-        return $"{visibility} {name}({parameters}) {{ try {{ __xps_constructor_body({arguments}); }} catch {{ {imageCleanup} throw; }} }}";
+        return $"{visibility} {name}({parameters}){initializer} {{ try {{ __xps_constructor_body({arguments}); }} catch {{ __xps_cleanup_failed_construction(); throw; }} }}";
     }
 }

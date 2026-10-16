@@ -452,8 +452,13 @@ public static class AstExperimentalCompiler
             }
             // Script classes are assembly-local implementation types, like the native
             // runtime types exposed by their fields and accessor signatures.
-            var constructorBody = AstClassConstructorSupport.Emit(classDeclaration, imageCleanup);
-            return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} {constructorBody} {delete} {memberBodies} }}";
+            var constructorBody = AstClassConstructorSupport.Emit(classDeclaration, symbols, sourcePath, fullSource);
+            // Non-virtual cleanup is bound to the constructor's completed ancestry;
+            // never dispatch Delete or a not-yet-initialized derived override here.
+            var constructionCleanup = classDeclaration.BaseType is null
+                ? $"protected void __xps_cleanup_failed_construction() {{ {imageCleanup} }}"
+                : $"protected new void __xps_cleanup_failed_construction() {{ try {{ {imageCleanup} }} finally {{ base.__xps_cleanup_failed_construction(); }} }}";
+            return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} {constructorBody} {constructionCleanup} {delete} {memberBodies} }}";
         }));
         if (userClassSupport.Length == 0)
         {

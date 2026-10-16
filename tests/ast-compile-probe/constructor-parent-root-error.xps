@@ -1,0 +1,7 @@
+Class Root
+    Public Sub New()
+        Call Parent.New()
+    End Sub
+End Class
+Sub Main()
+End Sub

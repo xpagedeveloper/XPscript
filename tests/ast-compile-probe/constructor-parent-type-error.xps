@@ -1,10 +1,10 @@
 Class Root
-    Public Sub New(ByVal value As Long)
+    Public Sub New(ByVal seed As Long)
     End Sub
 End Class
 Class Child Extend Root
     Public Sub New()
-        Call Parent.New(1)
+        Call Parent.New("wrong")
     End Sub
 End Class
 Sub Main()

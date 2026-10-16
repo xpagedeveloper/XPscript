@@ -1,0 +1,65 @@
+Public trace As String
+Class root
+    Private stored As Long
+    Public Value As Double
+    Public Sub New(ByVal seed As Double)
+        Value = seed
+        stored = 10
+        trace = trace & "R"
+    End Sub
+    Public Sub Bump(ByRef value As Long)
+        value = value + stored
+    End Sub
+End Class
+Class Middle Extend root
+    Private stored As Long
+    Public MidValue As Long
+    Public Sub New(ByVal seed As Long)
+        Call Parent.New(NextValue(seed))
+        stored = seed + 1
+        MidValue = stored
+        trace = trace & "M"
+    End Sub
+End Class
+Class Leaf Extend Middle
+    Private stored As Long
+    Public LeafValue As Long
+    Public Sub New(ByVal seed As Long)
+        Call pArEnT.nEw(NextValue(seed))
+        stored = seed + 2
+        With Me
+            Call .Bump(stored)
+            .LeafValue = stored
+        End With
+        trace = trace & "L"
+        Exit Sub
+        Error 6, "unreachable constructor body"
+    End Sub
+End Class
+Class Automatic
+    Public Value As Long
+    Public Sub New()
+        Value = 12
+    End Sub
+End Class
+Class AutomaticChild Extend Automatic
+    Public Extra As Long
+    Public Sub New()
+        On Error Resume Next
+        Error 3830, "handled"
+        On Error GoTo 0
+        Extra = Value + 1
+    End Sub
+End Class
+Function NextValue(ByVal value As Long) As Long
+    trace = trace & "A"
+    NextValue = value + 1
+End Function
+Sub Main()
+    Dim seed As Long = 3
+    Dim item As New lEaF(seed)
+    If trace <> "AARML" Or item.Value <> 5 Or item.MidValue <> 5 Or item.LeafValue <> 15 Or seed <> 3 Then Error 6, "derived initialization order or scopes"
+    Dim automatic As New AutomaticChild
+    If automatic.Value <> 12 Or automatic.Extra <> 13 Then Error 6, "implicit base or protected body"
+    Print "CLASS_DERIVED_CONSTRUCTORS_OK"
+End Sub

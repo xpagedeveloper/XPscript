@@ -1,0 +1,11 @@
+Class Root
+End Class
+Class Child Extend Root
+    Public Sub New()
+        If True Then
+            Call Parent.New()
+        End If
+    End Sub
+End Class
+Sub Main()
+End Sub
