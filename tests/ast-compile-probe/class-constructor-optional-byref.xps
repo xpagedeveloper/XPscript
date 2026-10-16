@@ -1,0 +1,114 @@
+Option Declare
+Private trace As String
+Private failDefault As Boolean
+Class Record
+    Public Value As Long
+    Public Sub New(Optional ByRef left As Long = 1, Optional ByRef right As Long = Mutate(left), Optional ByVal total As Long = left + right)
+        trace = trace & "R"
+        left = left + 1
+        right = right + total
+        Value = left + right
+    End Sub
+End Class
+Class Child Extend Record
+    Public Sub New(Optional seed As Long = 2)
+        Call Parent.New(seed, seed)
+        seed = seed + 100
+    End Sub
+End Class
+Class Automatic Extend Record
+End Class
+Class TextRecord
+    Public Value As String
+    Public Sub New(Optional text As String = "a", Optional ByVal suffix As String = text & "x")
+        text = text & suffix
+        Value = text
+    End Sub
+End Class
+Class Zero
+    Public Value As Long
+    Public Sub New(Optional ByRef number As Long, Optional flag As Boolean, Optional text As String, Optional fraction As Double, Optional small As Byte)
+        If flag Or text <> "" Or fraction <> 0 Or CLng(small) <> 0 Then Error 3900, "zero defaults failed"
+        number = number + 1
+        Value = number
+    End Sub
+End Class
+Class Names
+    Public Value As Long
+    Public Sub New(Optional ByRef __xpsOptional0 As Long = 3, Optional ByRef P0 As Long = Mutate(__xpsOptional0), Optional ByVal __xpsOptional0__value As Long = 1)
+        Value = __xpsOptional0 + P0
+    End Sub
+End Class
+Function Mutate(ByRef value As Long) As Long
+    trace = trace & "D"
+    value = value + 10
+    If failDefault Then Error 3901, "default failed"
+    Mutate = value + 1
+End Function
+Sub Make(Optional ByVal item As Variant = New Record())
+    If item.Value <> 47 Then Error 3902, "Optional caller rewrite failed"
+End Sub
+Sub MakeWithSeed(Optional ByVal seed As Long = 2, Optional ByVal item As Variant = New Record(seed))
+    If seed <> 13 Or item.Value <> 51 Then Error 3919, "provided ref in Optional caller rewrite lost"
+End Sub
+Sub Main()
+    trace = ""
+    Dim first As New Record()
+    Dim second As New Record()
+    If first.Value <> 47 Or second.Value <> 47 Or trace <> "DRDR" Then Error 3903, "fresh dependent defaults failed"
+    Dim value As Long = 2
+    Dim supplied As New Record(value)
+    If value <> 13 Or supplied.Value <> 51 Then Error 3904, "supplied ref/default lost"
+    value = 2
+    Set supplied = New Record(value, value)
+    If value <> 7 Or supplied.Value <> 14 Then Error 3905, "supplied duplicate alias lost"
+    value = 2
+    Set supplied = New Record(value, value, 3)
+    If value <> 6 Or supplied.Value <> 12 Then Error 3906, "full arity/default evaluation failed"
+    value = 2
+    Dim child As New Child(value)
+    If value <> 107 Or child.Value <> 14 Then Error 3907, "Parent.New reference lost"
+    Dim omittedChild As New Child()
+    If omittedChild.Value <> 14 Then Error 3908, "omitted child storage lost"
+    Dim automatic As New Automatic
+    If automatic.Value <> 47 Then Error 3909, "implicit Optional base failed"
+    Dim text As String = "b"
+    Dim textItem As New TextRecord(text)
+    If text <> "bbx" Or textItem.Value <> "bbx" Then Error 3910, "supplied String ref lost"
+    Set textItem = New TextRecord()
+    If textItem.Value <> "aax" Then Error 3911, "omitted String ref lost"
+    Dim zero As New Zero()
+    Dim zeroAgain As New Zero()
+    If zero.Value <> 1 Or zeroAgain.Value <> 1 Then Error 3912, "zero ref storage shared"
+    Dim names As New Names()
+    If names.Value <> 27 Then Error 3913, "generated names collided"
+    Dim values(0) As Long
+    values(0) = 2
+    Set supplied = New Record(values(0))
+    If values(0) <> 13 Then Error 3914, "array reference lost"
+    Dim entries List As Long
+    entries("a") = 2
+    Set supplied = New Record(entries("a"))
+    If entries("a") <> 13 Then Error 3915, "List reference lost"
+    entries("a") = 2
+    ForAll entry In entries
+        Set supplied = New Record(entry)
+    End ForAll
+    If entries("a") <> 13 Then Error 3916, "ForAll reference lost"
+    Call Make()
+    Call MakeWithSeed()
+    Dim old As Record = supplied
+    Dim failure As Long
+    failDefault = True
+    value = 2
+    trace = ""
+    On Error Resume Next
+    Set supplied = New Record(value)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3901 Or value <> 12 Or trace <> "D" Or Not (supplied Is old) Then Error 3917, "default error lost updates/target"
+    failDefault = False
+    Set supplied = New Record()
+    If supplied.Value <> 47 Then Error 3918, "failed default contaminated next call"
+    Print "OPTIONAL_BYREF_CONSTRUCTORS_OK"
+End Sub

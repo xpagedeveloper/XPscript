@@ -3,4 +3,6 @@ Class Record
     End Sub
 End Class
 Sub Main()
+    Dim value As String = "1"
+    Dim item As New Record(value)
 End Sub

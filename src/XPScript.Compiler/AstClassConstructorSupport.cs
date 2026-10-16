@@ -19,9 +19,6 @@ internal static class AstClassConstructorSupport
             AstExperimentalCompiler.ValidateOptionalDeclarations(parameters, path, source);
             foreach (var parameter in parameters)
             {
-                if (parameter.IsByRef && parameter.IsOptional)
-                    throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
-                        "Optional ByRef constructor parameters are not implemented yet.", "XPS3001", "ast");
                 if (parameter.IsList ||
                     AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text) == typeof(object))
                     throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
@@ -135,14 +132,15 @@ internal static class AstClassConstructorSupport
         var stores = string.Join(" ", parameters.Select((parameter, i) => $"this.P{i} = {(parameter.IsByRef ? "ref " : "")}{parameter.Name};"));
         var unpacked = string.Join(", ", parameters.Select((parameter, i) => $"{(parameter.IsByRef ? "ref " : "")}__xpsValues.P{i}"));
         var output = new System.Text.StringBuilder();
-        // Required references stay managed references in a stack-only carrier.
-        // Optional ByVal locals are copied; no reference to a default local escapes.
+        // Supplied references and heap-backed omitted slots stay managed
+        // references; ByVal locals are copied. No stack-local reference escapes.
         output.Append($"private {(hasReferences ? "ref struct" : "sealed class")} {carrier} {{ {fields} public {carrier}({Signature(parameters)}) {{ {stores} }} }}");
         output.Append($"private {name}({carrier} __xpsValues) : this({unpacked}) {{ }}");
         output.Append($"private static {resultType} {helper}({Signature(parameters)}) {{ return new {carrier}({Arguments(parameters)}); }}");
         for (var count = parameters.Length - 1; count >= 0 && constructor.Parameters[count].IsOptional; count--)
         {
-            var forward = OptionalCallLowering.Forward(helper, typeof(object), parameters, defaults, count, semanticReturnType: carrierType);
+            var forward = OptionalCallLowering.Forward(helper, typeof(object), parameters, defaults, count,
+                semanticReturnType: carrierType, heapBackedByRefDefaults: true);
             output.Append($"{visibility} {name}({Signature(forward.Parameters)}) : this(({carrier}){helper}({Arguments(forward.Parameters)})) {{ }}");
             var body = new BoundMethodEmitter().Emit(helper, typeof(object), forward.Parameters, forward.Statements, true, source, path, semanticReturnType: carrierType);
             output.Append("private ").Append(body["public ".Length..]);

@@ -8,6 +8,25 @@ using SyntaxKind = XPScript.Compiler.Syntax.SyntaxKind;
 using Conversion = XPScript.Compiler.Binding.Conversion;
 
 var expressions = new BoundExpressionEmitter();
+var optionalReference = new ParameterSymbol("seed", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
+var optionalDependent = new ParameterSymbol("next", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
+var defaultMutation = new BoundCallExpression(null, new FunctionSymbol("Mutate", typeof(long), [typeof(long)], ByRefParameters: [true]),
+    [new BoundNameExpression(optionalReference)]);
+var optionalCarrierType = XpTypeSymbol.User("ConstructorArguments");
+var heapOptional = OptionalCallLowering.Forward("Defaults", typeof(object), [optionalReference, optionalDependent],
+    [new BoundLiteralExpression(1L, typeof(long)), defaultMutation], 0,
+    semanticReturnType: optionalCarrierType, heapBackedByRefDefaults: true);
+var heapOptionalCode = new BoundMethodEmitter().Emit("Defaults", typeof(object), heapOptional.Parameters, heapOptional.Statements,
+    true, semanticReturnType: optionalCarrierType);
+if (!heapOptionalCode.Contains("long[] __xpsOptional0 = new long[1]") ||
+    !heapOptionalCode.Contains("Mutate(ref LSArrayRuntime.Reference<long>(__xpsOptional0") ||
+    !heapOptionalCode.Contains("static XpConstructorArguments Defaults()") ||
+    heapOptionalCode.Contains("ref __xpsOptional0_value"))
+    throw new Exception("Constructor Optional ByRef defaults lost typed heap storage, dependent aliases or stack-only carrier return.");
+var stackOptional = OptionalCallLowering.Forward("Defaults", typeof(object), [optionalReference, optionalDependent],
+    [new BoundLiteralExpression(1L, typeof(long)), defaultMutation], 0);
+if (stackOptional.Statements.OfType<BoundVariableDeclarationStatement>().Any(declaration => declaration.Local.Type.IsArray))
+    throw new Exception("Ordinary Optional forwarding unexpectedly allocated constructor reference cells.");
 var imageSemantic = XpTypeSymbol.User("XPImage");
 var imageField = new BoundNameExpression(new FieldSymbol("picture", typeof(object), imageSemantic));
 var createdImage = new BoundNewExpression(typeof(object), [new BoundLiteralExpression(2L, typeof(long)), new BoundLiteralExpression(2L, typeof(long))], imageSemantic);

@@ -2,12 +2,16 @@ $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $output = Join-Path $root ('out/constructor-' + [Guid]::NewGuid().ToString('N'))
-foreach ($fixture in @('class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
+foreach ($fixture in @('constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
     if ($LASTEXITCODE -ne 0) { throw "AST constructor compilation failed: $fixture" }
     $result = dotnet (Join-Path $target 'Generated.dll')
     $expected = switch ($fixture) {
+        'constructor-optional-byref-zero' { 'OPTIONAL_BYREF_ZERO_OK' }
+        'class-constructor-optional-byref' { 'OPTIONAL_BYREF_CONSTRUCTORS_OK' }
+        'constructor-byref-optional' { 'CONSTRUCTOR_BYREF_OPTIONAL_OK' }
+        'constructor-optional-byref' { 'CONSTRUCTOR_OPTIONAL_BYREF_OK' }
         'class-constructor-mixed' { 'MIXED_CONSTRUCTORS_OK' }
         'class-constructor-byref' { 'BYREF_CONSTRUCTORS_OK' }
         'class-constructor-byref-simple' { "5`n5`nBYREF_CONSTRUCTOR_SIMPLE_OK" }
@@ -57,8 +61,11 @@ foreach ($case in @(
     @('constructor-byref-module-storage-error', 'XPS3001', 7),
     @('constructor-byref-parent-literal-error', 'XPS2001', 7),
     @('constructor-byref-parent-type-error', 'XPS2003', 7),
-    @('constructor-byref-optional-deferred', 'XPS3001', 2),
-    @('constructor-optional-byref-deferred', 'XPS3001', 2),
+    @('constructor-optional-byref-literal-error', 'XPS2001', 6),
+    @('constructor-optional-byref-type-error', 'XPS2003', 7),
+    @('constructor-optional-byref-default-error', 'XPS2008', 2),
+    @('constructor-optional-byref-default-type-error', 'XPS2001', 2),
+    @('constructor-optional-byref-parent-literal-error', 'XPS2001', 7),
     @('constructor-optional-order-error', 'XPS1012', 2),
     @('constructor-optional-marker-error', 'XPS1012', 2),
     @('constructor-optional-type-error', 'XPS2001', 2),
@@ -87,6 +94,7 @@ foreach ($case in @(
 }
 Write-Host 'AST_CONSTRUCTORS_OK'
 Write-Host 'AST_MIXED_CONSTRUCTORS_OK'
+Write-Host 'AST_OPTIONAL_BYREF_CONSTRUCTORS_OK'
 Write-Host 'AST_DERIVED_CONSTRUCTORS_OK'
 Write-Host 'AST_OPTIONAL_CONSTRUCTORS_OK'
 Write-Host 'AST_BYREF_CONSTRUCTORS_OK'

@@ -254,6 +254,8 @@ public sealed class BoundExpressionEmitter
         var arguments = call.Arguments.Select((argument, index) =>
         {
             var byRef = call.Function.ByRefParameters?[index] == true;
+            if (byRef && argument is BoundIndexExpression { Expression.SemanticType.IsArray: true })
+                return "ref " + EmitIndexedReference(argument);
             if (byRef && argument is not BoundNameExpression)
                 throw new NotSupportedException("ByRef conversion requires temporary and copy-back lowering.");
             if (!byRef && call.Function.SemanticParameterTypes is { } parameterTypes &&
