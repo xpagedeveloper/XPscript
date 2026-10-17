@@ -40,13 +40,15 @@ internal static class AstModuleFieldSupport
                 var initializer = Regex.Match(tail, @"^=\s*(?<value>-?(?:\d+(?:\.\d*)?|\.\d+)|True|False)\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 var stringInitializer = Regex.Match(tail, "^=\\s*\\\"(?<value>(?:[^\\\"]|\\\"\\\")*)\\\"\\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 var nothingInitializer = Regex.IsMatch(tail, @"^=\s*Nothing\s*(?:'.*)?$", RegexOptions.IgnoreCase);
+                var newInitializer = Regex.Match(tail, @"^=\s*New\s+(?<type>[A-Za-z_]\w*)\s*\(\s*\)\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 // Numeric literal initializers have the same direct typed storage contract as
                 // uninitialized scalar fields. Other initialized/reference forms retain the
                 // compatibility path until their expression/lifetime lowering is migrated.
                 var typed = (type != typeof(object) || semantic is not null && !semantic.IsVariant) &&
-                    (tail.Length == 0 || tail.StartsWith("'", StringComparison.Ordinal) || initializer.Success || stringInitializer.Success || nothingInitializer) &&
+                    (tail.Length == 0 || tail.StartsWith("'", StringComparison.Ordinal) || initializer.Success || stringInitializer.Success || nothingInitializer || newInitializer.Success) &&
                     (initializer.Success ? type == typeof(long) || type == typeof(double) || type == typeof(bool) :
-                        stringInitializer.Success ? type == typeof(string) : true);
+                        stringInitializer.Success ? type == typeof(string) :
+                        newInitializer.Success ? type == typeof(object) && semantic is { Shape: XpTypeShape.Scalar, IsVariant: false } && semantic.Name.Equals(newInitializer.Groups["type"].Value, StringComparison.OrdinalIgnoreCase) : true);
                 return new Field(new VariableSymbol(match.Groups["name"].Value, type,
                     typed ? semantic ?? XpTypeSymbol.FromClr(type) : XpTypeSymbol.Variant)
                 {
@@ -56,6 +58,7 @@ internal static class AstModuleFieldSupport
                         : typed && stringInitializer.Success
                         ? $"\"{stringInitializer.Groups["value"].Value.Replace("\"\"", "\\\"")}\""
                         : typed && nothingInitializer ? "null"
+                        : typed && newInitializer.Success ? $"new Xp{newInitializer.Groups["type"].Value}()"
                         : null
                 });
             }).ToArray();
