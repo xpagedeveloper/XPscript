@@ -50,6 +50,12 @@ $staticClassMethodResult = dotnet (Join-Path $staticClassMethodOutput 'Generated
 if ($LASTEXITCODE -ne 0 -or ($staticClassMethodResult -join "`n") -ne "1`n2`n3") { throw 'AST scalar Static class-method execution failed.' }
 Write-Host 'AST_STATIC_CLASS_METHOD_OK'
 $derivedClassMethodOutput = Join-Path $output 'class-method-derived-next'
+$derivedConstructorFailureOutput = Join-Path $output 'class-constructor-derived-failure-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-constructor-derived-failure-next.xps') -o $derivedConstructorFailureOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST derived constructor failure compilation failed.' }
+$derivedConstructorFailureResult = dotnet (Join-Path $derivedConstructorFailureOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($derivedConstructorFailureResult -join "`n") -ne 'CLASS_DERIVED_CONSTRUCTOR_FAILURE_OK') { throw 'AST derived constructor failure cleanup failed.' }
+Write-Host 'AST_DERIVED_CONSTRUCTOR_FAILURE_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-derived-next.xps') -o $derivedClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST derived scalar class-method compilation failed.' }
 $derivedClassMethodResult = dotnet (Join-Path $derivedClassMethodOutput 'Generated.dll')

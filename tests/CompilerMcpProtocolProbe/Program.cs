@@ -315,6 +315,12 @@ foreach (var byRefListElementCallFixture in new[] { "byref-list-element-call-nex
     var result = await CallAsync(new { jsonrpc = "2.0", id = byRefListElementCallFixture, method = "tools/call", @params = new { name = "xpscript_ast_validate", arguments = new { source, filename = byRefListElementCallFixture + ".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("ByRef List-element call validation failed: " + result);
 }
+foreach (var derivedConstructorFailureFixture in new[] { "class-constructor-derived-failure-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", derivedConstructorFailureFixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc = "2.0", id = derivedConstructorFailureFixture, method = "tools/call", @params = new { name = "xpscript_ast_validate", arguments = new { source, filename = derivedConstructorFailureFixture + ".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Derived constructor failure validation failed: " + result);
+}
 foreach (var initializedModuleFixture in new[] { "initialized-module-byref-next", "initialized-module-boolean-next", "initialized-module-string-next", "initialized-module-reference-next", "initialized-module-reference-new-next", "initialized-module-reference-args-next", "initialized-module-date-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", initializedModuleFixture + ".xps"));
