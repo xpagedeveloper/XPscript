@@ -219,7 +219,15 @@ public static class AstExperimentalCompiler
             symbols.Declare(field.Symbol);
         foreach (var array in moduleArrayDeclarations)
             if (!symbols.LookupAll(array.Groups["name"].Value).Any())
-                symbols.Declare(new VariableSymbol(array.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
+            {
+                var elementRuntimeType = ResolveRuntimeType(array.Groups["type"].Value) ?? typeof(object);
+                var dimensions = array.Groups["bounds"].Value.Split(',').Length;
+                var elementSemanticType = XpTypeSymbol.FromClr(elementRuntimeType);
+                symbols.Declare(new VariableSymbol(
+                    array.Groups["name"].Value,
+                    dimensions == 1 ? elementRuntimeType.MakeArrayType() : elementRuntimeType.MakeArrayType(dimensions),
+                    XpTypeSymbol.ArrayOf(elementSemanticType, dimensions)));
+            }
         foreach (var match in allConstants)
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
         foreach (var typeName in AstObjectSupportRegistry.VariantTypeNames)
