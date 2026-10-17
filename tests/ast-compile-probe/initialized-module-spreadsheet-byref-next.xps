@@ -1,0 +1,11 @@
+Public sharedBook As XPSpreadsheet = New XPSpreadsheet()
+
+Sub Touch(ByRef value As XPSpreadsheet)
+    Set value = New XPSpreadsheet()
+End Sub
+
+Sub Main()
+    Call Touch(sharedBook)
+    If sharedBook Is Nothing Then Error 6, "initialized spreadsheet module ByRef storage failed"
+    Print "INITIALIZED_MODULE_SPREADSHEET_BYREF_OK"
+End Sub
