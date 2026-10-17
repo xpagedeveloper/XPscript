@@ -1,0 +1,12 @@
+Class Reader
+    Public Function Method(ByVal value As XPHttpRequest) As String
+        Method = value.Method
+    End Function
+End Class
+
+Sub Main()
+    Dim value As New XPHttpRequest
+    value.Method = "PATCH"
+    Dim reader As New Reader
+    Print reader.Method(value)
+End Sub

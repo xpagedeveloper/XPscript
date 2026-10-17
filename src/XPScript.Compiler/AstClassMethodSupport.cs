@@ -142,6 +142,7 @@ internal static class AstClassMethodSupport
                     !string.Equals(p.Type?.Identifier.Text, "XPCsvDocument", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(p.Type?.Identifier.Text, "XPSpreadsheet", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(p.Type?.Identifier.Text, "XPHttpClient", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(p.Type?.Identifier.Text, "XPHttpRequest", StringComparison.OrdinalIgnoreCase) &&
                     !classes.ContainsKey(p.Type?.Identifier.Text ?? ""));
             var hasUnsupportedObjectResult = function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) &&
                 !string.Equals(resultTypeName, "Object", StringComparison.OrdinalIgnoreCase) &&

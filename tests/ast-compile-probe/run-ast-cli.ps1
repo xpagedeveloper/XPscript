@@ -127,6 +127,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST HTTP client class-method compilation faile
 $httpClientClassMethodResult = dotnet (Join-Path $httpClientClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($httpClientClassMethodResult -join "`n") -ne '30') { throw 'AST HTTP client class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_HTTP_CLIENT_OK'
+$httpRequestClassMethodOutput = Join-Path $output 'class-method-http-request-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-request-next.xps') -o $httpRequestClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST HTTP request class-method compilation failed.' }
+$httpRequestClassMethodResult = dotnet (Join-Path $httpRequestClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($httpRequestClassMethodResult -join "`n") -ne 'PATCH') { throw 'AST HTTP request class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_HTTP_REQUEST_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
