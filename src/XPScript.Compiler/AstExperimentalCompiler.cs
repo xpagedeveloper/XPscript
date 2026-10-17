@@ -45,7 +45,7 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Close(?:\s+#?(?<file>[^\s]+))?\s*$", "${indent}Call AstClose(${file})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Print\s+#(?<file>[^,\s]+)\s*,\s*(?<value>.+)$", "${indent}Call AstPrintFile(${file}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Line\s+Input\s+#?(?<file>[^,\s]+)\s*,\s*(?<target>[A-Za-z_]\w*)\s*$", "${indent}${target} = AstLineInput(${file})");
-        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Kill\s+(?<path>.+)$", "${indent}Call AstKill(${path})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Kill\s+(?<path>[^\r\n]+)\r?$", "${indent}Call AstKill(${path})");
         source = Regex.Replace(source, @"(?<![\w.])Input\$\s*\(\s*(?<count>[^,()]+)\s*,\s*#\s*(?<file>[^)]+)\)", "AstInputChars(${count}, ${file})", RegexOptions.IgnoreCase);
         source = source.Replace("Error$", "ErrorValue()", StringComparison.OrdinalIgnoreCase);
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)p\.[A-Za-z_]\w*(?:\s*=.*)?$", "${indent}Call AstNoOp()");
