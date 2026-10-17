@@ -43,6 +43,9 @@ Write-Host 'AST_LOCK_COLUMN_MAPPING_OK'
 $unlockColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-unlock-error.xps') -o (Join-Path $output 'preprocessor-column-unlock-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($unlockColumnOutput -join "`n") -notmatch 'preprocessor-column-unlock-error\.xps:2:13:') { throw 'AST Unlock source column mapping regression failed.' }
 Write-Host 'AST_UNLOCK_COLUMN_MAPPING_OK'
+$redimColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-redim-error.xps') -o (Join-Path $output 'preprocessor-column-redim-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($redimColumnOutput -join "`n") -notmatch 'preprocessor-column-redim-error\.xps:3:18:') { throw 'AST ReDim source column mapping regression failed.' }
+Write-Host 'AST_REDIM_COLUMN_MAPPING_OK'
 $imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }

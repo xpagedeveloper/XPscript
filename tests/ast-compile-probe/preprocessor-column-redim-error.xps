@@ -1,0 +1,4 @@
+Sub Main()
+    Dim values() As Long
+    ReDim values(MissingBound)
+End Sub

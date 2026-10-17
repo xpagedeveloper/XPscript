@@ -448,11 +448,12 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Add missing AST Variant-to-Byte conversion through the existing runtime `CByte` helper; the executable regression now matches published scalar conversion behavior.
 - [x] Preserve uninitialized Variant Nothing semantics for `Is Nothing`; AST now emits null storage instead of an ExpandoObject and matches published output.
 - [ ] Preserve original source spans through all preprocessing and map parser/binder errors through the shared diagnostic contract.
-  - [ ] Investigate `Option Base` removal and route-attribute removal for source-span shifts; preserve declaration/trivia lines or introduce an explicit source map.
+  - [x] Investigate `Option Base` removal and route-attribute removal for source-span shifts; both preserve line structure and have focused regressions.
   - [ ] Audit every length-changing AST preprocessor rewrite for the same span and declaration-preservation risk, with focused regressions before replacing it.
   - [ ] Add column-mapping regressions for rewrites that insert or remove characters on a line (`Sleep`, `MkDir`, file statements, `ReDim`, and related lowering).
     - [x] `Sleep` and `MkDir` now have focused diagnostic-column regressions; `MkDir` lowering preserves the original argument column.
     - [x] File-lock rewrites have focused coverage; `Put`, `Open`, `Close`, `Lock` and `Unlock` now use the shared transformed-span mapping and preserve their argument columns.
+    - [x] `ReDim` has a focused bound-expression diagnostic regression through the shared transformed-span mapping.
   Optional declaration validation, explicit unsupported-feature guards and binder/default-expression errors now emit source-mapped CompileDiagnostic values. Bound emitter failures are wrapped with the originating bound statement span and mapped to the emission diagnostic category; generated control-flow mappings retain the original file/line. Roslyn backend diagnostics now consume the same generated-source mapping contract.
   - [x] Map Roslyn code-generation diagnostics through generated `#line` directives, including original file, start position and end position; `GeneratedDependencyProbe` covers the mapped backend failure path.
   Parser diagnostics now use the same mapped path; control-flow and generated-source diagnostics remain open.
