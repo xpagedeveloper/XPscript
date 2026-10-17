@@ -43,6 +43,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST List class-method compilation failed.' }
 $listClassMethodResult = dotnet (Join-Path $listClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($listClassMethodResult -join "`n") -ne "8`n8") { throw 'AST List class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_LIST_OK'
+$staticListClassMethodOutput = Join-Path $output 'class-method-static-list-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-static-list-next.xps') -o $staticListClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Static List class-method compilation failed.' }
+$staticListClassMethodResult = dotnet (Join-Path $staticListClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($staticListClassMethodResult -join "`n") -ne "1`n2") { throw 'AST Static List class-method execution failed.' }
+Write-Host 'AST_STATIC_LIST_CLASS_METHOD_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
