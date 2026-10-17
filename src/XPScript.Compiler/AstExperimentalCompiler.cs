@@ -292,6 +292,8 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("CDate", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         foreach (var builtin in new[] { "Base64Decode", "Base64Encode", "CByte", "CCur", "CSng", "CVar", "DataType", "DateAdd", "DateDiff", "Day", "FromBase64", "InstrB", "IsArray", "IsDate", "IsElement", "IsEmpty", "IsObject", "IsScalar", "LeftB", "ListTag", "LSet", "Month", "RegexValidate", "RightB", "RSet", "Space", "String", "StrLeft", "StrLeftBack", "StrReverse", "StrRight", "StrRightBack", "StrToken", "TimeNumber", "ToBase64", "UrlDecode", "UrlEncode", "MD5", "SHA1", "SHA256", "SHA384", "SHA512", "HMACSHA256", "HMACSHA384", "HMACSHA512" })
             symbols.Declare(new FunctionSymbol(builtin, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("DateAdd", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("DateDiff", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Mid", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Mid", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("MidB", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -758,8 +760,12 @@ internal static class Program
     public static object CSng(object value) => XPScriptRuntime.CSng(value);
     public static object CVar(object value) => XPScriptRuntime.CVar(value);
     public static object DataType(object value) => XPScriptNullRuntime.DataType(value);
-    public static object DateAdd(params object?[] values) => CDate(values.Length > 2 ? values[2]! : DateTime.Now);
-    public static object DateDiff(params object?[] values) => 0L;
+    public static object DateAdd(params object?[] values) => values.Length > 2
+        ? new XpDate(XPScriptRuntime.DateAdd(CStr(values[0]), Convert.ToDouble(values[1]), ToDateTime(values[2])))
+        : new XpDate(DateTime.Now);
+    public static object DateDiff(params object?[] values) => values.Length > 2
+        ? XPScriptRuntime.DateDiff(CStr(values[0]), ToDateTime(values[1]), ToDateTime(values[2]))
+        : 0L;
     public static object Day(object value) => Convert.ToDateTime(value).Day;
     public static object FromBase64(object value) => Base64Decode(value);
     public static object InstrB(params object?[] values) => InStr(1L, values.Length > 1 ? values[0] : null, values.Length > 1 ? values[1] : null);
@@ -911,6 +917,7 @@ internal static class Program
         public override int GetHashCode() => Value.GetHashCode();
     }
     public static object DateNumber(long year, long month, long day) => new XpDate(new DateTime((int)year, (int)month, (int)day));
+    private static DateTime ToDateTime(object? value) => value is XpDate date ? date.Value : Convert.ToDateTime(value);
     public static object Date() => new XpDate(DateTime.Today);
     public static object Format(object? value, object? pattern = null) => pattern is null ? CStr(value) : (value is XpDate date ? date.Value : Convert.ToDateTime(value)).ToString(CStr(pattern), System.Globalization.CultureInfo.InvariantCulture);
     public static object InputBox(object? prompt = null) => string.Empty;
