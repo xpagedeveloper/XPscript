@@ -19,6 +19,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized module string-reference compil
 $initializedStringResult = dotnet (Join-Path $initializedStringOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedStringResult -join "`n") -ne 'hello') { throw 'AST initialized module string-reference regression failed.' }
 Write-Host 'AST_INITIALIZED_MODULE_STRING_REFERENCE_OK'
+$initializedVariableOutput = Join-Path $output 'initialized-module-reference-variable-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-variable-next.xps') -o $initializedVariableOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized module variable-reference compilation failed.' }
+$initializedVariableResult = dotnet (Join-Path $initializedVariableOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedVariableResult -join "`n") -ne '12') { throw 'AST initialized module variable-reference regression failed.' }
+Write-Host 'AST_INITIALIZED_MODULE_VARIABLE_REFERENCE_OK'
 $constOutput = Join-Path $output 'const-statements'
 dotnet $compiler ast-compile (Join-Path $root 'samples/const-statements.xps') -o $constOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Const fixture compilation failed.' }

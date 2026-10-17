@@ -41,7 +41,7 @@ internal static class AstModuleFieldSupport
                 var initializer = Regex.Match(tail, @"^=\s*(?<value>-?(?:\d+(?:\.\d*)?|\.\d+)|True|False)\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 var stringInitializer = Regex.Match(tail, "^=\\s*\\\"(?<value>(?:[^\\\"]|\\\"\\\")*)\\\"\\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 var nothingInitializer = Regex.IsMatch(tail, @"^=\s*Nothing\s*(?:'.*)?$", RegexOptions.IgnoreCase);
-                var constructorArgument = "(?:-?(?:\\d+(?:\\.\\d*)?|\\.\\d+)|\\\"(?:[^\\\"]|\\\"\\\")*\\\")";
+                var constructorArgument = "(?:-?(?:\\d+(?:\\.\\d*)?|\\.\\d+)|\\\"(?:[^\\\"]|\\\"\\\")*\\\"|[A-Za-z_]\\w*)";
                 var newInitializer = Regex.Match(tail, $@"^=\s*New\s+(?<type>[A-Za-z_]\w*)\s*\(\s*(?<args>{constructorArgument}(?:\s*,\s*{constructorArgument})*)?\s*\)\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 var dateInitializer = Regex.Match(tail, @"^=\s*DateNumber\s*\(\s*(?<year>\d+)\s*,\s*(?<month>\d+)\s*,\s*(?<day>\d+)\s*\)\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 // Numeric literal initializers have the same direct typed storage contract as
