@@ -1,0 +1,3 @@
+Sub Main()
+    Open MissingPath For Input As #f
+End Sub

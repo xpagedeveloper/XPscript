@@ -452,7 +452,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [ ] Audit every length-changing AST preprocessor rewrite for the same span and declaration-preservation risk, with focused regressions before replacing it.
   - [ ] Add column-mapping regressions for rewrites that insert or remove characters on a line (`Sleep`, `MkDir`, file statements, `ReDim`, and related lowering).
     - [x] `Sleep` and `MkDir` now have focused diagnostic-column regressions; `MkDir` lowering preserves the original argument column.
-    - [ ] `Open`, `Close` and file-lock rewrites still require focused coverage; `Put` now uses the shared transformed-span mapping and preserves its first argument column.
+    - [ ] File-lock rewrites still require focused coverage; `Put`, `Open` and `Close` now use the shared transformed-span mapping and preserve their argument columns.
   Optional declaration validation, explicit unsupported-feature guards and binder/default-expression errors now emit source-mapped CompileDiagnostic values. Bound emitter failures are wrapped with the originating bound statement span and mapped to the emission diagnostic category; generated control-flow mappings retain the original file/line. Roslyn backend diagnostics now consume the same generated-source mapping contract.
   - [x] Map Roslyn code-generation diagnostics through generated `#line` directives, including original file, start position and end position; `GeneratedDependencyProbe` covers the mapped backend failure path.
   Parser diagnostics now use the same mapped path; control-flow and generated-source diagnostics remain open.
