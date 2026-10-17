@@ -137,10 +137,9 @@ internal static class AstClassMethodSupport
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar, concrete user-class and XPImage parameters/results; other object/array signatures are not implemented yet.", "XPS3001", "ast");
-            if (syntaxParameters.Any(p => p.IsList && constructor is null) ||
-                AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic && (d.IsArray || d.IsList)))
+            if (AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic && (d.IsArray || d.IsList)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "Optional/List parameters and Static array/List storage in class methods are not implemented by the AST compiler yet.", "XPS3001", "ast");
+                    "Static array/List storage in class methods is not implemented by the AST compiler yet.", "XPS3001", "ast");
             if (property is not null)
             {
                 var indexParameters = property.IsGetter ? syntaxParameters : syntaxParameters.Take(syntaxParameters.Count - 1).ToArray();

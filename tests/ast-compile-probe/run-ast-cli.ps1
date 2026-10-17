@@ -37,6 +37,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST concrete reference class-method compilatio
 $referenceClassMethodResult = dotnet (Join-Path $referenceClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($referenceClassMethodResult -join "`n") -ne '7') { throw 'AST concrete reference class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_REFERENCE_OK'
+$listClassMethodOutput = Join-Path $output 'class-method-list-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-list-next.xps') -o $listClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST List class-method compilation failed.' }
+$listClassMethodResult = dotnet (Join-Path $listClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listClassMethodResult -join "`n") -ne "8`n8") { throw 'AST List class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_LIST_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
