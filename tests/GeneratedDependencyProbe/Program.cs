@@ -7,6 +7,19 @@ var backend = typeof(CompilerDriver).Assembly.GetType("XPScript.Compiler.RunRosl
 var compile = backend.GetMethod("CompileAsync", BindingFlags.Public | BindingFlags.Static)!;
 async Task<string> Build(string source, string name) => await (Task<string>)compile.Invoke(null,
     [source, Path.Combine(outputRoot, name), false, CancellationToken.None])!;
+var mappedDiagnosticSource = "#line 42 \"mapped-backend.xps\"\ninternal static class Program { public static void Main() { MissingType value = 1; } }";
+try
+{
+    await Build(mappedDiagnosticSource, "mapped-diagnostic");
+    throw new Exception("Generated backend diagnostic fixture unexpectedly compiled.");
+}
+catch (CompilerException compilerException)
+{
+    var diagnostic = compilerException.GeneratedDiagnostics.Single();
+    if (diagnostic.File != "mapped-backend.xps" || diagnostic.Line != 42 || diagnostic.Position <= 0 ||
+        diagnostic.EndLine != 42 || diagnostic.EndColumn <= diagnostic.Position || diagnostic.Category != "code-generation")
+        throw new Exception("Generated backend diagnostics lost the mapped source span.");
+}
 async Task<string> Run(string assembly)
 {
     var info = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };

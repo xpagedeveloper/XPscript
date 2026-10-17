@@ -213,15 +213,21 @@ global using System.Threading.Tasks;
         foreach (var diagnostic in diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
         {
             if (diagnostic.Location.SourceTree is null) continue;
+            var mapped = diagnostic.Location.GetMappedLineSpan();
             var sourceText = diagnostic.Location.SourceTree.GetText();
             var position = sourceText.Lines.GetLinePosition(diagnostic.Location.SourceSpan.Start);
+            var file = string.IsNullOrWhiteSpace(mapped.Path)
+                ? (string.IsNullOrWhiteSpace(diagnostic.Location.SourceTree.FilePath) ? "Program.cs" : Path.GetFileName(diagnostic.Location.SourceTree.FilePath))
+                : mapped.Path;
+            var line = mapped.IsValid ? mapped.StartLinePosition.Line + 1 : position.Line + 1;
+            var column = mapped.IsValid ? mapped.StartLinePosition.Character + 1 : position.Character + 1;
             result.Add(new CompileDiagnostic
             {
-                File = string.IsNullOrWhiteSpace(diagnostic.Location.SourceTree.FilePath)
-                    ? "Program.cs"
-                    : Path.GetFileName(diagnostic.Location.SourceTree.FilePath),
-                Line = position.Line + 1,
-                Position = position.Character + 1,
+                File = file,
+                Line = line,
+                Position = column,
+                EndLine = mapped.IsValid ? mapped.EndLinePosition.Line + 1 : 0,
+                EndColumn = mapped.IsValid ? mapped.EndLinePosition.Character + 1 : 0,
                 Description = diagnostic.GetMessage(),
                 UpstreamCode = diagnostic.Id,
                 Category = "code-generation"
