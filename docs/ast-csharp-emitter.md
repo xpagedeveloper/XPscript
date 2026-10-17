@@ -178,6 +178,8 @@ Compatible scalar method overrides now select the derived implementation without
 
 Optional `Object` class-method parameters preserve omission and supplied-reference behavior; `class-method-optional-reference-next.xps` covers both calls.
 
+Optional concrete user-class parameters preserve typed `Nothing` defaults and supplied values; `class-method-optional-user-reference-next.xps` covers both calls.
+
 Compatible scalar property overrides also select the derived accessor; `class-property-override-next.xps` covers the derived getter result.
 
 Compatible indexed property overrides select the derived Get/Let pair; `class-property-indexed-override-next.xps` covers indexed assignment and lookup.
