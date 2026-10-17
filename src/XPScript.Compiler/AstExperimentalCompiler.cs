@@ -596,6 +596,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
 {{AstFileRuntimeCode()}}
+{{AstCallbackRuntimeCode()}}
 {{AstErrorRuntimeCode()}}
 internal static class LSCoreCompare
 {
@@ -1051,6 +1052,9 @@ internal static class Program
             throw new InvalidOperationException("AST file runtime source markers are missing.");
         return source[start..end];
     }
+
+    private static string AstCallbackRuntimeCode()
+        => CallbackRuntimeSource.Code.Replace("typeof(Script)", "typeof(Program)", StringComparison.Ordinal);
 
     private static string AstErrorRuntimeCode()
     {
