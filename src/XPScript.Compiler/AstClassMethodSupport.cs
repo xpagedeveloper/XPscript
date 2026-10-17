@@ -353,7 +353,9 @@ internal static class AstClassMethodSupport
                     {
                         var supplied = accessor.Parameters.Take(count).Concat(accessor.IsSetter ? accessor.Parameters.TakeLast(1) : []).ToArray();
                         var arguments = string.Join(", ", supplied.Select(p => (p.IsByRef ? "ref " : "") + p.Identifier.Text));
-                        output.Append(accessor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private " : "public ")
+                        var accessorModifier = accessor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private "
+                            : HasBaseProperty(declaration, name, classes) ? "public override " : "public virtual ";
+                        output.Append(accessorModifier)
                             .Append(accessor.IsGetter ? BoundMethodEmitter.CSharpType(type) : "void")
                             .Append(accessor.IsGetter ? " __xps_index_get_" : " __xps_index_let_").Append(name).Append('(')
                             .Append(string.Join(", ", supplied.Select((p, i) => (i < count && p.IsExplicitByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(DeclaredType(p.Type, globals)) + " " + p.Identifier.Text)))
