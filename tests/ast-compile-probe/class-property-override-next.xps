@@ -1,0 +1,16 @@
+Class Base
+    Public Property Get Value As Long
+        Value = 6
+    End Property
+End Class
+
+Class Child Extend Base
+    Public Property Get Value As Long
+        Value = 9
+    End Property
+End Class
+
+Sub Main()
+    Dim item As New Child
+    Print CStr(item.Value)
+End Sub

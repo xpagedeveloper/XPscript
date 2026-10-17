@@ -176,6 +176,8 @@ Derived scalar methods can bind direct `Parent.member` calls to the declared bas
 
 Compatible scalar method overrides now select the derived implementation without an inherited-signature ambiguity; `class-method-override-next.xps` covers the dispatch result.
 
+Compatible scalar property overrides also select the derived accessor; `class-property-override-next.xps` covers the derived getter result.
+
 Bound member names are canonicalized case-insensitively. `class-method-case.xps` is AST-only because normal compilation currently rejects that casing. `class-methods-native.xps` compares real normal/AST execution; negative fixtures cover private access, foreign class fields and diagnostics inside method bodies. Language FullTest and MCP run these early.
 
 Derived scalar property getters reuse lineage scopes for inherited fields and methods; `class-property-derived-next.xps` covers a derived getter reading an inherited property. Full override/setter/accessor lifecycle remains open.
