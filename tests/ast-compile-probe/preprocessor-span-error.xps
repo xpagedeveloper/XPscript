@@ -1,0 +1,5 @@
+Option Declare
+Const RemovedByAst = 1
+Sub Main()
+    Print MissingAfterRemovedConst
+End Sub

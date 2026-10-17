@@ -13,6 +13,9 @@ if ($LASTEXITCODE -ne 0) { throw 'AST missing-file/path error fixture compilatio
 $missingPathResult = dotnet (Join-Path $missingPathOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($missingPathResult -join "`n") -ne 'FILE_MISSING_PATH_ERRORS_OK') { throw 'AST missing-file/path errors regression failed.' }
 Write-Host 'AST_FILE_MISSING_PATH_ERRORS_OK'
+$spanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-span-error.xps') -o (Join-Path $output 'preprocessor-span-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($spanOutput -join "`n") -notmatch 'preprocessor-span-error\.xps:4:') { throw 'AST preprocessor source span mapping regression failed.' }
+Write-Host 'AST_PREPROCESSOR_SPAN_MAPPING_OK'
 $imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }
