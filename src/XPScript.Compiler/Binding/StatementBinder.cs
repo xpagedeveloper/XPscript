@@ -369,20 +369,35 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             _diagnostics.AddRange(binder.Diagnostics);
             return new BoundForAllStatement(new BoundNameExpression(alias), collection, body);
         }
-        var variableExpression = BindExpression(new NameExpressionSyntax(syntax.IdentifierToken));
-        if (variableExpression is not BoundNameExpression variable || collection is null)
-            return null;
-
-        if (!IsWritable(variable))
-            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
-                "ForAll loop variable must be writable.", syntax.IdentifierToken.Span));
-
         if (!collection.SemanticType.IsList && !collection.Type.IsArray && collection.Type != typeof(string) && !(_allowDynamicMembers && (collection.SemanticType.IsVariant || collection.Type == typeof(object))))
         {
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 $"ForAll requires an array collection, not {collection.SemanticType.Name}.", syntax.CollectionExpression.Span));
+            return null;
         }
-        else if (collection.Type.IsArray)
+
+        var bodyScope = _symbols.CreateChildScope();
+        BoundNameExpression variable;
+        if (_symbols.TryLookup(syntax.IdentifierToken.Text, out var loopSymbol))
+        {
+            variable = new BoundNameExpression(loopSymbol);
+            if (!IsWritable(variable))
+                _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
+                    "ForAll loop variable must be writable.", syntax.IdentifierToken.Span));
+        }
+        else
+        {
+            var aliasType = collection.Type.IsArray
+                ? collection.SemanticType.ElementType ?? XpTypeSymbol.FromClr(collection.Type.GetElementType()!)
+                : collection.Type == typeof(string)
+                    ? XpTypeSymbol.FromClr(typeof(string))
+                    : XpTypeSymbol.Variant;
+            var alias = new VariableSymbol(syntax.IdentifierToken.Text, aliasType.RuntimeType, aliasType);
+            bodyScope.Declare(alias);
+            variable = new BoundNameExpression(alias);
+        }
+
+        if (collection.Type.IsArray)
         {
             var elementType = collection.SemanticType.ElementType ?? XpTypeSymbol.FromClr(collection.Type.GetElementType()!);
             if (!variable.SemanticType.IsVariant && (variable.Type != elementType.RuntimeType ||
@@ -393,7 +408,6 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                     syntax.IdentifierToken.Span));
         }
 
-        var bodyScope = _symbols.CreateChildScope();
         var bodyBinder = new StatementBinder(bodyScope, _returnType, _allowsReturnValue, _allowDynamicMembers,
             functionName, functionResult, procedureIdentity, _forAllDepth + 1);
         var statements = syntax.Statements.Select(bodyBinder.Bind).OfType<BoundStatement>().ToArray();
