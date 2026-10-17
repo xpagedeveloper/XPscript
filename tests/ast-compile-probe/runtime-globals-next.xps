@@ -1,0 +1,6 @@
+Sub Main()
+    If Len(CStr(Platform)) = 0 Then Error 6102, "Platform runtime value is empty"
+    If Len(CStr(CurDir)) = 0 Then Error 6103, "CurDir runtime value is empty"
+    Print "COMMAND_READ=" & CStr(Command = "")
+    Print "RUNTIME_GLOBALS_OK"
+End Sub
