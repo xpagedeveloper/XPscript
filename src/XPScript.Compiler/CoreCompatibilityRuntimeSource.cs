@@ -789,6 +789,17 @@ internal static class LSFileRuntime
         Get(number).Stream.Unlock(checked(start - 1), checked(end - start + 1));
     }
 
+    public static void ChDrive(object? driveValue)
+    {
+        if (!OperatingSystem.IsWindows()) throw new XPScriptRuntimeException(5, "ChDrive is supported only on Windows.");
+        var drive = XPScriptRuntime.CStr(driveValue).Trim();
+        if (!System.Text.RegularExpressions.Regex.IsMatch(drive, "^[A-Za-z]:$"))
+            throw new XPScriptRuntimeException(5, "ChDrive requires a drive letter.");
+        var root = drive + "\\";
+        if (!Directory.Exists(root)) throw new DirectoryNotFoundException("Drive not found: " + drive);
+        Environment.CurrentDirectory = root;
+    }
+
     public static void Put(int number, object? recordNumber, object? value, string xpscriptType)
     {
         var state = Get(number);

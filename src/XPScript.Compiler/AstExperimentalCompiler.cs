@@ -45,6 +45,7 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Put\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>.+)$", "${indent}Call AstPut(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Get\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>[A-Za-z_]\w*)\s*$", "${indent}${value} = AstGet(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Seek\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>.+)$", "${indent}Call AstSeek(${file}, ${position})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)ChDrive\s+(?<drive>.+)$", "${indent}Call AstChDrive(${drive})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?<operation>Lock|Unlock)\s+#?(?<file>[^,\s]+)\s*,\s*(?<start>[^\s]+)\s+To\s+(?<end>.+)$", "${indent}Call Ast${operation}Bytes(${file}, ${start}, ${end})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Open\s+(?<path>.+?)\s+For\s+(?<mode>Input|Output|Append|Binary|Random)\s+As\s+#?(?<file>[^\s]+).*$", "${indent}Call AstOpen(${path}, \"${mode}\", ${file})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Close(?:\s+#?(?<file>[^\s]+))?\s*$", "${indent}Call AstClose(${file})");
@@ -277,6 +278,7 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("AstPut", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstGet", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstSeek", typeof(void), [typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstChDrive", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstLockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstUnlockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstOpen", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -924,6 +926,7 @@ internal static class Program
     public static void AstPut(object? file, object? position, object? value) => LSFileRuntime.Put(checked((int)XPScriptRuntime.CLng(file)), position, value, value switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" });
     public static object? AstGet(object? file, object? position, object? current) => LSFileRuntime.GetValue(checked((int)XPScriptRuntime.CLng(file)), position, current switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" }, current);
     public static void AstSeek(object? file, object? position) => LSFileRuntime.SeekSet(checked((int)XPScriptRuntime.CLng(file)), XPScriptRuntime.CLng(position));
+    public static void AstChDrive(object? drive) => LSFileRuntime.ChDrive(drive);
     public static void AstLockBytes(object? file, object? start, object? end) => LSFileRuntime.LockBytes(checked((int)XPScriptRuntime.CLng(file)), XPScriptRuntime.CLng(start), XPScriptRuntime.CLng(end));
     public static void AstUnlockBytes(object? file, object? start, object? end) => LSFileRuntime.UnlockBytes(checked((int)XPScriptRuntime.CLng(file)), XPScriptRuntime.CLng(start), XPScriptRuntime.CLng(end));
     public static void AstOpen(object? path, object? mode, object? file) => LSFileRuntime.Open(path, mode, checked((int)XPScriptRuntime.CLng(file)));

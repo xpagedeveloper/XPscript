@@ -154,6 +154,13 @@ $inputBoxResult = 'INPUTBOX_OK' | dotnet (Join-Path $inputBoxOutput 'Generated.d
 if ($LASTEXITCODE -ne 0 -or ($inputBoxResult -join "`n") -notmatch 'INPUTBOX_RUNTIME_OK') { throw 'AST InputBox runtime regression failed.' }
 Write-Host 'AST_INPUTBOX_OK'
 
+$chDriveOutput = Join-Path $output 'chdrive-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'chdrive-next.xps') -o $chDriveOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST ChDrive compilation failed.' }
+$chDriveResult = dotnet (Join-Path $chDriveOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($chDriveResult -join "`n") -ne 'CHDRIVE_GUARD_OK') { throw 'AST ChDrive guard regression failed.' }
+Write-Host 'AST_CHDRIVE_OK'
+
 $enumOutput = Join-Path $output 'language-extensions'
 dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }

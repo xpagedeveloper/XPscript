@@ -1,0 +1,9 @@
+Sub Main()
+    Dim failure As Long
+    On Error Resume Next
+    ChDrive "Z:"
+    failure = Err
+    On Error GoTo 0
+    If failure = 0 Then Error 6341, "AST ChDrive accepted a missing drive"
+    Print "CHDRIVE_GUARD_OK"
+End Sub
