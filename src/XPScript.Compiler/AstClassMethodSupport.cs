@@ -132,6 +132,7 @@ internal static class AstClassMethodSupport
                     !AstImageSupport.IsImage(p.Type?.Identifier.Text) &&
                     !string.Equals(p.Type?.Identifier.Text, "Object", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(p.Type?.Identifier.Text, "Variant", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(p.Type?.Identifier.Text, "XPJsonObject", StringComparison.OrdinalIgnoreCase) &&
                     !classes.ContainsKey(p.Type?.Identifier.Text ?? ""));
             var hasUnsupportedObjectResult = function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) &&
                 !string.Equals(resultTypeName, "Object", StringComparison.OrdinalIgnoreCase) &&
