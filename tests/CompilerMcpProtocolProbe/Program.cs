@@ -82,6 +82,12 @@ foreach (var staticListClassMethodFixture in new[] { "class-method-static-list-n
     var result = await CallAsync(new { jsonrpc="2.0",id=staticListClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=staticListClassMethodFixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Static List class-method validation failed: " + result);
 }
+foreach (var staticArrayClassMethodFixture in new[] { "class-method-static-array-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", staticArrayClassMethodFixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=staticArrayClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=staticArrayClassMethodFixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Static array class-method validation failed: " + result);
+}
 foreach (var initializedModuleFixture in new[] { "initialized-module-byref-next", "initialized-module-boolean-next", "initialized-module-string-next", "initialized-module-reference-next", "initialized-module-reference-new-next", "initialized-module-reference-args-next", "initialized-module-date-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", initializedModuleFixture + ".xps"));

@@ -137,9 +137,6 @@ internal static class AstClassMethodSupport
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar, concrete user-class and XPImage parameters/results; other object/array signatures are not implemented yet.", "XPS3001", "ast");
-            if (AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic && d.IsArray))
-                throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "Static array storage in class methods is not implemented by the AST compiler yet.", "XPS3001", "ast");
             if (property is not null)
             {
                 var indexParameters = property.IsGetter ? syntaxParameters : syntaxParameters.Take(syntaxParameters.Count - 1).ToArray();
@@ -227,7 +224,9 @@ internal static class AstClassMethodSupport
             {
                 var storageType = BoundMethodEmitter.SemanticStorageType(staticDeclaration.Local,
                     BoundMethodEmitter.CSharpType(staticDeclaration.Local.Type));
-                var initialValue = staticDeclaration.Local.SemanticType?.IsList == true ? $"new {storageType}()"
+                var initialValue = staticDeclaration.Local.IsDynamicArray || staticDeclaration.Local.Type.IsArray
+                    ? BoundArrayAllocation.Emit(staticDeclaration.Local, staticDeclaration.EmptyArray, staticDeclaration.ArrayLength)
+                    : staticDeclaration.Local.SemanticType?.IsList == true ? $"new {storageType}()"
                     : staticDeclaration.Local.Type == typeof(string) ? "string.Empty" : $"default({storageType})";
                 output.Append("private static ").Append(storageType).Append(' ').Append(staticDeclaration.Local.StaticStorageName)
                     .Append(" = ").Append(initialValue).Append(";\n");
