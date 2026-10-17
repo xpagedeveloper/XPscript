@@ -31,6 +31,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized String module storage compilat
 $initializedStringResult = dotnet (Join-Path $initializedStringOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedStringResult -join "`n") -ne 'ready!') { throw 'AST initialized String module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_STRING_MODULE_STORAGE_OK'
+$initializedReferenceOutput = Join-Path $output 'initialized-module-reference-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-next.xps') -o $initializedReferenceOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized reference module storage compilation failed.' }
+$initializedReferenceResult = dotnet (Join-Path $initializedReferenceOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedReferenceResult -join "`n") -ne '9') { throw 'AST initialized reference module ByRef storage failed.' }
+Write-Host 'AST_INITIALIZED_REFERENCE_MODULE_STORAGE_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }
