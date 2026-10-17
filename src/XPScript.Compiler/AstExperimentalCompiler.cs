@@ -343,7 +343,6 @@ public static class AstExperimentalCompiler
         if (usesApplication)
             foreach (var mainSymbol in symbols.LookupAll("Main").OfType<FunctionSymbol>())
                 mainSymbol.NativeTargetName = "__xps_application_main";
-        symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("RequestScope", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("NotesSession", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("UIForm", typeof(object), XpTypeSymbol.Variant));
@@ -555,7 +554,6 @@ internal static class Program
     public static bool False = false;
     public static dynamic Console = CreateConsole();
     private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.WriteLine = (Action<object?>)(value => System.Console.WriteLine(value)); return console; }
-    public static dynamic Debugger = new ExpandoObject();
     public static dynamic RequestScope = new ExpandoObject();
     public static dynamic NotesSession = new ExpandoObject();
     public static dynamic UIForm = new ExpandoObject();
