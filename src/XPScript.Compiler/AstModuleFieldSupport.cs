@@ -61,10 +61,19 @@ internal static class AstModuleFieldSupport
                         : typed && stringInitializer.Success
                         ? $"\"{stringInitializer.Groups["value"].Value.Replace("\"\"", "\\\"")}\""
                         : typed && nothingInitializer ? "null"
-                        : typed && newInitializer.Success ? $"new Xp{newInitializer.Groups["type"].Value}({newInitializer.Groups["args"].Value})"
+                        : typed && newInitializer.Success ? InitializerExpression(newInitializer)
                         : typed && dateInitializer.Success ? $"new XpDate(new System.DateTime({dateInitializer.Groups["year"].Value}, {dateInitializer.Groups["month"].Value}, {dateInitializer.Groups["day"].Value}))"
                         : null
                 });
             }).ToArray();
+    }
+
+    private static string InitializerExpression(Match initializer)
+    {
+        var typeName = initializer.Groups["type"].Value;
+        var arguments = initializer.Groups["args"].Value;
+        return AstImageSupport.IsImage(typeName)
+            ? $"new XPImage({arguments})"
+            : $"new Xp{typeName}({arguments})";
     }
 }

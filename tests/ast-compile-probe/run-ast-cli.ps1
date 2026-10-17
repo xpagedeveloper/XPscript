@@ -319,6 +319,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized Date module storage compilatio
 $initializedDateResult = dotnet (Join-Path $initializedDateOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedDateResult -join "`n") -notmatch '2026') { throw 'AST initialized Date module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_DATE_MODULE_STORAGE_OK'
+$initializedXpImageOutput = Join-Path $output 'initialized-module-xpimage-byref-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-xpimage-byref-next.xps') -o $initializedXpImageOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized XPImage module ByRef storage compilation failed.' }
+$initializedXpImageResult = dotnet (Join-Path $initializedXpImageOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedXpImageResult -join "`n") -ne 'INITIALIZED_MODULE_XPIMAGE_BYREF_OK') { throw 'AST initialized XPImage module ByRef storage failed.' }
+Write-Host 'AST_INITIALIZED_XPIMAGE_MODULE_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }

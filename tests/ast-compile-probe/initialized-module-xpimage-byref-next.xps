@@ -1,0 +1,11 @@
+Public sharedImage As XPImage = New XPImage(3, 2)
+
+Sub Touch(ByRef value As XPImage)
+    Set value = New XPImage(4, 1)
+End Sub
+
+Sub Main()
+    Call Touch(sharedImage)
+    If sharedImage.Width <> 4 Or sharedImage.Height <> 1 Then Error 6, "initialized XPImage module ByRef storage failed"
+    Print "INITIALIZED_MODULE_XPIMAGE_BYREF_OK"
+End Sub
