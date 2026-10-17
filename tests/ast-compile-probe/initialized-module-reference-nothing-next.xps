@@ -1,0 +1,13 @@
+Public current As Box = New Box(Nothing)
+
+Class Box
+    Public IsEmpty As Boolean
+
+    Public Sub New(ByVal initial As Object)
+        IsEmpty = initial Is Nothing
+    End Sub
+End Class
+
+Sub Main()
+    Print CStr(current.IsEmpty)
+End Sub
