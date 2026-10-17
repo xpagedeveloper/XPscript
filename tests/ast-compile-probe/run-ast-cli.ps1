@@ -530,8 +530,12 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-list-lifeti
 if ($LASTEXITCODE -ne 0) { throw 'AST captured List reference compilation failed.' }
 $listLifetimeResult = dotnet (Join-Path $output 'indexed-byref-list-lifetime/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($listLifetimeResult -join "`n") -ne 'INDEXED_BYREF_LIST_LIFETIME_OK') { throw 'AST captured List reference lifetime failed.' }
-$moduleStorageFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-module-storage-error.xps') -o (Join-Path $output 'indexed-byref-module-storage-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($moduleStorageFailure -join "`n") -notmatch 'indexed-byref-module-storage-error.xps:9:') { throw 'Module header diagnostic source mapping lost.' }
+$moduleStorageOutput = Join-Path $output 'indexed-byref-module-storage-error'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-module-storage-error.xps') -o $moduleStorageOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST module ByRef storage compilation failed.' }
+$moduleStorageResult = dotnet (Join-Path $moduleStorageOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($moduleStorageResult -join "`n") -ne '1') { throw 'AST module ByRef storage execution failed.' }
+Write-Host 'AST_INDEXED_BYREF_MODULE_STORAGE_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-module-runtime.xps') -o (Join-Path $output 'indexed-byref-module-runtime')
 if ($LASTEXITCODE -ne 0) { throw 'AST module ByRef index compilation failed.' }
 $moduleIndexResult = dotnet (Join-Path $output 'indexed-byref-module-runtime/Generated.dll')
