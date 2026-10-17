@@ -385,6 +385,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST indexed property setter dispatch compilati
 $indexedSetterResult = dotnet (Join-Path $indexedSetterOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($indexedSetterResult -join "`n") -ne 'CLASS_INDEXED_PROPERTY_SETTER_DISPATCH_OK') { throw 'AST indexed property setter dispatch failed.' }
 Write-Host 'AST_CLASS_INDEXED_PROPERTY_SETTER_DISPATCH_OK'
+$scalarSetterOutput = Join-Path $output 'class-property-setter-dispatch-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-property-setter-dispatch-next.xps') -o $scalarSetterOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST scalar property setter dispatch compilation failed.' }
+$scalarSetterResult = dotnet (Join-Path $scalarSetterOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($scalarSetterResult -join "`n") -ne 'CLASS_PROPERTY_SETTER_DISPATCH_OK') { throw 'AST scalar property setter dispatch failed.' }
+Write-Host 'AST_CLASS_PROPERTY_SETTER_DISPATCH_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }
