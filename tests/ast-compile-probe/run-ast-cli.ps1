@@ -331,6 +331,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized JSON module ByRef storage comp
 $initializedJsonResult = dotnet (Join-Path $initializedJsonOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedJsonResult -join "`n") -ne 'INITIALIZED_MODULE_JSON_BYREF_OK') { throw 'AST initialized JSON module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_JSON_MODULE_OK'
+$initializedJsonCollectionsOutput = Join-Path $output 'initialized-module-json-collections-byref-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-json-collections-byref-next.xps') -o $initializedJsonCollectionsOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized JSON collection module ByRef storage compilation failed.' }
+$initializedJsonCollectionsResult = dotnet (Join-Path $initializedJsonCollectionsOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedJsonCollectionsResult -join "`n") -ne 'INITIALIZED_MODULE_JSON_COLLECTIONS_BYREF_OK') { throw 'AST initialized JSON collection module ByRef storage failed.' }
+Write-Host 'AST_INITIALIZED_JSON_COLLECTIONS_MODULE_OK'
 $initializedXmlOutput = Join-Path $output 'initialized-module-xml-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-xml-byref-next.xps') -o $initializedXmlOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized XML module ByRef storage compilation failed.' }
