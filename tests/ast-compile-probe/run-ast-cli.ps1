@@ -97,6 +97,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST optional ByRef List class-method compilati
 $optionalByRefListClassMethodResult = dotnet (Join-Path $optionalByRefListClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($optionalByRefListClassMethodResult -join "`n") -ne "0`n12`n12") { throw 'AST optional ByRef List class-method execution failed.' }
 Write-Host 'AST_OPTIONAL_BYREF_LIST_CLASS_METHOD_OK'
+$optionalArrayClassMethodOutput = Join-Path $output 'class-method-optional-array-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-array-next.xps') -o $optionalArrayClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST optional array class-method compilation failed.' }
+$optionalArrayClassMethodResult = dotnet (Join-Path $optionalArrayClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionalArrayClassMethodResult -join "`n") -ne "0`n7`n7") { throw 'AST optional array class-method execution failed.' }
+Write-Host 'AST_OPTIONAL_ARRAY_CLASS_METHOD_OK'
 $staticListClassMethodOutput = Join-Path $output 'class-method-static-list-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-static-list-next.xps') -o $staticListClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Static List class-method compilation failed.' }

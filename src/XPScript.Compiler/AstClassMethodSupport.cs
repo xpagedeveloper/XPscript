@@ -231,7 +231,7 @@ internal static class AstClassMethodSupport
                     var binder = new ExpressionBinder(defaultScope);
                     var type = XpTypeSymbol.FromClr(parameters[i].Type);
                     var value = syntaxParameters[i].DefaultValue is { } syntax ? binder.Bind(syntax)
-                        : new BoundLiteralExpression(parameters[i].Type == typeof(string) ? "" : Activator.CreateInstance(parameters[i].Type), parameters[i].Type, type);
+                        : new BoundLiteralExpression(type.IsArray || type.IsList ? null : parameters[i].Type == typeof(string) ? "" : Activator.CreateInstance(parameters[i].Type), parameters[i].Type, type);
                     if (binder.Diagnostics.Count > 0)
                         throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, source);
                     var conversion = defaultScope.ClassifyConversion(value.SemanticType, type);

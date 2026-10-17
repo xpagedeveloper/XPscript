@@ -289,6 +289,13 @@ foreach (var optionalByRefListClassMethodFixture in new[] { "class-method-option
     var result = await CallAsync(new { jsonrpc = "2.0", id = optionalByRefListClassMethodFixture, method = "tools/call", @params = new { name = "xpscript_ast_validate", arguments = new { source, filename = optionalByRefListClassMethodFixture + ".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Optional ByRef List class-method validation failed: " + result);
 }
+
+foreach (var optionalArrayClassMethodFixture in new[] { "class-method-optional-array-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", optionalArrayClassMethodFixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc = "2.0", id = optionalArrayClassMethodFixture, method = "tools/call", @params = new { name = "xpscript_ast_validate", arguments = new { source, filename = optionalArrayClassMethodFixture + ".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Optional array class-method validation failed: " + result);
+}
 foreach (var initializedModuleFixture in new[] { "initialized-module-byref-next", "initialized-module-boolean-next", "initialized-module-string-next", "initialized-module-reference-next", "initialized-module-reference-new-next", "initialized-module-reference-args-next", "initialized-module-date-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", initializedModuleFixture + ".xps"));
