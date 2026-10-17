@@ -556,9 +556,6 @@ internal static class Program
     public static dynamic Console = CreateConsole();
     private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.WriteLine = (Action<object?>)(value => System.Console.WriteLine(value)); return console; }
     public static dynamic Debugger = new ExpandoObject();
-    public static dynamic Process = new ExpandoObject();
-    public static dynamic Session = new ExpandoObject();
-    public static dynamic Request = new ExpandoObject();
     public static dynamic RequestScope = new ExpandoObject();
     public static dynamic NotesSession = new ExpandoObject();
     public static dynamic UIForm = new ExpandoObject();
