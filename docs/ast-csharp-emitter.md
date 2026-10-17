@@ -184,6 +184,8 @@ Derived accessors can also read a direct base property through `Parent`; `class-
 
 Derived object/reference property overrides preserve typed Get/Set dispatch and inherited storage; `class-property-object-override-next.xps` covers reference assignment and lookup.
 
+Derived accessors can dispatch through `Parent` to a typed object property; `class-property-object-parent-next.xps` covers base-reference lookup and member access.
+
 Bound member names are canonicalized case-insensitively. `class-method-case.xps` is AST-only because normal compilation currently rejects that casing. `class-methods-native.xps` compares real normal/AST execution; negative fixtures cover private access, foreign class fields and diagnostics inside method bodies. Language FullTest and MCP run these early.
 
 Derived scalar property getters reuse lineage scopes for inherited fields and methods; `class-property-derived-next.xps` covers a derived getter reading an inherited property. Full override/setter/accessor lifecycle remains open.
