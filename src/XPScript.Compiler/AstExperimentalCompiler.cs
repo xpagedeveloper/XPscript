@@ -593,6 +593,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstXmlSupport.RuntimeCode(fullSource)}}
 {{AstSpreadsheetSupport.RuntimeCode(fullSource)}}
 {{AstApplicationSupport.RuntimeCode(fullSource)}}
+{{AstHttpSupport.RuntimeCode(fullSource)}}
 {{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
@@ -1007,7 +1008,7 @@ internal static class Program
 }
 """;
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
-        generated += Environment.NewLine + AstHttpSupport.ExceptionCode + Environment.NewLine + AstHttpSupport.RuntimeCode(fullSource);
+        generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
         if (usesAi)
         {
             generated += Environment.NewLine + AiRuntimeSource.Code + Environment.NewLine + AiToolRuntimeSource.Code;
