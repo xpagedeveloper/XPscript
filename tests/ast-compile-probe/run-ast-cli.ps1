@@ -46,6 +46,12 @@ Write-Host 'AST_UNLOCK_COLUMN_MAPPING_OK'
 $redimColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-redim-error.xps') -o (Join-Path $output 'preprocessor-column-redim-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($redimColumnOutput -join "`n") -notmatch 'preprocessor-column-redim-error\.xps:3:18:') { throw 'AST ReDim source column mapping regression failed.' }
 Write-Host 'AST_REDIM_COLUMN_MAPPING_OK'
+$printColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-print-error.xps') -o (Join-Path $output 'preprocessor-column-print-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($printColumnOutput -join "`n") -notmatch 'preprocessor-column-print-error\.xps:3:15:') { throw 'AST Print file source column mapping regression failed.' }
+Write-Host 'AST_PRINT_FILE_COLUMN_MAPPING_OK'
+$killColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-kill-error.xps') -o (Join-Path $output 'preprocessor-column-kill-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($killColumnOutput -join "`n") -notmatch 'preprocessor-column-kill-error\.xps:2:10:') { throw 'AST Kill source column mapping regression failed.' }
+Write-Host 'AST_KILL_COLUMN_MAPPING_OK'
 $imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }
