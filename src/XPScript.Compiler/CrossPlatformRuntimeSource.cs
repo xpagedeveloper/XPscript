@@ -212,6 +212,7 @@ internal static class XPCrossPlatformRuntime
     public static string FileHash(object? path, object? algorithm = null)
     {
         var file = Path.GetFullPath(XPScriptRuntime.CStr(path));
+        if (!File.Exists(file)) throw new FileNotFoundException("File not found.", file);
         var name = algorithm is null ? "SHA256" : XPScriptRuntime.CStr(algorithm).Trim().ToUpperInvariant().Replace("-", "", StringComparison.Ordinal);
         using System.Security.Cryptography.HashAlgorithm hash = name switch
         {
