@@ -368,6 +368,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Remove the unused global `Debugger` Expando fallback; AST debug statements use their dedicated lowering path.
   - [x] Remove global `XPJson*` Expando fallbacks; JSON objects/documents/arrays are emitted through the native AST JSON runtime and semantic type mappings.
   - [x] Remove the unused global `Response` Expando fallback; supported AST HTTP responses are typed native values and web callback compatibility remains a separate legacy route.
+  - [x] Remove global `Database`/`Document` Expando fallbacks; AST database/document surfaces use typed native objects or remain explicit legacy fallbacks.
 - [ ] Migrate class declarations, inheritance and object lifecycle into the AST bound tree.
   - [x] Bind and emit scalar typed instance Sub/Function bodies through shared procedure binding, control-flow validation and BoundMethodEmitter. Verify per-instance fields, private sibling calls, Me, scalar ByRef, recursion, parameter shadowing and default String fields; class bodies no longer disappear into empty scaffolding for this supported subset.
   - [x] Keep private fields/methods out of external symbol lookup and prevent class declarations from becoming fake module globals. Verify private access, cross-class field leakage and source-mapped body failures through CLI/MCP. AST canonicalizes case-insensitive member names; the old compiler's mixed-case failure is an explicit AST-only capability fixture.

@@ -346,8 +346,6 @@ public static class AstExperimentalCompiler
         symbols.Declare(new VariableSymbol("RequestScope", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("NotesSession", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("UIForm", typeof(object), XpTypeSymbol.Variant));
-        symbols.Declare(new VariableSymbol("Database", typeof(object), XpTypeSymbol.Variant));
-        symbols.Declare(new VariableSymbol("Document", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Err", typeof(object), XpTypeSymbol.Variant));
         // Bind every procedure in its own scope; declarations are registered
         // before bodies so forward calls and recursion see real signatures.
@@ -556,8 +554,6 @@ internal static class Program
     public static dynamic RequestScope = new ExpandoObject();
     public static dynamic NotesSession = new ExpandoObject();
     public static dynamic UIForm = new ExpandoObject();
-    public static dynamic Database = new ExpandoObject();
-    public static dynamic Document = new ExpandoObject();
     public static dynamic Err => XPScriptErrorRuntime.Err;
     public static dynamic SEARCH_DEPTH = 0L;
     public static dynamic Command = string.Empty;
