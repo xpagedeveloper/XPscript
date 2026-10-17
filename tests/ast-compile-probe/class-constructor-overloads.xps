@@ -1,0 +1,107 @@
+Option Declare
+Class Record
+    Public Value As String
+    Public Sub New()
+        Value = "empty"
+    End Sub
+    Public Sub New(ByVal number As Long)
+        Value = "long"
+    End Sub
+    Public Sub New(ByVal number As Double)
+        Value = "double"
+    End Sub
+    Public Sub New(ByVal text As String, Optional ByVal suffix As String = "!")
+        Value = text & suffix
+    End Sub
+End Class
+Class Child Extend Record
+    Public Sub New(ByVal text As String)
+        Parent.New(text)
+    End Sub
+    Public Sub New()
+        Parent.New()
+    End Sub
+End Class
+Class Choice
+    Public Value As String
+    Public Sub New(ByRef number As Long)
+        number = number + 1
+        Value = "ref"
+    End Sub
+    Public Sub New(ByVal text As String)
+        Value = text
+    End Sub
+End Class
+Class Box
+End Class
+Class ReferenceChoice
+    Public Value As String
+    Public Sub New(ByVal value As Object)
+        Me.Value = "object"
+    End Sub
+    Public Sub New(ByVal value As Box)
+        Me.Value = "box"
+    End Sub
+End Class
+Class ArityChoice
+    Public Value As String
+    Public Sub New(ByVal number As Long)
+        Value = "exact"
+    End Sub
+    Public Sub New(ByVal number As Long, Optional ByVal extra As String = "default")
+        Value = extra
+    End Sub
+End Class
+Class PrivateChoice
+    Public Value As Long
+    Private Sub New(ByVal number As Long)
+        Value = number
+    End Sub
+    Public Sub New(ByVal text As String)
+        Dim inner As PrivateChoice = New PrivateChoice(12)
+        Value = inner.Value
+    End Sub
+End Class
+Function MakeRecord(Optional ByVal ignored As Boolean = False) As Variant
+    Set MakeRecord = New Record("caller")
+End Function
+Class HeapChoice
+    Public Value As Long
+    Public Sub New(Optional ByRef __xpsTag As Long = 0)
+        __xpsTag = __xpsTag + 1
+        Value = __xpsTag
+    End Sub
+    Public Sub New(ByVal text As String)
+        Value = 99
+    End Sub
+End Class
+Sub Main()
+    Dim a As Record = New Record()
+    Dim b As Record = New Record(1)
+    Dim c As Record = New Record(1.5)
+    Dim d As Record = New Record("text")
+    Dim e As Record = New Record("text", "?")
+    Dim f As Child = New Child("child")
+    Dim g As Child = New Child()
+    Dim number As Long = 4
+    Dim h As Choice = New Choice(number)
+    Dim i As Choice = New Choice("value")
+    Dim j As ReferenceChoice = New ReferenceChoice(Nothing)
+    Dim k As ArityChoice = New ArityChoice(1)
+    Dim l As ArityChoice = New ArityChoice(1, "supplied")
+    Dim m As PrivateChoice = New PrivateChoice("public")
+    Dim returned As Variant = MakeRecord()
+    Dim n As Record = returned
+    Dim record As record = New rEcOrD(2)
+    Dim fresh As New HeapChoice()
+    Dim another As New HeapChoice()
+    Dim supplied As New HeapChoice(number)
+    If a.Value <> "empty" Or b.Value <> "long" Or c.Value <> "double" Then Error 5
+    If d.Value <> "text!" Or e.Value <> "text?" Then Error 5
+    If f.Value <> "child!" Or g.Value <> "empty" Then Error 5
+    If h.Value <> "ref" Or i.Value <> "value" Then Error 5
+    If j.Value <> "box" Or k.Value <> "exact" Or l.Value <> "supplied" Then Error 5
+    If m.Value <> 12 Or n.Value <> "caller!" Or record.Value <> "long" Then Error 5
+    If fresh.Value <> 1 Or another.Value <> 1 Or supplied.Value <> 6 Or number <> 6 Then Error 5
+    Print "OVERLOAD_CONSTRUCTORS_OK"
+End Sub

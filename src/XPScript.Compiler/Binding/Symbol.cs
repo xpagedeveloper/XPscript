@@ -118,6 +118,7 @@ public sealed record FunctionSymbol(
     public bool IsUserConstructor { get; init; }
     public int? RequiredConstructorArgumentCount { get; init; }
     public bool IsPrivateConstructor { get; init; }
+    public string? UserConstructorTag { get; init; }
     public IReadOnlyList<string>? NativeParameterTypes { get; init; }
     public bool IsNativeStatic { get; init; }
     public string? NativeTargetName { get; set; }

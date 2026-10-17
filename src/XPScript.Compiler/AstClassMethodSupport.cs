@@ -23,6 +23,7 @@ internal static class AstClassMethodSupport
     {
         var name = syntax?.Identifier.Text;
         if (string.IsNullOrEmpty(name) || name.Equals("Variant", StringComparison.OrdinalIgnoreCase)) return XpTypeSymbol.Variant;
+        if (AstClassConstructorSupport.Find(symbols, name)?.SemanticReturnType is { } userType) return userType;
         if (symbols.TryLookup(name, out var symbol) && symbol is TypeSymbol { SemanticType: not null } type) return type.SemanticType;
         var runtime = AstExperimentalCompiler.ResolveRuntimeType(name);
         return runtime == typeof(object) && !name.Equals("Object", StringComparison.OrdinalIgnoreCase)
@@ -149,7 +150,7 @@ internal static class AstClassMethodSupport
                         "A Property Let value parameter must be required and cannot have a default value.", "XPS1012", "semantic");
             }
             var classScope = globals.CreateChildScope();
-            if (AstClassConstructorSupport.Find(globals, declaration.Identifier.Text) is { } ownConstructor)
+            foreach (var ownConstructor in AstClassConstructorSupport.FindAll(globals, declaration.Identifier.Text))
                 classScope.Declare(ownConstructor with { IsPrivateConstructor = false });
             classScope.Declare(new VariableSymbol("Me", typeof(object), XpTypeSymbol.User(declaration.Identifier.Text)));
             foreach (var owner in lineage)
@@ -216,7 +217,7 @@ internal static class AstClassMethodSupport
             var bound = AstExperimentalCompiler.BindProcedure(statements, scope, parameters,
                 hasResult ? semanticResult : null, hasResult ? name : null, result,
                 declaration.Identifier.Text + "." + name, sourcePath, source);
-            var emittedName = constructor is not null ? "__xps_constructor_body" : isDestructor ? "__xps_destructor_body" : property is null ? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
+            var emittedName = constructor is not null ? "__xps_constructor_body" + AstClassConstructorSupport.Suffix(declaration, constructor) : isDestructor ? "__xps_destructor_body" : property is null ? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
             string body;
             try { body = new BoundMethodEmitter().Emit(emittedName, returnType, parameters, bound, false, source, sourcePath, semanticResult); }
             catch (BoundEmissionException ex) { throw AstExperimentalCompiler.MappedDiagnostic(ex.Span ?? member.Span, sourcePath, source, ex.Message); }

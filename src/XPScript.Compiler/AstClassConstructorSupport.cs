@@ -11,34 +11,64 @@ internal static class AstClassConstructorSupport
         foreach (var declaration in classes.Values)
         {
             var constructors = declaration.Members.OfType<ConstructorDeclarationSyntax>().ToArray();
-            if (constructors.Length > 1)
-                throw AstExperimentalCompiler.MappedDiagnostic(constructors[1].Span, path, source,
-                    "Constructor overloads are not implemented by the AST compiler yet.", "XPS3001", "ast");
-            var constructor = constructors.SingleOrDefault();
-            var parameters = constructor?.Parameters ?? Array.Empty<ParameterSyntax>();
-            AstExperimentalCompiler.ValidateOptionalDeclarations(parameters, path, source);
-            foreach (var parameter in parameters)
+            var signatures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var constructor in constructors.Length == 0 ? [null] : constructors.Cast<ConstructorDeclarationSyntax?>())
             {
-                var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
-                var sharedReference = type.IsObject || classes.ContainsKey(type.Name);
-                if (parameter.IsList || type.RuntimeType == typeof(object) &&
-                    !sharedReference)
-                    throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
-                        "AST constructors support scalar and Object/user-class parameters; native reference, Variant and List signatures are not implemented yet.", "XPS3001", "ast");
+                var parameters = constructor?.Parameters ?? Array.Empty<ParameterSyntax>();
+                AstExperimentalCompiler.ValidateOptionalDeclarations(parameters, path, source);
+                var duplicate = parameters.GroupBy(p => p.Identifier.Text, StringComparer.OrdinalIgnoreCase).FirstOrDefault(group => group.Count() > 1)?.Skip(1).FirstOrDefault();
+                if (duplicate is not null)
+                    throw AstExperimentalCompiler.MappedDiagnostic(duplicate.Span, path, source,
+                        "A constructor parameter name must be unique.", CompilerDiagnosticCodes.DuplicateOverload, "semantic");
+                foreach (var parameter in parameters)
+                {
+                    var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
+                    var sharedReference = type.IsObject || classes.ContainsKey(type.Name);
+                    if (parameter.IsList || type.RuntimeType == typeof(object) &&
+                        !sharedReference)
+                        throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
+                            "AST constructors support scalar and Object/user-class parameters; native reference, Variant and List signatures are not implemented yet.", "XPS3001", "ast");
+                }
+                var types = parameters.Select(p => AstClassMethodSupport.DeclaredType(p.Type, symbols)).ToArray();
+                var signature = string.Join(";", types.Select((type, i) => $"{type.Shape}:{type.Name}:{type.ArrayRank}:{parameters[i].IsByRef}"));
+                if (!signatures.Add(signature))
+                    throw AstExperimentalCompiler.MappedDiagnostic(constructor!.Span, path, source,
+                        "Duplicate constructor parameter signature.", CompilerDiagnosticCodes.DuplicateOverload, "semantic");
+                symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select(t => t.RuntimeType).ToArray(),
+                    XpTypeSymbol.User(declaration.Identifier.Text), types, parameters.Select(parameter => parameter.IsByRef).ToArray())
+                {
+                    IsUserConstructor = true,
+                    RequiredConstructorArgumentCount = parameters.TakeWhile(parameter => !parameter.IsOptional).Count(),
+                    IsPrivateConstructor = constructor?.Visibility?.Kind == SyntaxKind.PrivateKeyword,
+                    UserConstructorTag = constructors.Length > 1 ? "__xps_ctor" + Suffix(declaration, constructor!) : null
+                });
             }
-            var types = parameters.Select(p => AstClassMethodSupport.DeclaredType(p.Type, symbols)).ToArray();
-            symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select(t => t.RuntimeType).ToArray(),
-                XpTypeSymbol.User(declaration.Identifier.Text), types, parameters.Select(parameter => parameter.IsByRef).ToArray())
-            {
-                IsUserConstructor = true,
-                RequiredConstructorArgumentCount = parameters.TakeWhile(parameter => !parameter.IsOptional).Count(),
-                IsPrivateConstructor = constructor?.Visibility?.Kind == SyntaxKind.PrivateKeyword
-            });
         }
     }
 
     internal static FunctionSymbol? Find(SymbolTable symbols, string name) =>
-        symbols.LookupAll(name + ".New").OfType<FunctionSymbol>().FirstOrDefault(s => s.IsUserConstructor);
+        FindAll(symbols, name).FirstOrDefault();
+
+    internal static FunctionSymbol[] FindAll(SymbolTable symbols, string name) =>
+        symbols.LookupAll(name + ".New").OfType<FunctionSymbol>().Where(s => s.IsUserConstructor).ToArray();
+
+    internal static string Suffix(ClassDeclarationSyntax declaration, ConstructorDeclarationSyntax constructor) =>
+        declaration.Members.OfType<ConstructorDeclarationSyntax>().Skip(1).Any() ? "_" + constructor.Span.Start : "";
+
+    internal static string Arguments(FunctionSymbol constructor, IReadOnlyList<BoundExpression> arguments, BoundExpressionEmitter emitter) =>
+        TaggedArguments(constructor.UserConstructorTag, "Xp" + constructor.SemanticReturnType!.Name,
+            emitter.EmitReferenceArguments(arguments, constructor.ByRefParameters));
+
+    private static string TaggedArguments(string? tag, string type, string arguments) => tag is null ? arguments
+        : $"new {type}.{tag}()" + (arguments.Length == 0 ? "" : ", " + arguments);
+
+    private static string TagParameter(ConstructorDeclarationSyntax constructor)
+    {
+        var name = "__xpsTag";
+        while (constructor.Parameters.Any(parameter => parameter.Identifier.Text.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            name += "_";
+        return name;
+    }
 
     private static CallExpressionSyntax? ParentCall(StatementSyntax statement) =>
         (statement is CallStatementSyntax call ? call.Expression : (statement as ExpressionStatementSyntax)?.Expression)
@@ -59,7 +89,13 @@ internal static class AstClassConstructorSupport
 
     internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable symbols, string path, string source)
     {
-        var constructor = declaration.Members.OfType<ConstructorDeclarationSyntax>().SingleOrDefault();
+        var constructors = declaration.Members.OfType<ConstructorDeclarationSyntax>().ToArray();
+        return constructors.Length == 0 ? EmitOne(declaration, null, symbols, path, source)
+            : string.Concat(constructors.Select(constructor => EmitOne(declaration, constructor, symbols, path, source)));
+    }
+
+    private static string EmitOne(ClassDeclarationSyntax declaration, ConstructorDeclarationSyntax? constructor, SymbolTable symbols, string path, string source)
+    {
         var name = "Xp" + declaration.Identifier.Text;
         if (constructor is not null) Body(declaration, constructor, path, source);
         var initializer = string.Empty;
@@ -80,20 +116,24 @@ internal static class AstClassConstructorSupport
             if (binder.Diagnostics.Count > 0)
                 throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], path, source);
             var bound = (BoundNewExpression)expression;
-            initializer = " : base(" + new BoundExpressionEmitter().EmitReferenceArguments(bound.Arguments, bound.Constructor!.ByRefParameters) + ")";
+            initializer = " : base(" + Arguments(bound.Constructor!, bound.Arguments, new BoundExpressionEmitter()) + ")";
         }
         if (constructor is null) return $"public {name}(){initializer} {{ }}";
         var parameters = string.Join(", ", constructor.Parameters.Select(p =>
             (p.IsByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstClassMethodSupport.DeclaredType(p.Type, symbols)) + " " + p.Identifier.Text));
         var arguments = string.Join(", ", constructor.Parameters.Select(p => (p.IsByRef ? "ref " : "") + p.Identifier.Text));
         var visibility = constructor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public";
+        var suffix = Suffix(declaration, constructor);
+        var tag = suffix.Length == 0 ? null : "__xps_ctor" + suffix;
+        var prefix = tag is null ? "" : $"{tag} {TagParameter(constructor)}" + (parameters.Length == 0 ? "" : ", ");
+        var tagDeclaration = tag is null ? "" : $"public readonly struct {tag} {{ }}";
         // A failed construction owns its fields, but must not invoke user Delete.
-        return $"{visibility} {name}({parameters}){initializer} {{ try {{ __xps_constructor_body({arguments}); }} catch {{ __xps_cleanup_failed_construction(); throw; }} }}" +
-            EmitOptionalForwarders(constructor, name, visibility, symbols, path, source);
+        return tagDeclaration + $"{visibility} {name}({prefix}{parameters}){initializer} {{ try {{ __xps_constructor_body{suffix}({arguments}); }} catch {{ __xps_cleanup_failed_construction(); throw; }} }}" +
+            EmitOptionalForwarders(constructor, name, visibility, symbols, path, source, suffix, tag);
     }
 
     private static string EmitOptionalForwarders(ConstructorDeclarationSyntax constructor, string name, string visibility,
-        SymbolTable symbols, string path, string source)
+        SymbolTable symbols, string path, string source, string suffix, string? tag)
     {
         if (!constructor.Parameters.Any(parameter => parameter.IsOptional)) return string.Empty;
         var parameters = constructor.Parameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
@@ -128,10 +168,10 @@ internal static class AstClassConstructorSupport
         // Default evaluation itself remains the shared Optional forwarding body;
         // do not inline/substitute expressions and evaluate earlier defaults twice.
         var hasReferences = parameters.Any(parameter => parameter.IsByRef);
-        var carrierType = hasReferences ? XpTypeSymbol.User("__xps_constructor_arguments") : null;
-        var carrier = carrierType is null ? "__xps_constructor_arguments" : BoundMethodEmitter.CSharpType(carrierType);
+        var carrierType = hasReferences ? XpTypeSymbol.User("__xps_constructor_arguments" + suffix) : null;
+        var carrier = carrierType is null ? "__xps_constructor_arguments" + suffix : BoundMethodEmitter.CSharpType(carrierType);
         var resultType = hasReferences ? carrier : "object";
-        const string helper = "__xps_constructor_defaults";
+        var helper = "__xps_constructor_defaults" + suffix;
         var fields = string.Join(" ", parameters.Select((parameter, i) => $"public {(parameter.IsByRef ? "ref " : "")}{BoundMethodEmitter.CSharpType(parameter.SemanticType ?? XpTypeSymbol.FromClr(parameter.Type))} P{i};"));
         var stores = string.Join(" ", parameters.Select((parameter, i) => $"this.P{i} = {(parameter.IsByRef ? "ref " : "")}{parameter.Name};"));
         var unpacked = string.Join(", ", parameters.Select((parameter, i) => $"{(parameter.IsByRef ? "ref " : "")}__xpsValues.P{i}"));
@@ -139,13 +179,15 @@ internal static class AstClassConstructorSupport
         // Supplied references and heap-backed omitted slots stay managed
         // references; ByVal locals are copied. No stack-local reference escapes.
         output.Append($"private {(hasReferences ? "ref struct" : "sealed class")} {carrier} {{ {fields} public {carrier}({Signature(parameters)}) {{ {stores} }} }}");
-        output.Append($"private {name}({carrier} __xpsValues) : this({unpacked}) {{ }}");
+        output.Append($"private {name}({carrier} __xpsValues) : this({TaggedArguments(tag, name, unpacked)}) {{ }}");
         output.Append($"private static {resultType} {helper}({Signature(parameters)}) {{ return new {carrier}({Arguments(parameters)}); }}");
         for (var count = parameters.Length - 1; count >= 0 && constructor.Parameters[count].IsOptional; count--)
         {
             var forward = OptionalCallLowering.Forward(helper, typeof(object), parameters, defaults, count,
                 semanticReturnType: carrierType, heapBackedByRefDefaults: true);
-            output.Append($"{visibility} {name}({Signature(forward.Parameters)}) : this(({carrier}){helper}({Arguments(forward.Parameters)})) {{ }}");
+            var signature = Signature(forward.Parameters);
+            var prefix = tag is null ? "" : $"{tag} {TagParameter(constructor)}" + (signature.Length == 0 ? "" : ", ");
+            output.Append($"{visibility} {name}({prefix}{signature}) : this(({carrier}){helper}({Arguments(forward.Parameters)})) {{ }}");
             var body = new BoundMethodEmitter().Emit(helper, typeof(object), forward.Parameters, forward.Statements, true, source, path, semanticReturnType: carrierType);
             output.Append("private ").Append(body["public ".Length..]);
         }

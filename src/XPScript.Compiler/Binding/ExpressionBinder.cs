@@ -152,11 +152,36 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 XpTypeSymbol.User("XPImage"), imageConstructor.NativeTypes.Select(AstImageSupport.SemanticType).ToArray());
             return new BoundNewExpression(typeof(object), ConvertArguments(function, imageArguments), XpTypeSymbol.User("XPImage"));
         }
-        if (AstClassConstructorSupport.Find(_symbols, typeName) is { } userConstructor)
+        var userConstructors = AstClassConstructorSupport.FindAll(_symbols, typeName);
+        if (userConstructors.Length > 0)
         {
+            var values = syntax.Arguments.Select(Bind).ToArray();
+            var arityMatches = userConstructors.Where(candidate =>
+                values.Length >= (candidate.RequiredConstructorArgumentCount ?? candidate.ParameterTypes.Count) &&
+                values.Length <= candidate.ParameterTypes.Count).ToArray();
+            var compatible = arityMatches.Where(candidate =>
+                values.Select((value, i) => candidate.ByRefParameters?[i] == true
+                    ? _symbols.ClassifyConversion(value.SemanticType, candidate.SemanticParameterTypes![i]).IsIdentity &&
+                        value.Type == candidate.ParameterTypes[i] && IsConstructorReference(value)
+                    : _symbols.ClassifyConversion(value.SemanticType, candidate.SemanticParameterTypes![i]).IsImplicit).All(match => match)).ToArray();
+            var candidates = compatible.Where(candidate => !candidate.IsPrivateConstructor).ToArray();
+            if (candidates.Length == 0 && compatible.Any(candidate => candidate.IsPrivateConstructor))
+                return Error(syntax, CompilerDiagnosticCodes.UnknownMember, $"Constructor for '{typeName}' is private.");
+            // Preserve precise address/type diagnostics for a single signature.
+            var userConstructor = candidates.Length == 1 ? candidates[0]
+                : candidates.Length == 0 && arityMatches.Length == 1 ? arityMatches[0] : null;
+            if (candidates.Length > 1)
+            {
+                var best = candidates.Where(candidate => candidates.All(other => ReferenceEquals(candidate, other) ||
+                    BetterConstructor(candidate, other, values))).ToArray();
+                if (best.Length != 1)
+                    return Error(syntax, CompilerDiagnosticCodes.AmbiguousOverload, $"Ambiguous constructor for '{typeName}'.");
+                userConstructor = best[0];
+            }
+            if (userConstructor is null)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
             if (userConstructor.IsPrivateConstructor)
                 return Error(syntax, CompilerDiagnosticCodes.UnknownMember, $"Constructor for '{typeName}' is private.");
-            var values = syntax.Arguments.Select(Bind).ToArray();
             if (values.Length < (userConstructor.RequiredConstructorArgumentCount ?? userConstructor.ParameterTypes.Count) ||
                 values.Length > userConstructor.ParameterTypes.Count)
                 return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
@@ -202,6 +227,37 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
 
         return new BoundNewExpression(type, arguments, typeEntry.SemanticType ?? new XpTypeSymbol(typeEntry.Name, type));
+    }
+
+    private static bool IsConstructorReference(BoundExpression value) => value is
+        BoundNameExpression { Symbol: LocalSymbol or ParameterSymbol or FieldSymbol } or
+        BoundNameExpression { Symbol: VariableSymbol { HasTypedStorage: true } } or
+        BoundMemberAccessExpression { IsFieldStorage: true } ||
+        value is BoundIndexExpression index && (index.Expression.SemanticType.IsArray || index.Expression.SemanticType.IsList);
+
+    private bool BetterConstructor(FunctionSymbol left, FunctionSymbol right, BoundExpression[] values)
+    {
+        var better = false;
+        for (var i = 0; i < values.Length; i++)
+        {
+            var a = left.SemanticParameterTypes![i];
+            var b = right.SemanticParameterTypes![i];
+            var ca = _symbols.ClassifyConversion(values[i].SemanticType, a);
+            var cb = _symbols.ClassifyConversion(values[i].SemanticType, b);
+            if (ca.IsIdentity != cb.IsIdentity)
+            {
+                if (!ca.IsIdentity) return false;
+                better = true;
+            }
+            else
+            {
+                var ab = _symbols.ClassifyConversion(a, b).IsImplicit;
+                var ba = _symbols.ClassifyConversion(b, a).IsImplicit;
+                if (ba && !ab) return false;
+                if (ab && !ba) better = true;
+            }
+        }
+        return better || left.ParameterTypes.Count < right.ParameterTypes.Count;
     }
 
     private BoundExpression BindIndex(IndexExpressionSyntax syntax)

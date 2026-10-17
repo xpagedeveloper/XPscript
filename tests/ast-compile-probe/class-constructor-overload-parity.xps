@@ -1,0 +1,15 @@
+Class Record
+    Public Value As String
+    Public Sub New(ByVal value As Long)
+        Me.Value = "number"
+    End Sub
+    Public Sub New(ByVal value As String)
+        Me.Value = value
+    End Sub
+End Class
+Sub Main()
+    Dim first As New Record(1)
+    Dim second As New Record("text")
+    Print first.Value
+    Print second.Value
+End Sub

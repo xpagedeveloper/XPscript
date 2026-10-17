@@ -1,7 +1,7 @@
 Class Record
     Public Sub New()
     End Sub
-    Public Sub New(ByVal value As Long)
+    Public Sub New()
     End Sub
 End Class
 Sub Main()

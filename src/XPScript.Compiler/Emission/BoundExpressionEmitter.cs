@@ -92,7 +92,7 @@ public sealed class BoundExpressionEmitter
             : $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundNewExpression @new when @new.SemanticType.IsReferenceCell =>
             $"new {BoundMethodEmitter.CSharpType(@new.SemanticType)}({string.Join(", ", @new.Arguments.Select(Emit))})",
-        BoundNewExpression @new when @new.Constructor is not null => $"new Xp{@new.SemanticType.Name}({EmitReferenceArguments(@new.Arguments, @new.Constructor.ByRefParameters)})",
+        BoundNewExpression @new when @new.Constructor is not null => $"new Xp{@new.SemanticType.Name}({AstClassConstructorSupport.Arguments(@new.Constructor, @new.Arguments, this)})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateClient()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateRequest()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPSpreadsheet", StringComparison.OrdinalIgnoreCase) =>

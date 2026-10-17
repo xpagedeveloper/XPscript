@@ -17,6 +17,14 @@ Class ImageRecord
         Stored = picture
         If fail Then Error 3821, "constructor failed"
     End Sub
+    Public Sub New(ByVal width As Long, Optional ByVal fail As Boolean = False)
+        escaped = Me
+        Dim local As New XPImage(width, 3)
+        LocalImage = local
+        Set picture = local
+        Stored = picture
+        If fail Then Error 3822, "overloaded constructor failed"
+    End Sub
     Public Sub Delete()
         destructorCalls = destructorCalls + 1
     End Sub
@@ -33,6 +41,22 @@ Sub AssertExpired(ByVal value As Variant)
     If width <> -1 Or failure = 0 Then Error 6, "constructor image not recycled"
 End Sub
 Sub Main()
+    Dim overloaded As New ImageRecord(7)
+    If overloaded.Width <> 7 Then Error 6, "wrong image overload"
+    Call AssertExpired(overloaded.LocalImage)
+    Dim overloadOriginal As ImageRecord = overloaded
+    Dim overloadFailure As Long
+    On Error Resume Next
+    Set overloaded = New ImageRecord(9, True)
+    overloadFailure = Err
+    On Error GoTo 0
+    If overloadFailure <> 3822 Or Not (overloaded Is overloadOriginal) Then Error 6, "overload failure target"
+    Dim overloadFailed As ImageRecord = escaped
+    If overloadFailed.Width <> 0 Then Error 6, "overload field cleanup"
+    Call AssertExpired(overloadFailed.Stored)
+    Call AssertExpired(overloadFailed.LocalImage)
+    Delete overloaded
+    destructorCalls = 0
     Dim item As New ImageRecord(False)
     Dim original As ImageRecord = item
     If item.Width <> 4 Then Error 6, "successful constructor lost stored image"

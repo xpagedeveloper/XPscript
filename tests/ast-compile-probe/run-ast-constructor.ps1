@@ -3,12 +3,13 @@ $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
 $output = Join-Path $outputRoot ('constructor-' + [Guid]::NewGuid().ToString('N'))
-foreach ($fixture in @('constructor-refref-module', 'class-constructor-reference-storage', 'class-constructor-optional-refref', 'constructor-refref-array', 'constructor-refref-list', 'constructor-refref-forall', 'constructor-refref-optional', 'class-constructor-optional-reference', 'constructor-reference-optional', 'class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
+foreach ($fixture in @('class-constructor-overloads', 'constructor-refref-module', 'class-constructor-reference-storage', 'class-constructor-optional-refref', 'constructor-refref-array', 'constructor-refref-list', 'constructor-refref-forall', 'constructor-refref-optional', 'class-constructor-optional-reference', 'constructor-reference-optional', 'class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
     if ($LASTEXITCODE -ne 0) { throw "AST constructor compilation failed: $fixture" }
     $result = dotnet (Join-Path $target 'Generated.dll')
     $expected = switch ($fixture) {
+        'class-constructor-overloads' { 'OVERLOAD_CONSTRUCTORS_OK' }
         'class-constructor-reference-storage' { 'REFERENCE_STORAGE_CONSTRUCTORS_OK' }
         'class-constructor-optional-refref' { 'OPTIONAL_REFREF_CONSTRUCTORS_OK' }
         'constructor-refref-array' { 'REFREF_ARRAY_OK' }
@@ -44,6 +45,16 @@ foreach ($fixture in @('constructor-refref-module', 'class-constructor-reference
     }
     if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST constructor execution failed: $fixture" }
 }
+$overloadTarget = Join-Path $output 'overload-parity'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-constructor-overload-parity.xps') -o $overloadTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST overload parity compilation failed.' }
+$result = dotnet (Join-Path $overloadTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "number`ntext") { throw 'AST overload parity execution failed.' }
+$normalOverload = Join-Path $output $(if ($IsWindows) { 'normal-overload.exe' } else { 'normal-overload' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-overload-parity.xps') -o $normalOverload --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal overload parity compilation failed.' }
+$result = & $normalOverload
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "number`ntext") { throw 'Normal/AST overload parity failed.' }
 $normal = Join-Path $output $(if ($IsWindows) { 'normal.exe' } else { 'normal' })
 dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-parity.xps') -o $normal --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal constructor parity compilation failed.' }
@@ -71,6 +82,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Normal reference constructor parity compilatio
 $result = & $normalReference
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`n5`nREFERENCE_CONSTRUCTOR_PARITY_OK") { throw 'Normal/AST concrete-reference constructor parity failed.' }
 foreach ($case in @(
+    @('constructor-overloads-ambiguous-error', 'XPS2005', 8),
+    @('constructor-overloads-name-error', 'XPS2006', 2),
+    @('constructor-overloads-no-match-error', 'XPS2004', 8),
+    @('constructor-overloads-private-error', 'XPS2009', 8),
     @('constructor-mixed-literal-error', 'XPS2001', 6),
     @('constructor-mixed-type-error', 'XPS2003', 7),
     @('constructor-mixed-default-error', 'XPS2008', 2),
@@ -126,12 +141,13 @@ foreach ($case in @(
     @('constructor-parent-nested-error', 'XPS1012', 6),
     @('constructor-private-base-field-error', 'XPS2008', 6),
     @('constructor-required-base-deferred', 'XPS2004', 5),
-    @('constructor-overloads-deferred', 'XPS3001', 4)
+    @('constructor-overloads-duplicate-error', 'XPS2006', 4)
 )) {
     $fixture = $case[0]
     $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Constructor diagnostic lost: $fixture`n$failure" }
 }
+Write-Host 'AST_OVERLOAD_CONSTRUCTORS_OK'
 Write-Host 'AST_CONSTRUCTORS_OK'
 Write-Host 'AST_REFERENCE_CONSTRUCTORS_OK'
 Write-Host 'AST_BYREF_REFERENCE_CONSTRUCTORS_OK'
