@@ -488,14 +488,7 @@ public static class AstExperimentalCompiler
                     return $"public sealed class Xp{match.Groups["name"].Value} {{ {fields} }}";
                 }));
         }
-        var classSupport = "namespace __xps_user_classes { using static global::Program; " + userClassSupport + " }" + Environment.NewLine + (Regex.IsMatch(fullSource, @"(?im)^\s*Class\s+Person\b") ? """
-public sealed class XpPerson {
-    public string Name { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty;
-    public XpPerson(object? name, object? role) { Name = Convert.ToString(name) ?? string.Empty; Role = Convert.ToString(role) ?? string.Empty; }
-    public string Describe() => Name + ":" + Role;
-}
-""" : string.Empty);
+        var classSupport = "namespace __xps_user_classes { using static global::Program; " + userClassSupport + " }" + Environment.NewLine;
         classSupport += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?ims)^\s*Type\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Type\b")
             .Cast<Match>().Select(match =>
             {
