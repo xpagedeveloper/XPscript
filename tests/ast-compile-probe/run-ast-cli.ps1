@@ -52,6 +52,12 @@ Write-Host 'AST_PRINT_FILE_COLUMN_MAPPING_OK'
 $killColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-kill-error.xps') -o (Join-Path $output 'preprocessor-column-kill-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($killColumnOutput -join "`n") -notmatch 'preprocessor-column-kill-error\.xps:2:10:') { throw 'AST Kill source column mapping regression failed.' }
 Write-Host 'AST_KILL_COLUMN_MAPPING_OK'
+$inputColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-input-error.xps') -o (Join-Path $output 'preprocessor-column-input-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($inputColumnOutput -join "`n") -notmatch 'preprocessor-column-input-error\.xps:3:18:') { throw 'AST Input source column mapping regression failed.' }
+Write-Host 'AST_INPUT_COLUMN_MAPPING_OK'
+$lineInputColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-line-input-error.xps') -o (Join-Path $output 'preprocessor-column-line-input-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($lineInputColumnOutput -join "`n") -notmatch 'preprocessor-column-line-input-error\.xps:2:30:') { throw 'AST Line Input source column mapping regression failed.' }
+Write-Host 'AST_LINE_INPUT_COLUMN_MAPPING_OK'
 $imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }

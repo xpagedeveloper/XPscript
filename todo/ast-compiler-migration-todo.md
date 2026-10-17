@@ -455,6 +455,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [x] File-lock rewrites have focused coverage; `Put`, `Open`, `Close`, `Lock` and `Unlock` now use the shared transformed-span mapping and preserve their argument columns.
     - [x] `ReDim` has a focused bound-expression diagnostic regression through the shared transformed-span mapping.
     - [x] `Print #` and `Kill` have focused argument/path diagnostic-column regressions through the shared transformed-span mapping.
+    - [x] `Input$` and `Line Input` have focused argument/target diagnostic-column regressions through the shared transformed-span mapping.
   Optional declaration validation, explicit unsupported-feature guards and binder/default-expression errors now emit source-mapped CompileDiagnostic values. Bound emitter failures are wrapped with the originating bound statement span and mapped to the emission diagnostic category; generated control-flow mappings retain the original file/line. Roslyn backend diagnostics now consume the same generated-source mapping contract.
   - [x] Map Roslyn code-generation diagnostics through generated `#line` directives, including original file, start position and end position; `GeneratedDependencyProbe` covers the mapped backend failure path.
   Parser diagnostics now use the same mapped path; control-flow and generated-source diagnostics remain open.
