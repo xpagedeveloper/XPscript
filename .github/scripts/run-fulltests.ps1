@@ -71,6 +71,7 @@ if (Should-Run 'language') {
   if ($astCliFirst.Output -notmatch 'AST_ARRAY_STORAGE_BOUNDS_OK' -or $astCliFirst.Output -notmatch 'AST_IMAGE_ARRAY_BYTE_INTEROP_OK') { throw 'AST physical array storage/native Byte regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_OPTIONAL_ARRAY_CLASS_METHOD_OK') { throw 'AST optional array class-method regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_OPTIONAL_BYREF_ARRAY_CLASS_METHOD_OK') { throw 'AST optional ByRef array class-method regression missing.' }
+  if ($astCliFirst.Output -notmatch 'AST_EMPTY_INDEXED_PROPERTY_SLOT_OK') { throw 'AST empty indexed-property slot regression missing.' }
   $astLexer = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-lexer/AstLexerProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST lexer and compatibility regression'
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
   $astBinding = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-binding/AstBindingProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST semantic binder regression'

@@ -90,7 +90,9 @@ public sealed class ExpressionParser
             {
                 while (true)
                 {
-                    arguments.Add(ParseBinaryExpression());
+                    arguments.Add(Current.Kind is SyntaxKind.CommaToken or SyntaxKind.CloseParenToken
+                        ? new EmptyArgumentExpressionSyntax(new TextSpan(Current.Span.Start, 0))
+                        : ParseBinaryExpression());
                     if (Current.Kind != SyntaxKind.CommaToken)
                         break;
                     commas.Add(NextToken());

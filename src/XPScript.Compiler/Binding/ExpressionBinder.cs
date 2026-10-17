@@ -26,6 +26,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         BinaryExpressionSyntax binary => BindBinary(binary),
         ParenthesizedExpressionSyntax parenthesized => Bind(parenthesized.Expression),
         ImplicitMemberAccessExpressionSyntax implicitMember => BindImplicitMemberAccess(implicitMember),
+        EmptyArgumentExpressionSyntax empty => new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Nothing),
         _ => Error(syntax, $"Binding is not implemented for {syntax.Kind}.")
         };
         bound.Span = syntax.Span;
@@ -602,6 +603,19 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             var targetType = property.SemanticParameterTypes is not null
                 ? property.SemanticParameterTypes[i]
                 : XpTypeSymbol.FromClr(property.ParameterTypes[i]);
+            if (syntax.Arguments[i] is EmptyArgumentExpressionSyntax)
+            {
+                if (i < property.RequiredArgumentCount)
+                    return Error(syntax.Arguments[i], CompilerDiagnosticCodes.ArgumentCountMismatch, $"Indexed property '{property.Name}' requires argument {i + 1}.");
+                arguments[i] = targetType.RuntimeType == typeof(string)
+                    ? new BoundLiteralExpression(string.Empty, typeof(string), targetType)
+                    : targetType.RuntimeType == typeof(bool)
+                        ? new BoundLiteralExpression(false, typeof(bool), targetType)
+                        : !targetType.RuntimeType.IsValueType
+                            ? new BoundLiteralExpression(null, typeof(object), targetType)
+                            : new BoundLiteralExpression(Activator.CreateInstance(targetType.RuntimeType), targetType.RuntimeType, targetType);
+                continue;
+            }
             var conversion = _symbols.ClassifyConversion(arguments[i].SemanticType, targetType);
             if (property.ByRefIndexes?[i] == true)
             {

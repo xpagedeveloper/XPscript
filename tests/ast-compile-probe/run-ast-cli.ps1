@@ -242,6 +242,12 @@ $indexedOverridePropertyResult = dotnet (Join-Path $indexedOverridePropertyOutpu
 if ($LASTEXITCODE -ne 0 -or ($indexedOverridePropertyResult -join "`n") -ne '12') { throw 'AST indexed property override execution failed.' }
 Write-Host 'AST_INDEXED_PROPERTY_OVERRIDE_OK'
 $parentPropertyOutput = Join-Path $output 'class-property-parent-next'
+$emptySlotPropertyOutput = Join-Path $output 'class-property-empty-slot-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-property-empty-slot-next.xps') -o $emptySlotPropertyOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST empty indexed-property slot compilation failed.' }
+$emptySlotPropertyResult = dotnet (Join-Path $emptySlotPropertyOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($emptySlotPropertyResult -join "`n") -ne "1`n1") { throw 'AST empty indexed-property slot execution failed.' }
+Write-Host 'AST_EMPTY_INDEXED_PROPERTY_SLOT_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-property-parent-next.xps') -o $parentPropertyOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Parent property compilation failed.' }
 $parentPropertyResult = dotnet (Join-Path $parentPropertyOutput 'Generated.dll')

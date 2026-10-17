@@ -1,0 +1,11 @@
+Class Store
+    Public Property Get Item(Optional ByVal row As Long, Optional ByVal column As Long) As Long
+        Item = row + column
+    End Property
+End Class
+
+Sub Main()
+    Dim store As New Store
+    Print CStr(store.Item(, 1))
+    Print CStr(store.Item(1, ))
+End Sub

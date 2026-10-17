@@ -105,6 +105,7 @@ public enum SyntaxKind
     BinaryExpression,
     ParenthesizedExpression,
     CallExpression,
+    EmptyArgument,
     MemberAccessExpression,
     IndexExpression,
     NewExpression,
