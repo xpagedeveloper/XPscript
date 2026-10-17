@@ -1,0 +1,33 @@
+Class Box
+    Public Value As Long
+End Class
+
+Class Base
+    Public stored As Box
+
+    Public Property Get Current As Box
+        Set Current = stored
+    End Property
+
+    Public Property Set Current(ByVal incoming As Box)
+        Set stored = incoming
+    End Property
+End Class
+
+Class Child Extend Base
+    Public Property Get Current As Box
+        Set Current = stored
+    End Property
+
+    Public Property Set Current(ByVal incoming As Box)
+        Set stored = incoming
+    End Property
+End Class
+
+Sub Main()
+    Dim item As New Child
+    Dim value As New Box
+    value.Value = 12
+    Set item.Current = value
+    Print CStr(item.Current.Value)
+End Sub
