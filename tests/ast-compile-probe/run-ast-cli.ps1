@@ -1024,6 +1024,9 @@ if ($LASTEXITCODE -ne 2 -or ($parserError -join "`n") -notmatch 'Expected CloseP
 $preprocessorParserError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-parser-error.xps') -o (Join-Path $output 'preprocessor-parser-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($preprocessorParserError -join "`n") -notmatch 'preprocessor-parser-error\.xps:2:') { throw 'AST preprocessor parser source mapping regression failed.' }
 Write-Host 'AST_PREPROCESSOR_PARSER_MAPPING_OK'
+$matrixScaffoldingOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'sample-scaffolding-matrix-error.xps') -o (Join-Path $output 'sample-scaffolding-matrix-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($matrixScaffoldingOutput -join "`n") -notmatch 'sample-scaffolding-matrix-error\.xps:2:\d+: XPS2008: Undefined variable') { throw 'AST sample-specific matrix scaffolding regression failed.' }
+Write-Host 'AST_MATRIX_SCAFFOLDING_REMOVED_OK'
 $noEntry = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'no-entry-error.xps') -o (Join-Path $output 'no-entry-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($noEntry -join "`n") -notmatch 'requires a Sub declaration') { throw 'AST no-entry diagnostic regression failed.' }
 $nestedOutput = Join-Path $output 'nested-goto'
