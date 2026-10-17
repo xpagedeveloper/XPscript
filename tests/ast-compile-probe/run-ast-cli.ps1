@@ -992,6 +992,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-json-native-next.xp
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes JSON native compilation failed.' }
 $notesJsonResult = dotnet (Join-Path $notesJsonOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($notesJsonResult -join [Environment]::NewLine) -ne 'NOTES_JSON_NATIVE_OK') { throw 'AST Notes JSON native runtime failed.' }
+$notesHttpOutput = Join-Path $output 'notes-http-native'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-http-native-next.xps') -o $notesHttpOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Notes HTTP native compilation failed.' }
+$notesHttpResult = dotnet (Join-Path $notesHttpOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($notesHttpResult -join [Environment]::NewLine) -ne 'NOTES_HTTP_NATIVE_OK') { throw 'AST Notes HTTP native runtime failed.' }
 $jsonInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'json-member-error.xps') -o (Join-Path $output 'json-member-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($jsonInvalid -join "`n") -notmatch "json-member-error.xps:3:16: XPS2009: Undefined member 'UnknownMember'") { throw 'AST JSON unknown-member diagnostic lost its code or source position.' }
 $textObjectOutput = Join-Path $output 'object-name-text'

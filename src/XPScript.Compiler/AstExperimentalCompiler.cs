@@ -567,9 +567,6 @@ public static class AstExperimentalCompiler
                     .Select(value => $"public Xp{match.Groups["name"].Value} {value.Name} => new({value.Value});");
                 return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} public Xp{match.Groups["name"].Value}() {{ }} private Xp{match.Groups["name"].Value}(long value) => Value = value; public static implicit operator Xp{match.Groups["name"].Value}(int value) => new(value); public static implicit operator Xp{match.Groups["name"].Value}(long value) => new(value); {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
             }));
-        if (Regex.IsMatch(fullSource, @"(?i)\bNotesHTTPRequest\b")) classSupport += """
-public sealed class XpNotesHttp { public long TimeoutSec { get; set; } public long MaxRedirects { get; set; } public bool PreferStrings { get; set; } public bool PreferJSONNavigator { get; set; } public long ResponseCode { get; private set; } public void SetHeaderField(string name, object? value) { } public object Get(string url) { ResponseCode = 0; return PreferJSONNavigator ? new XpJsonDocument() : string.Empty; } public object Post(string url, object? body) { ResponseCode = 0; return PreferJSONNavigator ? new XpJsonDocument() : string.Empty; } public object Put(string url, object? body) => Post(url, body); public object Patch(string url, object? body) => Post(url, body); public object DeleteResource(string url) => Get(url); public object GetResponseHeaders() => Array.Empty<object>(); public void ResetHeaders() { } public void SetProxy(string host, long port) { } public void SetProxyUser(string user, string password) { } public void ResetProxy() { } }
-""";
         var generated = $$"""
 using System;
 using __xps_user_classes;
@@ -600,7 +597,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstArrayRuntimeCode()}}
 {{AstFileRuntimeCode()}}
 {{AstCallbackRuntimeCode()}}
-{{(!AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) ? AstTlsRuntimeCode() : "")}}
+{{(!AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) || AstNotesJsonSupport.Uses(fullSource) ? AstTlsRuntimeCode() : "")}}
 {{AstErrorRuntimeCode()}}
 internal static class LSCoreCompare
 {

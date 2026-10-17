@@ -114,6 +114,12 @@ public sealed class BoundStatementEmitter
                 if (targetText is "http.TimeoutSec" or "http.MaxRedirects" or "http.ResponseCode") expressionText = $"Convert.ToInt64({expressionText})";
                 if (targetText.Equals("ai", StringComparison.OrdinalIgnoreCase)) expressionText = $"(XPScriptAi){expressionText}";
                 if (targetText is "http.PreferStrings" or "http.PreferJSONNavigator") expressionText = $"Convert.ToBoolean({expressionText})";
+                if (assignment.Target is BoundMemberAccessExpression { Receiver.SemanticType.Name: "NotesHTTPRequest" } notesProperty &&
+                    notesProperty.Name is "TimeoutSec" or "MaxRedirects" or "ResponseCode")
+                    expressionText = $"Convert.ToInt32({expressionText})";
+                if (assignment.Target is BoundMemberAccessExpression { Receiver.SemanticType.Name: "NotesHTTPRequest" } notesBoolean &&
+                    notesBoolean.Name is "PreferStrings" or "PreferJSONNavigator")
+                    expressionText = $"Convert.ToBoolean({expressionText})";
                 Line($"{targetText} = {expressionText};");
                 break;
             case BoundExpressionStatement expression:
@@ -249,14 +255,15 @@ public sealed class BoundStatementEmitter
                 if (declaration.Local.IsDynamicArray)
                     type = "System.Array";
                 type = BoundMethodEmitter.SemanticStorageType(declaration.Local, type);
-                if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase)) type = "XpNotesHttp";
-                else if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAi";
+                if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAi";
                 else if (declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAi";
                 else if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAiTool";
                 else if (declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAiTool";
                 var initializer = declaration.Initializer is null
                     ? (declaration.Local.SemanticType?.IsVariant == true ? "null" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ? "new XpNotesHttp()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase) ? "new XpAi(\"\", \"\")" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("AITool", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase) ? "new XpAiTool(\"\")" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : (declaration.Local.ArrayBounds.Count > 0 ? declaration.Local.ArrayBounds[0].Upper : (declaration.ArrayLength ?? 0)) - declaration.Local.ArrayLowerBound + 1)}]" : type.StartsWith("Xp", StringComparison.Ordinal) ? $"new {type}()" : $"default({type})")))
                     : _expressions.Emit(declaration.Initializer);
+                if (declaration.Local.SemanticType?.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) == true && declaration.Initializer is null)
+                    initializer = "new NotesHTTPRequest()";
                 if (BoundExpressionEmitter.RuntimeObjectType(declaration.Local.SemanticType?.Name ?? "") is { } jsonType)
                 {
                     type = jsonType;

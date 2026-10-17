@@ -6,7 +6,7 @@ namespace XPScript.Compiler;
 
 internal static class AstNotesJsonSupport
 {
-    internal static readonly string[] Names = ["NotesJSONNavigator", "NotesJSONObject", "NotesJSONArray", "NotesJSONElement"];
+    internal static readonly string[] Names = ["NotesHTTPRequest", "NotesJSONNavigator", "NotesJSONObject", "NotesJSONArray", "NotesJSONElement"];
     private static readonly ClassDeclarationSyntax[] Classes = CSharpSyntaxTree.ParseText(JsonHttpCompatibilityRuntimeSource.Code).GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>().ToArray();
     internal static readonly AstNativeObjectSurface.Member[] Members = AstNativeObjectSurface.ReadMembers(Classes, Names, LanguageType).ToArray();
     internal static void Import(SymbolTable symbols) => AstNativeObjectSurface.Import(symbols, Members, LanguageType);

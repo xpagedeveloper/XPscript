@@ -1,0 +1,10 @@
+Option Declare
+
+Sub Main()
+    Dim http As New NotesHTTPRequest
+    http.TimeoutSec = 10
+    http.MaxRedirects = 2
+    Call http.SetHeaderField("X-Test", "ok")
+    If http.TimeoutSec <> 10 Or http.MaxRedirects <> 2 Then Error 4251
+    Print "NOTES_HTTP_NATIVE_OK"
+End Sub
