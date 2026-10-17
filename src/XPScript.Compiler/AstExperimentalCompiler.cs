@@ -390,7 +390,7 @@ public static class AstExperimentalCompiler
                 var type = parameters[i].SemanticType ?? XpTypeSymbol.FromClr(parameters[i].Type);
                 var value = procedureParameters[i].DefaultValue is { } syntax
                     ? defaultBinder.Bind(syntax)
-                    : new BoundLiteralExpression(parameters[i].Type == typeof(string) ? "" :
+                    : new BoundLiteralExpression(type.IsArray ? null : parameters[i].Type == typeof(string) ? "" :
                         parameters[i].Type.IsValueType ? Activator.CreateInstance(parameters[i].Type) : null, parameters[i].Type, type);
                 if (defaultBinder.Diagnostics.Count > 0)
                     throw SyntaxDiagnosticException(defaultBinder.Diagnostics[0], sourcePath, fullSource);

@@ -153,6 +153,8 @@ internal static class AstClassConstructorSupport
                 var value = constructor.Parameters[i].DefaultValue is { } syntax ? binder.Bind(syntax)
                     : type.IsVariant
                         ? new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Variant)
+                    : type.IsArray
+                        ? new BoundLiteralExpression(null, type.RuntimeType, type)
                     : type.RuntimeType == typeof(object)
                         ? new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Nothing)
                         : new BoundLiteralExpression(type.RuntimeType == typeof(string) ? "" : Activator.CreateInstance(type.RuntimeType), type.RuntimeType, type);
