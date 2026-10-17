@@ -389,7 +389,9 @@ public static class AstExperimentalCompiler
             symbols.Declare(new FunctionSymbol(name, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Date", typeof(object), [], XpTypeSymbol.Variant, []));
         symbols.Declare(new FunctionSymbol("Date$", typeof(object), [], XpTypeSymbol.Variant, []));
-        symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [], XpTypeSymbol.Variant, []));
+        symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         var usesApplication = AstApplicationSupport.UsesApplication(fullSource);
         if (usesApplication)
             foreach (var mainSymbol in symbols.LookupAll("Main").OfType<FunctionSymbol>())
@@ -958,7 +960,7 @@ internal static class Program
     private static DateTime ToDateTime(object? value) => value is XpDate date ? date.Value : Convert.ToDateTime(value);
     public static object Date() => new XpDate(DateTime.Today);
     public static object Format(object? value, object? pattern = null) => pattern is null ? CStr(value) : (value is XpDate date ? date.Value : Convert.ToDateTime(value)).ToString(CStr(pattern), System.Globalization.CultureInfo.InvariantCulture);
-    public static object InputBox(object? prompt = null) => string.Empty;
+    public static object InputBox(object? prompt = null, object? title = null, object? defaultValue = null) => XPScriptRuntime.InputBox(prompt);
     public static object MsgBox(object? prompt = null, object? boxType = null, object? title = null) => XPScriptRuntime.MsgBox(prompt);
     public static object ChDrive(object? drive) => true;
     public static object Erase(object? value) => true;

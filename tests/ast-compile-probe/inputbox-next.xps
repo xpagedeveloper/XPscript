@@ -1,0 +1,6 @@
+Sub Main()
+    Dim answer As String
+    answer = InputBox("Enter value", "AST", "fallback")
+    If answer <> "INPUTBOX_OK" Then Error 6341, "AST InputBox did not use shared runtime input"
+    Print "INPUTBOX_RUNTIME_OK"
+End Sub

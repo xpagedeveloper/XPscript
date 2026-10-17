@@ -147,6 +147,13 @@ $fileLockResult = dotnet (Join-Path $fileLockOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($fileLockResult -join "`n") -ne 'FILE_LOCK_OK') { throw 'AST file lock regression failed.' }
 Write-Host 'AST_FILE_LOCK_OK'
 
+$inputBoxOutput = Join-Path $output 'inputbox-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inputbox-next.xps') -o $inputBoxOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST InputBox compilation failed.' }
+$inputBoxResult = 'INPUTBOX_OK' | dotnet (Join-Path $inputBoxOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($inputBoxResult -join "`n") -notmatch 'INPUTBOX_RUNTIME_OK') { throw 'AST InputBox runtime regression failed.' }
+Write-Host 'AST_INPUTBOX_OK'
+
 $enumOutput = Join-Path $output 'language-extensions'
 dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }
