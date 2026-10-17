@@ -94,7 +94,7 @@ public sealed class BoundMethodEmitter
         : type.IsList
         ? $"LSList<{CSharpType(type.ElementType!)}>"
         : type.IsArray
-        ? $"{CSharpType(type.ElementType!)}[{new string(',', type.ArrayRank - 1)}]"
+        ? "System.Array"
         : BoundExpressionEmitter.RuntimeObjectType(type.Name) ??
           (type.RuntimeType == typeof(object) && !type.IsVariant && !type.IsObject && !type.IsNothing && !type.IsNull && !type.IsEmpty
               ? "Xp" + type.Name : CSharpType(type.RuntimeType));

@@ -86,6 +86,11 @@ public static class Guard
     }
     public static void Main()
     {
+        Reject(() => LSArrayRuntime.RequireArray<long>(new object[] { 1L }, 1), typeof(InvalidCastException));
+        Reject(() => LSArrayRuntime.RequireArray<object>(new string[] { "x" }, 1), typeof(InvalidCastException));
+        Reject(() => LSArrayRuntime.RequireArray<long>(new long[1, 1], 1), typeof(InvalidCastException));
+        if (LSArrayRuntime.RequireArray<long>(null, 1) is not null)
+            throw new Exception("A null array conversion allocated storage.");
         Reject(() => { ref var slot = ref LSArrayRuntime.Reference<long>(new object[] { 1L }, 0); }, typeof(InvalidCastException));
         Reject(() => { ref var slot = ref LSArrayRuntime.Reference<object>(new string[] { "x" }, 0); }, typeof(InvalidCastException));
         Reject(() => { ref var slot = ref LSArrayRuntime.Reference<long>(null, 0); }, typeof(InvalidCastException));
@@ -98,6 +103,11 @@ public static class Guard
             var lengths = Enumerable.Repeat(2, rank).ToArray();
             var lower = Enumerable.Repeat(-1, rank).ToArray();
             var array = Array.CreateInstance(typeof(long), lengths, lower);
+            if (!ReferenceEquals(array, LSArrayRuntime.RequireArray<long>(array, rank)))
+                throw new Exception("Array conversion lost physical storage identity.");
+            var emptyStrings = LSArrayRuntime.CreateManaged<string>(lengths, lower);
+            if (emptyStrings.Cast<string>().Any(value => value != string.Empty) || emptyStrings.GetLowerBound(0) != -1)
+                throw new Exception("Ranked String allocation lost default values or bounds.");
             var last = Enumerable.Repeat<object?>(0, rank).ToArray();
             ref var slot = ref LSArrayRuntime.Reference<long>(array, last);
             slot = 41;
@@ -112,6 +122,13 @@ public static class Guard
         text = "changed";
         if (strings[0] != "changed") throw new Exception("Reference-valued array slot failed.");
         var bytes = new byte[2];
+        if (!ReferenceEquals(bytes, LSArrayRuntime.ByteVector(bytes)))
+            throw new Exception("Native Byte vector conversion copied a zero-based vector.");
+        var boundedBytes = LSArrayRuntime.CreateManaged<byte>([2], [-3]);
+        boundedBytes.SetValue((byte)9, -3);
+        if (!LSArrayRuntime.ByteVector(boundedBytes)!.SequenceEqual(new byte[] { 9, 0 }))
+            throw new Exception("Native Byte vector conversion lost bounded elements.");
+        Reject(() => LSArrayRuntime.ByteVector(new byte[1, 1]), typeof(InvalidCastException));
         LSArrayRuntime.Reference<byte>(bytes, 1) = 7;
         var flags = new bool[2];
         LSArrayRuntime.Reference<bool>(flags, 1) = true;

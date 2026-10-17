@@ -7,6 +7,22 @@ $output = Join-Path $outputRoot 'ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
+$arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }
+$arrayBoundsResult = dotnet (Join-Path $arrayBoundsOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($arrayBoundsResult -join "`n") -ne 'ARRAY_STORAGE_BOUNDS_OK') { throw 'AST shared array storage/bounds regression failed.' }
+Write-Host 'AST_ARRAY_STORAGE_BOUNDS_OK'
+$arrayParityOutput = Join-Path $output 'array-storage-parity'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-parity.xps') -o $arrayParityOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST array parity compilation failed.' }
+$arrayParityResult = dotnet (Join-Path $arrayParityOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($arrayParityResult -join "`n") -ne "-3`n-1`n7`nARRAY_STORAGE_PARITY_OK") { throw 'AST array parity execution failed.' }
+$normalArray = Join-Path $output $(if ($IsWindows) { 'normal-array.exe' } else { 'normal-array' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'array-storage-parity.xps') -o $normalArray --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal array parity compilation failed.' }
+$normalArrayResult = & $normalArray
+if ($LASTEXITCODE -ne 0 -or ($normalArrayResult -join "`n") -ne ($arrayParityResult -join "`n")) { throw 'Normal/AST array storage parity failed.' }
 dotnet run --project (Join-Path $root 'tests/AstApplicationRuntimeProbe') -c Release
 if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime regression failed.' }
 & (Join-Path $PSScriptRoot 'run-ast-constructor.ps1')

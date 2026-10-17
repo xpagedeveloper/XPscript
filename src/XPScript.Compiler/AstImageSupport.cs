@@ -72,7 +72,7 @@ internal static class AstImageSupport
     internal static string ConvertArgument(string value, string type) => type switch
     {
         "int" or "int?" => $"checked((int)XPScriptRuntime.CLng({value}))",
-        "byte[]" => $"(byte[])({value})", "XPImage" => $"(XPImage)({value})", _ => value
+        "byte[]" => $"LSArrayRuntime.ByteVector({value})", "XPImage" => $"(XPImage)({value})", _ => value
     };
     internal static string RuntimeCode(string source) => AstObjectSupportRegistry.UsesObject(source, "XPImage")
         ? FileSystemPortabilityRuntimeSource.Code + Environment.NewLine + XPImageRuntimeSource.Code + Environment.NewLine + OwnershipCode : "";

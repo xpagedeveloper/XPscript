@@ -18,7 +18,7 @@ var heapOptional = OptionalCallLowering.Forward("Defaults", typeof(object), [opt
     semanticReturnType: optionalCarrierType, heapBackedByRefDefaults: true);
 var heapOptionalCode = new BoundMethodEmitter().Emit("Defaults", typeof(object), heapOptional.Parameters, heapOptional.Statements,
     true, semanticReturnType: optionalCarrierType);
-if (!heapOptionalCode.Contains("long[] __xpsOptional0 = new long[1]") ||
+if (!heapOptionalCode.Contains("System.Array __xpsOptional0 = new long[1]") ||
     !heapOptionalCode.Contains("Mutate(ref LSArrayRuntime.Reference<long>(__xpsOptional0") ||
     !heapOptionalCode.Contains("static XpConstructorArguments Defaults()") ||
     heapOptionalCode.Contains("ref __xpsOptional0_value"))
@@ -255,6 +255,12 @@ public static class Probe
     public static class LSCoreCompare
     {
         public static bool Equal(object? left, object? right) => Equals(left, right);
+    }
+    public static class LSArrayRuntime
+    {
+        public static Array? RequireArray<T>(object value, int rank) => (Array)value;
+        public static object? Get(object value, params object[] indices) =>
+            ((Array)value).GetValue(System.Array.ConvertAll(indices, value => Convert.ToInt32(value)));
     }
     public static class XPScriptRuntime
     {

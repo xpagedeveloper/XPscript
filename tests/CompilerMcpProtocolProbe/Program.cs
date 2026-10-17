@@ -13,6 +13,19 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
+var arrayBytesSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/image-array-byte-interop.xps"));
+var arrayBytesResult = await CallAsync(new { jsonrpc="2.0",id="image-array-byte-interop",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=arrayBytesSource,filename="image-array-byte-interop.xps" } } });
+if (arrayBytesResult.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+    throw new Exception("Native bounded Byte array validation failed: " + arrayBytesResult);
+var invalidArrayBoundsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/array-storage-bounds-error.xps"));
+var invalidArrayBoundsResult = await CallAsync(new { jsonrpc="2.0",id="array-storage-bounds-error",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=invalidArrayBoundsSource,filename="array-storage-bounds-error.xps" } } });
+var invalidArrayBoundsError = invalidArrayBoundsResult.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (!invalidArrayBoundsResult.GetProperty("result").GetProperty("isError").GetBoolean() || invalidArrayBoundsError.GetProperty("diagnosticCode").GetString() != "XPS1012" || invalidArrayBoundsError.GetProperty("line").GetInt32() != 2)
+    throw new Exception("Invalid array bound diagnostic lost: " + invalidArrayBoundsResult);
+var arrayBoundsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/array-storage-bounds.xps"));
+var arrayBoundsResult = await CallAsync(new { jsonrpc="2.0",id="array-storage-bounds",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=arrayBoundsSource,filename="array-storage-bounds.xps" } } });
+if (arrayBoundsResult.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+    throw new Exception("Array storage validation failed: " + arrayBoundsResult);
 foreach (var (fixture, code, line) in new[] { ("constructor-array-deferred", "XPS3001", 2), ("procedure-array-deferred", "XPS3001", 1), ("method-array-deferred", "XPS3001", 2), ("constructor-array-rank-error", "XPS1012", 2), ("constructor-array-list-error", "XPS1012", 2) })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));

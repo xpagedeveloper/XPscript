@@ -203,6 +203,51 @@ internal sealed class LSArray : IXPScriptArrayStorage
 
 internal static class LSArrayRuntime
 {
+    public static byte[]? ByteVector(object? value)
+    {
+        if (value is null) return null;
+        var array = RequireArray<byte>(value, 1)!;
+        return array is byte[] vector ? vector : array.Cast<byte>().ToArray();
+    }
+
+    public static Array? RequireArray<T>(object? value, int rank)
+    {
+        if (value is null) return null;
+        if (value is not Array array || array.Rank != rank || array.GetType().GetElementType() != typeof(T))
+            throw new InvalidCastException("Array element type and rank must match the declared type.");
+        return array;
+    }
+
+    public static Array CreateManaged<T>(int[] lengths, int[] lower)
+    {
+        var array = Array.CreateInstance(typeof(T), lengths, lower);
+        if (typeof(T) == typeof(string)) ClearManaged(array);
+        return array;
+    }
+
+    private static void ClearManaged(Array array)
+    {
+        if (array.GetType().GetElementType() == typeof(string) && array.Length > 0)
+        {
+            var lower = Enumerable.Range(0, array.Rank).Select(array.GetLowerBound).ToArray();
+            var indices = (int[])lower.Clone();
+            for (var item = 0; item < array.Length; item++)
+            {
+                array.SetValue(string.Empty, indices);
+                for (var dimension = array.Rank - 1; dimension >= 0; dimension--)
+                {
+                    if (indices[dimension] < array.GetUpperBound(dimension))
+                    {
+                        indices[dimension]++;
+                        break;
+                    }
+                    indices[dimension] = lower[dimension];
+                }
+            }
+        }
+        else Array.Clear(array);
+    }
+
     // Obtain a managed reference only after exact element-type and complete bounds checks.
     // This also supports non-zero-based arrays without a snapshot/copy-back wrapper.
     public static ref T Reference<T>(object? value, params object?[] indices)
@@ -261,6 +306,7 @@ internal static class LSArrayRuntime
         if (lengths.Any(length => length < 0))
             throw new IndexOutOfRangeException("Invalid XPScript array bounds.");
         var result = Array.CreateInstance(elementType, lengths, lower);
+        if (elementType == typeof(string)) ClearManaged(result);
         if (preserve && source is not null)
         {
             var indices = new int[lower.Length];
@@ -364,9 +410,7 @@ internal static class LSArrayRuntime
         public int UBound(int dimension = 1) { ValidateDimension(dimension); return array.GetUpperBound(dimension - 1); }
         public void Erase()
         {
-            if (array.GetType().GetElementType() == typeof(string) && array.Rank == 1)
-                Array.Fill((string[])array, string.Empty);
-            else Array.Clear(array);
+            ClearManaged(array);
         }
         private int[] Indices(object?[] indices)
         {

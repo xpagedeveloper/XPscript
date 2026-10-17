@@ -15,7 +15,7 @@ internal static class AstModuleFieldSupport
             : $"    public static dynamic {Symbol.Name} = null;";
     }
 
-    internal static IReadOnlyList<Field> Find(string source, SymbolTable symbols)
+    internal static string DeclarationSource(string source)
     {
         // Do not mistake fields or declaration-like text inside procedure bodies for globals.
         var text = source.ToCharArray();
@@ -24,7 +24,12 @@ internal static class AstModuleFieldSupport
             for (var i = declaration.Span.Start; i < declaration.Span.End && i < text.Length; i++)
                 if (text[i] is not ('\r' or '\n')) text[i] = ' ';
 
-        return Regex.Matches(new string(text), @"^[ \t]*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)(?<tail>[^\r\n]*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
+        return new string(text);
+    }
+
+    internal static IReadOnlyList<Field> Find(string source, SymbolTable symbols)
+    {
+        return Regex.Matches(DeclarationSource(source), @"^[ \t]*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)(?<tail>[^\r\n]*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match =>
             {
                 var type = AstExperimentalCompiler.ResolveRuntimeType(match.Groups["type"].Value);

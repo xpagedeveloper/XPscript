@@ -879,6 +879,19 @@ var boundedArrayParser = new StatementParser("Dim values(1 To 3) As Long");
 var boundedArrayStatement = (DimStatementSyntax)boundedArrayParser.ParseStatement();
 Equal(1, boundedArrayStatement.ArrayLowerBound, "bounded Dim lower bound");
 Equal(3, boundedArrayStatement.ArrayLength, "bounded Dim length");
+var signedArrayParser = new StatementParser("Dim values(-3 To -1, +2 To +4) As String");
+var signedArray = (DimStatementSyntax)signedArrayParser.ParseStatement();
+Equal(0, signedArrayParser.Diagnostics.Count, "signed array bounds diagnostics");
+Equal(new ArrayBound(-3, -1), signedArray.ArrayBounds[0], "negative array bounds retained");
+Equal(new ArrayBound(2, 4), signedArray.ArrayBounds[1], "positive signed array bounds retained");
+Equal(-3, signedArray.ArrayLowerBound, "signed array lower metadata");
+Equal(3, signedArray.ArrayLength, "signed array length metadata");
+foreach (var invalidBounds in new[] { "3 To 1", "-2147483648 To 0", "0 To 2147483647", "1 + 2", "2147483648" })
+{
+    var invalidBoundsParser = new StatementParser($"Dim values({invalidBounds}) As Long");
+    invalidBoundsParser.ParseStatement();
+    Equal(true, invalidBoundsParser.Diagnostics.Count > 0, "invalid/overflow array bounds rejected");
+}
 
 const string whileSource = "While True\ncount = count + 1\nWend";
 var whileParser = new StatementParser(whileSource);
@@ -1152,7 +1165,7 @@ var boundIndex = indexBinder.Bind(new ExpressionParser("items[1]").ParseExpressi
 Equal(BoundNodeKind.IndexExpression, boundIndex.Kind, "bound index root");
 Equal(typeof(string), boundIndex.Type, "bound index result type");
 Equal(0, indexBinder.Diagnostics.Count, "bound index diagnostics");
-Equal("items[1L]", emitter.Emit(boundIndex), "bound index C# emission");
+Equal("(Convert.ToString(LSArrayRuntime.Get(items, 1L)) ?? string.Empty)", emitter.Emit(boundIndex), "bound index C# emission");
 
 var memberSymbols = new SymbolTable();
 memberSymbols.Declare(new VariableSymbol("text", typeof(string)));
@@ -1315,14 +1328,14 @@ var boundIndexedProperty = indexedPropertyBinder.Bind(new ExpressionParser("peop
 Equal(BoundNodeKind.MemberAccessExpression, boundIndexedProperty.Kind, "bound indexed object property root");
 Equal(typeof(string), boundIndexedProperty.Type, "bound indexed object property type");
 Equal(0, indexedPropertyBinder.Diagnostics.Count, "bound indexed object property diagnostics");
-Equal("people[1L].Name", emitter.Emit(boundIndexedProperty), "bound indexed object property C# emission");
+Equal("((object)(LSArrayRuntime.Get(people, 1L))).Name", emitter.Emit(boundIndexedProperty), "bound indexed object property C# emission");
 
 var indexedMethodBinder = new ExpressionBinder(indexedSymbols);
 var boundIndexedMethod = indexedMethodBinder.Bind(new ExpressionParser("people[1].Describe()").ParseExpression());
 Equal(BoundNodeKind.CallExpression, boundIndexedMethod.Kind, "bound indexed object method root");
 Equal(typeof(string), boundIndexedMethod.Type, "bound indexed object method type");
 Equal(0, indexedMethodBinder.Diagnostics.Count, "bound indexed object method diagnostics");
-Equal("people[1L].Describe()", emitter.Emit(boundIndexedMethod), "bound indexed object method C# emission");
+Equal("((object)(LSArrayRuntime.Get(people, 1L))).Describe()", emitter.Emit(boundIndexedMethod), "bound indexed object method C# emission");
 
 var indexedChainBinder = new ExpressionBinder(indexedSymbols);
 var boundIndexedChain = indexedChainBinder.Bind(new ExpressionParser("people[1].Name").ParseExpression());
@@ -1341,12 +1354,12 @@ var boundRunCommand = callBinder.Bind(new ExpressionParser("Not RunCommand(\"whe
 Equal(BoundNodeKind.UnaryExpression, boundRunCommand.Kind, "bound RunCommand root");
 Equal(typeof(bool), boundRunCommand.Type, "bound RunCommand result type");
 Equal(0, callBinder.Diagnostics.Count, "bound RunCommand diagnostics");
-Equal("(!RunCommand(\"where.exe\", (String[])(Array(\"winget\"))))", emitter.Emit(boundRunCommand), "bound RunCommand C# emission");
+Equal("(!RunCommand(\"where.exe\", (System.String[])(LSArrayRuntime.RequireArray<string>(Array(\"winget\"), 1))))", emitter.Emit(boundRunCommand), "bound RunCommand C# emission");
 var boundRunCommandFalse = callBinder.Bind(new ExpressionParser("RunCommand(\"where.exe\", Array(\"winget\")) = False").ParseExpression());
 Equal(BoundNodeKind.BinaryExpression, boundRunCommandFalse.Kind, "bound RunCommand equals false root");
 Equal(typeof(bool), boundRunCommandFalse.Type, "bound RunCommand equals false type");
 Equal(0, callBinder.Diagnostics.Count, "bound RunCommand equals false diagnostics");
-Equal("(RunCommand(\"where.exe\", (String[])(Array(\"winget\"))) == false)", emitter.Emit(boundRunCommandFalse), "bound RunCommand equals false C# emission");
+Equal("(RunCommand(\"where.exe\", (System.String[])(LSArrayRuntime.RequireArray<string>(Array(\"winget\"), 1))) == false)", emitter.Emit(boundRunCommandFalse), "bound RunCommand equals false C# emission");
 var legacyRunCommand = ExpressionCompatibilityProbe.EmitLegacy("Not RunCommand(\"where.exe\", Array(\"winget\"))");
 var astRunCommand = emitter.Emit(boundRunCommand);
 string CanonicalizeCSharpExpression(string value)
@@ -1377,7 +1390,7 @@ string CanonicalizeCSharpExpression(string value)
 }
 // The bound path makes the String[] argument conversion explicit. Keep the
 // exact conversion assertion above; compare the remaining expression shape.
-Equal(CanonicalizeCSharpExpression(legacyRunCommand), CanonicalizeCSharpExpression(astRunCommand.Replace("(String[])(Array(\"winget\"))", "Array(\"winget\")", StringComparison.Ordinal)), "legacy vs AST RunCommand semantic emission");
+Equal(CanonicalizeCSharpExpression(legacyRunCommand), CanonicalizeCSharpExpression(astRunCommand.Replace("(System.String[])(LSArrayRuntime.RequireArray<string>(Array(\"winget\"), 1))", "Array(\"winget\")", StringComparison.Ordinal)), "legacy vs AST RunCommand semantic emission");
 
 void EqualLegacyAst(string source, string label)
 {

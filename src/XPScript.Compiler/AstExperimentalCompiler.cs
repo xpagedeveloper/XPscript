@@ -427,7 +427,7 @@ public static class AstExperimentalCompiler
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {(match.Groups["value"].Success ? match.Groups["value"].Value : "0")};"));
         if (Regex.IsMatch(fullSource, @"(?im)^\s*Enum\s+BuildState\b"))
             moduleFields += Environment.NewLine + "    public static dynamic BuildState = new ExpandoObject();";
-        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?im)^\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*\([^\r\n]+\)\s+As\s+\w+", RegexOptions.Multiline)
+        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(AstModuleFieldSupport.DeclarationSource(fullSource), @"(?im)^\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*\([^\r\n]+\)\s+As\s+\w+", RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = new ExpandoObject();"));
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
         var entryPoint = usesApplication
@@ -587,13 +587,7 @@ internal static class Program
             ? DateTime.FromOADate(number) : DateTime.Parse(text, CultureInfo.CurrentCulture);
     }
     public static long LBound(object value) => LSArrayRuntime.LBound(value);
-    public static long UBound(object value)
-    {
-        if (value is IXPScriptArrayStorage storage) return LSArrayRuntime.UBound(storage);
-        if (value is not System.Array array || array.Length == 0)
-            throw new InvalidOperationException("Array has not been allocated. Use ReDim first.");
-        return array.Length - 1;
-    }
+    public static long UBound(object value) => LSArrayRuntime.UBound(value);
     public static object Base64DecodeBinary(object value) => Convert.FromBase64String(CStr(value));
     public static void AstPrint() => Console.WriteLine("AST_XPS_COMPILE_OK");
     public static long[] Array(long first, long second) => [first, second];

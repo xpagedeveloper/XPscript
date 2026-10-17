@@ -1,0 +1,25 @@
+Sub Main()
+    Dim source As New XPImage(2, 2, "red")
+    Dim encoded As Variant
+    encoded = source.ToBytes("png")
+    Dim bytes() As Byte
+    Dim last As Long
+    last = UBound(encoded) + 5
+    ReDim bytes(5 To last)
+    Dim index As Long
+    For index = 0 To UBound(encoded)
+        bytes(index + 5) = CByte(encoded(index))
+    Next
+    Dim restored As XPImage = XPImage.FromBytes(bytes)
+    Dim firstByte As Byte = bytes(5)
+    If firstByte <> CByte(encoded(0)) Then
+        Error 5, "Typed Byte array read lost its element type"
+    End If
+    If restored.Width <> 2 Or restored.Height <> 2 Or source.Width <> 2 Then
+        Error 5, "Native byte input lost image content"
+    End If
+    If LBound(bytes) <> 5 Or UBound(bytes) <> UBound(encoded) + 5 Then
+        Error 5, "Native byte input changed source bounds"
+    End If
+    Print "IMAGE_ARRAY_BYTE_INTEROP_OK"
+End Sub

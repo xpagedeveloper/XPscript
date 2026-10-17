@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 foreach ($case in @(
+    @('array-storage-bounds-error', 'XPS1012', 2),
     @('constructor-array-deferred', 'XPS3001', 2),
     @('procedure-array-deferred', 'XPS3001', 1),
     @('method-array-deferred', 'XPS3001', 2),

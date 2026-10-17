@@ -1,0 +1,16 @@
+Sub Main()
+    Dim values(-3 To -1) As Long
+    values(-3) = 7
+    Dim shared As Variant
+    shared = values
+    Print LBound(shared)
+    Print UBound(shared)
+    Print shared(-3)
+    Dim text(2 To 3) As String
+    text(2) = "changed"
+    Erase text
+    If text(2) <> "" Then
+        Error 5, "Erase did not clear String storage"
+    End If
+    Print "ARRAY_STORAGE_PARITY_OK"
+End Sub

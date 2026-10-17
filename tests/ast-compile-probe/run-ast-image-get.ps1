@@ -3,6 +3,12 @@ $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
 $output = Join-Path $outputRoot ('image-get-' + [Guid]::NewGuid().ToString('N'))
+$byteTarget = Join-Path $output 'image-array-byte-interop'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'image-array-byte-interop.xps') -o $byteTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST nonzero-bound Byte array image compilation failed.' }
+$byteResult = dotnet (Join-Path $byteTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($byteResult -join "`n") -ne 'IMAGE_ARRAY_BYTE_INTEROP_OK') { throw 'AST native image Byte vector normalization failed.' }
+Write-Host 'AST_IMAGE_ARRAY_BYTE_INTEROP_OK'
 foreach ($fixture in @('image-constructor-list', 'image-constructor-variant', 'image-constructor-optional-refref', 'image-constructor-optional-reference', 'image-constructor-reference-byref', 'image-constructor-reference', 'image-constructor-optional-byref', 'image-constructor-mixed', 'image-constructor-byref', 'image-constructor-optional', 'image-constructor-derived', 'image-constructor', 'image-destructor-derived', 'image-destructor', 'image-field-delete', 'image-property-set', 'image-property-set-byval-signature', 'image-property-set-byref-signature', 'image-property-get', 'image-property-signature-only')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target

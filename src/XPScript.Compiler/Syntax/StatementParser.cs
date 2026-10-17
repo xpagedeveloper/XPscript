@@ -688,29 +688,6 @@ public sealed class StatementParser
             isArray = true;
             NextToken();
             var boundsStart = _position;
-            if (Current.Kind == SyntaxKind.NumberToken && long.TryParse(Current.Text, out var firstBound))
-            {
-                var upperBound = firstBound;
-                var hasExplicitLowerBound = false;
-                NextToken();
-                if (Current.Kind == SyntaxKind.ToKeyword)
-                {
-                    hasExplicitLowerBound = true;
-                    NextToken();
-                    if (Current.Kind == SyntaxKind.NumberToken && long.TryParse(Current.Text, out upperBound))
-                        NextToken();
-                }
-                // AST currently supports the common zero-based, one-dimensional form.
-                // Keep unsupported bounds explicit instead of silently compiling the wrong size.
-                if (upperBound < firstBound || upperBound >= int.MaxValue)
-                    _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
-                        "AST arrays require a valid constant bound.", identifier.Span));
-                else
-                {
-                    arrayLowerBound = hasExplicitLowerBound ? checked((int)firstBound) : 0;
-                    arrayLength = checked((int)(upperBound - firstBound + 1));
-                }
-            }
             while (Current.Kind is not SyntaxKind.CloseParenToken and not SyntaxKind.EndOfFileToken and not SyntaxKind.NewLineToken)
             {
                 if (Current.Kind == SyntaxKind.CommaToken)
@@ -724,6 +701,14 @@ public sealed class StatementParser
 
             // Preserve constant shape metadata for each dimension.
             parsedArrayBounds = arrayBounds;
+            if (arrayBounds.Count > 0 && arrayBounds.Count != arrayRank)
+                _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
+                    "Every fixed array dimension requires a constant bound.", identifier.Span));
+            if (arrayBounds.Count > 0)
+            {
+                arrayLowerBound = arrayBounds[0].Lower;
+                arrayLength = checked(arrayBounds[0].Upper - arrayLowerBound + 1);
+            }
         }
 
         SyntaxToken? asKeyword = null;
@@ -802,17 +787,40 @@ public sealed class StatementParser
             if (i != end && _tokens[i].Kind != SyntaxKind.CommaToken)
                 continue;
             var segmentEnd = i;
-            var numberTokens = _tokens[segmentStart..segmentEnd]
-                .Where(token => token.Kind == SyntaxKind.NumberToken)
-                .Select(token => long.TryParse(token.Text, out var value) ? (long?)value : null)
-                .Where(value => value.HasValue).Select(value => value!.Value).ToArray();
-            if (numberTokens.Length == 1 && numberTokens[0] <= int.MaxValue && numberTokens[0] >= int.MinValue)
-                result.Add(new ArrayBound(0, (int)numberTokens[0]));
-            else if (numberTokens.Length >= 2 && numberTokens[0] <= int.MaxValue && numberTokens[0] >= int.MinValue && numberTokens[1] <= int.MaxValue && numberTokens[1] >= int.MinValue)
-                result.Add(new ArrayBound((int)numberTokens[0], (int)numberTokens[1]));
+            if (segmentEnd > segmentStart)
+            {
+                var position = segmentStart;
+                var valid = ReadBound(ref position, segmentEnd, out var first);
+                var lower = 0;
+                var upper = first;
+                if (position < segmentEnd && _tokens[position].Kind == SyntaxKind.ToKeyword)
+                {
+                    lower = first;
+                    position++;
+                    valid &= ReadBound(ref position, segmentEnd, out upper);
+                }
+                if (!valid || position != segmentEnd || upper < lower || upper == int.MaxValue || (long)upper - lower + 1 > int.MaxValue)
+                    _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.InvalidSyntax,
+                        "AST arrays require valid constant bounds.", _tokens[segmentStart].Span));
+                else
+                    result.Add(new ArrayBound(lower, upper));
+            }
             segmentStart = i + 1;
         }
         return result;
+
+        bool ReadBound(ref int position, int limit, out int bound)
+        {
+            bound = 0;
+            var sign = 1L;
+            if (position < limit && _tokens[position].Kind is SyntaxKind.PlusToken or SyntaxKind.MinusToken)
+                sign = _tokens[position++].Kind == SyntaxKind.MinusToken ? -1 : 1;
+            if (position >= limit || _tokens[position].Kind != SyntaxKind.NumberToken ||
+                !long.TryParse(_tokens[position++].Text, out var value) || value < 0 || value > (sign < 0 ? 2147483648L : int.MaxValue))
+                return false;
+            bound = (int)(sign * value);
+            return true;
+        }
     }
 
     private StatementSyntax ParseAssignmentStatement(int equalsIndex)

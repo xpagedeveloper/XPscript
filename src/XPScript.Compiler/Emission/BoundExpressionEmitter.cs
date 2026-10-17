@@ -75,7 +75,7 @@ public sealed class BoundExpressionEmitter
             $"(({csvType})({Emit(index.Expression)}))[{Emit(index.Index)}]",
         BoundIndexExpression index when AstXmlSupport.RuntimeType(index.Expression.SemanticType.Name) is { } xmlType =>
             $"(({xmlType})({Emit(index.Expression)})).Get({Emit(index.Index)})",
-        BoundIndexExpression index when index.Expression.SemanticType.IsArray && index.Expression is BoundNameExpression { Symbol: LocalSymbol }
+        BoundIndexExpression index when index.Expression.SemanticType.IsArray
             => EmitArrayGet(index),
         BoundIndexExpression index when index.Expression is BoundNameExpression { Symbol: LocalSymbol { IsDynamicArray: true } }
             => EmitArrayGet(index),
@@ -83,8 +83,6 @@ public sealed class BoundExpressionEmitter
             => EmitArrayGet(index),
         BoundIndexExpression index when index.Indices.Count > 1 && index.Expression is BoundNameExpression
             => EmitArrayGet(index),
-        BoundIndexExpression index when index.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayLowerBound: not 0 } array } && index.Expression.Type.IsArray
-            => $"{Emit(index.Expression)}[{Emit(index.Index)} - {array.ArrayLowerBound}]",
         BoundIndexExpression index => index.Expression.Type == typeof(object)
             ? $"((dynamic){Emit(index.Expression)})[{Emit(index.Index)}]"
             : index.Expression.Type == typeof(Dictionary<string, object?>)
@@ -158,22 +156,11 @@ public sealed class BoundExpressionEmitter
             : index.Type == typeof(double) ? $"Convert.ToDouble({access})"
             : index.Type == typeof(bool) ? $"Convert.ToBoolean({access})"
             : index.Type == typeof(string) ? $"(Convert.ToString({access}) ?? string.Empty)"
-            : index.Type == typeof(object) ? $"(({BoundMethodEmitter.CSharpType(index.SemanticType)})({access}))" : access;
+            : $"(({BoundMethodEmitter.CSharpType(index.SemanticType)})({access}))";
     }
 
-    internal string EmitArrayIndexArguments(BoundIndexExpression index)
-    {
-        var offsets = index.Indices.Select((item, dimension) =>
-        {
-            var lower = index.Expression is BoundNameExpression { Symbol: LocalSymbol local }
-                ? dimension < local.ArrayBounds.Count ? local.ArrayBounds[dimension].Lower : dimension == 0 ? local.ArrayLowerBound : 0
-                : 0;
-            var emitted = Emit(item);
-            var multidimensional = index.Expression is BoundNameExpression { Symbol: LocalSymbol { ArrayRank: > 1 } };
-            return lower == 0 || multidimensional ? emitted : $"({emitted} - {lower})";
-        });
-        return string.Join(", ", offsets);
-    }
+    internal string EmitArrayIndexArguments(BoundIndexExpression index) =>
+        string.Join(", ", index.Indices.Select(Emit));
 
     internal string EmitIndexedArguments(BoundIndexedPropertyExpression indexed) =>
         EmitReferenceArguments(indexed.Arguments, indexed.Property.ByRefIndexes);
@@ -232,25 +219,19 @@ public sealed class BoundExpressionEmitter
             tagArgument is BoundNameExpression name && _aliases.TryGetValue(name.Symbol, out var alias))
             return alias.Tag;
         if (call.Target is null && call.Arguments.Count is 1 or 2 &&
-            tagArgument is BoundNameExpression { Symbol: LocalSymbol local } && local.SemanticType?.IsArray == true)
+            tagArgument?.SemanticType.IsArray == true)
         {
             if (call.Function.Name.Equals("LBound", StringComparison.OrdinalIgnoreCase))
             {
-                if (call.Arguments.Count == 2 && call.Arguments[1] is BoundLiteralExpression { Value: long dimension } && dimension == 1 && local.ArrayBounds.Count > 0)
-                    return local.ArrayBounds[0].Lower.ToString(CultureInfo.InvariantCulture);
                 return call.Arguments.Count == 2
                     ? $"LSArrayRuntime.LBound({Emit(tagArgument)}, Convert.ToInt32({Emit(call.Arguments[1])}))"
-                    : local.ArrayLowerBound.ToString(CultureInfo.InvariantCulture);
+                    : $"LSArrayRuntime.LBound({Emit(tagArgument)})";
             }
             if (call.Function.Name.Equals("UBound", StringComparison.OrdinalIgnoreCase))
             {
-                if (call.Arguments.Count == 2 && call.Arguments[1] is BoundLiteralExpression { Value: long dimension } && dimension == 1 && local.ArrayBounds.Count > 0)
-                    return local.ArrayBounds[0].Upper.ToString(CultureInfo.InvariantCulture);
                 return call.Arguments.Count == 2
                     ? $"LSArrayRuntime.UBound({Emit(tagArgument)}, Convert.ToInt32({Emit(call.Arguments[1])}))"
-                    : local.ArrayUpperBound is { } upperBound
-                    ? upperBound.ToString(CultureInfo.InvariantCulture)
-                    : $"{Emit(tagArgument)}.GetUpperBound(0)";
+                    : $"LSArrayRuntime.UBound({Emit(tagArgument)})";
             }
         }
         var arguments = call.Arguments.Select((argument, index) =>
@@ -262,6 +243,8 @@ public sealed class BoundExpressionEmitter
                 return "ref " + EmitIndexedReference(argument);
             if (byRef && argument is not BoundNameExpression)
                 throw new NotSupportedException("ByRef conversion requires temporary and copy-back lowering.");
+            if (!byRef && call.Function.SemanticParameterTypes is null && call.Function.ParameterTypes[index].IsArray)
+                return $"({BoundMethodEmitter.CSharpType(call.Function.ParameterTypes[index])})({Emit(argument)})";
             if (!byRef && call.Function.SemanticParameterTypes is { } parameterTypes &&
                 RuntimeObjectType(parameterTypes[index].Name) is { } nativeType)
                 return $"({nativeType})({Emit(argument)})";
@@ -310,6 +293,8 @@ public sealed class BoundExpressionEmitter
     private string EmitConversion(BoundConversionExpression expression)
     {
         var value = Emit(expression.Expression);
+        if (expression.SemanticType.IsArray && expression.Conversion.Kind == ConversionKind.FromVariant)
+            return $"LSArrayRuntime.RequireArray<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!)}>({value}, {expression.SemanticType.ArrayRank})";
         if (expression.SemanticType.IsList && expression.Conversion.Kind == ConversionKind.FromVariant)
             return $"(LSList<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!)}>)({value})";
         if (RuntimeObjectType(expression.SemanticType.Name) is { } jsonType && expression.Conversion.Kind is ConversionKind.FromVariant or ConversionKind.ReferenceUpcast)
@@ -327,7 +312,6 @@ public sealed class BoundExpressionEmitter
             ConversionKind.ToVariant => $"((object)({value}))",
             ConversionKind.ToObject when expression.Type != typeof(object) => value,
             ConversionKind.ToObject => $"((object)({value}))",
-            ConversionKind.FromVariant when expression.Type.IsArray => $"({expression.Type.Name})({value})",
             ConversionKind.FromVariant => $"{(ConversionMethod(expression.Type).StartsWith("Program.", StringComparison.Ordinal) ? string.Empty : "XPScriptRuntime.")}{ConversionMethod(expression.Type)}({value})",
             _ => throw new NotSupportedException($"Conversion {expression.Conversion.Kind} is not supported.")
         };

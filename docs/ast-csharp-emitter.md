@@ -2,7 +2,11 @@
 
 ## Array parameter syntax (migration prerequisite)
 
+AST array locals and Static storage now use a uniform `System.Array` carrier while retaining semantic element/rank metadata. Fixed arrays carry their actual CLR lower bounds, including negative one-dimensional bounds; indexing and LBound/UBound read the runtime storage rather than declaration offsets/constants. Sharing through Variant and assigning a matching typed array from Variant preserve identity and physical bounds. Typed Variant conversions check exact element type and rank before replacing old storage. Dynamic ReDim retains its existing rank-changing contract. String creation/ReDim/Erase preserve empty-string defaults across ranks and lower bounds. Ordinary, GoTo-hoisted and protected emission share allocation; hoisting does not skip allocation when the declaration is reached. CLI/MCP and Language/Runtime FullTest exercise `array-storage-bounds.xps`; `array-storage-parity.xps` supplies narrow normal/AST bounds and String Erase parity. Whole-array constructor signatures remain guarded below.
+
 Declaration parsing retains the array rank and source tokens in `values() As Long` and `values(,) As Long`, including Optional/default metadata. Ranks one through eight are recognized; higher ranks and combined array/List declarations are syntax errors. This does not enable array parameter execution: constructors, ordinary procedures and class methods still report mapped XPS3001 diagnostics before backend emission. CLI/MCP and Language FullTest cover these guards. Fixed/dynamic array storage, lower bounds and whole-array ByRef replacement must be migrated together before lifting them.
+
+Native byte-vector inputs reuse ByteVector: ordinary zero-based byte[] values pass through unchanged; bounded rank-one Byte arrays are normalized in element order only at the native boundary. The source array keeps its storage/bounds. Higher ranks and non-Byte elements are rejected. `image-array-byte-interop.xps` verifies actual image decoding, typed Byte reads and source-bound preservation in the shared image harness and permanent Runtime FullTest.
 
 ## Typed List constructor parameters
 

@@ -237,7 +237,9 @@ public sealed class BoundStatementEmitter
                     Line("}");
                 }
                 break;
-            case BoundVariableDeclarationStatement { Initializer: null } when _flatControlFlow:
+            case BoundVariableDeclarationStatement { Initializer: null } flatDeclaration when _flatControlFlow:
+                if (flatDeclaration.Local.IsDynamicArray || flatDeclaration.Local.SemanticType?.IsArray == true)
+                    Line($"{_expressions.Emit(new BoundNameExpression(flatDeclaration.Local))} = {BoundArrayAllocation.Emit(flatDeclaration.Local, flatDeclaration.EmptyArray, flatDeclaration.ArrayLength)};");
                 break;
             case BoundVariableDeclarationStatement { Local.SemanticType.IsList: true } list:
                 Line($"{BoundMethodEmitter.CSharpType(list.Local.SemanticType!)} {list.Local.Name} = {(list.Initializer is null ? "new()" : _expressions.Emit(list.Initializer))};");
