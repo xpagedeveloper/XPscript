@@ -129,9 +129,11 @@ internal static class AstClassMethodSupport
                     "Property Set requires an object/reference value type.", "XPS2001", "semantic");
             var hasUnsupportedObjectParameter = constructor is null && syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
                 .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) &&
-                    !AstImageSupport.IsImage(p.Type?.Identifier.Text) && !classes.ContainsKey(p.Type?.Identifier.Text ?? ""));
+                    !AstImageSupport.IsImage(p.Type?.Identifier.Text) &&
+                    !string.Equals(p.Type?.Identifier.Text, "Object", StringComparison.OrdinalIgnoreCase) &&
+                    !classes.ContainsKey(p.Type?.Identifier.Text ?? ""));
             var hasUnsupportedObjectResult = function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) &&
-                !classes.ContainsKey(resultTypeName ?? "");
+                !resultTypeName!.Equals("Object", StringComparison.OrdinalIgnoreCase) && !classes.ContainsKey(resultTypeName);
             if (hasUnsupportedObjectParameter || hasUnsupportedObjectResult ||
                 property is not null && (UnsupportedNativeAccessorType(resultTypeName) ||
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))

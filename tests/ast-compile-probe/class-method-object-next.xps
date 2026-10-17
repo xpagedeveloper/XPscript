@@ -1,0 +1,17 @@
+Class Inspector
+    Public Function Present(ByVal value As Object) As Long
+        If value Is Nothing Then
+            Present = 0
+        Else
+            Present = 1
+        End If
+    End Function
+End Class
+
+Sub Main()
+    Dim inspector As New Inspector
+    Dim missing As Object
+    Print CStr(inspector.Present(missing))
+    Dim value As New Object
+    Print CStr(inspector.Present(value))
+End Sub
