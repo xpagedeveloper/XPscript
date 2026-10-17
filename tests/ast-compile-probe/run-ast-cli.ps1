@@ -73,6 +73,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST JSON class-method compilation failed.' }
 $jsonClassMethodResult = dotnet (Join-Path $jsonClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($jsonClassMethodResult -join "`n") -ne '5') { throw 'AST JSON class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_JSON_OK'
+$jsonArrayClassMethodOutput = Join-Path $output 'class-method-json-array-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-json-array-next.xps') -o $jsonArrayClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST JSON array class-method compilation failed.' }
+$jsonArrayClassMethodResult = dotnet (Join-Path $jsonArrayClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($jsonArrayClassMethodResult -join "`n") -ne '2') { throw 'AST JSON array class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_JSON_ARRAY_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
