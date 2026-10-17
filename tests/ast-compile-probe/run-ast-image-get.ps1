@@ -40,10 +40,13 @@ foreach ($fixture in @('image-constructor-list', 'image-constructor-variant', 'i
     $notice = Get-Content (Join-Path $target 'Third-party-license.txt') -Raw
     if ($notice -notmatch 'Magick.NET-Q16-AnyCPU' -or $notice -notmatch 'Magick.NET.Core' -or $notice -match 'License text could not be resolved') { throw 'Image getter addon notices are incomplete.' }
 }
+$indexedImageTarget = Join-Path $output 'image-property-index-deferred'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'image-property-index-deferred.xps') -o $indexedImageTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST indexed image property fixture compilation failed.' }
+Write-Host 'AST_IMAGE_INDEXED_PROPERTY_OK'
 foreach ($case in @(
     @('image-property-set-mode-error', 'XPS2001', 8),
     @('image-property-set-type-error', 'XPS2001', 8),
-    @('image-property-index-deferred', 'XPS3001', 2),
     @('image-property-readonly-error', 'XPS2001', 7),
     @('image-property-private-error', 'XPS2009', 7),
     @('image-property-body-error', 'XPS2008', 3)
