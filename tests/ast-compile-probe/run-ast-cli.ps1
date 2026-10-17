@@ -89,7 +89,7 @@ $byRefListClassMethodOutput = Join-Path $output 'class-method-list-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-list-byref-next.xps') -o $byRefListClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ByRef List class-method compilation failed.' }
 $byRefListClassMethodResult = dotnet (Join-Path $byRefListClassMethodOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($byRefListClassMethodResult -join "`n") -ne '10') { throw 'AST ByRef List class-method execution failed.' }
+if ($LASTEXITCODE -ne 0 -or ($byRefListClassMethodResult -join "`n") -ne '21') { throw 'AST ByRef List class-method execution failed.' }
 Write-Host 'AST_BYREF_LIST_CLASS_METHOD_OK'
 $optionalListClassMethodOutput = Join-Path $output 'class-method-optional-list-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-list-next.xps') -o $optionalListClassMethodOutput
