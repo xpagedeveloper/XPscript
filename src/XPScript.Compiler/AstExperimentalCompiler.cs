@@ -82,7 +82,7 @@ public static class AstExperimentalCompiler
         var parser = new DeclarationParser(source);
         var unit = parser.ParseCompilationUnit();
         if (parser.Diagnostics.Count > 0)
-            throw SyntaxDiagnosticException(parser.Diagnostics[0], sourcePath, fullSource);
+            throw SyntaxDiagnosticException(parser.Diagnostics[0], sourcePath, source, fullSource);
         foreach (var item in unit.Declarations)
         {
             var parameters = item is SubDeclarationSyntax procedure ? procedure.Parameters
@@ -404,7 +404,7 @@ public static class AstExperimentalCompiler
                     : new BoundLiteralExpression(type.IsArray ? null : parameters[i].Type == typeof(string) ? "" :
                         parameters[i].Type.IsValueType ? Activator.CreateInstance(parameters[i].Type) : null, parameters[i].Type, type);
                 if (defaultBinder.Diagnostics.Count > 0)
-                    throw SyntaxDiagnosticException(defaultBinder.Diagnostics[0], sourcePath, fullSource);
+                    throw SyntaxDiagnosticException(defaultBinder.Diagnostics[0], sourcePath, source, fullSource);
                 var conversion = scope.ClassifyConversion(value.SemanticType, type);
                 if (!conversion.IsImplicit)
                     throw MappedDiagnostic(procedureParameters[i].Span, sourcePath, fullSource,

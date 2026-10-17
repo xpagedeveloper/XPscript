@@ -1,0 +1,3 @@
+Sub Main()
+    Open "missing" For Input As #
+End Sub

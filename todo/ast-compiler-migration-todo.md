@@ -462,6 +462,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Map Roslyn code-generation diagnostics through generated `#line` directives, including original file, start position and end position; `GeneratedDependencyProbe` covers the mapped backend failure path.
   Parser diagnostics now use the same mapped path; control-flow and generated-source diagnostics remain open.
   Label, duplicate-label and forbidden loop-entry diagnostics now also carry source spans.
+  - [x] Parser diagnostics from transformed source now map through the shared transformed-span mapper; `preprocessor-parser-error.xps` covers a malformed `Open` statement.
 
 Initial implementation: expression conversions and a method-body emitter for assignment, calls, return, If, For, ForAll, While, Do and Select Case are covered by `tests/ast-emission`. Bound syntax spans and an opt-in `#line`/mapping result are also available. `tests/ast-compile-probe` drives a real XPscript `Sub Main` through declaration parsing, binding and C# compilation. See `docs/ast-csharp-emitter.md` for supported nodes and remaining integration work. The phase remains open until the full bound tree, mapping and targets are connected to production compilation.
 

@@ -1021,6 +1021,9 @@ $staticVariantResult = dotnet (Join-Path $staticVariant 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($staticVariantResult -join "`n") -ne "1`n2") { throw 'AST Static Variant lifetime did not persist across calls.' }
 $parserError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'parser-error.xps') -o (Join-Path $output 'parser-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($parserError -join "`n") -notmatch 'Expected CloseParenToken') { throw 'AST parser diagnostic regression failed.' }
+$preprocessorParserError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-parser-error.xps') -o (Join-Path $output 'preprocessor-parser-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($preprocessorParserError -join "`n") -notmatch 'preprocessor-parser-error\.xps:2:') { throw 'AST preprocessor parser source mapping regression failed.' }
+Write-Host 'AST_PREPROCESSOR_PARSER_MAPPING_OK'
 $noEntry = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'no-entry-error.xps') -o (Join-Path $output 'no-entry-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($noEntry -join "`n") -notmatch 'requires a Sub declaration') { throw 'AST no-entry diagnostic regression failed.' }
 $nestedOutput = Join-Path $output 'nested-goto'
