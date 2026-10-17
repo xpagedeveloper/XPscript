@@ -112,6 +112,12 @@ foreach (var jsonArrayClassMethodFixture in new[] { "class-method-json-array-nex
     var result = await CallAsync(new { jsonrpc="2.0",id=jsonArrayClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=jsonArrayClassMethodFixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("JSON array class-method validation failed: " + result);
 }
+foreach (var jsonDocumentClassMethodFixture in new[] { "class-method-json-document-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", jsonDocumentClassMethodFixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=jsonDocumentClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=jsonDocumentClassMethodFixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("JSON document class-method validation failed: " + result);
+}
 foreach (var initializedModuleFixture in new[] { "initialized-module-byref-next", "initialized-module-boolean-next", "initialized-module-string-next", "initialized-module-reference-next", "initialized-module-reference-new-next", "initialized-module-reference-args-next", "initialized-module-date-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", initializedModuleFixture + ".xps"));
