@@ -562,9 +562,9 @@ internal static class Program
     public static dynamic RequestScope = new ExpandoObject();
     public static dynamic Err => XPScriptErrorRuntime.Err;
     public static dynamic SEARCH_DEPTH = 0L;
-    public static dynamic Command = string.Empty;
-    public static dynamic Platform = string.Empty;
-    public static dynamic CurDir = ".";
+    public static dynamic Command => XPScriptRuntime.Command();
+    public static dynamic Platform => XPCrossPlatformRuntime.Platform();
+    public static dynamic CurDir => XPScriptRuntime.CurDir();
     public static string CStr(object? value) => XPScriptRuntime.CStr(value);
     // The shared List runtime requires the date coercion entry point too.
     // Preserve existing XPscript date wrappers and numeric OLE date values.
