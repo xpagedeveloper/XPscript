@@ -72,6 +72,7 @@ if (Should-Run 'language') {
   if ($astCliFirst.Output -notmatch 'AST_CLASS_METHOD_HTTP_PARTS_OK') { throw 'AST HTTP part/file class-method regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_CLASS_METHOD_HTTP_COLLECTIONS_OK') { throw 'AST HTTP part/file collection class-method regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_CLASS_METHOD_HTTP_RESPONSE_RETURN_OK') { throw 'AST HTTP response class-method return regression missing.' }
+  if ($astCliFirst.Output -notmatch 'AST_CLASS_METHOD_HTTP_PARTS_RETURN_OK') { throw 'AST HTTP part/file class-method return regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_ARRAY_STORAGE_BOUNDS_OK' -or $astCliFirst.Output -notmatch 'AST_IMAGE_ARRAY_BYTE_INTEROP_OK' -or $astCliFirst.Output -notmatch 'AST_FILE_MISSING_PATH_ERRORS_OK') { throw 'AST physical array/native Byte/file path regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_LIST_CLASS_METHOD_CONSTRUCTOR_OK') { throw 'AST List class-method constructor regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_INITIALIZED_MODULE_BYREF_CONSTRUCTOR_OK') { throw 'AST initialized module ByRef constructor regression missing.' }
