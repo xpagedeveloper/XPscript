@@ -23,14 +23,14 @@ internal static class AstClassConstructorSupport
                 foreach (var parameter in parameters)
                 {
                     var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
-                    var sharedReference = type.IsObject || type.IsVariant || classes.ContainsKey(type.Name) ||
+                    var sharedReference = type.IsObject || type.IsVariant || classes.ContainsKey(type.Name) || AstImageSupport.IsImage(type.Name) ||
                         parameter.IsList && AstImageSupport.IsImage(type.Name) ||
                         !AstImageSupport.IsImage(type.Name) && !AstApplicationSupport.OwnsSymbol(type.Name) &&
                         BoundExpressionEmitter.RuntimeObjectType(type.Name) is not null;
                     if (type.RuntimeType == typeof(object) &&
                         !sharedReference)
                         throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
-                            "AST constructors support scalar, Variant, shared reference and typed List parameters; scalar XPImage and unknown reference signatures are not implemented yet.", "XPS3001", "ast");
+                            "AST constructors support scalar, Variant, XPImage, shared reference and typed List parameters; unknown reference signatures are not implemented yet.", "XPS3001", "ast");
                 }
                 var types = parameters.Select(p => AstExperimentalCompiler.ResolveParameterType(p, symbols)).ToArray();
                 var signature = string.Join(";", types.Select((type, i) => $"{type.Shape}:{type.Name}:{type.ArrayRank}:{parameters[i].IsByRef}"));

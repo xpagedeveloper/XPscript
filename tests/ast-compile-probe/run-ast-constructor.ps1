@@ -3,6 +3,12 @@ $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
 $output = Join-Path $outputRoot ('constructor-' + [Guid]::NewGuid().ToString('N'))
+$imageParameterTarget = Join-Path $output 'constructor-xpimage-parameter-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-parameter-next.xps') -o $imageParameterTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage constructor parameter compilation failed.' }
+$imageParameterResult = dotnet (Join-Path $imageParameterTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -notmatch '^5$') { throw 'AST scalar XPImage constructor parameter regression failed.' }
+Write-Host 'AST_XPIMAGE_PARAMETER_OK'
 foreach ($fixture in @('class-constructor-list', 'constructor-reference-list', 'class-constructor-variant', 'class-constructor-native', 'constructor-reference-variant', 'class-constructor-overloads', 'constructor-refref-module', 'class-constructor-reference-storage', 'class-constructor-optional-refref', 'constructor-refref-array', 'constructor-refref-list', 'constructor-refref-forall', 'constructor-refref-optional', 'class-constructor-optional-reference', 'constructor-reference-optional', 'class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
