@@ -138,9 +138,9 @@ internal static class AstClassMethodSupport
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar and XPImage parameters/results; other object/array signatures are not implemented yet.", "XPS3001", "ast");
             if (syntaxParameters.Any(p => p.IsList && constructor is null) ||
-                AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic))
+                AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic && (d.IsArray || d.IsList)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "Optional/List parameters and Static storage in class methods are not implemented by the AST compiler yet.", "XPS3001", "ast");
+                    "Optional/List parameters and Static array/List storage in class methods are not implemented by the AST compiler yet.", "XPS3001", "ast");
             if (property is not null)
             {
                 var indexParameters = property.IsGetter ? syntaxParameters : syntaxParameters.Take(syntaxParameters.Count - 1).ToArray();
@@ -223,6 +223,20 @@ internal static class AstClassMethodSupport
             string body;
             try { body = new BoundMethodEmitter().Emit(emittedName, returnType, parameters, bound, false, source, sourcePath, semanticResult); }
             catch (BoundEmissionException ex) { throw AstExperimentalCompiler.MappedDiagnostic(ex.Span ?? member.Span, sourcePath, source, ex.Message); }
+            foreach (var staticDeclaration in BoundStatementTraversal.Descendants(bound).OfType<BoundVariableDeclarationStatement>()
+                         .Where(item => item.Local.StaticStorageName is not null))
+            {
+                var storageType = BoundMethodEmitter.SemanticStorageType(staticDeclaration.Local,
+                    BoundMethodEmitter.CSharpType(staticDeclaration.Local.Type));
+                var initialValue = staticDeclaration.Local.Type == typeof(string) ? "string.Empty" : $"default({storageType})";
+                output.Append("private static ").Append(storageType).Append(' ').Append(staticDeclaration.Local.StaticStorageName)
+                    .Append(" = ").Append(initialValue).Append(";\n");
+                if (staticDeclaration.Initializer is not null)
+                {
+                    output.Append("private static int ").Append(staticDeclaration.Local.StaticStorageName).Append("_initState;\n");
+                    output.Append("private static readonly object ").Append(staticDeclaration.Local.StaticStorageName).Append("_initGate = new object();\n");
+                }
+            }
             if (constructor is not null || isDestructor || property is not null || (sub?.Visibility ?? function?.Visibility)?.Kind == SyntaxKind.PrivateKeyword)
                 body = "private " + body["public ".Length..];
             output.Append(body);

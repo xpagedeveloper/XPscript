@@ -19,6 +19,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST optional scalar class-method compilation f
 $optionalClassMethodResult = dotnet (Join-Path $optionalClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($optionalClassMethodResult -join "`n") -ne "5`n7") { throw 'AST optional scalar class-method execution failed.' }
 Write-Host 'AST_OPTIONAL_CLASS_METHOD_OK'
+$staticClassMethodOutput = Join-Path $output 'class-method-static-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-static-next.xps') -o $staticClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST scalar Static class-method compilation failed.' }
+$staticClassMethodResult = dotnet (Join-Path $staticClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($staticClassMethodResult -join "`n") -ne "1`n2`n3") { throw 'AST scalar Static class-method execution failed.' }
+Write-Host 'AST_STATIC_CLASS_METHOD_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
