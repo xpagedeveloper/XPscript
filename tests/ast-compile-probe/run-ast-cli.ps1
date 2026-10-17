@@ -391,6 +391,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST scalar property setter dispatch compilatio
 $scalarSetterResult = dotnet (Join-Path $scalarSetterOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($scalarSetterResult -join "`n") -ne 'CLASS_PROPERTY_SETTER_DISPATCH_OK') { throw 'AST scalar property setter dispatch failed.' }
 Write-Host 'AST_CLASS_PROPERTY_SETTER_DISPATCH_OK'
+$optionalVirtualDispatchOutput = Join-Path $output 'class-method-optional-virtual-dispatch-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-virtual-dispatch-next.xps') -o $optionalVirtualDispatchOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST optional virtual method dispatch compilation failed.' }
+$optionalVirtualDispatchResult = dotnet (Join-Path $optionalVirtualDispatchOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionalVirtualDispatchResult -join "`n") -ne 'CLASS_OPTIONAL_METHOD_VIRTUAL_DISPATCH_OK') { throw 'AST optional virtual method dispatch failed.' }
+Write-Host 'AST_OPTIONAL_METHOD_VIRTUAL_DISPATCH_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }

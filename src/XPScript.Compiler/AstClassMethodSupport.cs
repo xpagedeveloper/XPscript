@@ -322,7 +322,10 @@ internal static class AstClassMethodSupport
                         semanticReturnType: semanticResult);
                     var forwardBody = new BoundMethodEmitter().Emit(emittedName, returnType, forward.Parameters, forward.Statements,
                         false, source, sourcePath, semanticResult, cloneImageParameters: false);
-                    output.Append((sub?.Visibility?.Kind == SyntaxKind.PrivateKeyword || function?.Visibility?.Kind == SyntaxKind.PrivateKeyword) ? "private " : "public ")
+                    var forwardModifier = sub?.Visibility?.Kind == SyntaxKind.PrivateKeyword || function?.Visibility?.Kind == SyntaxKind.PrivateKeyword
+                        ? "private "
+                        : HasBaseMethod(declaration, sub, function, classes) ? "public override " : "public virtual ";
+                    output.Append(forwardModifier)
                         .Append(forwardBody["public ".Length..]);
                 }
             }
