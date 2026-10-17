@@ -104,6 +104,12 @@ $aiToolCallbackErrorOutput = Join-Path $output 'ai-tool-callback-error-next'
 $aiToolCallbackErrorText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-tool-callback-error-next.xps') -o $aiToolCallbackErrorOutput 2>&1
 if ($LASTEXITCODE -ne 2 -or ($aiToolCallbackErrorText -join "`n") -notmatch 'MissingCallback') { throw 'AST missing AITool callback diagnostic failed.' }
 Write-Host 'AST_AI_TOOL_CALLBACK_DIAGNOSTIC_OK'
+$aiToolLifecycleOutput = Join-Path $output 'ai-tool-lifecycle-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-tool-lifecycle-next.xps') -o $aiToolLifecycleOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST AITool lifecycle compilation failed.' }
+$aiToolLifecycleResult = dotnet (Join-Path $aiToolLifecycleOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($aiToolLifecycleResult -join "`n") -ne 'AI_TOOL_LIFECYCLE_OK') { throw 'AST AITool lifecycle regression failed.' }
+Write-Host 'AST_AI_TOOL_LIFECYCLE_OK'
 $notesSearchOutput = Join-Path $output 'notes-search-constants-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-search-constants-next.xps') -o $notesSearchOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes search constants compilation failed.' }

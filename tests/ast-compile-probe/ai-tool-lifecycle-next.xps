@@ -1,0 +1,19 @@
+Sub WeatherCallback(ByVal toolCall As Variant)
+End Sub
+
+Sub Main()
+    Dim tool As New AITool("weather")
+    Call tool.AddFunction("get_weather", "Returns weather", "WeatherCallback", "tenant-42")
+    If Not tool.HasFunction("get_weather") Then Error 5, "AITool function lookup failed"
+    If tool.FunctionCount() <> 1 Then Error 5, "AITool function registration failed"
+    If Not tool.RemoveFunction("get_weather") Then Error 5, "AITool function removal failed"
+    If tool.FunctionCount() <> 0 Then Error 5, "AITool function remained after removal"
+
+    Dim ai As New XPAi("https://example.invalid", "key")
+    Call ai.AddTool(tool)
+    If Not ai.HasTool("weather") Then Error 5, "XPAi tool lookup failed"
+    If ai.ToolCount() <> 1 Then Error 5, "XPAi tool registration failed"
+    If Not ai.RemoveTool("weather") Then Error 5, "XPAi tool removal failed"
+    If ai.ToolCount() <> 0 Then Error 5, "XPAi tool remained after removal"
+    Print "AI_TOOL_LIFECYCLE_OK"
+End Sub
