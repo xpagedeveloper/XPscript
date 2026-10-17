@@ -1,6 +1,0 @@
-Class ArrayOwner
-    Sub Accept(ByVal values() As Long)
-    End Sub
-End Class
-Sub Main()
-End Sub
