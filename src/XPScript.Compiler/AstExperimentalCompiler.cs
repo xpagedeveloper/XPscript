@@ -294,6 +294,13 @@ public static class AstExperimentalCompiler
             symbols.Declare(new FunctionSymbol(builtin, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateAdd", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateDiff", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("DatePart", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Weekday", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Weekday", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("MonthName", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("MonthName", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("WeekdayName", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("WeekdayName", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Mid", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Mid", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("MidB", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -766,6 +773,10 @@ internal static class Program
     public static object DateDiff(params object?[] values) => values.Length > 2
         ? XPScriptRuntime.DateDiff(CStr(values[0]), ToDateTime(values[1]), ToDateTime(values[2]))
         : 0L;
+    public static object DatePart(object? interval, object? value) => XPScriptRuntime.DatePart(CStr(interval), ToDateTime(value));
+    public static object Weekday(object? value, object? firstDay = null) => XPScriptRuntime.Weekday(ToDateTime(value), firstDay is null ? 1 : Convert.ToInt32(firstDay));
+    public static object MonthName(object? month, object? abbreviate = null) => XPScriptRuntime.MonthName(Convert.ToInt32(month), abbreviate is not null && Convert.ToBoolean(abbreviate));
+    public static object WeekdayName(object? weekday, object? abbreviate = null) => XPScriptRuntime.WeekdayName(Convert.ToInt32(weekday), abbreviate is not null && Convert.ToBoolean(abbreviate));
     public static object Day(object value) => Convert.ToDateTime(value).Day;
     public static object FromBase64(object value) => Base64Decode(value);
     public static object InstrB(params object?[] values) => InStr(1L, values.Length > 1 ? values[0] : null, values.Length > 1 ? values[1] : null);

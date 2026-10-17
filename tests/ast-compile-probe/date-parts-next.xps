@@ -1,0 +1,8 @@
+Sub Main()
+    Dim value As Variant = DateNumber(2026, 1, 2)
+    If DatePart("m", value) <> 1 Then Error 6311, "DatePart month drifted"
+    If DatePart("d", value) <> 2 Then Error 6312, "DatePart day drifted"
+    If Weekday(value) <> 6 Then Error 6313, "Weekday drifted"
+    If MonthName(1, True) <> "Jan" Then Error 6314, "MonthName drifted"
+    Print "DATE_PARTS_OK"
+End Sub
