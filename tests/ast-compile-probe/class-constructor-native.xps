@@ -1,0 +1,110 @@
+Option Declare
+Class Record
+    Public Value As XPJsonObject
+    Public Sub New(ByRef first As XPJsonObject, ByRef second As XPJsonObject, Optional ByVal fail As Boolean = False)
+        Set first = New XPJsonObject()
+        Call first.Set("value", 8)
+        If Not (first Is second) Then Error 4220, "native alias lost"
+        Set Value = second
+        If fail Then Error 4221, "native failure"
+    End Sub
+End Class
+Class Defaults
+    Public Value As XPJsonObject
+    Public Sub New(Optional ByRef value As XPJsonObject = New XPJsonObject(), Optional ByVal same As XPJsonObject = value)
+        If Not (value Is same) Then Error 4222
+        Call value.Set("value", 9)
+        Set Me.Value = value
+        Set value = Nothing
+    End Sub
+End Class
+Class Base
+    Public Value As XPXmlNode
+    Public Sub New(ByVal value As XPXmlNode)
+        Set Me.Value = value
+    End Sub
+End Class
+Class Child Extend Base
+    Public Sub New(ByVal value As XPXmlElement)
+        Parent.New(value)
+        Set value = Nothing
+    End Sub
+End Class
+Class OtherDefaults
+    Public Csv As XPCsvDocument
+    Public Book As XPSpreadsheet
+    Public RequestValue As XPHttpRequest
+    Public Client As XPHttpClient
+    Public Sub New(Optional ByRef csv As XPCsvDocument = New XPCsvDocument(), Optional ByVal book As XPSpreadsheet = New XPSpreadsheet(), Optional ByRef request As XPHttpRequest = New XPHttpRequest(), Optional ByVal client As XPHttpClient = New XPHttpClient())
+        csv.Delimiter = ";"
+        Call book.AddWorksheet("Shared")
+        request.Method = "POST"
+        client.Timeout = 0.25
+        Set Me.Csv = csv
+        Set Me.Book = book
+        Set Me.RequestValue = request
+        Set Me.Client = client
+        Set csv = Nothing
+        Set request = Nothing
+    End Sub
+End Class
+Class EmptyDefault
+    Public Value As XPJsonObject
+    Public Sub New(Optional ByRef value As XPJsonObject)
+        If Not (value Is Nothing) Then Error 4231
+        Set Me.Value = value
+    End Sub
+End Class
+Class AliasTypes
+    Public Value As Long
+    Public Sub New(ByVal value As XPHttpPart)
+        Me.Value = 1
+    End Sub
+    Public Sub New(ByVal value As XPHttpFile)
+        Me.Value = 2
+    End Sub
+End Class
+Sub Main()
+    Dim value As New XPJsonObject()
+    Dim original As XPJsonObject = value
+    Dim item As New Record(value, value)
+    If value Is original Then Error 4223
+    If Not (item.Value Is value) Or CLng(value.Get("value")) <> 8 Then Error 4224
+    Dim old As Record = item
+    Dim previous As XPJsonObject = value
+    Dim failure As Long
+    On Error Resume Next
+    Set item = New Record(value, value, True)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4221 Or Not (item Is old) Or value Is previous Then Error 4225
+    If CLng(value.Get("value")) <> 8 Then Error 4226
+    Dim fresh As New Defaults()
+    Dim another As New Defaults()
+    If fresh.Value Is another.Value Then Error 4227
+    If CLng(fresh.Value.Get("value")) <> 9 Then Error 4228
+    Dim document As New XPXmlDocument()
+    Dim root As XPXmlElement = document.AddRoot("root")
+    Dim child As New Child(root)
+    If Not (child.Value Is root) Or root.Name <> "root" Then Error 4229
+    Delete fresh
+    If CLng(another.Value.Get("value")) <> 9 Then Error 4230
+    Dim unassigned As New EmptyDefault()
+    If Not (unassigned.Value Is Nothing) Then Error 4232
+    Dim others As New OtherDefaults()
+    Dim more As New OtherDefaults()
+    If others.Csv Is more.Csv Or others.Book Is more.Book Or others.RequestValue Is more.RequestValue Then Error 4233
+    If others.Csv.Delimiter <> ";" Or others.Book.WorksheetCount <> 1 Then Error 4234
+    If others.RequestValue.Method <> "POST" Or others.Client.Timeout <> 0.25 Then Error 4235
+    Dim retained As XPHttpClient = others.Client
+    Delete others
+    If retained.Timeout <> 0.25 Then Error 4236, "Delete disposed borrowed native reference"
+    Call retained.Dispose()
+    Call more.Client.Dispose()
+    Dim partValue As XPHttpPart
+    Dim fileValue As XPHttpFile
+    Dim partRecord As New AliasTypes(partValue)
+    Dim fileRecord As New AliasTypes(fileValue)
+    If partRecord.Value <> 1 Or fileRecord.Value <> 2 Then Error 4237, "erased native overload identity"
+    Print "NATIVE_CONSTRUCTORS_OK"
+End Sub

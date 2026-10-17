@@ -23,11 +23,13 @@ internal static class AstClassConstructorSupport
                 foreach (var parameter in parameters)
                 {
                     var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
-                    var sharedReference = type.IsObject || classes.ContainsKey(type.Name);
+                    var sharedReference = type.IsObject || type.IsVariant || classes.ContainsKey(type.Name) ||
+                        !AstImageSupport.IsImage(type.Name) && !AstApplicationSupport.OwnsSymbol(type.Name) &&
+                        BoundExpressionEmitter.RuntimeObjectType(type.Name) is not null;
                     if (parameter.IsList || type.RuntimeType == typeof(object) &&
                         !sharedReference)
                         throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
-                            "AST constructors support scalar and Object/user-class parameters; native reference, Variant and List signatures are not implemented yet.", "XPS3001", "ast");
+                            "AST constructors support scalar, Variant and shared reference parameters; XPImage, unknown reference and List signatures are not implemented yet.", "XPS3001", "ast");
                 }
                 var types = parameters.Select(p => AstClassMethodSupport.DeclaredType(p.Type, symbols)).ToArray();
                 var signature = string.Join(";", types.Select((type, i) => $"{type.Shape}:{type.Name}:{type.ArrayRank}:{parameters[i].IsByRef}"));
@@ -148,6 +150,8 @@ internal static class AstClassConstructorSupport
                 var binder = new ExpressionBinder(scope);
                 var type = parameters[i].SemanticType!;
                 var value = constructor.Parameters[i].DefaultValue is { } syntax ? binder.Bind(syntax)
+                    : type.IsVariant
+                        ? new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Variant)
                     : type.RuntimeType == typeof(object)
                         ? new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Nothing)
                         : new BoundLiteralExpression(type.RuntimeType == typeof(string) ? "" : Activator.CreateInstance(type.RuntimeType), type.RuntimeType, type);

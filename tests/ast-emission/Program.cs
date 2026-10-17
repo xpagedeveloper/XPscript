@@ -37,6 +37,17 @@ var optionalBoxCode = new BoundMethodEmitter().Emit("Defaults", typeof(object), 
 if (!optionalBoxCode.Contains("System.Runtime.CompilerServices.StrongBox<XpBox>") ||
     !optionalBoxCode.Contains("ref __xpsOptional0.Value") || optionalBoxCode.Contains("object[]"))
     throw new Exception("Optional reference cells erased their concrete class or lost managed-reference emission.");
+foreach (var (semantic, expectedType) in new[] { (XpTypeSymbol.Variant, "object"), (XpTypeSymbol.User("XPJsonObject"), "XPScriptJsonObject") })
+{
+    var typedOptionalParameter = new ParameterSymbol("value", typeof(object), true, semantic);
+    var typedOptionalForward = OptionalCallLowering.Forward("Defaults", typeof(object), [typedOptionalParameter],
+        [new BoundLiteralExpression(null, typeof(object), semantic)], 0,
+        semanticReturnType: optionalCarrierType, heapBackedByRefDefaults: true);
+    var typedOptionalCode = new BoundMethodEmitter().Emit("Defaults", typeof(object), typedOptionalForward.Parameters,
+        typedOptionalForward.Statements, true, semanticReturnType: optionalCarrierType);
+    if (!typedOptionalCode.Contains($"System.Runtime.CompilerServices.StrongBox<{expectedType}>") || !typedOptionalCode.Contains("ref __xpsOptional0.Value"))
+        throw new Exception("Optional Variant/native constructor storage lost its exact type or managed reference.");
+}
 var imageField = new BoundNameExpression(new FieldSymbol("picture", typeof(object), imageSemantic));
 var createdImage = new BoundNewExpression(typeof(object), [new BoundLiteralExpression(2L, typeof(long)), new BoundLiteralExpression(2L, typeof(long))], imageSemantic);
 var imageStoreCode = new BoundMethodEmitter().Emit("StoreImage", typeof(void), [new BoundAssignmentStatement(imageField, createdImage, true)]);

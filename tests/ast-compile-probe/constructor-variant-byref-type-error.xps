@@ -1,0 +1,8 @@
+Class Record
+    Public Sub New(ByRef value As Variant)
+    End Sub
+End Class
+Sub Main()
+    Dim value As Long = 1
+    Dim item As New Record(value)
+End Sub

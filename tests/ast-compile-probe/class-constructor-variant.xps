@@ -1,0 +1,63 @@
+Option Declare
+Class Record
+    Public Value As Variant
+    Public Sub New(ByRef first As Variant, ByRef second As Variant, Optional ByVal fail As Boolean = False)
+        first = CLng(first) + 1
+        second = CLng(second) + 2
+        Value = first
+        If fail Then Error 4210, "variant failure"
+    End Sub
+End Class
+Class Defaults
+    Public Value As Variant
+    Public OriginalEmpty As Boolean
+    Public Sub New(Optional ByRef first As Variant, Optional ByRef second As Variant = first)
+        OriginalEmpty = IsEmpty(first)
+        If IsEmpty(first) Then
+            first = 0
+        End If
+        first = CLng(first) + 1
+        Value = first
+        second = "changed"
+    End Sub
+End Class
+Class Base
+    Public Value As Variant
+    Public Sub New(ByRef value As Variant)
+        value = "base"
+        Me.Value = value
+    End Sub
+End Class
+Class Child Extend Base
+    Public Sub New(ByVal value As Variant)
+        Parent.New(value)
+    End Sub
+End Class
+Class Snapshot
+    Public Value As Variant
+    Public Sub New(ByVal value As Variant)
+        Me.Value = value
+        value = "local"
+    End Sub
+End Class
+Sub Main()
+    Dim value As Variant = 1
+    Dim item As New Record(value, value)
+    If CLng(value) <> 4 Or CLng(item.Value) <> 4 Then Error 4211
+    Dim old As Record = item
+    Dim failure As Long
+    On Error Resume Next
+    Set item = New Record(value, value, True)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4210 Or CLng(value) <> 7 Or Not (item Is old) Then Error 4212
+    Dim fresh As New Defaults()
+    Dim another As New Defaults()
+    If Not fresh.OriginalEmpty Or Not another.OriginalEmpty Then Error 4213
+    If CLng(fresh.Value) <> 1 Or CLng(another.Value) <> 1 Then Error 4214
+    Dim child As New Child(value)
+    If CLng(value) <> 7 Or CStr(child.Value) <> "base" Then Error 4215
+    Dim snapshot As New Snapshot(42)
+    If CLng(snapshot.Value) <> 42 Then Error 4216
+    Print "VARIANT_CONSTRUCTORS_OK"
+End Sub

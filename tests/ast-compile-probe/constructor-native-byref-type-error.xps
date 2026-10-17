@@ -1,0 +1,8 @@
+Class Record
+    Public Sub New(ByRef value As XPXmlNode)
+    End Sub
+End Class
+Sub Main()
+    Dim value As New XPXmlElement("root")
+    Dim item As New Record(value)
+End Sub
