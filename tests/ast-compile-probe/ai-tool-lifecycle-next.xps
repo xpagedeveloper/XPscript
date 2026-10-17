@@ -1,9 +1,14 @@
-Sub WeatherCallback(ByVal toolCall As Variant)
+Sub WeatherCallback(ByVal toolCall As Variant, ByVal tenant As Variant)
 End Sub
 
 Sub Main()
     Dim tool As New AITool("weather")
-    Call tool.AddFunction("get_weather", "Returns weather", "WeatherCallback", "tenant-42")
+    Dim fn As AIToolFunction
+    Set fn = tool.AddFunction("get_weather", "Returns weather", "WeatherCallback", "tenant-42")
+    If fn.Name <> "get_weather" Or fn.CallbackName <> "WeatherCallback" Then Error 5, "AITool function metadata failed"
+    Call fn.AddParameter("city", "string", "City name", True)
+    If Not fn.HasParameter("city") Or fn.ParameterCount() <> 1 Then Error 5, "AITool parameter registration failed"
+    If Not fn.RemoveParameter("city") Or fn.ParameterCount() <> 0 Then Error 5, "AITool parameter removal failed"
     If Not tool.HasFunction("get_weather") Then Error 5, "AITool function lookup failed"
     If tool.FunctionCount() <> 1 Then Error 5, "AITool function registration failed"
     If Not tool.RemoveFunction("get_weather") Then Error 5, "AITool function removal failed"

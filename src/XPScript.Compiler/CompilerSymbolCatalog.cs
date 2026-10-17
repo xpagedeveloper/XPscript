@@ -178,6 +178,15 @@ public static class CompilerSymbolCatalog
             ,Define("AITool.HasFunction", "method", "AITool.HasFunction(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AITool.HasFunction")
             ,Define("AITool.FunctionCount", "method", "AITool.FunctionCount() As Integer", [], "Integer", "api.AITool.FunctionCount")
             ,Define("AITool.RemoveFunction", "method", "AITool.RemoveFunction(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AITool.RemoveFunction")
+            ,Define("AIToolFunction", "class", "AIToolFunction", [], null, "api.AIToolFunction")
+            ,Define("AIToolFunction.ToolName", "property", "AIToolFunction.ToolName As String", [], "String", "api.AIToolFunction.ToolName")
+            ,Define("AIToolFunction.Name", "property", "AIToolFunction.Name As String", [], "String", "api.AIToolFunction.Name")
+            ,Define("AIToolFunction.Description", "property", "AIToolFunction.Description As String", [], "String", "api.AIToolFunction.Description")
+            ,Define("AIToolFunction.CallbackName", "property", "AIToolFunction.CallbackName As String", [], "String", "api.AIToolFunction.CallbackName")
+            ,Define("AIToolFunction.AddParameter", "method", "AIToolFunction.AddParameter(name As String, type As String, description As String, required As Boolean)", [new("name", "String"), new("type", "String"), new("description", "String"), new("required", "Boolean")], null, "api.AIToolFunction.AddParameter")
+            ,Define("AIToolFunction.RemoveParameter", "method", "AIToolFunction.RemoveParameter(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AIToolFunction.RemoveParameter")
+            ,Define("AIToolFunction.HasParameter", "method", "AIToolFunction.HasParameter(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AIToolFunction.HasParameter")
+            ,Define("AIToolFunction.ParameterCount", "method", "AIToolFunction.ParameterCount() As Integer", [], "Integer", "api.AIToolFunction.ParameterCount")
         }.Where(x => !AstHttpSupport.OwnsSymbol(x.Name) && !AstApplicationSupport.OwnsSymbol(x.Name)).Concat(AstApplicationSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerSymbolDefinition? Find(string name)

@@ -137,6 +137,7 @@ public sealed class BoundExpressionEmitter
         "XPAI" => "XPScriptAi",
         "XPAIRESPONSE" => "XPScriptAiResponse",
         "AITOOL" => "XPScriptAiTool",
+        "AITOOLFUNCTION" => "XPScriptAiToolFunction",
         _ => null
     });
 
