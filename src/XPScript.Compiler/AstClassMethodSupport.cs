@@ -137,10 +137,10 @@ internal static class AstClassMethodSupport
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar typed parameters and results; object/array signatures are not implemented yet.", "XPS3001", "ast");
-            if (syntaxParameters.Any(p => (p.IsList || p.IsArray) && constructor is null || p.IsOptional && property is null && constructor is null) ||
+            if (syntaxParameters.Any(p => p.IsList && constructor is null || p.IsOptional && property is null && constructor is null) ||
                 AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "Optional/List/array parameters and Static storage in class methods are not implemented by the AST compiler yet.", "XPS3001", "ast");
+                    "Optional/List parameters and Static storage in class methods are not implemented by the AST compiler yet.", "XPS3001", "ast");
             if (property is not null)
             {
                 var indexParameters = property.IsGetter ? syntaxParameters : syntaxParameters.Take(syntaxParameters.Count - 1).ToArray();
@@ -175,8 +175,9 @@ internal static class AstClassMethodSupport
                     var methodName = ownSub?.Identifier.Text ?? ownFunction!.Identifier.Text;
                     var ps = ownSub?.Parameters ?? ownFunction!.Parameters;
                     var rt = ownFunction is null ? typeof(void) : AstExperimentalCompiler.ResolveRuntimeType(ownFunction.ReturnType?.Identifier.Text);
-                    var symbol = new FunctionSymbol(methodName, rt, ps.Select(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
-                        XpTypeSymbol.FromClr(rt), ps.Select(p => XpTypeSymbol.FromClr(AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text))).ToArray(), ps.Select(p => p.IsByRef).ToArray());
+                    var parameterTypes = ps.Select(p => AstExperimentalCompiler.ResolveParameterType(p, globals)).ToArray();
+                    var symbol = new FunctionSymbol(methodName, rt, parameterTypes.Select(p => p.RuntimeType).ToArray(),
+                        XpTypeSymbol.FromClr(rt), parameterTypes, ps.Select(p => p.IsByRef).ToArray());
                     classScope.Declare(symbol);
                     classScope.Declare(symbol with { Name = declaration.Identifier.Text + "." + methodName });
                 }

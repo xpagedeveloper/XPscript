@@ -133,12 +133,16 @@ public static class AstExperimentalCompiler
                     symbols.Declare(property with { Name = classDeclaration.Identifier.Text + "." + property.Name.Split('.').Last() });
                 foreach (var method in current.Members.OfType<SubDeclarationSyntax>())
                     if (method.Visibility?.Kind != SyntaxKind.PrivateKeyword)
-                    symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", typeof(void), method.Parameters.Select(parameter => ResolveRuntimeType(parameter.Type?.Identifier.Text)).ToArray(), null, null, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
+                    {
+                        var parameterTypes = method.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
+                        symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", typeof(void), parameterTypes.Select(type => type.RuntimeType).ToArray(), null, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
+                    }
                 foreach (var method in current.Members.OfType<FunctionDeclarationSyntax>())
                 {
                     if (method.Visibility?.Kind == SyntaxKind.PrivateKeyword) continue;
                     var returnType = ResolveRuntimeType(method.ReturnType?.Identifier.Text);
-                    symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", returnType, method.Parameters.Select(parameter => ResolveRuntimeType(parameter.Type?.Identifier.Text)).ToArray(), XpTypeSymbol.FromClr(returnType), null, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
+                    var parameterTypes = method.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
+                    symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", returnType, parameterTypes.Select(type => type.RuntimeType).ToArray(), XpTypeSymbol.FromClr(returnType), parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
                 }
             }
         }

@@ -1,0 +1,13 @@
+Class ArrayOwner
+    Sub Accept(ByRef values() As Long)
+        values(-3) = 43
+    End Sub
+End Class
+
+Sub Main()
+    Dim values(-3 To -1) As Long
+    Dim owner As ArrayOwner
+    Set owner = New ArrayOwner()
+    Call owner.Accept(values)
+    Print CStr(values(-3)) & ":" & CStr(LBound(values)) & ":" & CStr(UBound(values))
+End Sub
