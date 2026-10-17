@@ -19,6 +19,14 @@ internal static class AstClassMethodSupport
         !(new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }
             .Contains(name, StringComparer.OrdinalIgnoreCase));
 
+    private static bool SupportedNativeClassMethodType(string? name) =>
+        string.Equals(name, "Object", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(name, "Variant", StringComparison.OrdinalIgnoreCase) ||
+        AstImageSupport.IsImage(name) || AstXmlSupport.IsXml(name) || AstCsvSupport.IsCsv(name) ||
+        AstSpreadsheetSupport.IsSpreadsheet(name) || AstHttpSupport.IsHttp(name) ||
+        new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }
+            .Contains(name, StringComparer.OrdinalIgnoreCase);
+
     internal static XpTypeSymbol DeclaredType(TypeSyntax? syntax, SymbolTable symbols)
     {
         var name = syntax?.Identifier.Text;
@@ -171,24 +179,10 @@ internal static class AstClassMethodSupport
                     "Property Set requires an object/reference value type.", "XPS2001", "semantic");
             var hasUnsupportedObjectParameter = constructor is null && syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
                 .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) &&
-                    !AstImageSupport.IsImage(p.Type?.Identifier.Text) &&
-                    !string.Equals(p.Type?.Identifier.Text, "Object", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "Variant", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPJsonObject", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPJsonArray", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPJsonDocument", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPJsonElement", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPXmlDocument", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPXmlNode", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPXmlElement", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPCsvDocument", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPSpreadsheet", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPHttpClient", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(p.Type?.Identifier.Text, "XPHttpRequest", StringComparison.OrdinalIgnoreCase) &&
+                    !SupportedNativeClassMethodType(p.Type?.Identifier.Text) &&
                     !classes.ContainsKey(p.Type?.Identifier.Text ?? ""));
             var hasUnsupportedObjectResult = function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) &&
-                !string.Equals(resultTypeName, "Object", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(resultTypeName, "Variant", StringComparison.OrdinalIgnoreCase) && !classes.ContainsKey(resultTypeName ?? "");
+                !SupportedNativeClassMethodType(resultTypeName) && !classes.ContainsKey(resultTypeName ?? "");
             if (hasUnsupportedObjectParameter || hasUnsupportedObjectResult ||
                 property is not null && (UnsupportedNativeAccessorType(resultTypeName) ||
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
