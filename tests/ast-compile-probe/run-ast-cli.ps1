@@ -133,6 +133,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST HTTP request class-method compilation fail
 $httpRequestClassMethodResult = dotnet (Join-Path $httpRequestClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($httpRequestClassMethodResult -join "`n") -ne 'PATCH') { throw 'AST HTTP request class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_HTTP_REQUEST_OK'
+$derivedPropertyOutput = Join-Path $output 'class-property-derived-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-property-derived-next.xps') -o $derivedPropertyOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST derived property compilation failed.' }
+$derivedPropertyResult = dotnet (Join-Path $derivedPropertyOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($derivedPropertyResult -join "`n") -ne '8') { throw 'AST derived property execution failed.' }
+Write-Host 'AST_DERIVED_PROPERTY_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
