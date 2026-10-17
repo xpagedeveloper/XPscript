@@ -1,0 +1,6 @@
+Sub Main()
+    If DatePart("d", DateValue("2026-01-02 15:04:05")) <> 2 Then Error 6321, "DateValue drifted"
+    If DatePart("h", TimeValue("2026-01-02 15:04:05")) <> 15 Then Error 6322, "TimeValue drifted"
+    If DatePart("n", TimeNumber(15, 4, 5)) <> 4 Then Error 6323, "TimeNumber drifted"
+    Print "DATE_VALUES_OK"
+End Sub

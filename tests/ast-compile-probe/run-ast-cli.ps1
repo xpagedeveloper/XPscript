@@ -86,6 +86,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST date parts compilation failed.' }
 $datePartsResult = dotnet (Join-Path $datePartsOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($datePartsResult -join "`n") -ne 'DATE_PARTS_OK') { throw 'AST date parts regression failed.' }
 Write-Host 'AST_DATE_PARTS_OK'
+$dateValuesOutput = Join-Path $output 'date-values-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'date-values-next.xps') -o $dateValuesOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST date values compilation failed.' }
+$dateValuesResult = dotnet (Join-Path $dateValuesOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($dateValuesResult -join "`n") -ne 'DATE_VALUES_OK') { throw 'AST date values regression failed.' }
+Write-Host 'AST_DATE_VALUES_OK'
 $enumOutput = Join-Path $output 'language-extensions'
 dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }

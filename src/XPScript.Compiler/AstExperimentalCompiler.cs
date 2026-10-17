@@ -294,6 +294,9 @@ public static class AstExperimentalCompiler
             symbols.Declare(new FunctionSymbol(builtin, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateAdd", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateDiff", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("TimeNumber", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("DateValue", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("TimeValue", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DatePart", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Weekday", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Weekday", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -831,7 +834,7 @@ internal static class Program
     public static object StrRight(object value, object count) => Right(value, count);
     public static object StrRightBack(object value, object count) => Right(value, count);
     public static object StrToken(object value, object token) => CStr(value).Split(CStr(token))[0];
-    public static object TimeNumber(object value) => Convert.ToDateTime(value).TimeOfDay.TotalSeconds;
+    public static object TimeNumber(object hour, object minute, object second) => new XpDate(XPScriptRuntime.TimeNumber(Convert.ToInt32(hour), Convert.ToInt32(minute), Convert.ToInt32(second)));
     public static object ToBase64(object value) => Base64Encode(value);
     public static object UrlDecode(object value) => Uri.UnescapeDataString(CStr(value));
     public static object UrlEncode(object value) => Uri.EscapeDataString(CStr(value));
@@ -928,6 +931,8 @@ internal static class Program
         public override int GetHashCode() => Value.GetHashCode();
     }
     public static object DateNumber(long year, long month, long day) => new XpDate(new DateTime((int)year, (int)month, (int)day));
+    public static object DateValue(object? value) => new XpDate(XPScriptRuntime.DateValue(value));
+    public static object TimeValue(object? value) => new XpDate(XPScriptRuntime.TimeValue(value));
     private static DateTime ToDateTime(object? value) => value is XpDate date ? date.Value : Convert.ToDateTime(value);
     public static object Date() => new XpDate(DateTime.Today);
     public static object Format(object? value, object? pattern = null) => pattern is null ? CStr(value) : (value is XpDate date ? date.Value : Convert.ToDateTime(value)).ToString(CStr(pattern), System.Globalization.CultureInfo.InvariantCulture);
