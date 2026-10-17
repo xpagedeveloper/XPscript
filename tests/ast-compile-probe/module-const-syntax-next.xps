@@ -1,0 +1,9 @@
+Const ModuleAnswer As Long = 42
+Const ModuleGreeting As String = "hello"
+
+Sub Main()
+    Const LocalAnswer As Long = 7
+    Print CStr(ModuleAnswer)
+    Print ModuleGreeting
+    Print CStr(LocalAnswer)
+End Sub

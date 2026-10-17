@@ -370,7 +370,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Remove the unused global `Response` Expando fallback; supported AST HTTP responses are typed native values and web callback compatibility remains a separate legacy route.
   - [x] Remove global `Database`/`Document` Expando fallbacks; AST database/document surfaces use typed native objects or remain explicit legacy fallbacks.
   - [x] Remove `UIForm`/`NotesSession` AST Expando fallbacks; both are already routed explicitly to legacy compatibility.
-  - [ ] Investigate regex-based module-field generation for source `Const` declarations; preserve `Const` support through syntax/bound symbols rather than deleting the compatibility path without replacement.
+- [x] Investigate regex-based module-field generation for source `Const` declarations; module-level constants now come from `ApplicationConstDeclarationSyntax`, while procedure-level constants retain an explicit compatibility fallback until local constant symbols are lowered. `module-const-syntax-next.xps` verifies both forms.
     - [x] Accept procedure-level `Const` declarations in the AST syntax/binding path and add executable coverage using `samples/const-statements.xps`; regex-based value/type lowering remains open for structural migration.
   - [ ] Investigate regex-based `BuildUnknown`/`BuildReady`/`BuildRunning`/`BuildDone` and `BuildState` globals; determine whether they are documented language constructs or sample-specific scaffolding before migrating them structurally.
     - [x] Confirmed `BuildState` is documented enum support and fixed AST binding plus qualified enum access; structural enum declarations and correct implicit-value sequencing remain open.

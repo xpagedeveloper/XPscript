@@ -89,6 +89,17 @@ public static class AstExperimentalCompiler
                 : item is FunctionDeclarationSyntax routine ? routine.Parameters : [];
         }
         var moduleSource = AstClassMethodSupport.ModuleSource(fullSource);
+        var applicationConstants = unit.Declarations.OfType<ApplicationConstDeclarationSyntax>()
+            .Select(declaration => Regex.Match(declaration.Text, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+?)\s*$", RegexOptions.IgnoreCase))
+            .Where(match => match.Success)
+            .ToArray();
+        // Procedure-level Const statements are represented as no-op syntax today;
+        // retain their compatibility visibility until local constant symbols are lowered.
+        var compatibilityConstants = Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
+            .Cast<Match>()
+            .Where(match => !applicationConstants.Any(application => application.Groups["name"].Value.Equals(match.Groups["name"].Value, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+        var allConstants = applicationConstants.Concat(compatibilityConstants).ToArray();
         // The experimental path keeps going when a non-selected declaration
         // contains syntax outside the current AST slice. Binding diagnostics
         // for the selected procedure remain authoritative below.
@@ -200,7 +211,7 @@ public static class AstExperimentalCompiler
         var moduleFieldStorage = AstModuleFieldSupport.Find(moduleSource, symbols);
         foreach (var field in moduleFieldStorage)
             symbols.Declare(field.Symbol);
-        foreach (Match match in Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase | RegexOptions.Multiline))
+        foreach (var match in allConstants)
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
         foreach (var typeName in AstObjectSupportRegistry.VariantTypeNames)
             symbols.Declare(new VariableSymbol(typeName, typeof(object), BoundExpressionEmitter.RuntimeObjectType(typeName) is null ? XpTypeSymbol.Variant : XpTypeSymbol.User(typeName)));
@@ -429,8 +440,8 @@ public static class AstExperimentalCompiler
             throw MappedDiagnosticFromTransformed(span, sourcePath, source, fullSource, ex.Message, CompilerDiagnosticCodes.InvalidSyntax, "emission");
         }
         var moduleFields = string.Join(Environment.NewLine, moduleFieldStorage.Select(field => field.Declaration));
-        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
-            .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ToCSharpLiteral(match.Groups["value"].Value.Trim())};"));
+        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, allConstants
+            .Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ToCSharpLiteral(match.Groups["value"].Value.Trim())};"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?im)^\s*(?<name>BuildUnknown|BuildReady|BuildRunning|BuildDone)\s*(?:=\s*(?<value>-?\d+))?\s*$")
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {(match.Groups["value"].Success ? match.Groups["value"].Value : "0")};"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine,

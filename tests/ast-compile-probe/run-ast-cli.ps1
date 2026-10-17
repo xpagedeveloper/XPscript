@@ -50,6 +50,12 @@ $expectedConstResult = @(
 )
 if ($LASTEXITCODE -ne 0 -or ($constResult | Select-Object -Last 11) -join "`n" -ne ($expectedConstResult -join "`n")) { throw 'AST Const support regression failed.' }
 Write-Host 'AST_CONST_SUPPORT_OK'
+$moduleConstOutput = Join-Path $output 'module-const-syntax-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'module-const-syntax-next.xps') -o $moduleConstOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST module Const syntax compilation failed.' }
+$moduleConstResult = dotnet (Join-Path $moduleConstOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($moduleConstResult -join "`n") -ne "42`nhello`n7") { throw 'AST module/procedure Const syntax regression failed.' }
+Write-Host 'AST_MODULE_CONST_SYNTAX_OK'
 $enumOutput = Join-Path $output 'language-extensions'
 dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }
