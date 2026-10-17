@@ -360,6 +360,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     `json-runtime.xps` matches normal compilation output. Typed JSON Function return via Set is additionally supported by AST; legacy currently rejects that form, so `json-reference.xps` is an AST capability test rather than a full legacy-parity claim.
 - [ ] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding.
   - [x] Remove the unconditional `matrix` local-symbol scaffold; undeclared `matrix` now follows normal XPS2008 binding diagnostics.
+  - [x] Remove global `ForAll` alias scaffolding; undeclared array/string/dynamic aliases are now created in the loop body scope and existing aliases retain their normal symbol semantics.
 - [ ] Migrate class declarations, inheritance and object lifecycle into the AST bound tree.
   - [x] Bind and emit scalar typed instance Sub/Function bodies through shared procedure binding, control-flow validation and BoundMethodEmitter. Verify per-instance fields, private sibling calls, Me, scalar ByRef, recursion, parameter shadowing and default String fields; class bodies no longer disappear into empty scaffolding for this supported subset.
   - [x] Keep private fields/methods out of external symbol lookup and prevent class declarations from becoming fake module globals. Verify private access, cross-class field leakage and source-mapped body failures through CLI/MCP. AST canonicalizes case-insensitive member names; the old compiler's mixed-case failure is an explicit AST-only capability fixture.
