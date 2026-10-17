@@ -1,0 +1,12 @@
+Public enabled As Boolean = True
+
+Class FlagOwner
+    Public Sub New(ByRef value As Boolean)
+        value = False
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As New FlagOwner(enabled)
+    Print CStr(enabled)
+End Sub

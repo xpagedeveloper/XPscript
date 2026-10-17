@@ -19,6 +19,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation fai
 $initializedModuleResult = dotnet (Join-Path $initializedModuleOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedModuleResult -join "`n") -ne '8') { throw 'AST initialized module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_MODULE_STORAGE_OK'
+$initializedBooleanOutput = Join-Path $output 'initialized-module-boolean-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-boolean-next.xps') -o $initializedBooleanOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized Boolean module storage compilation failed.' }
+$initializedBooleanResult = dotnet (Join-Path $initializedBooleanOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedBooleanResult -join "`n") -ne 'False') { throw 'AST initialized Boolean module ByRef storage failed.' }
+Write-Host 'AST_INITIALIZED_BOOLEAN_MODULE_STORAGE_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }
