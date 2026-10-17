@@ -22,6 +22,12 @@ Write-Host 'AST_OPTION_BASE_SPAN_MAPPING_OK'
 $routeAttributeSpanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-span-route-attribute-error.xps') -o (Join-Path $output 'preprocessor-span-route-attribute-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($routeAttributeSpanOutput -join "`n") -notmatch 'preprocessor-span-route-attribute-error\.xps:3:') { throw 'AST route attribute source span mapping regression failed.' }
 Write-Host 'AST_ROUTE_ATTRIBUTE_SPAN_MAPPING_OK'
+$sleepColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-sleep-error.xps') -o (Join-Path $output 'preprocessor-column-sleep-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($sleepColumnOutput -join "`n") -notmatch 'preprocessor-column-sleep-error\.xps:2:11:') { throw 'AST Sleep source column mapping regression failed.' }
+Write-Host 'AST_SLEEP_COLUMN_MAPPING_OK'
+$mkDirColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-mkdir-error.xps') -o (Join-Path $output 'preprocessor-column-mkdir-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($mkDirColumnOutput -join "`n") -notmatch 'preprocessor-column-mkdir-error\.xps:2:11:') { throw 'AST MkDir source column mapping regression failed.' }
+Write-Host 'AST_MKDIR_COLUMN_MAPPING_OK'
 $imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }

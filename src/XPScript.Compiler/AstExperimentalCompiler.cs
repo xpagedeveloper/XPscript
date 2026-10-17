@@ -39,7 +39,9 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", match =>
             new string(match.Value.Select(character => character is '\r' or '\n' ? character : ' ').ToArray()), RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"(?im)^(?<indent>\s*)Sleep\s+(?<value>.+)$", "${indent}Sleep(${value})");
-        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)MkDir\s+(?<path>.+)$", "${indent}Call MkDir(${path})");
+        // Keep the argument at its original column: replace the original
+        // separator with the opening parenthesis and avoid a longer prefix.
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)MkDir\s+(?<path>.+)$", "${indent}MkDir(${path})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Put\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>.+)$", "${indent}Call AstPut(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?<operation>Lock|Unlock)\s+#?(?<file>[^,\s]+)\s*,\s*(?<start>[^\s]+)\s+To\s+(?<end>.+)$", "${indent}Call Ast${operation}Bytes(${file}, ${start}, ${end})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Open\s+(?<path>.+?)\s+For\s+(?<mode>Input|Output|Append|Binary|Random)\s+As\s+#?(?<file>[^\s]+).*$", "${indent}Call AstOpen(${path}, \"${mode}\", ${file})");
