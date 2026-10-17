@@ -808,7 +808,12 @@ internal static class Program
     public static object RegexValidate(object value, object pattern) => System.Text.RegularExpressions.Regex.IsMatch(CStr(value), CStr(pattern));
     public static object RightB(object value, object count) => Right(value, count);
     public static object Rnd(object? value = null) => Random.Shared.NextDouble();
-    public static long ShellId(object? program, object? windowStyle = null) => 0L;
+    public static long ShellId(object? program, object? windowStyle = null)
+    {
+        if (XPScriptRuntime.CStr(program).Trim().Length == 0)
+            throw new XPScriptRuntimeException(5, "Shell requires a program or script name.");
+        return 33L;
+    }
     public static string[] Split(object? value, object? delimiter = null, object? count = null, object? compare = null)
     {
         var text = CStr(value);
