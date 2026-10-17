@@ -14,6 +14,7 @@ public static class AstExperimentalCompiler
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
+        ValidateAstAiCallbacks(fullSource);
         var usesAi = RuntimeFeatures.Detect(fullSource).Ai;
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
@@ -1064,6 +1065,18 @@ internal static class Program
 
     private static string AstCallbackRuntimeCode()
         => CallbackRuntimeSource.Code.Replace("typeof(Script)", "typeof(Program)", StringComparison.Ordinal);
+
+    private static void ValidateAstAiCallbacks(string source)
+    {
+        var procedures = Regex.Matches(source, @"(?im)^\s*(?:Public\s+|Private\s+)?(?:Sub|Function)\s+(?<name>[A-Za-z_]\w*)\b")
+            .Cast<Match>().Select(match => match.Groups["name"].Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (Match registration in Regex.Matches(source, @"(?im)\.AddFunction\s*\(\s*[""][^""]*[""]\s*,\s*[""][^""]*[""]\s*,\s*[""](?<callback>[A-Za-z_]\w*)[""]"))
+        {
+            var callback = registration.Groups["callback"].Value;
+            if (!procedures.Contains(callback))
+                throw new CompilerException($"AITool callback '{callback}' was not found as a module Sub or Function.", CompilerDiagnosticCodes.CallbackNotFound, "symbol-resolution");
+        }
+    }
 
     private static string AstTlsRuntimeCode()
     {

@@ -1,0 +1,4 @@
+Sub Main()
+    Dim tool As New AITool("weather")
+    Call tool.AddFunction("get_weather", "Returns weather", "MissingCallback", "tenant-42")
+End Sub

@@ -99,6 +99,11 @@ if ($LASTEXITCODE -ne 0) { throw 'AST AITool function compilation failed.' }
 $aiToolFunctionResult = dotnet (Join-Path $aiToolFunctionOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($aiToolFunctionResult -join "`n") -ne 'AI_TOOL_FUNCTION_OK') { throw 'AST AITool function regression failed.' }
 Write-Host 'AST_AI_TOOL_FUNCTION_OK'
+
+$aiToolCallbackErrorOutput = Join-Path $output 'ai-tool-callback-error-next'
+$aiToolCallbackErrorText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-tool-callback-error-next.xps') -o $aiToolCallbackErrorOutput 2>&1
+if ($LASTEXITCODE -ne 2 -or ($aiToolCallbackErrorText -join "`n") -notmatch 'MissingCallback') { throw 'AST missing AITool callback diagnostic failed.' }
+Write-Host 'AST_AI_TOOL_CALLBACK_DIAGNOSTIC_OK'
 $notesSearchOutput = Join-Path $output 'notes-search-constants-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-search-constants-next.xps') -o $notesSearchOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes search constants compilation failed.' }
