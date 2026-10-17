@@ -35,6 +35,16 @@ Sub Main()
     On Error GoTo 0
     If code = 0 Then Error 9853, "FileInfo accepted a missing path"
     On Error Resume Next
+    values = Files(missing)
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9854, "Files accepted a missing directory"
+    On Error Resume Next
+    values = Directories(missing)
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9855, "Directories accepted a missing directory"
+    On Error Resume Next
     values = FileEquals(missing & "/left.bin", missing & "/right.bin")
     code = Err
     On Error GoTo 0
