@@ -924,10 +924,10 @@ internal static class Program
     public static void AstOpen(object? path, object? mode, object? file) => LSFileRuntime.Open(path, mode, checked((int)XPScriptRuntime.CLng(file)));
     public static void AstClose(object? file) => LSFileRuntime.Close(checked((int)XPScriptRuntime.CLng(file)));
     public static void AstClose() => LSFileRuntime.Close();
-    public static void AstPrintFile(object? file, object? value = null) { }
+    public static void AstPrintFile(object? file, object? value = null) => LSFileRuntime.PrintFile(checked((int)XPScriptRuntime.CLng(file)), value);
     public static object GetObject(object? value) => new ExpandoObject();
     public static object GetObject(object? value, object? context) => new ExpandoObject();
-    public static string AstLineInput(object? file) => string.Empty;
+    public static string AstLineInput(object? file) => LSFileRuntime.LineInput(checked((int)XPScriptRuntime.CLng(file)));
     public static void AstKill(object? path) => File.Delete(CStr(path));
     public static string AstInputChars(object? count, object? file) => string.Empty;
     public static void AstNoOp() { }

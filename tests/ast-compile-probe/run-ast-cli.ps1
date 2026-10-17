@@ -126,6 +126,13 @@ $fileGetResult = dotnet (Join-Path $fileGetOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($fileGetResult -join "`n") -ne 'FILE_GET_OK') { throw 'AST file Get regression failed.' }
 Write-Host 'AST_FILE_GET_OK'
 
+$fileTextOutput = Join-Path $output 'file-text-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-text-next.xps') -o $fileTextOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST file text compilation failed.' }
+$fileTextResult = dotnet (Join-Path $fileTextOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($fileTextResult -join "`n") -ne 'FILE_TEXT_OK') { throw 'AST file text regression failed.' }
+Write-Host 'AST_FILE_TEXT_OK'
+
 $enumOutput = Join-Path $output 'language-extensions'
 dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }
