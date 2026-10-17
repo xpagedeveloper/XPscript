@@ -87,6 +87,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST XPAi structured-output compilation failed.
 $aiStructuredResult = dotnet (Join-Path $aiStructuredOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($aiStructuredResult -join "`n") -ne 'XPAI-STRUCTURED-RUNTIME=OK') { throw 'AST XPAi structured-output regression failed.' }
 Write-Host 'AST_XPAI_STRUCTURED_OK'
+$aiToolPropertiesOutput = Join-Path $output 'ai-tool-properties-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-tool-properties-next.xps') -o $aiToolPropertiesOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST AITool property compilation failed.' }
+$aiToolPropertiesResult = dotnet (Join-Path $aiToolPropertiesOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($aiToolPropertiesResult -join "`n") -ne 'AI_TOOL_PROPERTIES_OK') { throw 'AST AITool property regression failed.' }
+Write-Host 'AST_AI_TOOL_PROPERTIES_OK'
 $notesSearchOutput = Join-Path $output 'notes-search-constants-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-search-constants-next.xps') -o $notesSearchOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes search constants compilation failed.' }

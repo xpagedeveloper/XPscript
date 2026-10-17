@@ -168,7 +168,11 @@ public static class CompilerSymbolCatalog
             Define("XPAiResponse.Text", "property", "XPAiResponse.Text As String", [], "String", "api.XPAiResponse.Text"),
             Define("XPAiResponse.Content", "property", "XPAiResponse.Content As String", [], "String", "api.XPAiResponse.Content"),
             Define("XPAiResponse.RawJson", "property", "XPAiResponse.RawJson As XPJsonDocument", [], "XPJsonDocument", "api.XPAiResponse.RawJson"),
-            Define("XPAiResponse.Usage", "property", "XPAiResponse.Usage As XPJsonDocument", [], "XPJsonDocument", "api.XPAiResponse.Usage")
+            Define("XPAiResponse.Usage", "property", "XPAiResponse.Usage As XPJsonDocument", [], "XPJsonDocument", "api.XPAiResponse.Usage"),
+            Define("AITool", "class", "AITool", [], null, "api.AITool"),
+            Define("AITool.Name", "property", "AITool.Name As String", [], "String", "api.AITool.Name"),
+            Define("AITool.Description", "property", "AITool.Description As String", [], "String", "api.AITool.Description"),
+            Define("AITool.Timeout", "property", "AITool.Timeout As Double", [], "Double", "api.AITool.Timeout")
         }.Where(x => !AstHttpSupport.OwnsSymbol(x.Name) && !AstApplicationSupport.OwnsSymbol(x.Name)).Concat(AstApplicationSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerSymbolDefinition? Find(string name)

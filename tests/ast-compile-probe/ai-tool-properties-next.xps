@@ -1,0 +1,9 @@
+Sub Main()
+    Dim tool As New AITool("weather")
+    tool.Description = "Weather information"
+    tool.Timeout = 12
+    If tool.Name <> "weather" Then Error 5, "AITool name mismatch"
+    If tool.Description <> "Weather information" Then Error 5, "AITool description mismatch"
+    If tool.Timeout <> 12 Then Error 5, "AITool timeout mismatch"
+    Print "AI_TOOL_PROPERTIES_OK"
+End Sub
