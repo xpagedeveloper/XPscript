@@ -5,5 +5,6 @@ Sub Main()
     If response.StatusCode <> 200 Then Error 5, "XPAi response status mismatch"
     If Not response.IsSuccess Then Error 5, "XPAi response marked unsuccessful"
     If response.Text <> "hello from provider" Then Error 5, "XPAi response text mismatch"
+    If response.HasJsonResult Then Error 5, "Unexpected JSON response marker"
     Print "XPAI_REQUEST_SUCCESS_OK"
 End Sub

@@ -170,6 +170,8 @@ public static class CompilerSymbolCatalog
             Define("XPAiResponse.Content", "property", "XPAiResponse.Content As String", [], "String", "api.XPAiResponse.Content"),
             Define("XPAiResponse.RawJson", "property", "XPAiResponse.RawJson As XPJsonDocument", [], "XPJsonDocument", "api.XPAiResponse.RawJson"),
             Define("XPAiResponse.Usage", "property", "XPAiResponse.Usage As XPJsonDocument", [], "XPJsonDocument", "api.XPAiResponse.Usage"),
+            Define("XPAiResponse.HasJsonResult", "property", "XPAiResponse.HasJsonResult As Boolean", [], "Boolean", "api.XPAiResponse.HasJsonResult"),
+            Define("XPAiResponse.ResultJson", "property", "XPAiResponse.ResultJson As XPJsonDocument", [], "XPJsonDocument", "api.XPAiResponse.ResultJson"),
             Define("AITool", "class", "AITool", [], null, "api.AITool"),
             Define("AITool.Name", "property", "AITool.Name As String", [], "String", "api.AITool.Name"),
             Define("AITool.Description", "property", "AITool.Description As String", [], "String", "api.AITool.Description"),

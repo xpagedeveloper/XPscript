@@ -371,6 +371,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [x] Expose the documented `AIToolCall` callback type and its tool/function/call/argument/session properties; the lifecycle callback now binds with a typed `AIToolCall` parameter.
     - [x] Bind the remaining documented AITool function lookup, request-context and JSON metadata methods; the lifecycle fixture executes those native APIs.
     - [x] Correct the `XPAi.NewRequest` catalog contract to the native parameterless reset method; the lifecycle fixture invokes it successfully.
+    - [x] Bind documented `XPAiResponse.HasJsonResult` and `ResultJson` properties supplied by the native prompt/schema postprocessor; the typed response fixture now compiles with the JSON-result contract.
   - [ ] Investigate the remaining AST `XpNotesHttp` compatibility scaffold separately from the migrated native HTTP path; its no-op headers/proxy methods and empty `Get`/`Post` responses must either delegate to the native runtime or remain an explicit legacy fallback with diagnostics.
   - [x] Bind AST `MsgBox` to the shared console/runtime return contract; `msgbox-next.xps` verifies the documented `1=OK` result while desktop UI postprocessing remains target-specific.
   - [ ] Investigate AST `ProcedureCounter`: it is not a documented built-in, but `samples/core-language.xps` defines it as a user `Static Function`; the current fallback masks the missing static module-function binding and must remain until that structural support is implemented.
