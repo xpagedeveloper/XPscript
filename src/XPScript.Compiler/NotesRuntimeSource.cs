@@ -16,6 +16,8 @@ internal static class NotesRuntimeSource
                      NotesRuntimeIndexedValueSource.Code + "\n\n" +
                      NotesNativeApiSource.Code;
 
+        source = NotesLtpaPostProcessor.Apply(source);
+
         if (features.Mime)
             source += "\n" + MimeFeatureMarker + "\n";
         if (features.Mail)

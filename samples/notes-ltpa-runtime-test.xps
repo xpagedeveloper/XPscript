@@ -1,0 +1,29 @@
+' NotesLTPA runtime regression.
+' Configure NOTES_RUNTIME, NOTES_SERVER, and NOTES_LTPA_CONFIG before running.
+Option Declare
+
+Sub Main()
+    Dim runtimeDirectory As String
+    Dim server As String
+    Dim configuration As String
+    Dim session As NotesSession
+    Dim ltpa As NotesLTPA
+    Dim token As String
+
+    runtimeDirectory = Environ("NOTES_RUNTIME")
+    server = Environ("NOTES_SERVER")
+    configuration = Environ("NOTES_LTPA_CONFIG")
+    If runtimeDirectory = "" Or server = "" Or configuration = "" Then
+        Print "NotesLTPA regression skipped: NOTES_RUNTIME, NOTES_SERVER, and NOTES_LTPA_CONFIG are required."
+        Exit Sub
+    End If
+
+    Set session = New NotesSession(runtimeDirectory)
+    Set ltpa = New NotesLTPA(session, server, configuration)
+    token = ltpa.GenerateToken(session.UserName)
+    If Len(token) < 32 Then Error 9801, "NotesLTPA returned an unexpectedly short token"
+    If ltpa.DurationMinutes <= 0 Then Error 9802, "NotesLTPA returned an invalid duration"
+    Print "NotesLTPA token generated for the current Notes user."
+    Call ltpa.Recycle()
+    Call session.Recycle()
+End Sub
