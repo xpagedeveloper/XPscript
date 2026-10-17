@@ -1,0 +1,12 @@
+Class Reader
+    Public Function Probe() As XPHttpResponse
+        Probe = Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim reader As New Reader
+    Dim response As XPHttpResponse
+    Set response = reader.Probe()
+    Print 1
+End Sub

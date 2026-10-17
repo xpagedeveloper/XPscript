@@ -235,6 +235,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST HTTP part/file collection class-method com
 $httpCollectionsClassMethodResult = dotnet (Join-Path $httpCollectionsClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($httpCollectionsClassMethodResult -join "`n") -ne '1') { throw 'AST HTTP part/file collection class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_HTTP_COLLECTIONS_OK'
+$httpResponseReturnOutput = Join-Path $output 'class-method-http-response-return-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-response-return-next.xps') -o $httpResponseReturnOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST HTTP response class-method return compilation failed.' }
+$httpResponseReturnResult = dotnet (Join-Path $httpResponseReturnOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($httpResponseReturnResult -join "`n") -ne '1') { throw 'AST HTTP response class-method return execution failed.' }
+Write-Host 'AST_CLASS_METHOD_HTTP_RESPONSE_RETURN_OK'
 $derivedPropertyOutput = Join-Path $output 'class-property-derived-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-property-derived-next.xps') -o $derivedPropertyOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST derived property compilation failed.' }
