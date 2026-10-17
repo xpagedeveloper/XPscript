@@ -55,6 +55,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Static array class-method compilation fail
 $staticArrayClassMethodResult = dotnet (Join-Path $staticArrayClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($staticArrayClassMethodResult -join "`n") -ne "1`n2") { throw 'AST Static array class-method execution failed.' }
 Write-Host 'AST_STATIC_ARRAY_CLASS_METHOD_OK'
+$arrayClassMethodOutput = Join-Path $output 'method-array-runtime-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'method-array-runtime-next.xps') -o $arrayClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST array class-method compilation failed.' }
+$arrayClassMethodResult = dotnet (Join-Path $arrayClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($arrayClassMethodResult -join "`n") -ne '43:-3:-1') { throw 'AST array class-method execution failed.' }
+Write-Host 'AST_ARRAY_CLASS_METHOD_OK'
 $objectClassMethodOutput = Join-Path $output 'class-method-object-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-object-next.xps') -o $objectClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Object class-method compilation failed.' }

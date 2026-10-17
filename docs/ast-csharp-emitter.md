@@ -170,6 +170,8 @@ Scalar, non-indexed user-class properties lower their Get/Let bodies through the
 
 AST emits scalar typed Sub/Function bodies in user classes through `AstClassMethodSupport`, the same procedure binder/label/loop validation used by module routines, and `BoundMethodEmitter` in instance mode. Supported coverage includes per-instance scalar fields, private sibling calls, Me, recursion, scalar ByRef, result assignment/fall-through and parameter shadowing. Private members are omitted from external lookup; class declarations are excluded from module-field scanning. Default String fields start empty. Existing parameterless construction and inherited-field behavior remain in place.
 
+Ordinary array class-method parameters now have executable CLI coverage through `method-array-runtime-next.xps`, including ByRef mutation and physical lower-bound preservation.
+
 Bound member names are canonicalized case-insensitively. `class-method-case.xps` is AST-only because normal compilation currently rejects that casing. `class-methods-native.xps` compares real normal/AST execution; negative fixtures cover private access, foreign class fields and diagnostics inside method bodies. Language FullTest and MCP run these early.
 
 Derived scalar property getters reuse lineage scopes for inherited fields and methods; `class-property-derived-next.xps` covers a derived getter reading an inherited property. Full override/setter/accessor lifecycle remains open.
