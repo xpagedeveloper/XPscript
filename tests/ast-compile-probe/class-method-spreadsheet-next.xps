@@ -1,0 +1,12 @@
+Class Writer
+    Public Function AddSheet(ByVal value As XPSpreadsheet) As Long
+        Call value.AddWorksheet("Data")
+        AddSheet = value.WorksheetCount
+    End Function
+End Class
+
+Sub Main()
+    Dim value As New XPSpreadsheet
+    Dim writer As New Writer
+    Print CStr(writer.AddSheet(value))
+End Sub

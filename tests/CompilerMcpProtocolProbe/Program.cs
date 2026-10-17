@@ -148,6 +148,12 @@ foreach (var csvClassMethodFixture in new[] { "class-method-csv-next" })
     var result = await CallAsync(new { jsonrpc="2.0",id=csvClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=csvClassMethodFixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("CSV class-method validation failed: " + result);
 }
+foreach (var spreadsheetClassMethodFixture in new[] { "class-method-spreadsheet-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", spreadsheetClassMethodFixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=spreadsheetClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=spreadsheetClassMethodFixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Spreadsheet class-method validation failed: " + result);
+}
 foreach (var initializedModuleFixture in new[] { "initialized-module-byref-next", "initialized-module-boolean-next", "initialized-module-string-next", "initialized-module-reference-next", "initialized-module-reference-new-next", "initialized-module-reference-args-next", "initialized-module-date-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", initializedModuleFixture + ".xps"));

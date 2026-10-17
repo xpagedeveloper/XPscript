@@ -140,6 +140,7 @@ internal static class AstClassMethodSupport
                     !string.Equals(p.Type?.Identifier.Text, "XPXmlNode", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(p.Type?.Identifier.Text, "XPXmlElement", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(p.Type?.Identifier.Text, "XPCsvDocument", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(p.Type?.Identifier.Text, "XPSpreadsheet", StringComparison.OrdinalIgnoreCase) &&
                     !classes.ContainsKey(p.Type?.Identifier.Text ?? ""));
             var hasUnsupportedObjectResult = function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) &&
                 !string.Equals(resultTypeName, "Object", StringComparison.OrdinalIgnoreCase) &&

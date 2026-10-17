@@ -115,6 +115,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST CSV class-method compilation failed.' }
 $csvClassMethodResult = dotnet (Join-Path $csvClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($csvClassMethodResult -join "`n") -ne ';') { throw 'AST CSV class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_CSV_OK'
+$spreadsheetClassMethodOutput = Join-Path $output 'class-method-spreadsheet-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-spreadsheet-next.xps') -o $spreadsheetClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST spreadsheet class-method compilation failed.' }
+$spreadsheetClassMethodResult = dotnet (Join-Path $spreadsheetClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($spreadsheetClassMethodResult -join "`n") -ne '1') { throw 'AST spreadsheet class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_SPREADSHEET_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
