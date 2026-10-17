@@ -67,7 +67,7 @@ internal static class LSJsonNodeRuntime
         if (value is double d) return System.Text.Json.Nodes.JsonValue.Create(d);
         if (value is decimal dec) return System.Text.Json.Nodes.JsonValue.Create(dec);
         if (value is DateTime dt) return System.Text.Json.Nodes.JsonValue.Create(dt.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
-        return System.Text.Json.Nodes.JsonSerializer.SerializeToNode(value);
+        return System.Text.Json.JsonSerializer.SerializeToNode(value);
     }
 
     public static object? ToXPScriptValue(System.Text.Json.Nodes.JsonNode? node)
@@ -605,13 +605,13 @@ internal sealed class NotesHTTPRequest
                 .Concat(response.Content.Headers)
                 .Select(x => x.Key + ": " + string.Join(", ", x.Value))
                 .ToArray();
-            var bytes = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+            var responseBytes = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
 
             if (PreferJSONNavigator)
-                return new NotesJSONNavigator(bytes);
+                return new NotesJSONNavigator(responseBytes);
             if (PreferStrings)
-                return System.Text.Encoding.UTF8.GetString(bytes);
-            return bytes;
+                return System.Text.Encoding.UTF8.GetString(responseBytes);
+            return responseBytes;
         }
         catch (XPScriptRuntimeException)
         {
