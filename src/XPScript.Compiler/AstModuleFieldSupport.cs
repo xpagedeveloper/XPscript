@@ -73,7 +73,9 @@ internal static class AstModuleFieldSupport
         var typeName = initializer.Groups["type"].Value;
         var arguments = initializer.Groups["args"].Value;
         var runtimeType = BoundExpressionEmitter.RuntimeObjectType(typeName);
-        return AstImageSupport.IsImage(typeName)
+        return typeName.Equals("XPXmlDocument", StringComparison.OrdinalIgnoreCase) && arguments.Length == 0
+            ? "XPScriptNativeXml.CreateDocument()"
+            : AstImageSupport.IsImage(typeName)
             ? $"new XPImage({arguments})"
             : runtimeType is not null
                 ? $"new {runtimeType}({arguments})"

@@ -331,6 +331,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized JSON module ByRef storage comp
 $initializedJsonResult = dotnet (Join-Path $initializedJsonOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedJsonResult -join "`n") -ne 'INITIALIZED_MODULE_JSON_BYREF_OK') { throw 'AST initialized JSON module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_JSON_MODULE_OK'
+$initializedXmlOutput = Join-Path $output 'initialized-module-xml-byref-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-xml-byref-next.xps') -o $initializedXmlOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized XML module ByRef storage compilation failed.' }
+$initializedXmlResult = dotnet (Join-Path $initializedXmlOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedXmlResult -join "`n") -ne 'INITIALIZED_MODULE_XML_BYREF_OK') { throw 'AST initialized XML module ByRef storage failed.' }
+Write-Host 'AST_INITIALIZED_XML_MODULE_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }
