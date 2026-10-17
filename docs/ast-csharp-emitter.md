@@ -186,6 +186,8 @@ Optional ByRef concrete user-class parameters preserve typed `Nothing` defaults 
 
 Ordinary class methods now have ByRef typed List alias and whole-list replacement coverage through `class-method-list-byref-next.xps`; element mutation and replacement are copied back to the caller.
 
+Optional List class-method parameters preserve omitted `Nothing` and supplied-list mutation; `class-method-optional-list-next.xps` covers both calls.
+
 Compatible scalar property overrides also select the derived accessor; `class-property-override-next.xps` covers the derived getter result.
 
 Compatible indexed property overrides select the derived Get/Let pair; `class-property-indexed-override-next.xps` covers indexed assignment and lookup.

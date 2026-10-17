@@ -1,0 +1,19 @@
+Class Reader
+    Public Function Read(Optional ByVal values List As Long = Nothing) As Long
+        If values Is Nothing Then
+            Read = 0
+        Else
+            values("updated") = values("value") + 7
+            Read = values("updated")
+        End If
+    End Function
+End Class
+
+Sub Main()
+    Dim reader As New Reader
+    Dim values List As Long
+    values("value") = 5
+    Print CStr(reader.Read())
+    Print CStr(reader.Read(values))
+    Print CStr(values("updated"))
+End Sub
