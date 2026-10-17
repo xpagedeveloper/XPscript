@@ -89,6 +89,7 @@ public sealed class SymbolTable
         AstHttpSupport.Import(this);
         AstSpreadsheetSupport.Import(this);
         AstApplicationSupport.Import(this);
+        AstNotesJsonSupport.Import(this);
         ImportXPAiOverloads();
     }
 

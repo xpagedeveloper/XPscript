@@ -339,7 +339,7 @@ internal sealed class NotesJSONNavigator
     {
         var text = XPScriptRuntime.CStr(pointer);
         if (text.Length == 0) return new NotesJSONElement("", Root, replacement => Root = replacement ?? new System.Text.Json.Nodes.JsonObject());
-        if (!text.StartsWith('/', StringComparison.Ordinal))
+        if (!text.StartsWith("/", StringComparison.Ordinal))
             throw new XPScriptRuntimeException(5, "JSON Pointer must start with '/'.");
 
         System.Text.Json.Nodes.JsonNode? current = Root;

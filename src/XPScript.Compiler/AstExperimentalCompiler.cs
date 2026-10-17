@@ -594,6 +594,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstSpreadsheetSupport.RuntimeCode(fullSource)}}
 {{AstApplicationSupport.RuntimeCode(fullSource)}}
 {{AstHttpSupport.RuntimeCode(fullSource)}}
+{{(AstNotesJsonSupport.Uses(fullSource) || Regex.IsMatch(fullSource, @"(?i)\bNotesHTTPRequest\b") ? JsonHttpCompatibilityRuntimeSource.Code : "")}}
 {{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}

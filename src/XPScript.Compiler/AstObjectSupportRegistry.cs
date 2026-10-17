@@ -35,7 +35,8 @@ internal static class AstObjectSupportRegistry
         "XPJsonSchema",
         "XPJsonArray",
         "XPJsonObject",
-        "XPJsonElement", "XPAi", "XPAiResponse", "AITool", "AIToolFunction", "AIToolCall"
+        "XPJsonElement", "XPAi", "XPAiResponse", "AITool", "AIToolFunction", "AIToolCall",
+        "NotesJSONNavigator", "NotesJSONObject", "NotesJSONArray", "NotesJSONElement"
     };
 
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -58,7 +59,7 @@ internal static class AstObjectSupportRegistry
         "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink", "NotesName", "NotesDateTime",
         "NotesAgentResult", "NotesAgent", "NotesStream", "NotesDXLImporter", "NotesDXLExporter",
         "NotesMIMEEntity", "NotesMIMEHeader", "NotesEmbeddedObject", "NotesViewEntry"
-        ,"NotesHTTPRequest", "NotesJSONNavigator", "NotesJSONObject", "NotesJSONArray", "NotesJSONElement"
+        ,"NotesHTTPRequest"
         ,"XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn"
         ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
         "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection"

@@ -1,0 +1,9 @@
+Option Declare
+
+Sub Main()
+    Dim json As New NotesJSONNavigator("{""name"":""Fredrik""}")
+    Dim element As NotesJSONElement
+    Set element = json.GetElementByName("name")
+    If element.Name <> "name" Or CStr(element.Value) <> "Fredrik" Then Error 4250
+    Print "NOTES_JSON_NATIVE_OK"
+End Sub
