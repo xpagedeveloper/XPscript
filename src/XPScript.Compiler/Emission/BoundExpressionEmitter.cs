@@ -135,6 +135,7 @@ public sealed class BoundExpressionEmitter
         "XPJSONELEMENT" => "XPScriptJsonElement",
         "XPJSONSCHEMA" => "XPScriptJsonSchema",
         "XPAI" => "XPScriptAi",
+        "XPAIRESPONSE" => "XPScriptAiResponse",
         "AITOOL" => "XPScriptAiTool",
         _ => null
     });
