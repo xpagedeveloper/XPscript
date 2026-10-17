@@ -355,6 +355,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized HTTP module ByRef storage comp
 $initializedHttpResult = dotnet (Join-Path $initializedHttpOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedHttpResult -join "`n") -ne 'INITIALIZED_MODULE_HTTP_BYREF_OK') { throw 'AST initialized HTTP module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_HTTP_MODULE_OK'
+$virtualDispatchOutput = Join-Path $output 'class-method-virtual-dispatch-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-virtual-dispatch-next.xps') -o $virtualDispatchOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST virtual derived method dispatch compilation failed.' }
+$virtualDispatchResult = dotnet (Join-Path $virtualDispatchOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($virtualDispatchResult -join "`n") -ne 'CLASS_METHOD_VIRTUAL_DISPATCH_OK') { throw 'AST virtual derived method dispatch failed.' }
+Write-Host 'AST_CLASS_METHOD_VIRTUAL_DISPATCH_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }

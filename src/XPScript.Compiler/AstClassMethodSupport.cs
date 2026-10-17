@@ -66,6 +66,29 @@ internal static class AstClassMethodSupport
                 if (text[i] is not ('\r' or '\n')) text[i] = ' ';
         return new string(text);
     }
+
+    private static bool SameMethodSignature(SubDeclarationSyntax? leftSub, FunctionDeclarationSyntax? leftFunction,
+        SubDeclarationSyntax? rightSub, FunctionDeclarationSyntax? rightFunction)
+    {
+        var leftName = leftSub?.Identifier.Text ?? leftFunction?.Identifier.Text;
+        var rightName = rightSub?.Identifier.Text ?? rightFunction?.Identifier.Text;
+        var left = leftSub?.Parameters ?? leftFunction?.Parameters ?? [];
+        var right = rightSub?.Parameters ?? rightFunction?.Parameters ?? [];
+        return string.Equals(leftName, rightName, StringComparison.OrdinalIgnoreCase) && left.Count == right.Count &&
+            left.Zip(right, (a, b) => a.IsByRef == b.IsByRef && string.Equals(a.Type?.Identifier.Text, b.Type?.Identifier.Text, StringComparison.OrdinalIgnoreCase)).All(match => match);
+    }
+
+    private static bool HasBaseMethod(ClassDeclarationSyntax declaration, SubDeclarationSyntax? sub, FunctionDeclarationSyntax? function,
+        IReadOnlyDictionary<string, ClassDeclarationSyntax> classes)
+    {
+        for (var owner = declaration.BaseType is { } baseType ? classes[baseType.Identifier.Text] : null;
+             owner is not null;
+             owner = owner.BaseType is { } parent ? classes[parent.Identifier.Text] : null)
+            if (owner.Members.Any(member => member is SubDeclarationSyntax or FunctionDeclarationSyntax &&
+                SameMethodSignature(sub, function, member as SubDeclarationSyntax, member as FunctionDeclarationSyntax)))
+                return true;
+        return false;
+    }
     internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable globals, string sourcePath, string source,
         IReadOnlyDictionary<string, ClassDeclarationSyntax> classes)
     {
@@ -273,6 +296,11 @@ internal static class AstClassMethodSupport
             }
             if (constructor is not null || isDestructor || property is not null || (sub?.Visibility ?? function?.Visibility)?.Kind == SyntaxKind.PrivateKeyword)
                 body = "private " + body["public ".Length..];
+            else if (property is null && constructor is null && !isDestructor)
+            {
+                var overrides = HasBaseMethod(declaration, sub, function, classes);
+                body = overrides ? "public override " + body["public ".Length..] : "public virtual " + body["public ".Length..];
+            }
             output.Append(body);
             if (property is null && constructor is null && !isDestructor)
             {
