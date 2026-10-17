@@ -11,7 +11,7 @@ internal static class AstModuleFieldSupport
     internal sealed record Field(VariableSymbol Symbol)
     {
         internal string Declaration => Symbol.HasTypedStorage
-            ? $"    public static {BoundMethodEmitter.CSharpType(Symbol.SemanticType ?? XpTypeSymbol.FromClr(Symbol.Type))} {Symbol.Name} = {(Symbol.Type == typeof(string) ? "string.Empty" : "default")};"
+            ? $"    public static {BoundMethodEmitter.CSharpType(Symbol.SemanticType ?? XpTypeSymbol.FromClr(Symbol.Type))} {Symbol.Name} = {Symbol.TypedInitializerLiteral ?? (Symbol.Type == typeof(string) ? "string.Empty" : "default")};"
             : $"    public static dynamic {Symbol.Name} = null;";
     }
 
@@ -37,11 +37,19 @@ internal static class AstModuleFieldSupport
                     ? XpTypeSymbol.Object
                     : symbols.LookupAll(match.Groups["type"].Value).OfType<TypeSymbol>().FirstOrDefault()?.SemanticType;
                 var tail = match.Groups["tail"].Value.Trim();
-                // Initialized declarations and unknown types retain the compatibility path.
+                var initializer = Regex.Match(tail, @"^=\s*(?<value>-?(?:\d+(?:\.\d*)?|\.\d+))\s*(?:'.*)?$", RegexOptions.IgnoreCase);
+                // Numeric literal initializers have the same direct typed storage contract as
+                // uninitialized scalar fields. Other initialized/reference forms retain the
+                // compatibility path until their expression/lifetime lowering is migrated.
                 var typed = (type != typeof(object) || semantic is not null && !semantic.IsVariant) &&
-                    (tail.Length == 0 || tail.StartsWith("'", StringComparison.Ordinal));
+                    (tail.Length == 0 || tail.StartsWith("'", StringComparison.Ordinal) || initializer.Success) &&
+                    (initializer.Success ? type == typeof(long) || type == typeof(double) : true);
                 return new Field(new VariableSymbol(match.Groups["name"].Value, type,
-                    typed ? semantic ?? XpTypeSymbol.FromClr(type) : XpTypeSymbol.Variant) { HasTypedStorage = typed });
+                    typed ? semantic ?? XpTypeSymbol.FromClr(type) : XpTypeSymbol.Variant)
+                {
+                    HasTypedStorage = typed,
+                    TypedInitializerLiteral = typed && initializer.Success ? initializer.Groups["value"].Value : null
+                });
             }).ToArray();
     }
 }

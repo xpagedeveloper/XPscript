@@ -13,6 +13,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilatio
 $imageParameterResult = dotnet (Join-Path $imageParameterOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -ne "6`n6") { throw 'AST scalar XPImage procedure/method execution failed.' }
 Write-Host 'AST_XPIMAGE_PROCEDURE_PARAMETER_OK'
+$initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
+$initializedModuleResult = dotnet (Join-Path $initializedModuleOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedModuleResult -join "`n") -ne '8') { throw 'AST initialized module ByRef storage failed.' }
+Write-Host 'AST_INITIALIZED_MODULE_STORAGE_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }
