@@ -109,10 +109,10 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesJSONNavigator", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonObject", StringComparison.OrdinalIgnoreCase) => "new XpJsonObject()",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPAi", StringComparison.OrdinalIgnoreCase) => $"new XPScriptAi({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("AITool", StringComparison.OrdinalIgnoreCase) => $"new XPScriptAiTool({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.IsObject && @new.Arguments.Count == 0 => "new System.Dynamic.ExpandoObject()",
         BoundNewExpression @new when @new.Type == typeof(object) && @new.SemanticType.Name.Length > 0 && char.IsUpper(@new.SemanticType.Name[0]) => $"new Xp{@new.SemanticType.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPAi", StringComparison.OrdinalIgnoreCase) => $"new XpAi({string.Join(", ", @new.Arguments.Select(Emit))})",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("AITool", StringComparison.OrdinalIgnoreCase) => $"new XpAiTool({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new => @new.Type == typeof(object)
             ? "new System.Dynamic.ExpandoObject()"
             : $"new {@new.Type.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
@@ -132,6 +132,8 @@ public sealed class BoundExpressionEmitter
         "XPJSONOBJECT" => "XPScriptJsonObject",
         "XPJSONARRAY" => "XPScriptJsonArray",
         "XPJSONELEMENT" => "XPScriptJsonElement",
+        "XPAI" => "XPScriptAi",
+        "AITOOL" => "XPScriptAiTool",
         _ => null
     });
 
@@ -180,6 +182,12 @@ public sealed class BoundExpressionEmitter
 
     private string EmitCall(BoundCallExpression call)
     {
+        if (call.Target is BoundMemberAccessExpression aiMember && aiMember.Receiver.SemanticType.Name.Equals("XPAi", StringComparison.OrdinalIgnoreCase) &&
+            call.Function.Name is "AddTool" or "RemoveTool" or "ClearTools" or "HasTool" or "GetTool" or "GetToolNames" or "ToolCount")
+        {
+            var aiArguments = call.Arguments.Select(Emit).Prepend(Emit(aiMember.Receiver));
+            return $"XPScriptAiToolRegistry.{call.Function.Name}({string.Join(", ", aiArguments)})";
+        }
         if (call.Function.NativeParameterTypes is { } nativeTypes)
         {
             var nativeArguments = call.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), nativeTypes[i]));

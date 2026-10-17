@@ -75,6 +75,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST default-private module array compilation f
 $moduleArrayDefaultResult = dotnet (Join-Path $moduleArrayDefaultOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($moduleArrayDefaultResult -join "`n") -ne 'MODULE_DEFAULT_PRIVATE_ARRAY_OK') { throw 'AST default-private module array regression failed.' }
 Write-Host 'AST_MODULE_DEFAULT_PRIVATE_ARRAY_OK'
+$aiNativeOutput = Join-Path $output 'ai-native-metadata-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-native-metadata-next.xps') -o $aiNativeOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST native AI metadata compilation failed.' }
+$aiNativeResult = dotnet (Join-Path $aiNativeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($aiNativeResult -join "`n") -ne 'AI_NATIVE_METADATA_OK') { throw 'AST native AI metadata regression failed.' }
+Write-Host 'AST_AI_NATIVE_METADATA_OK'
 $notesSearchOutput = Join-Path $output 'notes-search-constants-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-search-constants-next.xps') -o $notesSearchOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes search constants compilation failed.' }

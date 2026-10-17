@@ -14,6 +14,7 @@ public static class AstExperimentalCompiler
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
+        var usesAi = RuntimeFeatures.Detect(fullSource).Ai;
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
             if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)
@@ -597,6 +598,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstArrayRuntimeCode()}}
 {{AstFileRuntimeCode()}}
 {{AstCallbackRuntimeCode()}}
+{{AstTlsRuntimeCode()}}
 {{AstErrorRuntimeCode()}}
 internal static class LSCoreCompare
 {
@@ -1008,6 +1010,12 @@ internal static class Program
 """;
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode + Environment.NewLine + AstHttpSupport.RuntimeCode(fullSource);
+        if (usesAi)
+        {
+            generated += Environment.NewLine + AiRuntimeSource.Code + Environment.NewLine + AiToolRuntimeSource.Code;
+            generated = new AiSessionRuntimePostProcessor().Transform(generated);
+            generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated);
+        }
         var applicationMarkers = AstApplicationSupport.BuildMarkers(fullSource, sourcePath);
         if (applicationMarkers.Length != 0)
             return await RunCompiler.CompileGeneratedWithDependenciesAsync(generated + Environment.NewLine + applicationMarkers, outputDirectory, false, cancellationToken).ConfigureAwait(false);
@@ -1055,6 +1063,16 @@ internal static class Program
 
     private static string AstCallbackRuntimeCode()
         => CallbackRuntimeSource.Code.Replace("typeof(Script)", "typeof(Program)", StringComparison.Ordinal);
+
+    private static string AstTlsRuntimeCode()
+    {
+        var source = CoreCompatibilityRuntimeSource.Code;
+        var start = source.IndexOf("internal sealed class XPScriptTlsValidationState", StringComparison.Ordinal);
+        var end = source.IndexOf("internal sealed class XPScriptRuntimeException", start, StringComparison.Ordinal);
+        if (start < 0 || end < 0)
+            throw new InvalidOperationException("AST TLS runtime source markers are missing.");
+        return source[start..end];
+    }
 
     private static string AstErrorRuntimeCode()
     {

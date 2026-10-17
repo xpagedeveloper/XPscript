@@ -35,7 +35,7 @@ internal static class AstObjectSupportRegistry
         "XPJsonSchema",
         "XPJsonArray",
         "XPJsonObject",
-        "XPJsonElement"
+        "XPJsonElement", "XPAi", "XPAiResponse", "AITool"
     };
 
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

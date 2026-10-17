@@ -226,6 +226,14 @@ internal sealed class XPScriptAi : IDisposable
         lock (_sync) _activeRequest?.Cancel();
     }
 
+    public void AddTool(object? tool) => XPScriptAiToolRegistry.AddTool(this, tool);
+    public bool RemoveTool(object? name) => XPScriptAiToolRegistry.RemoveTool(this, name);
+    public void ClearTools() => XPScriptAiToolRegistry.ClearTools(this);
+    public bool HasTool(object? name) => XPScriptAiToolRegistry.HasTool(this, name);
+    public XPScriptAiTool GetTool(object? name) => XPScriptAiToolRegistry.GetTool(this, name);
+    public XPScriptJsonArray GetToolNames() => XPScriptAiToolRegistry.GetToolNames(this);
+    public int ToolCount() => XPScriptAiToolRegistry.ToolCount(this);
+
     public void Dispose()
     {
         lock (_sync)

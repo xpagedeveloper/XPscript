@@ -1,0 +1,9 @@
+Sub Main()
+    Dim ai As XPAi
+    Dim tool As New AITool("weather")
+    Set ai = New XPAi("openai", "test-key")
+    Call ai.AddTool(tool)
+    If ai.ToolCount() <> 1 Then Error 5, "native AI tool registry failed"
+    If Not ai.HasTool("weather") Then Error 5, "native AI tool lookup failed"
+    Print "AI_NATIVE_METADATA_OK"
+End Sub
