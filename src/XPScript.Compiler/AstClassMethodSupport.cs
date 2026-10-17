@@ -48,7 +48,8 @@ internal static class AstClassMethodSupport
             if (indexes.Count > 0)
                 yield return new IndexedPropertySymbol(declaration.Identifier.Text + "." + name, type,
                     indexes.Select(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
-                    semanticType, null, readable, writable, "__xps_index_get_" + name, "__xps_index_let_" + name,
+                    semanticType, indexes.Select(p => DeclaredType(p.Type, symbols)).ToArray(), readable, writable,
+                    "__xps_index_get_" + name, "__xps_index_let_" + name,
                     indexes.Select(p => p.IsExplicitByRef).ToArray())
                     { RequiredArgumentCount = indexes.TakeWhile(p => !p.IsOptional).Count(), AssignmentKind = assignmentKind };
             else yield return new PropertySymbol(declaration.Identifier.Text + "." + name,
@@ -100,6 +101,12 @@ internal static class AstClassMethodSupport
                     property.Identifier.Text.Equals(name, StringComparison.OrdinalIgnoreCase)))
                 return true;
         return false;
+    }
+
+    private static string CSharpDeclaredType(TypeSyntax? syntax, SymbolTable symbols)
+    {
+        var name = syntax?.Identifier.Text ?? string.Empty;
+        return BoundExpressionEmitter.RuntimeObjectType(name) ?? BoundMethodEmitter.CSharpType(DeclaredType(syntax, symbols));
     }
     internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable globals, string sourcePath, string source,
         IReadOnlyDictionary<string, ClassDeclarationSyntax> classes)
@@ -359,9 +366,9 @@ internal static class AstClassMethodSupport
                         var accessorModifier = accessor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private "
                             : HasBaseProperty(declaration, name, classes) ? "public override " : "public virtual ";
                         output.Append(accessorModifier)
-                            .Append(accessor.IsGetter ? BoundMethodEmitter.CSharpType(type) : "void")
+                            .Append(accessor.IsGetter ? BoundExpressionEmitter.RuntimeObjectType(type.Name) ?? BoundMethodEmitter.CSharpType(type) : "void")
                             .Append(accessor.IsGetter ? " __xps_index_get_" : " __xps_index_let_").Append(name).Append('(')
-                            .Append(string.Join(", ", supplied.Select((p, i) => (i < count && p.IsExplicitByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(DeclaredType(p.Type, globals)) + " " + p.Identifier.Text)))
+                            .Append(string.Join(", ", supplied.Select((p, i) => (i < count && p.IsExplicitByRef ? "ref " : "") + CSharpDeclaredType(p.Type, globals) + " " + p.Identifier.Text)))
                             .Append(") => __xps_property_").Append(accessor.IsGetter ? "get_" : "let_").Append(accessor.Identifier.Text)
                             .Append('(').Append(arguments).Append(");\n");
                     }

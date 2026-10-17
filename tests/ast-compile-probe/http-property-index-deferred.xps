@@ -3,4 +3,9 @@ Class Store
     End Property
 End Class
 Sub Main()
+    Dim store As New Store
+    Dim request As New XPHttpRequest
+    Dim response As XPHttpResponse = store.Item(request)
+    If Not (response Is Nothing) Then Error 6, "HTTP indexed accessor default result changed"
+    Print "HTTP_INDEXED_PROPERTY_OK"
 End Sub

@@ -433,12 +433,17 @@ foreach ($fixture in @('http-property-signature-only', 'tabular-reference-proper
     }
     if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST native reference accessor execution failed: $fixture" }
 }
+$httpIndexedOutput = Join-Path $output 'http-property-indexed'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'http-property-index-deferred.xps') -o $httpIndexedOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST indexed HTTP accessor compilation failed.' }
+$httpIndexedResult = dotnet (Join-Path $httpIndexedOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($httpIndexedResult -join "`n") -ne 'HTTP_INDEXED_PROPERTY_OK') { throw 'AST indexed HTTP accessor regression failed.' }
+Write-Host 'AST_HTTP_INDEXED_PROPERTY_OK'
 foreach ($case in @(
     @('http-property-type-error', 'XPS2001', 8),
     @('http-property-mode-error', 'XPS2001', 8),
     @('http-property-readonly-error', 'XPS2001', 7),
     @('http-property-file-type-error', 'XPS2001', 8),
-    @('http-property-index-deferred', 'XPS3001', 2),
     @('tabular-property-type-error', 'XPS2001', 8),
     @('tabular-property-mode-error', 'XPS2001', 8),
     @('tabular-property-frombytes-error', 'XPS1012', 7),
