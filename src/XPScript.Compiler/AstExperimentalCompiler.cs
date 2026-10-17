@@ -184,7 +184,17 @@ public static class AstExperimentalCompiler
             symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, ResolveValueType(procedure.ReturnType), parameterTypes, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
             DeclareOptionalSignatures(symbols, procedure.Identifier.Text, resultType, procedure.Parameters);
         }
-        symbols.Declare(new VariableSymbol("BuildState", typeof(object), XpTypeSymbol.Variant));
+        var enumNames = Regex.Matches(fullSource, @"(?ims)^\s*Enum\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Enum\b")
+            .Cast<Match>().ToArray();
+        foreach (var enumMatch in enumNames)
+        {
+            symbols.Declare(new VariableSymbol(enumMatch.Groups["name"].Value, typeof(object), XpTypeSymbol.User(enumMatch.Groups["name"].Value)));
+            foreach (Match member in Regex.Matches(enumMatch.Groups["body"].Value, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*-?\d+)?\s*$"))
+            {
+                symbols.Declare(new VariableSymbol(member.Groups["name"].Value, typeof(object), XpTypeSymbol.User(enumMatch.Groups["name"].Value)));
+                symbols.Declare(new PropertySymbol($"{enumMatch.Groups["name"].Value}.{member.Groups["name"].Value}", typeof(object), XpTypeSymbol.User(enumMatch.Groups["name"].Value)));
+            }
+        }
         foreach (var compatibilityName in AstObjectSupportRegistry.CompatibilityNames)
             symbols.Declare(new VariableSymbol(compatibilityName, typeof(object), XpTypeSymbol.Variant));
         var moduleFieldStorage = AstModuleFieldSupport.Find(moduleSource, symbols);
@@ -423,8 +433,8 @@ public static class AstExperimentalCompiler
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ToCSharpLiteral(match.Groups["value"].Value.Trim())};"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?im)^\s*(?<name>BuildUnknown|BuildReady|BuildRunning|BuildDone)\s*(?:=\s*(?<value>-?\d+))?\s*$")
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {(match.Groups["value"].Success ? match.Groups["value"].Value : "0")};"));
-        if (Regex.IsMatch(fullSource, @"(?im)^\s*Enum\s+BuildState\b"))
-            moduleFields += Environment.NewLine + "    public static dynamic BuildState = new ExpandoObject();";
+        moduleFields += Environment.NewLine + string.Join(Environment.NewLine,
+            enumNames.Select(enumMatch => $"    public static Xp{enumMatch.Groups["name"].Value} {enumMatch.Groups["name"].Value} = new Xp{enumMatch.Groups["name"].Value}();"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(AstModuleFieldSupport.DeclarationSource(fullSource), @"(?im)^\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*\([^\r\n]+\)\s+As\s+\w+", RegexOptions.Multiline)
             .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = new ExpandoObject();"));
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
@@ -493,8 +503,8 @@ public static class AstExperimentalCompiler
         classSupport += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?ims)^\s*Enum\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Enum\b")
             .Cast<Match>().Select(match =>
             {
-                var values = Regex.Matches(match.Groups["body"].Value, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$")
-                    .Cast<Match>().Select((value, index) => $"public static readonly Xp{match.Groups["name"].Value} {value.Groups["name"].Value} = new({(value.Groups["value"].Success ? value.Groups["value"].Value : index.ToString(System.Globalization.CultureInfo.InvariantCulture))});");
+                    var values = Regex.Matches(match.Groups["body"].Value, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$")
+                    .Cast<Match>().Select((value, index) => $"public Xp{match.Groups["name"].Value} {value.Groups["name"].Value} => new({(value.Groups["value"].Success ? value.Groups["value"].Value : index.ToString(System.Globalization.CultureInfo.InvariantCulture))});");
                 return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} public Xp{match.Groups["name"].Value}() {{ }} private Xp{match.Groups["name"].Value}(long value) => Value = value; public static implicit operator Xp{match.Groups["name"].Value}(int value) => new(value); public static implicit operator Xp{match.Groups["name"].Value}(long value) => new(value); {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
             }));
         if (Regex.IsMatch(fullSource, @"(?i)\b(NotesHTTPRequest|XPAi|AITool)\b")) classSupport += """

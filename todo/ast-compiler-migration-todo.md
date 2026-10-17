@@ -373,6 +373,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [ ] Investigate regex-based module-field generation for source `Const` declarations; preserve `Const` support through syntax/bound symbols rather than deleting the compatibility path without replacement.
     - [x] Accept procedure-level `Const` declarations in the AST syntax/binding path and add executable coverage using `samples/const-statements.xps`; regex-based value/type lowering remains open for structural migration.
   - [ ] Investigate regex-based `BuildUnknown`/`BuildReady`/`BuildRunning`/`BuildDone` and `BuildState` globals; determine whether they are documented language constructs or sample-specific scaffolding before migrating them structurally.
+    - [x] Confirmed `BuildState` is documented enum support and fixed AST binding plus qualified enum access; structural enum declarations and correct implicit-value sequencing remain open.
   - [ ] Investigate regex-based array module-field generation from `Dim name(...) As Type`; replace it with the shared declaration binder/storage path where it duplicates real module declarations.
   - [ ] Investigate remaining unconditional `SEARCH_DEPTH`, `Command`, `Platform`, and `CurDir` generated globals; classify each as a required built-in/runtime value or compatibility scaffolding and add focused regressions before removal.
 - [ ] Migrate class declarations, inheritance and object lifecycle into the AST bound tree.

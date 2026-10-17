@@ -32,6 +32,17 @@ $expectedConstResult = @(
 )
 if ($LASTEXITCODE -ne 0 -or ($constResult | Select-Object -Last 11) -join "`n" -ne ($expectedConstResult -join "`n")) { throw 'AST Const support regression failed.' }
 Write-Host 'AST_CONST_SUPPORT_OK'
+$enumOutput = Join-Path $output 'language-extensions'
+dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }
+$enumResult = dotnet (Join-Path $enumOutput 'Generated.dll')
+$expectedEnumResult = @(
+    'ENUM=0', 'ENUMQUAL=20', 'TYPE=Fredrik:40', 'OPTIONAL=Hello Fredrik',
+    'OPTIONAL2=Hi Fredrik', 'PROPERTYLET=PropertyLet', 'STRCONV=hello world',
+    'CTYPE=42', 'VALUE=7', 'COUNT=8'
+)
+if ($LASTEXITCODE -ne 0 -or ($enumResult -join "`n") -ne ($expectedEnumResult -join "`n")) { throw 'AST enum/Type language extensions regression failed.' }
+Write-Host 'AST_ENUM_LANGUAGE_EXTENSIONS_OK'
 $spanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-span-error.xps') -o (Join-Path $output 'preprocessor-span-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($spanOutput -join "`n") -notmatch 'preprocessor-span-error\.xps:4:') { throw 'AST preprocessor source span mapping regression failed.' }
 Write-Host 'AST_PREPROCESSOR_SPAN_MAPPING_OK'
