@@ -412,6 +412,12 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-elements-ru
 if ($LASTEXITCODE -ne 0) { throw 'AST element ByRef index compilation failed.' }
 $elementIndexResult = dotnet (Join-Path $output 'indexed-byref-elements-runtime/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($elementIndexResult -join "`n") -ne 'INDEXED_BYREF_ELEMENTS_OK') { throw 'AST element ByRef index alias/order/bounds/exception execution failed.' }
+$listElementCallOutput = Join-Path $output 'byref-list-element-call-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'byref-list-element-call-next.xps') -o $listElementCallOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST ByRef List-element call compilation failed.' }
+$listElementCallResult = dotnet (Join-Path $listElementCallOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listElementCallResult -join "`n") -ne "7`n7") { throw 'AST ByRef List-element call execution failed.' }
+Write-Host 'AST_BYREF_LIST_ELEMENT_CALL_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-elements-simple.xps') -o (Join-Path $output 'indexed-byref-elements-simple')
 if ($LASTEXITCODE -ne 0) { throw 'AST ordinary/flat element ByRef index compilation failed.' }
 $elementSimpleResult = dotnet (Join-Path $output 'indexed-byref-elements-simple/Generated.dll')

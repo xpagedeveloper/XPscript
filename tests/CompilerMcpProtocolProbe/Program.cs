@@ -309,6 +309,12 @@ foreach (var emptySlotPropertyFixture in new[] { "class-property-empty-slot-next
     var result = await CallAsync(new { jsonrpc = "2.0", id = emptySlotPropertyFixture, method = "tools/call", @params = new { name = "xpscript_ast_validate", arguments = new { source, filename = emptySlotPropertyFixture + ".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Empty indexed-property slot validation failed: " + result);
 }
+foreach (var byRefListElementCallFixture in new[] { "byref-list-element-call-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", byRefListElementCallFixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc = "2.0", id = byRefListElementCallFixture, method = "tools/call", @params = new { name = "xpscript_ast_validate", arguments = new { source, filename = byRefListElementCallFixture + ".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("ByRef List-element call validation failed: " + result);
+}
 foreach (var initializedModuleFixture in new[] { "initialized-module-byref-next", "initialized-module-boolean-next", "initialized-module-string-next", "initialized-module-reference-next", "initialized-module-reference-new-next", "initialized-module-reference-args-next", "initialized-module-date-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", initializedModuleFixture + ".xps"));
