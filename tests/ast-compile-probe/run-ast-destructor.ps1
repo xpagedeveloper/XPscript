@@ -16,6 +16,10 @@ foreach ($fixture in @('class-destructor-derived', 'class-destructor-derived-par
     }
     if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST destructor execution failed: $fixture" }
 }
+$derivedMethodTarget = Join-Path $output 'class-destructor-derived-method-deferred'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-destructor-derived-method-deferred.xps') -o $derivedMethodTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST derived method destructor fixture compilation failed.' }
+Write-Host 'AST_DERIVED_METHOD_DESTRUCTOR_OK'
 foreach ($fixture in @('class-destructor-derived-parity', 'class-destructor-parity')) {
     $normal = Join-Path $output ($fixture + $(if ($IsWindows) { '-normal.exe' } else { '-normal' }))
     dotnet $compiler compile (Join-Path $PSScriptRoot "$fixture.xps") -o $normal --single-file=false --runtime=false
@@ -32,7 +36,6 @@ foreach ($case in @(
     @('class-destructor-private-member-error', 'XPS2009', 6),
     @('class-destructor-private-method-error', 'XPS2009', 7),
     @('class-destructor-derived-body-error', 'XPS2008', 5),
-    @('class-destructor-derived-method-deferred', 'XPS3001', 4),
     @('class-destructor-body-error', 'XPS2008', 3)
 )) {
     $fixture = $case[0]

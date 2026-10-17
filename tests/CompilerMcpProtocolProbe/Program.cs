@@ -348,7 +348,7 @@ foreach (var fixture in new[] { "class-destructor-derived", "class-destructor-de
     var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Destructor validation failed: " + result);
 }
-foreach (var (fixture, code, line) in new[] { ("class-destructor-parameter-error", "XPS1012", 2), ("class-destructor-duplicate-error", "XPS1012", 4), ("class-destructor-function-error", "XPS1012", 2), ("class-destructor-private-base-error", "XPS2008", 6), ("class-destructor-private-member-error", "XPS2009", 6), ("class-destructor-private-method-error", "XPS2009", 7), ("class-destructor-derived-body-error", "XPS2008", 5), ("class-destructor-derived-method-deferred", "XPS3001", 4), ("class-destructor-body-error", "XPS2008", 3) })
+foreach (var (fixture, code, line) in new[] { ("class-destructor-parameter-error", "XPS1012", 2), ("class-destructor-duplicate-error", "XPS1012", 4), ("class-destructor-function-error", "XPS1012", 2), ("class-destructor-private-base-error", "XPS2008", 6), ("class-destructor-private-member-error", "XPS2009", 6), ("class-destructor-private-method-error", "XPS2009", 7), ("class-destructor-derived-body-error", "XPS2008", 5), ("class-destructor-body-error", "XPS2008", 3) })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
     var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
