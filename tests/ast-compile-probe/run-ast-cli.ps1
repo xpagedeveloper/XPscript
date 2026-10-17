@@ -97,6 +97,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST XML class-method compilation failed.' }
 $xmlClassMethodResult = dotnet (Join-Path $xmlClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($xmlClassMethodResult -join "`n") -ne 'root') { throw 'AST XML class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_XML_OK'
+$xmlDocumentClassMethodOutput = Join-Path $output 'class-method-xml-document-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-xml-document-next.xps') -o $xmlDocumentClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST XML document class-method compilation failed.' }
+$xmlDocumentClassMethodResult = dotnet (Join-Path $xmlDocumentClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($xmlDocumentClassMethodResult -join "`n") -ne 'root') { throw 'AST XML document class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_XML_DOCUMENT_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }

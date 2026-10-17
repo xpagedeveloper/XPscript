@@ -1,0 +1,12 @@
+Class Reader
+    Public Function RootName(ByVal value As XPXmlDocument) As String
+        RootName = value.Root.Name
+    End Function
+End Class
+
+Sub Main()
+    Dim document As XPXmlDocument
+    Set document = XmlParse("<root />")
+    Dim reader As New Reader
+    Print reader.RootName(document)
+End Sub
