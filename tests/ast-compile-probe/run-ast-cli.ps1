@@ -111,6 +111,13 @@ if ($LASTEXITCODE -ne 0) { throw 'AST MsgBox compilation failed.' }
 $msgBoxResult = dotnet (Join-Path $msgBoxOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($msgBoxResult -join "`n") -ne 'MSGBOX_RUNTIME_OK') { throw 'AST MsgBox runtime regression failed.' }
 Write-Host 'AST_MSGBOX_OK'
+
+$fileRuntimeOutput = Join-Path $output 'file-runtime-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-runtime-next.xps') -o $fileRuntimeOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST file runtime compilation failed.' }
+$fileRuntimeResult = dotnet (Join-Path $fileRuntimeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($fileRuntimeResult -join "`n") -ne 'FILE_RUNTIME_OK') { throw 'AST file runtime regression failed.' }
+Write-Host 'AST_FILE_RUNTIME_OK'
 $enumOutput = Join-Path $output 'language-extensions'
 dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }

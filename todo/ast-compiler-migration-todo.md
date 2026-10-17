@@ -367,7 +367,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [ ] Investigate the remaining AST `XpNotesHttp` compatibility scaffold separately from the migrated native HTTP path; its no-op headers/proxy methods and empty `Get`/`Post` responses must either delegate to the native runtime or remain an explicit legacy fallback with diagnostics.
   - [x] Bind AST `MsgBox` to the shared console/runtime return contract; `msgbox-next.xps` verifies the documented `1=OK` result while desktop UI postprocessing remains target-specific.
   - [ ] Investigate AST `Loc` and `ProcedureCounter` fixed-return helpers; `Loc` is currently blocked by the separate no-op `AstOpen`/`AstPut`/`AstClose` file scaffold, while `ProcedureCounter` has no native runtime counterpart identified yet.
-  - [ ] Replace the AST file-operation scaffold (`AstOpen`, `AstPut`, `AstClose` and `Loc`) with the shared file compatibility runtime, including missing-handle and path error behavior, before claiming AST file-I/O parity.
+  - [x] Replace the AST `AstOpen`/`AstClose`/`Loc` scaffold with the shared `LSFileRuntime`; `file-runtime-next.xps` verifies missing input-path errors and the initial output position. Typed `Put` parity and the remaining file commands remain separate coverage.
 - [ ] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding.
   - [x] Remove the unconditional `matrix` local-symbol scaffold; undeclared `matrix` now follows normal XPS2008 binding diagnostics.
   - [x] Remove global `ForAll` alias scaffolding; undeclared array/string/dynamic aliases are now created in the loop body scope and existing aliases retain their normal symbol semantics.

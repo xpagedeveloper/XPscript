@@ -578,6 +578,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
+{{AstFileRuntimeCode()}}
 {{AstErrorRuntimeCode()}}
 internal static class LSCoreCompare
 {
@@ -913,12 +914,12 @@ internal static class Program
     public static string Input(object? count) => string.Empty;
     public static string Input(object? count, object? file) => string.Empty;
     public static void Sleep(object? milliseconds) => System.Threading.Thread.Sleep(Math.Max(0, Convert.ToInt32(milliseconds)));
-    public static void AstPut(object? file, object? position, object? value) { }
+    public static void AstPut(object? file, object? position, object? value) => LSFileRuntime.Put(checked((int)XPScriptRuntime.CLng(file)), position, value, value switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" });
     public static void AstLockBytes(object? file, object? start, object? end) { }
     public static void AstUnlockBytes(object? file, object? start, object? end) { }
-    public static void AstOpen(object? path, object? mode, object? file) { }
-    public static void AstClose(object? file) { }
-    public static void AstClose() { }
+    public static void AstOpen(object? path, object? mode, object? file) => LSFileRuntime.Open(path, mode, checked((int)XPScriptRuntime.CLng(file)));
+    public static void AstClose(object? file) => LSFileRuntime.Close(checked((int)XPScriptRuntime.CLng(file)));
+    public static void AstClose() => LSFileRuntime.Close();
     public static void AstPrintFile(object? file, object? value = null) { }
     public static object GetObject(object? value) => new ExpandoObject();
     public static object GetObject(object? value, object? context) => new ExpandoObject();
@@ -959,7 +960,7 @@ internal static class Program
     public static long GetTickCount() => Environment.TickCount64;
     public static string Environ(object? name) => XPScriptRuntime.Environ(name);
     public static object AstUtf8(object? value) => Encoding.UTF8.GetBytes(Convert.ToString(value) ?? string.Empty);
-    public static long Loc(object? _) => 0;
+    public static long Loc(object? file) => LSFileRuntime.Loc(checked((int)XPScriptRuntime.CLng(file)));
     public static string Error(object? number) => XPScriptErrorRuntime.Error(checked((int)XPScriptRuntime.CLng(number)));
     public static string Error() => XPScriptErrorRuntime.Error();
     public static string ErrorValue() => XPScriptErrorRuntime.Description;
@@ -1017,6 +1018,16 @@ internal static class Program
             .Replace("value is ILSObjectReference reference && reference.IsNothing", "value is null", StringComparison.Ordinal)
             .Replace("ILSObjectReference reference when reference.IsNothing => NothingArray(),", "null => NothingArray(),", StringComparison.Ordinal)
             .Replace("null => NothingArray(),\n        null => NothingArray(),", "null => NothingArray(),", StringComparison.Ordinal);
+    }
+
+    private static string AstFileRuntimeCode()
+    {
+        var source = CoreCompatibilityRuntimeSource.Code;
+        var start = source.IndexOf("internal static class LSFileRuntime", StringComparison.Ordinal);
+        var end = source.IndexOf("// Marker calls are removed", start, StringComparison.Ordinal);
+        if (start < 0 || end < 0)
+            throw new InvalidOperationException("AST file runtime source markers are missing.");
+        return source[start..end];
     }
 
     private static string AstErrorRuntimeCode()
