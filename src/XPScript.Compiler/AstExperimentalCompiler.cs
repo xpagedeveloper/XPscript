@@ -265,6 +265,9 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Error", typeof(string), [], XpTypeSymbol.FromClr(typeof(string)), []));
         symbols.Declare(new FunctionSymbol("ErrorValue", typeof(string), [], XpTypeSymbol.FromClr(typeof(string)), []));
         symbols.Declare(new FunctionSymbol("GetTickCount", typeof(long), [], XpTypeSymbol.FromClr(typeof(long)), []));
+        symbols.Declare(new FunctionSymbol("MsgBox", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("MsgBox", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("MsgBox", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Loc", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Environ", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstUtf8", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
@@ -948,7 +951,7 @@ internal static class Program
     public static object Date() => new XpDate(DateTime.Today);
     public static object Format(object? value, object? pattern = null) => pattern is null ? CStr(value) : (value is XpDate date ? date.Value : Convert.ToDateTime(value)).ToString(CStr(pattern), System.Globalization.CultureInfo.InvariantCulture);
     public static object InputBox(object? prompt = null) => string.Empty;
-    public static object MsgBox(object? prompt = null) { Console.WriteLine(CStr(prompt)); return 0L; }
+    public static object MsgBox(object? prompt = null, object? boxType = null, object? title = null) => XPScriptRuntime.MsgBox(prompt);
     public static object ChDrive(object? drive) => true;
     public static object Erase(object? value) => true;
     public static object JsonParse(object? value) => XPScriptNativeJson.Parse(value);
