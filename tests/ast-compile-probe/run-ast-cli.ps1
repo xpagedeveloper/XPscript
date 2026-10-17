@@ -1121,6 +1121,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-local-lifetime.xps
 if ($LASTEXITCODE -ne 0) { throw 'AST Static local compilation failed.' }
 $staticResult = dotnet (Join-Path $staticOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($staticResult -join "`n") -ne "1`n10`n2`n20`n1`n10`n2`n20`nSTATIC_DEFAULTS_OK`nSTATIC_RETAINED_OK`n1`n2") { throw 'AST Static lifetime, procedure/overload isolation, defaults or ByRef mutation failed.' }
+$moduleStaticOutput = Join-Path $output 'static-module-function'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-module-function-next.xps') -o $moduleStaticOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST module-level Static Function compilation failed.' }
+$moduleStaticResult = dotnet (Join-Path $moduleStaticOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($moduleStaticResult -join "`n") -ne 'STATIC_MODULE_FUNCTION_OK') { throw 'AST module-level Static Function execution failed.' }
 $crossProcedure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-cross-procedure-error.xps') -o (Join-Path $output 'cross-procedure') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($crossProcedure -join "`n") -notmatch "Unknown label 'outside'") { throw 'AST GoTo accepted a label from another procedure.' }
 $gotoOutput = Join-Path $output 'goto-scope'

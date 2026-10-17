@@ -79,7 +79,7 @@ public static class AstExperimentalCompiler
             var name = Regex.Escape(redim.Groups["name"].Value);
             source = Regex.Replace(source, $@"(?im)(?<prefix>\bDim\s+{name})\s*\(\s*\)\s+As\s+", "${prefix}(,) As ");
         }
-        var declarationStart = System.Text.RegularExpressions.Regex.Match(source, @"(?im)^\s*(Sub|Function|Class)\b");
+        var declarationStart = System.Text.RegularExpressions.Regex.Match(source, @"(?im)^\s*(?:(?:Public|Private|Static)\s+)*(Sub|Function|Class)\b");
         if (declarationStart.Success)
             // Ignore module headers without moving declaration/body spans away from the source.
             source = new string(source[..declarationStart.Index].Select(c => c is '\r' or '\n' ? c : ' ').ToArray())
@@ -988,7 +988,6 @@ internal static class Program
     public static string Error(object? number) => XPScriptErrorRuntime.Error(checked((int)XPScriptRuntime.CLng(number)));
     public static string Error() => XPScriptErrorRuntime.Error();
     public static string ErrorValue() => XPScriptErrorRuntime.Description;
-    public static object ProcedureCounter() => 0L;
     public static class AstCompatibilityHelpers
     {
         public static long GetTickCount() => Environment.TickCount64;
@@ -996,7 +995,6 @@ internal static class Program
         public static string Error(object? number) => Program.Error(number);
         public static string Error() => Program.Error();
         public static string ErrorValue() => XPScriptErrorRuntime.Description;
-        public static object ProcedureCounter() => 0L;
         public static string ShowDialog(object? message, object? title = null, object? kind = null, object? values = null) => string.Empty;
         public static string LoadFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
         public static string OpenFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
