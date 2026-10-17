@@ -99,7 +99,6 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new when AstImageSupport.IsImage(@new.SemanticType.Name) =>
             $"new XPImage({string.Join(", ", @new.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), i < 2 ? "int" : "string")))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Path", StringComparison.OrdinalIgnoreCase) => $"new XpPath({string.Join(", ", @new.Arguments.Select(Emit))})",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("Person", StringComparison.OrdinalIgnoreCase) => $"new XpPerson({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) => @new.Arguments.Count == 0
             ? "XPScriptNativeCsv.CreateDocument()" : $"XPScriptNativeCsv.Parse({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPXmlDocument", StringComparison.OrdinalIgnoreCase) => @new.Arguments.Count == 0
