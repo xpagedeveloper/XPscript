@@ -6,6 +6,7 @@ public enum SyntaxKind
     ApplicationOptionDeclaration,
     ApplicationConstDeclaration,
     ApplicationDeclareDeclaration,
+    ConstStatement,
     BadToken,
     EndOfFileToken,
     NewLineToken,

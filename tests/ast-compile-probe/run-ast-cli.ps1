@@ -13,6 +13,25 @@ if ($LASTEXITCODE -ne 0) { throw 'AST missing-file/path error fixture compilatio
 $missingPathResult = dotnet (Join-Path $missingPathOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($missingPathResult -join "`n") -ne 'FILE_MISSING_PATH_ERRORS_OK') { throw 'AST missing-file/path errors regression failed.' }
 Write-Host 'AST_FILE_MISSING_PATH_ERRORS_OK'
+$constOutput = Join-Path $output 'const-statements'
+dotnet $compiler ast-compile (Join-Path $root 'samples/const-statements.xps') -o $constOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Const fixture compilation failed.' }
+$constResult = dotnet (Join-Path $constOutput 'Generated.dll')
+$expectedConstResult = @(
+    'NOTES_RUNTIME=C:\Program Files\HCL\Notes',
+    'TEXT_VALUE=hello',
+    'INTEGER_VALUE=42',
+    'LONG_VALUE=2147483648',
+    'DOUBLE_VALUE=12,5',
+    'BOOLEAN_VALUE=True',
+    'INFERRED_INTEGER=7',
+    'INFERRED_LONG=2147483648',
+    'INFERRED_DOUBLE=3,25',
+    'INFERRED_BOOLEAN=False',
+    'CONST_STATEMENTS=OK'
+)
+if ($LASTEXITCODE -ne 0 -or ($constResult | Select-Object -Last 11) -join "`n" -ne ($expectedConstResult -join "`n")) { throw 'AST Const support regression failed.' }
+Write-Host 'AST_CONST_SUPPORT_OK'
 $spanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-span-error.xps') -o (Join-Path $output 'preprocessor-span-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($spanOutput -join "`n") -notmatch 'preprocessor-span-error\.xps:4:') { throw 'AST preprocessor source span mapping regression failed.' }
 Write-Host 'AST_PREPROCESSOR_SPAN_MAPPING_OK'

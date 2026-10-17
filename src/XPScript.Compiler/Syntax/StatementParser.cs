@@ -52,6 +52,14 @@ public sealed class StatementParser
 
     private StatementSyntax ParseCurrentStatement()
     {
+        if (IsIdentifier("Const"))
+        {
+            var start = Current.Span.Start;
+            while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
+                NextToken();
+            var end = Current.Span.Start;
+            return new ConstStatementSyntax(new TextSpan(start, end - start));
+        }
         if (Current.Kind is SyntaxKind.GoToKeyword or SyntaxKind.GoSubKeyword)
         {
             var keyword = NextToken();

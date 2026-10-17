@@ -19,6 +19,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     {
         BoundStatement? bound = syntax switch
         {
+            ConstStatementSyntax => new BoundNoOpStatement(),
             AssignmentStatementSyntax assignment => BindAssignment(assignment.Target, assignment.Expression),
             DimStatementSyntax dim => BindDim(dim),
             SetStatementSyntax set => BindAssignment(set.Target, set.Expression, isSet: true),
