@@ -28,6 +28,15 @@ var stackOptional = OptionalCallLowering.Forward("Defaults", typeof(object), [op
 if (stackOptional.Statements.OfType<BoundVariableDeclarationStatement>().Any(declaration => declaration.Local.Type.IsArray))
     throw new Exception("Ordinary Optional forwarding unexpectedly allocated constructor reference cells.");
 var imageSemantic = XpTypeSymbol.User("XPImage");
+var optionalBox = new ParameterSymbol("value", typeof(object), true, XpTypeSymbol.User("Box"));
+var optionalBoxForward = OptionalCallLowering.Forward("Defaults", typeof(object), [optionalBox],
+    [new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Nothing)], 0,
+    semanticReturnType: optionalCarrierType, heapBackedByRefDefaults: true);
+var optionalBoxCode = new BoundMethodEmitter().Emit("Defaults", typeof(object), optionalBoxForward.Parameters,
+    optionalBoxForward.Statements, true, semanticReturnType: optionalCarrierType);
+if (!optionalBoxCode.Contains("System.Runtime.CompilerServices.StrongBox<XpBox>") ||
+    !optionalBoxCode.Contains("ref __xpsOptional0.Value") || optionalBoxCode.Contains("object[]"))
+    throw new Exception("Optional reference cells erased their concrete class or lost managed-reference emission.");
 var imageField = new BoundNameExpression(new FieldSymbol("picture", typeof(object), imageSemantic));
 var createdImage = new BoundNewExpression(typeof(object), [new BoundLiteralExpression(2L, typeof(long)), new BoundLiteralExpression(2L, typeof(long))], imageSemantic);
 var imageStoreCode = new BoundMethodEmitter().Emit("StoreImage", typeof(void), [new BoundAssignmentStatement(imageField, createdImage, true)]);

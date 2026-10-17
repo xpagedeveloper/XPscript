@@ -8,4 +8,5 @@ Sub Main()
     ForAll entry In values
         Dim item As New Record(entry)
     End ForAll
+    Print "REFREF_FORALL_OK"
 End Sub

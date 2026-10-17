@@ -81,7 +81,6 @@ public static class AstExperimentalCompiler
         if (parser.Diagnostics.Count > 0)
             throw SyntaxDiagnosticException(parser.Diagnostics[0], sourcePath, fullSource);
         var moduleSource = AstClassMethodSupport.ModuleSource(fullSource);
-        var moduleFieldStorage = AstModuleFieldSupport.Find(moduleSource);
         // The experimental path keeps going when a non-selected declaration
         // contains syntax outside the current AST slice. Binding diagnostics
         // for the selected procedure remain authoritative below.
@@ -171,6 +170,7 @@ public static class AstExperimentalCompiler
         symbols.Declare(new LocalSymbol("matrix", typeof(object), XpTypeSymbol.Variant));
         foreach (Match match in Regex.Matches(fullSource, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$", RegexOptions.Multiline))
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(long), XpTypeSymbol.Variant));
+        var moduleFieldStorage = AstModuleFieldSupport.Find(moduleSource, symbols);
         foreach (var field in moduleFieldStorage)
             symbols.Declare(field.Symbol);
         foreach (Match match in Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase | RegexOptions.Multiline))

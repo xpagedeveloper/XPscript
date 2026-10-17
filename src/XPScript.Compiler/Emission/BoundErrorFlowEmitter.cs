@@ -30,7 +30,7 @@ internal sealed class BoundErrorFlowEmitter
                      .Where(item => item.Local.StaticStorageName is null))
         {
             var type = declaration.Local.SemanticType?.IsList == true
-                ? $"LSList<{BoundMethodEmitter.CSharpType(declaration.Local.SemanticType.ElementType!.RuntimeType)}>"
+                ? $"LSList<{BoundMethodEmitter.CSharpType(declaration.Local.SemanticType.ElementType!)}>"
                 : BoundMethodEmitter.CSharpType(declaration.Local.Type);
             type = BoundMethodEmitter.SemanticStorageType(declaration.Local, type);
             _output.Write($"{type} {declaration.Local.Name} = default({type})!;", 0, declaration.Span);
@@ -145,7 +145,7 @@ internal sealed class BoundErrorFlowEmitter
                 var items = _output.Temporary(); var itemIndex = _output.Temporary();
                 var isList = loop.Collection.SemanticType.IsList;
                 _storage.Add(isList
-                    ? $"LSListAlias<{BoundMethodEmitter.CSharpType(loop.Collection.SemanticType.ElementType!.RuntimeType)}>[] {items} = []; int {itemIndex} = 0;"
+                    ? $"LSListAlias<{BoundMethodEmitter.CSharpType(loop.Collection.SemanticType.ElementType!)}>[] {items} = []; int {itemIndex} = 0;"
                     : $"object?[] {items} = []; int {itemIndex} = 0;");
                 var allTest = _instructions.Count; var allBody = -1;
                 Add(statement, next, indent =>

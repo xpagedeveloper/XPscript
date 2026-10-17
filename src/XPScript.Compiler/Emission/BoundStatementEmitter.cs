@@ -240,7 +240,7 @@ public sealed class BoundStatementEmitter
             case BoundVariableDeclarationStatement { Initializer: null } when _flatControlFlow:
                 break;
             case BoundVariableDeclarationStatement { Local.SemanticType.IsList: true } list:
-                Line($"LSList<{CSharpType(list.Local.SemanticType!.ElementType!.RuntimeType)}> {list.Local.Name} = {(list.Initializer is null ? "new()" : _expressions.Emit(list.Initializer))};");
+                Line($"{BoundMethodEmitter.CSharpType(list.Local.SemanticType!)} {list.Local.Name} = {(list.Initializer is null ? "new()" : _expressions.Emit(list.Initializer))};");
                 break;
             case BoundVariableDeclarationStatement declaration:
                 var type = CSharpType(declaration.Local.Type);
@@ -262,29 +262,13 @@ public sealed class BoundStatementEmitter
                 }
                 if (ImageScopeEnabled && AstImageSupport.IsImage(declaration.Local.SemanticType?.Name) && declaration.Local.StaticStorageName is null)
                     initializer = $"__imageScope.Own({initializer})";
-                if (declaration.Local.IsDynamicArray && declaration.Initializer is null)
-                {
-                    var elementType = declaration.Local.SemanticType?.ElementType?.RuntimeType is { } semanticElement
-                        ? CSharpType(semanticElement)
-                        : declaration.Local.Type.GetElementType() is { } element ? CSharpType(element) : "object";
-                    initializer = $"new {elementType}[0]";
-                }
-                if (declaration.Local.Type.IsArray && declaration.Local.Type.GetArrayRank() > 1 && declaration.Initializer is null)
-                {
-                    var elementType = type[..type.IndexOf('[', StringComparison.Ordinal)];
-                    var lengths = string.Join(", ", declaration.Local.ArrayBounds.Select(bound => (bound.Upper - bound.Lower + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                    var lowers = string.Join(", ", declaration.Local.ArrayBounds.Select(bound => bound.Lower.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                    initializer = declaration.Local.ArrayBounds.Any(bound => bound.Lower != 0)
-                        ? $"({type})System.Array.CreateInstance(typeof({elementType}), new[] {{ {lengths} }}, new[] {{ {lowers} }})"
-                        : $"new {elementType}[{lengths}]";
-                }
+                if (declaration.Initializer is null && (declaration.Local.IsDynamicArray || declaration.Local.Type.IsArray))
+                    initializer = BoundArrayAllocation.Emit(declaration.Local, declaration.EmptyArray, declaration.ArrayLength);
                 if (declaration.Initializer is null && declaration.Local.SemanticType?.IsObject == true)
                     initializer = "null";
                 Line($"{type} {declaration.Local.Name} = {initializer};");
                 if (ImageScopeEnabled && AstImageSupport.IsImage(declaration.Local.SemanticType?.Name) && declaration.Local.StaticStorageName is null)
                     Line($"__imageScope.Observe(() => {declaration.Local.Name});");
-                if (declaration.Local.Type.IsArray && declaration.Local.Type.GetArrayRank() == 1 && declaration.Initializer is null && declaration.Local.Type.GetElementType() == typeof(string) && !declaration.EmptyArray)
-                    Line($"System.Array.Fill((string[]){declaration.Local.Name}, string.Empty);");
                 break;
             case BoundErrorStatement error:
                 var description = error.Description is null ? "\"XPscript Error\"" : _expressions.Emit(error.Description);
@@ -447,7 +431,7 @@ public sealed class BoundStatementEmitter
                 Line($"var {items} = {collection};");
                 Line($"var {itemIndex} = 0;");
                 var itemType = value.Collection.SemanticType.IsList
-                    ? $"LSListAlias<{BoundMethodEmitter.CSharpType(value.Collection.SemanticType.ElementType!.RuntimeType)}>" : "object?";
+                    ? $"LSListAlias<{BoundMethodEmitter.CSharpType(value.Collection.SemanticType.ElementType!)}>" : "object?";
                 Line($"{itemType} {itemValue} = null;");
                 Line($"{itemStart}:;");
                 Line($"if ({itemIndex} >= {items}.Length) goto {itemDone};");

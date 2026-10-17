@@ -11,11 +11,11 @@ internal static class AstModuleFieldSupport
     internal sealed record Field(VariableSymbol Symbol)
     {
         internal string Declaration => Symbol.HasTypedStorage
-            ? $"    public static {BoundMethodEmitter.CSharpType(Symbol.Type)} {Symbol.Name} = {(Symbol.Type == typeof(string) ? "string.Empty" : "default")};"
+            ? $"    public static {BoundMethodEmitter.CSharpType(Symbol.SemanticType ?? XpTypeSymbol.FromClr(Symbol.Type))} {Symbol.Name} = {(Symbol.Type == typeof(string) ? "string.Empty" : "default")};"
             : $"    public static dynamic {Symbol.Name} = null;";
     }
 
-    internal static IReadOnlyList<Field> Find(string source)
+    internal static IReadOnlyList<Field> Find(string source, SymbolTable symbols)
     {
         // Do not mistake fields or declaration-like text inside procedure bodies for globals.
         var text = source.ToCharArray();
@@ -28,11 +28,15 @@ internal static class AstModuleFieldSupport
             .Cast<Match>().Select(match =>
             {
                 var type = AstExperimentalCompiler.ResolveRuntimeType(match.Groups["type"].Value);
+                var semantic = match.Groups["type"].Value.Equals("Object", StringComparison.OrdinalIgnoreCase)
+                    ? XpTypeSymbol.Object
+                    : symbols.LookupAll(match.Groups["type"].Value).OfType<TypeSymbol>().FirstOrDefault()?.SemanticType;
                 var tail = match.Groups["tail"].Value.Trim();
-                // Initialized declarations and reference types retain the compatibility path.
-                var typed = type != typeof(object) && (tail.Length == 0 || tail.StartsWith("'", StringComparison.Ordinal));
+                // Initialized declarations and unknown types retain the compatibility path.
+                var typed = (type != typeof(object) || semantic is not null && !semantic.IsVariant) &&
+                    (tail.Length == 0 || tail.StartsWith("'", StringComparison.Ordinal));
                 return new Field(new VariableSymbol(match.Groups["name"].Value, type,
-                    typed ? XpTypeSymbol.FromClr(type) : XpTypeSymbol.Variant) { HasTypedStorage = typed });
+                    typed ? semantic ?? XpTypeSymbol.FromClr(type) : XpTypeSymbol.Variant) { HasTypedStorage = typed });
             }).ToArray();
     }
 }

@@ -31,17 +31,15 @@ public sealed class BoundCompilationUnitEmitter
                      .OfType<BoundVariableDeclarationStatement>().Where(declaration => declaration.Local.StaticStorageName is not null))
         {
             var type = declaration.Local.SemanticType?.IsList == true
-                ? $"LSList<{BoundMethodEmitter.CSharpType(declaration.Local.SemanticType.ElementType!.RuntimeType)}>"
+                ? $"LSList<{BoundMethodEmitter.CSharpType(declaration.Local.SemanticType.ElementType!)}>"
                 : BoundMethodEmitter.CSharpType(declaration.Local.Type);
             if (declaration.Local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
                 !semantic.IsVariant && !semantic.IsObject && !semantic.IsEmpty && !semantic.IsNothing && !semantic.IsNull && !semantic.IsList)
                 type = $"Xp{semantic.Name}";
             type = BoundExpressionEmitter.RuntimeObjectType(declaration.Local.SemanticType?.Name ?? "") ?? type;
             type = BoundMethodEmitter.SemanticStorageType(declaration.Local, type);
-            var initialValue = declaration.Local.IsDynamicArray
-                ? $"new {BoundMethodEmitter.CSharpType(declaration.Local.SemanticType!.ElementType!.RuntimeType)}[0]"
-                : declaration.Local.Type.IsArray
-                ? $"new {type[..^2]}[0]"
+            var initialValue = declaration.Local.IsDynamicArray || declaration.Local.Type.IsArray
+                ? BoundArrayAllocation.Emit(declaration.Local, declaration.EmptyArray, declaration.ArrayLength)
                 : declaration.Local.SemanticType?.IsList == true ? $"new {type}()"
                 : declaration.Local.Type == typeof(string) ? "string.Empty" : $"default({type})";
             output.Append("private static ").Append(type).Append(' ').Append(declaration.Local.StaticStorageName)

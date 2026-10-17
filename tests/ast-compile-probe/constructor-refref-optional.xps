@@ -5,4 +5,6 @@ Class Record
     End Sub
 End Class
 Sub Main()
+    Dim item As New Record()
+    Print "REFREF_OPTIONAL_OK"
 End Sub

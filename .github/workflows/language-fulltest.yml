@@ -25,6 +25,6 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
-      - name: Run Language FullTest, reference and Optional/mixed constructors, Parent.New and XPImage cleanup first
+      - name: Run Language FullTest, typed reference cells and element/module constructor aliases, Parent.New and XPImage cleanup
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite language

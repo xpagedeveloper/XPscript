@@ -6,4 +6,5 @@ Sub Main()
     Dim values List As Object
     Set values("a") = New Object()
     Dim item As New Record(values("a"))
+    Print "REFREF_LIST_OK"
 End Sub

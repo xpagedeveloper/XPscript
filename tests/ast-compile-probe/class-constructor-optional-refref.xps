@@ -1,0 +1,68 @@
+Public defaults As Long
+Class Box
+    Public Value As Long
+End Class
+Class Record
+    Public Stored As Box
+    Public Saved As Box
+    Public Sub New(Optional ByRef value As Box = New Box(), Optional ByVal snapshot As Box = value, Optional ByVal count As Long = Touch(value), Optional ByRef opaque As Object)
+        If Not (opaque Is Nothing) Then Error 4101, "Object zero"
+        If value.Value <> 10 Then Error 4102, "default mutation"
+        value.Value = value.Value + count
+        Set Saved = snapshot
+        Set Stored = value
+        Set value = Nothing
+    End Sub
+End Class
+Class Vacant
+    Public Sub New(Optional value As Box, Optional ByRef opaque As Object = Nothing)
+        If Not (value Is Nothing) Or Not (opaque Is Nothing) Then Error 4103, "implicit reference defaults"
+        Set value = New Box()
+        Set opaque = New Object()
+    End Sub
+End Class
+Class Child Extend Record
+    Public Sub New()
+        Call Parent.New()
+    End Sub
+End Class
+Class ImplicitChild Extend Vacant
+End Class
+Class Forwarder
+    Public Stored As Box
+    Public Sub New(Optional ByRef value As Box = New Box())
+        Dim nested As New Record(value)
+        Set Stored = nested.Stored
+        If Not (value Is Nothing) Then Error 4104, "nested ByRef slot"
+    End Sub
+End Class
+Function Touch(ByVal value As Variant) As Long
+    defaults = defaults + 1
+    Dim typed As Box = value
+    typed.Value = typed.Value + 10
+    Touch = 2
+End Function
+Function Make(Optional ByVal value As Variant = New Record()) As Variant
+    Make = value
+End Function
+Sub Main()
+    Dim first As New Record()
+    Dim second As New Record()
+    If first.Stored Is second.Stored Then Error 4105, "shared omitted cell"
+    If Not (first.Stored Is first.Saved) Or first.Stored.Value <> 12 Then Error 4106, "snapshot or dependency"
+    Dim source As New Box()
+    Dim supplied As New Record(source)
+    If Not (source Is Nothing) Then Error 4107, "supplied caller slot"
+    Dim vacant As New Vacant()
+    Dim other As New Vacant()
+    Dim implicitChild As New ImplicitChild()
+    Dim child As New Child()
+    If child.Stored.Value <> 12 Then Error 4108, "base defaults"
+    Dim forwarder As New Forwarder()
+    If forwarder.Stored.Value <> 12 Then Error 4109, "nested defaults"
+    Dim returned As Variant = Make()
+    Dim rewritten As Record = returned
+    If rewritten.Stored.Value <> 12 Then Error 4110, "caller Optional rewrite"
+    If defaults <> 6 Then Error 4111, "default evaluation count"
+    Print "OPTIONAL_REFREF_CONSTRUCTORS_OK"
+End Sub

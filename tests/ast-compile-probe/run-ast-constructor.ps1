@@ -3,12 +3,19 @@ $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
 $output = Join-Path $outputRoot ('constructor-' + [Guid]::NewGuid().ToString('N'))
-foreach ($fixture in @('class-constructor-optional-reference', 'constructor-reference-optional', 'class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
+foreach ($fixture in @('constructor-refref-module', 'class-constructor-reference-storage', 'class-constructor-optional-refref', 'constructor-refref-array', 'constructor-refref-list', 'constructor-refref-forall', 'constructor-refref-optional', 'class-constructor-optional-reference', 'constructor-reference-optional', 'class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
     if ($LASTEXITCODE -ne 0) { throw "AST constructor compilation failed: $fixture" }
     $result = dotnet (Join-Path $target 'Generated.dll')
     $expected = switch ($fixture) {
+        'class-constructor-reference-storage' { 'REFERENCE_STORAGE_CONSTRUCTORS_OK' }
+        'class-constructor-optional-refref' { 'OPTIONAL_REFREF_CONSTRUCTORS_OK' }
+        'constructor-refref-array' { 'REFREF_ARRAY_OK' }
+        'constructor-refref-list' { 'REFREF_LIST_OK' }
+        'constructor-refref-forall' { 'REFREF_FORALL_OK' }
+        'constructor-refref-module' { 'REFREF_MODULE_OK' }
+        'constructor-refref-optional' { 'REFREF_OPTIONAL_OK' }
         'class-constructor-optional-reference' { 'OPTIONAL_REFERENCE_CONSTRUCTORS_OK' }
         'constructor-reference-optional' { 'CONSTRUCTOR_REFERENCE_OPTIONAL_OK' }
         'class-constructor-reference-byref' { 'BYREF_REFERENCE_CONSTRUCTORS_OK' }
@@ -93,17 +100,13 @@ foreach ($case in @(
     @('constructor-optional-required-error', 'XPS2004', 6),
     @('constructor-optional-slot-error', 'XPS1012', 6),
     @('constructor-optional-private-error', 'XPS2009', 6),
+    @('constructor-refref-element-type-error', 'XPS2003', 11),
     @('constructor-refref-upcast-error', 'XPS2003', 11),
     @('constructor-refref-object-error', 'XPS2003', 9),
     @('constructor-refref-temporary-error', 'XPS2001', 8),
     @('constructor-refref-variant-error', 'XPS2003', 7),
     @('constructor-refref-property-error', 'XPS3001', 14),
-    @('constructor-refref-array-deferred', 'XPS3001', 9),
-    @('constructor-refref-list-deferred', 'XPS3001', 8),
-    @('constructor-refref-forall-deferred', 'XPS3001', 9),
     @('constructor-refref-parent-error', 'XPS2003', 11),
-    @('constructor-refref-optional-deferred', 'XPS3001', 4),
-    @('constructor-refref-module-deferred', 'XPS3001', 8),
     @('constructor-optional-reference-type-error', 'XPS2001', 2),
     @('constructor-optional-reference-name-error', 'XPS2008', 4),
     @('constructor-reference-native-deferred', 'XPS3001', 2),
@@ -133,6 +136,8 @@ Write-Host 'AST_CONSTRUCTORS_OK'
 Write-Host 'AST_REFERENCE_CONSTRUCTORS_OK'
 Write-Host 'AST_BYREF_REFERENCE_CONSTRUCTORS_OK'
 Write-Host 'AST_OPTIONAL_REFERENCE_CONSTRUCTORS_OK'
+Write-Host 'AST_OPTIONAL_REFREF_CONSTRUCTORS_OK'
+Write-Host 'AST_REFERENCE_STORAGE_CONSTRUCTORS_OK'
 Write-Host 'AST_MIXED_CONSTRUCTORS_OK'
 Write-Host 'AST_OPTIONAL_BYREF_CONSTRUCTORS_OK'
 Write-Host 'AST_DERIVED_CONSTRUCTORS_OK'

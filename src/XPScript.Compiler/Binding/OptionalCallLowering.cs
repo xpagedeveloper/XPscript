@@ -24,10 +24,13 @@ public static class OptionalCallLowering
             var parameter = parameters[i];
             var cell = heapBackedByRefDefaults && parameter.IsByRef;
             var type = parameter.SemanticType ?? XpTypeSymbol.FromClr(parameter.Type);
-            var local = new LocalSymbol(localName, cell ? parameter.Type.MakeArrayType() : parameter.Type,
-                cell ? XpTypeSymbol.ArrayOf(type) : type);
+            var referenceCell = cell && parameter.Type == typeof(object);
+            var local = new LocalSymbol(localName, referenceCell ? typeof(object) : cell ? parameter.Type.MakeArrayType() : parameter.Type,
+                referenceCell ? XpTypeSymbol.ReferenceCellOf(type) : cell ? XpTypeSymbol.ArrayOf(type) : type);
             omittedLocals[parameter] = local;
-            replacements[parameter] = cell
+            replacements[parameter] = referenceCell
+                ? new BoundMemberAccessExpression(new BoundNameExpression(local), "Value", parameter.Type, type, isFieldStorage: true)
+                : cell
                 ? new BoundIndexExpression(new BoundNameExpression(local), new BoundLiteralExpression(0L, typeof(long)), parameter.Type, type)
                 : new BoundNameExpression(local);
         }
@@ -40,6 +43,14 @@ public static class OptionalCallLowering
             var value = replacements[parameters[i]];
             if (heapBackedByRefDefaults && parameters[i].IsByRef)
             {
+                if (local.SemanticType?.IsReferenceCell == true)
+                {
+                    // The interior managed reference roots the exact typed cell.
+                    statements.Add(new BoundVariableDeclarationStatement(local,
+                        new BoundNewExpression(typeof(object), [initializer], local.SemanticType)));
+                    arguments.Add(value);
+                    continue;
+                }
                 // A constructor carrier may outlive this forwarding frame. An
                 // interior managed reference keeps its fresh one-element array
                 // alive; never return a reference to an omitted stack local.

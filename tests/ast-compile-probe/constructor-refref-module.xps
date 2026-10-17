@@ -6,4 +6,5 @@ End Class
 Sub Main()
     Set value = New Object()
     Dim item As New Record(value)
+    Print "REFREF_MODULE_OK"
 End Sub

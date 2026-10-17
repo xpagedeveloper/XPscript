@@ -90,6 +90,8 @@ public sealed class BoundExpressionEmitter
             : index.Expression.Type == typeof(Dictionary<string, object?>)
                 ? $"{Emit(index.Expression)}[Convert.ToString({Emit(index.Index)}) ?? string.Empty]"
             : $"{Emit(index.Expression)}[{Emit(index.Index)}]",
+        BoundNewExpression @new when @new.SemanticType.IsReferenceCell =>
+            $"new {BoundMethodEmitter.CSharpType(@new.SemanticType)}({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.Constructor is not null => $"new Xp{@new.SemanticType.Name}({EmitReferenceArguments(@new.Arguments, @new.Constructor.ByRefParameters)})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateClient()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateRequest()",
@@ -156,7 +158,7 @@ public sealed class BoundExpressionEmitter
             : index.Type == typeof(double) ? $"Convert.ToDouble({access})"
             : index.Type == typeof(bool) ? $"Convert.ToBoolean({access})"
             : index.Type == typeof(string) ? $"(Convert.ToString({access}) ?? string.Empty)"
-            : access;
+            : index.Type == typeof(object) ? $"(({BoundMethodEmitter.CSharpType(index.SemanticType)})({access}))" : access;
     }
 
     internal string EmitArrayIndexArguments(BoundIndexExpression index)
@@ -185,7 +187,7 @@ public sealed class BoundExpressionEmitter
         BoundIndexExpression index when index.Expression.SemanticType.IsList =>
             $"{Emit(index.Expression)}.Reference({Emit(index.Index)})",
         BoundIndexExpression index when index.Expression.SemanticType.IsArray =>
-            $"LSArrayRuntime.Reference<{BoundMethodEmitter.CSharpType(index.Type)}>({Emit(index.Expression)}, {EmitArrayIndexArguments(index)})",
+            $"LSArrayRuntime.Reference<{BoundMethodEmitter.CSharpType(index.SemanticType)}>({Emit(index.Expression)}, {EmitArrayIndexArguments(index)})",
         _ => Emit(argument)
     };
 
@@ -254,6 +256,8 @@ public sealed class BoundExpressionEmitter
         var arguments = call.Arguments.Select((argument, index) =>
         {
             var byRef = call.Function.ByRefParameters?[index] == true;
+            if (byRef && argument is BoundMemberAccessExpression { IsFieldStorage: true, Receiver.SemanticType.IsReferenceCell: true })
+                return "ref " + Emit(argument);
             if (byRef && argument is BoundIndexExpression { Expression.SemanticType.IsArray: true })
                 return "ref " + EmitIndexedReference(argument);
             if (byRef && argument is not BoundNameExpression)
@@ -307,7 +311,7 @@ public sealed class BoundExpressionEmitter
     {
         var value = Emit(expression.Expression);
         if (expression.SemanticType.IsList && expression.Conversion.Kind == ConversionKind.FromVariant)
-            return $"(LSList<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!.RuntimeType)}>)({value})";
+            return $"(LSList<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!)}>)({value})";
         if (RuntimeObjectType(expression.SemanticType.Name) is { } jsonType && expression.Conversion.Kind is ConversionKind.FromVariant or ConversionKind.ReferenceUpcast)
             return $"({jsonType})({value})";
         if (expression.Type == typeof(object) && expression.Conversion.Kind == ConversionKind.FromVariant)

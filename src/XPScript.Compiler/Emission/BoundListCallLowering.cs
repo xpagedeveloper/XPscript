@@ -30,7 +30,7 @@ internal static class BoundListCallLowering
             var byRef = call.Function.ByRefParameters?[i] == true;
             var parameterType = call.Function.SemanticParameterTypes?[i];
             var type = parameterType?.IsList == true
-                ? $"LSList<{BoundMethodEmitter.CSharpType(parameterType.ElementType!.RuntimeType)}>"
+                ? $"LSList<{BoundMethodEmitter.CSharpType(parameterType.ElementType!)}>"
                 : BoundMethodEmitter.CSharpType(call.Function.ParameterTypes[i]);
             var name = "a" + i;
             if (byRef && (IsElement(argument) || IsAlias(argument)))

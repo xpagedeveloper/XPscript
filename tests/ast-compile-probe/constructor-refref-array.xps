@@ -7,4 +7,5 @@ End Class
 Sub Main()
     Dim values(0) As Box
     Dim item As New Record(values(0))
+    Print "REFREF_ARRAY_OK"
 End Sub

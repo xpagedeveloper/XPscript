@@ -189,7 +189,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         return new BoundVariableDeclarationStatement(local, initializer, syntax.IsArray && syntax.ArrayLength is null, syntax.ArrayLength);
     }
 
-    private static (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name, bool isArray = false, int? arrayLength = null, bool isList = false, int arrayRank = 1)
+    private (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name, bool isArray = false, int? arrayLength = null, bool isList = false, int arrayRank = 1)
     {
         var result = name?.Trim().ToUpperInvariant() switch
         {
@@ -198,7 +198,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             "STRING" => (typeof(string), XpTypeSymbol.FromClr(typeof(string))),
             "INTEGER" or "LONG" => (typeof(long), XpTypeSymbol.FromClr(typeof(long))),
             "SINGLE" or "DOUBLE" or "CURRENCY" => (typeof(double), XpTypeSymbol.FromClr(typeof(double))),
-            _ => (typeof(object), string.IsNullOrWhiteSpace(name) ? XpTypeSymbol.Variant : XpTypeSymbol.User(name.Trim()))
+            _ => (typeof(object), string.IsNullOrWhiteSpace(name) ? XpTypeSymbol.Variant :
+                _symbols.LookupAll(name.Trim()).OfType<TypeSymbol>().FirstOrDefault()?.SemanticType ?? XpTypeSymbol.User(name.Trim()))
         };
         if (isList) return (typeof(object), XpTypeSymbol.ListOf(result.Item2));
         if (!isArray) return result;
@@ -206,9 +207,9 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         // semantic type for binding, but use System.Array for generated C# so
         // a later rank-two/rank-three ReDim is assignable to the same slot.
         if (arrayLength is null && arrayRank > 1)
-            return (typeof(Array), XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(result.Item1), arrayRank));
+            return (typeof(Array), XpTypeSymbol.ArrayOf(result.Item2, arrayRank));
         var arrayType = arrayRank == 1 ? result.Item1.MakeArrayType() : result.Item1.MakeArrayType(arrayRank);
-        return (arrayType, XpTypeSymbol.ArrayOf(XpTypeSymbol.FromClr(result.Item1), arrayRank));
+        return (arrayType, XpTypeSymbol.ArrayOf(result.Item2, arrayRank));
     }
 
     private BoundStatement? BindCallStatement(CallStatementSyntax syntax)

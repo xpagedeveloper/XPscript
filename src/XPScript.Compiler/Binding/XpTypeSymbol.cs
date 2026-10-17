@@ -4,7 +4,8 @@ public enum XpTypeShape
 {
     Scalar,
     Array,
-    List
+    List,
+    ReferenceCell
 }
 
 public sealed record XpTypeSymbol(
@@ -26,6 +27,11 @@ public sealed record XpTypeSymbol(
     public bool IsNothing => string.Equals(Name, "Nothing", StringComparison.OrdinalIgnoreCase) && Shape == XpTypeShape.Scalar;
     public bool IsArray => Shape == XpTypeShape.Array;
     public bool IsList => Shape == XpTypeShape.List;
+    public bool IsReferenceCell => Shape == XpTypeShape.ReferenceCell;
+
+    // Compiler-owned heap storage; not an XPscript source-language type.
+    public static XpTypeSymbol ReferenceCellOf(XpTypeSymbol valueType) =>
+        new("ReferenceCell", typeof(object), valueType, XpTypeShape.ReferenceCell);
 
     public static XpTypeSymbol FromClr(Type type) =>
         type.IsArray

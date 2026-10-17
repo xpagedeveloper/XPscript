@@ -1,0 +1,67 @@
+Public escaped As Variant
+Public defaultLocal As Variant
+Public failNext As Boolean
+Class Source
+    Public Picture As XPImage
+End Class
+Class Owner
+    Public Picture As XPImage
+    Public Borrowed As Source
+    Public Sub New(Optional ByRef value As Source = MakeSource(), Optional ByVal fail As Boolean = failNext)
+        Set Borrowed = value
+        Set Picture = value.Picture
+        escaped = Me
+        Set value = Nothing
+        If fail Then Error 4130, "failed body"
+    End Sub
+End Class
+Class Child Extend Owner
+    Public Sub New()
+        Call Parent.New()
+    End Sub
+End Class
+Function MakeSource() As Variant
+    Dim picture As New XPImage(4, 2)
+    defaultLocal = picture
+    Dim value As New Source()
+    Set value.Picture = picture
+    MakeSource = value
+End Function
+Sub Main()
+    Dim first As New Child()
+    Dim firstSource As Source = first.Borrowed
+    Dim second As New Owner()
+    Dim secondSource As Source = second.Borrowed
+    If firstSource Is secondSource Then Error 4131, "shared default source"
+    If first.Picture.Width <> 4 Or firstSource.Picture.Width <> 4 Then Error 4132, "returned default source"
+    Dim expired As XPImage = defaultLocal
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = expired.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 4133, "factory local leaked"
+    Dim old As Child = first
+    failNext = True
+    On Error Resume Next
+    Set first = New Child()
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4130 Or Not (first Is old) Then Error 4134, "failed target"
+    Dim failed As Child = escaped
+    Dim failedSource As Source = failed.Borrowed
+    If Not (failed.Picture Is Nothing) Then Error 4135, "failed own field"
+    If failedSource.Picture.Width <> 4 Then Error 4136, "failed borrowed field"
+    Dim supplied As Source = firstSource
+    Dim suppliedOwner As New Owner(supplied, False)
+    If Not (supplied Is Nothing) Then Error 4137, "caller replacement lost"
+    Delete suppliedOwner
+    Delete first
+    Delete second
+    If firstSource.Picture.Width <> 4 Or secondSource.Picture.Width <> 4 Then Error 4138, "Delete consumed input"
+    Delete firstSource
+    Delete secondSource
+    Delete failedSource
+    Print "IMAGE_OPTIONAL_REFREF_CONSTRUCTORS_OK"
+End Sub
