@@ -1,0 +1,10 @@
+Class Reader
+    Public Function Probe(ByVal part As XPHttpPart, ByVal file As XPHttpFile) As Long
+        Probe = 1
+    End Function
+End Class
+
+Sub Main()
+    Dim reader As New Reader
+    Print reader.Probe(Nothing, Nothing)
+End Sub
