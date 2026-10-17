@@ -221,7 +221,7 @@ $httpResponseClassMethodOutput = Join-Path $output 'class-method-http-response-n
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-response-next.xps') -o $httpResponseClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST HTTP response class-method compilation failed.' }
 $httpResponseClassMethodResult = dotnet (Join-Path $httpResponseClassMethodOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($httpResponseClassMethodResult -join "`n") -ne 'True') { throw 'AST HTTP response class-method execution failed.' }
+if ($LASTEXITCODE -ne 0 -or ($httpResponseClassMethodResult -join "`n") -ne '1') { throw 'AST HTTP response class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_HTTP_RESPONSE_OK'
 $httpPartsClassMethodOutput = Join-Path $output 'class-method-http-parts-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-parts-next.xps') -o $httpPartsClassMethodOutput
