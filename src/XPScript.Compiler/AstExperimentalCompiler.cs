@@ -494,7 +494,7 @@ public static class AstExperimentalCompiler
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine,
             enumNames.Select(enumMatch => $"    public static Xp{enumMatch.Groups["name"].Value} {enumMatch.Groups["name"].Value} = new Xp{enumMatch.Groups["name"].Value}();"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, moduleArrayDeclarations
-            .Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ModuleArrayInitializer(match.Groups["bounds"].Value, match.Groups["type"].Value)};"));
+            .Select(match => $"    public static System.Array {match.Groups["name"].Value} = {ModuleArrayInitializer(match.Groups["bounds"].Value, match.Groups["type"].Value)};"));
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
         var entryPoint = usesApplication
             ? "public static void Main(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
@@ -912,17 +912,17 @@ internal static class Program
     public static object ArraySplice(object? value, object? start, object? count) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Where((_, index) => index < Convert.ToInt32(start) || index >= Convert.ToInt32(start) + Convert.ToInt32(count)).ToArray() : System.Array.Empty<object?>();
     public static object ArraySplice(object? value, object? start, object? count, object? replacement) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Where((_, index) => index < Convert.ToInt32(start) || index >= Convert.ToInt32(start) + Convert.ToInt32(count)).Append(replacement).ToArray() : new[] { replacement };
     public static object ArraySplice(object? value, object? start, object? count, object? first, object? second) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Where((_, index) => index < Convert.ToInt32(start) || index >= Convert.ToInt32(start) + Convert.ToInt32(count)).Concat(new[] { first, second }).ToArray() : new[] { first, second };
-    public static object ArrayResize(object? value, object? upper, object? preserve, object? lower = null)
+    public static Array ArrayResize(object? value, object? upper, object? preserve, object? lower = null)
     {
         var lowerBound = lower is null ? 0 : Convert.ToInt32(lower);
         var upperBound = Convert.ToInt32(upper);
         return LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), lowerBound, upperBound);
     }
-    public static object ArrayResize(object? value, object? upper1, object? preserve, object? lower1, object? upper2, object? lower2)
+    public static Array ArrayResize(object? value, object? upper1, object? preserve, object? lower1, object? upper2, object? lower2)
         => LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), Convert.ToInt32(upper1), Convert.ToInt32(lower1), Convert.ToInt32(upper2), Convert.ToInt32(lower2));
-    public static object ArrayResize(object? value, object? upper1, object? preserve, object? lower1, object? upper2, object? lower2, object? upper3, object? lower3)
+    public static Array ArrayResize(object? value, object? upper1, object? preserve, object? lower1, object? upper2, object? lower2, object? upper3, object? lower3)
         => LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), Convert.ToInt32(upper1), Convert.ToInt32(lower1), Convert.ToInt32(upper2), Convert.ToInt32(lower2), Convert.ToInt32(upper3), Convert.ToInt32(lower3));
-    public static object ArrayResize(object? value, object? upper1, object? preserve, object? lower1, object? upper2, object? lower2, object? upper3, object? lower3, object? upper4, object? lower4)
+    public static Array ArrayResize(object? value, object? upper1, object? preserve, object? lower1, object? upper2, object? lower2, object? upper3, object? lower3, object? upper4, object? lower4)
         => LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), Convert.ToInt32(upper1), Convert.ToInt32(lower1), Convert.ToInt32(upper2), Convert.ToInt32(lower2), Convert.ToInt32(upper3), Convert.ToInt32(lower3), Convert.ToInt32(upper4), Convert.ToInt32(lower4));
     public static object Explode(object? value, object? separator) => (value?.ToString() ?? string.Empty).Split(separator?.ToString() ?? ",");
     public static string FullTrim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
