@@ -25,6 +25,11 @@ Sub Main()
     On Error GoTo 0
     If code = 0 Then Error 9843, "FileHash accepted a missing file"
     On Error Resume Next
+    values = FileLen(missing & "/missing.bin")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9852, "FileLen accepted a missing file"
+    On Error Resume Next
     values = FileEquals(missing & "/left.bin", missing & "/right.bin")
     code = Err
     On Error GoTo 0

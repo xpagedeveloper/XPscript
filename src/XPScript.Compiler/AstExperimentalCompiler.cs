@@ -611,7 +611,7 @@ internal static class Program
     public static long Len(object? value) => XPScriptRuntime.Len(value);
     public static long LenB(object? value) => XPScriptRuntime.LenB(value);
     public static string TypeName(object? value) => XPScriptNullRuntime.TypeName(value);
-    public static long FileLen(string path) => new System.IO.FileInfo(path).Length;
+    public static long FileLen(string path) => new System.IO.FileInfo(RequireExistingFilePath(path)).Length;
     public static object ReadFile(params object?[] a) => XPScriptTextFileRuntime.ReadFile(a[0], a.Length > 1 ? a[1] : null);
     public static object ReadLines(params object?[] a) => System.IO.File.ReadAllLines(RequireExistingFilePath(a[0]));
     public static object ReadBytes(params object?[] a) => System.IO.File.ReadAllBytes(RequireExistingFilePath(a[0]));
