@@ -99,6 +99,7 @@ public sealed class SymbolTable
         var stringType = XpTypeSymbol.FromClr(typeof(string));
         Declare(new FunctionSymbol("XPAi.Complete", typeof(object), [typeof(object), typeof(string)], response, [messages, stringType]));
         Declare(new FunctionSymbol("XPAi.Stream", typeof(object), [typeof(object), typeof(string), typeof(string)], response, [messages, stringType, stringType]));
+        Declare(new FunctionSymbol("XPAi.StreamCallback", typeof(object), [typeof(string), typeof(object)], response, [stringType, XpTypeSymbol.Variant]));
     }
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch

@@ -1,11 +1,15 @@
 Sub OnChunk(ByVal text As String)
 End Sub
 
+Sub OnChunkWithContext(ByVal text As String, ByVal context As Variant)
+End Sub
+
 Sub Main()
     Dim ai As New XPAi("https://example.invalid", "key")
     Dim messages As XPJsonDocument
     Dim response As XPAiResponse
     Set response = ai.Complete(messages, "model")
     Set response = ai.Stream(messages, "OnChunk", "model")
+    Set response = ai.StreamCallback("OnChunkWithContext", "tenant")
     Print "XPAI_OVERLOADS_OK"
 End Sub
