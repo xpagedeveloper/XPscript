@@ -178,6 +178,12 @@ foreach (var derivedPropertySetFixture in new[] { "class-property-derived-set-ne
     var result = await CallAsync(new { jsonrpc="2.0",id=derivedPropertySetFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=derivedPropertySetFixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Derived property setter validation failed: " + result);
 }
+foreach (var derivedIndexedPropertyFixture in new[] { "class-property-derived-index-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", derivedIndexedPropertyFixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=derivedIndexedPropertyFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=derivedIndexedPropertyFixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Derived indexed property validation failed: " + result);
+}
 foreach (var initializedModuleFixture in new[] { "initialized-module-byref-next", "initialized-module-boolean-next", "initialized-module-string-next", "initialized-module-reference-next", "initialized-module-reference-new-next", "initialized-module-reference-args-next", "initialized-module-date-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", initializedModuleFixture + ".xps"));

@@ -145,6 +145,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST derived property setter compilation failed
 $derivedPropertySetResult = dotnet (Join-Path $derivedPropertySetOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($derivedPropertySetResult -join "`n") -ne '9') { throw 'AST derived property setter execution failed.' }
 Write-Host 'AST_DERIVED_PROPERTY_SET_OK'
+$derivedIndexedPropertyOutput = Join-Path $output 'class-property-derived-index-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-property-derived-index-next.xps') -o $derivedIndexedPropertyOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST derived indexed property compilation failed.' }
+$derivedIndexedPropertyResult = dotnet (Join-Path $derivedIndexedPropertyOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($derivedIndexedPropertyResult -join "`n") -ne '7') { throw 'AST derived indexed property execution failed.' }
+Write-Host 'AST_DERIVED_INDEXED_PROPERTY_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
