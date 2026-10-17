@@ -89,6 +89,16 @@ public sealed class SymbolTable
         AstHttpSupport.Import(this);
         AstSpreadsheetSupport.Import(this);
         AstApplicationSupport.Import(this);
+        ImportXPAiOverloads();
+    }
+
+    private void ImportXPAiOverloads()
+    {
+        var response = XpTypeSymbol.User("XPAiResponse");
+        var messages = XpTypeSymbol.User("XPJsonDocument");
+        var stringType = XpTypeSymbol.FromClr(typeof(string));
+        Declare(new FunctionSymbol("XPAi.Complete", typeof(object), [typeof(object), typeof(string)], response, [messages, stringType]));
+        Declare(new FunctionSymbol("XPAi.Stream", typeof(object), [typeof(object), typeof(string), typeof(string)], response, [messages, stringType, stringType]));
     }
 
     private static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch

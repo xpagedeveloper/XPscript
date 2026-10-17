@@ -1126,6 +1126,10 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-module-function-ne
 if ($LASTEXITCODE -ne 0) { throw 'AST module-level Static Function compilation failed.' }
 $moduleStaticResult = dotnet (Join-Path $moduleStaticOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($moduleStaticResult -join "`n") -ne 'STATIC_MODULE_FUNCTION_OK') { throw 'AST module-level Static Function execution failed.' }
+$xpaiOverloadOutput = Join-Path $output 'xpai-overloads'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpai-overloads-next.xps') -o $xpaiOverloadOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST XPAi overload compilation failed.' }
+Write-Host 'AST_XPAI_OVERLOADS_OK'
 $crossProcedure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-cross-procedure-error.xps') -o (Join-Path $output 'cross-procedure') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($crossProcedure -join "`n") -notmatch "Unknown label 'outside'") { throw 'AST GoTo accepted a label from another procedure.' }
 $gotoOutput = Join-Path $output 'goto-scope'
