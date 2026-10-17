@@ -607,15 +607,15 @@ internal static class Program
     public static string TypeName(object? value) => XPScriptNullRuntime.TypeName(value);
     public static long FileLen(string path) => new System.IO.FileInfo(path).Length;
     public static object ReadFile(params object?[] a) => XPScriptTextFileRuntime.ReadFile(a[0], a.Length > 1 ? a[1] : null);
-    public static object ReadLines(params object?[] a) => System.IO.File.ReadAllLines(CStr(a[0]));
-    public static object ReadBytes(params object?[] a) => System.IO.File.ReadAllBytes(CStr(a[0]));
+    public static object ReadLines(params object?[] a) => System.IO.File.ReadAllLines(RequireExistingFilePath(a[0]));
+    public static object ReadBytes(params object?[] a) => System.IO.File.ReadAllBytes(RequireExistingFilePath(a[0]));
     public static object FileHash(params object?[] a) {
         using System.Security.Cryptography.HashAlgorithm h = (a.Length > 1 ? CStr(a[1]).ToUpperInvariant() : "SHA256") switch {
             "SHA384" => System.Security.Cryptography.SHA384.Create(),
             "SHA512" => System.Security.Cryptography.SHA512.Create(),
             _ => System.Security.Cryptography.SHA256.Create()
         };
-        return Convert.ToHexString(h.ComputeHash(System.IO.File.ReadAllBytes(CStr(a[0])))).ToLowerInvariant();
+        return Convert.ToHexString(h.ComputeHash(System.IO.File.ReadAllBytes(RequireExistingFilePath(a[0])))).ToLowerInvariant();
     }
 
     private static string Digest(string algorithm, object? value) {
@@ -644,23 +644,23 @@ internal static class Program
     public static object Directories(params object?[] a) => System.IO.Directory.GetDirectories(CStr(a[0]));
     public static object IsFile(params object?[] a) => System.IO.File.Exists(CStr(a[0]));
     public static object IsDir(params object?[] a) => System.IO.Directory.Exists(CStr(a[0]));
-    public static object FileEquals(params object?[] a) => System.Linq.Enumerable.SequenceEqual(System.IO.File.ReadAllBytes(CStr(a[0])), System.IO.File.ReadAllBytes(CStr(a[1])));
+    public static object FileEquals(params object?[] a) => System.Linq.Enumerable.SequenceEqual(System.IO.File.ReadAllBytes(RequireExistingFilePath(a[0])), System.IO.File.ReadAllBytes(RequireExistingFilePath(a[1])));
     public static object CopyFile(params object?[] a) {
-        var source = CStr(a[0]); var target = CStr(a[1]); var action = a.Length > 2 ? Convert.ToInt32(a[2]) : 1;
+        var source = RequireExistingFilePath(a[0]); var target = RequireWritableFilePath(a[1]); var action = a.Length > 2 ? Convert.ToInt32(a[2]) : 1;
         if (System.IO.File.Exists(target)) { if (action == 3) return false; if (action != 2) return false; }
-        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(target))!);
         System.IO.File.Copy(source, target, action == 2); return true;
     }
     public static object MoveFile(params object?[] a) {
-        var source = CStr(a[0]); var target = CStr(a[1]); var action = a.Length > 2 ? Convert.ToInt32(a[2]) : 1;
+        var source = RequireExistingFilePath(a[0]); var target = RequireWritableFilePath(a[1]); var action = a.Length > 2 ? Convert.ToInt32(a[2]) : 1;
         if (System.IO.File.Exists(target)) { if (action == 3) return false; if (action != 2) return false; }
-        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(target))!);
         System.IO.File.Move(source, target, action == 2); return true;
     }
-    public static object WriteFile(params object?[] a) { var p = CStr(a[0]); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(p))!); System.IO.File.WriteAllText(p, CStr(a[1])); return true; }
-    public static object AppendFile(params object?[] a) { var p = CStr(a[0]); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(p))!); System.IO.File.AppendAllText(p, CStr(a[1])); return true; }
-    public static object WriteLines(params object?[] a) { System.IO.File.WriteAllLines(CStr(a[0]), ((System.Collections.IEnumerable)a[1]!).Cast<object?>().Select(CStr)); return true; }
-    public static object WriteBytes(params object?[] a) { System.IO.File.WriteAllBytes(CStr(a[0]), (byte[])a[1]!); return true; }
+    public static object WriteFile(params object?[] a) { System.IO.File.WriteAllText(RequireWritableFilePath(a[0]), CStr(a[1])); return true; }
+    public static object AppendFile(params object?[] a) { System.IO.File.AppendAllText(RequireWritableFilePath(a[0]), CStr(a[1])); return true; }
+    public static object WriteLines(params object?[] a) { System.IO.File.WriteAllLines(RequireWritableFilePath(a[0]), ((System.Collections.IEnumerable)a[1]!).Cast<object?>().Select(CStr)); return true; }
+    public static object WriteBytes(params object?[] a) { System.IO.File.WriteAllBytes(RequireWritableFilePath(a[0]), (byte[])a[1]!); return true; }
+    private static string RequireExistingFilePath(object? value) { var p = System.IO.Path.GetFullPath(CStr(value)); if (!System.IO.File.Exists(p)) throw new FileNotFoundException("File not found.", p); return p; }
+    private static string RequireWritableFilePath(object? value) { var p = System.IO.Path.GetFullPath(CStr(value)); var parent = System.IO.Path.GetDirectoryName(p); if (string.IsNullOrWhiteSpace(parent) || !System.IO.Directory.Exists(parent)) throw new DirectoryNotFoundException("Destination directory does not exist."); return p; }
     public sealed class XpFileInfo {
         public string Name { get; init; } = string.Empty;
         public string FullPath { get; init; } = string.Empty;

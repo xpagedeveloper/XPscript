@@ -41,7 +41,7 @@ internal static class XPCrossPlatformRuntime
 
         var source = XPScriptFileSystemRuntime.ResolvePath(sourceValue);
         var target = XPScriptFileSystemRuntime.ResolvePath(targetValue);
-        if (!File.Exists(source)) return false;
+        if (!File.Exists(source)) throw new FileNotFoundException("File not found.", source);
 
         if (File.Exists(target) || Directory.Exists(target))
         {
@@ -232,7 +232,8 @@ internal static class XPCrossPlatformRuntime
         var right = Path.GetFullPath(XPScriptRuntime.CStr(rightValue));
         var leftInfo = new System.IO.FileInfo(left);
         var rightInfo = new System.IO.FileInfo(right);
-        if (!leftInfo.Exists || !rightInfo.Exists) return false;
+        if (!leftInfo.Exists) throw new FileNotFoundException("File not found.", left);
+        if (!rightInfo.Exists) throw new FileNotFoundException("File not found.", right);
         if (leftInfo.Length != rightInfo.Length) return false;
         if (string.Equals(left, right, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) return true;
 
@@ -318,16 +319,23 @@ internal static class XPCrossPlatformRuntime
 
     public static string ReadFile(object? path, object? charset = null) => XPScriptTextFileRuntime.ReadFile(path, charset);
 
-    public static void WriteFile(object? path, object? content, object? charset = null) =>
-        File.WriteAllText(Path.GetFullPath(XPScriptRuntime.CStr(path)), XPScriptRuntime.CStr(content), ResolveTextEncoding(charset));
+    public static void WriteFile(object? path, object? content, object? charset = null)
+    {
+        var fullPath = RequireWritablePath(path);
+        File.WriteAllText(fullPath, XPScriptRuntime.CStr(content), ResolveTextEncoding(charset));
+    }
 
-    public static void AppendFile(object? path, object? content, object? charset = null) =>
-        File.AppendAllText(Path.GetFullPath(XPScriptRuntime.CStr(path)), XPScriptRuntime.CStr(content), ResolveTextEncoding(charset));
+    public static void AppendFile(object? path, object? content, object? charset = null)
+    {
+        var fullPath = RequireWritablePath(path);
+        File.AppendAllText(fullPath, XPScriptRuntime.CStr(content), ResolveTextEncoding(charset));
+    }
 
     public static LSArray ReadLines(object? path, object? charset = null)
     {
         var values = new List<object?>();
-        using var reader = new StreamReader(Path.GetFullPath(XPScriptRuntime.CStr(path)), ResolveTextEncoding(charset), detectEncodingFromByteOrderMarks: true);
+        var fullPath = RequireExistingFile(path);
+        using var reader = new StreamReader(fullPath, ResolveTextEncoding(charset), detectEncodingFromByteOrderMarks: true);
         string? line;
         while ((line = reader.ReadLine()) is not null) values.Add(line);
         return ToXPScriptArray("String", values);
@@ -335,18 +343,34 @@ internal static class XPCrossPlatformRuntime
 
     public static void WriteLines(object? path, object? values, object? charset = null)
     {
-        using var writer = new StreamWriter(Path.GetFullPath(XPScriptRuntime.CStr(path)), append: false, ResolveTextEncoding(charset));
+        using var writer = new StreamWriter(RequireWritablePath(path), append: false, ResolveTextEncoding(charset));
         foreach (var value in EnumerateValues(values)) writer.WriteLine(XPScriptRuntime.CStr(value));
     }
 
     public static LSArray ReadBytes(object? path)
     {
-        var bytes = File.ReadAllBytes(Path.GetFullPath(XPScriptRuntime.CStr(path)));
+        var bytes = File.ReadAllBytes(RequireExistingFile(path));
         return ToXPScriptArray("Byte", bytes.Cast<object?>());
     }
 
     public static void WriteBytes(object? path, object? values) =>
         XPScriptFileSystemRuntime.WriteBytes(path, ToBytes(values));
+
+    private static string RequireExistingFile(object? path)
+    {
+        var fullPath = Path.GetFullPath(XPScriptRuntime.CStr(path));
+        if (!File.Exists(fullPath)) throw new FileNotFoundException("File not found.", fullPath);
+        return fullPath;
+    }
+
+    private static string RequireWritablePath(object? path)
+    {
+        var fullPath = Path.GetFullPath(XPScriptRuntime.CStr(path));
+        var parent = Path.GetDirectoryName(fullPath);
+        if (string.IsNullOrWhiteSpace(parent) || !Directory.Exists(parent))
+            throw new DirectoryNotFoundException("Destination directory does not exist.");
+        return fullPath;
+    }
 
     private static LSArray ToXPScriptArray(string elementType, IEnumerable<object?> values)
     {

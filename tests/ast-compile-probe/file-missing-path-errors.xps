@@ -1,0 +1,63 @@
+Option Declare
+Sub Main()
+    Dim code As Long
+    Dim values As Variant
+    Dim missing As String
+    missing = "xps-missing-path-errors"
+    On Error Resume Next
+    values = ReadFile(missing & "/missing.txt")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9840, "ReadFile accepted a missing file"
+    On Error Resume Next
+    values = ReadLines(missing & "/missing.txt")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9841, "ReadLines accepted a missing file"
+    On Error Resume Next
+    values = ReadBytes(missing & "/missing.bin")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9842, "ReadBytes accepted a missing file"
+    On Error Resume Next
+    values = FileHash(missing & "/missing.bin")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9843, "FileHash accepted a missing file"
+    On Error Resume Next
+    values = FileEquals(missing & "/left.bin", missing & "/right.bin")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9844, "FileEquals accepted a missing file"
+    On Error Resume Next
+    Call WriteFile(missing & "/output.txt", "value")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9845, "WriteFile created a missing parent"
+    On Error Resume Next
+    Call AppendFile(missing & "/output.txt", "value")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9846, "AppendFile created a missing parent"
+    On Error Resume Next
+    Call WriteLines(missing & "/output.txt", Array("value"))
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9847, "WriteLines created a missing parent"
+    On Error Resume Next
+    Call WriteBytes(missing & "/output.bin", Array(1, 2))
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9848, "WriteBytes created a missing parent"
+    On Error Resume Next
+    Call CopyFile(missing & "/source.txt", missing & "/output.txt")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9849, "CopyFile accepted a missing source"
+    On Error Resume Next
+    Call MoveFile(missing & "/source.txt", missing & "/output.txt")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9850, "MoveFile accepted a missing source"
+    Print "FILE_MISSING_PATH_ERRORS_OK"
+End Sub

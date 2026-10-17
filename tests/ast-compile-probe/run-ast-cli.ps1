@@ -7,6 +7,12 @@ $output = Join-Path $outputRoot 'ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
+$missingPathOutput = Join-Path $output 'file-missing-path-errors'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-missing-path-errors.xps') -o $missingPathOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST missing-file/path error fixture compilation failed.' }
+$missingPathResult = dotnet (Join-Path $missingPathOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($missingPathResult -join "`n") -ne 'FILE_MISSING_PATH_ERRORS_OK') { throw 'AST missing-file/path errors regression failed.' }
+Write-Host 'AST_FILE_MISSING_PATH_ERRORS_OK'
 $imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }

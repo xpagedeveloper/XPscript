@@ -424,6 +424,8 @@ WriteFile "config.json", content, "utf-8"
 AppendFile "app.log", "done"
 ```
 
+Reads and file metadata/hash/equality operations raise a runtime error when their required file is missing. Writes, appends, line/byte output, and copy/move destinations raise a runtime error when the destination directory is missing; create the directory explicitly before writing.
+
 Supported charset names include `utf-8`, UTF-16 variants, ISO encodings, and code-page names supported by the runtime encoding provider. UTF-8 is the normal default.
 
 ### Lines

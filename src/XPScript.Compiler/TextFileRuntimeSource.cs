@@ -8,8 +8,10 @@ internal static class XPScriptTextFileRuntime
 {
     public static string ReadFile(object? path, object? charset = null)
     {
+        var fullPath = Path.GetFullPath(XPScriptRuntime.CStr(path));
+        if (!File.Exists(fullPath)) throw new FileNotFoundException("File not found.", fullPath);
         var encoding = ResolveTextEncoding(charset);
-        using var reader = new StreamReader(Path.GetFullPath(XPScriptRuntime.CStr(path)), encoding, detectEncodingFromByteOrderMarks: true);
+        using var reader = new StreamReader(fullPath, encoding, detectEncodingFromByteOrderMarks: true);
         return reader.ReadToEnd();
     }
 
