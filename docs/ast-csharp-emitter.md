@@ -180,6 +180,8 @@ Compatible scalar property overrides also select the derived accessor; `class-pr
 
 Compatible indexed property overrides select the derived Get/Let pair; `class-property-indexed-override-next.xps` covers indexed assignment and lookup.
 
+Derived accessors can also read a direct base property through `Parent`; `class-property-parent-next.xps` covers that dispatch path.
+
 Bound member names are canonicalized case-insensitively. `class-method-case.xps` is AST-only because normal compilation currently rejects that casing. `class-methods-native.xps` compares real normal/AST execution; negative fixtures cover private access, foreign class fields and diagnostics inside method bodies. Language FullTest and MCP run these early.
 
 Derived scalar property getters reuse lineage scopes for inherited fields and methods; `class-property-derived-next.xps` covers a derived getter reading an inherited property. Full override/setter/accessor lifecycle remains open.

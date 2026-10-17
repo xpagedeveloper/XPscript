@@ -219,6 +219,13 @@ foreach (var indexedOverridePropertyFixture in new[] { "class-property-indexed-o
     var result = await CallAsync(new { jsonrpc = "2.0", id = indexedOverridePropertyFixture, method = "tools/call", @params = new { name = "xpscript_ast_validate", arguments = new { source, filename = indexedOverridePropertyFixture + ".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Indexed property override validation failed: " + result);
 }
+
+foreach (var parentPropertyFixture in new[] { "class-property-parent-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", parentPropertyFixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc = "2.0", id = parentPropertyFixture, method = "tools/call", @params = new { name = "xpscript_ast_validate", arguments = new { source, filename = parentPropertyFixture + ".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Parent property validation failed: " + result);
+}
 foreach (var initializedModuleFixture in new[] { "initialized-module-byref-next", "initialized-module-boolean-next", "initialized-module-string-next", "initialized-module-reference-next", "initialized-module-reference-new-next", "initialized-module-reference-args-next", "initialized-module-date-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", initializedModuleFixture + ".xps"));

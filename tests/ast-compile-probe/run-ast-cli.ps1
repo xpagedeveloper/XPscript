@@ -187,6 +187,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST indexed property override compilation fail
 $indexedOverridePropertyResult = dotnet (Join-Path $indexedOverridePropertyOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($indexedOverridePropertyResult -join "`n") -ne '12') { throw 'AST indexed property override execution failed.' }
 Write-Host 'AST_INDEXED_PROPERTY_OVERRIDE_OK'
+$parentPropertyOutput = Join-Path $output 'class-property-parent-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-property-parent-next.xps') -o $parentPropertyOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Parent property compilation failed.' }
+$parentPropertyResult = dotnet (Join-Path $parentPropertyOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($parentPropertyResult -join "`n") -ne '7') { throw 'AST Parent property execution failed.' }
+Write-Host 'AST_PARENT_PROPERTY_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
