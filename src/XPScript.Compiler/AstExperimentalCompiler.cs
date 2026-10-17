@@ -458,7 +458,7 @@ public static class AstExperimentalCompiler
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine,
             enumNames.Select(enumMatch => $"    public static Xp{enumMatch.Groups["name"].Value} {enumMatch.Groups["name"].Value} = new Xp{enumMatch.Groups["name"].Value}();"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, moduleArrayDeclarations
-            .Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ModuleArrayInitializer(match.Groups["bounds"].Value)};"));
+            .Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ModuleArrayInitializer(match.Groups["bounds"].Value, match.Groups["type"].Value)};"));
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
         var entryPoint = usesApplication
             ? "public static void Main(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
@@ -1295,9 +1295,18 @@ internal static class Program
         return members;
     }
 
-    private static string ModuleArrayInitializer(string bounds)
+    private static string ModuleArrayInitializer(string bounds, string typeName)
     {
-        if (string.IsNullOrWhiteSpace(bounds)) return "System.Array.Empty<object>()";
+        var elementType = typeName.Trim().ToUpperInvariant() switch
+        {
+            "BYTE" => "byte",
+            "INTEGER" or "LONG" => "long",
+            "SINGLE" or "DOUBLE" or "CURRENCY" => "double",
+            "BOOLEAN" => "bool",
+            "STRING" => "string",
+            _ => "object"
+        };
+        if (string.IsNullOrWhiteSpace(bounds)) return $"System.Array.Empty<{elementType}>()";
         var dimensions = bounds.Split(',').Select(item => item.Trim()).ToArray();
         var parsed = dimensions.Select(dimension =>
         {
@@ -1308,6 +1317,6 @@ internal static class Program
         }).ToArray();
         var lengths = string.Join(", ", parsed.Select(item => item.Length));
         var lowers = string.Join(", ", parsed.Select(item => item.Lower));
-        return $"LSArrayRuntime.CreateManaged<object>(new[] {{ {lengths} }}, new[] {{ {lowers} }})";
+        return $"LSArrayRuntime.CreateManaged<{elementType}>(new[] {{ {lengths} }}, new[] {{ {lowers} }})";
     }
 }
