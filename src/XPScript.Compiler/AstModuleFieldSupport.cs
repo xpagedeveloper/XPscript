@@ -72,8 +72,11 @@ internal static class AstModuleFieldSupport
     {
         var typeName = initializer.Groups["type"].Value;
         var arguments = initializer.Groups["args"].Value;
+        var runtimeType = BoundExpressionEmitter.RuntimeObjectType(typeName);
         return AstImageSupport.IsImage(typeName)
             ? $"new XPImage({arguments})"
-            : $"new Xp{typeName}({arguments})";
+            : runtimeType is not null
+                ? $"new {runtimeType}({arguments})"
+                : $"new Xp{typeName}({arguments})";
     }
 }
