@@ -337,6 +337,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized XML module ByRef storage compi
 $initializedXmlResult = dotnet (Join-Path $initializedXmlOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedXmlResult -join "`n") -ne 'INITIALIZED_MODULE_XML_BYREF_OK') { throw 'AST initialized XML module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_XML_MODULE_OK'
+$initializedCsvOutput = Join-Path $output 'initialized-module-csv-byref-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-csv-byref-next.xps') -o $initializedCsvOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized CSV module ByRef storage compilation failed.' }
+$initializedCsvResult = dotnet (Join-Path $initializedCsvOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedCsvResult -join "`n") -ne 'INITIALIZED_MODULE_CSV_BYREF_OK') { throw 'AST initialized CSV module ByRef storage failed.' }
+Write-Host 'AST_INITIALIZED_CSV_MODULE_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }
