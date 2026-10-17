@@ -109,6 +109,7 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesJSONNavigator", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonObject", StringComparison.OrdinalIgnoreCase) => "new XpJsonObject()",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonSchema", StringComparison.OrdinalIgnoreCase) => "new XPScriptJsonSchema()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPAi", StringComparison.OrdinalIgnoreCase) => $"new XPScriptAi({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("AITool", StringComparison.OrdinalIgnoreCase) => $"new XPScriptAiTool({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.IsObject && @new.Arguments.Count == 0 => "new System.Dynamic.ExpandoObject()",
@@ -132,6 +133,7 @@ public sealed class BoundExpressionEmitter
         "XPJSONOBJECT" => "XPScriptJsonObject",
         "XPJSONARRAY" => "XPScriptJsonArray",
         "XPJSONELEMENT" => "XPScriptJsonElement",
+        "XPJSONSCHEMA" => "XPScriptJsonSchema",
         "XPAI" => "XPScriptAi",
         "AITOOL" => "XPScriptAiTool",
         _ => null

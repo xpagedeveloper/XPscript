@@ -81,6 +81,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST native AI metadata compilation failed.' }
 $aiNativeResult = dotnet (Join-Path $aiNativeOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($aiNativeResult -join "`n") -ne 'AI_NATIVE_METADATA_OK') { throw 'AST native AI metadata regression failed.' }
 Write-Host 'AST_AI_NATIVE_METADATA_OK'
+$aiStructuredOutput = Join-Path $output 'xpai-structured-output'
+dotnet $compiler ast-compile (Join-Path $root 'samples/xpai-structured-output.xps') -o $aiStructuredOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST XPAi structured-output compilation failed.' }
+$aiStructuredResult = dotnet (Join-Path $aiStructuredOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($aiStructuredResult -join "`n") -ne 'XPAI-STRUCTURED-RUNTIME=OK') { throw 'AST XPAi structured-output regression failed.' }
+Write-Host 'AST_XPAI_STRUCTURED_OK'
 $notesSearchOutput = Join-Path $output 'notes-search-constants-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-search-constants-next.xps') -o $notesSearchOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes search constants compilation failed.' }

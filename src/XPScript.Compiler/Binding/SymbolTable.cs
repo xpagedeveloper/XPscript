@@ -68,6 +68,12 @@ public sealed class SymbolTable
                 continue;
             }
 
+            if (definition.Kind.Equals("property", StringComparison.OrdinalIgnoreCase))
+            {
+                var propertyType = definition.ReturnType ?? "Variant";
+                Declare(new PropertySymbol(definition.Name, ResolveRuntimeType(propertyType), ResolveSemanticType(propertyType)));
+                continue;
+            }
             if (!definition.Kind.Equals("method", StringComparison.OrdinalIgnoreCase))
                 continue;
 
