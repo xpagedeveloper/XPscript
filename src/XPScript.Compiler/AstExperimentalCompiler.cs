@@ -968,10 +968,11 @@ internal static class Program
     public static class AstCompatibilityHelpers
     {
         public static long GetTickCount() => Environment.TickCount64;
-        public static long Loc(object? _) => 0;
+        public static long Loc(object? file) => Program.Loc(file);
         public static string Error(object? number) => Program.Error(number);
         public static string Error() => Program.Error();
         public static string ErrorValue() => XPScriptErrorRuntime.Description;
+        public static object ProcedureCounter() => 0L;
         public static string ShowDialog(object? message, object? title = null, object? kind = null, object? values = null) => string.Empty;
         public static string LoadFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
         public static string OpenFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
