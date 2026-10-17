@@ -147,7 +147,7 @@ public static class CompilerSymbolCatalog
             Define("XPAi.Complete", "method", "XPAi.Complete() As XPAiResponse", [], "XPAiResponse", "api.XPAi.Complete"),
             Define("XPAi.Stream", "method", "XPAi.Stream(callback As String) As XPAiResponse", [new("callback", "String")], "XPAiResponse", "api.XPAi.Stream"),
             Define("XPAi.StreamCallback", "method", "XPAi.StreamCallback(callback As String) As XPAiResponse", [new("callback", "String")], "XPAiResponse", "api.XPAi.StreamCallback"),
-            Define("XPAi.NewRequest", "method", "XPAi.NewRequest() As XPAiRequest", [], "XPAiRequest", "api.XPAi.NewRequest"),
+            Define("XPAi.NewRequest", "method", "XPAi.NewRequest()", [], null, "api.XPAi.NewRequest"),
             Define("XPAi.Dispose", "method", "XPAi.Dispose()", [], null, "api.XPAi.Dispose"),
             Define("XPAi.AddTool", "method", "XPAi.AddTool(tool As AITool)", [new("tool", "AITool")], null, "api.XPAi.AddTool"),
             Define("XPAi.HasTool", "method", "XPAi.HasTool(name As String) As Boolean", [new("name", "String")], "Boolean", "api.XPAi.HasTool"),

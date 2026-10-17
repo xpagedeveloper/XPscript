@@ -21,6 +21,7 @@ Sub Main()
     If tool.FunctionCount() <> 0 Then Error 5, "AITool function remained after removal"
 
     Dim ai As New XPAi("https://example.invalid", "key")
+    Call ai.NewRequest()
     Call ai.AddTool(tool)
     If Not ai.HasTool("weather") Then Error 5, "XPAi tool lookup failed"
     If ai.ToolCount() <> 1 Then Error 5, "XPAi tool registration failed"
