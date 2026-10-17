@@ -9,6 +9,12 @@ Sub Main()
     Call fn.AddParameter("city", "string", "City name", True)
     If Not fn.HasParameter("city") Or fn.ParameterCount() <> 1 Then Error 5, "AITool parameter registration failed"
     If Not fn.RemoveParameter("city") Or fn.ParameterCount() <> 0 Then Error 5, "AITool parameter removal failed"
+    If tool.GetFunction("get_weather").Name <> "get_weather" Then Error 5, "AITool function getter failed"
+    Call tool.SetRequestProperty("tenant", "tenant-42")
+    If tool.GetRequestContext().Get("tenant") <> "tenant-42" Then Error 5, "AITool request context failed"
+    Call tool.RemoveRequestProperty("tenant")
+    Call tool.ClearRequestProperties()
+    If InStr(tool.ToJson(), "get_weather") = 0 Then Error 5, "AITool JSON metadata failed"
     If Not tool.HasFunction("get_weather") Then Error 5, "AITool function lookup failed"
     If tool.FunctionCount() <> 1 Then Error 5, "AITool function registration failed"
     If Not tool.RemoveFunction("get_weather") Then Error 5, "AITool function removal failed"
