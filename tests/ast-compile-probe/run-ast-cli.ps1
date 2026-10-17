@@ -7,6 +7,12 @@ $output = Join-Path $outputRoot 'ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
+$imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }
+$imageParameterResult = dotnet (Join-Path $imageParameterOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -ne "6`n6") { throw 'AST scalar XPImage procedure/method execution failed.' }
+Write-Host 'AST_XPIMAGE_PROCEDURE_PARAMETER_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }

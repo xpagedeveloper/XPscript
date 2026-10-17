@@ -1,0 +1,16 @@
+Class ImageOwner
+    Public Sub Accept(ByVal value As XPImage)
+        Print CStr(value.Width)
+    End Sub
+End Class
+
+Sub AcceptImage(ByVal value As XPImage)
+    Print CStr(value.Width)
+End Sub
+
+Sub Main()
+    Dim image As New XPImage(6, 4)
+    Call AcceptImage(image)
+    Dim owner As New ImageOwner
+    Call owner.Accept(image)
+End Sub
