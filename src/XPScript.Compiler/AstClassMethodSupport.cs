@@ -137,7 +137,7 @@ internal static class AstClassMethodSupport
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar and XPImage parameters/results; other object/array signatures are not implemented yet.", "XPS3001", "ast");
-            if (syntaxParameters.Any(p => p.IsList && constructor is null || p.IsOptional && property is null && constructor is null) ||
+            if (syntaxParameters.Any(p => p.IsList && constructor is null) ||
                 AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Optional/List parameters and Static storage in class methods are not implemented by the AST compiler yet.", "XPS3001", "ast");
@@ -226,6 +226,18 @@ internal static class AstClassMethodSupport
             if (constructor is not null || isDestructor || property is not null || (sub?.Visibility ?? function?.Visibility)?.Kind == SyntaxKind.PrivateKeyword)
                 body = "private " + body["public ".Length..];
             output.Append(body);
+            if (property is null && constructor is null && !isDestructor)
+            {
+                for (var count = parameters.Length - 1; count >= 0 && syntaxParameters[count].IsOptional; count--)
+                {
+                    var forward = OptionalCallLowering.Forward(emittedName, returnType, parameters, defaults, count,
+                        semanticReturnType: semanticResult);
+                    var forwardBody = new BoundMethodEmitter().Emit(emittedName, returnType, forward.Parameters, forward.Statements,
+                        false, source, sourcePath, semanticResult, cloneImageParameters: false);
+                    output.Append((sub?.Visibility?.Kind == SyntaxKind.PrivateKeyword || function?.Visibility?.Kind == SyntaxKind.PrivateKeyword) ? "private " : "public ")
+                        .Append(forwardBody["public ".Length..]);
+                }
+            }
             if (property is not null)
             {
                 var end = parameters.Length - (property.IsSetter ? 1 : 0);

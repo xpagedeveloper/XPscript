@@ -13,6 +13,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilatio
 $imageParameterResult = dotnet (Join-Path $imageParameterOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -ne "6`n6") { throw 'AST scalar XPImage procedure/method execution failed.' }
 Write-Host 'AST_XPIMAGE_PROCEDURE_PARAMETER_OK'
+$optionalClassMethodOutput = Join-Path $output 'class-method-optional-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-next.xps') -o $optionalClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST optional scalar class-method compilation failed.' }
+$optionalClassMethodResult = dotnet (Join-Path $optionalClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionalClassMethodResult -join "`n") -ne "5`n7") { throw 'AST optional scalar class-method execution failed.' }
+Write-Host 'AST_OPTIONAL_CLASS_METHOD_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }

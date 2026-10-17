@@ -135,14 +135,18 @@ public static class AstExperimentalCompiler
                     if (method.Visibility?.Kind != SyntaxKind.PrivateKeyword)
                     {
                         var parameterTypes = method.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
-                        symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", typeof(void), parameterTypes.Select(type => type.RuntimeType).ToArray(), null, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
+                        var qualifiedMethodName = $"{classDeclaration.Identifier.Text}.{method.Identifier.Text}";
+                        symbols.Declare(new FunctionSymbol(qualifiedMethodName, typeof(void), parameterTypes.Select(type => type.RuntimeType).ToArray(), null, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
+                        DeclareOptionalSignatures(symbols, qualifiedMethodName, typeof(void), method.Parameters);
                     }
                 foreach (var method in current.Members.OfType<FunctionDeclarationSyntax>())
                 {
                     if (method.Visibility?.Kind == SyntaxKind.PrivateKeyword) continue;
                     var returnType = ResolveRuntimeType(method.ReturnType?.Identifier.Text);
                     var parameterTypes = method.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
-                    symbols.Declare(new FunctionSymbol($"{classDeclaration.Identifier.Text}.{method.Identifier.Text}", returnType, parameterTypes.Select(type => type.RuntimeType).ToArray(), XpTypeSymbol.FromClr(returnType), parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
+                    var qualifiedMethodName = $"{classDeclaration.Identifier.Text}.{method.Identifier.Text}";
+                    symbols.Declare(new FunctionSymbol(qualifiedMethodName, returnType, parameterTypes.Select(type => type.RuntimeType).ToArray(), XpTypeSymbol.FromClr(returnType), parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
+                    DeclareOptionalSignatures(symbols, qualifiedMethodName, returnType, method.Parameters);
                 }
             }
         }

@@ -46,6 +46,12 @@ foreach (var imageParameterFixture in new[] { "xpimage-parameter-runtime-next" }
     var result = await CallAsync(new { jsonrpc="2.0",id=imageParameterFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=imageParameterFixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("XPImage parameter validation failed: " + result);
 }
+foreach (var optionalClassMethodFixture in new[] { "class-method-optional-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", optionalClassMethodFixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=optionalClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=optionalClassMethodFixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Optional class-method validation failed: " + result);
+}
 foreach (var initializedModuleFixture in new[] { "initialized-module-byref-next", "initialized-module-boolean-next", "initialized-module-string-next", "initialized-module-reference-next", "initialized-module-reference-new-next", "initialized-module-reference-args-next", "initialized-module-date-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", initializedModuleFixture + ".xps"));
