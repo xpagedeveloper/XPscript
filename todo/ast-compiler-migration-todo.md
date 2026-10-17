@@ -363,6 +363,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Remove global `ForAll` alias scaffolding; undeclared array/string/dynamic aliases are now created in the loop body scope and existing aliases retain their normal symbol semantics.
   - [x] Remove the broad assignment-line global-symbol fallback; undeclared assignment targets now follow normal binder diagnostics instead of becoming module globals.
   - [x] Remove the hard-coded `Person` class emitter; user classes now use the generic AST class lowering path.
+  - [x] Gate legacy `NotesHTTPRequest`/AI compatibility helper emission on actual source usage instead of emitting those helpers for every AST compilation.
 - [ ] Migrate class declarations, inheritance and object lifecycle into the AST bound tree.
   - [x] Bind and emit scalar typed instance Sub/Function bodies through shared procedure binding, control-flow validation and BoundMethodEmitter. Verify per-instance fields, private sibling calls, Me, scalar ByRef, recursion, parameter shadowing and default String fields; class bodies no longer disappear into empty scaffolding for this supported subset.
   - [x] Keep private fields/methods out of external symbol lookup and prevent class declarations from becoming fake module globals. Verify private access, cross-class field leakage and source-mapped body failures through CLI/MCP. AST canonicalizes case-insensitive member names; the old compiler's mixed-case failure is an explicit AST-only capability fixture.
