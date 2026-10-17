@@ -698,7 +698,7 @@ internal static class Program
         public string Combine(string child) => System.IO.Path.Combine(_path, child);
     }
     public static object FileInfo(params object?[] a) {
-        var path = CStr(a[0]);
+        var path = System.IO.Path.GetFullPath(CStr(a[0]));
         if (System.IO.Directory.Exists(path)) {
             var directory = new System.IO.DirectoryInfo(path);
             return new XpFileInfo { Name = directory.Name, FullPath = directory.FullName, Extension = string.Empty,
@@ -706,6 +706,7 @@ internal static class Program
                 Attributes = (long)directory.Attributes, Created = directory.CreationTime,
                 Modified = directory.LastWriteTime, Accessed = directory.LastAccessTime };
         }
+        if (!System.IO.File.Exists(path)) throw new FileNotFoundException("Path not found.", path);
         var info = new System.IO.FileInfo(path);
         return new XpFileInfo { Name = info.Name, FullPath = info.FullName, Extension = info.Extension,
             Length = info.Exists ? info.Length : 0, IsFile = info.Exists, IsDirectory = false,

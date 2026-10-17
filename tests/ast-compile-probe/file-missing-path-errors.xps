@@ -30,6 +30,11 @@ Sub Main()
     On Error GoTo 0
     If code = 0 Then Error 9852, "FileLen accepted a missing file"
     On Error Resume Next
+    values = FileInfo(missing & "/missing.bin")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9853, "FileInfo accepted a missing path"
+    On Error Resume Next
     values = FileEquals(missing & "/left.bin", missing & "/right.bin")
     code = Err
     On Error GoTo 0
