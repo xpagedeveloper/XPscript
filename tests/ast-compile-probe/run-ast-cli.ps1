@@ -31,6 +31,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST optional user-reference class-method compi
 $optionalUserReferenceClassMethodResult = dotnet (Join-Path $optionalUserReferenceClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($optionalUserReferenceClassMethodResult -join "`n") -ne "0`n14") { throw 'AST optional user-reference class-method execution failed.' }
 Write-Host 'AST_OPTIONAL_USER_REFERENCE_CLASS_METHOD_OK'
+$optionalByRefReferenceClassMethodOutput = Join-Path $output 'class-method-optional-byref-reference-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-byref-reference-next.xps') -o $optionalByRefReferenceClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST optional ByRef Object class-method compilation failed.' }
+$optionalByRefReferenceClassMethodResult = dotnet (Join-Path $optionalByRefReferenceClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionalByRefReferenceClassMethodResult -join "`n") -ne "0`n1") { throw 'AST optional ByRef Object class-method execution failed.' }
+Write-Host 'AST_OPTIONAL_BYREF_REFERENCE_CLASS_METHOD_OK'
 $staticClassMethodOutput = Join-Path $output 'class-method-static-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-static-next.xps') -o $staticClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar Static class-method compilation failed.' }
