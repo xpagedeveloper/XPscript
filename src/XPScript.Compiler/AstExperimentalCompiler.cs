@@ -382,7 +382,7 @@ public static class AstExperimentalCompiler
                 procedureFunction is null ? null : ResolveValueType(procedureFunction.ReturnType), procedureFunction?.Identifier.Text, result,
                 (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
                 "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName + ":" + parameter.SemanticType?.Name)) + ")",
-                sourcePath, fullSource);
+                sourcePath, source, fullSource);
             var name = procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text;
             // Roslyn's console entry point is case-sensitive; XPscript is not.
             if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0)
@@ -427,7 +427,7 @@ public static class AstExperimentalCompiler
         catch (BoundEmissionException ex)
         {
             var span = ex.Span ?? sub?.Span ?? function?.Span ?? new TextSpan(0, 0);
-            throw MappedDiagnostic(span, sourcePath, fullSource, ex.Message, CompilerDiagnosticCodes.InvalidSyntax, "emission");
+            throw MappedDiagnosticFromTransformed(span, sourcePath, source, fullSource, ex.Message, CompilerDiagnosticCodes.InvalidSyntax, "emission");
         }
         var moduleFields = string.Join(Environment.NewLine, moduleFieldStorage.Select(field => field.Declaration));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
@@ -995,7 +995,7 @@ internal static class Program
 
     internal static IReadOnlyList<BoundStatement> BindProcedure(IReadOnlyList<StatementSyntax> procedureStatements, SymbolTable scope,
         IReadOnlyList<ParameterSymbol> parameters, XpTypeSymbol? returnType, string? functionName, LocalSymbol? result,
-        string identity, string sourcePath, string fullSource)
+        string identity, string sourcePath, string transformedSource, string fullSource)
     {
             var allProcedureStatements = FlattenStatements(procedureStatements).ToArray();
             var labels = allProcedureStatements.OfType<LabelStatementSyntax>()
@@ -1005,10 +1005,10 @@ internal static class Program
                 .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault(group => group.Count() > 1)?.Skip(1).FirstOrDefault();
             if (duplicateLabel is not null)
-                throw MappedDiagnostic(duplicateLabel.Span, sourcePath, fullSource, $"Duplicate label '{duplicateLabel.Identifier.Text}'.");
+                throw MappedDiagnosticFromTransformed(duplicateLabel.Span, sourcePath, transformedSource, fullSource, $"Duplicate label '{duplicateLabel.Identifier.Text}'.");
             foreach (var transfer in allProcedureStatements.OfType<GoToStatementSyntax>().Where(transfer => !transfer.IsGoSub))
                 if (!labels.ContainsKey(transfer.Target.Text))
-                    throw MappedDiagnostic(transfer.Span, sourcePath, fullSource, $"Unknown label '{transfer.Target.Text}'.");
+                    throw MappedDiagnosticFromTransformed(transfer.Span, sourcePath, transformedSource, fullSource, $"Unknown label '{transfer.Target.Text}'.");
             foreach (var control in allProcedureStatements)
             {
                 var target = control switch
@@ -1018,13 +1018,13 @@ internal static class Program
                     _ => null
                 };
                 if (target is not null && !labels.ContainsKey(target.Text))
-                    throw MappedDiagnostic(control.Span, sourcePath, fullSource, $"Unknown label '{target.Text}'.");
+                    throw MappedDiagnosticFromTransformed(control.Span, sourcePath, transformedSource, fullSource, $"Unknown label '{target.Text}'.");
             }
-            ValidateLoopEntryTransfers(procedureStatements, labels, sourcePath, fullSource);
+            ValidateLoopEntryTransfers(procedureStatements, labels, sourcePath, transformedSource, fullSource);
             var binder = new StatementBinder(scope, returnType, returnType is not null, true, functionName, result, identity);
             var bound = procedureStatements.Select(binder.Bind).OfType<BoundStatement>().ToList();
             if (binder.Diagnostics.Count > 0)
-                throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, fullSource);
+                throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, transformedSource, fullSource);
             if (result is not null)
             {
                 // Function-name assignment is ordinary state mutation, never
@@ -1035,6 +1035,11 @@ internal static class Program
             }
         return bound;
     }
+
+    internal static IReadOnlyList<BoundStatement> BindProcedure(IReadOnlyList<StatementSyntax> procedureStatements, SymbolTable scope,
+        IReadOnlyList<ParameterSymbol> parameters, XpTypeSymbol? returnType, string? functionName, LocalSymbol? result,
+        string identity, string sourcePath, string fullSource) =>
+        BindProcedure(procedureStatements, scope, parameters, returnType, functionName, result, identity, sourcePath, fullSource, fullSource);
 
     internal static IEnumerable<StatementSyntax> FlattenStatements(IEnumerable<StatementSyntax> statements)
     {
@@ -1060,7 +1065,7 @@ internal static class Program
     }
 
     private static void ValidateLoopEntryTransfers(IEnumerable<StatementSyntax> statements,
-        IReadOnlyDictionary<string, LabelStatementSyntax> labels, string sourcePath, string source)
+        IReadOnlyDictionary<string, LabelStatementSyntax> labels, string sourcePath, string transformedSource, string fullSource)
     {
         var scopes = FlattenStatements(statements)
             .Where(statement => statement is ForStatementSyntax or ForAllStatementSyntax)
@@ -1071,12 +1076,12 @@ internal static class Program
             if (label.Span.Start > transfer.Span.Start &&
                 FlattenStatements(statements).OfType<DimStatementSyntax>().Any(declaration =>
                     declaration.Span.Start > transfer.Span.Start && declaration.Span.End < label.Span.Start && declaration.Initializer is not null))
-                throw MappedDiagnostic(transfer.Span, sourcePath, source,
+                throw MappedDiagnosticFromTransformed(transfer.Span, sourcePath, transformedSource, fullSource,
                     $"GoTo cannot jump over local declaration to label '{label.Identifier.Text}'. Move the declaration before the GoTo or move the label before the declaration.");
             var sourceScope = InnermostContaining(scopes, transfer.Span);
             var targetScope = InnermostContaining(scopes, label.Span);
             if (!ReferenceEquals(sourceScope, targetScope))
-                throw MappedDiagnostic(transfer.Span, sourcePath, source,
+                throw MappedDiagnosticFromTransformed(transfer.Span, sourcePath, transformedSource, fullSource,
                     $"GoTo target '{label.Identifier.Text}' is outside the current For/ForAll scope. GoTo is only allowed within the same loop scope.");
         }
     }
@@ -1155,9 +1160,13 @@ internal static class Program
     }
 
     internal static CompilerException SyntaxDiagnosticException(SyntaxDiagnostic diagnostic, string sourcePath, string source)
+        => SyntaxDiagnosticException(diagnostic, sourcePath, source, source);
+
+    internal static CompilerException SyntaxDiagnosticException(SyntaxDiagnostic diagnostic, string sourcePath, string transformedSource, string fullSource)
     {
-        var start = SourceTextMap.GetPosition(source, diagnostic.Span.Start);
-        var end = SourceTextMap.GetPosition(source, diagnostic.Span.End);
+        var span = MapTransformedSpan(diagnostic.Span, transformedSource, fullSource);
+        var start = SourceTextMap.GetPosition(fullSource, span.Start);
+        var end = SourceTextMap.GetPosition(fullSource, span.End);
         var mapped = new CompileDiagnostic
         {
             File = Path.GetFileName(sourcePath), Line = start.Line, Position = start.Column,
@@ -1170,9 +1179,14 @@ internal static class Program
 
     internal static CompilerException MappedDiagnostic(TextSpan span, string sourcePath, string source, string message,
         string code = CompilerDiagnosticCodes.InvalidSyntax, string category = "semantic")
+        => MappedDiagnosticFromTransformed(span, sourcePath, source, source, message, code, category);
+
+    internal static CompilerException MappedDiagnosticFromTransformed(TextSpan span, string sourcePath, string transformedSource, string fullSource, string message,
+        string code = CompilerDiagnosticCodes.InvalidSyntax, string category = "semantic")
     {
-        var start = SourceTextMap.GetPosition(source, span.Start);
-        var end = SourceTextMap.GetPosition(source, span.End);
+        var mappedSpan = MapTransformedSpan(span, transformedSource, fullSource);
+        var start = SourceTextMap.GetPosition(fullSource, mappedSpan.Start);
+        var end = SourceTextMap.GetPosition(fullSource, mappedSpan.End);
         var mapped = new CompileDiagnostic
         {
             File = Path.GetFileName(sourcePath), Line = start.Line, Position = start.Column,
@@ -1180,6 +1194,60 @@ internal static class Program
             DiagnosticCode = code, Severity = "error", Category = category
         };
         return new CompilerException(message, code, category, [mapped]);
+    }
+
+    private static TextSpan MapTransformedSpan(TextSpan span, string transformedSource, string fullSource)
+    {
+        if (ReferenceEquals(transformedSource, fullSource) || string.Equals(transformedSource, fullSource, StringComparison.Ordinal))
+            return span;
+
+        var transformedLine = LineStartAtOffset(transformedSource, span.Start);
+        var originalLine = LineStartAtLine(fullSource, SourceTextMap.GetPosition(transformedSource, span.Start).Line);
+        if (transformedLine.Text is null || originalLine.Text is null)
+            return span;
+
+        var localStart = Math.Clamp(span.Start - transformedLine.Start, 0, transformedLine.Text.Length);
+        var token = Regex.Match(transformedLine.Text, $@"(?<![A-Za-z0-9_]){Regex.Escape(TokenAt(transformedLine.Text, localStart))}(?![A-Za-z0-9_])");
+        if (!token.Success || string.IsNullOrEmpty(token.Value))
+            return originalLine.Start + Math.Min(localStart, originalLine.Text.Length) is var fallback ? new TextSpan(fallback, span.Length) : span;
+
+        var originalToken = Regex.Match(originalLine.Text, $@"(?<![A-Za-z0-9_]){Regex.Escape(token.Value)}(?![A-Za-z0-9_])", RegexOptions.IgnoreCase);
+        if (!originalToken.Success)
+            return span;
+        return new TextSpan(originalLine.Start + originalToken.Index, span.Length);
+    }
+
+    private static string TokenAt(string line, int offset)
+    {
+        if (line.Length == 0) return string.Empty;
+        var index = Math.Min(offset, line.Length - 1);
+        if (!char.IsLetterOrDigit(line[index]) && line[index] != '_')
+            index = Math.Min(index + 1, line.Length - 1);
+        var start = index;
+        while (start > 0 && (char.IsLetterOrDigit(line[start - 1]) || line[start - 1] == '_')) start--;
+        var end = index;
+        while (end < line.Length && (char.IsLetterOrDigit(line[end]) || line[end] == '_')) end++;
+        return line[start..end];
+    }
+
+    private static (int Start, string? Text) LineStartAtOffset(string source, int offset)
+    {
+        var line = SourceTextMap.GetPosition(source, offset).Line;
+        return LineStartAtLine(source, line);
+    }
+
+    private static (int Start, string? Text) LineStartAtLine(string source, int line)
+    {
+        var current = 1;
+        var start = 0;
+        while (current < line && start < source.Length)
+        {
+            if (source[start++] == '\n') current++;
+        }
+        if (current != line) return (0, null);
+        var end = source.IndexOf('\n', start);
+        if (end < 0) end = source.Length;
+        return (start, source[start..end].TrimEnd('\r'));
     }
 
     private static void RejectUnsupported(string sourcePath, string source, string pattern, string message)

@@ -28,6 +28,9 @@ Write-Host 'AST_SLEEP_COLUMN_MAPPING_OK'
 $mkDirColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-mkdir-error.xps') -o (Join-Path $output 'preprocessor-column-mkdir-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($mkDirColumnOutput -join "`n") -notmatch 'preprocessor-column-mkdir-error\.xps:2:11:') { throw 'AST MkDir source column mapping regression failed.' }
 Write-Host 'AST_MKDIR_COLUMN_MAPPING_OK'
+$putColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-put-error.xps') -o (Join-Path $output 'preprocessor-column-put-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($putColumnOutput -join "`n") -notmatch 'preprocessor-column-put-error\.xps:2:10:') { throw 'AST Put source column mapping regression failed.' }
+Write-Host 'AST_PUT_COLUMN_MAPPING_OK'
 $imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }
