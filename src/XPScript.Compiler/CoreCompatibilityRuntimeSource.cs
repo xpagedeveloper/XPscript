@@ -777,6 +777,18 @@ internal static class LSFileRuntime
         };
     }
 
+    public static void LockBytes(int number, long start, long end)
+    {
+        if (start < 1 || end < start) throw new IOException("Lock range must be a valid one-based interval.");
+        Get(number).Stream.Lock(checked(start - 1), checked(end - start + 1));
+    }
+
+    public static void UnlockBytes(int number, long start, long end)
+    {
+        if (start < 1 || end < start) throw new IOException("Unlock range must be a valid one-based interval.");
+        Get(number).Stream.Unlock(checked(start - 1), checked(end - start + 1));
+    }
+
     public static void Put(int number, object? recordNumber, object? value, string xpscriptType)
     {
         var state = Get(number);

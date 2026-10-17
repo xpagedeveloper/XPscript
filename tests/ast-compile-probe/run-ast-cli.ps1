@@ -140,6 +140,13 @@ $fileInputCharsResult = dotnet (Join-Path $fileInputCharsOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($fileInputCharsResult -join "`n") -ne 'FILE_INPUT_CHARS_OK') { throw 'AST Input$ regression failed.' }
 Write-Host 'AST_FILE_INPUT_CHARS_OK'
 
+$fileLockOutput = Join-Path $output 'file-lock-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-lock-next.xps') -o $fileLockOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST file lock compilation failed.' }
+$fileLockResult = dotnet (Join-Path $fileLockOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($fileLockResult -join "`n") -ne 'FILE_LOCK_OK') { throw 'AST file lock regression failed.' }
+Write-Host 'AST_FILE_LOCK_OK'
+
 $enumOutput = Join-Path $output 'language-extensions'
 dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }

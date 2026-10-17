@@ -922,8 +922,8 @@ internal static class Program
     public static void AstPut(object? file, object? position, object? value) => LSFileRuntime.Put(checked((int)XPScriptRuntime.CLng(file)), position, value, value switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" });
     public static object? AstGet(object? file, object? position, object? current) => LSFileRuntime.GetValue(checked((int)XPScriptRuntime.CLng(file)), position, current switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" }, current);
     public static void AstSeek(object? file, object? position) => LSFileRuntime.SeekSet(checked((int)XPScriptRuntime.CLng(file)), XPScriptRuntime.CLng(position));
-    public static void AstLockBytes(object? file, object? start, object? end) { }
-    public static void AstUnlockBytes(object? file, object? start, object? end) { }
+    public static void AstLockBytes(object? file, object? start, object? end) => LSFileRuntime.LockBytes(checked((int)XPScriptRuntime.CLng(file)), XPScriptRuntime.CLng(start), XPScriptRuntime.CLng(end));
+    public static void AstUnlockBytes(object? file, object? start, object? end) => LSFileRuntime.UnlockBytes(checked((int)XPScriptRuntime.CLng(file)), XPScriptRuntime.CLng(start), XPScriptRuntime.CLng(end));
     public static void AstOpen(object? path, object? mode, object? file) => LSFileRuntime.Open(path, mode, checked((int)XPScriptRuntime.CLng(file)));
     public static void AstClose(object? file) => LSFileRuntime.Close(checked((int)XPScriptRuntime.CLng(file)));
     public static void AstClose() => LSFileRuntime.Close();
