@@ -1,5 +1,6 @@
 Option Declare
 Const RemovedByAst = 1
 Sub Main()
+    Print RemovedByAst
     Print MissingAfterRemovedConst
 End Sub
