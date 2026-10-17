@@ -38,18 +38,22 @@ internal static class AstModuleFieldSupport
                     : symbols.LookupAll(match.Groups["type"].Value).OfType<TypeSymbol>().FirstOrDefault()?.SemanticType;
                 var tail = match.Groups["tail"].Value.Trim();
                 var initializer = Regex.Match(tail, @"^=\s*(?<value>-?(?:\d+(?:\.\d*)?|\.\d+)|True|False)\s*(?:'.*)?$", RegexOptions.IgnoreCase);
+                var stringInitializer = Regex.Match(tail, "^=\\s*\\\"(?<value>(?:[^\\\"]|\\\"\\\")*)\\\"\\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 // Numeric literal initializers have the same direct typed storage contract as
                 // uninitialized scalar fields. Other initialized/reference forms retain the
                 // compatibility path until their expression/lifetime lowering is migrated.
                 var typed = (type != typeof(object) || semantic is not null && !semantic.IsVariant) &&
-                    (tail.Length == 0 || tail.StartsWith("'", StringComparison.Ordinal) || initializer.Success) &&
-                    (initializer.Success ? type == typeof(long) || type == typeof(double) || type == typeof(bool) : true);
+                    (tail.Length == 0 || tail.StartsWith("'", StringComparison.Ordinal) || initializer.Success || stringInitializer.Success) &&
+                    (initializer.Success ? type == typeof(long) || type == typeof(double) || type == typeof(bool) :
+                        stringInitializer.Success ? type == typeof(string) : true);
                 return new Field(new VariableSymbol(match.Groups["name"].Value, type,
                     typed ? semantic ?? XpTypeSymbol.FromClr(type) : XpTypeSymbol.Variant)
                 {
                     HasTypedStorage = typed,
                     TypedInitializerLiteral = typed && initializer.Success
                         ? type == typeof(bool) ? initializer.Groups["value"].Value.ToLowerInvariant() : initializer.Groups["value"].Value
+                        : typed && stringInitializer.Success
+                        ? $"\"{stringInitializer.Groups["value"].Value.Replace("\"\"", "\\\"")}\""
                         : null
                 });
             }).ToArray();

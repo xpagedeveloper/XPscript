@@ -1,0 +1,12 @@
+Public message As String = "ready"
+
+Class StringOwner
+    Public Sub New(ByRef value As String)
+        value = value & "!"
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As New StringOwner(message)
+    Print message
+End Sub
