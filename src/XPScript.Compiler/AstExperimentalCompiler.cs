@@ -455,6 +455,9 @@ public static class AstExperimentalCompiler
             var imageCleanup = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>()
                 .Where(field => AstImageSupport.IsImage(field.Type.Identifier.Text))
                 .Select(field => $"AstImageScope.StoreField(ref this.{field.Identifier.Text}, null);"));
+            var gcCleanup = imageCleanup.Length == 0
+                ? string.Empty
+                : $"~Xp{classDeclaration.Identifier.Text}() {{ {imageCleanup} }}";
             var delete = classDeclaration.BaseType is null
                 ? $"public virtual void Delete() {{ {imageCleanup} }}"
                 : $"public override void Delete() {{ {imageCleanup} base.Delete(); }}";
@@ -475,7 +478,7 @@ public static class AstExperimentalCompiler
             var constructionCleanup = classDeclaration.BaseType is null
                 ? $"protected void __xps_cleanup_failed_construction() {{ {imageCleanup} }}"
                 : $"protected new void __xps_cleanup_failed_construction() {{ try {{ {imageCleanup} }} finally {{ base.__xps_cleanup_failed_construction(); }} }}";
-            return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} {constructorBody} {constructionCleanup} {delete} {memberBodies} }}";
+            return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} {gcCleanup} {constructorBody} {constructionCleanup} {delete} {memberBodies} }}";
         }));
         if (userClassSupport.Length == 0)
         {
