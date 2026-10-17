@@ -565,11 +565,6 @@ internal static class Program
     public static dynamic Command = string.Empty;
     public static dynamic Platform = string.Empty;
     public static dynamic CurDir = ".";
-    public static dynamic XPJson = new ExpandoObject();
-    public static dynamic XPJsonDocument = new ExpandoObject();
-    public static dynamic XPJsonSchema = new ExpandoObject();
-    public static dynamic XPJsonArray = new ExpandoObject();
-    public static dynamic XPJsonObject = new ExpandoObject();
     public static string CStr(object? value) => XPScriptRuntime.CStr(value);
     // The shared List runtime requires the date coercion entry point too.
     // Preserve existing XPscript date wrappers and numeric OLE date values.
