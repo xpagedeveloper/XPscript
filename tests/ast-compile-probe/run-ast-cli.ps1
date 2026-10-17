@@ -61,7 +61,7 @@ dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps')
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }
 $enumResult = dotnet (Join-Path $enumOutput 'Generated.dll')
 $expectedEnumResult = @(
-    'ENUM=0', 'ENUMQUAL=20', 'TYPE=Fredrik:40', 'OPTIONAL=Hello Fredrik',
+    'ENUM=11', 'ENUMQUAL=20', 'TYPE=Fredrik:40', 'OPTIONAL=Hello Fredrik',
     'OPTIONAL2=Hi Fredrik', 'PROPERTYLET=PropertyLet', 'STRCONV=hello world',
     'CTYPE=42', 'VALUE=7', 'COUNT=8'
 )

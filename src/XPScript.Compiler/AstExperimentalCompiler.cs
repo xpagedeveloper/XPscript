@@ -442,8 +442,13 @@ public static class AstExperimentalCompiler
         var moduleFields = string.Join(Environment.NewLine, moduleFieldStorage.Select(field => field.Declaration));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, allConstants
             .Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ToCSharpLiteral(match.Groups["value"].Value.Trim())};"));
-        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?im)^\s*(?<name>BuildUnknown|BuildReady|BuildRunning|BuildDone)\s*(?:=\s*(?<value>-?\d+))?\s*$")
-            .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = {(match.Groups["value"].Success ? match.Groups["value"].Value : "0")};"));
+        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, enumNames
+            .Cast<Match>()
+            .SelectMany(enumMatch => EnumMembers(enumMatch.Groups["body"].Value)
+                .Select(member => (member.Name, member.Value)))
+            .GroupBy(member => member.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .Select(member => $"    public static dynamic {member.Name} = {member.Value};"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine,
             enumNames.Select(enumMatch => $"    public static Xp{enumMatch.Groups["name"].Value} {enumMatch.Groups["name"].Value} = new Xp{enumMatch.Groups["name"].Value}();"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(AstModuleFieldSupport.DeclarationSource(fullSource), @"(?im)^\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*\([^\r\n]+\)\s+As\s+\w+", RegexOptions.Multiline)
@@ -514,8 +519,8 @@ public static class AstExperimentalCompiler
         classSupport += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?ims)^\s*Enum\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Enum\b")
             .Cast<Match>().Select(match =>
             {
-                    var values = Regex.Matches(match.Groups["body"].Value, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$")
-                    .Cast<Match>().Select((value, index) => $"public Xp{match.Groups["name"].Value} {value.Groups["name"].Value} => new({(value.Groups["value"].Success ? value.Groups["value"].Value : index.ToString(System.Globalization.CultureInfo.InvariantCulture))});");
+                    var values = EnumMembers(match.Groups["body"].Value)
+                    .Select(value => $"public Xp{match.Groups["name"].Value} {value.Name} => new({value.Value});");
                 return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} public Xp{match.Groups["name"].Value}() {{ }} private Xp{match.Groups["name"].Value}(long value) => Value = value; public static implicit operator Xp{match.Groups["name"].Value}(int value) => new(value); public static implicit operator Xp{match.Groups["name"].Value}(long value) => new(value); {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
             }));
         if (Regex.IsMatch(fullSource, @"(?i)\b(NotesHTTPRequest|XPAi|AITool)\b")) classSupport += """
@@ -1267,5 +1272,20 @@ internal static class Program
             return "\"" + text.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\"";
         }
         return value;
+    }
+
+    private static IReadOnlyList<(string Name, long Value)> EnumMembers(string body)
+    {
+        var members = new List<(string Name, long Value)>();
+        var nextValue = 0L;
+        foreach (Match match in Regex.Matches(body, @"(?im)^\s*(?<name>[A-Za-z_]\w*)\s*(?:=\s*(?<value>-?\d+))?\s*$"))
+        {
+            var value = match.Groups["value"].Success
+                ? long.Parse(match.Groups["value"].Value, System.Globalization.CultureInfo.InvariantCulture)
+                : nextValue;
+            members.Add((match.Groups["name"].Value, value));
+            nextValue = value + 1;
+        }
+        return members;
     }
 }
