@@ -127,13 +127,16 @@ internal static class AstClassMethodSupport
             if (isObjectSetter && DeclaredType(property!.Type ?? syntaxParameters.Last().Type, globals).RuntimeType != typeof(object))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Property Set requires an object/reference value type.", "XPS2001", "semantic");
-            if (constructor is null && syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
-                    .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) && !AstImageSupport.IsImage(p.Type?.Identifier.Text)) ||
-                function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) ||
+            var hasUnsupportedObjectParameter = constructor is null && syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
+                .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) &&
+                    !AstImageSupport.IsImage(p.Type?.Identifier.Text) && !classes.ContainsKey(p.Type?.Identifier.Text ?? ""));
+            var hasUnsupportedObjectResult = function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) &&
+                !classes.ContainsKey(resultTypeName ?? "");
+            if (hasUnsupportedObjectParameter || hasUnsupportedObjectResult ||
                 property is not null && (UnsupportedNativeAccessorType(resultTypeName) ||
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "This AST class-method increment supports scalar and XPImage parameters/results; other object/array signatures are not implemented yet.", "XPS3001", "ast");
+                    "This AST class-method increment supports scalar, concrete user-class and XPImage parameters/results; other object/array signatures are not implemented yet.", "XPS3001", "ast");
             if (syntaxParameters.Any(p => p.IsList && constructor is null) ||
                 AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic && (d.IsArray || d.IsList)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,

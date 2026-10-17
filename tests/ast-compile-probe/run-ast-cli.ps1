@@ -31,6 +31,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST derived scalar class-method compilation fa
 $derivedClassMethodResult = dotnet (Join-Path $derivedClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($derivedClassMethodResult -join "`n") -ne '8') { throw 'AST derived scalar class-method execution failed.' }
 Write-Host 'AST_DERIVED_CLASS_METHOD_OK'
+$referenceClassMethodOutput = Join-Path $output 'class-method-reference-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-reference-next.xps') -o $referenceClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST concrete reference class-method compilation failed.' }
+$referenceClassMethodResult = dotnet (Join-Path $referenceClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($referenceClassMethodResult -join "`n") -ne '7') { throw 'AST concrete reference class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_REFERENCE_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
