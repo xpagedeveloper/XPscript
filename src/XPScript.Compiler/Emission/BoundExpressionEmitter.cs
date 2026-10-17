@@ -47,6 +47,7 @@ public sealed class BoundExpressionEmitter
         BoundConversionExpression conversion => EmitConversion(conversion),
         BoundNameExpression name when name.Symbol is VariableSymbol && name.SemanticType.Name == "Application" => "XPScriptApplicationRuntime.Namespace",
         BoundNameExpression name when name.Symbol is VariableSymbol { Name: "Me" } => "this",
+        BoundNameExpression name when name.Symbol is VariableSymbol { Name: "Parent" } => "base",
         BoundNameExpression name => _aliases.TryGetValue(name.Symbol, out var alias) ? alias.Value
             : name.Symbol is LocalSymbol { StaticStorageName: { } storage } ? storage : name.Symbol.Name,
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("Console", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("WriteLine", StringComparison.OrdinalIgnoreCase) => "System.Console.WriteLine",

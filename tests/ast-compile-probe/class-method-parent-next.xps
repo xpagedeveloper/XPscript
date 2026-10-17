@@ -1,0 +1,19 @@
+Class Base
+    Public value As Long
+
+    Public Function Total() As Long
+        Total = value
+    End Function
+End Class
+
+Class Child Extend Base
+    Public Function Adjusted() As Long
+        Adjusted = Parent.Total() + 1
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New Child
+    item.value = 6
+    Print CStr(item.Adjusted())
+End Sub

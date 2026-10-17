@@ -31,6 +31,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST derived scalar class-method compilation fa
 $derivedClassMethodResult = dotnet (Join-Path $derivedClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($derivedClassMethodResult -join "`n") -ne '8') { throw 'AST derived scalar class-method execution failed.' }
 Write-Host 'AST_DERIVED_CLASS_METHOD_OK'
+$parentClassMethodOutput = Join-Path $output 'class-method-parent-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-parent-next.xps') -o $parentClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Parent.member class-method compilation failed.' }
+$parentClassMethodResult = dotnet (Join-Path $parentClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($parentClassMethodResult -join "`n") -ne '7') { throw 'AST Parent.member class-method execution failed.' }
+Write-Host 'AST_PARENT_CLASS_METHOD_OK'
 $referenceClassMethodOutput = Join-Path $output 'class-method-reference-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-reference-next.xps') -o $referenceClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST concrete reference class-method compilation failed.' }

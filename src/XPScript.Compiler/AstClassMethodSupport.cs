@@ -164,6 +164,10 @@ internal static class AstClassMethodSupport
             foreach (var ownConstructor in AstClassConstructorSupport.FindAll(globals, declaration.Identifier.Text))
                 classScope.Declare(ownConstructor with { IsPrivateConstructor = false });
             classScope.Declare(new VariableSymbol("Me", typeof(object), XpTypeSymbol.User(declaration.Identifier.Text)));
+            if (declaration.BaseType is { } baseType)
+            {
+                classScope.Declare(new VariableSymbol("Parent", typeof(object), XpTypeSymbol.User(baseType.Identifier.Text)));
+            }
             foreach (var owner in lineage)
             {
                 var inherited = owner != declaration;
