@@ -349,6 +349,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized spreadsheet module ByRef stora
 $initializedSpreadsheetResult = dotnet (Join-Path $initializedSpreadsheetOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedSpreadsheetResult -join "`n") -ne 'INITIALIZED_MODULE_SPREADSHEET_BYREF_OK') { throw 'AST initialized spreadsheet module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_SPREADSHEET_MODULE_OK'
+$initializedHttpOutput = Join-Path $output 'initialized-module-http-byref-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-http-byref-next.xps') -o $initializedHttpOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized HTTP module ByRef storage compilation failed.' }
+$initializedHttpResult = dotnet (Join-Path $initializedHttpOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedHttpResult -join "`n") -ne 'INITIALIZED_MODULE_HTTP_BYREF_OK') { throw 'AST initialized HTTP module ByRef storage failed.' }
+Write-Host 'AST_INITIALIZED_HTTP_MODULE_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }

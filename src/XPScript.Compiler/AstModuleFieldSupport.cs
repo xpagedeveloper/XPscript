@@ -79,6 +79,10 @@ internal static class AstModuleFieldSupport
                 ? "XPScriptNativeCsv.CreateDocument()"
             : typeName.Equals("XPSpreadsheet", StringComparison.OrdinalIgnoreCase) && arguments.Length == 0
                 ? "XPScriptSpreadsheetFactory.Create()"
+            : typeName.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) && arguments.Length == 0
+                ? "XPScriptNativeHttp.CreateClient()"
+            : typeName.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase) && arguments.Length == 0
+                ? "XPScriptNativeHttp.CreateRequest()"
             : AstImageSupport.IsImage(typeName)
             ? $"new XPImage({arguments})"
             : runtimeType is not null
