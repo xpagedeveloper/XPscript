@@ -26,7 +26,13 @@ var arrayBoundsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/as
 var arrayBoundsResult = await CallAsync(new { jsonrpc="2.0",id="array-storage-bounds",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=arrayBoundsSource,filename="array-storage-bounds.xps" } } });
 if (arrayBoundsResult.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
     throw new Exception("Array storage validation failed: " + arrayBoundsResult);
-foreach (var (fixture, code, line) in new[] { ("constructor-array-deferred", "XPS3001", 2), ("procedure-array-deferred", "XPS3001", 1), ("method-array-deferred", "XPS3001", 2), ("constructor-array-rank-error", "XPS1012", 2), ("constructor-array-list-error", "XPS1012", 2) })
+foreach (var fixture in new[] { "array-parameter-runtime-next", "constructor-array-runtime-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Array signature validation failed: " + result);
+}
+foreach (var (fixture, code, line) in new[] { ("array-storage-bounds-error", "XPS1012", 2), ("constructor-array-rank-error", "XPS1012", 2), ("constructor-array-list-error", "XPS1012", 2) })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
     var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });

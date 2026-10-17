@@ -84,9 +84,6 @@ public static class AstExperimentalCompiler
         {
             var parameters = item is SubDeclarationSyntax procedure ? procedure.Parameters
                 : item is FunctionDeclarationSyntax routine ? routine.Parameters : [];
-            if (parameters.FirstOrDefault(parameter => parameter.IsArray) is { } arrayParameter)
-                throw MappedDiagnostic(arrayParameter.Span, sourcePath, fullSource,
-                    "Array procedure parameters are not implemented by the AST compiler yet.", "XPS3001", "ast");
         }
         var moduleSource = AstClassMethodSupport.ModuleSource(fullSource);
         // The experimental path keeps going when a non-selected declaration
@@ -1081,7 +1078,8 @@ internal static class Program
     internal static XpTypeSymbol ResolveParameterType(ParameterSyntax parameter, SymbolTable? symbols)
     {
         var element = symbols is null ? ResolveValueType(parameter.Type) : AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
-        return parameter.IsList ? XpTypeSymbol.ListOf(element) : element;
+        if (parameter.IsList) return XpTypeSymbol.ListOf(element);
+        return parameter.IsArray ? XpTypeSymbol.ArrayOf(element, parameter.ArrayRank) : element;
     }
 
     private static XpTypeSymbol ResolveValueType(TypeSyntax? type) => type is null || type.Identifier.Text.Equals("Variant", StringComparison.OrdinalIgnoreCase)

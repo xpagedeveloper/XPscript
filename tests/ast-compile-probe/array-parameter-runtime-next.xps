@@ -1,0 +1,9 @@
+Sub Accept(ByRef values() As Long)
+    values(-2) = 41
+End Sub
+
+Sub Main()
+    Dim values(-2 To 0) As Long
+    Call Accept(values)
+    Print CStr(values(-2)) & ":" & CStr(LBound(values)) & ":" & CStr(UBound(values))
+End Sub
