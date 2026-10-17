@@ -110,6 +110,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST AITool lifecycle compilation failed.' }
 $aiToolLifecycleResult = dotnet (Join-Path $aiToolLifecycleOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($aiToolLifecycleResult -join "`n") -ne 'AI_TOOL_LIFECYCLE_OK') { throw 'AST AITool lifecycle regression failed.' }
 Write-Host 'AST_AI_TOOL_LIFECYCLE_OK'
+$xpaiRequestErrorOutput = Join-Path $output 'xpai-request-error-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpai-request-error-next.xps') -o $xpaiRequestErrorOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST XPAi request-error compilation failed.' }
+$xpaiRequestErrorResult = dotnet (Join-Path $xpaiRequestErrorOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($xpaiRequestErrorResult -join "`n") -ne 'XPAI_REQUEST_ERROR_OK') { throw 'AST XPAi request-error regression failed.' }
+Write-Host 'AST_XPAI_REQUEST_ERROR_OK'
 $notesSearchOutput = Join-Path $output 'notes-search-constants-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-search-constants-next.xps') -o $notesSearchOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes search constants compilation failed.' }
