@@ -43,6 +43,7 @@ public static class AstExperimentalCompiler
         // separator with the opening parenthesis and avoid a longer prefix.
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)MkDir\s+(?<path>.+)$", "${indent}MkDir(${path})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Put\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>.+)$", "${indent}Call AstPut(${file}, ${position}, ${value})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Get\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>[A-Za-z_]\w*)\s*$", "${indent}${value} = AstGet(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?<operation>Lock|Unlock)\s+#?(?<file>[^,\s]+)\s*,\s*(?<start>[^\s]+)\s+To\s+(?<end>.+)$", "${indent}Call Ast${operation}Bytes(${file}, ${start}, ${end})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Open\s+(?<path>.+?)\s+For\s+(?<mode>Input|Output|Append|Binary|Random)\s+As\s+#?(?<file>[^\s]+).*$", "${indent}Call AstOpen(${path}, \"${mode}\", ${file})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Close(?:\s+#?(?<file>[^\s]+))?\s*$", "${indent}Call AstClose(${file})");
@@ -269,9 +270,11 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("MsgBox", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("MsgBox", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Loc", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("LOF", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Environ", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstUtf8", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstPut", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstGet", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstLockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstUnlockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstOpen", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -915,6 +918,7 @@ internal static class Program
     public static string Input(object? count, object? file) => string.Empty;
     public static void Sleep(object? milliseconds) => System.Threading.Thread.Sleep(Math.Max(0, Convert.ToInt32(milliseconds)));
     public static void AstPut(object? file, object? position, object? value) => LSFileRuntime.Put(checked((int)XPScriptRuntime.CLng(file)), position, value, value switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" });
+    public static object? AstGet(object? file, object? position, object? current) => LSFileRuntime.GetValue(checked((int)XPScriptRuntime.CLng(file)), position, current switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" }, current);
     public static void AstLockBytes(object? file, object? start, object? end) { }
     public static void AstUnlockBytes(object? file, object? start, object? end) { }
     public static void AstOpen(object? path, object? mode, object? file) => LSFileRuntime.Open(path, mode, checked((int)XPScriptRuntime.CLng(file)));
@@ -961,6 +965,7 @@ internal static class Program
     public static string Environ(object? name) => XPScriptRuntime.Environ(name);
     public static object AstUtf8(object? value) => Encoding.UTF8.GetBytes(Convert.ToString(value) ?? string.Empty);
     public static long Loc(object? file) => LSFileRuntime.Loc(checked((int)XPScriptRuntime.CLng(file)));
+    public static long LOF(object? file) => LSFileRuntime.LOF(checked((int)XPScriptRuntime.CLng(file)));
     public static string Error(object? number) => XPScriptErrorRuntime.Error(checked((int)XPScriptRuntime.CLng(number)));
     public static string Error() => XPScriptErrorRuntime.Error();
     public static string ErrorValue() => XPScriptErrorRuntime.Description;

@@ -118,6 +118,14 @@ if ($LASTEXITCODE -ne 0) { throw 'AST file runtime compilation failed.' }
 $fileRuntimeResult = dotnet (Join-Path $fileRuntimeOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($fileRuntimeResult -join "`n") -ne 'FILE_RUNTIME_OK') { throw 'AST file runtime regression failed.' }
 Write-Host 'AST_FILE_RUNTIME_OK'
+
+$fileGetOutput = Join-Path $output 'file-get-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-get-next.xps') -o $fileGetOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST file Get compilation failed.' }
+$fileGetResult = dotnet (Join-Path $fileGetOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($fileGetResult -join "`n") -ne 'FILE_GET_OK') { throw 'AST file Get regression failed.' }
+Write-Host 'AST_FILE_GET_OK'
+
 $enumOutput = Join-Path $output 'language-extensions'
 dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }

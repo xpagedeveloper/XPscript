@@ -1,0 +1,15 @@
+Sub Main()
+    Dim fileNumber As Integer
+    Dim payload As String
+    Dim loaded As String
+    fileNumber = FreeFile
+    payload = "ABCDE"
+    Open "ast-file-get-next.bin" For Binary As #fileNumber
+    Put #fileNumber, 1, payload
+    If LOF(fileNumber) <> 5 Then Error 6341, "AST Put did not write the typed payload"
+    loaded = "     "
+    Get #fileNumber, 1, loaded
+    If loaded <> payload Then Error 6341, "AST Get did not restore the typed payload"
+    Close #fileNumber
+    Print "FILE_GET_OK"
+End Sub
