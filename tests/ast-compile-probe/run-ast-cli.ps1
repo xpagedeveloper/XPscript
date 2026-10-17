@@ -29,7 +29,7 @@ $initializedNothingOutput = Join-Path $output 'initialized-module-reference-noth
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-nothing-next.xps') -o $initializedNothingOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module Nothing-reference compilation failed.' }
 $initializedNothingResult = dotnet (Join-Path $initializedNothingOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($initializedNothingResult -join "`n") -ne 'True') { throw 'AST initialized module Nothing-reference regression failed.' }
+if ($LASTEXITCODE -ne 0 -or ($initializedNothingResult -join "`n") -ne "True`nTrue") { throw 'AST initialized module Nothing/Boolean-reference regression failed.' }
 Write-Host 'AST_INITIALIZED_MODULE_NOTHING_REFERENCE_OK'
 $constOutput = Join-Path $output 'const-statements'
 dotnet $compiler ast-compile (Join-Path $root 'samples/const-statements.xps') -o $constOutput

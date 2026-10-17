@@ -1,13 +1,17 @@
 Public current As Box = New Box(Nothing)
+Public enabled As Box = New Box(True)
 
 Class Box
     Public IsEmpty As Boolean
+    Public IsEnabled As Boolean
 
     Public Sub New(ByVal initial As Object)
         IsEmpty = initial Is Nothing
+        IsEnabled = CStr(initial) = "True"
     End Sub
 End Class
 
 Sub Main()
     Print CStr(current.IsEmpty)
+    Print CStr(enabled.IsEnabled)
 End Sub
