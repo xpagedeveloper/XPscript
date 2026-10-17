@@ -1,0 +1,23 @@
+Class Base
+    Public Property Get Item(ByVal index As Long) As Long
+        Item = index + 1
+    End Property
+
+    Public Property Let Item(ByVal index As Long, ByVal incoming As Long)
+    End Property
+End Class
+
+Class Child Extend Base
+    Public Property Get Item(ByVal index As Long) As Long
+        Item = index + 10
+    End Property
+
+    Public Property Let Item(ByVal index As Long, ByVal incoming As Long)
+    End Property
+End Class
+
+Sub Main()
+    Dim item As New Child
+    item.Item(2) = 7
+    Print CStr(item.Item(2))
+End Sub
