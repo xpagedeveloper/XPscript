@@ -26,7 +26,8 @@ public static class AstExperimentalCompiler
         if (optionBaseMatch.Success)
         {
             optionBase = int.Parse(optionBaseMatch.Groups["base"].Value);
-            source = Regex.Replace(source, @"(?im)^\s*Option\s+Base\s+[01]\s*(?:\r?$)", string.Empty);
+            source = Regex.Replace(source, @"(?im)^\s*Option\s+Base\s+[01]\s*(?:\r?$)", match =>
+                new string(match.Value.Select(character => character is '\r' or '\n' ? character : ' ').ToArray()));
             if (optionBase == 1)
                 source = Regex.Replace(source, @"(?im)^(?<indent>\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*)\((?<bounds>[^)]*)\)", match =>
                 {
@@ -35,7 +36,8 @@ public static class AstExperimentalCompiler
                     return $"{match.Groups["indent"].Value}({bounds})";
                 });
         }
-        source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", string.Empty, RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", match =>
+            new string(match.Value.Select(character => character is '\r' or '\n' ? character : ' ').ToArray()), RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"(?im)^(?<indent>\s*)Sleep\s+(?<value>.+)$", "${indent}Sleep(${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)MkDir\s+(?<path>.+)$", "${indent}Call MkDir(${path})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Put\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>.+)$", "${indent}Call AstPut(${file}, ${position}, ${value})");

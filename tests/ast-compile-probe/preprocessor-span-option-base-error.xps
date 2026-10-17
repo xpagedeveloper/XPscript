@@ -1,0 +1,4 @@
+Option Base 1
+Sub Main()
+    Print MissingAfterOptionBase
+End Sub

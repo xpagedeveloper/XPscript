@@ -16,6 +16,12 @@ Write-Host 'AST_FILE_MISSING_PATH_ERRORS_OK'
 $spanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-span-error.xps') -o (Join-Path $output 'preprocessor-span-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($spanOutput -join "`n") -notmatch 'preprocessor-span-error\.xps:4:') { throw 'AST preprocessor source span mapping regression failed.' }
 Write-Host 'AST_PREPROCESSOR_SPAN_MAPPING_OK'
+$optionBaseSpanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-span-option-base-error.xps') -o (Join-Path $output 'preprocessor-span-option-base-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($optionBaseSpanOutput -join "`n") -notmatch 'preprocessor-span-option-base-error\.xps:3:') { throw 'AST Option Base source span mapping regression failed.' }
+Write-Host 'AST_OPTION_BASE_SPAN_MAPPING_OK'
+$routeAttributeSpanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-span-route-attribute-error.xps') -o (Join-Path $output 'preprocessor-span-route-attribute-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($routeAttributeSpanOutput -join "`n") -notmatch 'preprocessor-span-route-attribute-error\.xps:3:') { throw 'AST route attribute source span mapping regression failed.' }
+Write-Host 'AST_ROUTE_ATTRIBUTE_SPAN_MAPPING_OK'
 $imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }

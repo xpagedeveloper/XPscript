@@ -1,0 +1,4 @@
+[FromBody]
+Sub Main()
+    Print MissingAfterRouteAttribute
+End Sub
