@@ -1,0 +1,14 @@
+Class Reader
+    Public Function Kind(ByVal value As XPJsonElement) As String
+        Kind = value.Type
+    End Function
+End Class
+
+Sub Main()
+    Dim document As XPJsonDocument
+    Set document = XPJsonDocument.Parse("true")
+    Dim element As XPJsonElement
+    Set element = document.Root
+    Dim reader As New Reader
+    Print reader.Kind(element)
+End Sub
