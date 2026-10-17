@@ -37,6 +37,12 @@ Write-Host 'AST_OPEN_COLUMN_MAPPING_OK'
 $closeColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-close-error.xps') -o (Join-Path $output 'preprocessor-column-close-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($closeColumnOutput -join "`n") -notmatch 'preprocessor-column-close-error\.xps:2:12:') { throw 'AST Close source column mapping regression failed.' }
 Write-Host 'AST_CLOSE_COLUMN_MAPPING_OK'
+$lockColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-lock-error.xps') -o (Join-Path $output 'preprocessor-column-lock-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($lockColumnOutput -join "`n") -notmatch 'preprocessor-column-lock-error\.xps:2:11:') { throw 'AST Lock source column mapping regression failed.' }
+Write-Host 'AST_LOCK_COLUMN_MAPPING_OK'
+$unlockColumnOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-column-unlock-error.xps') -o (Join-Path $output 'preprocessor-column-unlock-error') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($unlockColumnOutput -join "`n") -notmatch 'preprocessor-column-unlock-error\.xps:2:13:') { throw 'AST Unlock source column mapping regression failed.' }
+Write-Host 'AST_UNLOCK_COLUMN_MAPPING_OK'
 $imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }

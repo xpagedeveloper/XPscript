@@ -1,0 +1,3 @@
+Sub Main()
+    Unlock #MissingFile, 1 To 2
+End Sub
