@@ -68,6 +68,13 @@ if ($LASTEXITCODE -ne 0) { throw 'AST module array compilation failed.' }
 $moduleArraysResult = dotnet (Join-Path $moduleArraysOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($moduleArraysResult -join "`n") -ne "MODULEARRAY=50`nMODULEBOUNDS=1:4`nMODULEFIXED=two") { throw 'AST module array storage regression failed.' }
 Write-Host 'AST_MODULE_ARRAYS_OK'
+
+$moduleArrayDefaultOutput = Join-Path $output 'module-array-default-private-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'module-array-default-private-next.xps') -o $moduleArrayDefaultOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST default-private module array compilation failed.' }
+$moduleArrayDefaultResult = dotnet (Join-Path $moduleArrayDefaultOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($moduleArrayDefaultResult -join "`n") -ne 'MODULE_DEFAULT_PRIVATE_ARRAY_OK') { throw 'AST default-private module array regression failed.' }
+Write-Host 'AST_MODULE_DEFAULT_PRIVATE_ARRAY_OK'
 $notesSearchOutput = Join-Path $output 'notes-search-constants-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-search-constants-next.xps') -o $notesSearchOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes search constants compilation failed.' }

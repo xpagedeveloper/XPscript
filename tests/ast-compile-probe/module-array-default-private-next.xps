@@ -1,0 +1,11 @@
+Option Base 1
+
+Dim Values() As Long
+
+Sub Main()
+    ReDim Values(1 To 2)
+    Values(1) = 7
+    Values(2) = 8
+    If Values(1) + Values(2) <> 15 Then Error 6341, "default-private module array was not typed"
+    Print "MODULE_DEFAULT_PRIVATE_ARRAY_OK"
+End Sub
