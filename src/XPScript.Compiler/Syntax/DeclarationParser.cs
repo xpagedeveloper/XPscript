@@ -65,7 +65,7 @@ public sealed class DeclarationParser
                 }
                 catch (InvalidOperationException exception)
                 {
-                    _ = exception;
+                    _diagnostics.Add(new SyntaxDiagnostic("XPS1012", exception.Message, new TextSpan(_baseOffset + startOffset, lines[i].Text.Length)));
                 }
                 i = Math.Max(end, i + 1);
                 continue;
@@ -78,7 +78,7 @@ public sealed class DeclarationParser
             }
             catch (InvalidOperationException exception)
             {
-                _ = exception;
+                _diagnostics.Add(new SyntaxDiagnostic("XPS1012", exception.Message, new TextSpan(_baseOffset + startOffset, lines[i].Text.Length)));
             }
             i = Math.Max(end, i + 1);
         }
@@ -99,6 +99,12 @@ public sealed class DeclarationParser
         SyntaxToken? visibility = null;
         if (Peek(header, position).Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword)
             visibility = header[position++];
+
+        // Module-level Static procedures have the same emitted method shape as
+        // ordinary module procedures; consume the declaration modifier here so
+        // it does not desynchronize parsing of the following procedure body.
+        if (!_classMemberContext && Peek(header, position).Text.Equals("Static", StringComparison.OrdinalIgnoreCase))
+            position++;
 
         return Peek(header, position).Kind switch
         {
