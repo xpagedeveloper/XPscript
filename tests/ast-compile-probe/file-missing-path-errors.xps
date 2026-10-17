@@ -59,5 +59,11 @@ Sub Main()
     code = Err
     On Error GoTo 0
     If code = 0 Then Error 9850, "MoveFile accepted a missing source"
+    Dim book As New XPSpreadsheet()
+    On Error Resume Next
+    Call book.SaveAs(missing & "/book.xlsx")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9851, "XPSpreadsheet.SaveAs created a missing parent"
     Print "FILE_MISSING_PATH_ERRORS_OK"
 End Sub
