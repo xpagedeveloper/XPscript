@@ -563,7 +563,7 @@ internal static class Program
     public static dynamic Err => XPScriptErrorRuntime.Err;
     public static dynamic SEARCH_DEPTH = 0L;
     public static dynamic Command => XPScriptRuntime.Command();
-    public static dynamic Platform => XPCrossPlatformRuntime.Platform();
+    public static dynamic Platform => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) ? "Windows" : System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX) ? "MacOS" : System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux) ? "Linux" : "Unknown";
     public static dynamic CurDir => XPScriptRuntime.CurDir();
     public static string CStr(object? value) => XPScriptRuntime.CStr(value);
     // The shared List runtime requires the date coercion entry point too.

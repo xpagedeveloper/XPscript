@@ -1,0 +1,13 @@
+Public current As Box = New Box("hello")
+
+Class Box
+    Public Value As String
+
+    Public Sub New(ByVal initial As String)
+        Value = initial
+    End Sub
+End Class
+
+Sub Main()
+    Print current.Value
+End Sub

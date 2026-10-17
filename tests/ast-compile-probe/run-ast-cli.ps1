@@ -13,6 +13,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST missing-file/path error fixture compilatio
 $missingPathResult = dotnet (Join-Path $missingPathOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($missingPathResult -join "`n") -ne 'FILE_MISSING_PATH_ERRORS_OK') { throw 'AST missing-file/path errors regression failed.' }
 Write-Host 'AST_FILE_MISSING_PATH_ERRORS_OK'
+$initializedStringOutput = Join-Path $output 'initialized-module-reference-string-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-string-next.xps') -o $initializedStringOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized module string-reference compilation failed.' }
+$initializedStringResult = dotnet (Join-Path $initializedStringOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedStringResult -join "`n") -ne 'hello') { throw 'AST initialized module string-reference regression failed.' }
+Write-Host 'AST_INITIALIZED_MODULE_STRING_REFERENCE_OK'
 $constOutput = Join-Path $output 'const-statements'
 dotnet $compiler ast-compile (Join-Path $root 'samples/const-statements.xps') -o $constOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Const fixture compilation failed.' }
