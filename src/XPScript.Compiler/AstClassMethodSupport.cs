@@ -131,14 +131,16 @@ internal static class AstClassMethodSupport
                 .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) &&
                     !AstImageSupport.IsImage(p.Type?.Identifier.Text) &&
                     !string.Equals(p.Type?.Identifier.Text, "Object", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(p.Type?.Identifier.Text, "Variant", StringComparison.OrdinalIgnoreCase) &&
                     !classes.ContainsKey(p.Type?.Identifier.Text ?? ""));
             var hasUnsupportedObjectResult = function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) &&
-                !resultTypeName!.Equals("Object", StringComparison.OrdinalIgnoreCase) && !classes.ContainsKey(resultTypeName);
+                !string.Equals(resultTypeName, "Object", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(resultTypeName, "Variant", StringComparison.OrdinalIgnoreCase) && !classes.ContainsKey(resultTypeName ?? "");
             if (hasUnsupportedObjectParameter || hasUnsupportedObjectResult ||
                 property is not null && (UnsupportedNativeAccessorType(resultTypeName) ||
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "This AST class-method increment supports scalar, concrete user-class and XPImage parameters/results; other object/array signatures are not implemented yet.", "XPS3001", "ast");
+                    "This AST class-method increment supports scalar, Object/Variant, concrete user-class and XPImage parameters/results; other object/array signatures are not implemented yet.", "XPS3001", "ast");
             if (property is not null)
             {
                 var indexParameters = property.IsGetter ? syntaxParameters : syntaxParameters.Take(syntaxParameters.Count - 1).ToArray();

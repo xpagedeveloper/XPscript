@@ -61,6 +61,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Object class-method compilation failed.' }
 $objectClassMethodResult = dotnet (Join-Path $objectClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($objectClassMethodResult -join "`n") -ne "0`n1") { throw 'AST Object class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_OBJECT_OK'
+$variantClassMethodOutput = Join-Path $output 'class-method-variant-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-variant-next.xps') -o $variantClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Variant class-method compilation failed.' }
+$variantClassMethodResult = dotnet (Join-Path $variantClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($variantClassMethodResult -join "`n") -ne '5') { throw 'AST Variant class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_VARIANT_OK'
 $initializedModuleOutput = Join-Path $output 'initialized-module-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-byref-next.xps') -o $initializedModuleOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module storage compilation failed.' }
