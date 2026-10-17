@@ -1,4 +1,4 @@
-Sub WeatherCallback(ByVal toolCall As Variant, ByVal tenant As Variant)
+Sub WeatherCallback(ByVal toolCall As AIToolCall, ByVal tenant As Variant)
 End Sub
 
 Sub Main()

@@ -187,6 +187,12 @@ public static class CompilerSymbolCatalog
             ,Define("AIToolFunction.RemoveParameter", "method", "AIToolFunction.RemoveParameter(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AIToolFunction.RemoveParameter")
             ,Define("AIToolFunction.HasParameter", "method", "AIToolFunction.HasParameter(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AIToolFunction.HasParameter")
             ,Define("AIToolFunction.ParameterCount", "method", "AIToolFunction.ParameterCount() As Integer", [], "Integer", "api.AIToolFunction.ParameterCount")
+            ,Define("AIToolCall", "class", "AIToolCall", [], null, "api.AIToolCall")
+            ,Define("AIToolCall.ToolName", "property", "AIToolCall.ToolName As String", [], "String", "api.AIToolCall.ToolName")
+            ,Define("AIToolCall.FunctionName", "property", "AIToolCall.FunctionName As String", [], "String", "api.AIToolCall.FunctionName")
+            ,Define("AIToolCall.CallId", "property", "AIToolCall.CallId As String", [], "String", "api.AIToolCall.CallId")
+            ,Define("AIToolCall.Arguments", "property", "AIToolCall.Arguments As XPJsonObject", [], "XPJsonObject", "api.AIToolCall.Arguments")
+            ,Define("AIToolCall.SessionId", "property", "AIToolCall.SessionId As String", [], "String", "api.AIToolCall.SessionId")
         }.Where(x => !AstHttpSupport.OwnsSymbol(x.Name) && !AstApplicationSupport.OwnsSymbol(x.Name)).Concat(AstApplicationSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerSymbolDefinition? Find(string name)
