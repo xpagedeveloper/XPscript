@@ -1,0 +1,21 @@
+Class Writer
+    Public Function Update(Optional ByRef values() As Long) As Long
+        If values Is Nothing Then
+            Dim replacement(-1 To 0) As Long
+            replacement(-1) = 9
+            values = replacement
+        Else
+            values(-1) = values(-1) + 4
+        End If
+        Update = values(-1)
+    End Function
+End Class
+
+Sub Main()
+    Dim writer As New Writer
+    Dim values(-1 To 0) As Long
+    values(-1) = 5
+    Print CStr(writer.Update())
+    Print CStr(writer.Update(values))
+    Print CStr(values(-1))
+End Sub
