@@ -14,7 +14,8 @@ internal static class SpreadsheetRuntimePart3Source
         if (!allowExternalConversion) EnsureCanUpdate();
         EnsureAtLeastOneWorksheet();
         var parent = System.IO.Path.GetDirectoryName(target);
-        if (!string.IsNullOrEmpty(parent)) System.IO.Directory.CreateDirectory(parent);
+        if (!string.IsNullOrEmpty(parent) && !System.IO.Directory.Exists(parent))
+            throw new System.IO.DirectoryNotFoundException($"XPSpreadsheet destination directory does not exist: {parent}");
         var temp = target + ".xpspreadsheet-" + System.Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
