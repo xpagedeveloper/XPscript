@@ -40,7 +40,7 @@ internal static class AstModuleFieldSupport
                 var initializer = Regex.Match(tail, @"^=\s*(?<value>-?(?:\d+(?:\.\d*)?|\.\d+)|True|False)\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 var stringInitializer = Regex.Match(tail, "^=\\s*\\\"(?<value>(?:[^\\\"]|\\\"\\\")*)\\\"\\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 var nothingInitializer = Regex.IsMatch(tail, @"^=\s*Nothing\s*(?:'.*)?$", RegexOptions.IgnoreCase);
-                var newInitializer = Regex.Match(tail, @"^=\s*New\s+(?<type>[A-Za-z_]\w*)\s*\(\s*\)\s*(?:'.*)?$", RegexOptions.IgnoreCase);
+                var newInitializer = Regex.Match(tail, @"^=\s*New\s+(?<type>[A-Za-z_]\w*)\s*\(\s*(?<args>-?(?:\d+(?:\.\d*)?|\.\d+)(?:\s*,\s*-?(?:\d+(?:\.\d*)?|\.\d+))*)?\s*\)\s*(?:'.*)?$", RegexOptions.IgnoreCase);
                 // Numeric literal initializers have the same direct typed storage contract as
                 // uninitialized scalar fields. Other initialized/reference forms retain the
                 // compatibility path until their expression/lifetime lowering is migrated.
@@ -58,7 +58,7 @@ internal static class AstModuleFieldSupport
                         : typed && stringInitializer.Success
                         ? $"\"{stringInitializer.Groups["value"].Value.Replace("\"\"", "\\\"")}\""
                         : typed && nothingInitializer ? "null"
-                        : typed && newInitializer.Success ? $"new Xp{newInitializer.Groups["type"].Value}()"
+                        : typed && newInitializer.Success ? $"new Xp{newInitializer.Groups["type"].Value}({newInitializer.Groups["args"].Value})"
                         : null
                 });
             }).ToArray();

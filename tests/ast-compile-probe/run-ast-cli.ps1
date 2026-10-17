@@ -43,6 +43,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized New reference module storage c
 $initializedReferenceNewResult = dotnet (Join-Path $initializedReferenceNewOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedReferenceNewResult -join "`n") -ne '12') { throw 'AST initialized New reference module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_REFERENCE_NEW_MODULE_STORAGE_OK'
+$initializedReferenceArgsOutput = Join-Path $output 'initialized-module-reference-args-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-args-next.xps') -o $initializedReferenceArgsOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized reference-argument module storage compilation failed.' }
+$initializedReferenceArgsResult = dotnet (Join-Path $initializedReferenceArgsOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedReferenceArgsResult -join "`n") -ne '13') { throw 'AST initialized reference-argument module ByRef storage failed.' }
+Write-Host 'AST_INITIALIZED_REFERENCE_ARGS_MODULE_STORAGE_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }
