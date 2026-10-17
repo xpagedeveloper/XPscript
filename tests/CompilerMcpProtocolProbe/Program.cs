@@ -136,6 +136,12 @@ foreach (var xmlDocumentClassMethodFixture in new[] { "class-method-xml-document
     var result = await CallAsync(new { jsonrpc="2.0",id=xmlDocumentClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=xmlDocumentClassMethodFixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("XML document class-method validation failed: " + result);
 }
+foreach (var xmlElementClassMethodFixture in new[] { "class-method-xml-element-next" })
+{
+    var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", xmlElementClassMethodFixture + ".xps"));
+    var result = await CallAsync(new { jsonrpc="2.0",id=xmlElementClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=xmlElementClassMethodFixture+".xps" } } });
+    if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("XML element class-method validation failed: " + result);
+}
 foreach (var initializedModuleFixture in new[] { "initialized-module-byref-next", "initialized-module-boolean-next", "initialized-module-string-next", "initialized-module-reference-next", "initialized-module-reference-new-next", "initialized-module-reference-args-next", "initialized-module-date-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", initializedModuleFixture + ".xps"));
