@@ -297,6 +297,9 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("TimeNumber", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateValue", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("TimeValue", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Hour", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Minute", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Second", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DatePart", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Weekday", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Weekday", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -799,6 +802,9 @@ internal static class Program
     public static object MidB(object value, object start, object? count = null) => Mid(value, start, count);
     public static object MidBP(object value, object start, object? count = null) => Mid(value, start, count);
     public static object Month(object value) => Convert.ToDateTime(value).Month;
+    public static object Hour(object? value) => XPScriptRuntime.Hour(ToDateTime(value));
+    public static object Minute(object? value) => XPScriptRuntime.Minute(ToDateTime(value));
+    public static object Second(object? value) => XPScriptRuntime.Second(ToDateTime(value));
     public static object RegexValidate(object value, object pattern) => System.Text.RegularExpressions.Regex.IsMatch(CStr(value), CStr(pattern));
     public static object RightB(object value, object count) => Right(value, count);
     public static object Rnd(object? value = null) => Random.Shared.NextDouble();

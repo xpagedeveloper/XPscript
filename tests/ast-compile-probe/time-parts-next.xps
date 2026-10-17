@@ -1,0 +1,6 @@
+Sub Main()
+    If Hour(TimeNumber(15, 4, 5)) <> 15 Then Error 6331, "Hour drifted"
+    If Minute(TimeNumber(15, 4, 5)) <> 4 Then Error 6332, "Minute drifted"
+    If Second(TimeNumber(15, 4, 5)) <> 5 Then Error 6333, "Second drifted"
+    Print "TIME_PARTS_OK"
+End Sub
