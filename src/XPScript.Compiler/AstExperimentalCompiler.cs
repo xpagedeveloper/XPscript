@@ -458,14 +458,17 @@ public static class AstExperimentalCompiler
             var gcCleanup = imageCleanup.Length == 0
                 ? string.Empty
                 : $"~Xp{classDeclaration.Identifier.Text}() {{ {imageCleanup} }}";
+            var explicitCleanup = imageCleanup.Length == 0
+                ? string.Empty
+                : imageCleanup + " System.GC.SuppressFinalize(this);";
             var delete = classDeclaration.BaseType is null
-                ? $"public virtual void Delete() {{ {imageCleanup} }}"
-                : $"public override void Delete() {{ {imageCleanup} base.Delete(); }}";
+                ? $"public virtual void Delete() {{ {explicitCleanup} }}"
+                : $"public override void Delete() {{ {explicitCleanup} base.Delete(); }}";
             var memberBodies = AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource, classes);
             if (classDeclaration.Members.OfType<DestructorDeclarationSyntax>().Any())
             {
-                var cleanup = classDeclaration.BaseType is null ? imageCleanup
-                    : $"try {{ {imageCleanup} }} finally {{ base.Delete(); }}";
+                var cleanup = classDeclaration.BaseType is null ? explicitCleanup
+                    : $"try {{ {explicitCleanup} }} finally {{ base.Delete(); }}";
                 delete = "private bool __xps_destructor_started; public " + (classDeclaration.BaseType is null ? "virtual" : "override") + " void Delete() { " +
                     "if (__xps_destructor_started) return; __xps_destructor_started = true; " +
                     $"try {{ __xps_destructor_body(); }} finally {{ {cleanup} }} }}";
