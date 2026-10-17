@@ -72,6 +72,7 @@ if (Should-Run 'language') {
   if ($astCliFirst.Output -notmatch 'AST_LIST_CLASS_METHOD_CONSTRUCTOR_OK') { throw 'AST List class-method constructor regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_INITIALIZED_MODULE_BYREF_CONSTRUCTOR_OK') { throw 'AST initialized module ByRef constructor regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_NATIVE_REFERENCE_CONSTRUCTOR_OK') { throw 'AST native reference constructor regression missing.' }
+  if ($astCliFirst.Output -notmatch 'AST_METHOD_REFERENCE_CONSTRUCTOR_OK') { throw 'AST method reference constructor regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_OPTIONAL_ARRAY_CLASS_METHOD_OK') { throw 'AST optional array class-method regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_OPTIONAL_BYREF_ARRAY_CLASS_METHOD_OK') { throw 'AST optional ByRef array class-method regression missing.' }
   if ($astCliFirst.Output -notmatch 'AST_EMPTY_INDEXED_PROPERTY_SLOT_OK') { throw 'AST empty indexed-property slot regression missing.' }
