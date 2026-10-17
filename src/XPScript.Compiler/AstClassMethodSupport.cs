@@ -115,9 +115,6 @@ internal static class AstClassMethodSupport
                         "A class destructor must be a single parameterless Sub Delete.", "XPS1012", "semantic");
                 destructorSeen = true;
             }
-            if (declaration.BaseType is not null && !isDestructor && constructor is null)
-                throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
-                    "Method bodies declared in derived classes are not implemented by the AST compiler yet.", "XPS3001", "ast");
             var syntaxParameters = sub?.Parameters ?? function?.Parameters ?? property?.Parameters ?? constructor?.Parameters ?? Array.Empty<ParameterSyntax>();
             var statements = sub?.Statements ?? function?.Statements ?? property?.Statements ?? destructor?.Statements ?? constructor!.Statements;
             if (constructor is not null)

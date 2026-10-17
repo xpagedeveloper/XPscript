@@ -1,0 +1,21 @@
+Class Base
+    Public value As Long
+    Public Sub Add(ByVal amount As Long)
+        value = value + amount
+    End Sub
+    Public Function Total() As Long
+        Total = value
+    End Function
+End Class
+
+Class Child Extend Base
+    Public Function Doubled() As Long
+        Doubled = Me.Total() * 2
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New Child
+    Call item.Add(4)
+    Print CStr(item.Doubled())
+End Sub
