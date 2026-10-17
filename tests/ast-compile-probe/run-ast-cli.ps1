@@ -62,6 +62,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST runtime globals compilation failed.' }
 $runtimeGlobalsResult = dotnet (Join-Path $runtimeGlobalsOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($runtimeGlobalsResult -join "`n") -ne "COMMAND_READ=True`nRUNTIME_GLOBALS_OK") { throw 'AST runtime globals regression failed.' }
 Write-Host 'AST_RUNTIME_GLOBALS_OK'
+$moduleArraysOutput = Join-Path $output 'module-arrays'
+dotnet $compiler ast-compile (Join-Path $root 'samples/module-arrays.xps') -o $moduleArraysOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST module array compilation failed.' }
+$moduleArraysResult = dotnet (Join-Path $moduleArraysOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($moduleArraysResult -join "`n") -ne "MODULEARRAY=50`nMODULEBOUNDS=1:4`nMODULEFIXED=two") { throw 'AST module array storage regression failed.' }
+Write-Host 'AST_MODULE_ARRAYS_OK'
 $enumOutput = Join-Path $output 'language-extensions'
 dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }

@@ -100,6 +100,9 @@ public static class AstExperimentalCompiler
             .Where(match => !applicationConstants.Any(application => application.Groups["name"].Value.Equals(match.Groups["name"].Value, StringComparison.OrdinalIgnoreCase)))
             .ToArray();
         var allConstants = applicationConstants.Concat(compatibilityConstants).ToArray();
+        var moduleArrayDeclarations = Regex.Matches(AstModuleFieldSupport.DeclarationSource(fullSource), @"(?im)^\s*(?:(?:Public|Private)\s+)?(?:Dim\s+)?(?<name>[A-Za-z_]\w*)\s*\((?<bounds>[^\r\n]*)\)\s+As\s+(?<type>[A-Za-z_]\w*)")
+            .Cast<Match>()
+            .ToArray();
         // The experimental path keeps going when a non-selected declaration
         // contains syntax outside the current AST slice. Binding diagnostics
         // for the selected procedure remain authoritative below.
@@ -211,6 +214,9 @@ public static class AstExperimentalCompiler
         var moduleFieldStorage = AstModuleFieldSupport.Find(moduleSource, symbols);
         foreach (var field in moduleFieldStorage)
             symbols.Declare(field.Symbol);
+        foreach (var array in moduleArrayDeclarations)
+            if (!symbols.LookupAll(array.Groups["name"].Value).Any())
+                symbols.Declare(new VariableSymbol(array.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
         foreach (var match in allConstants)
             symbols.Declare(new VariableSymbol(match.Groups["name"].Value, typeof(object), XpTypeSymbol.Variant));
         foreach (var typeName in AstObjectSupportRegistry.VariantTypeNames)
@@ -451,8 +457,8 @@ public static class AstExperimentalCompiler
             .Select(member => $"    public static dynamic {member.Name} = {member.Value};"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine,
             enumNames.Select(enumMatch => $"    public static Xp{enumMatch.Groups["name"].Value} {enumMatch.Groups["name"].Value} = new Xp{enumMatch.Groups["name"].Value}();"));
-        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(AstModuleFieldSupport.DeclarationSource(fullSource), @"(?im)^\s*Dim\s+(?<name>[A-Za-z_]\w*)\s*\([^\r\n]+\)\s+As\s+\w+", RegexOptions.Multiline)
-            .Cast<Match>().Select(match => $"    public static dynamic {match.Groups["name"].Value} = new ExpandoObject();"));
+        moduleFields += Environment.NewLine + string.Join(Environment.NewLine, moduleArrayDeclarations
+            .Select(match => $"    public static dynamic {match.Groups["name"].Value} = {ModuleArrayInitializer(match.Groups["bounds"].Value)};"));
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
         var entryPoint = usesApplication
             ? "public static void Main(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
@@ -1287,5 +1293,21 @@ internal static class Program
             nextValue = value + 1;
         }
         return members;
+    }
+
+    private static string ModuleArrayInitializer(string bounds)
+    {
+        if (string.IsNullOrWhiteSpace(bounds)) return "System.Array.Empty<object>()";
+        var dimensions = bounds.Split(',').Select(item => item.Trim()).ToArray();
+        var parsed = dimensions.Select(dimension =>
+        {
+            var range = Regex.Match(dimension, @"^(?<lower>-?\d+)\s+To\s+(?<upper>-?\d+)$", RegexOptions.IgnoreCase);
+            var lower = range.Success ? long.Parse(range.Groups["lower"].Value, System.Globalization.CultureInfo.InvariantCulture) : 0L;
+            var upper = range.Success ? long.Parse(range.Groups["upper"].Value, System.Globalization.CultureInfo.InvariantCulture) : long.Parse(dimension, System.Globalization.CultureInfo.InvariantCulture);
+            return (Lower: lower, Length: checked(upper - lower + 1));
+        }).ToArray();
+        var lengths = string.Join(", ", parsed.Select(item => item.Length));
+        var lowers = string.Join(", ", parsed.Select(item => item.Lower));
+        return $"LSArrayRuntime.CreateManaged<object>(new[] {{ {lengths} }}, new[] {{ {lowers} }})";
     }
 }
