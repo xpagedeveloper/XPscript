@@ -649,13 +649,19 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         }
 
         var conversion = _symbols.ClassifyConversion(value.SemanticType, target.SemanticType);
-        if ((value.SemanticType.IsList || target.SemanticType.IsList) && !conversion.IsImplicit)
+        var sameListElementType = value.SemanticType is { IsList: true, ElementType: { } valueElement } &&
+            target.SemanticType is { IsList: true, ElementType: { } targetElement } &&
+            valueElement.RuntimeType == targetElement.RuntimeType &&
+            valueElement.Name.Equals(targetElement.Name, StringComparison.OrdinalIgnoreCase);
+        if ((value.SemanticType.IsList || target.SemanticType.IsList) && !conversion.IsImplicit && !sameListElementType)
         {
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.TypeMismatch,
                 $"Cannot assign {value.SemanticType.Name} to {target.SemanticType.Name}.", valueSyntax.Span));
             return null;
         }
-        if (!conversion.IsImplicit && _allowDynamicMembers && propertyMode != PropertyAssignmentKind.Set)
+        if (sameListElementType)
+            conversion = new Conversion(ConversionKind.Identity);
+        else if (!conversion.IsImplicit && _allowDynamicMembers && propertyMode != PropertyAssignmentKind.Set)
             value = new BoundConversionExpression(value, target.SemanticType, new Conversion(ConversionKind.FromVariant)) { Span = value.Span };
         else if (!conversion.IsImplicit)
             _diagnostics.Add(new SyntaxDiagnostic(
