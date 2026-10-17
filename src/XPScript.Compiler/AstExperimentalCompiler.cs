@@ -223,6 +223,7 @@ public static class AstExperimentalCompiler
             symbols.Declare(new VariableSymbol(typeName, typeof(object), BoundExpressionEmitter.RuntimeObjectType(typeName) is null ? XpTypeSymbol.Variant : XpTypeSymbol.User(typeName)));
         symbols.Declare(new VariableSymbol("Console", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("SEARCH_BREADTH", typeof(long), XpTypeSymbol.Variant));
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
         symbols.Declare(new FunctionSymbol("Array", typeof(long[]), [typeof(long), typeof(long)]));
         symbols.Declare(new FunctionSymbol("Array", typeof(object[]), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -583,7 +584,8 @@ internal static class Program
     private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.WriteLine = (Action<object?>)(value => System.Console.WriteLine(value)); return console; }
     public static dynamic RequestScope = new ExpandoObject();
     public static dynamic Err => XPScriptErrorRuntime.Err;
-    public static dynamic SEARCH_DEPTH = 0L;
+    public static dynamic SEARCH_BREADTH = 1723L;
+    public static dynamic SEARCH_DEPTH = 1724L;
     public static dynamic Command => XPScriptRuntime.Command();
     public static dynamic Platform => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) ? "Windows" : System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX) ? "MacOS" : System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux) ? "Linux" : "Unknown";
     public static dynamic CurDir => XPScriptRuntime.CurDir();

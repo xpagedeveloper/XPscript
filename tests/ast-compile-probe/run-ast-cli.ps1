@@ -68,6 +68,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST module array compilation failed.' }
 $moduleArraysResult = dotnet (Join-Path $moduleArraysOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($moduleArraysResult -join "`n") -ne "MODULEARRAY=50`nMODULEBOUNDS=1:4`nMODULEFIXED=two") { throw 'AST module array storage regression failed.' }
 Write-Host 'AST_MODULE_ARRAYS_OK'
+$notesSearchOutput = Join-Path $output 'notes-search-constants-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-search-constants-next.xps') -o $notesSearchOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Notes search constants compilation failed.' }
+$notesSearchResult = dotnet (Join-Path $notesSearchOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($notesSearchResult -join "`n") -ne 'NOTES_SEARCH_CONSTANTS_OK') { throw 'AST Notes search constants regression failed.' }
+Write-Host 'AST_NOTES_SEARCH_CONSTANTS_OK'
 $enumOutput = Join-Path $output 'language-extensions'
 dotnet $compiler ast-compile (Join-Path $root 'samples/language-extensions.xps') -o $enumOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST enum/Type language extensions fixture compilation failed.' }
