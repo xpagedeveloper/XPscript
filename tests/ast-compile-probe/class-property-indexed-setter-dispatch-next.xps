@@ -1,0 +1,34 @@
+Class Base
+    Public Property Get Item(ByVal index As Long) As Long
+        Item = 0
+    End Property
+
+    Public Property Let Item(ByVal index As Long, ByVal incoming As Long)
+    End Property
+End Class
+
+Class Child Extend Base
+    Public value As Long
+
+    Public Property Get Item(ByVal index As Long) As Long
+        Item = value
+    End Property
+
+    Public Property Let Item(ByVal index As Long, ByVal incoming As Long)
+        value = incoming + index
+    End Property
+End Class
+
+Class Caller
+    Public Sub SetValue(ByVal item As Base)
+        item.Item(2) = 10
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As New Child
+    Dim caller As New Caller
+    Call caller.SetValue(item)
+    If item.value <> 12 Then Error 6, "derived indexed property setter dispatch failed"
+    Print "CLASS_INDEXED_PROPERTY_SETTER_DISPATCH_OK"
+End Sub
