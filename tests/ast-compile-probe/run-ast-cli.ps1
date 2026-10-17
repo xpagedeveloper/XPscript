@@ -49,6 +49,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized reference-argument module stor
 $initializedReferenceArgsResult = dotnet (Join-Path $initializedReferenceArgsOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedReferenceArgsResult -join "`n") -ne '13') { throw 'AST initialized reference-argument module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_REFERENCE_ARGS_MODULE_STORAGE_OK'
+$initializedDateOutput = Join-Path $output 'initialized-module-date-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-date-next.xps') -o $initializedDateOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized Date module storage compilation failed.' }
+$initializedDateResult = dotnet (Join-Path $initializedDateOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedDateResult -join "`n") -notmatch '2026') { throw 'AST initialized Date module ByRef storage failed.' }
+Write-Host 'AST_INITIALIZED_DATE_MODULE_STORAGE_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }

@@ -1,0 +1,12 @@
+Public current As Date = DateNumber(2026, 1, 2)
+
+Class DateOwner
+    Public Sub New(ByRef value As Date)
+        value = DateNumber(2026, 1, 3)
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As New DateOwner(current)
+    Print CStr(current)
+End Sub

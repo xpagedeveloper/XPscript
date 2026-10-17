@@ -23,7 +23,7 @@ internal static class AstClassConstructorSupport
                 foreach (var parameter in parameters)
                 {
                     var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
-                    var sharedReference = type.IsObject || type.IsVariant || classes.ContainsKey(type.Name) || AstImageSupport.IsImage(type.Name) ||
+                    var sharedReference = type.IsObject || type.IsVariant || type.Name.Equals("Date", StringComparison.OrdinalIgnoreCase) || classes.ContainsKey(type.Name) || AstImageSupport.IsImage(type.Name) ||
                         parameter.IsList && AstImageSupport.IsImage(type.Name) ||
                         !AstImageSupport.IsImage(type.Name) && !AstApplicationSupport.OwnsSymbol(type.Name) &&
                         BoundExpressionEmitter.RuntimeObjectType(type.Name) is not null;
