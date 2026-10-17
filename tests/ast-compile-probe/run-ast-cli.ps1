@@ -93,6 +93,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST AITool property compilation failed.' }
 $aiToolPropertiesResult = dotnet (Join-Path $aiToolPropertiesOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($aiToolPropertiesResult -join "`n") -ne 'AI_TOOL_PROPERTIES_OK') { throw 'AST AITool property regression failed.' }
 Write-Host 'AST_AI_TOOL_PROPERTIES_OK'
+$aiToolFunctionOutput = Join-Path $output 'ai-tool-function-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-tool-function-next.xps') -o $aiToolFunctionOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST AITool function compilation failed.' }
+$aiToolFunctionResult = dotnet (Join-Path $aiToolFunctionOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($aiToolFunctionResult -join "`n") -ne 'AI_TOOL_FUNCTION_OK') { throw 'AST AITool function regression failed.' }
+Write-Host 'AST_AI_TOOL_FUNCTION_OK'
 $notesSearchOutput = Join-Path $output 'notes-search-constants-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-search-constants-next.xps') -o $notesSearchOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes search constants compilation failed.' }

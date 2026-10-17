@@ -1,0 +1,11 @@
+Sub WeatherCallback(ByVal toolCall As Variant)
+End Sub
+
+Sub Main()
+    Dim tool As New AITool("weather")
+    Call tool.AddFunction("get_weather", "Returns weather", "WeatherCallback", "tenant-42")
+    Call tool.AddParameter("get_weather", "city", "string", "City name", True)
+    If tool.FunctionCount() <> 1 Then Error 5, "AITool function count mismatch"
+    If Not tool.HasFunction("get_weather") Then Error 5, "AITool function lookup mismatch"
+    Print "AI_TOOL_FUNCTION_OK"
+End Sub

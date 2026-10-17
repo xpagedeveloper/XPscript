@@ -173,6 +173,10 @@ public static class CompilerSymbolCatalog
             Define("AITool.Name", "property", "AITool.Name As String", [], "String", "api.AITool.Name"),
             Define("AITool.Description", "property", "AITool.Description As String", [], "String", "api.AITool.Description"),
             Define("AITool.Timeout", "property", "AITool.Timeout As Double", [], "Double", "api.AITool.Timeout")
+            ,Define("AITool.AddFunction", "method", "AITool.AddFunction(name As String, description As String, callback As String, context As Variant) As AIToolFunction", [new("name", "String"), new("description", "String"), new("callback", "String"), new("context", "Variant")], "AIToolFunction", "api.AITool.AddFunction")
+            ,Define("AITool.AddParameter", "method", "AITool.AddParameter(functionName As String, name As String, type As String, description As String, required As Boolean)", [new("functionName", "String"), new("name", "String"), new("type", "String"), new("description", "String"), new("required", "Boolean")], null, "api.AITool.AddParameter")
+            ,Define("AITool.HasFunction", "method", "AITool.HasFunction(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AITool.HasFunction")
+            ,Define("AITool.FunctionCount", "method", "AITool.FunctionCount() As Integer", [], "Integer", "api.AITool.FunctionCount")
         }.Where(x => !AstHttpSupport.OwnsSymbol(x.Name) && !AstApplicationSupport.OwnsSymbol(x.Name)).Concat(AstApplicationSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerSymbolDefinition? Find(string name)
