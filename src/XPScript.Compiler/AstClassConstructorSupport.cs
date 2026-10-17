@@ -24,14 +24,15 @@ internal static class AstClassConstructorSupport
                 {
                     var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
                     var sharedReference = type.IsObject || type.IsVariant || classes.ContainsKey(type.Name) ||
+                        parameter.IsList && AstImageSupport.IsImage(type.Name) ||
                         !AstImageSupport.IsImage(type.Name) && !AstApplicationSupport.OwnsSymbol(type.Name) &&
                         BoundExpressionEmitter.RuntimeObjectType(type.Name) is not null;
-                    if (parameter.IsList || type.RuntimeType == typeof(object) &&
+                    if (type.RuntimeType == typeof(object) &&
                         !sharedReference)
                         throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
-                            "AST constructors support scalar, Variant and shared reference parameters; XPImage, unknown reference and List signatures are not implemented yet.", "XPS3001", "ast");
+                            "AST constructors support scalar, Variant, shared reference and typed List parameters; scalar XPImage and unknown reference signatures are not implemented yet.", "XPS3001", "ast");
                 }
-                var types = parameters.Select(p => AstClassMethodSupport.DeclaredType(p.Type, symbols)).ToArray();
+                var types = parameters.Select(p => AstExperimentalCompiler.ResolveParameterType(p, symbols)).ToArray();
                 var signature = string.Join(";", types.Select((type, i) => $"{type.Shape}:{type.Name}:{type.ArrayRank}:{parameters[i].IsByRef}"));
                 if (!signatures.Add(signature))
                     throw AstExperimentalCompiler.MappedDiagnostic(constructor!.Span, path, source,
@@ -109,8 +110,8 @@ internal static class AstClassConstructorSupport
             var scope = symbols.CreateChildScope();
             foreach (var parameter in constructor?.Parameters ?? Array.Empty<ParameterSyntax>())
                 scope.Declare(new ParameterSymbol(parameter.Identifier.Text,
-                    AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef,
-                    AstClassMethodSupport.DeclaredType(parameter.Type, symbols)));
+                    AstExperimentalCompiler.ResolveParameterType(parameter, symbols).RuntimeType, parameter.IsByRef,
+                    AstExperimentalCompiler.ResolveParameterType(parameter, symbols)));
             var binder = new ExpressionBinder(scope);
             var syntax = new NewExpressionSyntax(new SyntaxToken(SyntaxKind.NewKeyword, "New", null, call?.Span ?? parent.Span),
                 parent.Identifier, call?.OpenParenToken, call?.Arguments ?? [], call?.CommaTokens ?? [], call?.CloseParenToken);
@@ -122,7 +123,7 @@ internal static class AstClassConstructorSupport
         }
         if (constructor is null) return $"public {name}(){initializer} {{ }}";
         var parameters = string.Join(", ", constructor.Parameters.Select(p =>
-            (p.IsByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstClassMethodSupport.DeclaredType(p.Type, symbols)) + " " + p.Identifier.Text));
+            (p.IsByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveParameterType(p, symbols)) + " " + p.Identifier.Text));
         var arguments = string.Join(", ", constructor.Parameters.Select(p => (p.IsByRef ? "ref " : "") + p.Identifier.Text));
         var visibility = constructor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public";
         var suffix = Suffix(declaration, constructor);
@@ -139,8 +140,8 @@ internal static class AstClassConstructorSupport
     {
         if (!constructor.Parameters.Any(parameter => parameter.IsOptional)) return string.Empty;
         var parameters = constructor.Parameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
-            AstExperimentalCompiler.ResolveRuntimeType(parameter.Type?.Identifier.Text), parameter.IsByRef,
-            AstClassMethodSupport.DeclaredType(parameter.Type, symbols))).ToArray();
+            AstExperimentalCompiler.ResolveParameterType(parameter, symbols).RuntimeType, parameter.IsByRef,
+            AstExperimentalCompiler.ResolveParameterType(parameter, symbols))).ToArray();
         var scope = symbols.CreateChildScope();
         var defaults = new BoundExpression?[parameters.Length];
         for (var i = 0; i < parameters.Length; i++)

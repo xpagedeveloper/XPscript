@@ -137,7 +137,7 @@ internal static class AstClassMethodSupport
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar typed parameters and results; object/array signatures are not implemented yet.", "XPS3001", "ast");
-            if (syntaxParameters.Any(p => p.IsList || p.IsOptional && property is null && constructor is null) ||
+            if (syntaxParameters.Any(p => p.IsList && constructor is null || p.IsOptional && property is null && constructor is null) ||
                 AstExperimentalCompiler.FlattenStatements(statements).OfType<DimStatementSyntax>().Any(d => d.IsStatic))
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Optional/List parameters and Static storage in class methods are not implemented by the AST compiler yet.", "XPS3001", "ast");
@@ -183,7 +183,8 @@ internal static class AstClassMethodSupport
             }
             var scope = classScope.CreateChildScope();
             var parameters = syntaxParameters.Select((p, i) => new ParameterSymbol(p.Identifier.Text,
-                AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text), p.IsByRef, DeclaredType(p.Type, globals))
+                AstExperimentalCompiler.ResolveParameterType(p, globals).RuntimeType, p.IsByRef,
+                AstExperimentalCompiler.ResolveParameterType(p, globals))
             {
                 IsBorrowedImageSnapshot = isObjectSetter && i == syntaxParameters.Count - 1 && p.IsByRef && AstImageSupport.IsImage(p.Type?.Identifier.Text)
             }).ToArray();

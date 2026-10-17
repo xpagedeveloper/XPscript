@@ -1,0 +1,151 @@
+Option Declare
+Class Replace
+    Public Stored As Variant
+    Public Sub New(ByRef first List As Long, ByRef second List As Long, Optional ByVal fail As Boolean = False)
+        Dim replacement List As Long
+        replacement("value") = 8
+        Set first = replacement
+        If Not (first Is second) Then Error 4300, "List slots lost aliasing"
+        second("next") = 9
+        Stored = first
+        If fail Then Error 4301, "List constructor failed"
+    End Sub
+End Class
+Class Snapshot
+    Public Stored As Variant
+    Public Sub New(ByVal values List As Long)
+        values("shared") = 11
+        Dim replacement List As Long
+        replacement("local") = 12
+        Set values = replacement
+        Stored = values
+    End Sub
+End Class
+Class Base
+    Public Stored As Variant
+    Public Sub New(ByRef values List As Long)
+        values("base") = 13
+        Dim replacement List As Long
+        replacement("new") = 14
+        Set values = replacement
+        Stored = values
+    End Sub
+End Class
+Class Child Extend Base
+    Public Sub New(ByVal values List As Long)
+        Parent.New(values)
+        If values("new") <> 14 Then Error 4302
+    End Sub
+End Class
+Class Defaults
+    Public Stored As Variant
+    Public Sub New(Optional ByRef values List As Long = MakeValues(), Optional ByVal same List As Long = values)
+        If Not (values Is same) Then Error 4303
+        values("default") = values("default") + 1
+        Stored = same
+        Set values = Nothing
+    End Sub
+End Class
+Class EmptyDefaults
+    Public Sub New(Optional values List As Long, Optional ByVal snapshot List As Long)
+        If Not (values Is Nothing) Or Not (snapshot Is Nothing) Then Error 4304
+        Dim replacement List As Long
+        replacement("value") = 1
+        Set values = replacement
+    End Sub
+End Class
+Class Box
+    Public Value As Long
+End Class
+Class ReferenceLists
+    Public Sub New(ByVal values List As Box, ByVal native List As XPJsonObject)
+        values("box").Value = 21
+        Call native("json").Set("value", 22)
+    End Sub
+End Class
+Class ErasedOverloads
+    Public Value As Long
+    Public Sub New(ByVal values List As Object)
+        Value = 1
+    End Sub
+    Public Sub New(ByVal values List As Variant)
+        Value = 2
+    End Sub
+End Class
+Class Overloads
+    Public Value As Long
+    Public Sub New(ByVal values List As Long)
+        Value = 1
+    End Sub
+    Public Sub New(ByVal values List As String)
+        Value = 2
+    End Sub
+End Class
+Function MakeValues() As Variant
+    Dim values List As Long
+    values("default") = 1
+    Set MakeValues = values
+End Function
+Class DefaultFailure
+    Public Sub New(ByRef values List As Long, Optional ByVal touched As Long = TouchList(values), Optional ByVal failed As Long = FailList())
+    End Sub
+End Class
+Function TouchList(ByVal values List As Long) As Long
+    values("touched") = 31
+    TouchList = 31
+End Function
+Function FailList() As Long
+    Error 4340, "List default failed"
+End Function
+Sub Main()
+    Dim values List As Long
+    values("old") = 1
+    Dim original List As Long = values
+    Dim item As New Replace(values, values)
+    If values Is original Then Error 4305
+    If values("value") <> 8 Or values("next") <> 9 Or original("old") <> 1 Then Error 4306
+    Dim old As Replace = item
+    Dim previous List As Long = values
+    Dim failure As Long
+    On Error Resume Next
+    Set item = New Replace(values, values, True)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4301 Or Not (item Is old) Or values Is previous Then Error 4307
+    Dim snapshot As New Snapshot(values)
+    If values("shared") <> 11 Or IsElement(values("local")) Then Error 4308
+    Dim child As New Child(values)
+    If values("base") <> 13 Or IsElement(values("new")) Then Error 4309
+    Dim forwarded List As Long = child.Stored
+    If forwarded("new") <> 14 Then Error 4310
+    Dim fresh As New Defaults()
+    Dim another As New Defaults()
+    Dim first List As Long = fresh.Stored
+    Dim second List As Long = another.Stored
+    If first Is second Or first("default") <> 2 Or second("default") <> 2 Then Error 4311
+    Dim omitted As New EmptyDefaults()
+    Dim words List As String
+    Dim numberOverload As New Overloads(values)
+    Dim stringOverload As New Overloads(words)
+    If numberOverload.Value <> 1 Or stringOverload.Value <> 2 Then Error 4312
+    Dim boxes List As Box
+    Set boxes("box") = New Box()
+    Dim native List As XPJsonObject
+    Set native("json") = New XPJsonObject()
+    Dim references As New ReferenceLists(boxes, native)
+    If boxes("box").Value <> 21 Or CLng(native("json").Get("value")) <> 22 Then Error 4313
+    Dim objects List As Object
+    Dim variants List As Variant
+    Dim objectOverload As New ErasedOverloads(objects)
+    Dim variantOverload As New ErasedOverloads(variants)
+    If objectOverload.Value <> 1 Or variantOverload.Value <> 2 Then Error 4314
+    Dim target As New DefaultFailure(values, 1, 2)
+    Dim oldTarget As DefaultFailure = target
+    failure = 0
+    On Error Resume Next
+    Set target = New DefaultFailure(values)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4340 Or Not (target Is oldTarget) Or values("touched") <> 31 Then Error 4315
+    Print "LIST_CONSTRUCTORS_OK"
+End Sub

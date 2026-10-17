@@ -3,12 +3,14 @@ $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
 $output = Join-Path $outputRoot ('constructor-' + [Guid]::NewGuid().ToString('N'))
-foreach ($fixture in @('class-constructor-variant', 'class-constructor-native', 'constructor-reference-variant', 'class-constructor-overloads', 'constructor-refref-module', 'class-constructor-reference-storage', 'class-constructor-optional-refref', 'constructor-refref-array', 'constructor-refref-list', 'constructor-refref-forall', 'constructor-refref-optional', 'class-constructor-optional-reference', 'constructor-reference-optional', 'class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
+foreach ($fixture in @('class-constructor-list', 'constructor-reference-list', 'class-constructor-variant', 'class-constructor-native', 'constructor-reference-variant', 'class-constructor-overloads', 'constructor-refref-module', 'class-constructor-reference-storage', 'class-constructor-optional-refref', 'constructor-refref-array', 'constructor-refref-list', 'constructor-refref-forall', 'constructor-refref-optional', 'class-constructor-optional-reference', 'constructor-reference-optional', 'class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
     if ($LASTEXITCODE -ne 0) { throw "AST constructor compilation failed: $fixture" }
     $result = dotnet (Join-Path $target 'Generated.dll')
     $expected = switch ($fixture) {
+        'class-constructor-list' { 'LIST_CONSTRUCTORS_OK' }
+        'constructor-reference-list' { 'CONSTRUCTOR_LIST_OK' }
         'class-constructor-native' { 'NATIVE_CONSTRUCTORS_OK' }
         'class-constructor-variant' { 'VARIANT_CONSTRUCTORS_OK' }
         'constructor-reference-variant' { 'CONSTRUCTOR_VARIANT_OK' }
@@ -48,6 +50,11 @@ foreach ($fixture in @('class-constructor-variant', 'class-constructor-native', 
     }
     if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST constructor execution failed: $fixture" }
 }
+$normalList = Join-Path $output $(if ($IsWindows) { 'normal-list.exe' } else { 'normal-list' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'constructor-reference-list.xps') -o $normalList --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal List constructor compilation failed.' }
+$result = & $normalList
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne 'CONSTRUCTOR_LIST_OK') { throw 'Normal/AST ByVal List constructor parity failed.' }
 $normalVariant = Join-Path $output $(if ($IsWindows) { 'normal-variant.exe' } else { 'normal-variant' })
 dotnet $compiler compile (Join-Path $PSScriptRoot 'constructor-reference-variant.xps') -o $normalVariant --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal Variant constructor compilation failed.' }
@@ -90,6 +97,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Normal reference constructor parity compilatio
 $result = & $normalReference
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`n5`nREFERENCE_CONSTRUCTOR_PARITY_OK") { throw 'Normal/AST concrete-reference constructor parity failed.' }
 foreach ($case in @(
+    @('constructor-list-byref-type-error', 'XPS2003', 7),
+    @('constructor-list-byval-type-error', 'XPS2004', 7),
+    @('constructor-list-default-type-error', 'XPS2001', 2),
+    @('constructor-list-default-name-error', 'XPS2008', 2),
+    @('constructor-list-reference-type-error', 'XPS2003', 11),
+    @('constructor-list-unknown-type-error', 'XPS3001', 2),
+    @('constructor-list-method-deferred', 'XPS3001', 2),
     @('constructor-native-byref-type-error', 'XPS2003', 7),
     @('constructor-native-optional-type-error', 'XPS2001', 2),
     @('constructor-variant-byref-type-error', 'XPS2003', 7),
@@ -137,7 +151,6 @@ foreach ($case in @(
     @('constructor-optional-reference-type-error', 'XPS2001', 2),
     @('constructor-optional-reference-name-error', 'XPS2008', 4),
     @('constructor-reference-native-deferred', 'XPS3001', 2),
-    @('constructor-reference-list-deferred', 'XPS3001', 2),
     @('constructor-reference-unknown-deferred', 'XPS3001', 2),
     @('constructor-reference-scalar-error', 'XPS2004', 6),
     @('constructor-reference-class-error', 'XPS2004', 11),
@@ -160,6 +173,7 @@ foreach ($case in @(
 }
 Write-Host 'AST_OVERLOAD_CONSTRUCTORS_OK'
 Write-Host 'AST_NATIVE_CONSTRUCTORS_OK'
+Write-Host 'AST_LIST_CONSTRUCTORS_OK'
 Write-Host 'AST_VARIANT_CONSTRUCTORS_OK'
 Write-Host 'AST_CONSTRUCTORS_OK'
 Write-Host 'AST_REFERENCE_CONSTRUCTORS_OK'

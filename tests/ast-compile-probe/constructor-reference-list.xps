@@ -1,0 +1,13 @@
+Class Record
+    Public Value As Long
+    Public Sub New(ByVal values List As Long)
+        values("shared") = 7
+        Value = values("shared")
+    End Sub
+End Class
+Sub Main()
+    Dim values List As Long
+    Dim item As New Record(values)
+    If values("shared") <> 7 Or item.Value <> 7 Then Error 4330
+    Print "CONSTRUCTOR_LIST_OK"
+End Sub

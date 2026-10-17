@@ -37,7 +37,7 @@ var optionalBoxCode = new BoundMethodEmitter().Emit("Defaults", typeof(object), 
 if (!optionalBoxCode.Contains("System.Runtime.CompilerServices.StrongBox<XpBox>") ||
     !optionalBoxCode.Contains("ref __xpsOptional0.Value") || optionalBoxCode.Contains("object[]"))
     throw new Exception("Optional reference cells erased their concrete class or lost managed-reference emission.");
-foreach (var (semantic, expectedType) in new[] { (XpTypeSymbol.Variant, "object"), (XpTypeSymbol.User("XPJsonObject"), "XPScriptJsonObject") })
+foreach (var (semantic, expectedType) in new[] { (XpTypeSymbol.Variant, "object"), (XpTypeSymbol.User("XPJsonObject"), "XPScriptJsonObject"), (XpTypeSymbol.ListOf(XpTypeSymbol.User("Box")), "LSList<XpBox>") })
 {
     var typedOptionalParameter = new ParameterSymbol("value", typeof(object), true, semantic);
     var typedOptionalForward = OptionalCallLowering.Forward("Defaults", typeof(object), [typedOptionalParameter],

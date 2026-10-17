@@ -1074,9 +1074,11 @@ internal static class Program
                 null, parameters.Take(count).Select(ResolveParameterType).ToArray(), parameters.Take(count).Select(p => p.IsByRef).ToArray()) { IsOptionalForwarding = true });
     }
 
-    private static XpTypeSymbol ResolveParameterType(ParameterSyntax parameter)
+    private static XpTypeSymbol ResolveParameterType(ParameterSyntax parameter) => ResolveParameterType(parameter, null);
+
+    internal static XpTypeSymbol ResolveParameterType(ParameterSyntax parameter, SymbolTable? symbols)
     {
-        var element = ResolveValueType(parameter.Type);
+        var element = symbols is null ? ResolveValueType(parameter.Type) : AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
         return parameter.IsList ? XpTypeSymbol.ListOf(element) : element;
     }
 
