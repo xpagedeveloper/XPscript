@@ -19,6 +19,33 @@ static void Equal<T>(T expected, T actual, string message)
 static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
 // Keep the most recently failing regression first so CI fails fast on this area.
+for (var rank = 1; rank <= 8; rank++)
+{
+    var arrayText = $"Sub Accept(ByRef values({new string(',', rank - 1)}) As Long, Optional ByVal fallback() As String = Factory(1, 2))\nEnd Sub";
+    var arrayParser = new DeclarationParser(arrayText);
+    var arraySub = (SubDeclarationSyntax)arrayParser.ParseDeclaration();
+    Equal(0, arrayParser.Diagnostics.Count, "ranked array parameter diagnostics");
+    Equal(2, arraySub.Parameters.Count, "array commas do not split parameters");
+    var parameter = arraySub.Parameters[0];
+    Equal(true, parameter.IsArray, "array parameter flag");
+    Equal(rank, parameter.ArrayRank, "array parameter rank");
+    Equal(rank - 1, parameter.ArrayCommas.Count, "array rank comma tokens");
+    Equal(true, parameter.IsByRef, "array ByRef mode");
+    Equal("ByRef values(" + new string(',', rank - 1) + ") As Long", arrayText[parameter.Span.Start..parameter.Span.End], "array parameter span");
+    Equal(true, arraySub.Parameters[1].IsOptional, "optional array flag");
+    Equal(1, arraySub.Parameters[1].ArrayRank, "optional array rank");
+    Equal(true, arraySub.Parameters[1].DefaultValue is CallExpressionSyntax, "array default expression retained");
+}
+var untypedArrayParser = new DeclarationParser("Sub Accept(values())\nEnd Sub");
+var untypedArray = ((SubDeclarationSyntax)untypedArrayParser.ParseDeclaration()).Parameters[0];
+Equal(0, untypedArrayParser.Diagnostics.Count, "untyped array diagnostics");
+Equal("values()", "Sub Accept(values())"[untypedArray.Span.Start..untypedArray.Span.End], "untyped array span includes closing parenthesis");
+foreach (var invalidArray in new[] { "values(,,,,,,,,) As Long", "values() List As Long", "values(4) As Long" })
+{
+    var arrayParser = new DeclarationParser($"Sub Accept({invalidArray})\nEnd Sub");
+    arrayParser.ParseDeclaration();
+    Equal(true, arrayParser.Diagnostics.Count > 0, "invalid array parameter rejected");
+}
 var optionalParser = new DeclarationParser("Sub Greeting(Optional ByVal prefix As String = \"Hello\", Optional count As Long = 2)\nEnd Sub");
 var applicationDeclarationParser = new DeclarationParser("Option Declare\nConst Answer As Integer = 42\nDeclare Function Native Lib \"native\" () As Integer\nSub Main()\nEnd Sub");
 var applicationUnit = applicationDeclarationParser.ParseCompilationUnit();

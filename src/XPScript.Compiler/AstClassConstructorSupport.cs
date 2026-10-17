@@ -22,6 +22,9 @@ internal static class AstClassConstructorSupport
                         "A constructor parameter name must be unique.", CompilerDiagnosticCodes.DuplicateOverload, "semantic");
                 foreach (var parameter in parameters)
                 {
+                    if (parameter.IsArray)
+                        throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
+                            "Array constructor parameters are not implemented by the AST compiler yet.", "XPS3001", "ast");
                     var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
                     var sharedReference = type.IsObject || type.IsVariant || classes.ContainsKey(type.Name) ||
                         parameter.IsList && AstImageSupport.IsImage(type.Name) ||

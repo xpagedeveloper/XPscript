@@ -1,5 +1,9 @@
 # Bound C# emitter
 
+## Array parameter syntax (migration prerequisite)
+
+Declaration parsing retains the array rank and source tokens in `values() As Long` and `values(,) As Long`, including Optional/default metadata. Ranks one through eight are recognized; higher ranks and combined array/List declarations are syntax errors. This does not enable array parameter execution: constructors, ordinary procedures and class methods still report mapped XPS3001 diagnostics before backend emission. CLI/MCP and Language FullTest cover these guards. Fixed/dynamic array storage, lower bounds and whole-array ByRef replacement must be migrated together before lifting them.
+
 ## Typed List constructor parameters
 
 Constructors accept `ByVal values List As T` and explicit/implicit ByRef, including trailing Optional parameters. The shared parameter-type resolver carries the List shape and canonical element type through symbols, signatures, Parent.New scopes, body helpers and Optional carriers. ByVal shares the List object but replacing its parameter is local; ByRef replaces the caller's actual slot, preserving duplicate aliases and writes when construction fails. Different List element types remain invariant, including user-class ancestors; overloads retain semantic element types even when their C# representations coincide.

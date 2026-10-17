@@ -1,0 +1,4 @@
+Sub Accept(ByRef values(,) As Long)
+End Sub
+Sub Main()
+End Sub

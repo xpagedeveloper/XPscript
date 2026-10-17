@@ -6,6 +6,7 @@ $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_RO
 $output = Join-Path $outputRoot 'ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 # Exercise the previously failing Application metadata/build path before broad regressions.
+& (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 dotnet run --project (Join-Path $root 'tests/AstApplicationRuntimeProbe') -c Release
 if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime regression failed.' }
 & (Join-Path $PSScriptRoot 'run-ast-constructor.ps1')

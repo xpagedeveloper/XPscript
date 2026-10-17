@@ -80,6 +80,14 @@ public static class AstExperimentalCompiler
         var unit = parser.ParseCompilationUnit();
         if (parser.Diagnostics.Count > 0)
             throw SyntaxDiagnosticException(parser.Diagnostics[0], sourcePath, fullSource);
+        foreach (var item in unit.Declarations)
+        {
+            var parameters = item is SubDeclarationSyntax procedure ? procedure.Parameters
+                : item is FunctionDeclarationSyntax routine ? routine.Parameters : [];
+            if (parameters.FirstOrDefault(parameter => parameter.IsArray) is { } arrayParameter)
+                throw MappedDiagnostic(arrayParameter.Span, sourcePath, fullSource,
+                    "Array procedure parameters are not implemented by the AST compiler yet.", "XPS3001", "ast");
+        }
         var moduleSource = AstClassMethodSupport.ModuleSource(fullSource);
         // The experimental path keeps going when a non-selected declaration
         // contains syntax outside the current AST slice. Binding diagnostics

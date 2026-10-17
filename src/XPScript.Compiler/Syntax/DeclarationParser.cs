@@ -347,9 +347,23 @@ public sealed class DeclarationParser
                 modifier = tokens[position++];
 
             var identifier = Take(tokens, ref position, SyntaxKind.IdentifierToken);
+            SyntaxToken? arrayOpen = null;
+            SyntaxToken? arrayClose = null;
+            var arrayCommas = new List<SyntaxToken>();
+            if (Peek(tokens, position).Kind == SyntaxKind.OpenParenToken)
+            {
+                arrayOpen = tokens[position++];
+                while (Peek(tokens, position).Kind == SyntaxKind.CommaToken)
+                    arrayCommas.Add(tokens[position++]);
+                arrayClose = Take(tokens, ref position, SyntaxKind.CloseParenToken);
+                if (arrayCommas.Count >= 8)
+                    _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Array parameters support one to eight dimensions.", arrayOpen.Span));
+            }
             SyntaxToken? listKeyword = null;
             if (Peek(tokens, position).Text.Equals("List", StringComparison.OrdinalIgnoreCase))
                 listKeyword = tokens[position++];
+            if (arrayOpen is not null && listKeyword is not null)
+                _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "A parameter cannot be both an array and a List.", listKeyword.Span));
             SyntaxToken? asKeyword = null;
             TypeSyntax? type = null;
             if (Peek(tokens, position).Kind == SyntaxKind.AsKeyword)
@@ -380,7 +394,8 @@ public sealed class DeclarationParser
                 defaultValue = parser.ParseExpression();
                 _diagnostics.AddRange(parser.Diagnostics);
             }
-            parameters.Add(new ParameterSyntax(modifier, identifier, asKeyword, type, optionalKeyword, equalsToken, defaultValue, listKeyword));
+            parameters.Add(new ParameterSyntax(modifier, identifier, asKeyword, type, optionalKeyword, equalsToken, defaultValue, listKeyword,
+                arrayOpen, arrayCommas, arrayClose));
             if (Peek(tokens, position).Kind != SyntaxKind.CommaToken)
                 break;
             commas.Add(tokens[position++]);

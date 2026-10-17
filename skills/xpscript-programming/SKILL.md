@@ -280,6 +280,8 @@ Do not enable `AllowPrivateNetwork` merely to make a user-supplied URL work. Req
 
 XPscript arrays use XPscript array semantics and support helpers such as `Array`, `ReDim`, `LBound`, `UBound`, `Join`, `Explode`, and array helper functions documented in the language reference.
 
+Experimental AST recognizes ranked array parameter syntax (`values()` / `values(,)`) but still rejects array constructor/procedure/method signatures with XPS3001. Parser recognition is not executable support; do not generate such signatures for AST programs yet. Passing individual typed array elements to supported scalar/reference ByRef parameters remains supported.
+
 `ForAll` is the single first-class iteration model for supported iterable values. Use the same syntax for one-dimensional arrays, Lists, JSON arrays/enumerables, XML collections, database row/result collections, filesystem arrays, other runtime enumerable values, and XPscript classes that expose an iterator.
 
 ```xpscript
