@@ -1,0 +1,12 @@
+Sub Main()
+    Dim fileNumber As Integer
+    Dim part As String
+    fileNumber = FreeFile
+    Open "ast-file-input-chars-next-v3.bin" For Binary As #fileNumber
+    Put #fileNumber, 1, "ABC"
+    Seek #fileNumber, 1
+    part = Input$(3, #fileNumber)
+    If part <> "ABC" Then Error 6341, "AST Input$ did not read the requested bytes"
+    Close #fileNumber
+    Print "FILE_INPUT_CHARS_OK"
+End Sub

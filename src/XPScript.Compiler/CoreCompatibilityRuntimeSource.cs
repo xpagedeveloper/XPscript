@@ -713,6 +713,35 @@ internal static class LSFileRuntime
         return sb.ToString().Trim();
     }
 
+    public static string InputChars(int number, int count)
+    {
+        if (count < 0) throw new XPScriptRuntimeException(5, "Input$ count must be zero or greater.");
+        if (count == 0) return string.Empty;
+        var state = Get(number);
+        if (state.Reader is not null)
+        {
+            var buffer = new char[count];
+            var total = 0;
+            while (total < count)
+            {
+                var read = state.Reader.Read(buffer, total, count - total);
+                if (read <= 0) throw new EndOfStreamException("Input$ requested more characters than remain in the file.");
+                total += read;
+            }
+            return new string(buffer);
+        }
+        if (state.Mode is not ("binary" or "random")) throw new IOException("File is not open for Input or Binary access.");
+        var bytes = new byte[count];
+        var offset = 0;
+        while (offset < count)
+        {
+            var read = state.Stream.Read(bytes, offset, count - offset);
+            if (read <= 0) throw new EndOfStreamException("Input$ requested more characters than remain in the file.");
+            offset += read;
+        }
+        return Encoding.Latin1.GetString(bytes);
+    }
+
     public static bool EOF(int number)
     {
         var state = Get(number);
