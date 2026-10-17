@@ -1,0 +1,16 @@
+Class Base
+    Public Function Total() As Long
+        Total = 6
+    End Function
+End Class
+
+Class Child Extend Base
+    Public Function Total() As Long
+        Total = 9
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New Child
+    Print CStr(item.Total())
+End Sub

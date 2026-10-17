@@ -37,6 +37,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Parent.member class-method compilation fai
 $parentClassMethodResult = dotnet (Join-Path $parentClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($parentClassMethodResult -join "`n") -ne '7') { throw 'AST Parent.member class-method execution failed.' }
 Write-Host 'AST_PARENT_CLASS_METHOD_OK'
+$overrideClassMethodOutput = Join-Path $output 'class-method-override-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-override-next.xps') -o $overrideClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST class-method override compilation failed.' }
+$overrideClassMethodResult = dotnet (Join-Path $overrideClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($overrideClassMethodResult -join "`n") -ne '9') { throw 'AST class-method override execution failed.' }
+Write-Host 'AST_CLASS_METHOD_OVERRIDE_OK'
 $referenceClassMethodOutput = Join-Path $output 'class-method-reference-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-reference-next.xps') -o $referenceClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST concrete reference class-method compilation failed.' }

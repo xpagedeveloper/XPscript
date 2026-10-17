@@ -134,6 +134,8 @@ public static class AstExperimentalCompiler
                 foreach (var method in current.Members.OfType<SubDeclarationSyntax>())
                     if (method.Visibility?.Kind != SyntaxKind.PrivateKeyword)
                     {
+                        if (current != classDeclaration && classDeclaration.Members.OfType<SubDeclarationSyntax>().Any(own => SameClassMethodSignature(own, method)))
+                            continue;
                         var parameterTypes = method.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
                         var qualifiedMethodName = $"{classDeclaration.Identifier.Text}.{method.Identifier.Text}";
                         symbols.Declare(new FunctionSymbol(qualifiedMethodName, typeof(void), parameterTypes.Select(type => type.RuntimeType).ToArray(), null, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
@@ -142,6 +144,8 @@ public static class AstExperimentalCompiler
                 foreach (var method in current.Members.OfType<FunctionDeclarationSyntax>())
                 {
                     if (method.Visibility?.Kind == SyntaxKind.PrivateKeyword) continue;
+                    if (current != classDeclaration && classDeclaration.Members.OfType<FunctionDeclarationSyntax>().Any(own => SameClassMethodSignature(own, method)))
+                        continue;
                     var returnType = ResolveRuntimeType(method.ReturnType?.Identifier.Text);
                     var parameterTypes = method.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
                     var qualifiedMethodName = $"{classDeclaration.Identifier.Text}.{method.Identifier.Text}";
@@ -1080,6 +1084,18 @@ internal static class Program
                 parameters.Take(count).Select(p => ResolveParameterType(p).RuntimeType).ToArray(),
                 null, parameters.Take(count).Select(ResolveParameterType).ToArray(), parameters.Take(count).Select(p => p.IsByRef).ToArray()) { IsOptionalForwarding = true });
     }
+
+    private static bool SameClassMethodSignature(SubDeclarationSyntax left, SubDeclarationSyntax right) =>
+        left.Identifier.Text.Equals(right.Identifier.Text, StringComparison.OrdinalIgnoreCase) &&
+        left.Parameters.Count == right.Parameters.Count &&
+        left.Parameters.Zip(right.Parameters, (a, b) => a.IsByRef == b.IsByRef &&
+            string.Equals(a.Type?.Identifier.Text, b.Type?.Identifier.Text, StringComparison.OrdinalIgnoreCase)).All(match => match);
+
+    private static bool SameClassMethodSignature(FunctionDeclarationSyntax left, FunctionDeclarationSyntax right) =>
+        left.Identifier.Text.Equals(right.Identifier.Text, StringComparison.OrdinalIgnoreCase) &&
+        left.Parameters.Count == right.Parameters.Count &&
+        left.Parameters.Zip(right.Parameters, (a, b) => a.IsByRef == b.IsByRef &&
+            string.Equals(a.Type?.Identifier.Text, b.Type?.Identifier.Text, StringComparison.OrdinalIgnoreCase)).All(match => match);
 
     private static XpTypeSymbol ResolveParameterType(ParameterSyntax parameter) => ResolveParameterType(parameter, null);
 

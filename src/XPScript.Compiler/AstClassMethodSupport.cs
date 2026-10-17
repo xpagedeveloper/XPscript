@@ -189,6 +189,22 @@ internal static class AstClassMethodSupport
                     if (inherited && (ownSub?.Visibility ?? ownFunction?.Visibility)?.Kind == SyntaxKind.PrivateKeyword) continue;
                     var methodName = ownSub?.Identifier.Text ?? ownFunction!.Identifier.Text;
                     var ps = ownSub?.Parameters ?? ownFunction!.Parameters;
+                    if (inherited && declaration.Members
+                        .Where(member => member is SubDeclarationSyntax or FunctionDeclarationSyntax)
+                        .Any(member =>
+                        {
+                            var ownParameters = member is SubDeclarationSyntax ownSubDeclaration
+                                ? ownSubDeclaration.Parameters
+                                : ((FunctionDeclarationSyntax)member).Parameters;
+                            var ownName = member is SubDeclarationSyntax ownSubDeclarationName
+                                ? ownSubDeclarationName.Identifier.Text
+                                : ((FunctionDeclarationSyntax)member).Identifier.Text;
+                            return ownName.Equals(methodName, StringComparison.OrdinalIgnoreCase) &&
+                                ownParameters.Count == ps.Count &&
+                                ownParameters.Zip(ps, (left, right) => left.IsByRef == right.IsByRef &&
+                                    string.Equals(left.Type?.Identifier.Text, right.Type?.Identifier.Text, StringComparison.OrdinalIgnoreCase)).All(match => match);
+                        }))
+                        continue;
                     var rt = ownFunction is null ? typeof(void) : AstExperimentalCompiler.ResolveRuntimeType(ownFunction.ReturnType?.Identifier.Text);
                     var parameterTypes = ps.Select(p => AstExperimentalCompiler.ResolveParameterType(p, globals)).ToArray();
                     var symbol = new FunctionSymbol(methodName, rt, parameterTypes.Select(p => p.RuntimeType).ToArray(),
