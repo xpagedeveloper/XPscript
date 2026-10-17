@@ -89,6 +89,18 @@ internal static class AstClassMethodSupport
                 return true;
         return false;
     }
+
+    private static bool HasBaseProperty(ClassDeclarationSyntax declaration, string name,
+        IReadOnlyDictionary<string, ClassDeclarationSyntax> classes)
+    {
+        for (var owner = declaration.BaseType is { } baseType ? classes[baseType.Identifier.Text] : null;
+             owner is not null;
+             owner = owner.BaseType is { } parent ? classes[parent.Identifier.Text] : null)
+            if (owner.Members.OfType<PropertyDeclarationSyntax>().Any(property =>
+                    property.Identifier.Text.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                return true;
+        return false;
+    }
     internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable globals, string sourcePath, string source,
         IReadOnlyDictionary<string, ClassDeclarationSyntax> classes)
     {
@@ -354,7 +366,10 @@ internal static class AstClassMethodSupport
             var publicProperty = group.Any(p => p.Visibility?.Kind != SyntaxKind.PrivateKeyword);
             var getterVisibility = publicProperty && getter?.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private " : "";
             var setterVisibility = publicProperty && setter?.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private " : "";
-            output.Append(publicProperty ? "public " : "private ").Append(BoundMethodEmitter.CSharpType(type))
+            var propertyModifier = publicProperty
+                ? HasBaseProperty(declaration, name, classes) ? "public override " : "public virtual "
+                : "private ";
+            output.Append(propertyModifier).Append(BoundMethodEmitter.CSharpType(type))
                 .Append(' ').Append(name).Append(" { ");
             if (getter is not null) output.Append(getterVisibility).Append("get => __xps_property_get_").Append(getter.Identifier.Text).Append("(); ");
             if (setter is not null) output.Append(setterVisibility).Append("set => __xps_property_let_").Append(setter.Identifier.Text)

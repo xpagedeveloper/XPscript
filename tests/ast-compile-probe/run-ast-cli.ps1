@@ -361,6 +361,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST virtual derived method dispatch compilatio
 $virtualDispatchResult = dotnet (Join-Path $virtualDispatchOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($virtualDispatchResult -join "`n") -ne 'CLASS_METHOD_VIRTUAL_DISPATCH_OK') { throw 'AST virtual derived method dispatch failed.' }
 Write-Host 'AST_CLASS_METHOD_VIRTUAL_DISPATCH_OK'
+$virtualPropertyOutput = Join-Path $output 'class-property-virtual-dispatch-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-property-virtual-dispatch-next.xps') -o $virtualPropertyOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST virtual derived property dispatch compilation failed.' }
+$virtualPropertyResult = dotnet (Join-Path $virtualPropertyOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($virtualPropertyResult -join "`n") -ne 'CLASS_PROPERTY_VIRTUAL_DISPATCH_OK') { throw 'AST virtual derived property dispatch failed.' }
+Write-Host 'AST_CLASS_PROPERTY_VIRTUAL_DISPATCH_OK'
 $arrayBoundsOutput = Join-Path $output 'array-storage-bounds'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-bounds.xps') -o $arrayBoundsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST physical array bounds compilation failed.' }

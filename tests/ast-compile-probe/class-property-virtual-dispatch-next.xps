@@ -1,0 +1,24 @@
+Class Base
+    Public Property Get Value As Long
+        Value = 6
+    End Property
+End Class
+
+Class Child Extend Base
+    Public Property Get Value As Long
+        Value = 9
+    End Property
+End Class
+
+Class Caller
+    Public Function Read(ByVal item As Base) As Long
+        Read = item.Value
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New Child
+    Dim caller As New Caller
+    If caller.Read(item) <> 9 Then Error 6, "derived virtual property dispatch failed"
+    Print "CLASS_PROPERTY_VIRTUAL_DISPATCH_OK"
+End Sub
