@@ -73,12 +73,15 @@ public sealed class XpsOpenApiClientGenerator
     {
         if (node is JsonObject obj)
         {
-            if (obj["$ref"] is JsonValue value && value.TryGetValue<string>(out var reference) && reference.StartsWith("#/components/", StringComparison.Ordinal))
+            if (obj["$ref"] is JsonValue value && value.TryGetValue<string>(out var reference))
             {
+                reference = reference.Trim().Trim('"');
+                if (!reference.StartsWith("#/components/", StringComparison.Ordinal)) goto SkipComponentReference;
                 var parts = reference["#/components/".Length..].Split('/', 2);
                 if (parts.Length == 2 && parts[0].Equals("schemas", StringComparison.OrdinalIgnoreCase)) selected.Add(parts[1]);
                 else if (parts.Length == 2 && root["components"]?[parts[0]]?[parts[1]] is JsonNode component) CollectComponentReferences(root, component, selected);
             }
+            SkipComponentReference:
             foreach (var child in obj.Select(pair => pair.Value)) CollectComponentReferences(root, child, selected);
         }
         else if (node is JsonArray array)
@@ -88,7 +91,7 @@ public sealed class XpsOpenApiClientGenerator
     {
         if (node is JsonObject obj)
         {
-            if (obj["$ref"] is JsonValue value && value.TryGetValue<string>(out var reference) && reference.StartsWith("#/components/schemas/", StringComparison.Ordinal)) selected.Add(reference["#/components/schemas/".Length..]);
+            if (obj["$ref"] is JsonValue value && value.TryGetValue<string>(out var reference)) { reference = reference.Trim().Trim('"'); if (reference.StartsWith("#/components/schemas/", StringComparison.Ordinal)) selected.Add(reference["#/components/schemas/".Length..]); }
             foreach (var child in obj.Select(pair => pair.Value)) CollectReferences(child, selected);
         }
         else if (node is JsonArray array)
