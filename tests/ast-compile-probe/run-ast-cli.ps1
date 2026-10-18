@@ -198,6 +198,7 @@ if ($LASTEXITCODE -ne 0 -or ($fileRuntimeResult -join "`n") -ne 'FILE_RUNTIME_OK
 Write-Host 'AST_FILE_RUNTIME_OK'
 
 $fileGetOutput = Join-Path $output 'file-get-next'
+Set-Content -LiteralPath (Join-Path $root 'ast-file-get-next-regression.bin') -Value 'seed' -NoNewline
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-get-next.xps') -o $fileGetOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST file Get compilation failed.' }
 $fileGetResult = dotnet (Join-Path $fileGetOutput 'Generated.dll')
