@@ -76699,8 +76699,7 @@ components:
       oneOf:
         - type: string
           default: <|endoftext|>
-          example: |+
-            
+          example: ""
         - type: array
           minItems: 1
           maxItems: 4

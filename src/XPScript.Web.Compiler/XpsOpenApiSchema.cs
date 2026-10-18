@@ -17,6 +17,8 @@ internal static class XpsOpenApiSchema
 
             var colon = trimmed.IndexOf(':');
             var reference = trimmed[(colon + 1)..].Trim();
+            if (reference.StartsWith("\"#/", StringComparison.Ordinal))
+                reference = reference[1..].TrimEnd('\\');
             if (reference.Length >= 2 &&
                 ((reference[0] == '\'' && reference[^1] == '\'') ||
                  (reference[0] == '"' && reference[^1] == '"')))

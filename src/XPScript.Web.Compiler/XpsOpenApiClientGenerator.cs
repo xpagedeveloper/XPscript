@@ -311,9 +311,11 @@ public sealed class XpsOpenApiClientGenerator
                             result[property.Key] = propertySchema;
                         continue;
                     }
-                    if ((IsModelReferenceType(eyistingType) && IsModelReferenceType(incomingType)) ||
+                    if (eyistingType.Equals("Variant", StringComparison.OrdinalIgnoreCase) || incomingType.Equals("Variant", StringComparison.OrdinalIgnoreCase) ||
+                        (IsModelReferenceType(eyistingType) && IsModelReferenceType(incomingType)) ||
                         (IsModelReferenceType(eyistingType) && incomingType.Equals("Variant", StringComparison.OrdinalIgnoreCase)) ||
-                        (eyistingType.Equals("Variant", StringComparison.OrdinalIgnoreCase) && IsModelReferenceType(incomingType)))
+                        (eyistingType.Equals("Variant", StringComparison.OrdinalIgnoreCase) && IsModelReferenceType(incomingType)) ||
+                        (IsStringCompatibleSchema(root, eyisting, eyistingType) && IsStringCompatibleSchema(root, propertySchema, incomingType)))
                     {
                         result[property.Key] = new JsonObject { ["x-xpscript-conflicting-allof-model"] = true };
                         continue;
@@ -328,6 +330,12 @@ public sealed class XpsOpenApiClientGenerator
     private static bool IsModelReferenceType(string typeName)
     {
         return typeName is not ("String" or "Boolean" or "Integer" or "Long" or "Single" or "Double" or "Date" or "Variant" or "XPJsonObject" or "XPJsonArray");
+    }
+    private static bool IsStringCompatibleSchema(JsonObject root, JsonObject schema, string typeName)
+    {
+        if (typeName.Equals("String", StringComparison.OrdinalIgnoreCase)) return true;
+        var resolved = XpsOpenApiSchema.Resolve(root, schema, "OpenAPI client allOf string-compatible schema");
+        return resolved.ContainsKey("enum") || string.Equals(XpsOpenApiSchema.PrimaryType(resolved), "string", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryWidenNumericType(string left, string right, out string widened)
