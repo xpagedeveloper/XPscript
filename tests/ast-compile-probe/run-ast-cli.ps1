@@ -213,6 +213,7 @@ if ($LASTEXITCODE -ne 0 -or ($fileTextResult -join "`n") -ne 'FILE_TEXT_OK') { t
 Write-Host 'AST_FILE_TEXT_OK'
 
 $fileInputCharsOutput = Join-Path $output 'file-input-chars-next'
+Set-Content -LiteralPath (Join-Path $root 'ast-file-input-chars-next-v3.bin') -Value 'seed' -NoNewline
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-input-chars-next.xps') -o $fileInputCharsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Input$ compilation failed.' }
 $fileInputCharsResult = dotnet (Join-Path $fileInputCharsOutput 'Generated.dll')
