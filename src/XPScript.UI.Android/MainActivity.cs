@@ -28,24 +28,24 @@ public sealed class MainActivity : AvaloniaMainActivity
     protected override void OnStart()
     {
         base.OnStart();
-        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=start");
+        global::Android.Util.Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=start");
     }
 
     protected override void OnResume()
     {
         base.OnResume();
-        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=resume");
+        global::Android.Util.Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=resume");
     }
 
     protected override void OnPause()
     {
-        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=pause");
+        global::Android.Util.Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=pause");
         base.OnPause();
     }
 
     protected override void OnStop()
     {
-        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=stop");
+        global::Android.Util.Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=stop");
         base.OnStop();
     }
 
