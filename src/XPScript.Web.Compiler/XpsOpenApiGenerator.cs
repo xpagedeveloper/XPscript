@@ -27,17 +27,17 @@ public sealed class XpsOpenApiGenerator
     private static XpsOpenApiModelCatalog CollectComponentModels(JsonObject root, string? sourceName)
         => XpsOpenApiModelCatalog.Collect(root, (rawName, used) =>
         {
-            var name = ToSchemaIdentifier(ResolvePackagePrefix(root, sourceName) + "_" + rawName, $"schema '{rawName}'");
+            var prefix = ResolvePackagePrefix(root, sourceName);
+            var name = ToSchemaIdentifier(string.IsNullOrWhiteSpace(prefix) ? rawName : prefix + "_" + rawName, $"schema '{rawName}'");
             if (!used.Add(name))
                 throw new XpsOpenApiGenerationException($"OpenAPI schemas generate duplicate XPScript class name '{name}'.");
             return name;
         });
-    private static string ResolvePackagePrefix(JsonObject root, string? sourceName)
+    private static string? ResolvePackagePrefix(JsonObject root, string? sourceName)
     {
         if (root["x-xpscript-package"] is JsonValue value && value.TryGetValue<string>(out var explicitName) && !string.IsNullOrWhiteSpace(explicitName))
             return ToTypeIdentifier(explicitName, "OpenAPI package");
-        var title = root["info"] is JsonObject info ? ReadString(info, "title") : null;
-        return ToTypeIdentifier(string.IsNullOrWhiteSpace(title) ? Path.GetFileNameWithoutExtension(sourceName ?? "OpenApi") : title!, "OpenAPI package");
+        return null;
     }
     private static List<OperationModel> CollectOperations(JsonObject root, Dictionary<string, JsonObject> models) { if (root["paths"] is not JsonObject paths) throw new XpsOpenApiGenerationException("OpenAPI document is missing the required 'paths' object."); var operations = new List<OperationModel>(); var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var rootSecurity = root["security"]; ValidateSecuritySchemes(root); foreach (var pathPair in paths) { if (pathPair.Value is not JsonObject pathItem) continue; var pathParameters = ReadParameters(root, pathItem["parameters"], $"paths.{pathPair.Key}.parameters"); foreach (var method in HttpMethods) { if (pathItem[method] is not JsonObject operation) continue; var rawName = ReadString(operation, "operationId") ?? BuildOperationName(method, pathPair.Key); var name = UniqueOperationName(ToTypeIdentifier(rawName, $"operation '{method.ToUpperInvariant()} {pathPair.Key}'"), usedNames); var parameters = MergeParameters(pathParameters, ReadParameters(root, operation["parameters"], $"{method.ToUpperInvariant()} {pathPair.Key} parameters")); EnsureUniqueParameters(parameters, method, pathPair.Key); var body = ReadRequestBody(root, operation["requestBody"], name, models, $"{method.ToUpperInvariant()} {pathPair.Key} requestBody"); var responses = ReadResponses(root, operation["responses"], $"{method.ToUpperInvariant()} {pathPair.Key} responses"); var security = operation.ContainsKey("security") ? operation["security"] : rootSecurity; var authenticated = ReadServerSecurity(root, security, $"{method.ToUpperInvariant()} {pathPair.Key} security"); operations.Add(new OperationModel(method.ToUpperInvariant(), pathPair.Key, name, parameters, body, responses, authenticated)); } } return operations; }
     private static void ValidateSecuritySchemes(JsonObject root) { if (root["components"] is not JsonObject components || components["securitySchemes"] is not JsonObject schemes) return; foreach (var pair in schemes) { if (pair.Value is not JsonObject scheme) throw new XpsOpenApiGenerationException($"components.securitySchemes.{pair.Key} must be an object."); var type = ReadString(scheme, "type")?.ToLowerInvariant() ?? throw new XpsOpenApiGenerationException($"Security scheme '{pair.Key}' is missing 'type'."); if (type is not ("apikey" or "http" or "oauth2" or "openidconnect" or "mutualtls")) throw new XpsOpenApiGenerationException($"Security scheme '{pair.Key}' uses unsupported type '{type}'."); } }
