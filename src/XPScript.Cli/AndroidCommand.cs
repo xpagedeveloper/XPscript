@@ -121,7 +121,6 @@ internal static class AndroidCommand
         if (!string.IsNullOrEmpty(lastOutput)) Console.Write(lastOutput);
         throw new TimeoutException("Android application did not report XPSCRIPT-EXIT within " + timeout.TotalSeconds + " seconds on " + serial + ".");
     }
-    }
 
     private static async Task<int> LaunchAsync(string[] args)
     {
