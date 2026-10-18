@@ -70,6 +70,9 @@ jobs:
       - name: Run xpscriptc AST CLI compilation probe
         shell: pwsh
         run: ./tests/ast-compile-probe/run-ast-cli.ps1
+      - name: Verify CLI command-line compatibility
+        shell: pwsh
+        run: ./tests/cli-compatibility/run-cli-compatibility.ps1
       - name: Run focused AST unknown-symbol binder test
         run: dotnet run --project ./tests/ast-binding/AstBindingProbe.csproj -c Release
       - name: Run deterministic AST compatibility tests first
