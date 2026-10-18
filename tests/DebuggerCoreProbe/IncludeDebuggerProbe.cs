@@ -90,6 +90,18 @@ End Function
             {
             }
 
+            foreach (var invalidUse in new[] { $"Use \"{helperPath}\"\n", "Use \"lib/helper.xps\"\n" })
+            {
+                try
+                {
+                    includeTransform.Invoke(include, [invalidUse, invalidUsePath]);
+                    throw new Exception("Use unexpectedly accepted an absolute path or explicit .xps suffix.");
+                }
+                catch (TargetInvocationException ex) when (ex.InnerException is CompilerException)
+                {
+                }
+            }
+
             var generated = new XPScriptTranspiler().Transpile(rootSource.Replace("Include \"lib/helper.xps\"", string.Empty, StringComparison.Ordinal), rootPath, CompilerDriver.CurrentRuntimeIdentifier());
             if (!generated.Contains("\"into\" => true", StringComparison.Ordinal))
                 throw new Exception("Debugger Step Into no longer stops at the next XPscript statement.");
