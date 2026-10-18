@@ -617,7 +617,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstArrayRuntimeCode()}}
 {{AstFileRuntimeCode()}}
 {{AstCallbackRuntimeCode()}}
-{{(!AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) || AstNotesJsonSupport.Uses(fullSource) ? AstTlsRuntimeCode() : "")}}
+{{(!AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) ? AstTlsRuntimeCode() : "")}}
 {{AstErrorRuntimeCode()}}
 internal static class LSCoreCompare
 {
