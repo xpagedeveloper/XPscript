@@ -101,13 +101,13 @@ internal static class RunCompiler
             cancellationToken).ConfigureAwait(false);
     }
 
-    internal static Task<string> CompileGeneratedWithDependenciesAsync(string generatedSource, string outputDirectory, bool debug, CancellationToken cancellationToken)
+    internal static Task<string> CompileGeneratedWithDependenciesAsync(string generatedSource, string outputDirectory, bool debug, CancellationToken cancellationToken, string? runtimeIdentifier = null)
     {
         var outputRoot = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
         return CompileWithMsBuildAsync(Path.Combine(outputRoot, "Program.cs"), outputRoot, generatedSource,
-            new ManagedAssemblyReferencePreprocessor.Result(generatedSource, [], []), [], debug, cancellationToken);
+            new ManagedAssemblyReferencePreprocessor.Result(generatedSource, [], []), [], debug, cancellationToken, runtimeIdentifier);
     }
 
     private static async Task<string> CompileWithMsBuildAsync(
@@ -117,7 +117,8 @@ internal static class RunCompiler
         ManagedAssemblyReferencePreprocessor.Result managedReferences,
         IReadOnlyList<NativeDependencyPackager.Dependency> nativeDependencies,
         bool debug,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? runtimeIdentifier = null)
     {
         var tempRoot = CompilerPathSecurity.CreateOwnedTemporaryDirectory("run-build-");
         try
@@ -131,7 +132,7 @@ internal static class RunCompiler
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
 
-            var build = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken).ConfigureAwait(false);
+            var build = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
             ApplicationSecurityAudit.Report(build.Stdout + Environment.NewLine + build.Stderr);
             if (build.ExitCode != 0)
             {
@@ -141,7 +142,7 @@ internal static class RunCompiler
                 {
                     await File.WriteAllTextAsync(programPath, DisableSourceMappings(generatedSource), cancellationToken).ConfigureAwait(false);
                     CompilerPathSecurity.HardenTemporaryFile(programPath);
-                    var generatedBuild = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken).ConfigureAwait(false);
+                    var generatedBuild = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
                     generatedDiagnostics = ParseGeneratedBuildDiagnostics(generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr);
                 }
 
@@ -176,7 +177,8 @@ internal static class RunCompiler
         string tempRoot,
         string projectPath,
         string outputRoot,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? runtimeIdentifier = null)
     {
         var psi = new ProcessStartInfo
         {
@@ -196,10 +198,10 @@ internal static class RunCompiler
         psi.ArgumentList.Add("--nologo");
         psi.ArgumentList.Add("--no-incremental");
         psi.ArgumentList.Add("-p:UseAppHost=false");
-        if (ApplicationDependencyCatalog.Detect(File.ReadAllText(Path.Combine(tempRoot, "Program.cs"))).Count > 0)
+        if (runtimeIdentifier is not null || ApplicationDependencyCatalog.Detect(File.ReadAllText(Path.Combine(tempRoot, "Program.cs"))).Count > 0)
         {
             psi.ArgumentList.Add("-r");
-            psi.ArgumentList.Add(CompilerDriver.CurrentRuntimeIdentifier());
+            psi.ArgumentList.Add(runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier());
         }
         CompilerBuildEnvironment.Configure(psi, tempRoot);
         const string extensionsPrefix = "-p:MSBuildProjectExtensionsPath=";

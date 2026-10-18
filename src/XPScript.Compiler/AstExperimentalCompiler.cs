@@ -10,7 +10,10 @@ namespace XPScript.Compiler;
 /// <summary>Experimental CLI bridge for the currently supported AST compilation slice.</summary>
 public static class AstExperimentalCompiler
 {
-    public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken = default)
+    public static Task<string> CompileAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken = default)
+        => CompileAsync(sourcePath, outputDirectory, null, cancellationToken);
+
+    public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, string? runtimeIdentifier, CancellationToken cancellationToken = default)
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var fullSource = source;
@@ -1020,7 +1023,9 @@ internal static class Program
         }
         var applicationMarkers = AstApplicationSupport.BuildMarkers(fullSource, sourcePath);
         if (applicationMarkers.Length != 0)
-            return await RunCompiler.CompileGeneratedWithDependenciesAsync(generated + Environment.NewLine + applicationMarkers, outputDirectory, false, cancellationToken).ConfigureAwait(false);
+            return await RunCompiler.CompileGeneratedWithDependenciesAsync(generated + Environment.NewLine + applicationMarkers, outputDirectory, false, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
+        if (runtimeIdentifier is not null)
+            return await RunCompiler.CompileGeneratedWithDependenciesAsync(generated, outputDirectory, false, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
         return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 

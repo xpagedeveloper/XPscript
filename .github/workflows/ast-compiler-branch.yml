@@ -146,6 +146,12 @@ jobs:
         run: dotnet publish ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore -r ${{ matrix.rid }} --self-contained false -p:UseSharedCompilation=false
       - name: Verify target metadata and supported RID
         run: dotnet run --project ./tests/TargetMatrixProbe/TargetMatrixProbe.csproj -c Release --no-restore
+      - name: Compile AST source for target RID
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP "ast-target-${{ matrix.rid }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile ./tests/ast-compile-probe/shared-runtime.xps --output $output --rid ${{ matrix.rid }}
+          if (-not (Test-Path (Join-Path $output 'Generated.dll'))) { throw 'AST target compilation did not produce Generated.dll.' }
       - name: Verify generated compiler artifact
         shell: pwsh
         run: |

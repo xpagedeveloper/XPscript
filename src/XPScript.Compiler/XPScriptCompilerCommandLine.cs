@@ -305,20 +305,25 @@ public static class XPScriptCompilerCommandLine
         var sourcePath = Path.GetFullPath(args[0]);
         var outputDirectory = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourcePath)!, "ast-output"));
         var debug = false;
+        string? runtimeIdentifier = null;
         for (var i = 1; i < args.Length; i++)
         {
             if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
                 outputDirectory = Path.GetFullPath(args[++i]);
             else if (args[i] == "--debug")
                 debug = true;
+            else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
+                runtimeIdentifier = args[++i].ToLowerInvariant();
             else
                 throw new ArgumentException($"Unknown argument: {args[i]}");
         }
 
         try
         {
+            if (runtimeIdentifier is not null && !CompilerDriver.SupportedRuntimes.Contains(runtimeIdentifier, StringComparer.OrdinalIgnoreCase))
+                throw new ArgumentException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
-            var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory).ConfigureAwait(false);
+            var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier).ConfigureAwait(false);
             Console.WriteLine($"AST compilation succeeded: {assemblyPath}");
             return 0;
         }
