@@ -594,7 +594,7 @@ using XpJsonObject = XPScriptJsonObject;
 using XpJsonArray = XPScriptJsonArray;
 using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
-{{(usesAi ? JsonSchemaRuntimeSource.Code : "")}}
+{{((usesAi || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema")) ? JsonSchemaRuntimeSource.Code : "")}}
 {{AstRuntimeSource.Code}}
 {{AstImageSupport.RuntimeCode(fullSource)}}
 {{AstCsvSupport.RuntimeCode(fullSource)}}
