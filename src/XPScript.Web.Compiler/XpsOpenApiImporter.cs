@@ -1,5 +1,9 @@
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using YamlDotNet.Core;
+using YamlDotNet.RepresentationModel;
 
 namespace XPScript.Web.Compiler;
 
@@ -42,9 +46,18 @@ public sealed class XpsOpenApiImporter
         return Import(File.ReadAllText(fullPath), existingSource, Path.GetFileName(fullPath), options);
     }
 
+    public static void ValidateImportLimitsFile(string specificationPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(specificationPath);
+        var fullPath = Path.GetFullPath(specificationPath);
+        if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI specification file was not found.", fullPath);
+        ValidateImportLimits(File.ReadAllText(fullPath), Path.GetFileName(fullPath));
+    }
+
     public XpsOpenApiImportResult Import(string specification, string existingSource, string? sourceName = null, XpsOpenApiGenerationOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(existingSource);
+        ValidateImportLimits(specification, sourceName);
         var desired = _generator.Generate(specification, sourceName, options);
         // Server import is intentionally one-time. Existing handwritten source can be
         // extended by the first import, but generated OpenAPI infrastructure is immutable.
@@ -134,6 +147,52 @@ public sealed class XpsOpenApiImporter
             addedProperties,
             addedProcedures,
             warnings.Distinct(StringComparer.Ordinal).ToArray());
+    }
+
+    public static void ValidateImportLimits(string specification, string? sourceName = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(specification);
+        var endpointCount = 0;
+        var classCount = 0;
+        try
+        {
+            var trimmed = specification.AsSpan().TrimStart();
+            if (!trimmed.IsEmpty && trimmed[0] == '{')
+            {
+                var root = JsonNode.Parse(specification) as JsonObject
+                    ?? throw new XpsOpenApiGenerationException("OpenAPI import source must have an object root.");
+                endpointCount = (root["paths"] as JsonObject)?.Count ?? 0;
+                classCount = (root["components"]?["schemas"] as JsonObject)?.Count ?? 0;
+            }
+            else
+            {
+                var yaml = new YamlStream();
+                yaml.Load(new StringReader(specification));
+                var root = yaml.Documents.Count == 1 ? yaml.Documents[0].RootNode as YamlMappingNode : null;
+                endpointCount = GetYamlMap(root, "paths")?.Children.Count ?? 0;
+                classCount = GetYamlMap(GetYamlMap(root, "components"), "schemas")?.Children.Count ?? 0;
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or YamlException)
+        {
+            // The generator provides the authoritative parse diagnostic below.
+            return;
+        }
+
+        var source = string.IsNullOrWhiteSpace(sourceName) ? "OpenAPI source" : sourceName;
+        if (endpointCount > 200)
+            throw new XpsOpenApiGenerationException($"{source}: OpenAPI import supports at most 200 endpoints; found {endpointCount}.");
+        if (classCount > 200)
+            throw new XpsOpenApiGenerationException($"{source}: OpenAPI import supports at most 200 classes/schemas; found {classCount}.");
+    }
+
+    private static YamlMappingNode? GetYamlMap(YamlMappingNode? parent, string key)
+    {
+        if (parent is null) return null;
+        foreach (var pair in parent.Children)
+            if (pair.Key is YamlScalarNode scalar && string.Equals(scalar.Value, key, StringComparison.Ordinal) && pair.Value is YamlMappingNode map)
+                return map;
+        return null;
     }
 
     private static bool ContainsGeneratedOpenApiSource(string source) =>

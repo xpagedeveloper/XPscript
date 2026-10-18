@@ -139,6 +139,7 @@ internal static class XpsOpenApiCommand
 
     private static int Import(string specificationPath, string outputPath, string? statusPath, IReadOnlySet<string> includedOperations)
     {
+        XpsOpenApiImporter.ValidateImportLimitsFile(specificationPath);
         WriteStatus(statusPath, "reading", 0, 0, 0, null);
         if (!File.Exists(outputPath))
         {
