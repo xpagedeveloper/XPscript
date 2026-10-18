@@ -50,7 +50,7 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>\s*)Sleep\s+(?<value>[^\r\n]+)\r?$", "${indent}Sleep(${value})");
         // Keep the argument at its original column: replace the original
         // separator with the opening parenthesis and avoid a longer prefix.
-        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)MkDir\s+(?<path>.+)$", "${indent}MkDir(${path})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)MkDir\s+(?<path>[^\r\n]+)\r?$", "${indent}MkDir(${path})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Put\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>[^\r\n]+)\r?$", "${indent}AstPut(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Get\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>[A-Za-z_]\w*)\s*$", "${indent}${value} = AstGet(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Seek\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^\r\n]+)\r?$", "${indent}Call AstSeek(${file}, ${position})");
