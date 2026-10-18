@@ -54,7 +54,7 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Put\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>[^\r\n]+)\r?$", "${indent}AstPut(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Get\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>[A-Za-z_]\w*)\s*$", "${indent}${value} = AstGet(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Seek\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^\r\n]+)\r?$", "${indent}Call AstSeek(${file}, ${position})");
-        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)ChDrive\s+(?<drive>.+)$", "${indent}Call AstChDrive(${drive})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)ChDrive\s+(?<drive>[^\r\n]+)\r?$", "${indent}Call AstChDrive(${drive})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?<operation>Lock|Unlock)\s+#?(?<file>[^,\s]+)\s*,\s*(?<start>[^\s]+)\s+To\s+(?<end>[^\r\n]+)\r?$", "${indent}Call Ast${operation}Bytes(${file}, ${start}, ${end})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Open\s+(?<path>.+?)\s+For\s+(?<mode>Input|Output|Append|Binary|Random)\s+As\s+#?(?<file>[^\s]+).*$", "${indent}Call AstOpen(${path}, \"${mode}\", ${file})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Close(?:\s+#?(?<file>[^\s]+))?\s*$", "${indent}Call AstClose(${file})");
