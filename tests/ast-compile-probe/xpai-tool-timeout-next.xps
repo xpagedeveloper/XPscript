@@ -6,6 +6,8 @@ End Sub
 
 Sub Main()
     Dim ai As New XPAi(Environ("XPSCRIPT_AI_TIMEOUT_TEST_AI"), "timeout-test-key")
+    ai.Model = "test-model"
+    ai.UserPrompt = "Run the slow tool."
     Dim tool As New XPAITool("slow")
     tool.Timeout = 0.1
     Call tool.AddFunction("slow_call", "Slow callback", "SlowCallback", "context")
