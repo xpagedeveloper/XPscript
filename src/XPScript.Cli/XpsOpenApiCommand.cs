@@ -101,8 +101,11 @@ internal static class XpsOpenApiCommand
             Path.GetFileNameWithoutExtension(specificationPath) + ".client.xps");
         ValidateOutputPath(outputPath);
 
-        if (File.Exists(outputPath))
-            throw new IOException("Generated client output already exists. Choose a new output path or remove the existing generated file first: " + outputPath);
+        if (File.Exists(outputPath) && !ConfirmOverwrite(outputPath))
+        {
+            Console.WriteLine("Skipped existing output: " + outputPath);
+            return 0;
+        }
 
         var result = new XpsOpenApiClientGenerator().GenerateFile(specificationPath, className, new XpsOpenApiGenerationOptions(includedOperations));
         var directory = Path.GetDirectoryName(outputPath);
@@ -124,6 +127,14 @@ internal static class XpsOpenApiCommand
         Console.WriteLine($"Generated {outputPath}");
         Console.WriteLine($"OpenAPI {result.OpenApiVersion}: {result.Operations.Count} endpoint(s), {result.Models.Count} model(s)");
         return 0;
+    }
+
+    private static bool ConfirmOverwrite(string outputPath)
+    {
+        Console.Write($"Output already exists: {outputPath}. Overwrite? [y/N] ");
+        var answer = Console.ReadLine();
+        return string.Equals(answer?.Trim(), "y", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(answer?.Trim(), "yes", StringComparison.OrdinalIgnoreCase);
     }
 
     private static int Import(string specificationPath, string outputPath, string? statusPath, IReadOnlySet<string> includedOperations)
