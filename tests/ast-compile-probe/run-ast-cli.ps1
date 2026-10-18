@@ -221,6 +221,7 @@ if ($LASTEXITCODE -ne 0 -or ($fileInputCharsResult -join "`n") -ne 'FILE_INPUT_C
 Write-Host 'AST_FILE_INPUT_CHARS_OK'
 
 $fileLockOutput = Join-Path $output 'file-lock-next'
+Set-Content -LiteralPath (Join-Path $root 'ast-file-lock-next.bin') -Value 'seed' -NoNewline
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-lock-next.xps') -o $fileLockOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST file lock compilation failed.' }
 $fileLockResult = dotnet (Join-Path $fileLockOutput 'Generated.dll')
