@@ -13,7 +13,7 @@ public sealed class XpsOpenApiGenerationException : Exception { public XpsOpenAp
 
 public sealed class XpsOpenApiGenerator
 {
-    private static readonly string[] HttpMethods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"];
+    private static readonly string[] HttpMethods = ["get", "post", "put", "patch", "delete", "head", "options", "trace", "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "TRACE"];
     private static readonly Regex IdentifierPattern = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant);
     private static readonly HashSet<string> LexicalKeywords = new(StringComparer.OrdinalIgnoreCase) { "Abstract", "And", "As", "Base", "Bool", "Boolean", "Break", "Byte", "ByRef", "ByVal", "Call", "Case", "Catch", "Char", "Checked", "Class", "Const", "Continue", "Date", "Decimal", "Default", "Delegate", "Dim", "Do", "Double", "Each", "Else", "ElseIf", "End", "Enum", "Event", "Exit", "Explicit", "Extern", "False", "Finally", "Fixed", "Float", "For", "Foreach", "Function", "Goto", "If", "Implicit", "In", "Int", "Integer", "Interface", "Internal", "Is", "Lock", "Long", "Loop", "Mod", "Namespace", "New", "Next", "Nothing", "Not", "Null", "Object", "On", "Operator", "Option", "Or", "Out", "Override", "Params", "Private", "Protected", "Public", "Readonly", "Ref", "Return", "Sbyte", "Sealed", "Select", "Set", "Short", "Single", "Sizeof", "Stackalloc", "Static", "Step", "String", "Struct", "Sub", "Switch", "Then", "This", "Throw", "To", "True", "Try", "Typeof", "Uint", "Ulong", "Unchecked", "Unsafe", "Ushort", "Using", "Variant", "Virtual", "Void", "Volatile", "Wend", "While", "With", "Xor" };
 
