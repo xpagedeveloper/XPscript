@@ -558,6 +558,9 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Compare web target behavior.
 - [ ] Compare desktop/Avalonia behavior.
 - [ ] Compare Android/mobile behavior as support matures.
+- [ ] Audit every legacy compiler command-line parameter and verify that the AST compiler implements the same parameter, value handling, defaults and diagnostics; add parity coverage for the complete parameter set.
+- [ ] Verify that the web target and REST server are fully implemented in the AST path, including all `[]` rules and their compatibility behavior.
+- [ ] Verify web and REST server execution through Kestrel HTTP server, IIS, CGI and FastCGI, with regression coverage for each hosting mode.
 - [ ] Migrate the Android target branch (`origin/android-runtime-uiform-mobile`) into the AST compiler path. Preserve the Android ARM64/x64 hosts, generated APK project setup, logcat/error routing, CLI device/build/deploy workflow, Android-specific runtime objects and UIForm/Avalonia behavior; add focused compiler/runtime probes and move stable coverage into the permanent FullTest workflows.
 - [x] Add target selection to `ast-compile` and compile AST-generated units through the Windows, Linux, macOS, browser-WASM/web and Android project backends. Desktop and browser-WASM compilation have executable probes and CI coverage; local Android AST compilation now produces APKs for both `android-x64` and `android-arm64`. Physical device/emulator installation and UI/runtime verification remain a separate local Android setup gate. The target matrix probe verifies normal project metadata only and must not be treated as full AST cross-target compilation.
 - [x] Add explicit compatibility fixtures for LotusScript-like edge cases. The AST compatibility suite now has permanent executable fixtures for `Rem`/apostrophe comments, `_` line continuation and `Application.NewLine`.
