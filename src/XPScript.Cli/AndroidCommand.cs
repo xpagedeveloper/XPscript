@@ -137,7 +137,7 @@ internal static class AndroidCommand
     {
         var requestedSerial = ParseOptionalDevice(args, "android launch");
         var adb = ResolveAdb();
-        var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
+        var serial = await RequireReadyDeviceAsync(adb, "auto", requestedSerial, null);
         var result = await ExecuteAsync(adb, ["-s", serial, "shell", "monkey", "-p", "eu.xpscript.app", "-c", "android.intent.category.LAUNCHER", "1"]);
         if (result.ExitCode != 0 || result.Output.Contains("No activities found", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (result.Error + Environment.NewLine + result.Output).Trim());
@@ -149,7 +149,7 @@ internal static class AndroidCommand
     {
         var requestedSerial = ParseOptionalDevice(args, "android logs");
         var adb = ResolveAdb();
-        var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
+        var serial = await RequireReadyDeviceAsync(adb, "auto", requestedSerial, null);
         return await StreamLogsAsync(adb, serial);
     }
 
@@ -201,7 +201,7 @@ internal static class AndroidCommand
         }
 
         var adb = ResolveAdb();
-        var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
+        var serial = await RequireReadyDeviceAsync(adb, "auto", requestedSerial, null);
         var result = await ExecuteAsync(adb, ["-s", serial, "install", "-r", apk]);
         if (result.ExitCode != 0 || !result.Output.Contains("Success", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("adb install failed for " + serial + ": " + (result.Error + Environment.NewLine + result.Output).Trim());
