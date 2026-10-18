@@ -127,8 +127,11 @@ internal static class RunCompiler
             var programPath = Path.Combine(tempRoot, "Program.cs");
             var references = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
             var usesMimeKit = generatedSource.Contains("MimeKit.", StringComparison.Ordinal);
-            await File.WriteAllTextAsync(projectPath, BuildProject(references, usesMimeKit), cancellationToken).ConfigureAwait(false);
-            await File.WriteAllTextAsync(programPath, generatedSource, cancellationToken).ConfigureAwait(false);
+            var isAndroid = IsAndroidRuntime(runtimeIdentifier);
+            await File.WriteAllTextAsync(projectPath, BuildProject(references, usesMimeKit, runtimeIdentifier), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(programPath,
+                isAndroid ? generatedSource + Environment.NewLine + AndroidHostSource.Code : generatedSource,
+                cancellationToken).ConfigureAwait(false);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
 
@@ -272,7 +275,13 @@ internal static class RunCompiler
         return result;
     }
 
-    private static string BuildProject(IReadOnlyList<(string Name, string Path)> references, bool usesMimeKit)
+    private static bool IsAndroidRuntime(string? runtimeIdentifier) =>
+        runtimeIdentifier is "android-arm64" or "android-x64";
+
+    private static string BuildProject(
+        IReadOnlyList<(string Name, string Path)> references,
+        bool usesMimeKit,
+        string? runtimeIdentifier)
     {
         var items = new StringBuilder();
         if (references.Count > 0)
@@ -292,13 +301,23 @@ internal static class RunCompiler
         var packageItems = usesMimeKit
             ? $"  <ItemGroup>\n    <PackageReference Include=\"MimeKit\" Version=\"{mimeKitVersion}\" />\n  </ItemGroup>\n"
             : string.Empty;
+        var isAndroid = IsAndroidRuntime(runtimeIdentifier);
+        var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
+        var startupObject = isAndroid ? string.Empty : "    <StartupObject>Program</StartupObject>\n";
+        var androidProperties = isAndroid
+            ? $"    <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>\n" +
+              "    <AndroidApplication>true</AndroidApplication>\n" +
+              $"    <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>\n" +
+              "    <AndroidPackageFormat>apk</AndroidPackageFormat>\n" +
+              "    <ApplicationId>eu.xpscript.app</ApplicationId>\n"
+            : string.Empty;
 
         return $"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <StartupObject>Program</StartupObject>
-    <TargetFramework>net10.0</TargetFramework>
+{startupObject}
+    <TargetFramework>{targetFramework}</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -307,6 +326,7 @@ internal static class RunCompiler
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
+{androidProperties}    <RuntimeIdentifier>{runtimeIdentifier ?? string.Empty}</RuntimeIdentifier>
   </PropertyGroup>
 {packageItems}{items}</Project>
 """;

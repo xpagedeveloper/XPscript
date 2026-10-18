@@ -702,10 +702,12 @@ public sealed class CompilerDriver
 """
             : string.Empty;
         var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
+        var startupObject = isAndroid ? string.Empty : "    <StartupObject>Program</StartupObject>\n";
         var androidProperties = isAndroid
             ? $"""
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
-    <AndroidSupportedAbis>{(runtimeIdentifier.Equals("android-x64", StringComparison.OrdinalIgnoreCase) ? "x86_64" : "arm64-v8a")}</AndroidSupportedAbis>
+    <AndroidApplication>true</AndroidApplication>
+    <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <ApplicationId>eu.xpscript.app</ApplicationId>
 """
@@ -715,7 +717,7 @@ public sealed class CompilerDriver
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <StartupObject>Program</StartupObject>
+{startupObject}
     <TargetFramework>{targetFramework}</TargetFramework>
     <AssemblyName>{EscapeXml(assemblyName)}</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>

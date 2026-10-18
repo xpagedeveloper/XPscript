@@ -505,6 +505,12 @@ public static class AstExperimentalCompiler
             ? "public static void Main(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
                 (methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void)) ? "__xps_application_main();" : "") + " }"
             : methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
+        var androidEntryPoint = runtimeIdentifier is "android-arm64" or "android-x64"
+            ? usesApplication
+                ? "public static void __xps_android_entry(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
+                    (methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void)) ? "__xps_application_main();" : "") + " }"
+                : $"public static void __xps_android_entry(string[] args) {{ XPScriptRuntime.SetArgs(args); {methodName}(); }}"
+            : string.Empty;
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
         var userClassSupport = string.Join(Environment.NewLine, unit.Declarations.OfType<ClassDeclarationSyntax>().Select(classDeclaration =>
         {
@@ -627,7 +633,7 @@ internal static class Program
     public static bool True = true;
     public static bool False = false;
     public static dynamic Console = CreateConsole();
-    private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.WriteLine = (Action<object?>)(value => System.Console.WriteLine(value)); return console; }
+    private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.AndroidLog = (Action<string, bool>?)null; console.WriteLine = (Action<object?>)(value => { var text = Convert.ToString(value) ?? string.Empty; if (console.AndroidLog is Action<string, bool> log) log(text, false); else System.Console.WriteLine(value); }); return console; }
     public static dynamic RequestScope = new ExpandoObject();
     public static dynamic Err => XPScriptErrorRuntime.Err;
     public static dynamic SEARCH_BREADTH = 1723L;
@@ -1011,6 +1017,7 @@ internal static class Program
 {{moduleFields}}
 {{body}}
 {{entryPoint}}
+{{androidEntryPoint}}
 }
 """;
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
