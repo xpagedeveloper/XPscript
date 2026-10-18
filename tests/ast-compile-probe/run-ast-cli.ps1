@@ -37,6 +37,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST SQL Server native-surface compilation fail
 $mssqlResult = dotnet (Join-Path $mssqlOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($mssqlResult -join "`n") -ne 'MSSQL_AST_OK') { throw 'AST SQL Server native-surface regression failed.' }
 Write-Host 'AST_MSSQL_OK'
+$supabaseOutput = Join-Path $output 'supabase-native-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'supabase-native-next.xps') -o $supabaseOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Supabase native-surface compilation failed.' }
+$supabaseResult = dotnet (Join-Path $supabaseOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($supabaseResult -join "`n") -ne 'SUPABASE_AST_OK') { throw 'AST Supabase native-surface regression failed.' }
+Write-Host 'AST_SUPABASE_OK'
 $initializedStringOutput = Join-Path $output 'initialized-module-reference-string-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-string-next.xps') -o $initializedStringOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module string-reference compilation failed.' }

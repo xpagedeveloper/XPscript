@@ -1,0 +1,6 @@
+Option Declare
+
+Sub Main()
+    Dim db As XPDbSupabase
+    Print "SUPABASE_AST_OK"
+End Sub

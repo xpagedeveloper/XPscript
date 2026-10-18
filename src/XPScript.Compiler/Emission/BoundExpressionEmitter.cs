@@ -113,6 +113,8 @@ public sealed class BoundExpressionEmitter
             $"new XPScriptDbMySql({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPDbMsSql", StringComparison.OrdinalIgnoreCase) || @new.SemanticType.Name.Equals("XPDBMsSQL", StringComparison.OrdinalIgnoreCase) =>
             $"new XPScriptDbMsSql({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPDbSupabase", StringComparison.OrdinalIgnoreCase) || @new.SemanticType.Name.Equals("XPSupabaseDB", StringComparison.OrdinalIgnoreCase) =>
+            $"new XPScriptDbSupabase({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) => "new XpJsonArray()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJSONNavigator", StringComparison.OrdinalIgnoreCase) => $"new XPJSONNavigator({string.Join(", ", @new.Arguments.Select(Emit))})",
@@ -143,7 +145,7 @@ public sealed class BoundExpressionEmitter
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
 
-    internal static string? RuntimeObjectType(string name) => AstApplicationSupport.RuntimeType(name) ?? AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstNotesJsonSupport.RuntimeType(name) ?? AstSystemInventorySupport.RuntimeType(name) ?? AstSqliteSupport.RuntimeType(name) ?? AstMySqlSupport.RuntimeType(name) ?? AstMsSqlSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
+    internal static string? RuntimeObjectType(string name) => AstApplicationSupport.RuntimeType(name) ?? AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstNotesJsonSupport.RuntimeType(name) ?? AstSystemInventorySupport.RuntimeType(name) ?? AstSqliteSupport.RuntimeType(name) ?? AstMySqlSupport.RuntimeType(name) ?? AstMsSqlSupport.RuntimeType(name) ?? AstSupabaseSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
     {
         "XPIMAGE" => "XPImage",
         "XPJSONDOCUMENT" => "XPScriptJsonDocument",

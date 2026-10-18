@@ -180,7 +180,7 @@ internal static class CompilerBuildEnvironment
         var comments = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCommentsMarker);
         if (usesMySql) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MySqlDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         if (usesMsSql && !source.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal)) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MsSqlDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
-        if (usesSupabaseDb) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + SupabaseDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
+        if (usesSupabaseDb && !source.Contains("internal sealed class XPScriptDbSupabase", StringComparison.Ordinal)) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + SupabaseDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         string? escapedAssembly = null;
         if (usesUiForm || usesUiListView || usesDesktopDialog)
         {

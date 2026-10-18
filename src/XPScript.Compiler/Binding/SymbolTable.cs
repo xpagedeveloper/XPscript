@@ -54,7 +54,7 @@ public sealed class SymbolTable
         foreach (var definition in CompilerSymbolCatalog.All)
         {
             if (AstApplicationSupport.OwnsSymbol(definition.Name)) continue;
-            if (AstSpreadsheetSupport.Names.Any(n => definition.Name.Equals(n, StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith(n + ".", StringComparison.OrdinalIgnoreCase)) || AstHttpSupport.OwnsSymbol(definition.Name) || AstSystemInventorySupport.Names.Any(n => definition.Name.Equals(n, StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith(n + ".", StringComparison.OrdinalIgnoreCase)) || AstSqliteSupport.OwnsSymbol(definition.Name) || AstMySqlSupport.OwnsSymbol(definition.Name) || AstMsSqlSupport.OwnsSymbol(definition.Name) || definition.Name.StartsWith("XPCsv", StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith("Csv", StringComparison.OrdinalIgnoreCase) ||
+            if (AstSpreadsheetSupport.Names.Any(n => definition.Name.Equals(n, StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith(n + ".", StringComparison.OrdinalIgnoreCase)) || AstHttpSupport.OwnsSymbol(definition.Name) || AstSystemInventorySupport.Names.Any(n => definition.Name.Equals(n, StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith(n + ".", StringComparison.OrdinalIgnoreCase)) || AstSqliteSupport.OwnsSymbol(definition.Name) || AstMySqlSupport.OwnsSymbol(definition.Name) || AstMsSqlSupport.OwnsSymbol(definition.Name) || AstSupabaseSupport.OwnsSymbol(definition.Name) || definition.Name.StartsWith("XPCsv", StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith("Csv", StringComparison.OrdinalIgnoreCase) ||
                 definition.Name.StartsWith("XPXml", StringComparison.OrdinalIgnoreCase) || definition.Name.StartsWith("Xml", StringComparison.OrdinalIgnoreCase))
             {
                 if (definition.Kind == "class") Declare(new TypeSymbol(definition.Name, typeof(object), XpTypeSymbol.User(definition.Name)));
@@ -94,6 +94,7 @@ public sealed class SymbolTable
         AstSqliteSupport.Import(this);
         AstMySqlSupport.Import(this);
         AstMsSqlSupport.Import(this);
+        AstSupabaseSupport.Import(this);
         ImportXPAiOverloads();
     }
 
