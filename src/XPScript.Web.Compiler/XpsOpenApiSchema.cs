@@ -105,7 +105,7 @@ internal static class XpsOpenApiSchema
         if (node is not JsonObject current) throw new XpsOpenApiGenerationException(context + " must be an object.");
         for (var depth = 0; depth < 32; depth++)
         {
-            var reference = ReadString(current, "$ref");
+            var reference = ReadString(current, "$ref")?.Trim().Trim('"');
             if (reference is null) return current;
             if (!reference.StartsWith("#/", StringComparison.Ordinal))
                 throw new XpsOpenApiGenerationException(context + " uses external $ref '" + reference + "'. Only local OpenAPI references are supported.");
@@ -265,6 +265,7 @@ internal static class XpsOpenApiSchema
 
     internal static string ReferenceTypeName(string reference, string context)
     {
+        reference = reference.Trim().Trim('"');
         if (!reference.StartsWith("#/components/schemas/", StringComparison.Ordinal))
             throw new XpsOpenApiGenerationException(context + " schema reference '" + reference + "' must point to #/components/schemas/... for typed XPScript generation.");
         var raw = reference[(reference.LastIndexOf('/') + 1)..].Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal);
