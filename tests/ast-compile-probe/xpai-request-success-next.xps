@@ -1,5 +1,7 @@
 Sub Main()
     Dim ai As New XPAi(Environ("XPSCRIPT_AI_TEST_AI"), "XPAI_SECRET_MARKER")
+    ai.Model = "test-model"
+    ai.UserPrompt = "Say hello."
     Dim response As XPAiResponse
     Set response = ai.Complete()
     If response.StatusCode <> 200 Then Error 5, "XPAi response status mismatch"
