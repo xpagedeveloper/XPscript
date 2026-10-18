@@ -62,6 +62,11 @@ try
     if ((await Run("dotnet", [Path.Combine(aiToolOutput, "Generated.dll")])).Trim() != "XPAI_TOOL_LOOP_OK")
         throw new Exception("XPAi tool-loop regression failed.");
     Console.WriteLine("AST_XPAI_TOOL_LOOP_OK");
+    var notesHttpOutput = Path.Combine(output, "notes-http-request");
+    await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/notes-http-request-next.xps"), "-o", notesHttpOutput]);
+    if ((await Run("dotnet", [Path.Combine(notesHttpOutput, "Generated.dll")] )).Trim() != "NOTES_HTTP_REQUEST_OK")
+        throw new Exception("NotesHTTPRequest request regression failed.");
+    Console.WriteLine("AST_NOTES_HTTP_REQUEST_OK");
 }
 finally
 {
@@ -124,7 +129,7 @@ async Task Handle(TcpClient connection, X509Certificate2? certificate)
             }
             if (request[1] == "/slow") await Task.Delay(600, cancellation.Token);
             var status = request[1] == "/fail" ? "418 Teapot" : request[1] == "/redirect" ? "302 Found" : "200 OK";
-            var payload = request[1] == "/ai" ? AiPayload(body) : request[1] == "/json" ? body : request[1] == "/redirect" ? "redirect-not-followed" :
+            var payload = request[1] == "/notes" ? "notes-http-ok" : request[1] == "/ai" ? AiPayload(body) : request[1] == "/json" ? body : request[1] == "/redirect" ? "redirect-not-followed" :
                 request[0] + "|" + headers.GetValueOrDefault("X-XPScript-Test", "") + (body.Length > 0 ? "|" + body : "");
             var contentType = request[1] is "/json" or "/ai" ? "application/json" : "text/plain; charset=utf-8";
             if (request[1] == "/multipart")
@@ -156,7 +161,7 @@ async Task<string> Run(string file, string[] commandArguments)
     var start = new ProcessStartInfo(file) { RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = repo };
     foreach (var (name, value) in new[] { ("XPSCRIPT_HTTP_TEST_HTTP", arguments[0]), ("XPSCRIPT_HTTP_TEST_TLS", arguments[1]),
         ("XPSCRIPT_HTTP_TEST_MISMATCH", arguments[2]), ("XPSCRIPT_HTTP_TEST_EXPIRED", arguments[3]),
-        ("XPSCRIPT_AI_TEST_AI", arguments[0] + "/ai") }) start.Environment[name] = value;
+        ("XPSCRIPT_AI_TEST_AI", arguments[0] + "/ai"), ("XPSCRIPT_NOTES_HTTP_TEST_URL", arguments[0] + "/notes") }) start.Environment[name] = value;
     foreach (var value in commandArguments) start.ArgumentList.Add(value);
     using var process = Process.Start(start)!;
     var stdout = process.StandardOutput.ReadToEndAsync(); var stderr = process.StandardError.ReadToEndAsync();

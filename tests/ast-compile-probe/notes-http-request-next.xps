@@ -1,0 +1,11 @@
+Option Declare
+
+Sub Main()
+    Dim http As New NotesHTTPRequest
+    http.PreferStrings = True
+    Dim result As Variant
+    Set result = http.Get(Environ("XPSCRIPT_NOTES_HTTP_TEST_URL"))
+    If http.ResponseCode <> 200 Then Error 4265
+    If CStr(result) <> "notes-http-ok" Then Error 4266
+    Print "NOTES_HTTP_REQUEST_OK"
+End Sub
