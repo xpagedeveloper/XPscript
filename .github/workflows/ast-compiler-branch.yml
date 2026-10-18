@@ -137,6 +137,8 @@ jobs:
         include:
           - rid: win-x64
             os: windows-latest
+          - rid: win-arm64
+            os: windows-11-arm
           - rid: linux-x64
             os: ubuntu-latest
           - rid: linux-arm64
