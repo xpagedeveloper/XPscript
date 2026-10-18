@@ -22,9 +22,6 @@ internal static class CompilerBuildEnvironment
         var appData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Roaming"));
         var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
         _ = CreatePrivateDirectory(appData, "NuGet");
-        var nugetPackages = CreatePrivateDirectory(cacheRoot, "nuget-packages");
-        var nugetHttpCache = CreatePrivateDirectory(cacheRoot, "nuget-http-cache");
-        var nugetPluginsCache = CreatePrivateDirectory(cacheRoot, "nuget-plugins-cache");
         ConfigureGeneratedDependencies(startInfo, root);
         var patchSource = ApplicationPackagePatchStore.ActivePackageSource;
         if (patchSource is not null && startInfo.ArgumentList.Count > 0 &&
@@ -38,9 +35,7 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["TMP"] = processTemp;
         startInfo.Environment["TMPDIR"] = processTemp;
         startInfo.Environment["DOTNET_CLI_HOME"] = cliHome;
-        startInfo.Environment["NUGET_PACKAGES"] = nugetPackages;
-        startInfo.Environment["NUGET_HTTP_CACHE_PATH"] = nugetHttpCache;
-        startInfo.Environment["NUGET_PLUGINS_CACHE_PATH"] = nugetPluginsCache;
+        startInfo.Environment["NUGET_PACKAGES"] = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
         startInfo.Environment["USERPROFILE"] = profile;
         startInfo.Environment["HOME"] = profile;
         startInfo.Environment["APPDATA"] = appData;

@@ -37,7 +37,7 @@ foreach ($test in $tests) {
     $legacyLines = @(& $legacyOutput)
     $legacyRunCode = $LASTEXITCODE
     if ($legacyRunCode -ne 0) { throw "Legacy program failed: $($test.Name), exit code $legacyRunCode" }
-    dotnet $compiler ast-compile $source -o $output --security=off
+    dotnet $compiler ast-compile $source -o $output
     if ($LASTEXITCODE -ne 0) { throw "Compilation failed: $($test.Name)" }
 
     $generated = Join-Path $output "Generated.dll"
