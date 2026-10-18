@@ -24,7 +24,7 @@ For each definition:
 - [x] `test/openapi/skogsstyrelsen.json` — REST server + REST client
 - [ ] `test/openapi/stripe.json` — REST server + REST client
 - [x] `test/openapi/swedac.json` — REST server + REST client
-- [ ] `test/openapi/vinnova.yaml` — REST server + REST client
+- [x] `test/openapi/vinnova.yaml` — REST server + REST client
 
 ## DigitalOcean investigation notes
 
