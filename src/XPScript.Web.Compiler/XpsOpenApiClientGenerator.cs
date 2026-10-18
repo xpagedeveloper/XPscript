@@ -53,8 +53,17 @@ public sealed class XpsOpenApiClientGenerator
     private static JsonArray ConvertSequence(YamlSequenceNode sequence) { var result = new JsonArray(); foreach (var item in sequence.Children) result.Add(ConvertYaml(item)); return result; }
     private static JsonNode? ConvertScalar(YamlScalarNode scalar) { var value = scalar.Value ?? string.Empty; if (scalar.Style is not ScalarStyle.Plain) return JsonValue.Create(value); if (value is "~" || value.Equals("null", StringComparison.OrdinalIgnoreCase)) return null; if (bool.TryParse(value, out var b)) return JsonValue.Create(b); if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i)) return JsonValue.Create(i); if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) return JsonValue.Create(d); return JsonValue.Create(value); }
     private static XpsOpenApiModelCatalog CollectModels(JsonObject root)
+    {
+        var title = root["info"] is JsonObject info ? ReadString(info, "title") : null;
+        var prefix = root["x-xpscript-package"] is JsonValue value && value.TryGetValue<string>(out var explicitName) && !string.IsNullOrWhiteSpace(explicitName)
+            ? ToIdentifier(explicitName)
+            : ToIdentifier(title ?? "OpenApi");
+        return CollectModels(root, prefix);
+    }
+
+    private static XpsOpenApiModelCatalog CollectModels(JsonObject root, string prefix)
         => XpsOpenApiModelCatalog.Collect(root, (rawName, used) =>
-            UniqueTypeIdentifier(ToSchemaIdentifier(rawName), used));
+            UniqueTypeIdentifier(ToSchemaIdentifier(prefix + "_" + rawName), used));
     private static Dictionary<string, ClientSecurityScheme> CollectSecuritySchemes(JsonObject root)
     {
         var result = new Dictionary<string, ClientSecurityScheme>(StringComparer.OrdinalIgnoreCase);
