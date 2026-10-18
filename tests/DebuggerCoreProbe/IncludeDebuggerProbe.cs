@@ -18,6 +18,7 @@ internal static class IncludeDebuggerProbe
             var helperPath = Path.Combine(libDirectory, "helper.xps");
             var rootSource = """
 Include "lib/helper.xps"
+Use "lib/helper"
 
 Sub Main()
     Dim value As Integer
@@ -65,6 +66,29 @@ End Function
                 throw new Exception("Debugger include mapping did not preserve helper source id and local line.");
             if (!marked.Contains("__XPSOURCE_5_" + rootHex + "()", StringComparison.Ordinal))
                 throw new Exception("Debugger include mapping did not restore the root source after included code.");
+            if (expandedSource.Split("Function HelperValue", StringSplitOptions.None).Length != 2)
+                throw new Exception("Use must deduplicate a file already included through Include.");
+
+            var useRootPath = Path.Combine(tempRoot, "use-root.xps");
+            var useRootSource = "Use \"lib/helper\"\nSub Main()\nEnd Sub\n";
+            File.WriteAllText(useRootPath, useRootSource);
+            var useResult = includeTransform.Invoke(include, [useRootSource, useRootPath])
+                ?? throw new Exception("Use source preprocessor returned null.");
+            var useExpandedSource = (string)(useResult.GetType().GetProperty("Source")?.GetValue(useResult)
+                ?? throw new Exception("Expanded Use source was not returned."));
+            if (!useExpandedSource.Contains("Function HelperValue", StringComparison.Ordinal))
+                throw new Exception("Use did not infer the .xps extension.");
+
+            var invalidUsePath = Path.Combine(tempRoot, "invalid-use.xps");
+            File.WriteAllText(invalidUsePath, "Use \"..\\lib\\helper\"\n");
+            try
+            {
+                includeTransform.Invoke(include, [File.ReadAllText(invalidUsePath), invalidUsePath]);
+                throw new Exception("Use unexpectedly allowed parent-directory traversal.");
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException is CompilerException)
+            {
+            }
 
             var generated = new XPScriptTranspiler().Transpile(rootSource.Replace("Include \"lib/helper.xps\"", string.Empty, StringComparison.Ordinal), rootPath, CompilerDriver.CurrentRuntimeIdentifier());
             if (!generated.Contains("\"into\" => true", StringComparison.Ordinal))
