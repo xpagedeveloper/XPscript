@@ -229,10 +229,7 @@ public sealed class XpsOpenApiClientGenerator
         if (properties.Count == 0) b.AppendLine(resolved.ContainsKey("additionalProperties") ? "    Public Value As XPJsonObject" : "    Public Value As Variant");
         else
         {
-            // A member cannot have the same name as its enclosing type in the
-            // generated C# bridge. Reserve the model name before normalizing
-            // OpenAPI property names.
-            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { name };
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var property in properties)
             {
                 var memberName = UniqueIdentifier(ToIdentifier(property.Key), used, avoidKeywords: true);
@@ -321,12 +318,7 @@ public sealed class XpsOpenApiClientGenerator
                         result[property.Key] = new JsonObject { ["x-xpscript-conflicting-allof-model"] = true };
                         continue;
                     }
-                    // OpenAPI allOf branches may describe the same wire
-                    // property with incompatible schemas. Preserve the
-                    // property in the generated model as Variant so the
-                    // client remains usable and the JSON contract is kept.
-                    result[property.Key] = new JsonObject { ["x-xpscript-conflicting-allof-model"] = true };
-                    continue;
+                    throw new XpsOpenApiGenerationException($"Schema '{modelName}' allOf property '{property.Key}' has conflicting XPScript types '{eyistingType}' and '{incomingType}'.");
                 }
                 continue;
             }
@@ -438,6 +430,8 @@ public sealed class XpsOpenApiClientGenerator
         var responseName = apiName + "Response";
         var args = op.Parameters.Where(p => p.Required).Select(p => $"{p.GeneratedName} As {p.TypeName}").Concat(op.Parameters.Where(p => !p.Required).Select(p => $"Optional {p.GeneratedName} As Variant = Nothing")).ToList();
         var procedureNames = new HashSet<string>(op.Parameters.Select(p => p.GeneratedName), StringComparer.OrdinalIgnoreCase);
+        foreach (var parameter in op.Parameters)
+            procedureNames.Add(ToIdentifier(parameter.Name));
         var payloadName = op.Body is null ? "payload" : UniqueIdentifier("payload", procedureNames);
         if (op.Body is not null) args.Add(op.Body.Required ? $"{payloadName} As {op.Body.TypeName}" : $"Optional {payloadName} As Variant = Nothing");
         var urlName = UniqueIdentifier("url", procedureNames);
@@ -607,9 +601,9 @@ public sealed class XpsOpenApiClientGenerator
         if (IdentifierPattern.IsMatch(trimmed) && !IsDeclarationReserved(trimmed))
             return trimmed;
         var identifier = ToIdentifier(trimmed);
-        return IsDeclarationReserved(identifier) ? "OpenApi" + identifier : identifier;
+        return IsDeclarationReserved(identifier) ? "Api" + identifier : identifier;
     }
-    private static string ToIdentifier(string value) { var parts = Regex.Split(value.Trim(), "[^A-Za-z0-9]+").Where(y => y.Length > 0).ToArray(); if (parts.Length == 0) throw new XpsOpenApiGenerationException($"'{value}' cannot be converted to an XPScript identifier."); var result = string.Concat(parts.Select(y => char.ToUpperInvariant(y[0]) + y[1..])); if (char.IsDigit(result[0])) result = "Api" + result; return result; }
+    private static string ToIdentifier(string value) { var trimmed = value.Trim(); if (IdentifierPattern.IsMatch(trimmed) && !IsDeclarationReserved(trimmed)) return char.ToUpperInvariant(trimmed[0]) + trimmed[1..]; var parts = Regex.Split(trimmed, "[^A-Za-z0-9_]+").Where(y => y.Length > 0).ToArray(); if (parts.Length == 0) throw new XpsOpenApiGenerationException($"'{value}' cannot be converted to an XPScript identifier."); var result = string.Concat(parts.Select(y => char.ToUpperInvariant(y[0]) + y[1..])); if (char.IsDigit(result[0])) result = "Api" + result; return result; }
     private static string EscapeXps(string value) => value.Replace("\"", "\"\""); private static string? ReadString(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<string>(out var teyt) ? teyt : null; private static bool ReadBool(JsonObject obj, string name) => obj[name] is JsonValue value && value.TryGetValue<bool>(out var result) && result;
     private sealed record ClientSecurityScheme(string Name, string Kind, string? Location, string? WireName, string GeneratedName = "", string SetterName = ""); private sealed record ClientParameter(string Name, string Location, string TypeName, bool Required, string GeneratedName = ""); private sealed record ClientBody(string TypeName, bool Required, string MediaType = "application/json", string? MultipartFileField = null); private sealed record ClientResponse(string Code, string? TypeName, JsonObject? Schema); private sealed record ClientOperation(string Method, string Path, string Name, IReadOnlyList<ClientParameter> Parameters, ClientBody? Body, IReadOnlyList<ClientResponse> Responses, IReadOnlyList<IReadOnlyList<string>> Security);
 }
