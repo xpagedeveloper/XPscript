@@ -18,7 +18,7 @@ public sealed class CompilerDriver
         "linux-x64", "linux-arm64",
         "osx-x64", "osx-arm64",
         "browser-wasm",
-        "android-arm64"
+        "android-arm64", "android-x64"
     };
 
     public static IReadOnlyCollection<string> SupportedRuntimes => SupportedRuntimeIdentifiers;
@@ -218,7 +218,7 @@ public sealed class CompilerDriver
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
             CompilerSourceDocuments.Stage(sourcePath, includeResult.Map, tempRoot);
-            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+            if (IsAndroidRuntime(rid))
             {
                 var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
                 await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
@@ -339,7 +339,7 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
-            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+            if (IsAndroidRuntime(rid))
             {
                 var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
                 await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
@@ -545,6 +545,10 @@ public sealed class CompilerDriver
         return rid;
     }
 
+    private static bool IsAndroidRuntime(string runtimeIdentifier) =>
+        runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase) ||
+        runtimeIdentifier.Equals("android-x64", StringComparison.OrdinalIgnoreCase);
+
     private async Task ValidateGeneratedCodeAsync(
         string sourcePath,
         string runtimeIdentifier,
@@ -572,7 +576,7 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
-            if (rid.Equals("android-arm64", StringComparison.OrdinalIgnoreCase))
+            if (IsAndroidRuntime(runtimeIdentifier))
             {
                 var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
                 await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
@@ -690,7 +694,7 @@ public sealed class CompilerDriver
             itemGroup.AppendLine("  </ItemGroup>");
         }
 
-        var isAndroid = runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase);
+        var isAndroid = IsAndroidRuntime(runtimeIdentifier);
         var publishProperties = publishSingleFile && !isAndroid
             ? $"""
     <PublishSingleFile>true</PublishSingleFile>
@@ -699,9 +703,9 @@ public sealed class CompilerDriver
             : string.Empty;
         var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
         var androidProperties = isAndroid
-            ? """
+            ? $"""
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
-    <AndroidSupportedAbis>arm64-v8a</AndroidSupportedAbis>
+    <AndroidSupportedAbis>{(runtimeIdentifier.Equals("android-x64", StringComparison.OrdinalIgnoreCase) ? "x86_64" : "arm64-v8a")}</AndroidSupportedAbis>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <ApplicationId>com.xpscript.debugapp</ApplicationId>
 """
