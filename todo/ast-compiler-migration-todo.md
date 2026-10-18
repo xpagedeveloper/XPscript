@@ -559,6 +559,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Compare desktop/Avalonia behavior.
 - [ ] Compare Android/mobile behavior as support matures.
 - [ ] Migrate the Android target branch (`origin/android-runtime-uiform-mobile`) into the AST compiler path. Preserve the Android ARM64/x64 hosts, generated APK project setup, logcat/error routing, CLI device/build/deploy workflow, Android-specific runtime objects and UIForm/Avalonia behavior; add focused compiler/runtime probes and move stable coverage into the permanent FullTest workflows.
+- [ ] Add target selection to `ast-compile` and compile AST-generated units through the Windows, Linux, macOS, browser-WASM/web and Android project backends; the current target matrix probe verifies normal project metadata only and must not be treated as full AST cross-target compilation.
 - [x] Add explicit compatibility fixtures for LotusScript-like edge cases. The AST compatibility suite now has permanent executable fixtures for `Rem`/apostrophe comments, `_` line continuation and `Application.NewLine`.
 - [x] Record intentional behavior changes instead of silently changing semantics. `docs/ast-intentional-behavior.md` documents explicit legacy fallback, mapped unsupported-feature diagnostics and deferred runtime semantics.
 
