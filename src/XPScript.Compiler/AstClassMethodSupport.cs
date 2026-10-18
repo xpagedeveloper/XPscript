@@ -42,6 +42,7 @@ internal static class AstClassMethodSupport
     {
         var name = syntax?.Identifier.Text;
         if (string.IsNullOrEmpty(name) || name.Equals("Variant", StringComparison.OrdinalIgnoreCase)) return XpTypeSymbol.Variant;
+        if (AstNotesJsonSupport.IsCompatibilityType(name)) return XpTypeSymbol.User(name);
         if (AstClassConstructorSupport.Find(symbols, name)?.SemanticReturnType is { } userType) return userType;
         if (symbols.TryLookup(name, out var symbol) && symbol is TypeSymbol { SemanticType: not null } type) return type.SemanticType;
         var runtime = AstExperimentalCompiler.ResolveRuntimeType(name);

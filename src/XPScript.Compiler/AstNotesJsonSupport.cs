@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Text.RegularExpressions;
 using XPScript.Compiler.Binding;
 
 namespace XPScript.Compiler;
@@ -17,12 +18,19 @@ internal static class AstNotesJsonSupport
         .ReadMembers(Classes, Names.Where(name => name is "NotesHTTPRequest" or "XPJSONNavigator" or "XPJSONElement").ToArray(), LanguageType)
         .ToArray();
     internal static void Import(SymbolTable symbols) => AstNativeObjectSurface.Import(symbols, Members, LanguageType);
-    internal static string? RuntimeType(string name) => name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ||
-        name.Equals("XPJSONNavigator", StringComparison.OrdinalIgnoreCase) ||
-        name.Equals("XPJSONElement", StringComparison.OrdinalIgnoreCase)
+    internal static string? RuntimeType(string name) => name is "XPJSONObject" or "XPJSONArray" or "XPJSONElement" ||
+        name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ||
+        name.Equals("XPJSONNavigator", StringComparison.OrdinalIgnoreCase)
         ? Names.First(n => n.Equals(name, StringComparison.OrdinalIgnoreCase))
         : null;
-    internal static bool Uses(string source) => Names.Any(name => AstObjectSupportRegistry.UsesObject(source, name));
+    internal static bool IsCompatibilityType(string name) => name is "XPJSONObject" or "XPJSONArray" or "XPJSONElement";
+    // Native XPJsonObject/XPJsonArray/XPJsonElement use PascalCase. Only the
+    // explicitly all-caps compatibility spellings should import the legacy
+    // JSON HTTP constructors; the language itself remains case-insensitive.
+    internal static bool Uses(string source) =>
+        Names.Where(name => name is "NotesHTTPRequest" or "XPJSONNavigator")
+            .Any(name => AstObjectSupportRegistry.UsesObject(source, name)) ||
+        Regex.IsMatch(source, @"\b(?:XPJSONObject|XPJSONArray|XPJSONElement)\b");
     private static string LanguageType(string type) => type.TrimEnd('?') switch
     {
         "object" or "System.Object" => "Variant",
