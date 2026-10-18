@@ -207,10 +207,9 @@ public sealed class XpsOpenApiClientGenerator
         // Reserve every identifier already emitted, excluding JSON string literals.
         var reservedSymbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         reservedSymbols.UnionWith(models.Keys);
-        foreach (var line in b.ToString().Split('\n'))
+        foreach (var chunk in b.GetChunks())
         {
-            if (line.TrimStart().StartsWith("'", StringComparison.Ordinal)) continue;
-            var code = Regex.Replace(line, "\"(?:\"\"|[^\"])*\"", "");
+            var code = Regex.Replace(chunk.Span.ToString(), "\"(?:\"\"|[^\"])*\"", "");
             foreach (Match match in Regex.Matches(code, @"[A-Za-z_]\w*")) reservedSymbols.Add(match.Value);
         }
         foreach (var model in enums)
