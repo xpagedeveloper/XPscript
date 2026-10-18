@@ -19,6 +19,22 @@ xpscript openapi generate api.json --force
 
 `--force` is required to overwrite an existing generated `.xps` file.
 
+Component schema declarations and `$ref` types use the same model-name catalog.
+Valid schema identifiers such as `clear_actor_limits` retain their spelling.
+If a schema name needs conversion, every reference uses the converted declaration
+name, including names escaped with `~0` or `~1` in a JSON Pointer.
+Server generation rejects component names that collide after conversion.
+
+Generated model array fields use `XPJsonArray` in both server and client code.
+The exported source does not use typed array class fields, which the CLI class
+parser does not support. Client response JSON Schema validation retains the
+item schema, including references to object and enum components.
+
+Client enum members that collide with generated declarations or other enum
+members receive an enum-name prefix and, if needed, a numeric suffix. Use the
+member names in the generated enum declaration. This avoids unqualified enum
+constants changing model, field or parameter identifiers during compilation.
+
 ### Initial import
 
 Use `openapi import` for the first import of an OpenAPI specification into an XPScript REST server source file.

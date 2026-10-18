@@ -1,0 +1,29 @@
+name: Platform FullTest
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, test-openapi-import-class-skeletons]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  openapi:
+    name: OpenAPI generation and compilation (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run focused regressions, CLI chain and complete OpenAPI suite
+        shell: bash
+        run: bash tests/OpenApiGeneratorSmoke/run-rest-host-ci.sh

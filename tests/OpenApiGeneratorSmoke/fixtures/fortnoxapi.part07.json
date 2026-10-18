@@ -1,0 +1,4996 @@
+            "description": "identifies file/folder to remove",
+            "in": "query",
+            "name": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete folder response with no content"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Folder not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove files",
+        "tags": [
+          "fortnox_Archive"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "If no path is provided the root will be returned.\n Providing fileId will return given file from fileattachments.",
+        "operationId": "ArchiveController_doIndex",
+        "parameters": [
+          {
+            "description": "name of folder",
+            "in": "query",
+            "name": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "fileId from fileattachments",
+            "in": "query",
+            "name": "fileid",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_FileStorage_FolderSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show folder response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Folder not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve folder or file",
+        "tags": [
+          "fortnox_Archive"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "If not path or folderId is provided, the file will be uploaded to the root directory.",
+        "operationId": "ArchiveController_doCreate",
+        "parameters": [
+          {
+            "description": "id of folder",
+            "in": "query",
+            "name": "folderid",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "name of folder",
+            "in": "query",
+            "name": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "description": "file to uplad",
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Request body for create folder"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_FileStorage_Folder_FileRow_Wrap"
+                }
+              }
+            },
+            "description": "Successful create folder response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Folder not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Upload a file to a specific subdirectory",
+        "tags": [
+          "fortnox_Archive"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/archive/{id}": {
+      "delete": {
+        "description": "Delete a folder",
+        "operationId": "ArchiveController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies file/folder to remove",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Path of file/folder to remove",
+            "in": "query",
+            "name": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete folder response with no content"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Folder not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Delete a single file",
+        "tags": [
+          "fortnox_Archive"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Providing fileId will return given file from fileattachments.",
+        "operationId": "ArchiveController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the file",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Path of folder to show",
+            "in": "query",
+            "name": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "fileId from fileattachments",
+            "in": "query",
+            "name": "fileid",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_FileStorage_FolderSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show folder response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Folder not found"
+          },
+          "default": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single file",
+        "tags": [
+          "fortnox_Archive"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/articlefileconnections": {
+      "get": {
+        "description": "The article file connections register can return a list of records or a single record. By specifying a FileId in the URL, a single record will be returned. Not specifying a FileId will return a list of records.",
+        "operationId": "ArticleFileConnectionController_doIndex",
+        "parameters": [
+          {
+            "description": "Articlenumber of file connections to list",
+            "in": "query",
+            "name": "articlenumber",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_ArticleFileConnectionListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list article file connections response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of article file connections",
+        "tags": [
+          "fortnox_ArticleFileConnections"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create an article file connection",
+        "operationId": "ArticleFileConnectionController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Da_ArticleFileConnectionSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create article file connection"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_ArticleFileConnectionSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create article file connection response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Article file connection not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an article file connection",
+        "tags": [
+          "fortnox_ArticleFileConnections"
+        ],
+        "x-codegen-request-body-name": "articleFileConnection",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/articlefileconnections/{FileId}": {
+      "delete": {
+        "description": "Delete an article file connection",
+        "operationId": "ArticleFileConnectionController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the article file connection",
+            "in": "path",
+            "name": "FileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete article file connection response with no content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Article file connection not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove an article file connection",
+        "tags": [
+          "fortnox_ArticleFileConnections"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve an article file connection",
+        "operationId": "ArticleFileConnectionController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the article file connection",
+            "in": "path",
+            "name": "FileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_ArticleFileConnectionSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show article file connection response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Article file connection not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single article file connection",
+        "tags": [
+          "fortnox_ArticleFileConnections"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/articles": {
+      "get": {
+        "description": "Retrieves a list of articles. The articles are returned sorted by article number with the lowest number appearing first.",
+        "operationId": "ArticleController_doIndex",
+        "parameters": [
+          {
+            "description": "possibility to filter supplier invoices",
+            "in": "query",
+            "name": "filter",
+            "schema": {
+              "enum": [
+                "active",
+                "inactive"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "field to sort returned list",
+            "in": "query",
+            "name": "sortby",
+            "schema": {
+              "enum": [
+                "articlenumber",
+                "quantityinstock",
+                "reservedquantity",
+                "stockvalue"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by article number",
+            "in": "query",
+            "name": "articlenumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by description",
+            "in": "query",
+            "name": "description",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by ean",
+            "in": "query",
+            "name": "ean",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by supplier number",
+            "in": "query",
+            "name": "suppliernumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by manufacturer",
+            "in": "query",
+            "name": "manufacturer",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by manufacturerarticlenumber",
+            "in": "query",
+            "name": "manufacturerarticlenumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by web shop",
+            "in": "query",
+            "name": "webshop",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by lastmodified",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ArticleListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list articles response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of articles",
+        "tags": [
+          "fortnox_Articles"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "The created article will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "ArticleController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ArticleSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create article"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ArticleSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create article response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an article",
+        "tags": [
+          "fortnox_Articles"
+        ],
+        "x-codegen-request-body-name": "article",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/articles/{ArticleNumber}": {
+      "delete": {
+        "description": "<p>Deletes the article permanently.</p>\n <p>You need to supply the unique article number that was returned when the article was created or retrieved from the list of articles.</p>",
+        "operationId": "ArticleController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the article",
+            "in": "path",
+            "name": "ArticleNumber",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete article response with no content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Article not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Delete an article",
+        "tags": [
+          "fortnox_Articles"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieves the details of an article. You need to supply the unique article number that was returned when the article was created or retrieved from the list of articles.",
+        "operationId": "ArticleController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the article",
+            "in": "path",
+            "name": "ArticleNumber",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ArticleSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show article response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Article not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve an article",
+        "tags": [
+          "fortnox_Articles"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Updates the specified article with the values provided in the properties. Any property not provided will be left unchanged.\n You need to supply the unique article number that was returned when the article was created or retrieved from the list of articles.\n Note that even though the article number is writeable you can not change the number of an existing article.",
+        "operationId": "ArticleController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the article",
+            "in": "path",
+            "name": "ArticleNumber",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ArticleSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update article"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ArticleSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update article response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Article not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update an article",
+        "tags": [
+          "fortnox_Articles"
+        ],
+        "x-codegen-request-body-name": "article",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/articleurlconnections": {
+      "get": {
+        "description": "The article url connections register can return a list of records or a single record. By specifying an id in the URL, a single record will be returned. Not specifying an id will return a list of records.",
+        "operationId": "ItemUrlConnectionController_doIndex",
+        "parameters": [
+          {
+            "description": "identifies the article",
+            "in": "query",
+            "name": "articlenumber",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ItemUrlConnectionListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list article url connections response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of article url connections",
+        "tags": [
+          "fortnox_ArticleUrlConnections"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create an article url connection",
+        "operationId": "ItemUrlConnectionController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ItemUrlConnectionSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create article url connection"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ItemUrlConnectionSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create article url connection response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an article url connection",
+        "tags": [
+          "fortnox_ArticleUrlConnection"
+        ],
+        "x-codegen-request-body-name": "articleUrlConnection",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/articleurlconnections/{id}": {
+      "delete": {
+        "description": "Delete an article url connection",
+        "operationId": "ItemUrlConnectionController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the article url connection",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete article url connection response with no content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove an article url connection",
+        "tags": [
+          "fortnox_ArticleUrlConnection"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve an article url connection",
+        "operationId": "ItemUrlConnectionController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the article url connection",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ItemUrlConnectionSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show article url connection response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Article url connection not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single article url connection",
+        "tags": [
+          "fortnox_ArticleUrlConnection"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update an article url connection",
+        "operationId": "ItemUrlConnectionController_doUpdate",
+        "parameters": [
+          {
+            "description": "Id of article url connection to update",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ItemUrlConnectionSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update article url connection"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ItemUrlConnectionSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update article url connection response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Article url connection not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update an article url connection",
+        "tags": [
+          "fortnox_ArticleUrlConnection"
+        ],
+        "x-codegen-request-body-name": "articleUrlConnection",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assetfileconnections": {
+      "get": {
+        "description": "The asset register can return a list of assets or a single asset. By specifying a FileId in the URL, a single asset will be returned. Not specifying a FileId will return a list of records.",
+        "operationId": "AssetFileConnectionController_doIndex",
+        "parameters": [
+          {
+            "description": "Assetid of asset file connections to list",
+            "in": "query",
+            "name": "assetid",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_AssetFileConnectionListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list asset file connections response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of asset file connections",
+        "tags": [
+          "fortnox_AssetFileConnection"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create an asset file connection",
+        "operationId": "AssetFileConnectionController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Da_AssetFileConnectionCreatePayload"
+              }
+            }
+          },
+          "description": "Request body for create asset file connection"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_AssetFileConnectionSingleItem"
+                }
+              }
+            },
+            "description": "Successful create asset file connection response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an asset file connection",
+        "tags": [
+          "fortnox_AssetFileConnection"
+        ],
+        "x-codegen-request-body-name": "assetFileConnection",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assetfileconnections/{FileId}": {
+      "delete": {
+        "description": "Delete an asset file connection",
+        "operationId": "AssetFileConnectionController_doDelete",
+        "parameters": [
+          {
+            "description": "File id of asset file connection to delete",
+            "in": "path",
+            "name": "FileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete asset file connection response with no content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset file connection not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove an asset file connection",
+        "tags": [
+          "fortnox_AssetFileConnection"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets": {
+      "get": {
+        "description": "Get assets",
+        "operationId": "AssetsController_doIndex",
+        "parameters": [
+          {
+            "description": "Asset number",
+            "in": "query",
+            "name": "number",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Asset description",
+            "in": "query",
+            "name": "description",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Asset type",
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter on last modified date",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list assets response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of assets",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "The created asset will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "AssetsController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Anl_AssetsSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create asset"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsSingleItemResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful create asset response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an Asset",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-codegen-request-body-name": "asset",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets/changeob/{Id}": {
+      "put": {
+        "description": "The updated asset will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "AssetsController_doChangeob",
+        "parameters": [
+          {
+            "description": "Asset ID",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Anl_AssetActionsSingleItem"
+              }
+            }
+          },
+          "description": "Request body for update asset"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsActionResponse"
+                }
+              }
+            },
+            "description": "Successful update asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Change manual OB value of an Asset",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-codegen-request-body-name": "asset",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets/depreciate": {
+      "post": {
+        "description": "The created vouchers list will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "AssetsController_doDepreciate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Anl_Depreciation_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update asset"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsDepreciationResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update asset response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Perform a Depreciation of an Asset",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-codegen-request-body-name": "body",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets/depreciations/{ToDate}": {
+      "get": {
+        "description": "Retrieves a list of assets to depreciate.",
+        "operationId": "AssetsController_doDepreciations",
+        "parameters": [
+          {
+            "description": "toDate",
+            "in": "path",
+            "name": "ToDate",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list assets response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Assets depreciation list",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets/scrap/{Id}": {
+      "put": {
+        "description": "The updated asset will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "AssetsController_doScrap",
+        "parameters": [
+          {
+            "description": "Asset ID",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Anl_ScrapAsset_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update asset"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsActionResponse"
+                }
+              }
+            },
+            "description": "Successful update asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Scrap an Asset",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-codegen-request-body-name": "asset",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets/sell/{Id}": {
+      "put": {
+        "description": "Partial sell or full sell of an asset.",
+        "operationId": "AssetsController_doSell",
+        "parameters": [
+          {
+            "description": "Asset ID",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Anl_SellAsset_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update asset"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsActionResponse"
+                }
+              }
+            },
+            "description": "Successful update asset response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Sell an Asset",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-codegen-request-body-name": "asset",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets/types": {
+      "get": {
+        "description": "Get assets",
+        "operationId": "AssetsController_doTypesGet",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetTypesListResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful list assets response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Assets not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of asset types",
+        "tags": [
+          "fortnox_AssetTypes"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Update an asset",
+        "operationId": "AssetsController_doTypesPost",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Anl_CreateAssetType_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update asset"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetTypesSingleResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an asset type",
+        "tags": [
+          "fortnox_AssetTypes"
+        ],
+        "x-codegen-request-body-name": "createAssetRequest",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets/types/{id}": {
+      "delete": {
+        "description": "Delete an asset",
+        "operationId": "AssetsController_doTypesDeleteWithId",
+        "parameters": [
+          {
+            "description": "id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful delete asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Delete an asset type",
+        "tags": [
+          "fortnox_AssetTypes"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve an asset",
+        "operationId": "AssetsController_doTypesGetWithId",
+        "parameters": [
+          {
+            "description": "id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetTypesSingleResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve an asset type",
+        "tags": [
+          "fortnox_AssetTypes"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update an asset",
+        "operationId": "AssetsController_doTypesPutWithId",
+        "parameters": [
+          {
+            "description": "id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Anl_UpdateAssetType_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update asset"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetTypesSingleResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update an asset type",
+        "tags": [
+          "fortnox_AssetTypes"
+        ],
+        "x-codegen-request-body-name": "updateAssetRequest",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets/writedown/{Id}": {
+      "put": {
+        "description": "The updated asset will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "AssetsController_doWritedown",
+        "parameters": [
+          {
+            "description": "Asset ID",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Anl_AdjustAssetValue_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update asset"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsActionResponse"
+                }
+              }
+            },
+            "description": "Successful update asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Write down an Asset",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-codegen-request-body-name": "asset",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets/writeup/{Id}": {
+      "put": {
+        "description": "The updated asset will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "AssetsController_doWriteup",
+        "parameters": [
+          {
+            "description": "Asset ID",
+            "in": "path",
+            "name": "Id",            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Anl_AdjustAssetValue_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update asset"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsActionResponse"
+                }
+              }
+            },
+            "description": "Successful update asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Write up an Asset",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-codegen-request-body-name": "asset",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/assets/{Id}": {
+      "delete": {
+        "description": "By specifying an {Id} in the URL a single &quot;Not active&quot; asset or asset with a type &quot;Not depreciable&quot; can be deleted. By specifying an {Id} in the URL a single &quot;Active&quot; or &quot;Fully depreciated&quot; assets can be voided and in this case in request body voiddate should be provided, otherwise it will use todays date.",
+        "operationId": "AssetsController_doDelete",
+        "parameters": [
+          {
+            "description": "Asset number",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Delete_Wrap"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful delete asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Delete or Void an Asset",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-codegen-request-body-name": "request",
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve an asset",
+        "operationId": "AssetsController_doShow",
+        "parameters": [
+          {
+            "description": "Asset number",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsSingleItemResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single asset",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "The updated asset will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "AssetsController_doUpdate",
+        "parameters": [
+          {
+            "description": "Asset ID",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Anl_AssetsSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update asset"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Anl_AssetsSingleItemResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update asset response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Asset not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update an Asset",
+        "tags": [
+          "fortnox_Assets"
+        ],
+        "x-codegen-request-body-name": "asset",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/attendancetransactions": {
+      "get": {
+        "description": "Supports query-string parameters <strong>employeeid</strong> and <strong>date</strong> for filtering the result.",
+        "operationId": "AttendanceTransactionsController_doIndex",
+        "parameters": [
+          {
+            "description": "filter by employee id",
+            "in": "query",
+            "name": "employeeid",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by date",
+            "in": "query",
+            "name": "date",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_AttendanceTransactionsListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list attendance transactions response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Attendance transactions not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Lists all attendance transactions",
+        "tags": [
+          "fortnox_AttendanceTransactions"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create an attendance transaction",
+        "operationId": "AttendanceTransactionsController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Lon_AttendanceTransactionsSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create attendance transaction"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_AttendanceTransactionsSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create attendance transaction response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Attendance transaction not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a new attendance transaction",
+        "tags": [
+          "fortnox_AttendanceTransactions"
+        ],
+        "x-codegen-request-body-name": "attendanceTransaction",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/attendancetransactions/{id}": {
+      "delete": {
+        "description": "Delete an attendance transaction",
+        "operationId": "AttendanceTransactionsController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the transaction",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful delete attendance transaction response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Attendance transaction not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Delete an attendance transaction",
+        "tags": [
+          "fortnox_AttendanceTransactions"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieves a specific transaction",
+        "operationId": "AttendanceTransactionsController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the transaction",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_AttendanceTransactionsSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show attendance transaction response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Attendance transaction not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a specific attendance transaction",
+        "tags": [
+          "fortnox_AttendanceTransactions"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update an attendance transaction",
+        "operationId": "AttendanceTransactionsController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the transaction",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Lon_AttendanceTransactionsSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update attendance transaction"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_AttendanceTransactionsSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update attendance transaction response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Attendance transaction not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a single attendance transaction",
+        "tags": [
+          "fortnox_AttendanceTransactions"
+        ],
+        "x-codegen-request-body-name": "attendanceTransaction",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/attendancetransactions/{id}/{Date}/{Code}": {
+      "get": {
+        "description": "Retrieves a list of attendance transaction for an employee on a specific date and cause code.",
+        "operationId": "AttendanceTransactionsController_doListByIdDateCauseCode",
+        "parameters": [
+          {
+            "description": "identifies the employee",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "date of the attendance",
+            "in": "path",
+            "name": "Date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "status code of the attendance transaction",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "enum": [
+                "ARB",
+                "BE2",
+                "BER",
+                "FLX",
+                "HLG",
+                "JO2",
+                "JOR",
+                "MER",
+                "OB1",
+                "OB2",
+                "OB3",
+                "OB4",
+                "OB5",
+                "OK0",
+                "OK1",
+                "OK2",
+                "OK3",
+                "OK4",
+                "OK5",
+                "OT1",
+                "OT2",
+                "OT3",
+                "OT4",
+                "OT5",
+                "RES",
+                "TID"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_AttendanceTransactionsListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list attendance transactions response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Attendance transactions not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve attendance transactions",
+        "tags": [
+          "fortnox_AttendanceTransactions"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/companyinformation": {
+      "get": {
+        "description": "Retrieve a company information",
+        "operationId": "CompanyInformationController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_CompanyInformationSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show company information response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve the Company Information",
+        "tags": [
+          "fortnox_CompanyInformation"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/contractaccruals": {
+      "get": {
+        "description": "The contract accruals register can return a list of records or a single record. By specifying a DocumentNumber in the URL, a single record will be returned. Not specifying a DocumentNumber will return a list of records.",
+        "operationId": "ContractAccrualController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list contract accruals response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of contract accruals",
+        "tags": [
+          "fortnox_ContractAccruals"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create a contract accrual",
+        "operationId": "ContractAccrualController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create contract accrual"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create contract accrual response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a contract accrual",
+        "tags": [
+          "fortnox_ContractAccruals"
+        ],
+        "x-codegen-request-body-name": "contractAccrual",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/contractaccruals/{DocumentNumber}": {
+      "delete": {
+        "description": "Delete a contract accrual",
+        "operationId": "ContractAccrualController_doDelete",
+        "parameters": [
+          {
+            "description": "Document number of contract accrual to delete",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete contract accrual response with no content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Contract accrual not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove a contract accrual",
+        "tags": [
+          "fortnox_ContractAccruals"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve a contract accrual",
+        "operationId": "ContractAccrualController_doShow",
+        "parameters": [
+          {
+            "description": "Document number of contract accrual to show",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show contract accrual response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Contract accrual not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single contract accrual",
+        "tags": [
+          "fortnox_ContractAccruals"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update a contract accrual",
+        "operationId": "ContractAccrualController_doUpdate",
+        "parameters": [
+          {
+            "description": "Document number of contract accrual to update",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update contract accrual"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update contract accrual response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Contract accrual not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a contract accrual",
+        "tags": [
+          "fortnox_ContractAccruals"
+        ],
+        "x-codegen-request-body-name": "contractAccrual",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/contracts": {
+      "get": {
+        "description": "Get contracts",
+        "operationId": "ContractController_doIndex",
+        "parameters": [
+          {
+            "description": "Filter contracts by start of contract period",
+            "in": "query",
+            "name": "periodstart",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter contracts by end of contract period",
+            "in": "query",
+            "name": "periodend",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter contracts by status",
+            "in": "query",
+            "name": "filter",
+            "schema": {
+              "enum": [
+                "active",
+                "inactive",
+                "finished"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter contracts by document number",
+            "in": "query",
+            "name": "documentnumber",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter contracts by customer number",
+            "in": "query",
+            "name": "customernumber",
+            "schema": {
+              "type": "string"
+            }
+          },          {
+            "description": "Filter contracts by template number",
+            "in": "query",
+            "name": "templatenumber",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter contracts by number of remaining invoices",
+            "in": "query",
+            "name": "invoicesremaining",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter contracts by last modified date",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractListResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful list contracts response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of contracts",
+        "tags": [
+          "fortnox_Contracts"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create a contract",
+        "operationId": "ContractController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractCreatePayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create contract"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful create contract response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a contract",
+        "tags": [
+          "fortnox_Contracts"
+        ],
+        "x-codegen-request-body-name": "contract",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/contracts/{DocumentNumber}": {
+      "get": {
+        "description": "Retrieve a contract",
+        "operationId": "ContractController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the contract",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show contract response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Contract not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single contract",
+        "tags": [
+          "fortnox_Contracts"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Note that there are two approaches for updating the rows on a contract.\n\n If RowId is not specified on any row, the rows will be mapped and updated in the order in which they are set in the array. All rows that should remain on the contract needs to be provided.\n\n If RowId is specified on one or more rows the following goes: Corresponding row with that id will be updated. The rows without RowId will be interpreted as new rows. If a row should not be updated but remain on the contract then specify only RowId like { \"RowId\": 123 }, otherwise it will be removed. Note that new RowIds are generated for all rows every time a contract is updated.\n\n When the InvoiceDiscount value is set on the rows and the Contract, the value set on the Contract takes precedence over the row-level InvoiceDiscount.",
+        "operationId": "ContractController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the contract",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractUpdatePayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update contract"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update contract response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Contract not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a contract",
+        "tags": [
+          "fortnox_Contracts"
+        ],
+        "x-codegen-request-body-name": "contract",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/contracts/{DocumentNumber}/createinvoice": {
+      "put": {
+        "description": "Update a contract",
+        "operationId": "ContractController_doUpdateAndCreateInvoice",
+        "parameters": [
+          {
+            "description": "identifies the contract",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Date of invoicing",
+            "in": "query",
+            "name": "invoicedate",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractUpdateAndCreateInvoicePayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update contract"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update contract response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Contract not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create invoice from contract",
+        "tags": [
+          "fortnox_Contracts"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/contracts/{DocumentNumber}/finish": {
+      "put": {
+        "description": "Update a contract",
+        "operationId": "ContractController_doUpdateAndFinish",
+        "parameters": [
+          {
+            "description": "identifies the contract",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractUpdateAndFinishPayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update contract"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update contract response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Contract not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Set a contract as finished",
+        "tags": [
+          "fortnox_Contracts"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/contracts/{DocumentNumber}/increaseinvoicecount": {
+      "put": {
+        "description": "Update a contract",
+        "operationId": "ContractController_doUpdateAndIncreaseInvoiceCount",
+        "parameters": [
+          {
+            "description": "identifies the contract",
+            "in": "path",
+            "name": "DocumentNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractUpdateAndIncreaseInvoiceCountPayload_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update contract"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update contract response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Contract not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Increases the invoice count without creating an invoice",
+        "tags": [
+          "fortnox_Contracts"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/contracttemplates": {
+      "get": {
+        "description": "The contract template resource can return a list of records or a single record. By specifying a TemplateNumber in the URL, a single record will be returned. Not specifying a TemplateNumber will return a list of records.",
+        "operationId": "ContractTemplateController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractTemplateListResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful list contract templates response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of contract templates",
+        "tags": [
+          "fortnox_ContractTemplates"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create a contract template",
+        "operationId": "ContractTemplateController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractTemplateSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create contract template"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractTemplateResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful create contract template response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a contract template",
+        "tags": [
+          "fortnox_ContractTemplates"
+        ],
+        "x-codegen-request-body-name": "contractTemplate",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/contracttemplates/{TemplateNumber}": {
+      "get": {
+        "description": "Retrieve a contract template",
+        "operationId": "ContractTemplateController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the contract template",
+            "in": "path",
+            "name": "TemplateNumber",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractTemplateResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful show contract template response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Contract template not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single contract template",
+        "tags": [
+          "fortnox_ContractTemplates"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update a contract template",
+        "operationId": "ContractTemplateController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the contract template",
+            "in": "path",
+            "name": "TemplateNumber",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractTemplateSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update contract template"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractTemplateResponse_Wrap"
+                }
+              }
+            },
+            "description": "Successful update contract template response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Contract template not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a contract template",
+        "tags": [
+          "fortnox_ContractTemplates"
+        ],
+        "x-codegen-request-body-name": "contractTemplate",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/costcenters": {
+      "get": {
+        "description": "The cost centers register can return a list of records or a single record. By specifying a Code in the URL, a single record will be returned. Not specifying a Code will return a list of records.",
+        "operationId": "CostCenterController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_CostCenterListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list cost centers response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of cost centers",
+        "tags": [
+          "fortnox_CostCenters"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create a cost center",
+        "operationId": "CostCenterController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_CostCenterSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create cost center"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_CostCenterSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create cost center response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a cost center",
+        "tags": [
+          "fortnox_CostCenters"
+        ],
+        "x-codegen-request-body-name": "costCenter",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/costcenters/{Code}": {
+      "delete": {
+        "description": "Delete a cost center",
+        "operationId": "CostCenterController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the cost center to remove",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete cost center response with no content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Cost center not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove a cost center",
+        "tags": [
+          "fortnox_CostCenters"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve a cost center",
+        "operationId": "CostCenterController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the cost center",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_CostCenterSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show cost center response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Cost center not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single cost center",
+        "tags": [
+          "fortnox_CostCenters"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update a cost center",
+        "operationId": "CostCenterController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the cost center",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_CostCenterSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update cost center"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_CostCenterSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update cost center response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Cost center not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a cost center",
+        "tags": [
+          "fortnox_CostCenters"
+        ],
+        "x-codegen-request-body-name": "costCenter",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/currencies": {
+      "get": {
+        "description": "The currency register can return a list of records or a single record. By specifying a Code in the URL, a single record will be returned. Not specifying a Code will return a list of records.",
+        "operationId": "CurrencyController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_CurrencyListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list currencies response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of currencies",
+        "tags": [
+          "fortnox_Currencies"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create a currency",
+        "operationId": "CurrencyController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_CurrencySinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create currency"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_CurrencySingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create currency response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a currency",
+        "tags": [
+          "fortnox_Currencies"
+        ],
+        "x-codegen-request-body-name": "currency",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/currencies/{Code}": {
+      "delete": {
+        "description": "Delete a currency",
+        "operationId": "CurrencyController_doDelete",
+        "parameters": [
+          {
+            "description": "Code of currency to delete",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete currency response with no content"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Currency not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Remove a currency",
+        "tags": [
+          "fortnox_Currencies"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieve a currency",
+        "operationId": "CurrencyController_doShow",
+        "parameters": [
+          {
+            "description": "Code of currency to show",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_CurrencySingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show currency response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Currency not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a single currency",
+        "tags": [
+          "fortnox_Currencies"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update a currency",
+        "operationId": "CurrencyController_doUpdate",
+        "parameters": [
+          {
+            "description": "Code of currency to update",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_CurrencySinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update currency"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_CurrencySingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update currency response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Currency not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a currency",
+        "tags": [
+          "fortnox_Currencies"
+        ],
+        "x-codegen-request-body-name": "currency",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/customerreferences": {
+      "get": {
+        "description": "</p>",
+        "operationId": "CustomerReferenceController_doIndex",
+        "parameters": [
+          {
+            "description": "possibility to filter by customer number",
+            "in": "query",
+            "name": "customer",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_CustomerReferenceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show customer reference response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of customers reference rows",
+        "tags": [
+          "fortnox_CustomerReferences"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "</p>\n <p>The created customer reference row will be returned if everything succeeded, if there were any problems an error will be returned.</p>",
+        "operationId": "CustomerReferenceController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_CustomerReferenceRowRow_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create customer reference"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_CustomerReferenceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create customer reference response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a customer reference row",
+        "tags": [
+          "fortnox_CustomerReferences"
+        ],
+        "x-codegen-request-body-name": "customerReferenceRow",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/customerreferences/{CustomerReferenceRowId}": {
+      "delete": {
+        "description": "</p>\n <p>Deletes the customer reference row permanently. If everything succeeded the response will be of the type 204, No content and the response body will be empty.</p>\n <p>If there were any problems an error will be returned.</p>\n <p>You need to supply the unique customer reference row id of the customer reference row that you want to delete.</p>",
+        "operationId": "CustomerReferenceController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the customer reference row",
+            "in": "path",
+            "name": "CustomerReferenceRowId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete customer reference response with no content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Delete a customer reference row",
+        "tags": [
+          "fortnox_CustomerReferences"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "</p>\n <p>You need to supply the unique customer reference row id that was returned when the customer reference row was created or retrieved from the list of customer reference rows.</p>",
+        "operationId": "CustomerReferenceController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the customer reference row",
+            "in": "path",
+            "name": "CustomerReferenceRowId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_CustomerReferenceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show customer reference response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a customer reference row",
+        "tags": [
+          "fortnox_CustomerReferences"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "</p>\n <p>The updated customer reference row will be returned if everything succeeded, if there were any problems an error will be returned.</p>\n <p>You need to supply the unique customer reference row id of the customer reference row that you want to update.</p>\n <p>Only the properties provided in the request body will be updated, properties not provided will be left unchanged.</p>\n <p>CustomerNumber cannot be changed by this request.</p>",
+        "operationId": "CustomerReferenceController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the customer reference row",
+            "in": "path",
+            "name": "CustomerReferenceRowId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_CustomerReferenceRowRow_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update customer reference"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_CustomerReferenceSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update customer reference response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a customer reference row",
+        "tags": [
+          "fortnox_CustomerReferences"
+        ],
+        "x-codegen-request-body-name": "customerReferenceRow",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/customers": {
+      "get": {
+        "description": "The customers are returned sorted by customer number with the lowest number appearing first.",
+        "operationId": "CustomerController_doIndex",
+        "parameters": [
+          {
+            "description": "possibility to filter customers",
+            "in": "query",
+            "name": "filter",
+            "schema": {
+              "enum": [
+                "active",
+                "inactive"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "field to sort returned list",
+            "in": "query",
+            "name": "sortby",
+            "schema": {
+              "enum": [
+                "customernumber",
+                "name"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by customer number",
+            "in": "query",
+            "name": "customernumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by name",
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by zip code",
+            "in": "query",
+            "name": "zipcode",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by city",
+            "in": "query",
+            "name": "city",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by email",
+            "in": "query",
+            "name": "email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by phone",
+            "in": "query",
+            "name": "phone",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by organisation number",
+            "in": "query",
+            "name": "organisationnumber",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by gln",
+            "in": "query",
+            "name": "gln",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by gln delivery",
+            "in": "query",
+            "name": "glndelivery",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by last modified",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_CustomerListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list customers response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of customers",
+        "tags": [
+          "fortnox_Customers"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "The created customer will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "CustomerController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_CustomerSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create customer"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_CustomerSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create customer response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a customer",
+        "tags": [
+          "fortnox_Customers"
+        ],
+        "x-codegen-request-body-name": "customer",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/customers/{CustomerNumber}": {
+      "delete": {
+        "description": "Deletes the customer permanently. If everything succeeded the response will be of the type 204 \\u2013 No content and the response body will be empty. If there were any problems an error will be returned.\n You need to supply the unique customer number of the customer that you want to delete.",
+        "operationId": "CustomerController_doDelete",
+        "parameters": [
+          {
+            "description": "Customer number of customer to delete",
+            "in": "path",
+            "name": "CustomerNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete customer response with no content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Customer not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Delete a customer",
+        "tags": [
+          "fortnox_Customers"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "You need to supply the unique customer number that was returned when the customer was created or retrieved from the list of customers.",
+        "operationId": "CustomerController_doShow",
+        "parameters": [
+          {
+            "description": "Customer number of customer to show",
+            "in": "path",
+            "name": "CustomerNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_CustomerSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show customer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Customer not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a customer",
+        "tags": [
+          "fortnox_Customers"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "<p>The updated customer will be returned if everything succeeded, if there were any problems an error will be returned.</p>\n <p>You need to supply the unique customer number of the customer that you want to update.</p>\n <p>Only the properties provided in the request body will be updated, properties not provided will be left unchanged.</p>",
+        "operationId": "CustomerController_doUpdate",
+        "parameters": [
+          {
+            "description": "Customer number of customer to update",
+            "in": "path",
+            "name": "CustomerNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Kf_CustomerSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update customer"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Kf_CustomerSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update customer response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Customer not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a customer",
+        "tags": [
+          "fortnox_Customers"
+        ],
+        "x-codegen-request-body-name": "customer",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/emailsenders": {
+      "get": {
+        "description": "Get email senders",
+        "operationId": "EmailSenderController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_EmailSenders_Wrap"
+                }
+              }
+            },
+            "description": "Successful list email senders response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of all trusted and rejected senders",
+        "tags": [
+          "fortnox_TrustedEmailSenders"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/emailsenders/trusted": {
+      "post": {
+        "description": "Update an email sender",
+        "operationId": "EmailSenderController_doTrustedPostDefault",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Da_EmailSender_Trusted_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update email sender"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Da_EmailSender_Trusted_Wrap"
+                }
+              }
+            },
+            "description": "Successful update email sender response"
+          },
+          "204": {
+            "description": "Successful update email sender response with no content"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Add a new email address as trusted",
+        "tags": [
+          "fortnox_TrustedEmailSenders"
+        ],
+        "x-codegen-request-body-name": "trustedEmailSender",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/emailsenders/trusted/{Id}": {
+      "delete": {
+        "description": "Provide an id matching an email to delete.",
+        "operationId": "EmailSenderController_doTrustedDeleteWithId",
+        "parameters": [
+          {
+            "description": "identifies the trusted email sender to delete",
+            "in": "path",
+            "name": "Id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful delete email sender response"
+          },
+          "204": {
+            "description": "Successful delete email sender response with no content"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Forbidden request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Delete an email address from the trusted senders list",
+        "tags": [
+          "fortnox_TrustedEmailSenders"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/employees": {
+      "get": {
+        "description": "ScheduleId, MonthlySalary and HourlyPay reflect current values, all\n ScheduleIds are returned in DatedSchedules and all MonthlySalary and\n HourlyPay pairs are returned in DatedWages.",
+        "operationId": "EmployeeController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_EmployeeListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list employees response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a list of employees",
+        "tags": [
+          "fortnox_Employees"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "EmployeeId is optional. If not supplied the program will generate a unique id.\n \n VacationDaysSaved and all registered and pending vacationdays are read only.\n \n Only one of DatedSchedules and ScheduleId may be supplied. If DatedSchedules are supplied\n it must have one and only one record where FirstDay = '1970-01-01'.\n All FirstDay values must greater or equal to '1970-01-01' and unique.\n\n If DatedWages is supplied neither MonthlySalary nor HourlyPay may be supplied. If\n MonthlySalary or HourlyPay are supplied, DatedWages may not be supplied.\n If DatedWages are supplied it must have one and only one record where FirstDay = '1970-01-01'.\n All FirstDay values must greater or equal to '1970-01-01' and unique.",
+        "operationId": "EmployeeController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Lon_EmployeeSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create employee"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_EmployeeSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create employee response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a new employee",
+        "tags": [
+          "fortnox_Employees"
+        ],
+        "x-codegen-request-body-name": "employee",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/employees/{EmployeeId}": {
+      "get": {
+        "description": "ScheduleId, MonthlySalary and HourlyPay reflect current values, all\n ScheduleIds are returned in DatedSchedules and all MonthlySalary and\n HourlyPay pairs are returned in DatedWages.",
+        "operationId": "EmployeeController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the employee",
+            "in": "path",
+            "name": "EmployeeId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_EmployeeSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show employee response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Employee not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a specific employee",
+        "tags": [
+          "fortnox_Employees"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Only one of DatedSchedules and ScheduleId may be supplied. If DatedSchedules are supplied\n it must have one and only one record where FirstDay = '1970-01-01'.\n All FirstDay values must greater or equal to '1970-01-01' and unique.\n \n VacationDaysSaved and all registered and pending vacationdays are read only.\n\n If DatedWages is supplied neither MonthlySalary nor HourlyPay may be supplied. If\n MonthlySalary or HourlyPay are supplied, DatedWages may not be supplied.\n If DatedWages are supplied it must have one and only one record where FirstDay = '1970-01-01'.\n All FirstDay values must greater or equal to '1970-01-01' and unique.",
+        "operationId": "EmployeeController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the employee",

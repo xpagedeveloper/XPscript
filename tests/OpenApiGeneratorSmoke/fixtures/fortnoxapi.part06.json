@@ -1,0 +1,4996 @@
+          "RoundOff": {
+            "format": "double",
+            "type": "number"
+          },
+          "Sent": {
+            "type": "boolean"
+          },
+          "StockPointCode": {
+            "type": "string"
+          },
+          "StockPointId": {
+            "type": "string"
+          },
+          "TaxReduction": {
+            "format": "double",
+            "type": "number"
+          },
+          "TaxReductionType": {
+            "enum": [
+              "none",
+              "rot",
+              "rut",
+              "green"
+            ],
+            "type": "string"
+          },
+          "TermsOfDelivery": {
+            "type": "string"
+          },
+          "TermsOfPayment": {
+            "type": "string"
+          },
+          "TimeBasisReference": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Total": {
+            "format": "double",
+            "type": "number"
+          },
+          "TotalToPay": {
+            "format": "double",
+            "type": "number"
+          },
+          "TotalVAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "VATIncluded": {
+            "type": "boolean"
+          },
+          "WarehouseReady": {
+            "type": "boolean"
+          },
+          "WayOfDelivery": {
+            "type": "string"
+          },
+          "YourOrderNumber": {
+            "maxLength": 75,
+            "type": "string"
+          },
+          "YourReference": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "ZipCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "CustomerNumber"
+        ],
+        "type": "object"
+      },
+      "fortnox_Order_OrderV2SinglePayloadItem": {
+        "properties": {
+          "Address1": {
+            "type": "string"
+          },
+          "Address2": {
+            "type": "string"
+          },
+          "AdministrationFee": {
+            "format": "double",
+            "type": "number"
+          },
+          "City": {
+            "type": "string"
+          },
+          "Comments": {
+            "type": "string"
+          },
+          "CopyRemarks": {
+            "type": "boolean"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Country": {
+            "type": "string"
+          },
+          "Currency": {
+            "maxLength": 3,
+            "type": "string"
+          },
+          "CurrencyRate": {
+            "format": "double",
+            "type": "number"
+          },
+          "CurrencyUnit": {
+            "format": "double",
+            "type": "number"
+          },
+          "CustomerName": {
+            "type": "string"
+          },
+          "CustomerNumber": {
+            "type": "string"
+          },
+          "DeliveryAddress1": {
+            "type": "string"
+          },
+          "DeliveryAddress2": {
+            "type": "string"
+          },
+          "DeliveryCity": {
+            "type": "string"
+          },
+          "DeliveryCountry": {
+            "type": "string"
+          },
+          "DeliveryDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "DeliveryName": {
+            "type": "string"
+          },
+          "DeliveryState": {
+            "enum": [
+              "registration",
+              "reservation",
+              "delivery"
+            ],
+            "type": "string"
+          },
+          "DeliveryZipCode": {
+            "type": "string"
+          },
+          "DocumentNumber": {
+            "type": "string"
+          },
+          "EmailInformation": {
+            "$ref": "#/components/schemas/fortnox_DocumentEmailFieldSinglePayloadItem"
+          },
+          "ExternalInvoiceReference1": {
+            "type": "string"
+          },
+          "ExternalInvoiceReference2": {
+            "type": "string"
+          },
+          "Freight": {
+            "format": "double",
+            "type": "number"
+          },
+          "Labels": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_OOF_DocumentTagsOnDocumentSinglePayloadItem"
+            },
+            "type": "array"
+          },
+          "Language": {
+            "type": "string"
+          },
+          "NotCompleted": {
+            "type": "boolean"
+          },
+          "OrderDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "OrderRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Order_OrderRowV2SinglePayloadItem"
+            },
+            "type": "array"
+          },
+          "OrganisationNumber": {
+            "type": "string"
+          },
+          "OurReference": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "OutboundDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "Phone1": {
+            "type": "string"
+          },
+          "Phone2": {
+            "type": "string"
+          },
+          "PriceList": {
+            "type": "string"
+          },
+          "PrintTemplate": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "Remarks": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "StockPointCode": {
+            "type": "string"
+          },
+          "StockPointId": {
+            "type": "string"
+          },
+          "TaxReductionType": {
+            "enum": [
+              "none",
+              "rot",
+              "rut",
+              "green"
+            ],
+            "type": "string"
+          },
+          "TermsOfDelivery": {
+            "type": "string"
+          },
+          "TermsOfPayment": {
+            "type": "string"
+          },
+          "VATIncluded": {
+            "type": "boolean"
+          },
+          "WayOfDelivery": {
+            "type": "string"
+          },
+          "YourOrderNumber": {
+            "maxLength": 75,
+            "type": "string"
+          },
+          "YourReference": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "ZipCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "CustomerNumber"
+        ],
+        "type": "object"
+      },
+      "fortnox_Order_OrderV2SinglePayloadItem_Wrap": {
+        "properties": {
+          "Order": {
+            "$ref": "#/components/schemas/fortnox_Order_OrderV2SinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_PaymentWriteOffSingleItem": {
+        "properties": {
+          "AccountNumber": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Amount": {
+            "format": "double",
+            "type": "number"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Currency": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "TransactionInformation": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_PaymentWriteOffSinglePayloadItem": {
+        "properties": {
+          "AccountNumber": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Amount": {
+            "format": "double",
+            "type": "number"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Currency": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "TransactionInformation": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_PreDefinedAccountListItem_Wrap": {
+        "properties": {
+          "PreDefinedAccounts": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_PreDefinedAccountSingleItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_PreDefinedAccountSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Account": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Account"
+        ],
+        "type": "object"
+      },
+      "fortnox_PreDefinedAccountSingleItem_Wrap": {
+        "properties": {
+          "PreDefinedAccount": {
+            "$ref": "#/components/schemas/fortnox_PreDefinedAccountSingleItem"
+          }
+        },
+        "required": [
+          "PreDefinedAccount"
+        ],
+        "type": "object"
+      },
+      "fortnox_PreDefinedAccountSinglePayloadItem": {
+        "properties": {
+          "Account": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Account"
+        ],
+        "type": "object"
+      },
+      "fortnox_PreDefinedAccountSinglePayloadItem_Wrap": {
+        "properties": {
+          "PreDefinedAccount": {
+            "$ref": "#/components/schemas/fortnox_PreDefinedAccountSinglePayloadItem"
+          }
+        },
+        "required": [
+          "PreDefinedAccount"
+        ],
+        "type": "object"
+      },
+      "fortnox_PriceListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "ArticleNumber": {
+            "type": "string"
+          },
+          "Date": {
+            "type": "string"
+          },
+          "FromQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "Percent": {
+            "format": "float",
+            "type": "number"
+          },
+          "Price": {
+            "format": "double",
+            "type": "number"
+          },
+          "PriceList": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ArticleNumber",
+          "PriceList"
+        ],
+        "type": "object"
+      },
+      "fortnox_PriceListItem_Wrap": {
+        "properties": {
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          },
+          "Prices": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_PriceListItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_PriceListListItem_Wrap": {
+        "properties": {
+          "PriceLists": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_PriceListSingleItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_PriceListSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Code": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Comments": {
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "PreSelected": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "Code",
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_PriceListSingleItem_Wrap": {
+        "properties": {
+          "PriceList": {
+            "$ref": "#/components/schemas/fortnox_PriceListSingleItem"
+          }
+        },
+        "required": [
+          "PriceList"
+        ],
+        "type": "object"
+      },
+      "fortnox_PriceListSinglePayloadItem": {
+        "properties": {
+          "Code": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Comments": {
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "PreSelected": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "Code",
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_PriceListSinglePayloadItem_Wrap": {
+        "properties": {
+          "PriceList": {
+            "$ref": "#/components/schemas/fortnox_PriceListSinglePayloadItem"
+          }
+        },
+        "required": [
+          "PriceList"
+        ],
+        "type": "object"
+      },
+      "fortnox_PriceSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "ArticleNumber": {
+            "type": "string"
+          },
+          "Date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "FromQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "Percent": {
+            "format": "double",
+            "type": "number"
+          },
+          "Price": {
+            "format": "double",
+            "type": "number"
+          },
+          "PriceList": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ArticleNumber",
+          "PriceList"
+        ],
+        "type": "object"
+      },
+      "fortnox_PriceSingleItem_Wrap": {
+        "properties": {
+          "Price": {
+            "$ref": "#/components/schemas/fortnox_PriceSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_PriceSinglePayloadItem": {
+        "properties": {
+          "ArticleNumber": {
+            "type": "string"
+          },
+          "Date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "FromQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "Percent": {
+            "format": "double",
+            "type": "number"
+          },
+          "Price": {
+            "format": "double",
+            "type": "number"
+          },
+          "PriceList": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ArticleNumber",
+          "PriceList"
+        ],
+        "type": "object"
+      },
+      "fortnox_PriceSinglePayloadItem_Wrap": {
+        "properties": {
+          "Price": {
+            "$ref": "#/components/schemas/fortnox_PriceSinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_PrintTemplateListItem_Wrap": {
+        "properties": {
+          "PrintTemplates": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_PrintTemplateSingleItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_PrintTemplateSingleItem": {
+        "properties": {
+          "Name": {
+            "maxLength": 25,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Template": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Template"
+        ],
+        "type": "object"
+      },
+      "fortnox_Project_ProjectListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Comments": {
+            "type": "string"
+          },
+          "ContactPerson": {
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "EndDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "ProjectLeader": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "ProjectNumber": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "StartDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "Status": {
+            "enum": [
+              "NOTSTARTED",
+              "ONGOING",
+              "COMPLETED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_Project_ProjectListItem_Wrap": {
+        "properties": {
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          },
+          "Projects": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Project_ProjectListItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Project_ProjectSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Comments": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "ContactPerson": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "EndDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "ProjectLeader": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "ProjectNumber": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "StartDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "Status": {
+            "enum": [
+              "NOTSTARTED",
+              "ONGOING",
+              "COMPLETED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_Project_ProjectSingleItem_Wrap": {
+        "properties": {
+          "Project": {
+            "$ref": "#/components/schemas/fortnox_Project_ProjectSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Project_ProjectSinglePayloadItem": {
+        "properties": {
+          "Comments": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "ContactPerson": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "EndDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "ProjectLeader": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "ProjectNumber": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "StartDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "Status": {
+            "enum": [
+              "NOTSTARTED",
+              "ONGOING",
+              "COMPLETED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_Project_ProjectSinglePayloadItem_Wrap": {
+        "properties": {
+          "Project": {
+            "$ref": "#/components/schemas/fortnox_Project_ProjectSinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_SinvoiceExternalUrlConnectionSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "ExternalURLConnection": {
+            "type": "string"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "SupplierInvoiceNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Url": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_SinvoiceExternalUrlConnectionSingleItem_Wrap": {
+        "properties": {
+          "SupplierInvoiceExternalURLConnection": {
+            "$ref": "#/components/schemas/fortnox_SinvoiceExternalUrlConnectionSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_SinvoiceExternalUrlConnectionSinglePayloadItem": {
+        "properties": {
+          "ExternalURLConnection": {
+            "type": "string"
+          },
+          "SupplierInvoiceNumber": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_TaxReductionAmountSingleItem": {
+        "properties": {
+          "AskedAmount": {
+            "format": "double",
+            "minimum": 1,
+            "type": "number"
+          },
+          "WorkType": {
+            "enum": [
+              "SOLARCELLS",
+              "STORAGESELFPRODUCEDELECTRICITY",
+              "CHARGINGSTATIONELECTRICVEHICLE"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "AskedAmount",
+          "WorkType"
+        ],
+        "type": "object"
+      },
+      "fortnox_TaxReductionAmountSinglePayloadItem": {
+        "properties": {
+          "AskedAmount": {
+            "format": "double",
+            "minimum": 1,
+            "type": "number"
+          },
+          "WorkType": {
+            "enum": [
+              "SOLARCELLS",
+              "STORAGESELFPRODUCEDELECTRICITY",
+              "CHARGINGSTATIONELECTRICVEHICLE"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "AskedAmount",
+          "WorkType"
+        ],
+        "type": "object"
+      },
+      "fortnox_TaxReductionCreatePayload": {
+        "properties": {
+          "ApprovedAmount": {
+            "format": "double",
+            "type": "number"
+          },
+          "AskedAmount": {
+            "format": "double",
+            "minimum": 1,
+            "type": "number"
+          },
+          "BilledAmount": {
+            "format": "double",
+            "type": "number"
+          },
+          "CustomerName": {
+            "maxLength": 2147483647,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "PropertyDesignation": {
+            "type": "string"
+          },
+          "ReferenceDocumentType": {
+            "enum": [
+              "OFFER",
+              "ORDER",
+              "INVOICE"
+            ],
+            "type": "string"
+          },
+          "ReferenceNumber": {
+            "type": "string"
+          },
+          "RequestSent": {
+            "type": "boolean"
+          },
+          "ResidenceAssociationOrganisationNumber": {
+            "type": "string"
+          },
+          "SocialSecurityNumber": {
+            "maxLength": 13,
+            "minLength": 10,
+            "type": "string"
+          },
+          "TaxReductionAmounts": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_TaxReductionAmountSinglePayloadItem"
+            },
+            "type": "array"
+          },
+          "VoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VoucherSeries": {
+            "type": "string"
+          },
+          "VoucherYear": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "AskedAmount",
+          "CustomerName",
+          "ReferenceDocumentType",
+          "ReferenceNumber",
+          "SocialSecurityNumber"
+        ],
+        "type": "object"
+      },
+      "fortnox_TaxReductionCreatePayload_Wrap": {
+        "properties": {
+          "TaxReduction": {
+            "$ref": "#/components/schemas/fortnox_TaxReductionCreatePayload"
+          }
+        },
+        "required": [
+          "TaxReduction"
+        ],
+        "type": "object"
+      },
+      "fortnox_TaxReductionListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "ApprovedAmount": {
+            "format": "double",
+            "type": "number"
+          },
+          "AskedAmount": {
+            "format": "float",
+            "type": "number"
+          },
+          "BilledAmount": {            "format": "float",
+            "type": "number"
+          },
+          "CustomerName": {
+            "maxLength": 2147483647,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "PropertyDesignation": {
+            "type": "string"
+          },
+          "ReferenceDocumentType": {
+            "enum": [
+              "OFFER",
+              "ORDER",
+              "INVOICE"
+            ],
+            "type": "string"
+          },
+          "ReferenceNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "RequestSent": {
+            "format": "date",
+            "type": "string"
+          },
+          "ResidenceAssociationOrganisationNumber": {
+            "type": "string"
+          },
+          "SocialSecurityNumber": {
+            "maxLength": 13,
+            "minLength": 10,
+            "type": "string"
+          },
+          "TaxReductionAmounts": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_TaxReductionAmountSingleItem"
+            },
+            "type": "array"
+          },
+          "TypeOfReduction": {
+            "type": "string"
+          },
+          "VoucherNumber": {
+            "type": "string"
+          },
+          "VoucherSeries": {
+            "type": "string"
+          },
+          "VoucherYear": {
+            "type": "string"
+          },
+          "WorkType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "CustomerName",
+          "ReferenceDocumentType",
+          "ReferenceNumber",
+          "SocialSecurityNumber"
+        ],
+        "type": "object"
+      },
+      "fortnox_TaxReductionListItem_Wrap": {
+        "properties": {
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          },
+          "TaxReductions": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_TaxReductionListItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_TaxReductionSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "ApprovedAmount": {
+            "format": "double",
+            "type": "number"
+          },
+          "AskedAmount": {
+            "format": "double",
+            "minimum": 1,
+            "type": "number"
+          },
+          "BilledAmount": {
+            "format": "double",
+            "type": "number"
+          },
+          "CustomerName": {
+            "maxLength": 2147483647,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "PropertyDesignation": {
+            "type": "string"
+          },
+          "ReferenceDocumentType": {
+            "enum": [
+              "OFFER",
+              "ORDER",
+              "INVOICE"
+            ],
+            "type": "string"
+          },
+          "ReferenceNumber": {
+            "type": "string"
+          },
+          "RequestSent": {
+            "type": "boolean"
+          },
+          "ResidenceAssociationOrganisationNumber": {
+            "type": "string"
+          },
+          "SocialSecurityNumber": {
+            "maxLength": 13,
+            "minLength": 10,
+            "type": "string"
+          },
+          "TaxReductionAmounts": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_TaxReductionAmountSingleItem"
+            },
+            "type": "array"
+          },
+          "TypeOfReduction": {
+            "type": "string"
+          },
+          "VoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VoucherSeries": {
+            "type": "string"
+          },
+          "VoucherYear": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "WorkType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "AskedAmount",
+          "CustomerName",
+          "ReferenceDocumentType",
+          "ReferenceNumber",
+          "SocialSecurityNumber"
+        ],
+        "type": "object"
+      },
+      "fortnox_TaxReductionSingleItem_Wrap": {
+        "properties": {
+          "TaxReduction": {
+            "$ref": "#/components/schemas/fortnox_TaxReductionSingleItem"
+          }
+        },
+        "required": [
+          "TaxReduction"
+        ],
+        "type": "object"
+      },
+      "fortnox_TaxReductionUpdatePayload": {
+        "properties": {
+          "ApprovedAmount": {
+            "format": "double",
+            "type": "number"
+          },
+          "AskedAmount": {
+            "format": "double",
+            "minimum": 1,
+            "type": "number"
+          },
+          "BilledAmount": {
+            "format": "double",
+            "type": "number"
+          },
+          "CustomerName": {
+            "maxLength": 2147483647,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "PropertyDesignation": {
+            "type": "string"
+          },
+          "ReferenceDocumentType": {
+            "enum": [
+              "OFFER",
+              "ORDER",
+              "INVOICE"
+            ],
+            "type": "string"
+          },
+          "ReferenceNumber": {
+            "type": "string"
+          },
+          "RequestSent": {
+            "type": "boolean"
+          },
+          "ResidenceAssociationOrganisationNumber": {
+            "type": "string"
+          },
+          "SocialSecurityNumber": {
+            "maxLength": 13,
+            "minLength": 10,
+            "type": "string"
+          },
+          "TaxReductionAmounts": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_TaxReductionAmountSinglePayloadItem"
+            },
+            "type": "array"
+          },
+          "VoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VoucherSeries": {
+            "type": "string"
+          },
+          "VoucherYear": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "AskedAmount",
+          "CustomerName",
+          "ReferenceDocumentType",
+          "ReferenceNumber",
+          "SocialSecurityNumber"
+        ],
+        "type": "object"
+      },
+      "fortnox_TaxReductionUpdatePayload_Wrap": {
+        "properties": {
+          "TaxReduction": {
+            "$ref": "#/components/schemas/fortnox_TaxReductionUpdatePayload"
+          }
+        },
+        "required": [
+          "TaxReduction"
+        ],
+        "type": "object"
+      },
+      "fortnox_TermsOfPaymentListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Code": {
+            "maxLength": 25,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Code",
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_TermsOfPaymentListItem_Wrap": {
+        "properties": {
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          },
+          "TermsOfPayments": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_TermsOfPaymentListItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_TermsOfPaymentSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Code": {
+            "maxLength": 25,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Code",
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_TermsOfPaymentSingleItem_Wrap": {
+        "properties": {
+          "TermsOfPayment": {
+            "$ref": "#/components/schemas/fortnox_TermsOfPaymentSingleItem"
+          }
+        },
+        "required": [
+          "TermsOfPayment"
+        ],
+        "type": "object"
+      },
+      "fortnox_TermsOfPaymentSinglePayloadItem": {
+        "properties": {
+          "Code": {
+            "maxLength": 25,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Code",
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_TermsOfPaymentSinglePayloadItem_Wrap": {
+        "properties": {
+          "TermsOfPayment": {
+            "$ref": "#/components/schemas/fortnox_TermsOfPaymentSinglePayloadItem"
+          }
+        },
+        "required": [
+          "TermsOfPayment"
+        ],
+        "type": "object"
+      },
+      "fortnox_UnitListItem_Wrap": {
+        "properties": {
+          "Units": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_UnitSingleItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_UnitSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Code": {
+            "maxLength": 20,
+            "minLength": 1,
+            "type": "string"
+          },
+          "CodeEnglish": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "Code",
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_UnitSingleItem_Wrap": {
+        "properties": {
+          "Unit": {
+            "$ref": "#/components/schemas/fortnox_UnitSingleItem"
+          }
+        },
+        "required": [
+          "Unit"
+        ],
+        "type": "object"
+      },
+      "fortnox_UnitSinglePayloadItem": {
+        "properties": {
+          "Code": {
+            "maxLength": 20,
+            "minLength": 1,
+            "type": "string"
+          },
+          "CodeEnglish": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "Code",
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_UnitSinglePayloadItem_Wrap": {
+        "properties": {
+          "Unit": {
+            "$ref": "#/components/schemas/fortnox_UnitSinglePayloadItem"
+          }
+        },
+        "required": [
+          "Unit"
+        ],
+        "type": "object"
+      },
+      "fortnox_VacationDebtBasis_VacationDebtBasis_EmployeeSingleItem": {
+        "properties": {
+          "DaysEarned": {
+            "format": "double",
+            "type": "number"
+          },
+          "DaysSaved": {
+            "format": "double",
+            "type": "number"
+          },
+          "DaysUnused": {
+            "format": "double",
+            "type": "number"
+          },
+          "DebtAdvance": {
+            "format": "double",
+            "type": "number"
+          },
+          "DebtEarned": {
+            "format": "double",
+            "type": "number"
+          },
+          "DebtSaved": {
+            "format": "double",
+            "type": "number"
+          },
+          "DebtUnused": {
+            "format": "double",
+            "type": "number"
+          },
+          "EmployeeId": {
+            "maxLength": 15,
+            "minLength": 1,
+            "type": "string"
+          },
+          "EmployeeName": {
+            "type": "string"
+          },
+          "TotalDebtEmployee": {
+            "format": "double",
+            "type": "number"
+          },
+          "TotalDebtEmployerContribution": {
+            "format": "double",
+            "type": "number"
+          },
+          "VariableEarned": {
+            "format": "double",
+            "type": "number"
+          },
+          "VariableUnused": {
+            "format": "double",
+            "type": "number"
+          },
+          "WageEarned": {
+            "format": "double",
+            "type": "number"
+          },
+          "WageSaved": {
+            "format": "double",
+            "type": "number"
+          },
+          "WageUnused": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "EmployeeId"
+        ],
+        "type": "object"
+      },
+      "fortnox_WayOfDeliveryListItem_Wrap": {
+        "properties": {
+          "WayOfDeliveries": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_WayOfDeliverySingleItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_WayOfDeliverySingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Code": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "DescriptionEnglish": {
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": [
+          "Code"
+        ],
+        "type": "object"
+      },
+      "fortnox_WayOfDeliverySingleItem_Wrap": {
+        "properties": {
+          "WayOfDelivery": {
+            "$ref": "#/components/schemas/fortnox_WayOfDeliverySingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_WayOfDeliverySinglePayloadItem": {
+        "properties": {
+          "Code": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "DescriptionEnglish": {
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": [
+          "Code"
+        ],
+        "type": "object"
+      },
+      "fortnox_WayOfDeliverySinglePayloadItem_Wrap": {
+        "properties": {
+          "WayOfDelivery": {
+            "$ref": "#/components/schemas/fortnox_WayOfDeliverySinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "go_fnox_se_fnx_financial-transactions_api_bankfeeds_v1.Reference": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/v1.ReferenceType"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "go_fnox_se_fnx_financial-transactions_api_bankfeeds_v1.Transaction": {
+        "properties": {
+          "accountID": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "amountCurrency": {
+            "type": "number"
+          },
+          "balance": {
+            "$ref": "#/components/schemas/v1.Balance"
+          },
+          "cardID": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "currencyRate": {
+            "type": "number"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/v1.Direction"
+          },
+          "iban": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "paymentDate": {
+            "$ref": "#/components/schemas/json.Date"
+          },
+          "references": {
+            "items": {
+              "$ref": "#/components/schemas/go_fnox_se_fnx_financial-transactions_api_bankfeeds_v1.Reference"
+            },
+            "type": "array"
+          },
+          "responseCode": {
+            "type": "string"
+          },
+          "responseCodeDescription": {
+            "type": "string"
+          },
+          "settlementDate": {
+            "$ref": "#/components/schemas/v1.Date"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "integration-developer_IntegrationSalesResponse": {
+        "properties": {
+          "amount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "date": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "integration-developer_RatingDTO": {
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "companyEmployeeRange": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "integrationId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "isMyRating": {
+            "type": "boolean"
+          },
+          "rating": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ratingId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "response": {
+            "$ref": "#/components/schemas/integration-developer_RatingResponseDTO"
+          },
+          "updated": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "integration-developer_RatingResponseDTO": {
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updated": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "integration-developer_TenantPartnerInformationDTO": {
+        "properties": {
+          "partner": {
+            "type": "string"
+          },
+          "tenantId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "integration-developer_UserMappingDTO": {
+        "properties": {
+          "externalSourceId": {
+            "type": "string"
+          },
+          "isAdministrator": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "tenantId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "integration-developer_UsersResponse": {
+        "properties": {
+          "activationTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "externalSourceId": {
+            "type": "string"
+          },
+          "isAdministrator": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "userType": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "integration-developer_WebException": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "json.Date": {
+        "properties": {
+          "time.Time": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ory-hydra-api_errorOAuth2": {
+        "description": "Error",
+        "properties": {
+          "error": {
+            "description": "Error",
+            "type": "string"
+          },
+          "error_debug": {
+            "description": "Error Debug Information\n\nOnly available in dev mode.",
+            "type": "string"
+          },
+          "error_description": {
+            "description": "Error Description",
+            "type": "string"
+          },
+          "error_hint": {
+            "description": "Error Hint\n\nHelps the user identify the error cause.",
+            "example": "The redirect URL is not allowed.",
+            "type": "string"
+          },
+          "status_code": {
+            "description": "HTTP Status Code",
+            "example": 401,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ory-hydra-api_oAuth2TokenExchange": {
+        "description": "OAuth2 Token Exchange Result",
+        "properties": {
+          "access_token": {
+            "description": "The access token issued by the authorization server.",
+            "type": "string"
+          },
+          "expires_in": {
+            "description": "The lifetime in seconds of the access token. For\nexample, the value \"3600\" denotes that the access token will\nexpire in one hour from the time the response was generated.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "id_token": {
+            "description": "To retrieve a refresh token request the id_token scope.",
+            "type": "string"
+          },
+          "refresh_token": {
+            "description": "The refresh token, which can be used to obtain new\naccess tokens. To retrieve it add the scope \"offline\" to your access token request.",
+            "type": "string"
+          },
+          "scope": {
+            "description": "The scope of the access token",
+            "type": "string"
+          },
+          "token_type": {
+            "description": "The type of the token issued",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "partner-api_AddedIntegration": {
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "authorizationCode": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "partner-api_CompanyInformation": {
+        "properties": {
+          "companyName": {
+            "type": "string"
+          },
+          "contract": {
+            "type": "string"
+          },
+          "organizationNumber": {
+            "type": "string"
+          },
+          "tenantId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "partner-api_FetchedIntegration": {
+        "properties": {
+          "clientId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "partner-api_PartnerClientAuthorizationRequest": {
+        "properties": {
+          "clientId": {
+            "type": "string"
+          },
+          "clientTenantId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "redirectUri": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "partner-api_WebException": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "time-reporting_ArticleRegistration": {
+        "properties": {
+          "createdBy": {
+            "type": "string"
+          },
+          "createdTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "documentId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "documentType": {
+            "enum": [
+              "order",
+              "invoice"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "invoiceBasisId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "invoiceText": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "item": {
+            "$ref": "#/components/schemas/time-reporting_TRItem"
+          },
+          "nonInvoiceable": {
+            "type": "boolean"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "orderIndex": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": "string"
+          },
+          "timeLocked": {            "type": "boolean"
+          },
+          "totalQuantity": {
+            "type": "number"
+          },
+          "unitCost": {
+            "type": "number"
+          },
+          "unitPrice": {
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "time-reporting_BaseArticleRegistration": {
+        "properties": {
+          "articleRegistrations": {
+            "items": {
+              "$ref": "#/components/schemas/time-reporting_ArticleRegistration"
+            },
+            "type": "array"
+          },
+          "costCenter": {
+            "$ref": "#/components/schemas/time-reporting_TRCostCenter"
+          },
+          "createdTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/time-reporting_TRCustomer"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": "string"
+          },
+          "project": {
+            "$ref": "#/components/schemas/time-reporting_TRProject"
+          },
+          "purchaseDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "registeredArticle": {
+            "$ref": "#/components/schemas/time-reporting_ArticleRegistration"
+          },
+          "registrationType": {
+            "enum": [
+              "WORK",
+              "ABSENCE",
+              "ARTICLE"
+            ],
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customer",
+          "purchaseDate"
+        ],
+        "type": "object"
+      },
+      "time-reporting_DetailedRegistration": {
+        "properties": {
+          "chargeHours": {
+            "format": "float",
+            "type": "number"
+          },
+          "childId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "costCenter": {
+            "$ref": "#/components/schemas/time-reporting_TRCostCenter"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/time-reporting_TRCustomer"
+          },
+          "documentId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "documentType": {
+            "enum": [
+              "order",
+              "invoice"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "invoiceBasisId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "invoiceText": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "nonInvoiceable": {
+            "type": "boolean"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "project": {
+            "$ref": "#/components/schemas/time-reporting_TRProject"
+          },
+          "registrationCode": {
+            "$ref": "#/components/schemas/time-reporting_RegistrationCode"
+          },
+          "service": {
+            "$ref": "#/components/schemas/time-reporting_TRItem"
+          },
+          "startTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "stopTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "unitCost": {
+            "type": "number"
+          },
+          "unitPrice": {
+            "type": "number"
+          },
+          "updatedBy": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "workedDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "workedHours": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "registrationCode",
+          "workedDate"
+        ],
+        "type": "object"
+      },
+      "time-reporting_RegistrationCode": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "code": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string"
+          },
+          "costMultiplier": {
+            "format": "float",
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "priceMultiplier": {
+            "format": "float",
+            "type": "number"
+          },
+          "type": {
+            "enum": [
+              "WORK",
+              "ABSENCE"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "type"
+        ],
+        "type": "object"
+      },
+      "time-reporting_TRCostCenter": {
+        "properties": {
+          "active": {
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "time-reporting_TRCustomer": {
+        "properties": {
+          "accountManager": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "defaultProjectId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "invoiceCity": {
+            "type": "string"
+          },
+          "invoiceZipCode": {
+            "type": "string"
+          },
+          "isBusiness": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "number": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "priceList": {
+            "type": "string"
+          },
+          "propertyDesignation": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "time-reporting_TRItem": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "description": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "isStock": {
+            "type": "boolean"
+          },
+          "purchasePrice": {
+            "type": "number"
+          },
+          "salesPrices": {
+            "items": {
+              "$ref": "#/components/schemas/time-reporting_TRItemPrice"
+            },
+            "type": "array"
+          },
+          "type": {
+            "enum": [
+              "SERVICE",
+              "STOCK"
+            ],
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "time-reporting_TRItemPrice": {
+        "properties": {
+          "list": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "time-reporting_TRProject": {
+        "properties": {
+          "description": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "endDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "invoicedAmount": {
+            "format": "double",
+            "type": "number"
+          },
+          "orderAmount": {
+            "format": "double",
+            "type": "number"
+          },
+          "orderTime": {
+            "format": "double",
+            "type": "number"
+          },
+          "projectLeader": {
+            "type": "string"
+          },
+          "startDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "status": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "totalAmountInInvoices": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "time-reporting_WebException": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "todos_WebException": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "v1.Balance": {
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "v1.Date": {
+        "properties": {
+          "time.Time": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "v1.Direction": {
+        "enum": [
+          "in",
+          "out"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "DirectionIn",
+          "DirectionOut"
+        ]
+      },
+      "v1.ReferenceType": {
+        "enum": [
+          "end-to-end-id",
+          "message",
+          "ocr",
+          "total",
+          "amount",
+          "balance",
+          "demandFee",
+          "taxReduction",
+          "invoice-id",
+          "credit-id",
+          "creditor-account",
+          "debitor-account",
+          "iban",
+          "bankgiro",
+          "plusgiro",
+          "bban",
+          "customer-number",
+          "invoice-number",
+          "swish-number",
+          "account",
+          "name",
+          "debitor-name",
+          "creditor-name",
+          "currency-diff",
+          "your-order-number",
+          "attachment",
+          "date",
+          "account-number",
+          "city",
+          "country",
+          "mcc",
+          "card-id"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "ReferenceTypeEndToEndID",
+          "ReferenceTypeMessage",
+          "ReferenceTypeOCR",
+          "ReferenceTypeTotal",
+          "ReferenceTypeAmount",
+          "ReferenceTypeBalance",
+          "ReferenceTypeDemandFee",
+          "ReferenceTypeTaxReduction",
+          "ReferenceTypeInvoiceID",
+          "ReferenceTypeCreditID",
+          "ReferenceTypeCreditorAccount",
+          "ReferenceTypeDebitorAccount",
+          "ReferenceTypeIBAN",
+          "ReferenceTypeBankgiro",
+          "ReferenceTypePlusgiro",
+          "ReferenceTypeBBAN",
+          "ReferenceTypeCustomerNumber",
+          "ReferenceTypeInvoiceNumber",
+          "ReferenceTypeSwishNumber",
+          "ReferenceTypeAccount",
+          "ReferenceTypeName",
+          "ReferenceTypeDebitorName",
+          "ReferenceTypeCreditorName",
+          "ReferenceTypeCurrencyDiff",
+          "ReferenceTypeYourOrderNumber",
+          "ReferenceTypeAttachment",
+          "ReferenceTypeDate",
+          "ReferenceTypeAccountNumber",
+          "ReferenceTypeCity",
+          "ReferenceTypeCountry",
+          "ReferenceTypeMerchantCategoryCode",
+          "ReferenceTypeCardID"
+        ]
+      },
+      "warehouse_AverageCost": {
+        "properties": {
+          "averageCostInSEK": {
+            "type": "number"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_Currency": {
+        "properties": {
+          "currency": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string"
+          },
+          "rate": {
+            "minimum": 0.000001,
+            "type": "number"
+          },
+          "unit": {
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "currency",
+          "rate"
+        ],
+        "type": "object"
+      },
+      "warehouse_CustomDocumentType": {
+        "properties": {
+          "category": {
+            "enum": [
+              "INBOUND",
+              "OUTBOUND"
+            ],
+            "type": "string"
+          },
+          "referenceType": {
+            "maxLength": 25,
+            "minLength": 1,
+            "pattern": "[a-zA-Z0-9_-]+",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "referenceType"
+        ],
+        "type": "object"
+      },
+      "warehouse_CustomInboundDocument": {
+        "properties": {
+          "currency": {
+            "$ref": "#/components/schemas/warehouse_Currency"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 25,
+            "minLength": 1,
+            "pattern": "^[0-9]+",
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_CustomInboundDocumentRow"
+            },
+            "type": "array"
+          },
+          "type": {
+            "maxLength": 25,
+            "minLength": 1,
+            "pattern": "[a-zA-Z0-9_-]+",
+            "type": "string"
+          },
+          "voided": {
+            "type": "boolean"
+          },
+          "warehouseReady": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "date",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "warehouse_CustomInboundDocumentRow": {
+        "properties": {
+          "batch": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "costCenterCode": {
+            "maxLength": 25,
+            "minLength": 1,
+            "type": "string"
+          },
+          "directCost": {
+            "type": "number"
+          },
+          "freightCost": {
+            "type": "number"
+          },
+          "itemDescription": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "itemId": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "itemUnit": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "otherCost": {
+            "type": "number"
+          },
+          "projectId": {
+            "maxLength": 25,
+            "minLength": 1,
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "rowId": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "stockLocationCode": {
+            "type": "string"
+          },
+          "stockLocationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockPointCode": {
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId",
+          "quantity"
+        ],
+        "type": "object"
+      },
+      "warehouse_CustomOutboundDocument": {
+        "properties": {
+          "averageCosts": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_AverageCost"
+            },
+            "type": "array"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "deliveryState": {
+            "enum": [
+              "registration",
+              "reservation",
+              "delivery"
+            ],
+            "type": "string"
+          },
+          "forcedDelivery": {
+            "type": "boolean"
+          },
+          "id": {
+            "maxLength": 25,
+            "minLength": 1,
+            "pattern": "^[0-9]+",
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "referenceType": {
+            "maxLength": 25,
+            "minLength": 1,
+            "pattern": "[a-zA-Z0-9_-]+",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_CustomOutboundDocumentRow"
+            },
+            "type": "array"
+          },
+          "voided": {
+            "type": "boolean"
+          },
+          "warehouseReady": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "date",
+          "deliveryState",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "warehouse_CustomOutboundDocumentRow": {
+        "properties": {
+          "costCenterCode": {
+            "maxLength": 25,
+            "minLength": 1,
+            "type": "string"
+          },
+          "deliveredQuantity": {
+            "type": "number"
+          },
+          "forcedQuantity": {
+            "type": "number"
+          },
+          "itemDescription": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "itemId": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "itemUnit": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "projectId": {
+            "maxLength": 25,
+            "minLength": 1,
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "reservedQuantity": {
+            "type": "number"
+          },
+          "rowId": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "stockLocationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId",
+          "quantity"
+        ],
+        "type": "object"
+      },
+      "warehouse_DocumentReference": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_IncomingGoods": {
+        "properties": {
+          "completed": {
+            "type": "boolean"
+          },
+          "costCenterCode": {
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "deliveryNoteId": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "hasDeliveryNote": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "released": {
+            "type": "boolean"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_IncomingGoodsRow"
+            },
+            "type": "array"
+          },
+          "stockPointCode": {
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockPointName": {
+            "type": "string"
+          },
+          "supplierName": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "supplierNumber": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "voided": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deliveryNoteId"
+        ],
+        "type": "object"
+      },
+      "warehouse_IncomingGoodsListRow": {
+        "properties": {
+          "completed": {
+            "type": "boolean"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "deliveryNoteId": {
+            "type": "string"
+          },
+          "hasDeliveryNote": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "note": {
+            "type": "string"
+          },
+          "released": {
+            "type": "boolean"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "supplierName": {
+            "type": "string"
+          },
+          "supplierNumber": {
+            "type": "string"
+          },
+          "unmatchedValue": {
+            "type": "number"
+          },
+          "voided": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_IncomingGoodsRow": {
+        "properties": {
+          "backOrderQuantity": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "batch": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "costCenterCode": {
+            "type": "string"
+          },
+          "directCost": {
+            "type": "number"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "invoicedQuantity": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "isStockItem": {
+            "type": "boolean"
+          },
+          "itemDescription": {
+            "type": "string"
+          },
+          "itemId": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "itemUnit": {
+            "type": "string"
+          },
+          "orderedQuantity": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "purchaseOrderId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "purchaseOrderRowId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "receivedQuantity": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "remainingOrderedQuantity": {
+            "type": "number"
+          },
+          "rowOrder": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "stockLocationCode": {
+            "type": "string"
+          },
+          "stockLocationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockLocationName": {
+            "type": "string"
+          },
+          "stockPointCode": {
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockPointName": {
+            "type": "string"
+          },
+          "takenQuantity": {
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "backOrderQuantity",
+          "invoicedQuantity",
+          "itemId",
+          "orderedQuantity",
+          "receivedQuantity",
+          "takenQuantity"
+        ],
+        "type": "object"
+      },      "warehouse_ManualDocument": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "deliveryId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "released": {
+            "type": "boolean"
+          },
+          "type": {
+            "enum": [
+              "Inbound",
+              "Outbound",
+              "StockTransfer"
+            ],
+            "type": "string"
+          },
+          "voided": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_ManualInboundDocument": {
+        "properties": {
+          "currency": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string"
+          },
+          "currencyRate": {
+            "minimum": 0.000001,
+            "type": "number"
+          },
+          "currencyUnit": {
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "released": {
+            "type": "boolean"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_ManualInboundDocumentRow"
+            },
+            "maxItems": 2147483647,
+            "minItems": 1,
+            "type": "array"
+          },
+          "stockPointCode": {
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockPointName": {
+            "type": "string"
+          },
+          "voided": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "currency",
+          "currencyRate",
+          "date",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "warehouse_ManualInboundDocumentPatch": {
+        "properties": {
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_ManualInboundDocumentRow": {
+        "properties": {
+          "batch": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "costCenterCode": {
+            "type": "string"
+          },
+          "directCost": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "freightCost": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "itemDescription": {
+            "type": "string"
+          },
+          "itemId": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "itemUnit": {
+            "type": "string"
+          },
+          "otherCost": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "quantity": {
+            "minimum": 0.01,
+            "type": "number"
+          },
+          "rowId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "stockLocationCode": {
+            "type": "string"
+          },
+          "stockLocationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockLocationName": {
+            "type": "string"
+          },
+          "stockPointCode": {
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockPointName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId",
+          "quantity"
+        ],
+        "type": "object"
+      },
+      "warehouse_ManualOutboundDocument": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "released": {
+            "type": "boolean"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_ManualOutboundDocumentRow"
+            },
+            "maxItems": 2147483647,
+            "type": "array"
+          },
+          "stockPointCode": {
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockPointName": {
+            "type": "string"
+          },
+          "voided": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "date",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "warehouse_ManualOutboundDocumentPatch": {
+        "properties": {
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_ManualOutboundDocumentRow": {
+        "properties": {
+          "costCenterCode": {
+            "type": "string"
+          },
+          "deliveredQuantity": {
+            "type": "number"
+          },
+          "forcedQuantity": {
+            "type": "number"
+          },
+          "itemDescription": {
+            "type": "string"
+          },
+          "itemId": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "itemUnit": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "quantity": {
+            "minimum": 0.01,
+            "type": "number"
+          },
+          "stockLocationCode": {
+            "type": "string"
+          },
+          "stockLocationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockLocationName": {
+            "type": "string"
+          },
+          "stockPointCode": {
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockPointName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId",
+          "quantity"
+        ],
+        "type": "object"
+      },
+      "warehouse_PackageItem": {
+        "properties": {
+          "itemDescription": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "itemUnit": {
+            "type": "string"
+          },
+          "quantityRequired": {
+            "type": "number"
+          },
+          "quantityReserved": {
+            "type": "number"
+          },
+          "totalQuantityRequired": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "itemId",
+          "quantityRequired"
+        ],
+        "type": "object"
+      },
+      "warehouse_PartialPurchaseOrder": {
+        "properties": {
+          "deliveryDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "internalReference": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "messageToSupplier": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "supplierName": {
+            "maxLength": 1024,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_ProductionOrder": {
+        "properties": {
+          "batch": {
+            "type": "string"
+          },
+          "costCenterCode": {
+            "type": "string"
+          },
+          "documentState": {
+            "enum": [
+              "completed",
+              "voided"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "inboundStockLocationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "inboundStockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "itemDescription": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "itemUnit": {
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "outboundStockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "packageItems": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_PackageItem"
+            },
+            "type": "array"
+          },
+          "productionDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "productionState": {
+            "enum": [
+              "registered",
+              "reserved",
+              "ongoing"
+            ],
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "quantity": {
+            "minimum": 0.01,
+            "type": "number"
+          },
+          "startDate": {
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "productionState",
+          "quantity",
+          "startDate"
+        ],
+        "type": "object"
+      },
+      "warehouse_ProductionOrderPatch": {
+        "properties": {
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_PurchaseOrder": {
+        "properties": {
+          "confirmationEmail": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "costCenterCode": {
+            "maxLength": 25,
+            "type": "string"
+          },
+          "currencyCode": {
+            "maxLength": 3,
+            "type": "string"
+          },
+          "currencyRate": {
+            "type": "number"
+          },
+          "currencyUnit": {
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "customerId": {
+            "maxLength": 25,
+            "type": "string"
+          },
+          "customerName": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "customerNumber": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "deliveryAddress": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "type": "string"
+          },
+          "deliveryAddress2": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "deliveryCity": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "deliveryCountryCode": {
+            "maxLength": 3,
+            "type": "string"
+          },
+          "deliveryDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "deliveryName": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "deliveryZipCode": {
+            "maxLength": 10,
+            "minLength": 1,
+            "type": "string"
+          },
+          "dropship": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "internalReference": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "languageCode": {
+            "maxLength": 3,
+            "type": "string"
+          },
+          "manuallyCompleted": {
+            "type": "boolean"
+          },
+          "messageToSupplier": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "orderDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "orderValue": {
+            "type": "number"
+          },
+          "orderValueInSEK": {
+            "type": "number"
+          },
+          "ourReference": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "outboundDocumentReference": {
+            "$ref": "#/components/schemas/warehouse_DocumentReference"
+          },
+          "paymentTermsCode": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "projectId": {
+            "maxLength": 25,
+            "type": "string"
+          },
+          "purchaseOrderState": {
+            "enum": [
+              "NOT_SENT",
+              "SENT",
+              "SENT_NOT_REJECTED",
+              "DELAYED",
+              "RECEIVED",
+              "VOIDED",
+              "CURRENT",
+              "ALL"
+            ],
+            "type": "string"
+          },
+          "purchaseType": {
+            "enum": [
+              "WAREHOUSE",
+              "DROPSHIP"
+            ],
+            "type": "string"
+          },
+          "responseState": {
+            "enum": [
+              "NOT_SENT",
+              "SENT",
+              "ACCEPTED_WITH_REQ_DLV_DATE",
+              "ACCEPTED_WITH_CHANGED_DLV_DATE",
+              "PARTLY_ACCEPTED_WITH_REQ_DLV_DATE",
+              "PARTLY_ACCEPTED_WITH_CHANGED_DLV_DATE",
+              "REJECTED"
+            ],
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_PurchaseOrderRow"
+            },
+            "type": "array"
+          },
+          "stockPointCode": {
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "supplier": {
+            "type": "string"
+          },
+          "supplierAddress": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "supplierAddress2": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "supplierCity": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "supplierCountryCode": {
+            "maxLength": 3,
+            "type": "string"
+          },
+          "supplierEmail": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "supplierName": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "supplierNumber": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "supplierPostCode": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "totalReceivedQuantity": {
+            "type": "number"
+          },
+          "translatedResponseState": {
+            "type": "string"
+          },
+          "voided": {
+            "type": "boolean"
+          },
+          "yourReference": {
+            "maxLength": 50,
+            "type": "string"
+          }
+        },
+        "required": [
+          "currencyCode",
+          "currencyRate",
+          "deliveryAddress",
+          "deliveryCity",
+          "deliveryName",
+          "deliveryZipCode",
+          "orderDate",
+          "paymentTermsCode",
+          "supplierNumber"
+        ],
+        "type": "object"
+      },
+      "warehouse_PurchaseOrderMailSettings": {
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "bodyAsHtml": {
+            "type": "string"
+          },
+          "receiver": {
+            "type": "string"
+          },
+          "receiverCopy": {
+            "type": "string"
+          },
+          "receiverSecretCopy": {
+            "type": "string"
+          },
+          "replyTo": {
+            "type": "string"
+          },
+          "senderName": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "body",
+          "receiver",
+          "replyTo",
+          "subject"
+        ],
+        "type": "object"
+      },
+      "warehouse_PurchaseOrderRow": {
+        "properties": {
+          "backOrderQuantity": {
+            "type": "number"
+          },
+          "costCenterCode": {
+            "maxLength": 25,
+            "type": "string"
+          },
+          "currencyCode": {
+            "maxLength": 3,
+            "minLength": 3,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "isStockItem": {
+            "type": "boolean"
+          },
+          "itemDescription": {
+            "type": "string"
+          },
+          "itemId": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "itemUnit": {
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_PurchaseOrderRowNote"
+            },
+            "type": "array"
+          },
+          "orderedQuantity": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "price": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "projectId": {
+            "maxLength": 25,
+            "type": "string"
+          },
+          "purchaseOrderId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "receivedQuantity": {
+            "type": "number"
+          },
+          "remainingOrderedQuantity": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "rowNum": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "stockLocationCode": {
+            "type": "string"
+          },
+          "stockLocationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockLocationName": {
+            "type": "string"
+          },
+          "stockPointCode": {
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockPointName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "currencyCode",
+          "itemId",
+          "orderedQuantity",
+          "remainingOrderedQuantity"
+        ],
+        "type": "object"
+      },
+      "warehouse_PurchaseOrderRowNote": {
+        "properties": {
+          "note": {
+            "type": "string"
+          },
+          "purchaseOrderId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "purchaseOrderRowId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "rowNum": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_ReleaseParentOrder": {
+        "properties": {
+          "releasedParentOrder": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_ResponseStateChange": {
+        "properties": {
+          "responseState": {
+            "enum": [
+              "NOT_SENT",
+              "SENT",
+              "ACCEPTED_WITH_REQ_DLV_DATE",
+              "ACCEPTED_WITH_CHANGED_DLV_DATE",
+              "PARTLY_ACCEPTED_WITH_REQ_DLV_DATE",
+              "PARTLY_ACCEPTED_WITH_CHANGED_DLV_DATE",
+              "REJECTED"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_StockBalance": {
+        "properties": {
+          "availableStock": {
+            "type": "number"
+          },
+          "inStock": {
+            "type": "number"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "stockPointCode": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_StockLocation": {
+        "properties": {
+          "code": {
+            "maxLength": 20,
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 25,
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "warehouse_StockPoint": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "code": {
+            "maxLength": 10,
+            "minLength": 1,
+            "type": "string"
+          },
+          "deliveryAddress": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "deliveryAddress2": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "deliveryCity": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "deliveryCountryCode": {
+            "maxLength": 3,
+            "type": "string"
+          },
+          "deliveryName": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "deliveryPhone": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "deliveryZipCode": {
+            "maxLength": 10,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 25,
+            "minLength": 1,
+            "type": "string"
+          },
+          "stockLocations": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_StockLocation"
+            },
+            "type": "array"
+          },
+          "usingCompanyAddress": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "type": "object"
+      },
+      "warehouse_StockTaking": {
+        "properties": {
+          "costCenterCode": {
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "responsible": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_StockTakingRow"
+            },
+            "type": "array"
+          },
+          "sortParams": {
+            "$ref": "#/components/schemas/warehouse_StockTakingSortParams"
+          },
+          "sortingId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "state": {
+            "pattern": "planning|started|completed|voided",
+            "type": "string"
+          },
+          "usingStockPoints": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "responsible",
+          "state"
+        ],
+        "type": "object"
+      },
+      "warehouse_StockTakingRow": {
+        "properties": {
+          "countedBy": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "currentRowNo": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "hasPostReleaseStockChanges": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "itemId": {
+            "maxLength": 50,
+            "type": "string"          },
+          "stockLocationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stockTakenQuantity": {
+            "type": "number"
+          },
+          "stockTakingId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "stockTakingRowId": {
+            "type": "string"
+          },
+          "totalQuantityInStock": {
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_StockTakingSortParams": {
+        "properties": {
+          "primarySort": {
+            "type": "string"
+          },
+          "primarySortOrder": {
+            "type": "string"
+          },
+          "secondarySort": {
+            "type": "string"
+          },
+          "secondarySortOrder": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_StockTransferDocument": {
+        "properties": {
+          "id": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "note": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "released": {
+            "type": "boolean"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/warehouse_StockTransferRow"
+            },
+            "type": "array"
+          },
+          "transferDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "voided": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "type": "object"
+      },
+      "warehouse_StockTransferRow": {
+        "properties": {
+          "fromStockLocationCode": {
+            "type": "string"
+          },
+          "fromStockLocationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "fromStockLocationName": {
+            "type": "string"
+          },
+          "fromStockPointCode": {
+            "type": "string"
+          },
+          "fromStockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "fromStockPointName": {
+            "type": "string"
+          },
+          "itemDescription": {
+            "type": "string"
+          },
+          "itemId": {
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "itemUnit": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "requestedQuantity": {
+            "minimum": 0.01,
+            "type": "number"
+          },
+          "rowNum": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "toStockLocationCode": {
+            "type": "string"
+          },
+          "toStockLocationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "toStockLocationName": {
+            "type": "string"
+          },
+          "toStockPointCode": {
+            "type": "string"
+          },
+          "toStockPointId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "toStockPointName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromStockPointId",
+          "itemId",
+          "requestedQuantity",
+          "toStockPointId"
+        ],
+        "type": "object"
+      },
+      "warehouse_TenantInfo": {
+        "properties": {
+          "activated": {
+            "type": "boolean"
+          },
+          "tenantId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "warehouse_WebException": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "basic": {
+        "scheme": "basic",
+        "type": "http"
+      },
+      "basicAuth": {
+        "description": "HTTP Basic authentication with a Fortnox-issued bank service account.",
+        "scheme": "basic",
+        "type": "http"
+      },
+      "bearerAuth": {
+        "bearerFormat": "JWT",
+        "description": "Bearer authentication using a Fortnox-issued JWT for the bank service account.",
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "fortnoxOAuth2": {
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://apps.fortnox.se/oauth-v1/auth",
+            "scopes": {
+              "developerapi": "developerapi"
+            },
+            "tokenUrl": "https://apps.fortnox.se/oauth-v1/token"
+          },
+          "clientCredentials": {
+            "scopes": {
+              "developerapi": "developerapi"
+            },
+            "tokenUrl": "https://apps.fortnox.se/oauth-v1/token"
+          }
+        },
+        "type": "oauth2"
+      },
+      "oryHydraOAuth2": {
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://hydra.demo.ory.sh/oauth2/auth",
+            "scopes": {
+              "offline": "A scope required when requesting refresh tokens (alias for `offline_access`)",
+              "offline_access": "A scope required when requesting refresh tokens",
+              "openid": "Request an OpenID Connect ID Token"
+            },
+            "tokenUrl": "https://hydra.demo.ory.sh/oauth2/token"
+          }
+        },
+        "type": "oauth2"
+      }
+    }
+  },
+  "info": {
+    "description": "# Documentation \n\nThe Fortnox API is organized around REST. This means that we’ve designed it to have resource-oriented URLs and be as predictable as possible for you as developer.\n\nIt also means that we use HTTP status codes when something goes wrong and HTTP verbs understod by many API clients around the web.\n\nWe use a modified version of OAuth2 for authentication to offer a secure way for both you and our users to interact.\n\nThe API is generally built to support both XML and JSON but in this documentation all the examples will be in JSON.\n\nWe encourage you to read all the articles in the [Guides & Good to Know section](https://www.fortnox.se/developer/guides-and-good-to-know/)</a> first, before going forward and learning about the different resources.\n\nThis to ensure you get an understanding of some of the shared components of the API such as parameters and error handling.\n\n## Rate limits\n\nThe limit per access-token is 25 requests per 5 seconds. This equals to 300 requests per minute.\n\n[Read more about this here.](https://www.fortnox.se/developer/guides-and-good-to-know/rate-limits-for-fortnox-api/)\n\n## Query parameters\n\nUse query parameters with the ?-character and separate parameters with the &-character. \n\n**Example:**\n GET - https://api.fortnox.se/3/invoices?accountnumberfrom=3000&accountnumberto=4000\nRead more about our parameters [here](https://www.fortnox.se/developer/guides-and-good-to-know/parameters/)\n\n\nSearch the documentation using the search field in the top left corner.",
+    "title": "Fortnox API",
+    "version": ""
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/3/absencetransactions": {
+      "get": {
+        "description": "Supports query-string parameters <strong>employeeid</strong> and <strong>date</strong> for filtering the result.",
+        "operationId": "AbsenceTransactionsController_doIndex",
+        "parameters": [
+          {
+            "description": "filter by employee id",
+            "in": "query",
+            "name": "employeeid",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "filter by date",
+            "in": "query",
+            "name": "date",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_AbsenceTransactionsListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list absence transactions response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Absence transactions not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Lists all absence transactions",
+        "tags": [
+          "fortnox_AbsenceTransactions"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "Create an absence transaction",
+        "operationId": "AbsenceTransactionsController_doCreate",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Lon_AbsenceTransactionsSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create absence transaction"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_AbsenceTransactionsSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create absence transaction response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Absence transaction not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create a new absence transaction",
+        "tags": [
+          "fortnox_AbsenceTransactions"
+        ],
+        "x-codegen-request-body-name": "absenceTransactionsPayload",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/absencetransactions/{id}": {
+      "delete": {
+        "description": "Delete an absence transaction",
+        "operationId": "AbsenceTransactionsController_doDelete",
+        "parameters": [
+          {
+            "description": "identifies the transaction",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful delete absence transaction response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Absence transaction not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Delete an absence transaction",
+        "tags": [
+          "fortnox_AbsenceTransactions"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieves a specific transaction",
+        "operationId": "AbsenceTransactionsController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the transaction",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_AbsenceTransactionsSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show absence transaction response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Absence transaction not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve a specific absence transaction",
+        "tags": [
+          "fortnox_AbsenceTransactions"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Update an absence transaction",
+        "operationId": "AbsenceTransactionsController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the transaction",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Lon_AbsenceTransactionsSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update absence transaction"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_AbsenceTransactionsSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update absence transaction response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Absence transaction not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update a single absence transaction",
+        "tags": [
+          "fortnox_AbsenceTransactions"
+        ],
+        "x-codegen-request-body-name": "absenceTransactionsPayload",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/absencetransactions/{id}/{Date}/{Code}": {
+      "get": {
+        "description": "Retrieves a list of absence transactions for an employee on a specific date and cause code.",
+        "operationId": "AbsenceTransactionsController_doListByIdDateCauseCode",
+        "parameters": [
+          {
+            "description": "identifies the employee",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "of the absence transaction",
+            "in": "path",
+            "name": "Date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "description": "status code of the absence transaction",
+            "in": "path",
+            "name": "Code",
+            "required": true,
+            "schema": {
+              "enum": [
+                "ASK",
+                "FPE",
+                "FRA",
+                "HAV",
+                "KOM",
+                "MIL",
+                "NAR",
+                "OS1",
+                "OS2",
+                "OS3",
+                "OS4",
+                "OS5",
+                "PAP",
+                "PEM",
+                "PER",
+                "SEM",
+                "SJK",
+                "SMB",
+                "SVE",
+                "TJL",
+                "UTB",
+                "VAB"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Lon_AbsenceTransactionsListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list absence transactions response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Bad request response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Absence transactions not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve absence transactions",
+        "tags": [
+          "fortnox_AbsenceTransactions"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/accountcharts": {
+      "get": {
+        "description": "Retrieves a list of all the available account charts.",
+        "operationId": "AccountChartController_doIndex",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_AccountChartListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list account charts response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "List all account charts",
+        "tags": [
+          "fortnox_AccountCharts"
+        ],
+        "x-fn-is-public": true
+      }
+    },
+    "/3/accounts": {
+      "get": {
+        "description": "The accounts are returned sorted by account number with the lowest number appearing first.",
+        "operationId": "AccountController_doIndex",
+        "parameters": [
+          {
+            "description": "field to sort returned list on",
+            "in": "query",
+            "name": "sortby",
+            "schema": {
+              "enum": [
+                "number"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Lastmodified of accounts to list",
+            "in": "query",
+            "name": "lastmodified",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sru of accounts to list",
+            "in": "query",
+            "name": "sru",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_AccountListItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful list accounts response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "List all accounts",
+        "tags": [
+          "fortnox_Accounts"
+        ],
+        "x-fn-is-public": true
+      },
+      "post": {
+        "description": "The created account will be returned if everything succeeded, if there were any problems an error will be returned.",
+        "operationId": "AccountController_doCreate",
+        "parameters": [
+          {
+            "description": "financial year to create account against",
+            "in": "query",
+            "name": "financialyear",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Bf_AccountSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for create account"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_AccountSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful create account response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Create an account",
+        "tags": [
+          "fortnox_Accounts"
+        ],
+        "x-codegen-request-body-name": "accountPayload",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/accounts/{Number}": {
+      "delete": {
+        "description": "Deletes the specified account in the users current year",
+        "operationId": "AccountController_doDelete",
+        "parameters": [
+          {
+            "description": "account to delete",
+            "in": "path",
+            "name": "Number",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful delete account response with no content"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Account not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Deletes an account",
+        "tags": [
+          "fortnox_Accounts"
+        ],
+        "x-fn-is-public": true
+      },
+      "get": {
+        "description": "Retrieves the details of an account. You need to supply the unique account number that was returned when the account was created or retrieved from the list of accounts.",
+        "operationId": "AccountController_doShow",
+        "parameters": [
+          {
+            "description": "identifies the account",
+            "in": "path",
+            "name": "Number",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_AccountSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful show account response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Account not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Retrieve an account",
+        "tags": [
+          "fortnox_Accounts"
+        ],
+        "x-fn-is-public": true
+      },
+      "put": {
+        "description": "Updates the specified account with the values provided in the properties. Any property not provided will be left unchanged.\n Note that even though the account number is writeable you can&acute;t change the number of an existing account.",
+        "operationId": "AccountController_doUpdate",
+        "parameters": [
+          {
+            "description": "identifies the account",
+            "in": "path",
+            "name": "Number",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "financial year to update account against",
+            "in": "query",
+            "name": "financialyear",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/fortnox_Bf_AccountSinglePayloadItem_Wrap"
+              }
+            }
+          },
+          "description": "Request body for update account"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_Bf_AccountSingleItem_Wrap"
+                }
+              }
+            },
+            "description": "Successful update account response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Account not found"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/fortnox_ErrorInformation_Wrap"
+                }
+              }
+            },
+            "description": "Error information if the request did not succeed"
+          }
+        },
+        "summary": "Update an account",
+        "tags": [
+          "fortnox_Accounts"
+        ],
+        "x-codegen-request-body-name": "accountPayload",
+        "x-fn-is-public": true
+      }
+    },
+    "/3/archive": {
+      "delete": {
+        "description": "Please note that removing a folder will also resulting in removal of all the contents within!",
+        "operationId": "ArchiveController_doDeleteRoot",
+        "parameters": [
+          {

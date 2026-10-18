@@ -16,5 +16,7 @@
     <None Include="client-ci.yaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="petstore.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="fixtures/*.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../test/openapi/digitalocean.yaml" Link="fixtures/digitalocean.yaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
