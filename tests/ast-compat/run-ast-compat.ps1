@@ -28,6 +28,15 @@ foreach ($test in $tests) {
     $source = Join-Path $PSScriptRoot $test.File
     $output = Join-Path $outRoot $test.Name
     if ($IsWindows) { $output += ".exe" }
+    $legacyOutput = Join-Path $outRoot ($test.Name + '-legacy')
+    if ($IsWindows) { $legacyOutput += ".exe" }
+    dotnet run --project (Join-Path $root 'src/XPScript.Compiler/XPScript.Compiler.csproj') -c Release --no-build -- $source -o $legacyOutput --runtime=false
+    $legacyCompileCode = $LASTEXITCODE
+    if ($legacyCompileCode -ne 0) { throw "Legacy compilation failed: $($test.Name) (exit code $legacyCompileCode)" }
+    if (-not (Test-Path $legacyOutput)) { throw "Legacy compiler produced no executable: $($test.Name)" }
+    $legacyLines = @(& $legacyOutput)
+    $legacyRunCode = $LASTEXITCODE
+    if ($legacyRunCode -ne 0) { throw "Legacy program failed: $($test.Name), exit code $legacyRunCode" }
     dotnet $compiler ast-compile $source -o $output
     if ($LASTEXITCODE -ne 0) { throw "Compilation failed: $($test.Name)" }
 
@@ -36,10 +45,14 @@ foreach ($test in $tests) {
     $lines = @(& dotnet $generated)
     if ($LASTEXITCODE -ne 0) { throw "Program failed: $($test.Name), exit code $LASTEXITCODE" }
     $actual = @($lines | ForEach-Object { "$_".TrimEnd() })
+    $legacyActual = @($legacyLines | ForEach-Object { "$_".TrimEnd() })
     $expected = @($test.Expected)
     if (($actual -join "\n") -cne ($expected -join "\n")) {
         throw "Output mismatch for $($test.Name). Expected [$($expected -join ', ')] but got [$($actual -join ', ')]"
     }
+    if (($legacyActual -join "\n") -cne ($actual -join "\n")) {
+        throw "Legacy/AST runtime output mismatch for $($test.Name). Legacy [$($legacyActual -join ', ')] AST [$($actual -join ', ')]"
+    }
 }
 
-Write-Host "AST compatibility baseline passed: $($tests.Count) deterministic programs."
+Write-Host "AST compatibility baseline passed: $($tests.Count) deterministic programs with legacy/AST compile and runtime parity."
