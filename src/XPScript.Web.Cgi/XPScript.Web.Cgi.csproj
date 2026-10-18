@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <ProjectReference Include="../XPScript.Web.Runtime/XPScript.Web.Runtime.csproj" />
     <ProjectReference Include="../XPScript.Web.Compiler/XPScript.Web.Compiler.csproj" />
   </ItemGroup>
