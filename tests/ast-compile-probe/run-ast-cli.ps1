@@ -31,6 +31,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST MySQL native-surface compilation failed.' 
 $mysqlResult = dotnet (Join-Path $mysqlOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($mysqlResult -join "`n") -ne 'MYSQL_AST_OK') { throw 'AST MySQL native-surface regression failed.' }
 Write-Host 'AST_MYSQL_OK'
+$mssqlOutput = Join-Path $output 'mssql-native-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'mssql-native-next.xps') -o $mssqlOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST SQL Server native-surface compilation failed.' }
+$mssqlResult = dotnet (Join-Path $mssqlOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($mssqlResult -join "`n") -ne 'MSSQL_AST_OK') { throw 'AST SQL Server native-surface regression failed.' }
+Write-Host 'AST_MSSQL_OK'
 $initializedStringOutput = Join-Path $output 'initialized-module-reference-string-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-string-next.xps') -o $initializedStringOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module string-reference compilation failed.' }

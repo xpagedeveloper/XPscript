@@ -204,7 +204,7 @@ public static class CompilerSymbolCatalog
             ,Define("XPAIToolCall.CallId", "property", "XPAIToolCall.CallId As String", [], "String", "api.XPAIToolCall.CallId")
             ,Define("XPAIToolCall.Arguments", "property", "XPAIToolCall.Arguments As XPJsonObject", [], "XPJsonObject", "api.XPAIToolCall.Arguments")
             ,Define("XPAIToolCall.SessionId", "property", "XPAIToolCall.SessionId As String", [], "String", "api.XPAIToolCall.SessionId")
-        }.Where(x => !AstHttpSupport.OwnsSymbol(x.Name) && !AstApplicationSupport.OwnsSymbol(x.Name) && !AstSqliteSupport.OwnsSymbol(x.Name) && !AstMySqlSupport.OwnsSymbol(x.Name)).Concat(AstApplicationSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).Concat(AstSystemInventorySupport.Catalog).Concat(AstSqliteSupport.Catalog).Concat(AstMySqlSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
+        }.Where(x => !AstHttpSupport.OwnsSymbol(x.Name) && !AstApplicationSupport.OwnsSymbol(x.Name) && !AstSqliteSupport.OwnsSymbol(x.Name) && !AstMySqlSupport.OwnsSymbol(x.Name) && !AstMsSqlSupport.OwnsSymbol(x.Name)).Concat(AstApplicationSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).Concat(AstSystemInventorySupport.Catalog).Concat(AstSqliteSupport.Catalog).Concat(AstMySqlSupport.Catalog).Concat(AstMsSqlSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerSymbolDefinition? Find(string name)
     {

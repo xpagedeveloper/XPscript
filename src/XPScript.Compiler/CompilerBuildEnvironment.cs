@@ -168,6 +168,7 @@ internal static class CompilerBuildEnvironment
         var usesDesktopDialog = source.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
         var packages = ApplicationDependencyCatalog.Detect(source);
         var usesMySql = source.Contains("XPScriptDbMySql", StringComparison.Ordinal);
+        var usesMsSql = source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
         var usesSupabaseDb = source.Contains("XPScriptDbSupabase", StringComparison.Ordinal);
         var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
@@ -178,6 +179,7 @@ internal static class CompilerBuildEnvironment
         var fileDescription = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildFileDescriptionMarker);
         var comments = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCommentsMarker);
         if (usesMySql) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MySqlDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
+        if (usesMsSql && !source.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal)) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MsSqlDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         if (usesSupabaseDb) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + SupabaseDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         string? escapedAssembly = null;
         if (usesUiForm || usesUiListView || usesDesktopDialog)
