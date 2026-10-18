@@ -30,14 +30,14 @@ foreach ($test in $tests) {
     if ($IsWindows) { $output += ".exe" }
     $legacyOutput = Join-Path $outRoot ($test.Name + '-legacy')
     if ($IsWindows) { $legacyOutput += ".exe" }
-    dotnet run --project (Join-Path $root 'src/XPScript.Compiler/XPScript.Compiler.csproj') -c Release --no-build -- $source -o $legacyOutput --runtime=false
+    dotnet run --project (Join-Path $root 'src/XPScript.Compiler/XPScript.Compiler.csproj') -c Release --no-build -- $source -o $legacyOutput --runtime=false --security=off
     $legacyCompileCode = $LASTEXITCODE
     if ($legacyCompileCode -ne 0) { throw "Legacy compilation failed: $($test.Name) (exit code $legacyCompileCode)" }
     if (-not (Test-Path $legacyOutput)) { throw "Legacy compiler produced no executable: $($test.Name)" }
     $legacyLines = @(& $legacyOutput)
     $legacyRunCode = $LASTEXITCODE
     if ($legacyRunCode -ne 0) { throw "Legacy program failed: $($test.Name), exit code $legacyRunCode" }
-    dotnet $compiler ast-compile $source -o $output
+    dotnet $compiler ast-compile $source -o $output --security=off
     if ($LASTEXITCODE -ne 0) { throw "Compilation failed: $($test.Name)" }
 
     $generated = Join-Path $output "Generated.dll"
