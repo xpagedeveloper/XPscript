@@ -180,10 +180,10 @@ public sealed class XpsOpenApiImporter
         }
 
         var source = string.IsNullOrWhiteSpace(sourceName) ? "OpenAPI source" : sourceName;
-        if (endpointCount > 200)
-            throw new XpsOpenApiGenerationException($"{source}: OpenAPI import supports at most 200 endpoints; found {endpointCount}.");
-        if (classCount > 200)
-            throw new XpsOpenApiGenerationException($"{source}: OpenAPI import supports at most 200 classes/schemas; found {classCount}.");
+        if (endpointCount > 300)
+            throw new XpsOpenApiGenerationException($"{source}: OpenAPI import supports at most 300 endpoints; found {endpointCount}.");
+        if (classCount > 300)
+            throw new XpsOpenApiGenerationException($"{source}: OpenAPI import supports at most 300 classes/schemas; found {classCount}.");
     }
 
     private static YamlMappingNode? GetYamlMap(YamlMappingNode? parent, string key)
