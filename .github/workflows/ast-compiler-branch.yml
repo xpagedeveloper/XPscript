@@ -67,6 +67,13 @@ jobs:
         run: dotnet run --project ./tests/TargetMatrixProbe/TargetMatrixProbe.csproj -c Release
       - name: Verify Android AST compiler target probe
         run: dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
+      - name: Verify AST browser-WASM target compilation
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'ast-browser-wasm-target'
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile ./tests/ast-compile-probe/shared-runtime.xps --output $output --rid browser-wasm
+          if (-not (Test-Path (Join-Path $output 'Generated.dll'))) { throw 'AST browser-WASM target compilation did not produce Generated.dll.' }
+          Write-Host 'AST_BROWSER_WASM_TARGET_COMPILE=OK'
       - name: Run xpscriptc AST CLI compilation probe
         shell: pwsh
         run: ./tests/ast-compile-probe/run-ast-cli.ps1
