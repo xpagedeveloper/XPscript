@@ -12,7 +12,19 @@ if (args is ["--write-digitalocean-regression", var regressionPath])
 
 if (args is ["--verify-definition", var definitionPath])
 {
-    await VerifyDefinition(definitionPath);
+    await VerifyDefinition(definitionPath, true, true);
+    return;
+}
+
+if (args is ["--verify-definition-server", var serverDefinitionPath])
+{
+    await VerifyDefinition(serverDefinitionPath, true, false);
+    return;
+}
+
+if (args is ["--verify-definition-client", var clientDefinitionPath])
+{
+    await VerifyDefinition(clientDefinitionPath, false, true);
     return;
 }
 
@@ -2725,34 +2737,38 @@ paths:
     Console.WriteLine("OPENAPI-REGENERATION-COLLISION=OK");
 }
 
-static async Task VerifyDefinition(string definitionPath)
+static async Task VerifyDefinition(string definitionPath, bool verifyServer, bool verifyClient)
 {
     var fullPath = Path.IsPathRooted(definitionPath)
         ? definitionPath
         : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, definitionPath));
     if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI definition was not found.", fullPath);
     var specification = File.ReadAllText(fullPath);
-    var server = new XpsOpenApiGenerator().Generate(specification, Path.GetFileName(fullPath));
-    var client = new XpsOpenApiClientGenerator().Generate(specification, Path.GetFileName(fullPath));
-    if (server.Operations.Count == 0 || server.Models.Count == 0)
-        throw new Exception("OpenAPI server generation produced no operations or models.");
-    if (client.Operations.Count == 0 || client.Models.Count == 0)
-        throw new Exception("OpenAPI client generation produced no operations or models.");
+    XpsOpenApiGenerationResult? server = verifyServer ? new XpsOpenApiGenerator().Generate(specification, Path.GetFileName(fullPath)) : null;
+    XpsOpenApiClientGenerationResult? client = verifyClient ? new XpsOpenApiClientGenerator().Generate(specification, Path.GetFileName(fullPath)) : null;
+    if (server is not null && (server.Operations.Count == 0 || server.Models.Count == 0)) throw new Exception("OpenAPI server generation produced no operations or models.");
+    if (client is not null && (client.Operations.Count == 0 || client.Models.Count == 0)) throw new Exception("OpenAPI client generation produced no operations or models.");
     var fileName = Path.GetFileName(fullPath);
-    var selectedKey = fileName.Equals("riksantikvarieambetet.yaml", StringComparison.OrdinalIgnoreCase) ? "GET /lamningar" : fileName.Equals("scb.json", StringComparison.OrdinalIgnoreCase) ? "GET /tables" : fileName.Equals("skogsstyrelsen.json", StringComparison.OrdinalIgnoreCase) ? "GET /skogligagrunddata/v1/api-info" : "GET /assistants";
+    var selectedKey = fileName.Equals("riksantikvarieambetet.yaml", StringComparison.OrdinalIgnoreCase) ? "GET /lamningar" : fileName.Equals("scb.json", StringComparison.OrdinalIgnoreCase) ? "GET /tables" : fileName.Equals("skogsstyrelsen.json", StringComparison.OrdinalIgnoreCase) ? "GET /skogligagrunddata/v1/api-info" : fileName.Equals("stripe.json", StringComparison.OrdinalIgnoreCase) ? "GET /v1/account" : "GET /assistants";
     var selected = new XpsOpenApiGenerationOptions(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { selectedKey });
-    var scopedServer = new XpsOpenApiGenerator().Generate(specification, Path.GetFileName(fullPath), selected);
-    var scopedClient = new XpsOpenApiClientGenerator().Generate(specification, Path.GetFileName(fullPath), null, selected);
+    var scopedServer = verifyServer ? new XpsOpenApiGenerator().Generate(specification, Path.GetFileName(fullPath), selected) : null;
+    var scopedClient = verifyClient ? new XpsOpenApiClientGenerator().Generate(specification, Path.GetFileName(fullPath), null, selected) : null;
     var root = Path.Combine(Path.GetTempPath(), "xps-openapi-definition-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
-    var serverPath = Path.Combine(root, "server.xps");
-    await File.WriteAllTextAsync(serverPath, scopedServer.Source);
-    await using var serverUnit = await new XpsWebCompiler().CompileAsync(serverPath, root);
-    var clientPath = Path.Combine(root, "client.xps");
-    await File.WriteAllTextAsync(clientPath, scopedClient.Source + "\nSub Main()\nEnd Sub\n");
-    var rootReferences = string.Join(" | ", scopedClient.Source.Split('\n').Where(line => line.Contains("Root", StringComparison.Ordinal)).Take(12));
-    if (rootReferences.Length > 0 && !scopedClient.Source.Contains("Public Class Root", StringComparison.Ordinal))
+    if (scopedServer is not null)
+    {
+        var serverPath = Path.Combine(root, "server.xps");
+        await File.WriteAllTextAsync(serverPath, scopedServer.Source);
+        await using var serverUnit = await new XpsWebCompiler().CompileAsync(serverPath, root);
+    }
+    if (scopedClient is not null)
+    {
+        var clientPath = Path.Combine(root, "client.xps");
+        await File.WriteAllTextAsync(clientPath, scopedClient.Source + "\nSub Main()\nEnd Sub\n");
+        var rootReferences = string.Join(" | ", scopedClient.Source.Split('\n').Where(line => line.Contains("Root", StringComparison.Ordinal)).Take(12));
+        if (rootReferences.Length > 0 && !scopedClient.Source.Contains("Public Class Root", StringComparison.Ordinal))
         throw new Exception("GitHub representative client references an undeclared Root model: " + rootReferences);
-    _ = new XPScriptTranspiler().TranspileRestricted(await File.ReadAllTextAsync(clientPath), clientPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
-    Console.WriteLine($"OPENAPI-DEFINITION={Path.GetFileName(fullPath)} SERVER_OPERATIONS={server.Operations.Count} SERVER_MODELS={server.Models.Count} CLIENT_OPERATIONS={client.Operations.Count} CLIENT_MODELS={client.Models.Count} REPRESENTATIVE-COMPILE=OK");
+        _ = new XPScriptTranspiler().TranspileRestricted(await File.ReadAllTextAsync(clientPath), clientPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
+    }
+    Console.WriteLine($"OPENAPI-DEFINITION={Path.GetFileName(fullPath)} SERVER_OPERATIONS={server?.Operations.Count ?? 0} SERVER_MODELS={server?.Models.Count ?? 0} CLIENT_OPERATIONS={client?.Operations.Count ?? 0} CLIENT_MODELS={client?.Models.Count ?? 0} REPRESENTATIVE-COMPILE=OK");
 }
