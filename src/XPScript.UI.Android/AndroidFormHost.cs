@@ -73,7 +73,7 @@ public static class AndroidFormHost
             panel.Children.Add(actions);
 
             var form = new ScrollViewer { Content = panel };
-            MainView.Current.ShowForm(form);
+            MainView.Current!.ShowForm(form);
 
             cancel.Click += (_, _) =>
             {
