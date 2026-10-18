@@ -28,6 +28,12 @@ if (args is ["--verify-definition-client", var clientDefinitionPath])
     return;
 }
 
+if (args is ["--verify-definition-client-scoped", var scopedDefinitionPath])
+{
+    await VerifyScopedClient(scopedDefinitionPath);
+    return;
+}
+
 VerifyClientRegeneration();
 if (args is ["--regeneration-only"]) return;
 
@@ -2771,4 +2777,21 @@ static async Task VerifyDefinition(string definitionPath, bool verifyServer, boo
         _ = new XPScriptTranspiler().TranspileRestricted(await File.ReadAllTextAsync(clientPath), clientPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
     }
     Console.WriteLine($"OPENAPI-DEFINITION={Path.GetFileName(fullPath)} SERVER_OPERATIONS={server?.Operations.Count ?? 0} SERVER_MODELS={server?.Models.Count ?? 0} CLIENT_OPERATIONS={client?.Operations.Count ?? 0} CLIENT_MODELS={client?.Models.Count ?? 0} REPRESENTATIVE-COMPILE=OK");
+}
+
+static async Task VerifyScopedClient(string definitionPath)
+{
+    var fullPath = Path.GetFullPath(definitionPath);
+    if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI definition was not found.", fullPath);
+    var specification = File.ReadAllText(fullPath);
+    var fileName = Path.GetFileName(fullPath);
+    var selectedKey = fileName.Equals("stripe.json", StringComparison.OrdinalIgnoreCase) ? "GET /v1/account" : "GET /assistants";
+    var options = new XpsOpenApiGenerationOptions(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { selectedKey });
+    var client = new XpsOpenApiClientGenerator().Generate(specification, fileName, null, options);
+    var root = Path.Combine(Path.GetTempPath(), "xps-openapi-client-scoped-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(root);
+    var clientPath = Path.Combine(root, "client.xps");
+    await File.WriteAllTextAsync(clientPath, client.Source + "\nSub Main()\nEnd Sub\n");
+    _ = new XPScriptTranspiler().TranspileRestricted(await File.ReadAllTextAsync(clientPath), clientPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
+    Console.WriteLine($"OPENAPI-SCOPED-CLIENT={fileName} OPERATIONS={client.Operations.Count} MODELS={client.Models.Count} COMPILE=OK");
 }
