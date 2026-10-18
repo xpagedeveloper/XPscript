@@ -27,10 +27,10 @@ internal static class AndroidCommand
         var requestedSerial = ParseOptionalDevice(args, "android launch");
         var adb = ResolveAdb();
         var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
-        var result = await ExecuteAsync(adb, ["-s", serial, "shell", "monkey", "-p", "com.xpscript.debugapp", "-c", "android.intent.category.LAUNCHER", "1"]);
+        var result = await ExecuteAsync(adb, ["-s", serial, "shell", "monkey", "-p", "eu.xpscript.app", "-c", "android.intent.category.LAUNCHER", "1"]);
         if (result.ExitCode != 0 || result.Output.Contains("No activities found", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (result.Error + Environment.NewLine + result.Output).Trim());
-        Console.WriteLine("Launched com.xpscript.debugapp on " + serial + ".");
+        Console.WriteLine("Launched eu.xpscript.app on " + serial + ".");
         return 0;
     }
 
