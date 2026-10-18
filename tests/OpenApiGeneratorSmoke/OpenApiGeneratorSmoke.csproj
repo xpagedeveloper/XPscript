@@ -18,5 +18,6 @@
     <None Include="fixtures/*.yaml" CopyToOutputDirectory="PreserveNewest" />
     <None Include="fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../test/openapi/digitalocean.yaml" Link="fixtures/digitalocean.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../test/openapi/github.json" Link="fixtures/github.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

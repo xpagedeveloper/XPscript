@@ -10,6 +10,12 @@ if (args is ["--write-digitalocean-regression", var regressionPath])
     return;
 }
 
+if (args is ["--verify-definition", var definitionPath])
+{
+    VerifyDefinition(definitionPath);
+    return;
+}
+
 VerifyClientRegeneration();
 if (args is ["--regeneration-only"]) return;
 
@@ -2717,4 +2723,20 @@ paths:
         throw new Exception("OpenAPI client regeneration must preserve deterministic member naming when the contract grows.");
 
     Console.WriteLine("OPENAPI-REGENERATION-COLLISION=OK");
+}
+
+static void VerifyDefinition(string definitionPath)
+{
+    var fullPath = Path.IsPathRooted(definitionPath)
+        ? definitionPath
+        : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, definitionPath));
+    if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI definition was not found.", fullPath);
+    var specification = File.ReadAllText(fullPath);
+    var server = new XpsOpenApiGenerator().Generate(specification, Path.GetFileName(fullPath));
+    var client = new XpsOpenApiClientGenerator().Generate(specification, Path.GetFileName(fullPath));
+    if (server.Operations.Count == 0 || server.Models.Count == 0)
+        throw new Exception("OpenAPI server generation produced no operations or models.");
+    if (client.Operations.Count == 0 || client.Models.Count == 0)
+        throw new Exception("OpenAPI client generation produced no operations or models.");
+    Console.WriteLine($"OPENAPI-DEFINITION={Path.GetFileName(fullPath)} SERVER_OPERATIONS={server.Operations.Count} SERVER_MODELS={server.Models.Count} CLIENT_OPERATIONS={client.Operations.Count} CLIENT_MODELS={client.Models.Count}");
 }
