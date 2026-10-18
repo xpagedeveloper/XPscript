@@ -82,7 +82,9 @@ internal sealed class CoreCompatibilityTranspiler
     }
 
     private static string[] Normalize(string source) =>
-        source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')
+            .Select(line => Regex.IsMatch(line, @"^\s*Rem\b", RegexOptions.IgnoreCase) ? string.Empty : line)
+            .ToArray();
 
     private void Analyze(string[] lines, string sourceName)
     {
