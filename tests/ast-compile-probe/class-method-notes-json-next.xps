@@ -1,0 +1,33 @@
+Option Declare
+
+Class NotesJsonMethods
+    Public Function AcceptHttp(ByVal value As NotesHTTPRequest) As Boolean
+        AcceptHttp = value Is Nothing
+    End Function
+
+    Public Function AcceptNavigator(ByVal value As XPJSONNavigator) As Boolean
+        AcceptNavigator = value Is Nothing
+    End Function
+
+    Public Function AcceptObject(ByVal value As XPJSONObject) As Boolean
+        AcceptObject = value Is Nothing
+    End Function
+
+    Public Function AcceptArray(ByVal value As XPJSONArray) As Boolean
+        AcceptArray = value Is Nothing
+    End Function
+
+    Public Function AcceptElement(ByVal value As XPJSONElement) As Boolean
+        AcceptElement = value Is Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New NotesJsonMethods
+    If Not methods.AcceptHttp(Nothing) Then Error 4260
+    If Not methods.AcceptNavigator(Nothing) Then Error 4261
+    If Not methods.AcceptObject(Nothing) Then Error 4262
+    If Not methods.AcceptArray(Nothing) Then Error 4263
+    If Not methods.AcceptElement(Nothing) Then Error 4264
+    Print "AST_NOTES_JSON_CLASS_METHODS_OK"
+End Sub

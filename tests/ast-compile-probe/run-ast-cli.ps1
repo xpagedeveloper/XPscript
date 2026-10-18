@@ -334,6 +334,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST AI class-method parameter compilation fail
 $aiClassMethodResult = dotnet (Join-Path $aiClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($aiClassMethodResult -join "`n") -ne "True`nTrue`nTrue`nTrue`nTrue") { throw 'AST AI class-method parameter execution failed.' }
 Write-Host 'AST_AI_CLASS_METHOD_PARAMETERS_OK'
+$notesJsonClassMethodOutput = Join-Path $output 'class-method-notes-json-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-json-next.xps') -o $notesJsonClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Notes JSON class-method probe failed.' }
+dotnet (Join-Path $notesJsonClassMethodOutput 'class-method-notes-json-next.dll')
+if ($LASTEXITCODE -ne 0) { throw 'AST Notes JSON class-method executable failed.' }
+Write-Host 'AST_NOTES_JSON_CLASS_METHODS_OK'
 $optionalClassMethodOutput = Join-Path $output 'class-method-optional-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-next.xps') -o $optionalClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST optional scalar class-method compilation failed.' }
