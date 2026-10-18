@@ -1,0 +1,21 @@
+Option Declare
+
+Sub SlowCallback(ByVal toolCall As XPAIToolCall, ByVal context As Variant)
+    Call Sleep(1)
+End Sub
+
+Sub Main()
+    Dim ai As New XPAi(Environ("XPSCRIPT_AI_TIMEOUT_TEST_AI"), "timeout-test-key")
+    Dim tool As New XPAITool("slow")
+    tool.Timeout = 0.1
+    Call tool.AddFunction("slow_call", "Slow callback", "SlowCallback", "context")
+    Call ai.AddTool(tool)
+    Dim response As XPAiResponse
+    Dim code As Long
+    On Error Resume Next
+    Set response = ai.Complete()
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 4267
+    Print "XPAI_TOOL_TIMEOUT_OK"
+End Sub
