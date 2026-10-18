@@ -473,12 +473,35 @@ internal static class XPScriptAiToolRegistry
     {
         if (!Collections.TryGetValue(client, out var collection))
             throw new XPScriptRuntimeException(5, $"XPAi tool function '{functionName}' is not registered.");
+        XPScriptAiTool? owner = null;
+        XPScriptAiToolFunction? function = null;
         lock (collection.Sync)
         {
             foreach (var tool in collection.Tools)
             {
-                var function = tool.SnapshotFunctions().FirstOrDefault(candidate => candidate.Name.Equals(functionName, StringComparison.OrdinalIgnoreCase));
-                if (function is not null) return function.Invoke(callId, arguments, sessionId);
+                function = tool.SnapshotFunctions().FirstOrDefault(candidate => candidate.Name.Equals(functionName, StringComparison.OrdinalIgnoreCase));
+                if (function is not null)
+                {
+                    owner = tool;
+                    break;
+                }
+            }
+        }
+        if (owner is not null && function is not null)
+        {
+            try
+            {
+                return Task.Run(() => function.Invoke(callId, arguments, sessionId))
+                    .WaitAsync(TimeSpan.FromSeconds(owner.Timeout))
+                    .GetAwaiter().GetResult();
+            }
+            catch (TimeoutException)
+            {
+                throw new XPScriptRuntimeException(5, $"XPAi tool '{owner.Name}' function '{function.Name}' timed out.");
+            }
+            catch (AggregateException exception) when (exception.InnerException is XPScriptRuntimeException runtimeException)
+            {
+                throw runtimeException;
             }
         }
         throw new XPScriptRuntimeException(5, $"XPAi tool function '{functionName}' is not registered.");
