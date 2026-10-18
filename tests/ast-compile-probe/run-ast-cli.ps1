@@ -1207,7 +1207,7 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpai-overloads-next.xps')
 if ($LASTEXITCODE -ne 0) { throw 'AST XPAi overload compilation failed.' }
 Write-Host 'AST_XPAI_OVERLOADS_OK'
 $crossProcedure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-cross-procedure-error.xps') -o (Join-Path $output 'cross-procedure') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($crossProcedure -join "`n") -notmatch "Unknown label 'outside'") { throw 'AST GoTo accepted a label from another procedure.' }
+if ($LASTEXITCODE -ne 2 -or ($crossProcedure -join "`n") -notmatch "goto-cross-procedure-error\.xps:7:5: XPS1012: Unknown label 'outside'") { throw 'AST GoTo source mapping or cross-procedure label validation failed.' }
 $gotoOutput = Join-Path $output 'goto-scope'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-procedure-scope.xps') -o $gotoOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST procedure-scoped GoTo compilation failed.' }
@@ -1229,7 +1229,7 @@ foreach ($resumeFixture in @('resume-loops', 'resume-handler-error')) {
     if ($LASTEXITCODE -ne 0 -or ($fixtureResult -join "`n") -ne $expected) { throw "AST $resumeFixture execution failed." }
 }
 $resumeUnknown = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'resume-unknown-label.xps') -o (Join-Path $output 'resume-unknown-label') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($resumeUnknown -join "`n") -notmatch "Unknown label 'missing'") { throw 'AST On Error label validation failed.' }
+if ($LASTEXITCODE -ne 2 -or ($resumeUnknown -join "`n") -notmatch "resume-unknown-label\.xps:2:5: XPS1012: Unknown label 'missing'") { throw 'AST On Error label source mapping or validation failed.' }
 foreach ($runtimeFailure in @('resume-disabled', 'resume-error')) {
     $failureOutput = Join-Path $output $runtimeFailure
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$runtimeFailure.xps") -o $failureOutput
