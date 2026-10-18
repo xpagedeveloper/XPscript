@@ -1991,6 +1991,47 @@ foreach (var marker in new[] { "Public JsonParse As String", "Public StrLeftBack
     if (!scopeCollision.Source.Contains(marker, StringComparison.Ordinal))
         throw new Exception("Generated OpenAPI scope-collision model is missing member: " + marker);
 
+var scopedServer = generator.Generate("""
+openapi: 3.1.0
+info: { title: Scoped Server Models, version: 1.0.0 }
+components:
+  schemas:
+    Included:
+      type: object
+      properties:
+        nested: { $ref: '#/components/schemas/Nested' }
+    Nested:
+      type: object
+      properties:
+        value: { type: string }
+    Excluded:
+      type: object
+      properties:
+        value: { type: string }
+paths:
+  /included:
+    get:
+      operationId: included
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Included' }
+  /excluded:
+    get:
+      operationId: excluded
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Excluded' }
+""", "scoped-server.yaml", new XpsOpenApiGenerationOptions(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "included" }));
+if (!scopedServer.Models.Contains("Included") || !scopedServer.Models.Contains("Nested") || scopedServer.Models.Contains("Excluded") || scopedServer.Operations.Count != 1)
+    throw new Exception("OpenAPI server operation scoping did not retain only the selected operation's transitive models.");
+Console.WriteLine("OPENAPI-SERVER-MODEL-SCOPE=OK");
+
 var crossScopeRuntimeNames = new XpsOpenApiClientGenerator().Generate("""
 openapi: 3.1.0
 info: { title: Cross Scope Runtime Names, version: 1.0.0 }
