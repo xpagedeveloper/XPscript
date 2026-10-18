@@ -1,24 +1,24 @@
-Sub WeatherCallback(ByVal toolCall As AIToolCall, ByVal tenant As Variant)
+Sub WeatherCallback(ByVal toolCall As XPAIToolCall, ByVal tenant As Variant)
 End Sub
 
 Sub Main()
-    Dim tool As New AITool("weather")
-    Dim fn As AIToolFunction
+    Dim tool As New XPAITool("weather")
+    Dim fn As XPAIToolFunction
     Set fn = tool.AddFunction("get_weather", "Returns weather", "WeatherCallback", "tenant-42")
-    If fn.Name <> "get_weather" Or fn.CallbackName <> "WeatherCallback" Then Error 5, "AITool function metadata failed"
+    If fn.Name <> "get_weather" Or fn.CallbackName <> "WeatherCallback" Then Error 5, "XPAITool function metadata failed"
     Call fn.AddParameter("city", "string", "City name", True)
-    If Not fn.HasParameter("city") Or fn.ParameterCount() <> 1 Then Error 5, "AITool parameter registration failed"
-    If Not fn.RemoveParameter("city") Or fn.ParameterCount() <> 0 Then Error 5, "AITool parameter removal failed"
-    If tool.GetFunction("get_weather").Name <> "get_weather" Then Error 5, "AITool function getter failed"
+    If Not fn.HasParameter("city") Or fn.ParameterCount() <> 1 Then Error 5, "XPAITool parameter registration failed"
+    If Not fn.RemoveParameter("city") Or fn.ParameterCount() <> 0 Then Error 5, "XPAITool parameter removal failed"
+    If tool.GetFunction("get_weather").Name <> "get_weather" Then Error 5, "XPAITool function getter failed"
     Call tool.SetRequestProperty("tenant", "tenant-42")
-    If tool.GetRequestContext().Get("tenant") <> "tenant-42" Then Error 5, "AITool request context failed"
+    If tool.GetRequestContext().Get("tenant") <> "tenant-42" Then Error 5, "XPAITool request context failed"
     Call tool.RemoveRequestProperty("tenant")
     Call tool.ClearRequestProperties()
-    If InStr(tool.ToJson(), "get_weather") = 0 Then Error 5, "AITool JSON metadata failed"
-    If Not tool.HasFunction("get_weather") Then Error 5, "AITool function lookup failed"
-    If tool.FunctionCount() <> 1 Then Error 5, "AITool function registration failed"
-    If Not tool.RemoveFunction("get_weather") Then Error 5, "AITool function removal failed"
-    If tool.FunctionCount() <> 0 Then Error 5, "AITool function remained after removal"
+    If InStr(tool.ToJson(), "get_weather") = 0 Then Error 5, "XPAITool JSON metadata failed"
+    If Not tool.HasFunction("get_weather") Then Error 5, "XPAITool function lookup failed"
+    If tool.FunctionCount() <> 1 Then Error 5, "XPAITool function registration failed"
+    If Not tool.RemoveFunction("get_weather") Then Error 5, "XPAITool function removal failed"
+    If tool.FunctionCount() <> 0 Then Error 5, "XPAITool function remained after removal"
 
     Dim ai As New XPAi("https://example.invalid", "key")
     Call ai.NewRequest()

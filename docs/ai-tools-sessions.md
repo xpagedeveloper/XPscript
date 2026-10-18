@@ -6,7 +6,7 @@ For a runnable local demonstration, see [`demo/ai/ai-tool-demo.xps`](../demo/ai/
 
 ## Tool execution flow
 
-1. Create an `AITool`.
+1. Create an `XPAITool`.
 2. Register one or more AI-visible functions with `AddFunction`.
 3. Declare the JSON parameter schema with `AddParameter`.
 4. Add the tool to an `XPAi` client with `AddTool`.
@@ -17,7 +17,7 @@ For a runnable local demonstration, see [`demo/ai/ai-tool-demo.xps`](../demo/ai/
 
 Automatic tool execution currently applies to non-streaming `Complete()` calls. Streaming tool-call delta aggregation is a separate concern.
 
-## `AITool(name)`
+## `XPAITool(name)`
 
 Creates a logical tool container.
 
@@ -26,10 +26,10 @@ Creates a logical tool container.
 - `name`: required tool name. Names are case-insensitive for registry lookup and must satisfy the runtime identifier limits.
 
 ```xpscript
-Dim weather As New AITool("weather")
+Dim weather As New XPAITool("weather")
 ```
 
-## `AITool.Description`
+## `XPAITool.Description`
 
 Gets or sets the human-readable tool description.
 
@@ -37,7 +37,7 @@ Gets or sets the human-readable tool description.
 weather.Description = "Weather information"
 ```
 
-## `AITool.Timeout`
+## `XPAITool.Timeout`
 
 Gets or sets the tool timeout metadata in seconds. Accepted values are `0.1` through `3600`.
 
@@ -45,7 +45,7 @@ Gets or sets the tool timeout metadata in seconds. Accepted values are `0.1` thr
 weather.Timeout = 15
 ```
 
-## `AITool.AddFunction(name, description, callback [, callbackContext...])`
+## `XPAITool.AddFunction(name, description, callback [, callbackContext...])`
 
 Registers one AI-visible function and binds it to an application callback.
 
@@ -54,7 +54,7 @@ Registers one AI-visible function and binds it to an application callback.
 - `name`: function name sent to the AI provider.
 - `description`: function description sent to the provider.
 - `callback`: module `Sub` or `Function` name. Static callback names are checked by the compiler.
-- `callbackContext...`: optional fixed values appended after the generated `AIToolCall` argument.
+- `callbackContext...`: optional fixed values appended after the generated `XPAIToolCall` argument.
 
 ```xpscript
 Call weather.AddFunction( _
@@ -68,7 +68,7 @@ A static callback registration fails at compile time when the callback does not 
 
 ## Tool callback signature
 
-The callback receives an `AIToolCall` object first, followed by the fixed context values supplied to `AddFunction`.
+The callback receives an `XPAIToolCall` object first, followed by the fixed context values supplied to `AddFunction`.
 
 ```xpscript
 Function HandleGetWeather(call As Variant, tenant As String) As Variant
@@ -79,7 +79,7 @@ Function HandleGetWeather(call As Variant, tenant As String) As Variant
 End Function
 ```
 
-`AIToolCall` exposes:
+`XPAIToolCall` exposes:
 
 - `ToolName`: owning tool name.
 - `FunctionName`: AI-visible function name.
@@ -87,7 +87,7 @@ End Function
 - `Arguments`: validated `XPJsonObject` arguments.
 - `SessionId`: current XPAi session identifier, when available.
 
-## `AITool.AddParameter(functionName, name, type, description, required)`
+## `XPAITool.AddParameter(functionName, name, type, description, required)`
 
 Adds one JSON-schema parameter to a registered function.
 
@@ -108,7 +108,7 @@ Generated object schemas set `additionalProperties` to `false`. Tool arguments a
 
 ## Function registry members
 
-### `AITool.HasFunction(name)`
+### `XPAITool.HasFunction(name)`
 
 Returns `True` when the tool contains the function.
 
@@ -116,7 +116,7 @@ Returns `True` when the tool contains the function.
 Print CStr(weather.HasFunction("get_weather"))
 ```
 
-### `AITool.GetFunction(name)`
+### `XPAITool.GetFunction(name)`
 
 Returns the registered function object or raises an XPScript runtime error when it does not exist.
 
@@ -126,7 +126,7 @@ Set fn = weather.GetFunction("get_weather")
 Print fn.Name
 ```
 
-### `AITool.GetFunctionNames()`
+### `XPAITool.GetFunctionNames()`
 
 Returns function names in deterministic registration order as a JSON array.
 
@@ -136,7 +136,7 @@ Set names = weather.GetFunctionNames()
 Print CStr(names.Get(0))
 ```
 
-### `AITool.FunctionCount()`
+### `XPAITool.FunctionCount()`
 
 Returns the number of functions in the tool.
 
@@ -144,7 +144,7 @@ Returns the number of functions in the tool.
 Print CStr(weather.FunctionCount())
 ```
 
-### `AITool.RemoveFunction(name)`
+### `XPAITool.RemoveFunction(name)`
 
 Removes a function and returns whether it existed.
 
@@ -158,7 +158,7 @@ The function object returned by `AddFunction` or `GetFunction` also supports `Ad
 
 Request context is application-owned metadata. It is not allowed to mutate the parent XPAi endpoint, API key or request headers.
 
-### `AITool.SetRequestProperty(name, value)`
+### `XPAITool.SetRequestProperty(name, value)`
 
 Adds or replaces one context property.
 
@@ -166,7 +166,7 @@ Adds or replaces one context property.
 Call weather.SetRequestProperty("tenant", "tenant-a")
 ```
 
-### `AITool.RemoveRequestProperty(name)`
+### `XPAITool.RemoveRequestProperty(name)`
 
 Removes one context property.
 
@@ -174,7 +174,7 @@ Removes one context property.
 Call weather.RemoveRequestProperty("tenant")
 ```
 
-### `AITool.ClearRequestProperties()`
+### `XPAITool.ClearRequestProperties()`
 
 Clears all tool context properties.
 
@@ -182,7 +182,7 @@ Clears all tool context properties.
 Call weather.ClearRequestProperties()
 ```
 
-### `AITool.GetRequestContext()`
+### `XPAITool.GetRequestContext()`
 
 Returns a defensive `XPJsonObject` copy.
 
@@ -192,7 +192,7 @@ Set context = weather.GetRequestContext()
 Print CStr(context.Get("tenant"))
 ```
 
-### `AITool.ToJson()` and `ToJsonObject()`
+### `XPAITool.ToJson()` and `ToJsonObject()`
 
 Serialize tool metadata for diagnostics or application inspection. They do not expose XPAi credentials.
 
@@ -200,7 +200,7 @@ Serialize tool metadata for diagnostics or application inspection. They do not e
 
 ### `XPAi.AddTool(tool)`
 
-Registers an `AITool` on one XPAi client.
+Registers an `XPAITool` on one XPAi client.
 
 ```xpscript
 Call ai.AddTool(weather)
@@ -324,6 +324,6 @@ Session identifiers are accepted only from successful responses. Control charact
 
 ## Security boundary
 
-AITool registration is an allowlist. The model can select only provider-visible function names that the application has registered. It never supplies an XPScript callback/procedure name. Callback invocation uses the shared callback runtime with identifier validation, exact arity matching, controlled argument conversion, sanitized failures and trimming protection.
+XPAITool registration is an allowlist. The model can select only provider-visible function names that the application has registered. It never supplies an XPScript callback/procedure name. Callback invocation uses the shared callback runtime with identifier validation, exact arity matching, controlled argument conversion, sanitized failures and trimming protection.
 
 Browser WebAssembly cannot use XPAi because browser code cannot keep provider credentials private. Browser UI callbacks that need AI must call an explicit server-side HTTP API.

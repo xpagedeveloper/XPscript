@@ -6,13 +6,13 @@ public static class JsonHttpCompatibilityRuntimeSource
 internal static class LSJsonHttpRuntime
 {
     public static NotesHTTPRequest CreateHTTPRequest() => new();
-    public static NotesJSONNavigator CreateJSONNavigator(object? input = null) => new(input);
-    public static NotesJSONObject CreateJSONObject() => new(new System.Text.Json.Nodes.JsonObject());
-    public static NotesJSONArray CreateJSONArray() => new(new System.Text.Json.Nodes.JsonArray());
-    public static NotesJSONElement CreateJSONElement(object? value = null, object? name = null)
+    public static XPJSONNavigator CreateJSONNavigator(object? input = null) => new(input);
+    public static XPJSONObject CreateJSONObject() => new(new System.Text.Json.Nodes.JsonObject());
+    public static XPJSONArray CreateJSONArray() => new(new System.Text.Json.Nodes.JsonArray());
+    public static XPJSONElement CreateJSONElement(object? value = null, object? name = null)
     {
         var node = LSJsonNodeRuntime.ToNode(value);
-        return new NotesJSONElement(XPScriptRuntime.CStr(name), node, null);
+        return new XPJSONElement(XPScriptRuntime.CStr(name), node, null);
     }
 }
 
@@ -21,10 +21,10 @@ internal static class LSJsonNodeRuntime
     public static System.Text.Json.Nodes.JsonNode? ParseInput(object? input)
     {
         if (input is null) return new System.Text.Json.Nodes.JsonObject();
-        if (input is NotesJSONNavigator navigator) return navigator.Root.DeepClone();
-        if (input is NotesJSONObject obj) return obj.Node.DeepClone();
-        if (input is NotesJSONArray arr) return arr.Node.DeepClone();
-        if (input is NotesJSONElement element) return element.RawNode?.DeepClone();
+        if (input is XPJSONNavigator navigator) return navigator.Root.DeepClone();
+        if (input is XPJSONObject obj) return obj.Node.DeepClone();
+        if (input is XPJSONArray arr) return arr.Node.DeepClone();
+        if (input is XPJSONElement element) return element.RawNode?.DeepClone();
         if (input is byte[] bytes) return ParseText(System.Text.Encoding.UTF8.GetString(bytes));
 
         var text = XPScriptRuntime.CStr(input);
@@ -52,10 +52,10 @@ internal static class LSJsonNodeRuntime
     public static System.Text.Json.Nodes.JsonNode? ToNode(object? value)
     {
         if (value is null) return null;
-        if (value is NotesJSONElement element) return element.RawNode?.DeepClone();
-        if (value is NotesJSONObject obj) return obj.Node.DeepClone();
-        if (value is NotesJSONArray arr) return arr.Node.DeepClone();
-        if (value is NotesJSONNavigator navigator) return navigator.Root.DeepClone();
+        if (value is XPJSONElement element) return element.RawNode?.DeepClone();
+        if (value is XPJSONObject obj) return obj.Node.DeepClone();
+        if (value is XPJSONArray arr) return arr.Node.DeepClone();
+        if (value is XPJSONNavigator navigator) return navigator.Root.DeepClone();
         if (value is byte[] bytes) return System.Text.Json.Nodes.JsonValue.Create(System.Text.Encoding.UTF8.GetString(bytes));
         if (value is string s) return System.Text.Json.Nodes.JsonValue.Create(s);
         if (value is bool b) return System.Text.Json.Nodes.JsonValue.Create(b);
@@ -73,8 +73,8 @@ internal static class LSJsonNodeRuntime
     public static object? ToXPScriptValue(System.Text.Json.Nodes.JsonNode? node)
     {
         if (node is null) return null;
-        if (node is System.Text.Json.Nodes.JsonObject obj) return new NotesJSONObject(obj);
-        if (node is System.Text.Json.Nodes.JsonArray arr) return new NotesJSONArray(arr);
+        if (node is System.Text.Json.Nodes.JsonObject obj) return new XPJSONObject(obj);
+        if (node is System.Text.Json.Nodes.JsonArray arr) return new XPJSONArray(arr);
 
         var element = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(node.ToJsonString());
         return element.ValueKind switch
@@ -106,16 +106,16 @@ internal static class LSJsonNodeRuntime
         };
     }
 
-    public static NotesJSONElement ElementFromObject(System.Text.Json.Nodes.JsonObject obj, string name)
+    public static XPJSONElement ElementFromObject(System.Text.Json.Nodes.JsonObject obj, string name)
     {
         obj.TryGetPropertyValue(name, out var node);
-        return new NotesJSONElement(name, node, replacement => obj[name] = replacement);
+        return new XPJSONElement(name, node, replacement => obj[name] = replacement);
     }
 
-    public static NotesJSONElement ElementFromArray(System.Text.Json.Nodes.JsonArray arr, int index)
+    public static XPJSONElement ElementFromArray(System.Text.Json.Nodes.JsonArray arr, int index)
     {
         var node = arr[index];
-        return new NotesJSONElement("", node, replacement => arr[index] = replacement);
+        return new XPJSONElement("", node, replacement => arr[index] = replacement);
     }
 
     public static void ValidateOneBasedIndex(int index, int size, bool suppressErrors)
@@ -126,12 +126,12 @@ internal static class LSJsonNodeRuntime
     }
 }
 
-internal sealed class NotesJSONElement
+internal sealed class XPJSONElement
 {
     private System.Text.Json.Nodes.JsonNode? _node;
     private readonly Action<System.Text.Json.Nodes.JsonNode?>? _setter;
 
-    internal NotesJSONElement(string name, System.Text.Json.Nodes.JsonNode? node, Action<System.Text.Json.Nodes.JsonNode?>? setter)
+    internal XPJSONElement(string name, System.Text.Json.Nodes.JsonNode? node, Action<System.Text.Json.Nodes.JsonNode?>? setter)
     {
         Name = name;
         _node = node;
@@ -155,39 +155,39 @@ internal sealed class NotesJSONElement
 
     public void Copy(object? source)
     {
-        if (source is not NotesJSONElement element)
-            throw new XPScriptRuntimeException(13, "Copy requires NotesJSONElement.");
+        if (source is not XPJSONElement element)
+            throw new XPScriptRuntimeException(13, "Copy requires XPJSONElement.");
         _node = element.RawNode?.DeepClone();
         _setter?.Invoke(_node);
     }
 }
 
-internal sealed class NotesJSONObject
+internal sealed class XPJSONObject
 {
     private int _cursor = -1;
-    internal NotesJSONObject(System.Text.Json.Nodes.JsonObject node) => Node = node;
+    internal XPJSONObject(System.Text.Json.Nodes.JsonObject node) => Node = node;
     internal System.Text.Json.Nodes.JsonObject Node { get; }
     public int Size => Node.Count;
 
-    public NotesJSONElement? GetElementByName(object? name)
+    public XPJSONElement? GetElementByName(object? name)
     {
         var key = XPScriptRuntime.CStr(name);
         return Node.ContainsKey(key) ? LSJsonNodeRuntime.ElementFromObject(Node, key) : null;
     }
 
-    public NotesJSONElement? GetFirstElement()
+    public XPJSONElement? GetFirstElement()
     {
         _cursor = 0;
         return ElementAt(_cursor, true);
     }
 
-    public NotesJSONElement? GetNextElement()
+    public XPJSONElement? GetNextElement()
     {
         _cursor++;
         return ElementAt(_cursor, true);
     }
 
-    public NotesJSONElement? GetNthElement(object? index, object? suppressErrors = null)
+    public XPJSONElement? GetNthElement(object? index, object? suppressErrors = null)
     {
         var oneBased = XPScriptRuntime.CInt(index);
         var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
@@ -197,7 +197,7 @@ internal sealed class NotesJSONObject
         return ElementAt(_cursor, false);
     }
 
-    public NotesJSONElement AppendElement(object? value, object? name)
+    public XPJSONElement AppendElement(object? value, object? name)
     {
         var key = XPScriptRuntime.CStr(name);
         if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object elements require a name.");
@@ -205,35 +205,35 @@ internal sealed class NotesJSONObject
         return LSJsonNodeRuntime.ElementFromObject(Node, key);
     }
 
-    public NotesJSONArray AppendArray(object? name)
+    public XPJSONArray AppendArray(object? name)
     {
         var key = XPScriptRuntime.CStr(name);
         if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object arrays require a name.");
         var arr = new System.Text.Json.Nodes.JsonArray();
         Node[key] = arr;
-        return new NotesJSONArray(arr);
+        return new XPJSONArray(arr);
     }
 
-    public NotesJSONObject AppendObject(object? name)
+    public XPJSONObject AppendObject(object? name)
     {
         var key = XPScriptRuntime.CStr(name);
         if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON objects require a name.");
         var obj = new System.Text.Json.Nodes.JsonObject();
         Node[key] = obj;
-        return new NotesJSONObject(obj);
+        return new XPJSONObject(obj);
     }
 
     public void Copy(object? source)
     {
-        if (source is not NotesJSONObject other)
-            throw new XPScriptRuntimeException(13, "Copy requires NotesJSONObject.");
+        if (source is not XPJSONObject other)
+            throw new XPScriptRuntimeException(13, "Copy requires XPJSONObject.");
         Node.Clear();
         foreach (var pair in other.Node)
             Node[pair.Key] = pair.Value?.DeepClone();
         _cursor = -1;
     }
 
-    private NotesJSONElement? ElementAt(int zeroBased, bool suppress)
+    private XPJSONElement? ElementAt(int zeroBased, bool suppress)
     {
         if (zeroBased < 0 || zeroBased >= Size)
         {
@@ -245,26 +245,26 @@ internal sealed class NotesJSONObject
     }
 }
 
-internal sealed class NotesJSONArray
+internal sealed class XPJSONArray
 {
     private int _cursor = -1;
-    internal NotesJSONArray(System.Text.Json.Nodes.JsonArray node) => Node = node;
+    internal XPJSONArray(System.Text.Json.Nodes.JsonArray node) => Node = node;
     internal System.Text.Json.Nodes.JsonArray Node { get; }
     public int Size => Node.Count;
 
-    public NotesJSONElement? GetFirstElement()
+    public XPJSONElement? GetFirstElement()
     {
         _cursor = 0;
         return ElementAt(_cursor, true);
     }
 
-    public NotesJSONElement? GetNextElement()
+    public XPJSONElement? GetNextElement()
     {
         _cursor++;
         return ElementAt(_cursor, true);
     }
 
-    public NotesJSONElement? GetNthElement(object? index, object? suppressErrors = null)
+    public XPJSONElement? GetNthElement(object? index, object? suppressErrors = null)
     {
         var oneBased = XPScriptRuntime.CInt(index);
         var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
@@ -274,37 +274,37 @@ internal sealed class NotesJSONArray
         return ElementAt(_cursor, false);
     }
 
-    public NotesJSONElement AppendElement(object? value)
+    public XPJSONElement AppendElement(object? value)
     {
         Node.Add(LSJsonNodeRuntime.ToNode(value));
         return LSJsonNodeRuntime.ElementFromArray(Node, Node.Count - 1);
     }
 
-    public NotesJSONArray AppendArray()
+    public XPJSONArray AppendArray()
     {
         var arr = new System.Text.Json.Nodes.JsonArray();
         Node.Add(arr);
-        return new NotesJSONArray(arr);
+        return new XPJSONArray(arr);
     }
 
-    public NotesJSONObject AppendObject()
+    public XPJSONObject AppendObject()
     {
         var obj = new System.Text.Json.Nodes.JsonObject();
         Node.Add(obj);
-        return new NotesJSONObject(obj);
+        return new XPJSONObject(obj);
     }
 
     public void Copy(object? source)
     {
-        if (source is not NotesJSONArray other)
-            throw new XPScriptRuntimeException(13, "Copy requires NotesJSONArray.");
+        if (source is not XPJSONArray other)
+            throw new XPScriptRuntimeException(13, "Copy requires XPJSONArray.");
         Node.Clear();
         foreach (var item in other.Node)
             Node.Add(item?.DeepClone());
         _cursor = -1;
     }
 
-    private NotesJSONElement? ElementAt(int zeroBased, bool suppress)
+    private XPJSONElement? ElementAt(int zeroBased, bool suppress)
     {
         if (zeroBased < 0 || zeroBased >= Size)
         {
@@ -315,11 +315,11 @@ internal sealed class NotesJSONArray
     }
 }
 
-internal sealed class NotesJSONNavigator
+internal sealed class XPJSONNavigator
 {
     private int _cursor = -1;
 
-    public NotesJSONNavigator(object? input = null)
+    public XPJSONNavigator(object? input = null)
     {
         Root = LSJsonNodeRuntime.ParseInput(input);
     }
@@ -328,17 +328,17 @@ internal sealed class NotesJSONNavigator
     public bool PreferJSONNavigator { get; set; } = true;
     public bool PreferUTF8 { get; set; } = true;
 
-    public NotesJSONElement? GetElementByName(object? name)
+    public XPJSONElement? GetElementByName(object? name)
     {
         if (Root is not System.Text.Json.Nodes.JsonObject obj) return null;
         var key = XPScriptRuntime.CStr(name);
         return obj.ContainsKey(key) ? LSJsonNodeRuntime.ElementFromObject(obj, key) : null;
     }
 
-    public NotesJSONElement? GetElementByPointer(object? pointer)
+    public XPJSONElement? GetElementByPointer(object? pointer)
     {
         var text = XPScriptRuntime.CStr(pointer);
-        if (text.Length == 0) return new NotesJSONElement("", Root, replacement => Root = replacement ?? new System.Text.Json.Nodes.JsonObject());
+        if (text.Length == 0) return new XPJSONElement("", Root, replacement => Root = replacement ?? new System.Text.Json.Nodes.JsonObject());
         if (!text.StartsWith("/", StringComparison.Ordinal))
             throw new XPScriptRuntimeException(5, "JSON Pointer must start with '/'.");
 
@@ -373,25 +373,25 @@ internal sealed class NotesJSONNavigator
         }
 
         if (parent is System.Text.Json.Nodes.JsonObject parentObj && property is not null)
-            return new NotesJSONElement(property, current, replacement => parentObj[property] = replacement);
+            return new XPJSONElement(property, current, replacement => parentObj[property] = replacement);
         if (parent is System.Text.Json.Nodes.JsonArray parentArr && arrayIndex.HasValue)
-            return new NotesJSONElement("", current, replacement => parentArr[arrayIndex.Value] = replacement);
-        return new NotesJSONElement("", current, null);
+            return new XPJSONElement("", current, replacement => parentArr[arrayIndex.Value] = replacement);
+        return new XPJSONElement("", current, null);
     }
 
-    public NotesJSONElement? GetFirstElement()
+    public XPJSONElement? GetFirstElement()
     {
         _cursor = 0;
         return ElementAt(_cursor, true);
     }
 
-    public NotesJSONElement? GetNextElement()
+    public XPJSONElement? GetNextElement()
     {
         _cursor++;
         return ElementAt(_cursor, true);
     }
 
-    public NotesJSONElement? GetNthElement(object? index, object? suppressErrors = null)
+    public XPJSONElement? GetNthElement(object? index, object? suppressErrors = null)
     {
         var oneBased = XPScriptRuntime.CInt(index);
         var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
@@ -409,7 +409,7 @@ internal sealed class NotesJSONNavigator
 
     public string Stringify() => Root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = false });
 
-    public NotesJSONElement AppendElement(object? value, object? name = null)
+    public XPJSONElement AppendElement(object? value, object? name = null)
     {
         if (Root is System.Text.Json.Nodes.JsonObject obj)
         {
@@ -426,7 +426,7 @@ internal sealed class NotesJSONNavigator
         throw new XPScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
     }
 
-    public NotesJSONArray AppendArray(object? name = null)
+    public XPJSONArray AppendArray(object? name = null)
     {
         var child = new System.Text.Json.Nodes.JsonArray();
         if (Root is System.Text.Json.Nodes.JsonObject obj)
@@ -440,10 +440,10 @@ internal sealed class NotesJSONNavigator
             arr.Add(child);
         }
         else throw new XPScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
-        return new NotesJSONArray(child);
+        return new XPJSONArray(child);
     }
 
-    public NotesJSONObject AppendObject(object? name = null)
+    public XPJSONObject AppendObject(object? name = null)
     {
         var child = new System.Text.Json.Nodes.JsonObject();
         if (Root is System.Text.Json.Nodes.JsonObject obj)
@@ -457,10 +457,10 @@ internal sealed class NotesJSONNavigator
             arr.Add(child);
         }
         else throw new XPScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
-        return new NotesJSONObject(child);
+        return new XPJSONObject(child);
     }
 
-    private NotesJSONElement? ElementAt(int zeroBased, bool suppress)
+    private XPJSONElement? ElementAt(int zeroBased, bool suppress)
     {
         if (Root is System.Text.Json.Nodes.JsonObject obj)
         {
@@ -481,7 +481,7 @@ internal sealed class NotesJSONNavigator
             }
             return LSJsonNodeRuntime.ElementFromArray(arr, zeroBased);
         }
-        if (zeroBased == 0) return new NotesJSONElement("", Root, replacement => Root = replacement ?? new System.Text.Json.Nodes.JsonObject());
+        if (zeroBased == 0) return new XPJSONElement("", Root, replacement => Root = replacement ?? new System.Text.Json.Nodes.JsonObject());
         return null;
     }
 }
@@ -573,10 +573,10 @@ internal sealed class NotesHTTPRequest
             {
                 var body = data switch
                 {
-                    NotesJSONNavigator nav => nav.Stringify(),
-                    NotesJSONObject obj => obj.Node.ToJsonString(),
-                    NotesJSONArray arr => arr.Node.ToJsonString(),
-                    NotesJSONElement element => element.RawNode?.ToJsonString() ?? "null",
+                    XPJSONNavigator nav => nav.Stringify(),
+                    XPJSONObject obj => obj.Node.ToJsonString(),
+                    XPJSONArray arr => arr.Node.ToJsonString(),
+                    XPJSONElement element => element.RawNode?.ToJsonString() ?? "null",
                     byte[] bytes => System.Text.Encoding.UTF8.GetString(bytes),
                     _ => XPScriptRuntime.CStr(data)
                 };
@@ -608,7 +608,7 @@ internal sealed class NotesHTTPRequest
             var responseBytes = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
 
             if (PreferJSONNavigator)
-                return new NotesJSONNavigator(responseBytes);
+                return new XPJSONNavigator(responseBytes);
             if (PreferStrings)
                 return System.Text.Encoding.UTF8.GetString(responseBytes);
             return responseBytes;

@@ -107,11 +107,11 @@ public sealed class BoundExpressionEmitter
             $"XPScriptNativeXml.CreateElement({Emit(@new.Arguments[0])})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) => "new XpJsonArray()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesJSONNavigator", StringComparison.OrdinalIgnoreCase) => $"new NotesJSONNavigator({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJSONNavigator", StringComparison.OrdinalIgnoreCase) => $"new XPJSONNavigator({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"new NotesHTTPRequest({string.Join(", ", @new.Arguments.Select(Emit))})",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesJSONObject", StringComparison.OrdinalIgnoreCase) => "LSJsonHttpRuntime.CreateJSONObject()",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesJSONArray", StringComparison.OrdinalIgnoreCase) => "LSJsonHttpRuntime.CreateJSONArray()",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesJSONElement", StringComparison.OrdinalIgnoreCase) => @new.Arguments.Count switch
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJSONObject", StringComparison.OrdinalIgnoreCase) => "LSJsonHttpRuntime.CreateJSONObject()",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJSONArray", StringComparison.OrdinalIgnoreCase) => "LSJsonHttpRuntime.CreateJSONArray()",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJSONElement", StringComparison.OrdinalIgnoreCase) => @new.Arguments.Count switch
         {
             0 => "LSJsonHttpRuntime.CreateJSONElement()",
             1 => $"LSJsonHttpRuntime.CreateJSONElement({Emit(@new.Arguments[0])})",
@@ -120,7 +120,7 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonObject", StringComparison.OrdinalIgnoreCase) => "new XpJsonObject()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonSchema", StringComparison.OrdinalIgnoreCase) => "new XPScriptJsonSchema()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPAi", StringComparison.OrdinalIgnoreCase) => $"new XPScriptAi({string.Join(", ", @new.Arguments.Select(Emit))})",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("AITool", StringComparison.OrdinalIgnoreCase) => $"new XPScriptAiTool({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPAITool", StringComparison.OrdinalIgnoreCase) => $"new XPScriptAiTool({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.IsObject && @new.Arguments.Count == 0 => "new System.Dynamic.ExpandoObject()",
         BoundNewExpression @new when @new.Type == typeof(object) && @new.SemanticType.Name.Length > 0 && char.IsUpper(@new.SemanticType.Name[0]) => $"new Xp{@new.SemanticType.Name}({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new => @new.Type == typeof(object)
@@ -145,9 +145,9 @@ public sealed class BoundExpressionEmitter
         "XPJSONSCHEMA" => "XPScriptJsonSchema",
         "XPAI" => "XPScriptAi",
         "XPAIRESPONSE" => "XPScriptAiResponse",
-        "AITOOL" => "XPScriptAiTool",
-        "AITOOLFUNCTION" => "XPScriptAiToolFunction",
-        "AITOOLCALL" => "XPScriptAiToolCall",
+        "XPAITOOL" => "XPScriptAiTool",
+        "XPAITOOLFUNCTION" => "XPScriptAiToolFunction",
+        "XPAITOOLCALL" => "XPScriptAiToolCall",
         _ => null
     });
 

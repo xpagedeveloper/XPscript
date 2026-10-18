@@ -1,4 +1,4 @@
 Sub Main()
-    Dim tool As AITool
+    Dim tool As XPAITool
     tool.AddFunction("probe", "probe", "MissingCallback")
 End Sub

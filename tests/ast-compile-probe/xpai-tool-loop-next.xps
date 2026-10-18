@@ -1,0 +1,16 @@
+Sub WeatherCallback(ByVal toolCall As XPAIToolCall, ByVal context As Variant)
+End Sub
+
+Sub Main()
+    Dim ai As New XPAi(Environ("XPSCRIPT_AI_TEST_AI"), "XPAI_SECRET_MARKER")
+    Dim tool As New XPAITool("weather")
+    Dim fn As XPAIToolFunction
+    Dim response As XPAiResponse
+
+    Set fn = tool.AddFunction("get_weather", "Returns weather", "WeatherCallback", "tenant")
+    Call fn.AddParameter("city", "string", "City name", True)
+    Call ai.AddTool(tool)
+    Set response = ai.Complete()
+    If response.Text <> "tool complete" Then Error 5, "XPAi tool loop response mismatch"
+    Print "XPAI_TOOL_LOOP_OK"
+End Sub

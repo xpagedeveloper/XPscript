@@ -1,20 +1,20 @@
 Option Declare
 
 Sub Main()
-    Dim json As New NotesJSONNavigator("")
-    Dim parsed As New NotesJSONNavigator("{""name"":""Fredrik"",""items"":[1,2,3]}")
-    Dim directObject As New NotesJSONObject
-    Dim directArray As New NotesJSONArray
-    Dim directElement As New NotesJSONElement("standalone", "direct")
-    Dim address As NotesJSONObject
-    Dim roles As NotesJSONArray
-    Dim element As NotesJSONElement
-    Dim secondElement As NotesJSONElement
-    Dim copied As NotesJSONNavigator
-    Dim copiedObject As NotesJSONObject
+    Dim json As New XPJSONNavigator("")
+    Dim parsed As New XPJSONNavigator("{""name"":""Fredrik"",""items"":[1,2,3]}")
+    Dim directObject As New XPJSONObject
+    Dim directArray As New XPJSONArray
+    Dim directElement As New XPJSONElement("standalone", "direct")
+    Dim address As XPJSONObject
+    Dim roles As XPJSONArray
+    Dim element As XPJSONElement
+    Dim secondElement As XPJSONElement
+    Dim copied As XPJSONNavigator
+    Dim copiedObject As XPJSONObject
     Dim http As New NotesHTTPRequest
     Dim response As Variant
-    Dim responseJson As NotesJSONNavigator
+    Dim responseJson As XPJSONNavigator
     Dim headers As Variant
 
     Call directObject.AppendElement("value", "key")
@@ -52,7 +52,7 @@ Sub Main()
     Set secondElement = roles.GetNextElement()
     Print "ITER=" & CStr(element.Value) & ":" & CStr(secondElement.Value)
 
-    Set copied = New NotesJSONNavigator("")
+    Set copied = New XPJSONNavigator("")
     Set copiedObject = copied.AppendObject("copy")
     Call copiedObject.Copy(address)
     Print "COPY=" & copied.Stringify()

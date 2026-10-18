@@ -56,7 +56,7 @@ Stdout and stderr are drained concurrently to avoid pipe-buffer deadlocks. `Shel
 - [Supabase HTTP database](#supabase-http-database)
 - [Domino REST database](#domino-rest-database)
 - [XPAi](#xpai)
-- [AITool](#aitool)
+- [XPAITool](#aitool)
 - [UIForm](#uiform)
 - [UIListView](#uilistview)
 - [REST routes and binding](#rest-routes-and-binding)
@@ -286,7 +286,7 @@ See [XPAi client](ai.md) and [tools/session memory](ai-tools-sessions.md).
 | `Dispose` | `ai.Dispose()` | none | Cancels active work and releases resources. | [xpai.xps](../samples/xpai.xps) |
 | `AutoExecuteTools` | `ai.AutoExecuteTools = value` | Boolean. | Enables/disables automatic non-streaming tool execution. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
 | `MaxToolIterations` | `ai.MaxToolIterations = count` | 1 through 32. | Bounds automatic tool/model continuation. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
-| `AddTool` | `ai.AddTool(tool)` | registered `AITool`. | Adds a tool to this client. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
+| `AddTool` | `ai.AddTool(tool)` | registered `XPAITool`. | Adds a tool to this client. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
 | `RemoveTool` | `ai.RemoveTool(name)` | tool name. | Removes a tool and returns whether it existed. | [xpai.xps](../samples/xpai.xps) |
 | `ClearTools` | `ai.ClearTools()` | none | Removes all registered tools. | [xpai.xps](../samples/xpai.xps) |
 | `HasTool` | `ai.HasTool(name)` | tool name. | Tests tool registration. | [xpai.xps](../samples/xpai.xps) |
@@ -299,11 +299,11 @@ See [XPAi client](ai.md) and [tools/session memory](ai-tools-sessions.md).
 | `ResetSession` | `ai.ResetSession()` | none | Clears stored session ID only. | [xpai.xps](../samples/xpai.xps) |
 | `NewRequest` | `ai.NewRequest()` | none | Clears messages/session while preserving client config/tools. | [xpai.xps](../samples/xpai.xps) |
 
-## AITool
+## XPAITool
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `AITool` | `New AITool(name)` | logical tool name. | Creates an AI tool container. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
+| `XPAITool` | `New XPAITool(name)` | logical tool name. | Creates an AI tool container. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
 | `Description` | `tool.Description = text` | provider-visible description. | Sets tool description. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
 | `Timeout` | `tool.Timeout = seconds` | 0.1 through 3600 seconds. | Sets tool timeout metadata. | [xpai.xps](../samples/xpai.xps) |
 | `AddFunction` | `tool.AddFunction(name, description, callback [, context...])` | AI name, description, module callback, optional fixed context. | Registers allowed AI function to callback mapping. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
@@ -319,12 +319,12 @@ See [XPAi client](ai.md) and [tools/session memory](ai-tools-sessions.md).
 | `GetRequestContext` | `tool.GetRequestContext()` | none | Returns defensive JSON context copy. | [xpai.xps](../samples/xpai.xps) |
 | `ToJsonObject` | `tool.ToJsonObject()` | none | Returns tool metadata as `XPJsonObject`. | [xpai.xps](../samples/xpai.xps) |
 | `ToJson` | `tool.ToJson()` | none | Serializes tool metadata. | [xpai.xps](../samples/xpai.xps) |
-| `AIToolFunction.AddParameter` | `fn.AddParameter(name, type, description, required)` | parameter schema fields. | Adds parameter directly to function object. | [xpai.xps](../samples/xpai.xps) |
-| `AIToolFunction.RemoveParameter` | `fn.RemoveParameter(name)` | parameter name. | Removes parameter. | [xpai.xps](../samples/xpai.xps) |
-| `AIToolFunction.HasParameter` | `fn.HasParameter(name)` | parameter name. | Tests parameter registration. | [xpai.xps](../samples/xpai.xps) |
-| `AIToolFunction.ParameterCount` | `fn.ParameterCount()` | none | Returns parameter count. | [xpai.xps](../samples/xpai.xps) |
+| `XPAIToolFunction.AddParameter` | `fn.AddParameter(name, type, description, required)` | parameter schema fields. | Adds parameter directly to function object. | [xpai.xps](../samples/xpai.xps) |
+| `XPAIToolFunction.RemoveParameter` | `fn.RemoveParameter(name)` | parameter name. | Removes parameter. | [xpai.xps](../samples/xpai.xps) |
+| `XPAIToolFunction.HasParameter` | `fn.HasParameter(name)` | parameter name. | Tests parameter registration. | [xpai.xps](../samples/xpai.xps) |
+| `XPAIToolFunction.ParameterCount` | `fn.ParameterCount()` | none | Returns parameter count. | [xpai.xps](../samples/xpai.xps) |
 
-`AIToolCall` passed to callbacks exposes `ToolName`, `FunctionName`, `CallId`, `Arguments` and `SessionId`. The compiler verifies static `AddFunction` callback names and arity.
+`XPAIToolCall` passed to callbacks exposes `ToolName`, `FunctionName`, `CallId`, `Arguments` and `SessionId`. The compiler verifies static `AddFunction` callback names and arity.
 
 ## UIForm
 

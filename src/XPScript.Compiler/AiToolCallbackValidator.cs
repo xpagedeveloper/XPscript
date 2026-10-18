@@ -22,21 +22,21 @@ internal sealed class AiToolCallbackValidator
 
             if (!IsIdentifier(callbackName))
                 throw CallbackDiagnostic(sourceName, CompilerDiagnosticCodes.InvalidCallbackName,
-                    $"AITool callback name '{callbackName}' is invalid.",
+                    $"XPAITool callback name '{callbackName}' is invalid.",
                     ("symbol", callbackName), ("symbolKind", "callback"));
 
             var expectedArity = 1 + registration.Arguments.Count - 3;
             if (!procedures.TryGetValue(callbackName, out var arities))
                 throw CallbackDiagnostic(sourceName, CompilerDiagnosticCodes.CallbackNotFound,
-                    $"AITool callback '{callbackName}' was not found as a module Sub or Function.",
+                    $"XPAITool callback '{callbackName}' was not found as a module Sub or Function.",
                     ("symbol", callbackName), ("symbolKind", "callback"), ("containingScope", "module"));
 
             if (!arities.Contains(expectedArity))
             {
                 var available = string.Join(", ", arities.OrderBy(value => value));
                 throw CallbackDiagnostic(sourceName, CompilerDiagnosticCodes.CallbackArityMismatch,
-                    $"AITool callback '{callbackName}' must accept {expectedArity} parameter(s) " +
-                    $"(AIToolCall plus {expectedArity - 1} callback context parameter(s)); declared arity: {available}.",
+                    $"XPAITool callback '{callbackName}' must accept {expectedArity} parameter(s) " +
+                    $"(XPAIToolCall plus {expectedArity - 1} callback context parameter(s)); declared arity: {available}.",
                     ("symbol", callbackName), ("symbolKind", "callback"),
                     ("expectedArgumentCount", expectedArity.ToString(System.Globalization.CultureInfo.InvariantCulture)),
                     ("availableArgumentCounts", available));
@@ -130,7 +130,7 @@ internal sealed class AiToolCallbackValidator
                 var diagnostic = new CompileDiagnostic
                 {
                     File = Path.GetFileName(sourceName), Line = line, Position = column, EndLine = line,
-                    EndColumn = column + 1, Description = "Unterminated AITool.AddFunction call.",
+                    EndColumn = column + 1, Description = "Unterminated XPAITool.AddFunction call.",
                     DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
                     Properties =
                     [

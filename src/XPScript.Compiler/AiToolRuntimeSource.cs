@@ -14,7 +14,7 @@ internal sealed class XPScriptAiTool
 
     public XPScriptAiTool(object? nameValue)
     {
-        Name = NormalizeName(nameValue, "AITool name");
+        Name = NormalizeName(nameValue, "XPAITool name");
     }
 
     public string Name { get; }
@@ -26,7 +26,7 @@ internal sealed class XPScriptAiTool
         {
             var description = value?.Trim() ?? string.Empty;
             if (description.Length > 4096 || description.IndexOf('\0') >= 0)
-                throw new XPScriptRuntimeException(5, "AITool Description is invalid.");
+                throw new XPScriptRuntimeException(5, "XPAITool Description is invalid.");
             _description = description;
         }
     }
@@ -37,7 +37,7 @@ internal sealed class XPScriptAiTool
         set
         {
             if (value < 0.1 || value > 3600 || double.IsNaN(value) || double.IsInfinity(value))
-                throw new XPScriptRuntimeException(5, "AITool Timeout must be between 0.1 and 3600 seconds.");
+                throw new XPScriptRuntimeException(5, "XPAITool Timeout must be between 0.1 and 3600 seconds.");
             _timeout = TimeSpan.FromSeconds(value);
         }
     }
@@ -48,7 +48,7 @@ internal sealed class XPScriptAiTool
         lock (_sync)
         {
             if (_functions.Any(existing => existing.Name.Equals(function.Name, StringComparison.OrdinalIgnoreCase)))
-                throw new XPScriptRuntimeException(5, $"AITool function '{function.Name}' is already registered.");
+                throw new XPScriptRuntimeException(5, $"XPAITool function '{function.Name}' is already registered.");
             _functions.Add(function);
         }
         return function;
@@ -59,7 +59,7 @@ internal sealed class XPScriptAiTool
 
     public bool RemoveFunction(object? nameValue)
     {
-        var name = NormalizeName(nameValue, "AITool function name");
+        var name = NormalizeName(nameValue, "XPAITool function name");
         lock (_sync)
         {
             var index = _functions.FindIndex(function => function.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -71,19 +71,19 @@ internal sealed class XPScriptAiTool
 
     public bool HasFunction(object? nameValue)
     {
-        var name = NormalizeName(nameValue, "AITool function name");
+        var name = NormalizeName(nameValue, "XPAITool function name");
         lock (_sync) return _functions.Any(function => function.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
     public XPScriptAiToolFunction GetFunction(object? nameValue)
     {
-        var name = NormalizeName(nameValue, "AITool function name");
+        var name = NormalizeName(nameValue, "XPAITool function name");
         lock (_sync)
         {
             var function = _functions.FirstOrDefault(candidate => candidate.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (function is not null) return function;
         }
-        throw new XPScriptRuntimeException(5, $"AITool function '{name}' is not registered.");
+        throw new XPScriptRuntimeException(5, $"XPAITool function '{name}' is not registered.");
     }
 
     public XPScriptJsonArray GetFunctionNames()
@@ -163,7 +163,7 @@ internal sealed class XPScriptAiTool
     {
         var name = XPScriptRuntime.CStr(value).Trim();
         if (name.Length is < 1 or > 256 || name.IndexOfAny(['\r', '\n', '\0']) >= 0)
-            throw new XPScriptRuntimeException(5, "AITool request property name is invalid.");
+            throw new XPScriptRuntimeException(5, "XPAITool request property name is invalid.");
         return name;
     }
 }
@@ -177,18 +177,18 @@ internal sealed class XPScriptAiToolFunction
 
     internal XPScriptAiToolFunction(object? toolNameValue, object? nameValue, object? descriptionValue, object? callbackNameValue, object?[]? callbackArguments)
     {
-        ToolName = XPScriptAiTool.NormalizeName(toolNameValue, "AITool name");
-        Name = XPScriptAiTool.NormalizeName(nameValue, "AITool function name");
+        ToolName = XPScriptAiTool.NormalizeName(toolNameValue, "XPAITool name");
+        Name = XPScriptAiTool.NormalizeName(nameValue, "XPAITool function name");
         Description = XPScriptRuntime.CStr(descriptionValue).Trim();
         CallbackName = XPScriptRuntime.CStr(callbackNameValue).Trim();
         _callbackArguments = callbackArguments?.ToArray() ?? [];
         if (Description.Length == 0 || Description.Length > 8192 || Description.IndexOf('\0') >= 0)
-            throw new XPScriptRuntimeException(5, "AITool function description is invalid.");
+            throw new XPScriptRuntimeException(5, "XPAITool function description is invalid.");
         if (CallbackName.Length is < 1 or > 256 || !(char.IsLetter(CallbackName[0]) || CallbackName[0] == '_') ||
             CallbackName.Skip(1).Any(c => !(char.IsLetterOrDigit(c) || c == '_')))
-            throw new XPScriptRuntimeException(5, "AITool function callback name is invalid.");
+            throw new XPScriptRuntimeException(5, "XPAITool function callback name is invalid.");
         if (_callbackArguments.Length > 63)
-            throw new XPScriptRuntimeException(5, "AITool function callback context exceeds the 63-argument limit.");
+            throw new XPScriptRuntimeException(5, "XPAITool function callback context exceeds the 63-argument limit.");
     }
 
     public string ToolName { get; }
@@ -202,16 +202,16 @@ internal sealed class XPScriptAiToolFunction
         lock (_sync)
         {
             if (_parameters.Count >= MaxParameters)
-                throw new XPScriptRuntimeException(5, "AITool function parameter count exceeds the 128-parameter limit.");
+                throw new XPScriptRuntimeException(5, "XPAITool function parameter count exceeds the 128-parameter limit.");
             if (_parameters.Any(existing => existing.Name.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase)))
-                throw new XPScriptRuntimeException(5, $"AITool parameter '{parameter.Name}' is already registered.");
+                throw new XPScriptRuntimeException(5, $"XPAITool parameter '{parameter.Name}' is already registered.");
             _parameters.Add(parameter);
         }
     }
 
     public bool RemoveParameter(object? nameValue)
     {
-        var name = XPScriptAiTool.NormalizeName(nameValue, "AITool parameter name");
+        var name = XPScriptAiTool.NormalizeName(nameValue, "XPAITool parameter name");
         lock (_sync)
         {
             var index = _parameters.FindIndex(parameter => parameter.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -223,7 +223,7 @@ internal sealed class XPScriptAiToolFunction
 
     public bool HasParameter(object? nameValue)
     {
-        var name = XPScriptAiTool.NormalizeName(nameValue, "AITool parameter name");
+        var name = XPScriptAiTool.NormalizeName(nameValue, "XPAITool parameter name");
         lock (_sync) return _parameters.Any(parameter => parameter.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -310,13 +310,13 @@ internal sealed class XPScriptAiToolParameter
 {
     internal XPScriptAiToolParameter(object? nameValue, object? typeValue, object? descriptionValue, object? requiredValue)
     {
-        Name = XPScriptAiTool.NormalizeName(nameValue, "AITool parameter name");
+        Name = XPScriptAiTool.NormalizeName(nameValue, "XPAITool parameter name");
         Type = XPScriptRuntime.CStr(typeValue).Trim().ToLowerInvariant();
         if (Type is not ("string" or "integer" or "number" or "boolean" or "object" or "array"))
-            throw new XPScriptRuntimeException(5, "AITool parameter type must be string, integer, number, boolean, object or array.");
+            throw new XPScriptRuntimeException(5, "XPAITool parameter type must be string, integer, number, boolean, object or array.");
         Description = XPScriptRuntime.CStr(descriptionValue).Trim();
         if (Description.Length > 4096 || Description.IndexOf('\0') >= 0)
-            throw new XPScriptRuntimeException(5, "AITool parameter description is invalid.");
+            throw new XPScriptRuntimeException(5, "XPAITool parameter description is invalid.");
         Required = XPScriptRuntime.CBool(requiredValue);
     }
 
@@ -381,7 +381,7 @@ internal static class XPScriptAiToolRegistry
     {
         var client = RequireClient(clientValue);
         if (toolValue is not XPScriptAiTool tool)
-            throw new XPScriptRuntimeException(13, "XPAi.AddTool requires an AITool instance.");
+            throw new XPScriptRuntimeException(13, "XPAi.AddTool requires an XPAITool instance.");
         var collection = Collections.GetOrCreateValue(client);
         lock (collection.Sync)
         {
@@ -498,7 +498,7 @@ internal static class XPScriptAiToolRegistry
     }
 
     private static string NormalizeLookupName(object? value)
-        => XPScriptAiTool.NormalizeName(value, "AITool name");
+        => XPScriptAiTool.NormalizeName(value, "XPAITool name");
 }
 """;
 }

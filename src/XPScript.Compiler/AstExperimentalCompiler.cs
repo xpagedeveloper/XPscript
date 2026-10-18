@@ -1069,7 +1069,7 @@ internal static class Program
         {
             var callback = registration.Groups["callback"].Value;
             if (!procedures.Contains(callback))
-                throw new CompilerException($"AITool callback '{callback}' was not found as a module Sub or Function.", CompilerDiagnosticCodes.CallbackNotFound, "symbol-resolution");
+                throw new CompilerException($"XPAITool callback '{callback}' was not found as a module Sub or Function.", CompilerDiagnosticCodes.CallbackNotFound, "symbol-resolution");
         }
     }
 

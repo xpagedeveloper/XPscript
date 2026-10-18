@@ -54,7 +54,7 @@ Implement after the current UIForm work is complete and merged.
 
 ## Optional tool architecture
 
-- [x] Add an `AITool` abstraction so optional AI capabilities can be attached to an `AIClient` instance.
+- [x] Add an `XPAITool` abstraction so optional AI capabilities can be attached to an `AIClient` instance.
 - [x] Add methods such as `AddTool`, `RemoveTool`, `ClearTools` and `HasTool`.
 - [x] Keep each tool isolated from the core transport client and from unrelated tools.
 - [x] Allow tools to contribute request context, callable functions/tool definitions, response processing or retrieval results where appropriate.

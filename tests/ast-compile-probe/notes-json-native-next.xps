@@ -1,8 +1,8 @@
 Option Declare
 
 Sub Main()
-    Dim json As New NotesJSONNavigator("{""name"":""Fredrik""}")
-    Dim element As NotesJSONElement
+    Dim json As New XPJSONNavigator("{""name"":""Fredrik""}")
+    Dim element As XPJSONElement
     Set element = json.GetElementByName("name")
     If element.Name <> "name" Or CStr(element.Value) <> "Fredrik" Then Error 4250
     Print "NOTES_JSON_NATIVE_OK"

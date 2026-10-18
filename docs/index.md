@@ -7,7 +7,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 ## Start here
 
 - [XPScript cheat sheet](cheatsheet.md): compact copy/paste reference for core syntax, CLI, UIForm, web/REST, Browser-WASM, HTTP, databases, secrets, XPAi and Notes/Domino.
-- [Runnable demo catalog](../demo/README.md): small programs for console, desktop UI, browser WebAssembly, web/REST, Kestrel, FastCGI, CGI, WebIIS, SQLite, SQL Server, HTTP databases, HTTP client and XPAi/AITool.
+- [Runnable demo catalog](../demo/README.md): small programs for console, desktop UI, browser WebAssembly, web/REST, Kestrel, FastCGI, CGI, WebIIS, SQLite, SQL Server, HTTP databases, HTTP client and XPAi/XPAITool.
 - [Language and built-in command reference](language-reference.md): statements, operators, scalar/built-in functions and process commands. Every row has syntax, parameters, behavior and a complete `.xps` example.
 - [Application and state reference](application-reference.md): complete `Application` runtime aliases/UI metadata plus `Application.State`, `Process.State`, `Session.State` and `Request.State`.
 - [Application.Crypto](application-crypto.md): versioned authenticated string encryption, key handling, context binding and migration.
@@ -18,7 +18,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 - [Native and managed interop reference](native-interop-reference.md): native declarations plus every OS/RID-specific `Lib`/`Alias` selector and managed/native dependency directive.
 - [Compiler and host CLI reference](cli-reference.md): `xpscriptc`, Kestrel, FastCGI and WebIIS commands/options.
 - [Dependency security and package patching](dependency-security-and-patching.md): application-specific dependency inspection, NuGet vulnerability checks, security modes, version-scoped compatible patches, `patch all`, and `--security-only`.
-- [Runtime API reference](api-reference.md): HTTP, JSON, native Notes/Domino, databases, XPAi/AITool, UIForm/UIListView and web/REST runtime objects with the same searchable five-field format.
+- [Runtime API reference](api-reference.md): HTTP, JSON, native Notes/Domino, databases, XPAi/XPAITool, UIForm/UIListView and web/REST runtime objects with the same searchable five-field format.
 - [Native Notes/Domino C API](notes-c-api.md): `NotesSession`, databases, views, documents, items, names, date/time values, agents and native lifecycle semantics.
 - [Notes MIME](notes-mime-entity.md): native `NotesMIMEEntity`/`NotesMIMEHeader` traversal, nested mutation, headers, parameters, streams and attachment handling.
 - [Compact command index](commands.md): the older compact overview. Use the references above for the complete searchable catalog.
@@ -55,7 +55,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 28. [SQLite database](sqlite.md), local parameterized SQL, JSON query results, transactions and file-path boundaries.
 29. [SQL Server database](mssql.md), SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.
 30. [XPAi client](ai.md), OpenAI-compatible AI requests, provider configuration, response metadata and SSE streaming.
-31. [XPAi tools and session memory](ai-tools-sessions.md), AITool schemas/callbacks, automatic tool execution and provider session continuation.
+31. [XPAi tools and session memory](ai-tools-sessions.md), XPAITool schemas/callbacks, automatic tool execution and provider session continuation.
 32. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
 33. [Documentation rules](documentation-rules.md), the required structure and CI validation for command/API documentation and demos.
 

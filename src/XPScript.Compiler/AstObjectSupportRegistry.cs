@@ -35,8 +35,8 @@ internal static class AstObjectSupportRegistry
         "XPJsonSchema",
         "XPJsonArray",
         "XPJsonObject",
-        "XPJsonElement", "XPAi", "XPAiResponse", "AITool", "AIToolFunction", "AIToolCall",
-        "NotesHTTPRequest", "NotesJSONNavigator", "NotesJSONObject", "NotesJSONArray", "NotesJSONElement"
+        "XPJsonElement", "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall",
+        "NotesHTTPRequest", "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement"
     };
 
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -62,7 +62,7 @@ internal static class AstObjectSupportRegistry
         ,"XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn"
         ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
         "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection"
-        ,"XPDBSQLite", "XPDBMySQL", "XPDBMsSQL", "XPDbSupabase", "XPDbMySql", "XPDbMsSql", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest", "AITool", "XPJsonValidationResult", "XPAiResponse"
+        ,"XPDBSQLite", "XPDBMySQL", "XPDBMsSQL", "XPDbSupabase", "XPDbMySql", "XPDbMsSql", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPAITool", "XPJsonValidationResult", "XPAiResponse"
         ,"XPHttpPart", "XPHttpFile", "XPPathValue", "XPFileInfoValue", "XPShellResult"
     };
 

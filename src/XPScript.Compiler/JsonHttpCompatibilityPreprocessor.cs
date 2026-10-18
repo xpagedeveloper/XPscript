@@ -6,7 +6,7 @@ internal sealed class JsonHttpCompatibilityPreprocessor
 {
     private static readonly string[] Types =
     [
-        "NotesHTTPRequest", "NotesJSONNavigator", "NotesJSONObject", "NotesJSONArray", "NotesJSONElement"
+        "NotesHTTPRequest", "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement"
     ];
 
     public string Transform(string source)
@@ -34,7 +34,7 @@ internal sealed class JsonHttpCompatibilityPreprocessor
 
             var lhs = set.Groups[1].Value;
             var rhs = set.Groups[2].Value;
-            var compatibilityRhs = Regex.IsMatch(rhs, @"\bNew\s+(NotesHTTPRequest|NotesJSONNavigator|NotesJSONObject|NotesJSONArray|NotesJSONElement)\b", RegexOptions.IgnoreCase)
+            var compatibilityRhs = Regex.IsMatch(rhs, @"\bNew\s+(NotesHTTPRequest|XPJSONNavigator|XPJSONObject|XPJSONArray|XPJSONElement)\b", RegexOptions.IgnoreCase)
                 || Regex.IsMatch(rhs, @"\.Create(?:HTTPRequest|JSONNavigator)\b", RegexOptions.IgnoreCase)
                 || variables.Any(variable => Regex.IsMatch(rhs, $@"\b{Regex.Escape(variable)}\s*\.", RegexOptions.IgnoreCase));
 

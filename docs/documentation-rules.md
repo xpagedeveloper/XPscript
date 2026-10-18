@@ -55,7 +55,7 @@ Reference ownership is explicit:
 - `file-io-reference.md` owns file handles, text/binary/Random I/O, locking, file metadata and filesystem commands.
 - `native-interop-reference.md` owns `Declare ... Lib`, every OS/RID-specific `Lib`/`Alias` selector, `Reference` and `ReferenceNative`.
 - `cli-reference.md` owns compiler, XPScript WebServer, FastCGI and WebIIS command-line commands/options.
-- `api-reference.md` owns runtime objects such as HTTP, JSON, native Notes/Domino, databases, XPAi/AITool, UIForm/UIListView and web state.
+- `api-reference.md` owns runtime objects such as HTTP, JSON, native Notes/Domino, databases, XPAi/XPAITool, UIForm/UIListView and web state.
 
 Topical pages may repeat important members with longer explanations, but they should link back to the appropriate reference when useful.
 
@@ -73,7 +73,7 @@ Examples:
 
 - HTTP/JSON: `http-client.md` plus `api-reference.md`.
 - SQLite/SQL Server/HTTP DB: database topical page plus `api-reference.md`.
-- XPAi/AITool/session memory: `ai.md`, `ai-tools-sessions.md` and `api-reference.md`.
+- XPAi/XPAITool/session memory: `ai.md`, `ai-tools-sessions.md` and `api-reference.md`.
 - UIForm/UIListView: `uiform.md`, `uiform-fields.md` and `api-reference.md`.
 - Web/REST/Session/Application/RequestScope: `web.md`, `rest-api.md` and `api-reference.md`.
 - Native Notes/Domino: `notes-c-api.md` plus `api-reference.md`; MIME changes also require `notes-mime-entity.md`. The VS Code extension synchronizes native Notes IntelliSense from `notes-c-api.md`, so each public Notes property or method must occupy its own machine-readable table row. Do not group several member names into one cell.

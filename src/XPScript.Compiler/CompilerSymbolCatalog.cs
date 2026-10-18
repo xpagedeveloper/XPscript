@@ -149,9 +149,9 @@ public static class CompilerSymbolCatalog
             Define("XPAi.StreamCallback", "method", "XPAi.StreamCallback(callback As String) As XPAiResponse", [new("callback", "String")], "XPAiResponse", "api.XPAi.StreamCallback"),
             Define("XPAi.NewRequest", "method", "XPAi.NewRequest()", [], null, "api.XPAi.NewRequest"),
             Define("XPAi.Dispose", "method", "XPAi.Dispose()", [], null, "api.XPAi.Dispose"),
-            Define("XPAi.AddTool", "method", "XPAi.AddTool(tool As AITool)", [new("tool", "AITool")], null, "api.XPAi.AddTool"),
+            Define("XPAi.AddTool", "method", "XPAi.AddTool(tool As XPAITool)", [new("tool", "XPAITool")], null, "api.XPAi.AddTool"),
             Define("XPAi.HasTool", "method", "XPAi.HasTool(name As String) As Boolean", [new("name", "String")], "Boolean", "api.XPAi.HasTool"),
-            Define("XPAi.GetTool", "method", "XPAi.GetTool(name As String) As AITool", [new("name", "String")], "AITool", "api.XPAi.GetTool"),
+            Define("XPAi.GetTool", "method", "XPAi.GetTool(name As String) As XPAITool", [new("name", "String")], "XPAITool", "api.XPAi.GetTool"),
             Define("XPAi.GetToolNames", "method", "XPAi.GetToolNames() As XPJsonArray", [], "XPJsonArray", "api.XPAi.GetToolNames"),
             Define("XPAi.ToolCount", "method", "XPAi.ToolCount() As Integer", [], "Integer", "api.XPAi.ToolCount"),
             Define("XPAi.RemoveTool", "method", "XPAi.RemoveTool(name As String) As Boolean", [new("name", "String")], "Boolean", "api.XPAi.RemoveTool"),
@@ -172,38 +172,38 @@ public static class CompilerSymbolCatalog
             Define("XPAiResponse.Usage", "property", "XPAiResponse.Usage As XPJsonDocument", [], "XPJsonDocument", "api.XPAiResponse.Usage"),
             Define("XPAiResponse.HasJsonResult", "property", "XPAiResponse.HasJsonResult As Boolean", [], "Boolean", "api.XPAiResponse.HasJsonResult"),
             Define("XPAiResponse.ResultJson", "property", "XPAiResponse.ResultJson As XPJsonDocument", [], "XPJsonDocument", "api.XPAiResponse.ResultJson"),
-            Define("AITool", "class", "AITool", [], null, "api.AITool"),
-            Define("AITool.Name", "property", "AITool.Name As String", [], "String", "api.AITool.Name"),
-            Define("AITool.Description", "property", "AITool.Description As String", [], "String", "api.AITool.Description"),
-            Define("AITool.Timeout", "property", "AITool.Timeout As Double", [], "Double", "api.AITool.Timeout")
-            ,Define("AITool.AddFunction", "method", "AITool.AddFunction(name As String, description As String, callback As String, context As Variant) As AIToolFunction", [new("name", "String"), new("description", "String"), new("callback", "String"), new("context", "Variant")], "AIToolFunction", "api.AITool.AddFunction")
-            ,Define("AITool.AddParameter", "method", "AITool.AddParameter(functionName As String, name As String, type As String, description As String, required As Boolean)", [new("functionName", "String"), new("name", "String"), new("type", "String"), new("description", "String"), new("required", "Boolean")], null, "api.AITool.AddParameter")
-            ,Define("AITool.HasFunction", "method", "AITool.HasFunction(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AITool.HasFunction")
-            ,Define("AITool.FunctionCount", "method", "AITool.FunctionCount() As Integer", [], "Integer", "api.AITool.FunctionCount")
-            ,Define("AITool.RemoveFunction", "method", "AITool.RemoveFunction(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AITool.RemoveFunction")
-            ,Define("AITool.GetFunction", "method", "AITool.GetFunction(name As String) As AIToolFunction", [new("name", "String")], "AIToolFunction", "api.AITool.GetFunction")
-            ,Define("AITool.GetFunctionNames", "method", "AITool.GetFunctionNames() As XPJsonArray", [], "XPJsonArray", "api.AITool.GetFunctionNames")
-            ,Define("AITool.SetRequestProperty", "method", "AITool.SetRequestProperty(name As String, value As Variant)", [new("name", "String"), new("value", "Variant")], null, "api.AITool.SetRequestProperty")
-            ,Define("AITool.RemoveRequestProperty", "method", "AITool.RemoveRequestProperty(name As String)", [new("name", "String")], null, "api.AITool.RemoveRequestProperty")
-            ,Define("AITool.ClearRequestProperties", "method", "AITool.ClearRequestProperties()", [], null, "api.AITool.ClearRequestProperties")
-            ,Define("AITool.GetRequestContext", "method", "AITool.GetRequestContext() As XPJsonObject", [], "XPJsonObject", "api.AITool.GetRequestContext")
-            ,Define("AITool.ToJsonObject", "method", "AITool.ToJsonObject() As XPJsonObject", [], "XPJsonObject", "api.AITool.ToJsonObject")
-            ,Define("AITool.ToJson", "method", "AITool.ToJson() As String", [], "String", "api.AITool.ToJson")
-            ,Define("AIToolFunction", "class", "AIToolFunction", [], null, "api.AIToolFunction")
-            ,Define("AIToolFunction.ToolName", "property", "AIToolFunction.ToolName As String", [], "String", "api.AIToolFunction.ToolName")
-            ,Define("AIToolFunction.Name", "property", "AIToolFunction.Name As String", [], "String", "api.AIToolFunction.Name")
-            ,Define("AIToolFunction.Description", "property", "AIToolFunction.Description As String", [], "String", "api.AIToolFunction.Description")
-            ,Define("AIToolFunction.CallbackName", "property", "AIToolFunction.CallbackName As String", [], "String", "api.AIToolFunction.CallbackName")
-            ,Define("AIToolFunction.AddParameter", "method", "AIToolFunction.AddParameter(name As String, type As String, description As String, required As Boolean)", [new("name", "String"), new("type", "String"), new("description", "String"), new("required", "Boolean")], null, "api.AIToolFunction.AddParameter")
-            ,Define("AIToolFunction.RemoveParameter", "method", "AIToolFunction.RemoveParameter(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AIToolFunction.RemoveParameter")
-            ,Define("AIToolFunction.HasParameter", "method", "AIToolFunction.HasParameter(name As String) As Boolean", [new("name", "String")], "Boolean", "api.AIToolFunction.HasParameter")
-            ,Define("AIToolFunction.ParameterCount", "method", "AIToolFunction.ParameterCount() As Integer", [], "Integer", "api.AIToolFunction.ParameterCount")
-            ,Define("AIToolCall", "class", "AIToolCall", [], null, "api.AIToolCall")
-            ,Define("AIToolCall.ToolName", "property", "AIToolCall.ToolName As String", [], "String", "api.AIToolCall.ToolName")
-            ,Define("AIToolCall.FunctionName", "property", "AIToolCall.FunctionName As String", [], "String", "api.AIToolCall.FunctionName")
-            ,Define("AIToolCall.CallId", "property", "AIToolCall.CallId As String", [], "String", "api.AIToolCall.CallId")
-            ,Define("AIToolCall.Arguments", "property", "AIToolCall.Arguments As XPJsonObject", [], "XPJsonObject", "api.AIToolCall.Arguments")
-            ,Define("AIToolCall.SessionId", "property", "AIToolCall.SessionId As String", [], "String", "api.AIToolCall.SessionId")
+            Define("XPAITool", "class", "XPAITool", [], null, "api.XPAITool"),
+            Define("XPAITool.Name", "property", "XPAITool.Name As String", [], "String", "api.XPAITool.Name"),
+            Define("XPAITool.Description", "property", "XPAITool.Description As String", [], "String", "api.XPAITool.Description"),
+            Define("XPAITool.Timeout", "property", "XPAITool.Timeout As Double", [], "Double", "api.XPAITool.Timeout")
+            ,Define("XPAITool.AddFunction", "method", "XPAITool.AddFunction(name As String, description As String, callback As String, context As Variant) As XPAIToolFunction", [new("name", "String"), new("description", "String"), new("callback", "String"), new("context", "Variant")], "XPAIToolFunction", "api.XPAITool.AddFunction")
+            ,Define("XPAITool.AddParameter", "method", "XPAITool.AddParameter(functionName As String, name As String, type As String, description As String, required As Boolean)", [new("functionName", "String"), new("name", "String"), new("type", "String"), new("description", "String"), new("required", "Boolean")], null, "api.XPAITool.AddParameter")
+            ,Define("XPAITool.HasFunction", "method", "XPAITool.HasFunction(name As String) As Boolean", [new("name", "String")], "Boolean", "api.XPAITool.HasFunction")
+            ,Define("XPAITool.FunctionCount", "method", "XPAITool.FunctionCount() As Integer", [], "Integer", "api.XPAITool.FunctionCount")
+            ,Define("XPAITool.RemoveFunction", "method", "XPAITool.RemoveFunction(name As String) As Boolean", [new("name", "String")], "Boolean", "api.XPAITool.RemoveFunction")
+            ,Define("XPAITool.GetFunction", "method", "XPAITool.GetFunction(name As String) As XPAIToolFunction", [new("name", "String")], "XPAIToolFunction", "api.XPAITool.GetFunction")
+            ,Define("XPAITool.GetFunctionNames", "method", "XPAITool.GetFunctionNames() As XPJsonArray", [], "XPJsonArray", "api.XPAITool.GetFunctionNames")
+            ,Define("XPAITool.SetRequestProperty", "method", "XPAITool.SetRequestProperty(name As String, value As Variant)", [new("name", "String"), new("value", "Variant")], null, "api.XPAITool.SetRequestProperty")
+            ,Define("XPAITool.RemoveRequestProperty", "method", "XPAITool.RemoveRequestProperty(name As String)", [new("name", "String")], null, "api.XPAITool.RemoveRequestProperty")
+            ,Define("XPAITool.ClearRequestProperties", "method", "XPAITool.ClearRequestProperties()", [], null, "api.XPAITool.ClearRequestProperties")
+            ,Define("XPAITool.GetRequestContext", "method", "XPAITool.GetRequestContext() As XPJsonObject", [], "XPJsonObject", "api.XPAITool.GetRequestContext")
+            ,Define("XPAITool.ToJsonObject", "method", "XPAITool.ToJsonObject() As XPJsonObject", [], "XPJsonObject", "api.XPAITool.ToJsonObject")
+            ,Define("XPAITool.ToJson", "method", "XPAITool.ToJson() As String", [], "String", "api.XPAITool.ToJson")
+            ,Define("XPAIToolFunction", "class", "XPAIToolFunction", [], null, "api.XPAIToolFunction")
+            ,Define("XPAIToolFunction.ToolName", "property", "XPAIToolFunction.ToolName As String", [], "String", "api.XPAIToolFunction.ToolName")
+            ,Define("XPAIToolFunction.Name", "property", "XPAIToolFunction.Name As String", [], "String", "api.XPAIToolFunction.Name")
+            ,Define("XPAIToolFunction.Description", "property", "XPAIToolFunction.Description As String", [], "String", "api.XPAIToolFunction.Description")
+            ,Define("XPAIToolFunction.CallbackName", "property", "XPAIToolFunction.CallbackName As String", [], "String", "api.XPAIToolFunction.CallbackName")
+            ,Define("XPAIToolFunction.AddParameter", "method", "XPAIToolFunction.AddParameter(name As String, type As String, description As String, required As Boolean)", [new("name", "String"), new("type", "String"), new("description", "String"), new("required", "Boolean")], null, "api.XPAIToolFunction.AddParameter")
+            ,Define("XPAIToolFunction.RemoveParameter", "method", "XPAIToolFunction.RemoveParameter(name As String) As Boolean", [new("name", "String")], "Boolean", "api.XPAIToolFunction.RemoveParameter")
+            ,Define("XPAIToolFunction.HasParameter", "method", "XPAIToolFunction.HasParameter(name As String) As Boolean", [new("name", "String")], "Boolean", "api.XPAIToolFunction.HasParameter")
+            ,Define("XPAIToolFunction.ParameterCount", "method", "XPAIToolFunction.ParameterCount() As Integer", [], "Integer", "api.XPAIToolFunction.ParameterCount")
+            ,Define("XPAIToolCall", "class", "XPAIToolCall", [], null, "api.XPAIToolCall")
+            ,Define("XPAIToolCall.ToolName", "property", "XPAIToolCall.ToolName As String", [], "String", "api.XPAIToolCall.ToolName")
+            ,Define("XPAIToolCall.FunctionName", "property", "XPAIToolCall.FunctionName As String", [], "String", "api.XPAIToolCall.FunctionName")
+            ,Define("XPAIToolCall.CallId", "property", "XPAIToolCall.CallId As String", [], "String", "api.XPAIToolCall.CallId")
+            ,Define("XPAIToolCall.Arguments", "property", "XPAIToolCall.Arguments As XPJsonObject", [], "XPJsonObject", "api.XPAIToolCall.Arguments")
+            ,Define("XPAIToolCall.SessionId", "property", "XPAIToolCall.SessionId As String", [], "String", "api.XPAIToolCall.SessionId")
         }.Where(x => !AstHttpSupport.OwnsSymbol(x.Name) && !AstApplicationSupport.OwnsSymbol(x.Name)).Concat(AstApplicationSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerSymbolDefinition? Find(string name)

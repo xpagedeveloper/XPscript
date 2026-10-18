@@ -89,26 +89,26 @@ if ($LASTEXITCODE -ne 0 -or ($aiStructuredResult -join "`n") -ne 'XPAI-STRUCTURE
 Write-Host 'AST_XPAI_STRUCTURED_OK'
 $aiToolPropertiesOutput = Join-Path $output 'ai-tool-properties-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-tool-properties-next.xps') -o $aiToolPropertiesOutput
-if ($LASTEXITCODE -ne 0) { throw 'AST AITool property compilation failed.' }
+if ($LASTEXITCODE -ne 0) { throw 'AST XPAITool property compilation failed.' }
 $aiToolPropertiesResult = dotnet (Join-Path $aiToolPropertiesOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($aiToolPropertiesResult -join "`n") -ne 'AI_TOOL_PROPERTIES_OK') { throw 'AST AITool property regression failed.' }
+if ($LASTEXITCODE -ne 0 -or ($aiToolPropertiesResult -join "`n") -ne 'AI_TOOL_PROPERTIES_OK') { throw 'AST XPAITool property regression failed.' }
 Write-Host 'AST_AI_TOOL_PROPERTIES_OK'
 $aiToolFunctionOutput = Join-Path $output 'ai-tool-function-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-tool-function-next.xps') -o $aiToolFunctionOutput
-if ($LASTEXITCODE -ne 0) { throw 'AST AITool function compilation failed.' }
+if ($LASTEXITCODE -ne 0) { throw 'AST XPAITool function compilation failed.' }
 $aiToolFunctionResult = dotnet (Join-Path $aiToolFunctionOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($aiToolFunctionResult -join "`n") -ne 'AI_TOOL_FUNCTION_OK') { throw 'AST AITool function regression failed.' }
+if ($LASTEXITCODE -ne 0 -or ($aiToolFunctionResult -join "`n") -ne 'AI_TOOL_FUNCTION_OK') { throw 'AST XPAITool function regression failed.' }
 Write-Host 'AST_AI_TOOL_FUNCTION_OK'
 
 $aiToolCallbackErrorOutput = Join-Path $output 'ai-tool-callback-error-next'
 $aiToolCallbackErrorText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-tool-callback-error-next.xps') -o $aiToolCallbackErrorOutput 2>&1
-if ($LASTEXITCODE -ne 2 -or ($aiToolCallbackErrorText -join "`n") -notmatch 'MissingCallback') { throw 'AST missing AITool callback diagnostic failed.' }
+if ($LASTEXITCODE -ne 2 -or ($aiToolCallbackErrorText -join "`n") -notmatch 'MissingCallback') { throw 'AST missing XPAITool callback diagnostic failed.' }
 Write-Host 'AST_AI_TOOL_CALLBACK_DIAGNOSTIC_OK'
 $aiToolLifecycleOutput = Join-Path $output 'ai-tool-lifecycle-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-tool-lifecycle-next.xps') -o $aiToolLifecycleOutput
-if ($LASTEXITCODE -ne 0) { throw 'AST AITool lifecycle compilation failed.' }
+if ($LASTEXITCODE -ne 0) { throw 'AST XPAITool lifecycle compilation failed.' }
 $aiToolLifecycleResult = dotnet (Join-Path $aiToolLifecycleOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($aiToolLifecycleResult -join "`n") -ne 'AI_TOOL_LIFECYCLE_OK') { throw 'AST AITool lifecycle regression failed.' }
+if ($LASTEXITCODE -ne 0 -or ($aiToolLifecycleResult -join "`n") -ne 'AI_TOOL_LIFECYCLE_OK') { throw 'AST XPAITool lifecycle regression failed.' }
 Write-Host 'AST_AI_TOOL_LIFECYCLE_OK'
 $xpaiRequestErrorOutput = Join-Path $output 'xpai-request-error-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpai-request-error-next.xps') -o $xpaiRequestErrorOutput

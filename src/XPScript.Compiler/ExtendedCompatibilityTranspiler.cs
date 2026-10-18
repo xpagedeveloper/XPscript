@@ -6,7 +6,7 @@ namespace XPScript.Compiler;
 internal sealed class ExtendedCompatibilityTranspiler
 {
     private static readonly string[] SaxTypes = ["NotesSAXParser", "NotesSAXAttributeList", "NotesSAXException"];
-    private static readonly string[] JsonHttpTypes = ["NotesHTTPRequest", "NotesJSONNavigator", "NotesJSONObject", "NotesJSONArray", "NotesJSONElement"];
+    private static readonly string[] JsonHttpTypes = ["NotesHTTPRequest", "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement"];
     private static readonly string[] ExtendedFunctions =
     [
         "Environ", "Format", "FormatNumber", "FormatPercent", "GetObject", "InputBox", "MessageBox", "Shell"
@@ -20,29 +20,29 @@ internal sealed class ExtendedCompatibilityTranspiler
             "SetProxy", "SetProxyUser", "ResetProxy", "ResponseCode", "TimeoutSec", "MaxRedirects", "PreferStrings",
             "PreferUTF8", "PreferJSONNavigator", "CertificateValidation"
         ],
-        ["NotesJSONNavigator"] =
+        ["XPJSONNavigator"] =
         [
             "GetElementByName", "GetElementByPointer", "GetFirstElement", "GetNextElement", "GetNthElement", "Stringify",
             "AppendElement", "AppendArray", "AppendObject", "PreferJSONNavigator", "PreferUTF8"
         ],
-        ["NotesJSONObject"] =
+        ["XPJSONObject"] =
         [
             "Size", "GetElementByName", "GetFirstElement", "GetNextElement", "GetNthElement", "AppendElement", "AppendArray",
             "AppendObject", "Copy"
         ],
-        ["NotesJSONArray"] =
+        ["XPJSONArray"] =
         [
             "Size", "GetFirstElement", "GetNextElement", "GetNthElement", "AppendElement", "AppendArray", "AppendObject", "Copy"
         ],
-        ["NotesJSONElement"] = ["Name", "Type", "Value", "Copy"]
+        ["XPJSONElement"] = ["Name", "Type", "Value", "Copy"]
     };
 
     private static readonly Dictionary<string, string[]> NoArgMethods = new(StringComparer.OrdinalIgnoreCase)
     {
         ["NotesHTTPRequest"] = ["ResetHeaders", "GetResponseHeaders", "ResetProxy"],
-        ["NotesJSONNavigator"] = ["GetFirstElement", "GetNextElement", "Stringify"],
-        ["NotesJSONObject"] = ["GetFirstElement", "GetNextElement"],
-        ["NotesJSONArray"] = ["GetFirstElement", "GetNextElement"]
+        ["XPJSONNavigator"] = ["GetFirstElement", "GetNextElement", "Stringify"],
+        ["XPJSONObject"] = ["GetFirstElement", "GetNextElement"],
+        ["XPJSONArray"] = ["GetFirstElement", "GetNextElement"]
     };
 
     public string Transform(string source)
@@ -78,7 +78,7 @@ internal sealed class ExtendedCompatibilityTranspiler
                 continue;
             }
 
-            var dimNewCompat = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+(NotesHTTPRequest|NotesJSONNavigator|NotesJSONObject|NotesJSONArray|NotesJSONElement)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
+            var dimNewCompat = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+(NotesHTTPRequest|XPJSONNavigator|XPJSONObject|XPJSONArray|XPJSONElement)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
             if (dimNewCompat.Success)
             {
                 var variable = dimNewCompat.Groups[1].Value;
@@ -89,7 +89,7 @@ internal sealed class ExtendedCompatibilityTranspiler
                 continue;
             }
 
-            var setNewCompat = Regex.Match(line, @"^Set\s+([A-Za-z_]\w*)\s*=\s*New\s+(NotesHTTPRequest|NotesJSONNavigator|NotesJSONObject|NotesJSONArray|NotesJSONElement)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
+            var setNewCompat = Regex.Match(line, @"^Set\s+([A-Za-z_]\w*)\s*=\s*New\s+(NotesHTTPRequest|XPJSONNavigator|XPJSONObject|XPJSONArray|XPJSONElement)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
             if (setNewCompat.Success)
             {
                 var variable = setNewCompat.Groups[1].Value;
@@ -99,7 +99,7 @@ internal sealed class ExtendedCompatibilityTranspiler
                 continue;
             }
 
-            var directNewCompat = Regex.Match(line, @"^([A-Za-z_]\w*)\s*=\s*New\s+(NotesHTTPRequest|NotesJSONNavigator|NotesJSONObject|NotesJSONArray|NotesJSONElement)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
+            var directNewCompat = Regex.Match(line, @"^([A-Za-z_]\w*)\s*=\s*New\s+(NotesHTTPRequest|XPJSONNavigator|XPJSONObject|XPJSONArray|XPJSONElement)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
             if (directNewCompat.Success)
             {
                 var variable = directNewCompat.Groups[1].Value;
@@ -241,7 +241,7 @@ internal sealed class ExtendedCompatibilityTranspiler
 
     private static void DiscoverCompatibilityVariables(string line, Dictionary<string, string> variables)
     {
-        var match = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+(NotesHTTPRequest|NotesJSONNavigator|NotesJSONObject|NotesJSONArray|NotesJSONElement)\b", RegexOptions.IgnoreCase);
+        var match = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+(NotesHTTPRequest|XPJSONNavigator|XPJSONObject|XPJSONArray|XPJSONElement)\b", RegexOptions.IgnoreCase);
         if (match.Success) variables[match.Groups[1].Value] = CanonicalType(match.Groups[2].Value);
     }
 

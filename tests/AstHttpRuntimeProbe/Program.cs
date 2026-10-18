@@ -18,6 +18,7 @@ using var tls = new TcpListener(IPAddress.Loopback, 0);
 using var oldTls = new TcpListener(IPAddress.Loopback, 0);
 plain.Start(); tls.Start(); oldTls.Start();
 var handlers = new System.Collections.Concurrent.ConcurrentBag<Task>();
+var aiRequests = 0;
 var tasks = new[] { Serve(plain, null), Serve(tls, valid), Serve(oldTls, expired) };
 var arguments = new[] { $"http://127.0.0.1:{Port(plain)}", $"https://localhost:{Port(tls)}/get",
     $"https://127.0.0.1:{Port(tls)}/get", $"https://localhost:{Port(oldTls)}/get" };
@@ -56,6 +57,11 @@ try
     if ((await Run("dotnet", [Path.Combine(aiOutput, "Generated.dll")])).Trim() != "XPAI_REQUEST_SUCCESS_OK")
         throw new Exception("XPAi request success regression failed.");
     Console.WriteLine("AST_XPAI_REQUEST_SUCCESS_OK");
+    var aiToolOutput = Path.Combine(output, "ai-tool-loop");
+    await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/xpai-tool-loop-next.xps"), "-o", aiToolOutput]);
+    if ((await Run("dotnet", [Path.Combine(aiToolOutput, "Generated.dll")])).Trim() != "XPAI_TOOL_LOOP_OK")
+        throw new Exception("XPAi tool-loop regression failed.");
+    Console.WriteLine("AST_XPAI_TOOL_LOOP_OK");
 }
 finally
 {
@@ -118,7 +124,7 @@ async Task Handle(TcpClient connection, X509Certificate2? certificate)
             }
             if (request[1] == "/slow") await Task.Delay(600, cancellation.Token);
             var status = request[1] == "/fail" ? "418 Teapot" : request[1] == "/redirect" ? "302 Found" : "200 OK";
-            var payload = request[1] == "/ai" ? "{\"model\":\"test-model\",\"choices\":[{\"message\":{\"content\":\"hello from provider\"}}],\"usage\":{\"total_tokens\":3}}" : request[1] == "/json" ? body : request[1] == "/redirect" ? "redirect-not-followed" :
+            var payload = request[1] == "/ai" ? AiPayload(body) : request[1] == "/json" ? body : request[1] == "/redirect" ? "redirect-not-followed" :
                 request[0] + "|" + headers.GetValueOrDefault("X-XPScript-Test", "") + (body.Length > 0 ? "|" + body : "");
             var contentType = request[1] is "/json" or "/ai" ? "application/json" : "text/plain; charset=utf-8";
             if (request[1] == "/multipart")
@@ -134,6 +140,16 @@ async Task Handle(TcpClient connection, X509Certificate2? certificate)
         }
         catch (Exception ex) when (ex is IOException or AuthenticationException or OperationCanceledException) { }
     }
+}
+
+string AiPayload(string requestBody)
+{
+    var requestNumber = Interlocked.Increment(ref aiRequests);
+    if (requestNumber == 2 && requestBody.Contains("get_weather", StringComparison.Ordinal))
+        return "{\"model\":\"test-model\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"tool_calls\":[{\"id\":\"call-1\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"city\\\":\\\"Linkoping\\\"}\"}}]}}]}";
+    return requestNumber == 1
+        ? "{\"model\":\"test-model\",\"choices\":[{\"message\":{\"content\":\"hello from provider\"}}],\"usage\":{\"total_tokens\":3}}"
+        : "{\"model\":\"test-model\",\"choices\":[{\"message\":{\"content\":\"tool complete\"}}],\"usage\":{\"total_tokens\":3}}";
 }
 async Task<string> Run(string file, string[] commandArguments)
 {

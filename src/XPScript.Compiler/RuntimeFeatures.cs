@@ -51,8 +51,8 @@ public readonly record struct RuntimeFeatures(
         return new RuntimeFeatures(
             Http: PreprocessorFeatureGate.ContainsTypeReference(code, "XPHttpClient", "XPHttpResponse", "NotesHTTPRequest"),
             Json: PreprocessorFeatureGate.ContainsTypeReference(
-                  code, "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesJSONNavigator",
-                      "NotesJSONObject", "NotesJSONArray", "NotesJSONElement") ||
+                  code, "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJSONNavigator",
+                      "XPJSONObject", "XPJSONArray", "XPJSONElement") ||
                   PreprocessorFeatureGate.ContainsCall(
                       code, "XPJsonDocument.Parse", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode"),
             JsonSchema: jsonSchema || PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm"),
@@ -68,7 +68,7 @@ public readonly record struct RuntimeFeatures(
             MsSql: PreprocessorFeatureGate.ContainsTypeReference(code, "XPDbMsSql"),
             Attachments: attachments,
             Ui: PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm", "UIListView"),
-            Ai: PreprocessorFeatureGate.ContainsAny(code, "XPAi", "XPAiResponse", "AITool"),
+            Ai: PreprocessorFeatureGate.ContainsAny(code, "XPAi", "XPAiResponse", "XPAITool"),
             Archive: PreprocessorFeatureGate.ContainsTypeReference(code, "Archive", "ArchiveEntry"),
             Spreadsheet: AstSpreadsheetSupport.UsesSpreadsheet(source),
             NetworkTools: PreprocessorFeatureGate.ContainsTypeReference(code, "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo"),

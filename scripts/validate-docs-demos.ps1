@@ -158,7 +158,7 @@ $requiredApi = @(
     'XPJsonObject.Set', 'XPJsonArray.Add', 'XPDBSQLite.Execute', 'XPDbMsSql.Query',
     'XPHttpDbSupabase', 'XPHttpDbDominoRest',
     '`Complete`', 'AutoExecuteTools', 'MaxToolIterations', 'NewRequest',
-    '`AddFunction`', '`AddParameter`', 'AIToolCall',
+    '`AddFunction`', '`AddParameter`', 'XPAIToolCall',
     'UIForm', 'AddLookupField', 'UIListView', 'AddRowButton',
     'FromBody', 'Response.Created', 'Session.Authenticate', 'RequestScope.Add'
 )

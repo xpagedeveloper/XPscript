@@ -1,6 +1,6 @@
 Sub Main()
     Dim ai As XPAi
-    Dim tool As New AITool("weather")
+    Dim tool As New XPAITool("weather")
     Set ai = New XPAi("openai", "test-key")
     Call ai.AddTool(tool)
     If ai.ToolCount() <> 1 Then Error 5, "native AI tool registry failed"
