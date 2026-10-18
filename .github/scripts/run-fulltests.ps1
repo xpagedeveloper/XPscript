@@ -9,17 +9,6 @@ New-Item -ItemType Directory -Force -Path ./out/fulltest | Out-Null
 $runtimeTimeoutMilliseconds = 50000
 $compileTimeoutMilliseconds = if ($IsWindows) { 180000 } else { 60000 }
 
-if ($Suite -eq 'language') {
-  $compatibility = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compat/run-ast-compat.ps1') 600000 'legacy/AST compatibility corpus'
-  if ($compatibility.ExitCode -ne 0 -or $compatibility.Output -notmatch 'AST compatibility baseline passed') {
-    throw 'Legacy/AST compatibility corpus regression failed.'
-  }
-  $diagnosticCompatibility = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compat/run-diagnostic-compat.ps1') 180000 'legacy/AST diagnostic compatibility'
-  if ($diagnosticCompatibility.ExitCode -ne 0 -or $diagnosticCompatibility.Output -notmatch 'AST_DIAGNOSTIC_COMPAT=OK') {
-    throw 'Legacy/AST diagnostic compatibility regression failed.'
-  }
-}
-
 function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeoutMilliseconds, [string] $label) {
   $si = [System.Diagnostics.ProcessStartInfo]::new(); $si.FileName = $fileName; $si.UseShellExecute = $false; $si.RedirectStandardOutput = $true; $si.RedirectStandardError = $true
   foreach ($argument in $arguments) { [void] $si.ArgumentList.Add([string] $argument) }
@@ -68,6 +57,17 @@ function Get-XpsExe([string] $name) { $plain = "./out/fulltest/$name"; $win = "$
 function Run-Xps([string] $source, [string] $name, [string[]] $arguments = @()) { Compile-Xps $source $name; Write-Host "FULLTEST_RUN=$name"; $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "run $name"; if ($r.ExitCode -ne 0) { exit $r.ExitCode }; return $r }
 function Expect-XpsFailure([string] $name, [string[]] $arguments, [string] $label) { $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "security $label"; if ($r.ExitCode -eq 0) { throw "Security probe unexpectedly succeeded: $label" }; if ([string]::IsNullOrWhiteSpace($r.Output)) { throw "Security probe returned no diagnostic: $label" }; if ($r.Output -match 'SharpCompress') { throw "Security diagnostic exposed implementation detail: $label" } }
 function Should-Run([string] $name) { return $Suite -eq 'all' -or $Suite -eq $name }
+
+if ($Suite -eq 'language') {
+  $compatibility = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compat/run-ast-compat.ps1') 600000 'legacy/AST compatibility corpus'
+  if ($compatibility.ExitCode -ne 0 -or $compatibility.Output -notmatch 'AST compatibility baseline passed') {
+    throw 'Legacy/AST compatibility corpus regression failed.'
+  }
+  $diagnosticCompatibility = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compat/run-diagnostic-compat.ps1') 180000 'legacy/AST diagnostic compatibility'
+  if ($diagnosticCompatibility.ExitCode -ne 0 -or $diagnosticCompatibility.Output -notmatch 'AST_DIAGNOSTIC_COMPAT=OK') {
+    throw 'Legacy/AST diagnostic compatibility regression failed.'
+  }
+}
 
 Write-Host "FULLTEST_SUITE=$Suite"
 
