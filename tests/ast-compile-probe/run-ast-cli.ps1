@@ -347,7 +347,7 @@ Write-Host 'AST_AI_CLASS_METHOD_PARAMETERS_OK'
 $notesJsonClassMethodOutput = Join-Path $output 'class-method-notes-json-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-json-next.xps') -o $notesJsonClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes JSON class-method probe failed.' }
-dotnet (Join-Path $notesJsonClassMethodOutput 'class-method-notes-json-next.dll')
+dotnet (Join-Path $notesJsonClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes JSON class-method executable failed.' }
 Write-Host 'AST_NOTES_JSON_CLASS_METHODS_OK'
 $optionalClassMethodOutput = Join-Path $output 'class-method-optional-next'
