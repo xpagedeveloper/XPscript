@@ -12,7 +12,7 @@ if (args is ["--write-digitalocean-regression", var regressionPath])
 
 if (args is ["--verify-definition", var definitionPath])
 {
-    VerifyDefinition(definitionPath);
+    await VerifyDefinition(definitionPath);
     return;
 }
 
@@ -2725,7 +2725,7 @@ paths:
     Console.WriteLine("OPENAPI-REGENERATION-COLLISION=OK");
 }
 
-static void VerifyDefinition(string definitionPath)
+static async Task VerifyDefinition(string definitionPath)
 {
     var fullPath = Path.IsPathRooted(definitionPath)
         ? definitionPath
@@ -2738,5 +2738,19 @@ static void VerifyDefinition(string definitionPath)
         throw new Exception("OpenAPI server generation produced no operations or models.");
     if (client.Operations.Count == 0 || client.Models.Count == 0)
         throw new Exception("OpenAPI client generation produced no operations or models.");
-    Console.WriteLine($"OPENAPI-DEFINITION={Path.GetFileName(fullPath)} SERVER_OPERATIONS={server.Operations.Count} SERVER_MODELS={server.Models.Count} CLIENT_OPERATIONS={client.Operations.Count} CLIENT_MODELS={client.Models.Count}");
+    var selected = new XpsOpenApiGenerationOptions(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { server.Operations.First(operation => !operation.Equals("MetaRoot", StringComparison.OrdinalIgnoreCase)) });
+    var scopedServer = new XpsOpenApiGenerator().Generate(specification, Path.GetFileName(fullPath), selected);
+    var scopedClient = new XpsOpenApiClientGenerator().Generate(specification, Path.GetFileName(fullPath), null, selected);
+    var root = Path.Combine(Path.GetTempPath(), "xps-openapi-definition-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(root);
+    var serverPath = Path.Combine(root, "server.xps");
+    await File.WriteAllTextAsync(serverPath, scopedServer.Source);
+    await using var serverUnit = await new XpsWebCompiler().CompileAsync(serverPath, root);
+    var clientPath = Path.Combine(root, "client.xps");
+    await File.WriteAllTextAsync(clientPath, scopedClient.Source + "\nSub Main()\nEnd Sub\n");
+    var rootReferences = string.Join(" | ", scopedClient.Source.Split('\n').Where(line => line.Contains("Root", StringComparison.Ordinal)).Take(12));
+    if (rootReferences.Length > 0 && !scopedClient.Source.Contains("Public Class Root", StringComparison.Ordinal))
+        throw new Exception("GitHub representative client references an undeclared Root model: " + rootReferences);
+    _ = new XPScriptTranspiler().TranspileRestricted(await File.ReadAllTextAsync(clientPath), clientPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
+    Console.WriteLine($"OPENAPI-DEFINITION={Path.GetFileName(fullPath)} SERVER_OPERATIONS={server.Operations.Count} SERVER_MODELS={server.Models.Count} CLIENT_OPERATIONS={client.Operations.Count} CLIENT_MODELS={client.Models.Count} REPRESENTATIVE-COMPILE=OK");
 }

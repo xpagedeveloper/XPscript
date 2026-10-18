@@ -29,7 +29,7 @@ public sealed class XpsOpenApiGenerator
             foreach (var path in paths)
                 if (path.Value is JsonObject item)
                     foreach (var method in HttpMethods)
-                        if (item[method] is JsonObject operation && (included.Contains(path.Key) || included.Contains(method.ToUpperInvariant() + " " + path.Key) || (operation["operationId"] is JsonValue id && id.TryGetValue<string>(out var name) && included.Contains(name))))
+                        if (item[method] is JsonObject operation && (included.Contains(path.Key) || included.Contains(method.ToUpperInvariant() + " " + path.Key) || (operation["operationId"] is JsonValue id && id.TryGetValue<string>(out var name) && (included.Contains(name) || included.Contains(ToTypeIdentifier(name, "OpenAPI operation"))))))
                             CollectComponentReferences(root, operation, selected);
 
         var pending = new Queue<string>(selected);
