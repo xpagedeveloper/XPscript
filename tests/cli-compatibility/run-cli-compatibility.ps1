@@ -16,4 +16,21 @@ if ($LASTEXITCODE -ne 1 -or $astHelp -notlike '*ast-compile requires an .xps sou
     throw 'AST command argument handling regression.'
 }
 
+$astSource = Join-Path $root 'tests/ast-compile-probe/application-newline.xps'
+$resultRoot = Join-Path $root 'tests/cli-compatibility/.tmp-result-format'
+New-Item -ItemType Directory -Force -Path $resultRoot | Out-Null
+$jsonOutput = dotnet $compiler ast-compile $astSource -o (Join-Path $resultRoot 'json') --result-format json | Out-String
+if ($LASTEXITCODE -ne 0) { throw "AST JSON result-format regression: $jsonOutput" }
+$jsonResult = $jsonOutput | ConvertFrom-Json
+if ($jsonResult.result -ne 'ok' -or $jsonResult.operation -ne 'ast-compile' -or [string]::IsNullOrWhiteSpace($jsonResult.output)) {
+    throw 'AST JSON result-format contract regression.'
+}
+
+$xmlOutput = dotnet $compiler ast-compile $astSource -o (Join-Path $resultRoot 'xml') --result-format xml | Out-String
+if ($LASTEXITCODE -ne 0) { throw "AST XML result-format regression: $xmlOutput" }
+[xml]$xmlResult = $xmlOutput
+if ($xmlResult.compileResult.result -ne 'ok' -or $xmlResult.compileResult.operation -ne 'ast-compile') {
+    throw 'AST XML result-format contract regression.'
+}
+
 Write-Host 'CLI_COMMAND_LINE_COMPATIBILITY_OK'

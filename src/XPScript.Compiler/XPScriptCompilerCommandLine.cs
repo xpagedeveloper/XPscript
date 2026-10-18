@@ -307,6 +307,7 @@ public static class XPScriptCompilerCommandLine
         var sourcePath = Path.GetFullPath(args[0]);
         var outputDirectory = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourcePath)!, "ast-output"));
         var debug = false;
+        var resultFormat = "text";
         string? runtimeIdentifier = null;
         for (var i = 1; i < args.Length; i++)
         {
@@ -316,21 +317,41 @@ public static class XPScriptCompilerCommandLine
                 debug = true;
             else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
                 runtimeIdentifier = args[++i].ToLowerInvariant();
+            else if (args[i] == "--result-format" && i + 1 < args.Length)
+                resultFormat = args[++i].ToLowerInvariant();
             else
                 throw new ArgumentException($"Unknown argument: {args[i]}");
         }
 
         try
         {
+            if (resultFormat is not ("text" or "json" or "xml"))
+                throw new ArgumentException("--result-format must be text, json, or xml.");
             if (runtimeIdentifier is not null && !CompilerDriver.SupportedRuntimes.Contains(runtimeIdentifier, StringComparer.OrdinalIgnoreCase))
                 throw new ArgumentException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier).ConfigureAwait(false);
-            Console.WriteLine($"AST compilation succeeded: {assemblyPath}");
+            var result = CompileResult.Ok(assemblyPath)
+                .WithOperation("ast-compile")
+                .WithContext(sourcePath, runtimeIdentifier);
+            if (resultFormat == "text")
+                Console.WriteLine($"AST compilation succeeded: {assemblyPath}");
+            else
+                WriteResult(result, resultFormat);
             return 0;
         }
         catch (CompilerException ex)
         {
+            if (resultFormat is "json" or "xml")
+            {
+                var result = CompileResult.Error(ex.GeneratedDiagnostics.Count > 0
+                    ? ex.GeneratedDiagnostics
+                    : [new CompileDiagnostic { Description = ex.Message }])
+                    .WithOperation("ast-compile")
+                    .WithContext(sourcePath, runtimeIdentifier);
+                WriteResult(result, resultFormat);
+                return 2;
+            }
             if (ex.GeneratedDiagnostics.Count == 0)
             {
                 var message = ex.Message;
@@ -348,6 +369,14 @@ public static class XPScriptCompilerCommandLine
         }
         catch (Exception ex)
         {
+            if (resultFormat is "json" or "xml")
+            {
+                var result = CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }])
+                    .WithOperation("ast-compile")
+                    .WithContext(sourcePath, runtimeIdentifier);
+                WriteResult(result, resultFormat);
+                return 1;
+            }
             Console.Error.WriteLine(debug
                 ? ex.ToString()
                 : "Kompileringen misslyckades. Kör med --debug för teknisk diagnostik.");
