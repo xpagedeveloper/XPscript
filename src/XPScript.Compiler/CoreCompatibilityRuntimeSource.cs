@@ -918,7 +918,8 @@ internal static class LSFileRuntime
 
     private static State BinaryState(string path, string mode, int recordLength)
     {
-        var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+        var fileMode = mode == "binary" ? FileMode.Open : FileMode.OpenOrCreate;
+        var stream = new FileStream(path, fileMode, FileAccess.ReadWrite, FileShare.Read);
         return new State { Stream = stream, Mode = mode, RecordLength = recordLength };
     }
 }

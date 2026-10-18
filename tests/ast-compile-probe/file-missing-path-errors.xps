@@ -85,5 +85,13 @@ Sub Main()
     code = Err
     On Error GoTo 0
     If code = 0 Then Error 9851, "XPSpreadsheet.SaveAs created a missing parent"
+    Dim file As Integer
+    On Error Resume Next
+    file = FreeFile()
+    Open missing & "/missing.bin" For Binary As #file
+    code = Err
+    Close #file
+    On Error GoTo 0
+    If code = 0 Then Error 9856, "Binary Open created a missing file"
     Print "FILE_MISSING_PATH_ERRORS_OK"
 End Sub
