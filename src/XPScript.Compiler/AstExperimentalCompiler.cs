@@ -47,7 +47,7 @@ public static class AstExperimentalCompiler
         }
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", match =>
             new string(match.Value.Select(character => character is '\r' or '\n' ? character : ' ').ToArray()), RegexOptions.IgnoreCase);
-        source = Regex.Replace(source, @"(?im)^(?<indent>\s*)Sleep\s+(?<value>.+)$", "${indent}Sleep(${value})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>\s*)Sleep\s+(?<value>[^\r\n]+)\r?$", "${indent}Sleep(${value})");
         // Keep the argument at its original column: replace the original
         // separator with the opening parenthesis and avoid a longer prefix.
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)MkDir\s+(?<path>.+)$", "${indent}MkDir(${path})");
