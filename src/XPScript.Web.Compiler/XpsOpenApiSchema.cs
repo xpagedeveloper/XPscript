@@ -79,17 +79,24 @@ internal static class XpsOpenApiSchema
     private static readonly AsyncLocal<string?> OpenApiVersion = new();
     private static readonly AsyncLocal<IReadOnlyDictionary<string, string>?> ReferenceTypeNames = new();
     private static readonly AsyncLocal<Dictionary<JsonObject, JsonObject>?> ResolvedReferences = new();
+    private static readonly AsyncLocal<Dictionary<JsonObject, string>?> ResolvedTypes = new();
 
     internal static IDisposable BeginResolveCache()
     {
         var previous = ResolvedReferences.Value;
         ResolvedReferences.Value = new Dictionary<JsonObject, JsonObject>(ReferenceEqualityComparer.Instance);
-        return new ResolveCacheScope(previous);
+        var previousTypes = ResolvedTypes.Value;
+        ResolvedTypes.Value = new Dictionary<JsonObject, string>(ReferenceEqualityComparer.Instance);
+        return new ResolveCacheScope(previous, previousTypes);
     }
 
-    private sealed class ResolveCacheScope(Dictionary<JsonObject, JsonObject>? previous) : IDisposable
+    private sealed class ResolveCacheScope(Dictionary<JsonObject, JsonObject>? previous, Dictionary<JsonObject, string>? previousTypes) : IDisposable
     {
-        public void Dispose() => ResolvedReferences.Value = previous;
+        public void Dispose()
+        {
+            ResolvedReferences.Value = previous;
+            ResolvedTypes.Value = previousTypes;
+        }
     }
 
     internal static IDisposable UseOpenApiVersion(string version)
@@ -143,6 +150,14 @@ internal static class XpsOpenApiSchema
     }
 
     internal static string XpsType(JsonObject root, JsonObject schema, string context)
+    {
+        if (ResolvedTypes.Value?.TryGetValue(schema, out var cached) == true) return cached;
+        var result = XpsTypeCore(root, schema, context);
+        ResolvedTypes.Value?[schema] = result;
+        return result;
+    }
+
+    private static string XpsTypeCore(JsonObject root, JsonObject schema, string context)
     {
         if (schema["type"] is JsonArray types)
         {
