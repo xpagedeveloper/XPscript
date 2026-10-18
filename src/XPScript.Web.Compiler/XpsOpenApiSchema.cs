@@ -78,6 +78,19 @@ internal static class XpsOpenApiSchema
 
     private static readonly AsyncLocal<string?> OpenApiVersion = new();
     private static readonly AsyncLocal<IReadOnlyDictionary<string, string>?> ReferenceTypeNames = new();
+    private static readonly AsyncLocal<Dictionary<JsonObject, JsonObject>?> ResolvedReferences = new();
+
+    internal static IDisposable BeginResolveCache()
+    {
+        var previous = ResolvedReferences.Value;
+        ResolvedReferences.Value = new Dictionary<JsonObject, JsonObject>(ReferenceEqualityComparer.Instance);
+        return new ResolveCacheScope(previous);
+    }
+
+    private sealed class ResolveCacheScope(Dictionary<JsonObject, JsonObject>? previous) : IDisposable
+    {
+        public void Dispose() => ResolvedReferences.Value = previous;
+    }
 
     internal static IDisposable UseOpenApiVersion(string version)
     {
@@ -105,10 +118,16 @@ internal static class XpsOpenApiSchema
     internal static JsonObject Resolve(JsonObject root, JsonNode? node, string context)
     {
         if (node is not JsonObject current) throw new XpsOpenApiGenerationException(context + " must be an object.");
+        var original = current;
+        if (ResolvedReferences.Value?.TryGetValue(original, out var cached) == true) return cached;
         for (var depth = 0; depth < 32; depth++)
         {
             var reference = ReadString(current, "$ref")?.Trim().Trim('"');
-            if (reference is null) return current;
+            if (reference is null)
+            {
+                ResolvedReferences.Value?[original] = current;
+                return current;
+            }
             if (!reference.StartsWith("#/", StringComparison.Ordinal))
                 throw new XpsOpenApiGenerationException(context + " uses external $ref '" + reference + "'. Only local OpenAPI references are supported.");
             JsonNode? target = root;

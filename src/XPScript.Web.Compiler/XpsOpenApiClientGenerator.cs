@@ -34,7 +34,7 @@ public sealed class XpsOpenApiClientGenerator
 
     public XpsOpenApiClientGenerationResult Generate(string specification, string? sourceName, string? className, XpsOpenApiGenerationOptions? options)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(specification); XpsOpenApiSchema.ValidateExternalReferences(specification, sourceName); var root = ParseDocument(specification);
+        ArgumentException.ThrowIfNullOrWhiteSpace(specification); XpsOpenApiSchema.ValidateExternalReferences(specification, sourceName); using var resolveCache = XpsOpenApiSchema.BeginResolveCache(); var root = ParseDocument(specification);
         var normalized = XpsOpenApiSchema.NormalizeDocument(root); var version = normalized.Version;
         using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version); var apiName = ResolveClassName(root, sourceName, className); var modelSet = CollectModels(root); using var typeNameScope = XpsOpenApiSchema.UseReferenceTypeNames(modelSet.TypeNames); var models = modelSet.Models; var securitySchemes = CollectSecuritySchemes(root); var operations = CollectOperations(root); AssignGeneratedApiMemberNames(operations, securitySchemes);
         if (options?.IncludedOperations is { Count: > 0 } included)
