@@ -261,7 +261,7 @@ $expectedEnumResult = @(
 if ($LASTEXITCODE -ne 0 -or ($enumResult -join "`n") -ne ($expectedEnumResult -join "`n")) { throw 'AST enum/Type language extensions regression failed.' }
 Write-Host 'AST_ENUM_LANGUAGE_EXTENSIONS_OK'
 $spanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-span-error.xps') -o (Join-Path $output 'preprocessor-span-error') 2>&1
-if ($LASTEXITCODE -eq 0 -or ($spanOutput -join "`n") -notmatch 'preprocessor-span-error\.xps:4:') { throw 'AST preprocessor source span mapping regression failed.' }
+if ($LASTEXITCODE -eq 0 -or ($spanOutput -join "`n") -notmatch 'preprocessor-span-error\.xps:5:') { throw 'AST preprocessor source span mapping regression failed.' }
 Write-Host 'AST_PREPROCESSOR_SPAN_MAPPING_OK'
 $optionBaseSpanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-span-option-base-error.xps') -o (Join-Path $output 'preprocessor-span-option-base-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($optionBaseSpanOutput -join "`n") -notmatch 'preprocessor-span-option-base-error\.xps:3:') { throw 'AST Option Base source span mapping regression failed.' }
