@@ -16,6 +16,10 @@ public static class AstExperimentalCompiler
     public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, string? runtimeIdentifier, CancellationToken cancellationToken = default)
     {
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        // Expand Include directives before AST feature detection and parsing so the
+        // AST compiler has the same multi-file source contract as the legacy path.
+        var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
+        source = includeResult.Source;
         var fullSource = source;
         ValidateAstAiCallbacks(fullSource);
         var usesAi = RuntimeFeatures.Detect(fullSource).Ai;
