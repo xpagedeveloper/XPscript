@@ -284,7 +284,6 @@ Usage:
   xpscript android install <app.apk> [--device SERIAL]
   xpscript android launch [--device SERIAL]
   xpscript android logs [--device SERIAL]
-  xpscript android run <source.xps> [--platform RID] [--device SERIAL]
   xpscript android run <source.xps> [--platform RID] [--device SERIAL] [--debug]
 
 Commands:
