@@ -1,0 +1,12 @@
+Class Reader
+    Public Function IsOpen(ByVal value As XPDBSQLite) As Boolean
+        IsOpen = value.IsOpen
+    End Function
+End Class
+
+Sub Main()
+    Dim db As New XPDBSQLite(":memory:")
+    Dim reader As New Reader
+    Print CStr(reader.IsOpen(db))
+    Call db.Close()
+End Sub
