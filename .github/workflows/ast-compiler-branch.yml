@@ -78,6 +78,9 @@ jobs:
       - name: Run deterministic AST compatibility tests first
         shell: pwsh
         run: ./tests/ast-compat/run-ast-compat.ps1
+      - name: Compare legacy and AST diagnostic identity
+        shell: pwsh
+        run: ./tests/ast-compat/run-diagnostic-compat.ps1
       - name: Verify focused MCP web diagnostic first
         run: dotnet run --project ./tests/CompilerMcpWebDiagnosticProbe/CompilerMcpWebDiagnosticProbe.csproj -c Release -- .
       - name: Verify CLI and MCP diagnostic parity
