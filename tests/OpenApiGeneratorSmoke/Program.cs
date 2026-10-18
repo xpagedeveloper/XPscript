@@ -1769,6 +1769,24 @@ paths:
 
     Console.WriteLine("OPENAPI-REGENERATION-COLLISION=OK");
 
+    var scopedImport = new XpsOpenApiGenerator().Generate("""
+openapi: 3.1.0
+info: { title: Scoped import, version: 1.0.0 }
+paths:
+  /first:
+    get:
+      operationId: First
+      responses: { '200': { description: ok } }
+  /second:
+    post:
+      operationId: Second
+      responses: { '200': { description: ok } }
+""", "scoped-import.yaml", new XpsOpenApiGenerationOptions(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Second" }));
+    if (scopedImport.Operations.Count != 1 || !scopedImport.Operations.Contains("Second") ||
+        scopedImport.Source.Contains("Function First(", StringComparison.Ordinal))
+        throw new Exception("Endpoint-scoped OpenAPI import must emit only the requested operation.");
+    Console.WriteLine("OPENAPI-SCOPED-IMPORT=OK");
+
     foreach (var marker in new[] { "OPENAPI-CLIENT-SECURITY=OK", "OPENAPI-CLIENT-CORE-ONLY=OK" })
         Console.WriteLine(marker);
     Console.WriteLine("OPENAPI-CLIENT-COMPILE=OK");

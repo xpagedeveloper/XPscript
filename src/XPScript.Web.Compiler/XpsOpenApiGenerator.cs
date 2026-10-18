@@ -13,6 +13,8 @@ public sealed record XpsOpenApiGenerationResult(
     IReadOnlyList<string> Operations,
     IReadOnlyList<string> Models);
 
+public sealed record XpsOpenApiGenerationOptions(IReadOnlySet<string>? IncludedOperations = null);
+
 public sealed class XpsOpenApiGenerationException : Exception
 {
     public XpsOpenApiGenerationException(string message) : base(message) { }
@@ -39,7 +41,19 @@ public sealed class XpsOpenApiGenerator
         return Generate(File.ReadAllText(fullPath), Path.GetFileName(fullPath));
     }
 
+    public XpsOpenApiGenerationResult GenerateFile(string specificationPath, XpsOpenApiGenerationOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrWhiteSpace(specificationPath);
+        var fullPath = Path.GetFullPath(specificationPath);
+        if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI specification file was not found.", fullPath);
+        return Generate(File.ReadAllText(fullPath), Path.GetFileName(fullPath), options);
+    }
+
     public XpsOpenApiGenerationResult Generate(string specification, string? sourceName = null)
+        => Generate(specification, sourceName, null);
+
+    public XpsOpenApiGenerationResult Generate(string specification, string? sourceName, XpsOpenApiGenerationOptions? options)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(specification);
         var root = ParseDocument(specification, sourceName);
@@ -49,6 +63,11 @@ public sealed class XpsOpenApiGenerator
         using var versionScope = XpsOpenApiSchema.UseOpenApiVersion(version);
         var models = CollectComponentModels(root);
         var operations = CollectOperations(root, models);
+        if (options?.IncludedOperations is { Count: > 0 } included)
+            operations = operations.Where(operation =>
+                included.Contains(operation.Name) ||
+                included.Contains(operation.Method + " " + operation.Path) ||
+                included.Contains(operation.Path)).ToList();
         if (operations.Count == 0) throw new XpsOpenApiGenerationException("OpenAPI document does not contain any supported path operations.");
 
         var source = EmitSource(version, sourceName, root, models, operations);

@@ -22,6 +22,7 @@ internal static class XpsOpenApiCommand
 
         var specificationPath = Path.GetFullPath(args[1]);
         string? outputPath = null;
+        var includedOperations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var force = false;
 
         for (var i = 2; i < args.Length; i++)
@@ -38,6 +39,11 @@ internal static class XpsOpenApiCommand
                     break;
                 case "--force":
                     throw new ArgumentException("openapi import is additive and does not accept --force.");
+                case "--operation" when command == "import":
+                    if (++i >= args.Length) throw new ArgumentException("--operation requires an operationId, path, or METHOD path.");
+                    foreach (var operation in args[i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                        includedOperations.Add(operation);
+                    break;
                 default:
                     throw new ArgumentException($"Unknown openapi {command} argument: " + args[i]);
             }
@@ -49,7 +55,7 @@ internal static class XpsOpenApiCommand
 
         return command == "generate"
             ? Generate(specificationPath, outputPath, force)
-            : Import(specificationPath, outputPath);
+            : Import(specificationPath, outputPath, includedOperations);
     }
 
     private static int RunClient(string[] args)
@@ -110,11 +116,11 @@ internal static class XpsOpenApiCommand
         return 0;
     }
 
-    private static int Import(string specificationPath, string outputPath)
+    private static int Import(string specificationPath, string outputPath, IReadOnlySet<string> includedOperations)
     {
         if (!File.Exists(outputPath))
         {
-            var generated = new XpsOpenApiGenerator().GenerateFile(specificationPath);
+            var generated = new XpsOpenApiGenerator().GenerateFile(specificationPath, new XpsOpenApiGenerationOptions(includedOperations));
             ValidateAndReplace(outputPath, generated.Source);
             Console.WriteLine($"Imported {outputPath}");
             Console.WriteLine($"OpenAPI {generated.OpenApiVersion}: created new file with {generated.Operations.Count} endpoint(s), {generated.Models.Count} model(s)");
@@ -174,7 +180,7 @@ internal static class XpsOpenApiCommand
         Console.WriteLine("""
 Usage:
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
-  xpscript openapi import <spec.yaml|spec.yml|spec.json> [-o output.xps]
+  xpscript openapi import <spec.yaml|spec.yml|spec.json> [-o output.xps] [--operation operationId|path|METHOD path]
   xpscript openapi client generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--class ApiClass]
 
 `generate` and `import` retain their existing REST server behavior.
