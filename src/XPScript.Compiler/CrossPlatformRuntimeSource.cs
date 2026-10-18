@@ -27,7 +27,12 @@ internal static class XPCrossPlatformRuntime
         return File.Exists(value) && !Directory.Exists(value);
     }
 
-    public static bool IsDir(object? path) => Directory.Exists(XPScriptRuntime.CStr(path));
+    public static bool IsDir(object? path) => Directory.Exists(NormalizeDirectoryProbe(XPScriptRuntime.CStr(path)));
+
+    private static string NormalizeDirectoryProbe(string path) =>
+        OperatingSystem.IsWindows() && path.Length == 2 && char.IsLetter(path[0]) && path[1] == ':'
+            ? path + Path.DirectorySeparatorChar
+            : path;
 
     public static bool CopyFile(object? source, object? target, int action = 1) =>
         ApplyFileTransferPolicy(source, target, action, move: false);

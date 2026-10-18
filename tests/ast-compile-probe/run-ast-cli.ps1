@@ -228,6 +228,13 @@ $fileLockResult = dotnet (Join-Path $fileLockOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($fileLockResult -join "`n") -ne 'FILE_LOCK_OK') { throw 'AST file lock regression failed.' }
 Write-Host 'AST_FILE_LOCK_OK'
 
+$isDirDriveOutput = Join-Path $output 'isdir-drive-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'isdir-drive-next.xps') -o $isDirDriveOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST IsDir drive compilation failed.' }
+$isDirDriveResult = dotnet (Join-Path $isDirDriveOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($isDirDriveResult -join "`n") -ne 'ISDIR_DRIVE_OK') { throw 'AST IsDir drive regression failed.' }
+Write-Host 'AST_ISDIR_DRIVE_OK'
+
 $inputBoxOutput = Join-Path $output 'inputbox-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inputbox-next.xps') -o $inputBoxOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST InputBox compilation failed.' }

@@ -709,7 +709,11 @@ internal static class Program
     public static object Files(params object?[] a) => System.IO.Directory.GetFiles(CStr(a[0]), a.Length > 1 ? CStr(a[1]) : "*", a.Length > 2 && Convert.ToBoolean(a[2]) ? System.IO.SearchOption.AllDirectories : System.IO.SearchOption.TopDirectoryOnly);
     public static object Directories(params object?[] a) => System.IO.Directory.GetDirectories(CStr(a[0]));
     public static object IsFile(params object?[] a) => System.IO.File.Exists(CStr(a[0]));
-    public static object IsDir(params object?[] a) => System.IO.Directory.Exists(CStr(a[0]));
+    public static object IsDir(params object?[] a) => System.IO.Directory.Exists(NormalizeDirectoryProbe(CStr(a[0])));
+    private static string NormalizeDirectoryProbe(string path) =>
+        OperatingSystem.IsWindows() && path.Length == 2 && char.IsLetter(path[0]) && path[1] == ':'
+            ? path + System.IO.Path.DirectorySeparatorChar
+            : path;
     public static object FileEquals(params object?[] a) => System.Linq.Enumerable.SequenceEqual(System.IO.File.ReadAllBytes(RequireExistingFilePath(a[0])), System.IO.File.ReadAllBytes(RequireExistingFilePath(a[1])));
     public static object CopyFile(params object?[] a) {
         var source = RequireExistingFilePath(a[0]); var target = RequireWritableFilePath(a[1]); var action = a.Length > 2 ? Convert.ToInt32(a[2]) : 1;
