@@ -88,7 +88,7 @@ X509Certificate2 Certificate(bool old)
     var san = new SubjectAlternativeNameBuilder(); san.AddDnsName("localhost"); request.CertificateExtensions.Add(san.Build());
     request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, true));
     using var generated = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-2), DateTime.UtcNow.AddDays(old ? -1 : 1));
-    return new X509Certificate2(generated.Export(X509ContentType.Pfx), (string?)null,
+    return X509CertificateLoader.LoadPkcs12(generated.Export(X509ContentType.Pfx), (string?)null,
         X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
 }
 async Task Serve(TcpListener listener, X509Certificate2? certificate)
