@@ -2738,7 +2738,8 @@ static async Task VerifyDefinition(string definitionPath)
         throw new Exception("OpenAPI server generation produced no operations or models.");
     if (client.Operations.Count == 0 || client.Models.Count == 0)
         throw new Exception("OpenAPI client generation produced no operations or models.");
-    var selectedKey = Path.GetFileName(fullPath).Equals("riksantikvarieambetet.yaml", StringComparison.OrdinalIgnoreCase) ? "GET /lamningar" : "GET /assistants";
+    var fileName = Path.GetFileName(fullPath);
+    var selectedKey = fileName.Equals("riksantikvarieambetet.yaml", StringComparison.OrdinalIgnoreCase) ? "GET /lamningar" : fileName.Equals("scb.json", StringComparison.OrdinalIgnoreCase) ? "GET /tables" : "GET /assistants";
     var selected = new XpsOpenApiGenerationOptions(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { selectedKey });
     var scopedServer = new XpsOpenApiGenerator().Generate(specification, Path.GetFileName(fullPath), selected);
     var scopedClient = new XpsOpenApiClientGenerator().Generate(specification, Path.GetFileName(fullPath), null, selected);
