@@ -70,9 +70,10 @@ public sealed class CompilerDriver
                 diagnostics.AddRange(ex.GeneratedDiagnostics);
             return CompileResult.Error(diagnostics).WithContext(sourcePath, runtimeIdentifier);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithContext(sourcePath, runtimeIdentifier);
+            var description = CompilerDiagnosticMode.Debug ? ex.ToString() : "Compilation failed.";
+            return CompileResult.Error([CreateDiagnostic(0, 0, description, "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithContext(sourcePath, runtimeIdentifier);
         }
     }
 
