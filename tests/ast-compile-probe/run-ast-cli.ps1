@@ -187,7 +187,7 @@ $msgBoxOutput = Join-Path $output 'msgbox-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'msgbox-next.xps') -o $msgBoxOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST MsgBox compilation failed.' }
 $msgBoxResult = dotnet (Join-Path $msgBoxOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($msgBoxResult -join "`n") -ne 'MSGBOX_RUNTIME_OK') { throw 'AST MsgBox runtime regression failed.' }
+if ($LASTEXITCODE -ne 0 -or ($msgBoxResult -join "`n") -ne "AST MsgBox`nMSGBOX_RUNTIME_OK") { throw 'AST MsgBox runtime regression failed.' }
 Write-Host 'AST_MSGBOX_OK'
 
 $fileRuntimeOutput = Join-Path $output 'file-runtime-next'
