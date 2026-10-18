@@ -1,0 +1,26 @@
+Class Reader
+    Public Function IsNothingAi(ByVal value As XPAi) As Boolean
+        IsNothingAi = value Is Nothing
+    End Function
+    Public Function IsNothingResponse(ByVal value As XPAiResponse) As Boolean
+        IsNothingResponse = value Is Nothing
+    End Function
+    Public Function IsNothingTool(ByVal value As XPAITool) As Boolean
+        IsNothingTool = value Is Nothing
+    End Function
+    Public Function IsNothingFunction(ByVal value As XPAIToolFunction) As Boolean
+        IsNothingFunction = value Is Nothing
+    End Function
+    Public Function IsNothingCall(ByVal value As XPAIToolCall) As Boolean
+        IsNothingCall = value Is Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim reader As New Reader
+    Print CStr(reader.IsNothingAi(Nothing))
+    Print CStr(reader.IsNothingResponse(Nothing))
+    Print CStr(reader.IsNothingTool(Nothing))
+    Print CStr(reader.IsNothingFunction(Nothing))
+    Print CStr(reader.IsNothingCall(Nothing))
+End Sub

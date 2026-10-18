@@ -328,6 +328,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST XPJsonSchema class-method parameter compil
 $jsonSchemaClassMethodResult = dotnet (Join-Path $jsonSchemaClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($jsonSchemaClassMethodResult -join "`n") -ne 'True') { throw 'AST XPJsonSchema class-method parameter execution failed.' }
 Write-Host 'AST_JSON_SCHEMA_CLASS_METHOD_PARAMETER_OK'
+$aiClassMethodOutput = Join-Path $output 'class-method-ai-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-ai-next.xps') -o $aiClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST AI class-method parameter compilation failed.' }
+$aiClassMethodResult = dotnet (Join-Path $aiClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($aiClassMethodResult -join "`n") -ne "True`nTrue`nTrue`nTrue`nTrue") { throw 'AST AI class-method parameter execution failed.' }
+Write-Host 'AST_AI_CLASS_METHOD_PARAMETERS_OK'
 $optionalClassMethodOutput = Join-Path $output 'class-method-optional-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-next.xps') -o $optionalClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST optional scalar class-method compilation failed.' }
