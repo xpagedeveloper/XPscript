@@ -11,6 +11,33 @@ permissions:
   contents: read
 
 jobs:
+  web-hosting:
+    name: Web and REST hosting (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run REST, Kestrel, CGI and FastCGI smoke tests
+        shell: pwsh
+        run: |
+          $projects = @(
+            'tests/WebRestApiSmoke/WebRestApiSmoke.csproj',
+            'tests/WebKestrelSmoke/WebKestrelSmoke.csproj',
+            'tests/WebCgiSmoke/WebCgiSmoke.csproj',
+            'tests/WebFastCgiSmoke/WebFastCgiSmoke.csproj'
+          )
+          foreach ($project in $projects) {
+            dotnet run --project $project -c Release
+            if ($LASTEXITCODE -ne 0) { throw "Web hosting smoke test failed: $project" }
+          }
+
   openapi:
     name: OpenAPI generation and compilation (${{ matrix.os }})
     strategy:
