@@ -8,6 +8,7 @@ Status markers: `[x]` implemented and regression-verified, `[>]` partially imple
 
 ## Syntax and resolution
 
+- [ ] Add `Use "name"` as a restricted include variant: resolve only `.xps` files in the containing file's directory or a descendant directory, infer the `.xps` extension, reject absolute paths and parent-directory traversal, and apply the same canonical duplicate/cycle handling as `Include`.
 - [x] define and document `Include` syntax for source files, for example `Include "common.xps"`
 - [x] resolve relative include paths relative to the file that contains the `Include` statement
 - [x] support nested includes
