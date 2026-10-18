@@ -62,7 +62,7 @@ internal static class AndroidCommand
             throw new InvalidOperationException("adb install failed for " + serial + ": " + (install.Error + Environment.NewLine + install.Output).Trim());
 
         await ExecuteAsync(adb, ["-s", serial, "logcat", "-c"]);
-        var launch = await ExecuteAsync(adb, ["-s", serial, "shell", "monkey", "-p", "com.xpscript.debugapp", "-c", "android.intent.category.LAUNCHER", "1"]);
+        var launch = await ExecuteAsync(adb, ["-s", serial, "shell", "monkey", "-p", "eu.xpscript.app", "-c", "android.intent.category.LAUNCHER", "1"]);
         if (launch.ExitCode != 0 || launch.Output.Contains("No activities found", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Android application launch failed on " + serial + ": " + (launch.Error + Environment.NewLine + launch.Output).Trim());
 
