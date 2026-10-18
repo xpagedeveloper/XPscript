@@ -1,0 +1,23 @@
+' SystemInventory native surface must bind through AST without legacy preprocessing.
+Option Declare
+
+Sub Main()
+    Dim inventory As New SystemInventory
+    Dim snapshot As SystemInventorySnapshot
+    Dim systemInfo As SystemInventorySystemInfo
+    Dim cpu As SystemInventoryCpuInfo
+    Dim memory As SystemInventoryMemoryInfo
+    Dim software As Variant
+
+    Set snapshot = inventory.GetSnapshot()
+    Set systemInfo = snapshot.System
+    Set cpu = snapshot.Cpu
+    Set memory = snapshot.Memory
+    software = inventory.FindInstalledSoftware("dotnet")
+
+    If inventory.IsSoftwareInstalled("dotnet") Or Not (systemInfo.Is64BitProcess Or Not systemInfo.Is64BitProcess) Then
+        Print "SYSTEMINVENTORY_AST_OK"
+    Else
+        Print "SYSTEMINVENTORY_AST_OK"
+    End If
+End Sub

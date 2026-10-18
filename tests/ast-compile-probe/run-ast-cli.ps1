@@ -13,6 +13,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST missing-file/path error fixture compilatio
 $missingPathResult = dotnet (Join-Path $missingPathOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($missingPathResult -join "`n") -ne 'FILE_MISSING_PATH_ERRORS_OK') { throw 'AST missing-file/path errors regression failed.' }
 Write-Host 'AST_FILE_MISSING_PATH_ERRORS_OK'
+$systemInventoryOutput = Join-Path $output 'systeminventory-native-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'systeminventory-native-next.xps') -o $systemInventoryOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST SystemInventory native-surface compilation failed.' }
+$systemInventoryResult = dotnet (Join-Path $systemInventoryOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($systemInventoryResult -join "`n") -ne 'SYSTEMINVENTORY_AST_OK') { throw 'AST SystemInventory native-surface regression failed.' }
+Write-Host 'AST_SYSTEMINVENTORY_NATIVE_SURFACE_OK'
 $initializedStringOutput = Join-Path $output 'initialized-module-reference-string-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-string-next.xps') -o $initializedStringOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module string-reference compilation failed.' }

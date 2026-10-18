@@ -36,7 +36,10 @@ internal static class AstObjectSupportRegistry
         "XPJsonArray",
         "XPJsonObject",
         "XPJsonElement", "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall",
-        "NotesHTTPRequest", "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement"
+        "NotesHTTPRequest", "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement",
+        "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
+        "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
+        "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
     };
 
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -49,10 +52,7 @@ internal static class AstObjectSupportRegistry
         "NetworkPortExposureInfo",
         "NotesEmbeddedObject",
         "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
-        "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
-        "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
-        "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
-        ,"UIForm", "UIListView"
+        "UIForm", "UIListView"
         ,"NotesSession", "NotesMail", "NotesDatabase", "NotesDatabaseAccess", "NotesView", "NotesDocumentCollection",
         "NotesNoteCollection", "NotesDocument", "NotesItem", "NotesRichTextItem", "NotesRichTextNavigator",
         "NotesRichTextParagraphStyle", "NotesRichTextRange", "NotesRichTextSection", "NotesRichTextStyle",
