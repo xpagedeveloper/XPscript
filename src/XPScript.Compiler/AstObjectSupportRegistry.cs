@@ -40,6 +40,7 @@ internal static class AstObjectSupportRegistry
         "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
         "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
+        ,"XPDBSQLite"
     };
 
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -62,7 +63,7 @@ internal static class AstObjectSupportRegistry
         ,"XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn"
         ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
         "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection"
-        ,"XPDBSQLite", "XPDBMySQL", "XPDBMsSQL", "XPDbSupabase", "XPDbMySql", "XPDbMsSql", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPAITool", "XPJsonValidationResult", "XPAiResponse"
+        ,"XPDBMySQL", "XPDBMsSQL", "XPDbSupabase", "XPDbMySql", "XPDbMsSql", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPAITool", "XPJsonValidationResult", "XPAiResponse"
         ,"XPHttpPart", "XPHttpFile", "XPPathValue", "XPFileInfoValue", "XPShellResult"
     };
 

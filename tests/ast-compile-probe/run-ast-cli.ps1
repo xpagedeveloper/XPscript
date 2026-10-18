@@ -19,6 +19,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST SystemInventory native-surface compilation
 $systemInventoryResult = dotnet (Join-Path $systemInventoryOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($systemInventoryResult -join "`n") -ne 'SYSTEMINVENTORY_AST_OK') { throw 'AST SystemInventory native-surface regression failed.' }
 Write-Host 'AST_SYSTEMINVENTORY_NATIVE_SURFACE_OK'
+$sqliteOutput = Join-Path $output 'sqlite-native-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'sqlite-native-next.xps') -o $sqliteOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST SQLite native-surface compilation failed.' }
+$sqliteResult = dotnet (Join-Path $sqliteOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($sqliteResult -join "`n") -ne 'SQLITE_AST_OK') { throw 'AST SQLite native-surface regression failed.' }
+Write-Host 'AST_SQLITE_OK'
 $initializedStringOutput = Join-Path $output 'initialized-module-reference-string-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-string-next.xps') -o $initializedStringOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized module string-reference compilation failed.' }
