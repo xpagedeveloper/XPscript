@@ -118,3 +118,37 @@ jobs:
       - name: Run all FullTests
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1
+
+  desktop-target-matrix:
+    name: AST desktop target (${{ matrix.rid }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            os: ubuntu-latest
+          - rid: linux-arm64
+            os: ubuntu-24.04-arm
+          - rid: osx-x64
+            os: macos-13
+          - rid: osx-arm64
+            os: macos-14
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj -r ${{ matrix.rid }}
+      - name: Build compiler for target RID
+        run: dotnet publish ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore -r ${{ matrix.rid }} --self-contained false -p:UseSharedCompilation=false
+      - name: Verify target metadata and supported RID
+        run: dotnet run --project ./tests/TargetMatrixProbe/TargetMatrixProbe.csproj -c Release --no-restore
+      - name: Verify generated compiler artifact
+        shell: pwsh
+        run: |
+          $artifact = Get-ChildItem './src/XPScript.Compiler/bin/Release/net10.0/${{ matrix.rid }}/publish/xpscriptc*' | Select-Object -First 1
+          if (-not $artifact) { throw 'Target-specific compiler artifact was not produced.' }
+          Write-Host "Produced $($artifact.FullName)"
