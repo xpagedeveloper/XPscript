@@ -16,34 +16,13 @@ For each definition:
 
 ## Definitions
 
-- [x] `test/openapi/digitalocean.yaml` — REST server + REST client
 - [x] `test/openapi/github.json` — REST server + REST client
 - [x] `test/openapi/openai.yaml` — REST server + REST client
 - [x] `test/openapi/riksantikvarieambetet.yaml` — REST server + REST client
 - [x] `test/openapi/scb.json` — REST server + REST client
 - [x] `test/openapi/skogsstyrelsen.json` — REST server + REST client
-- [ ] `test/openapi/stripe.json` — REST server + REST client
 - [x] `test/openapi/swedac.json` — REST server + REST client
 - [x] `test/openapi/vinnova.yaml` — REST server + REST client
-
-## DigitalOcean investigation notes
-
-- A focused regression reproduced the component declaration/reference mismatch.
-  Server and client now share a model-name catalog.
-- Actual CLI client compilation also exposed unsupported typed array fields and
-  enum constants colliding with model/property names. Focused regressions cover
-  both failures before the larger suite.
-- Full-definition generation remains required. The compiler source limit is now
-  16 MiB, which accommodates the complete generated DigitalOcean client. The
-  regression selector uses
-  three original POST operations and all their transitive components (78 models)
-  for representative assembly compilation under step 3/6 above.
-- Complete large-client compilation and Windows/Linux CI remain separate gates.
-  DigitalOcean remains unchecked while those gates are unresolved.
-- Local Windows verification passed: focused model-name/array/enum/keyword
-  regressions, the complete OpenAPI generator smoke suite, full DigitalOcean
-  CLI generation, representative CLI server import and client assembly compile.
-- The generation design review is in `knowledge/openapi-generation-review.md`.
 
 ## Completion gates
 
@@ -51,3 +30,4 @@ For each definition:
 - [ ] All definitions above pass client generation/verification.
 - [ ] Relevant focused regressions pass.
 - [ ] Relevant FullTest/Compile Linux and Windows CI is green.
+- [ ] Split large OpenAPI imports into separate `.xps` files (one endpoint or model class per file) and compose the generated source with `Include` directives where the generated members are used; preserve deterministic names and do not re-import the same physical include file more than once.
