@@ -155,6 +155,29 @@ jobs:
           $output = Join-Path $env:RUNNER_TEMP "ast-target-${{ matrix.rid }}"
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile ./tests/ast-compile-probe/shared-runtime.xps --output $output --rid ${{ matrix.rid }}
           if (-not (Test-Path (Join-Path $output 'Generated.dll'))) { throw 'AST target compilation did not produce Generated.dll.' }
+          $actual = ((& dotnet (Join-Path $output 'Generated.dll')) -join "`n").Trim()
+          $expected = @'
+INTEGER
+LONG
+17
+True
+2
+EMPTY=[]
+Variable is null
+NULL
+1
+False
+True
+bcd
+True
+3
+2
+1
+OVERFLOW=6
+CONTINUED
+'@.Trim()
+          if ($actual -cne $expected) { throw "AST console target output mismatch for ${{ matrix.rid }}.`nExpected:`n$expected`nActual:`n$actual" }
+          Write-Host 'AST_CONSOLE_TARGET_RUNTIME=OK'
       - name: Verify generated compiler artifact
         shell: pwsh
         run: |
