@@ -7,5 +7,8 @@ Sub Main()
     Set result = http.Get(Environ("XPSCRIPT_NOTES_HTTP_TEST_URL"))
     If http.ResponseCode <> 200 Then Error 4265
     If CStr(result) <> "notes-http-ok" Then Error 4266
+    Set result = http.Post(Environ("XPSCRIPT_NOTES_HTTP_TEST_URL"), "notes-http-request")
+    If http.ResponseCode <> 200 Then Error 4267
+    If CStr(result) <> "notes-http-ok" Then Error 4268
     Print "NOTES_HTTP_REQUEST_OK"
 End Sub
