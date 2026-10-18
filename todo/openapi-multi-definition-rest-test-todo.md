@@ -17,7 +17,7 @@ For each definition:
 ## Definitions
 
 - [ ] `test/openapi/digitalocean.yaml` — REST server + REST client
-- [ ] `test/openapi/github.json` — REST server + REST client
+- [x] `test/openapi/github.json` — REST server + REST client
 - [ ] `test/openapi/openai.yaml` — REST server + REST client
 - [ ] `test/openapi/riksantikvarieambetet.yaml` — REST server + REST client
 - [ ] `test/openapi/scb.json` — REST server + REST client
