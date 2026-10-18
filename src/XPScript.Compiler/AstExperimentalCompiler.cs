@@ -408,6 +408,8 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         var usesApplication = AstApplicationSupport.UsesApplication(fullSource);
+        var usesDatabaseDynamicRuntime = AstSqliteSupport.Uses(fullSource) || AstMySqlSupport.Uses(fullSource) ||
+            AstMsSqlSupport.Uses(fullSource) || AstSupabaseSupport.Uses(fullSource);
         if (usesApplication)
             foreach (var mainSymbol in symbols.LookupAll("Main").OfType<FunctionSymbol>())
                 mainSymbol.NativeTargetName = "__xps_application_main";
@@ -600,10 +602,10 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstSpreadsheetSupport.RuntimeCode(fullSource)}}
 {{AstApplicationSupport.RuntimeCode(fullSource)}}
 {{(AstSystemInventorySupport.Uses(fullSource) ? SystemInventoryRuntimeSource.Code : "")}}
-{{(AstSqliteSupport.Uses(fullSource) ? CaseInsensitiveDynamicObjectRuntimeSource.Code + SqliteDbRuntimeSource.Code : "")}}
-{{((AstMySqlSupport.Uses(fullSource) || AstMsSqlSupport.Uses(fullSource)) ? CaseInsensitiveDynamicObjectRuntimeSource.Code : "")}}
+{{(usesDatabaseDynamicRuntime ? CaseInsensitiveDynamicObjectRuntimeSource.Code : "")}}
+{{(AstSqliteSupport.Uses(fullSource) ? SqliteDbRuntimeSource.Code : "")}}
 {{(AstMsSqlSupport.Uses(fullSource) ? MsSqlDbRuntimeSource.Code : "")}}
-{{(AstSupabaseSupport.Uses(fullSource) ? CaseInsensitiveDynamicObjectRuntimeSource.Code + HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + SupabaseDbRuntimeSource.Code : "")}}
+{{(AstSupabaseSupport.Uses(fullSource) ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + SupabaseDbRuntimeSource.Code : "")}}
 {{AstHttpSupport.RuntimeCode(fullSource)}}
 {{(AstNotesJsonSupport.Uses(fullSource) || Regex.IsMatch(fullSource, @"(?i)\bNotesHTTPRequest\b") ? JsonHttpCompatibilityRuntimeSource.Code : "")}}
 {{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}

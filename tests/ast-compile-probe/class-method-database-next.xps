@@ -1,0 +1,26 @@
+Class Reader
+    Public Function IsNothingSqlite(ByVal value As XPDBSQLite) As Boolean
+        IsNothingSqlite = value Is Nothing
+    End Function
+    Public Function IsNothingMySql(ByVal value As XPDbMySql) As Boolean
+        IsNothingMySql = value Is Nothing
+    End Function
+    Public Function IsNothingMsSql(ByVal value As XPDbMsSql) As Boolean
+        IsNothingMsSql = value Is Nothing
+    End Function
+    Public Function IsNothingSupabase(ByVal value As XPDbSupabase) As Boolean
+        IsNothingSupabase = value Is Nothing
+    End Function
+    Public Function IsNothingSupabaseAlias(ByVal value As XPSupabaseDB) As Boolean
+        IsNothingSupabaseAlias = value Is Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim reader As New Reader
+    Print CStr(reader.IsNothingSqlite(Nothing))
+    Print CStr(reader.IsNothingMySql(Nothing))
+    Print CStr(reader.IsNothingMsSql(Nothing))
+    Print CStr(reader.IsNothingSupabase(Nothing))
+    Print CStr(reader.IsNothingSupabaseAlias(Nothing))
+End Sub

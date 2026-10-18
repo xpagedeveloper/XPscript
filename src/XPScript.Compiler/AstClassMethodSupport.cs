@@ -24,7 +24,8 @@ internal static class AstClassMethodSupport
         string.Equals(name, "Variant", StringComparison.OrdinalIgnoreCase) ||
         AstImageSupport.IsImage(name) || AstXmlSupport.IsXml(name) || AstCsvSupport.IsCsv(name) ||
         AstSpreadsheetSupport.IsSpreadsheet(name) || AstHttpSupport.IsHttp(name) ||
-        string.Equals(name, "XPDBSQLite", StringComparison.OrdinalIgnoreCase) ||
+        new[] { "XPDBSQLite", "XPDbMySql", "XPDbMsSql", "XPDbSupabase", "XPSupabaseDB" }
+            .Contains(name, StringComparer.OrdinalIgnoreCase) ||
         new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }
             .Contains(name, StringComparer.OrdinalIgnoreCase);
 
