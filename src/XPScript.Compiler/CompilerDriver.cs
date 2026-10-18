@@ -707,7 +707,7 @@ public sealed class CompilerDriver
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
     <AndroidSupportedAbis>{(runtimeIdentifier.Equals("android-x64", StringComparison.OrdinalIgnoreCase) ? "x86_64" : "arm64-v8a")}</AndroidSupportedAbis>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
-    <ApplicationId>com.xpscript.debugapp</ApplicationId>
+    <ApplicationId>eu.xpscript.app</ApplicationId>
 """
             : string.Empty;
 

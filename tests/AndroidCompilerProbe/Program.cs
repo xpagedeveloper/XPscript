@@ -16,7 +16,7 @@ foreach (var rid in new[] { "android-arm64", "android-x64" })
         ?? throw new Exception("Android project generation returned null."));
 
     var abi = rid == "android-x64" ? "x86_64" : "arm64-v8a";
-    foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramework>", "<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>", $"<AndroidSupportedAbis>{abi}</AndroidSupportedAbis>", "<AndroidPackageFormat>apk</AndroidPackageFormat>" })
+    foreach (var expected in new[] { "<TargetFramework>net10.0-android</TargetFramework>", "<SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>", $"<AndroidSupportedAbis>{abi}</AndroidSupportedAbis>", "<AndroidPackageFormat>apk</AndroidPackageFormat>", "<ApplicationId>eu.xpscript.app</ApplicationId>" })
         if (!project.Contains(expected, StringComparison.Ordinal))
             throw new Exception(rid + " generated project is missing: " + expected);
 }
