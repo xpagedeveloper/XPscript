@@ -316,6 +316,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST database class-method parameter compilatio
 $databaseClassMethodResult = dotnet (Join-Path $databaseClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($databaseClassMethodResult -join "`n") -ne "True`nTrue`nTrue`nTrue`nTrue") { throw 'AST database class-method parameter execution failed.' }
 Write-Host 'AST_DATABASE_CLASS_METHOD_PARAMETERS_OK'
+$inventoryClassMethodOutput = Join-Path $output 'class-method-system-inventory-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-system-inventory-next.xps') -o $inventoryClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST SystemInventory class-method parameter compilation failed.' }
+$inventoryClassMethodResult = dotnet (Join-Path $inventoryClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($inventoryClassMethodResult -join "`n") -ne "True`nTrue`nTrue`nTrue") { throw 'AST SystemInventory class-method parameter execution failed.' }
+Write-Host 'AST_SYSTEM_INVENTORY_CLASS_METHOD_PARAMETERS_OK'
 $optionalClassMethodOutput = Join-Path $output 'class-method-optional-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-next.xps') -o $optionalClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST optional scalar class-method compilation failed.' }

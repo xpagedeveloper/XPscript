@@ -1,0 +1,22 @@
+Class Reader
+    Public Function IsNothingSnapshot(ByVal value As SystemInventorySnapshot) As Boolean
+        IsNothingSnapshot = value Is Nothing
+    End Function
+    Public Function IsNothingSystem(ByVal value As SystemInventorySystemInfo) As Boolean
+        IsNothingSystem = value Is Nothing
+    End Function
+    Public Function IsNothingCpu(ByVal value As SystemInventoryCpuInfo) As Boolean
+        IsNothingCpu = value Is Nothing
+    End Function
+    Public Function IsNothingSoftware(ByVal value As InstalledSoftwareInfo) As Boolean
+        IsNothingSoftware = value Is Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim reader As New Reader
+    Print CStr(reader.IsNothingSnapshot(Nothing))
+    Print CStr(reader.IsNothingSystem(Nothing))
+    Print CStr(reader.IsNothingCpu(Nothing))
+    Print CStr(reader.IsNothingSoftware(Nothing))
+End Sub
