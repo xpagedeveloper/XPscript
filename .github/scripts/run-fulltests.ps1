@@ -9,6 +9,17 @@ New-Item -ItemType Directory -Force -Path ./out/fulltest | Out-Null
 $runtimeTimeoutMilliseconds = 50000
 $compileTimeoutMilliseconds = if ($IsWindows) { 180000 } else { 60000 }
 
+if ($Suite -eq 'language') {
+  $compatibility = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compat/run-ast-compat.ps1') 600000 'legacy/AST compatibility corpus'
+  if ($compatibility.ExitCode -ne 0 -or $compatibility.Output -notmatch 'AST compatibility baseline passed') {
+    throw 'Legacy/AST compatibility corpus regression failed.'
+  }
+  $diagnosticCompatibility = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compat/run-diagnostic-compat.ps1') 180000 'legacy/AST diagnostic compatibility'
+  if ($diagnosticCompatibility.ExitCode -ne 0 -or $diagnosticCompatibility.Output -notmatch 'AST_DIAGNOSTIC_COMPAT=OK') {
+    throw 'Legacy/AST diagnostic compatibility regression failed.'
+  }
+}
+
 function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeoutMilliseconds, [string] $label) {
   $si = [System.Diagnostics.ProcessStartInfo]::new(); $si.FileName = $fileName; $si.UseShellExecute = $false; $si.RedirectStandardOutput = $true; $si.RedirectStandardError = $true
   foreach ($argument in $arguments) { [void] $si.ArgumentList.Add([string] $argument) }
