@@ -36,10 +36,10 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             IfStatementSyntax @if => BindIf(@if),
             ForStatementSyntax @for => BindFor(@for),
             ForAllStatementSyntax forAll => BindForAll(forAll),
-            WhileStatementSyntax @while => BindWhile(@while),
+            WhileStatementSyntax whileStatement => BindWhile(whileStatement),
             DoStatementSyntax @do => BindDo(@do),
-            SelectStatementSyntax select => BindSelect(select),
-            WithStatementSyntax with => BindWith(with),
+            SelectStatementSyntax selectStatement => BindSelect(selectStatement),
+            WithStatementSyntax withStatement => BindWith(withStatement),
             _ => BindUnsupported(syntax)
         };
         if (bound is not null)

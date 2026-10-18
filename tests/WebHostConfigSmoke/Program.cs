@@ -37,7 +37,8 @@ try
     await VerifyInvalidConfigAsync(cliDll, configDir);
     await VerifyMissingConfigAsync(cliDll, configDir);
     await VerifyAutomaticConfigAsync(cliDll, configDir, automaticConfig);
-    await VerifyApiDocsJsonSchemaAsync(cliDll, siteDir);\n    await VerifyApiDocsJsonSchemaFailuresAsync(cliDll, parent);
+    await VerifyApiDocsJsonSchemaAsync(cliDll, siteDir);
+    await VerifyApiDocsJsonSchemaFailuresAsync(cliDll, parent);
     Console.WriteLine("WEB-HOST-CONFIG-SMOKE=OK");
 }
 finally
@@ -283,7 +284,7 @@ static async Task VerifyApiDocsJsonSchemaFailuresAsync(string cliDll, string par
         Directory.CreateDirectory(Path.Combine(root, "schemas"));
         if (test.SchemaContent is not null && !test.SchemaPath.StartsWith("..", StringComparison.Ordinal))
             await File.WriteAllTextAsync(Path.Combine(root, test.SchemaPath.Replace('/', Path.DirectorySeparatorChar)), test.SchemaContent);
-        await File.WriteAllTextAsync(Path.Combine(root, "api.xps"), $"""
+        await File.WriteAllTextAsync(Path.Combine(root, "api.xps"), $$"""
 [Anonymous]
 [Post:/api/test]
 [JsonSchema:{{test.SchemaPath}}]
@@ -300,7 +301,7 @@ End Sub
     Directory.CreateDirectory(absoluteRoot);
     var absoluteSchema = Path.Combine(parent, "absolute.schema.json");
     await File.WriteAllTextAsync(absoluteSchema, "{}");
-    await File.WriteAllTextAsync(Path.Combine(absoluteRoot, "api.xps"), $"""
+    await File.WriteAllTextAsync(Path.Combine(absoluteRoot, "api.xps"), $$"""
 [Anonymous]
 [Post:/api/test]
 [JsonSchema:{{absoluteSchema}}]
