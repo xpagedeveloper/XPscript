@@ -592,6 +592,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstApplicationSupport.RuntimeCode(fullSource)}}
 {{(AstSystemInventorySupport.Uses(fullSource) ? SystemInventoryRuntimeSource.Code : "")}}
 {{(AstSqliteSupport.Uses(fullSource) ? CaseInsensitiveDynamicObjectRuntimeSource.Code + SqliteDbRuntimeSource.Code : "")}}
+{{(AstMySqlSupport.Uses(fullSource) ? CaseInsensitiveDynamicObjectRuntimeSource.Code : "")}}
 {{AstHttpSupport.RuntimeCode(fullSource)}}
 {{(AstNotesJsonSupport.Uses(fullSource) || Regex.IsMatch(fullSource, @"(?i)\bNotesHTTPRequest\b") ? JsonHttpCompatibilityRuntimeSource.Code : "")}}
 {{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
