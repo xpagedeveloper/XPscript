@@ -39,10 +39,7 @@ internal static class AndroidCommand
         var requestedSerial = ParseOptionalDevice(args, "android logs");
         var adb = ResolveAdb();
         var serial = await RequireReadyDeviceAsync(adb, requestedSerial);
-        var result = await StreamLogsAsync(adb, serial);
-        if (result.ExitCode != 0)
-            throw new InvalidOperationException("adb logcat failed on " + serial + ": " + result.Error.Trim());
-        return result;
+        return await StreamLogsAsync(adb, serial);
     }
 
     private static async Task<int> StreamLogsAsync(string adb, string serial)
