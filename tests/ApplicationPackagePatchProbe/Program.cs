@@ -5,6 +5,17 @@ static void Require(bool condition, string message)
     if (!condition) throw new InvalidOperationException(message);
 }
 
+foreach (var source in new[] { "MimeKit.MimeParser", "NotesMIMEEntity", "internal sealed class XPScriptDbMsSql" })
+{
+    var packages = ApplicationDependencyCatalog.Detect(source);
+    Require(packages.Count(package => package.Name == "System.Security.Cryptography.Pkcs") == 1,
+        "MIME/SQL Server applications must declare one cryptography security dependency");
+    Require(packages.Single(package => package.Name == "System.Security.Cryptography.Pkcs").Version == "10.0.13",
+        "generated applications must not inherit a vulnerable Pkcs baseline");
+}
+Require(!ApplicationDependencyCatalog.Detect("Print hello").Any(package => package.Name == "System.Security.Cryptography.Pkcs"),
+    "unused cryptography must not add a generated application dependency");
+
 Require(ApplicationPackagePatchStore.IsCompatiblePatch("7.0.2", "7.0.2"), "baseline patch must be compatible");
 Require(ApplicationPackagePatchStore.IsCompatiblePatch("7.0.2", "7.0.9"), "newer patch must be compatible");
 Require(!ApplicationPackagePatchStore.IsCompatiblePatch("7.0.2", "7.0.1"), "downgrade must be rejected");

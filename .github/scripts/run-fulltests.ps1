@@ -138,6 +138,8 @@ if (Should-Run 'archive') {
 
 if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
+  $packagePolicy = Invoke-Bounded 'dotnet' @('run','--project','./tests/ApplicationPackagePatchProbe/ApplicationPackagePatchProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'NuGet security baseline and generated dependency policy'
+  if ($packagePolicy.ExitCode -ne 0) { exit $packagePolicy.ExitCode }
   # Android setup performs real installations when run; compile it only in CI.
   Compile-Xps ./Android/setup-android-dev.xps android-setup-dev-compile
   # Process execution is a core platform primitive. Keep its smallest regression first.

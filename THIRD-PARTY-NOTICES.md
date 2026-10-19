@@ -45,7 +45,8 @@ The following packages are distributed under the MIT License:
 - [MySqlConnector](https://github.com/mysql-net/MySqlConnector) (`2.6.2`)
 - [SharpCompress](https://github.com/adamhathcock/sharpcompress) (`0.50.4`)
 - [SkiaSharp](https://github.com/mono/SkiaSharp), including its platform native asset packages (`3.119.4-preview.1.1`)
-- [System.Configuration.ConfigurationManager](https://github.com/dotnet/runtime), `System.Diagnostics.EventLog`, `System.IdentityModel.Tokens.Jwt`, `System.Security.Cryptography.Pkcs`, and `System.Security.Cryptography.ProtectedData` (`9.0.13` or `10.0.0`)
+- [System.Configuration.ConfigurationManager](https://github.com/dotnet/runtime), `System.Diagnostics.EventLog`, `System.IdentityModel.Tokens.Jwt`, and `System.Security.Cryptography.ProtectedData` (`9.0.13` or `10.0.0`)
+- [System.Security.Cryptography.Pkcs](https://github.com/dotnet/runtime) (`10.0.13`), explicitly pinned for cryptography security updates in the toolchain and generated MIME/SQL Server applications
 - [Tmds.DBus.Protocol](https://github.com/tmds/Tmds.DBus) (`0.92.0`)
 - [YamlDotNet](https://github.com/aaubry/YamlDotNet) (`18.1.0`)
 
