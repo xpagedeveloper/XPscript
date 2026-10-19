@@ -3,6 +3,8 @@ End Sub
 
 Sub Main()
     Dim ai As New XPAi(Environ("XPSCRIPT_AI_TEST_AI"), "XPAI_SECRET_MARKER")
+    ai.Model = "test-model"
+    ai.UserPrompt = "What is the weather?"
     Dim tool As New XPAITool("weather")
     Dim fn As XPAIToolFunction
     Dim response As XPAiResponse

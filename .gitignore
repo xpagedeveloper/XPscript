@@ -13,3 +13,9 @@ graphify-out/
 docs-site/node_modules/
 docs-site/.astro/
 docs-site/dist/
+**/tmp*/
+.tmp*
+*.bin
+*.tmp
+ast-file-text-next.txt
+tmp*
