@@ -10,6 +10,7 @@ internal static class AstClassMethodSupport
     // Managed native families share references; images use their explicit snapshot ownership contract.
     // Other families retain their deferral until their accessor contract is covered.
     private static bool UnsupportedNativeAccessorType(string? name) =>
+        name is not null && name.Trim().ToUpperInvariant() is not ("BYTE" or "BOOLEAN" or "STRING" or "INTEGER" or "LONG" or "SINGLE" or "DOUBLE" or "CURRENCY" or "DATE") &&
         BoundExpressionEmitter.RuntimeObjectType(name ?? "") is not null &&
         !AstXmlSupport.IsXml(name) &&
         !AstCsvSupport.IsCsv(name) &&
