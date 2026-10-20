@@ -26,6 +26,7 @@ internal static class AstSqliteSupport
         new("XPDBSQLite", "QueryArray", "XPJsonArray", ["object", "object"], ["sql", "parameters"], false, false, false),
         new("XPDBSQLite", "GetRow", "XPJsonObject", ["object", "object", "object"], ["table", "keyColumn", "keyValue"], false, false, false),
         new("XPDBSQLite", "SaveRow", "int", ["object", "object", "object"], ["table", "keyColumn", "data"], false, false, false),
+        new("XPDBSQLite", "Attachments", "XPAttachmentCollection", ["object", "object", "object"], ["table", "keyColumn", "keyValue"], false, false, false),
         new("XPDBSQLite", "DatabasePath", "string", [], [], false, true, false),
         new("XPDBSQLite", "ReadOnly", "bool", [], [], false, true, false),
         new("XPDBSQLite", "IsOpen", "bool", [], [], false, true, false),

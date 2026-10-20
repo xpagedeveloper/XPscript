@@ -651,7 +651,8 @@ using XpJsonElement = XPScriptJsonElement;
 {{(AstSqliteSupport.Uses(fullSource) ? SqliteDbRuntimeSource.Code : "")}}
 {{(AstMsSqlSupport.Uses(fullSource) ? MsSqlDbRuntimeSource.Code : "")}}
 {{(AstSupabaseSupport.Uses(fullSource) ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + SupabaseDbRuntimeSource.Code : "")}}
-{{(usesDatabaseDynamicRuntime ? DatabaseUiDataSourceRuntimeSource.Build(AstSqliteSupport.Uses(fullSource), AstMsSqlSupport.Uses(fullSource), false) : "")}}
+{{(usesDatabaseDynamicRuntime ? DatabaseUiDataSourceRuntimeSource.Build(AstSqliteSupport.Uses(fullSource), AstMsSqlSupport.Uses(fullSource), true) : "")}}
+{{(usesDatabaseDynamicRuntime ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + AstTlsRuntimeCode() + DatabaseAttachmentRuntimeV2Source.Build(AstSqliteSupport.Uses(fullSource), AstMsSqlSupport.Uses(fullSource)) + DatabaseAttachmentRuntimeV3Source.Code : "")}}
 {{AstHttpSupport.RuntimeCode(fullSource)}}
 {{(AstNotesJsonSupport.Uses(fullSource) || Regex.IsMatch(fullSource, @"(?i)\bNotesHTTPRequest\b") ? JsonHttpCompatibilityRuntimeSource.Code + (AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) || runtimeFeatures.Http ? "" : AstTlsRuntimeCode()) : "")}}
 {{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}

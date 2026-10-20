@@ -399,6 +399,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST database UI data-source compilation failed
 $databaseUiDataSourceResult = dotnet (Join-Path $databaseUiDataSourceOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($databaseUiDataSourceResult -join "`n") -ne 'DATABASE_UI_DATA_SOURCE_OK') { throw 'AST database UI data-source regression failed.' }
 Write-Host 'AST_DATABASE_UI_DATA_SOURCE_OK'
+$databaseAttachmentsOutput = Join-Path $output 'database-attachments-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'database-attachments-next.xps') -o $databaseAttachmentsOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST database attachments compilation failed.' }
+$databaseAttachmentsResult = dotnet (Join-Path $databaseAttachmentsOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($databaseAttachmentsResult -join "`n") -ne 'DATABASE_ATTACHMENTS_OK') { throw 'AST database attachments regression failed.' }
+Write-Host 'AST_DATABASE_ATTACHMENTS_OK'
 $inventoryClassMethodOutput = Join-Path $output 'class-method-system-inventory-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-system-inventory-next.xps') -o $inventoryClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST SystemInventory class-method parameter compilation failed.' }

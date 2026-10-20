@@ -25,6 +25,7 @@ internal static class AstMsSqlSupport
         new("XPDbMsSql", "QueryArray", "XPJsonArray", ["object", "object"], ["sql", "parameters"], false, false, false),
         new("XPDbMsSql", "GetRow", "XPJsonObject", ["object", "object", "object"], ["table", "keyColumn", "keyValue"], false, false, false),
         new("XPDbMsSql", "SaveRow", "int", ["object", "object", "object"], ["table", "keyColumn", "data"], false, false, false),
+        new("XPDbMsSql", "Attachments", "XPAttachmentCollection", ["object", "object", "object"], ["table", "keyColumn", "keyValue"], false, false, false),
         new("XPDbMsSql", "DataSource", "string", [], [], false, true, false),
         new("XPDbMsSql", "Database", "string", [], [], false, true, false),
         new("XPDbMsSql", "IsOpen", "bool", [], [], false, true, false),

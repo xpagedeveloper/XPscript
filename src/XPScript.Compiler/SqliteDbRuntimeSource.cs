@@ -301,6 +301,9 @@ internal sealed class XPScriptDbSqlite : XPScriptCaseInsensitiveDynamicObject, I
         }
     }
 
+    public XPScriptAttachmentCollectionV3 Attachments(object? table, object? keyColumn, object? keyValue)
+        => XPScriptDatabaseAttachmentApi.ForSqlite(this, table, keyColumn, keyValue);
+
     public void Dispose() => Close();
 
     private Microsoft.Data.Sqlite.SqliteCommand CreateCommand(object? sql)

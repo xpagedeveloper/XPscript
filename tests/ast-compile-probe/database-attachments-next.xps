@@ -1,0 +1,23 @@
+Sub Main()
+    Dim db As New XPDBSQLite(":memory:")
+    Dim files As XPAttachmentCollection
+    Call db.Execute("CREATE TABLE owners (id INTEGER PRIMARY KEY)")
+    Call db.Execute("INSERT INTO owners(id) VALUES (1)")
+    Set files = db.Attachments("owners", "id", 1)
+    Call files.List()
+    Call files.GetMetadata()
+    Call files.FindByName("missing")
+    If False Then
+        Call files.GetMetadata("missing")
+        Call files.Save("missing.txt", "tester")
+        Call files.SaveAs("missing.txt", "renamed.txt", "tester")
+        Call files.Get("missing", "target.txt")
+        Call files.SaveToDisk("missing", "target.txt")
+        Call files.GetAll("target")
+        Call files.SendToBrowser("missing")
+        Call files.SendToBrowser("missing", "download.txt")
+        Call files.Delete("missing")
+    End If
+    Call db.Dispose()
+    Print "DATABASE_ATTACHMENTS_OK"
+End Sub

@@ -271,6 +271,9 @@ internal sealed class XPScriptDbMsSql : XPScriptCaseInsensitiveDynamicObject, ID
         }
     }
 
+    public XPScriptAttachmentCollectionV3 Attachments(object? table, object? keyColumn, object? keyValue)
+        => XPScriptDatabaseAttachmentApi.ForMsSql(this, table, keyColumn, keyValue);
+
     public void Dispose() => Close();
 
     private Microsoft.Data.SqlClient.SqlCommand CreateCommand(object? sql)

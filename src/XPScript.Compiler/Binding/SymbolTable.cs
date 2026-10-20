@@ -95,6 +95,7 @@ public sealed class SymbolTable
         AstMySqlSupport.Import(this);
         AstMsSqlSupport.Import(this);
         AstSupabaseSupport.Import(this);
+        AstAttachmentSupport.Import(this);
         ImportXPAiOverloads();
     }
 
