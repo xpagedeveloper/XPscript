@@ -73,6 +73,8 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 
 - Current continuation checkpoint: branch `investigate-ast-compiler` is clean apart from the unrelated untracked `scripts/restart-chatgpt-after-5-minutes.ps1`. The next open implementation audit is full legacy CLI `--target` behavior parity; AST currently parses the compatibility switches but still explicitly rejects `--target webiis`. The HTTP/XML collection-property duplicate-runtime experiment was reverted and remains uncommitted/open.
 
+- Follow-up verification: the isolated `run-ast-array-signature.ps1` suite passes, but the full `run-ast-cli.ps1` wrapper currently terminates after entering that nested suite without exposing a PowerShell exception. No harness change was kept; this wrapper issue must be isolated before claiming the full AST suite green.
+
 - Native database class-property regression exposed unsafe generated dependency runtime; added AllowUnsafeBlocks to generated legacy/dependency projects.
 - Verified compiler Release build and focused class-properties-native AST compile/run with SystemInventorySnapshot, XPDBSQLite and XPDbSupabase accessors: CLASS_PROPERTIES_NATIVE_OK.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
