@@ -264,7 +264,7 @@ internal static class RunCompiler
 
         var mimeKitVersion = ApplicationDependencyCatalog.ResolveVersion("MimeKit", ApplicationDependencyCatalog.MimeKitVersion);
         var packageItems = usesMimeKit
-            ? $"  <ItemGroup>\n    <PackageReference Include=\"MimeKit\" Version=\"{mimeKitVersion}\" />\n  </ItemGroup>\n"
+            ? $"  <ItemGroup>\n    <PackageReference Include=\"MimeKit\" Version=\"{mimeKitVersion}\" />\n    <PackageReference Include=\"System.Security.Cryptography.Pkcs\" Version=\"{ApplicationDependencyCatalog.ResolveVersion("System.Security.Cryptography.Pkcs", ApplicationDependencyCatalog.CryptographyPkcsVersion)}\" />\n  </ItemGroup>\n"
             : string.Empty;
 
         return $"""

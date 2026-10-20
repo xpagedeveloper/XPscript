@@ -243,6 +243,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         }
         if (usesSqlite) items.AppendLine($"    <PackageReference Include=\"Microsoft.Data.Sqlite\" Version=\"{MicrosoftDataSqliteVersion}\" />");
         if (usesMsSql) items.AppendLine($"    <PackageReference Include=\"Microsoft.Data.SqlClient\" Version=\"{MicrosoftDataSqlClientVersion}\" />");
+        if (usesMsSql) items.AppendLine($"    <PackageReference Include=\"System.Security.Cryptography.Pkcs\" Version=\"{ApplicationDependencyCatalog.CryptographyPkcsVersion}\" />");
         if (usesImage) items.AppendLine($"    <PackageReference Include=\"Magick.NET-Q16-AnyCPU\" Version=\"{MagickNetVersion}\" />");
         var itemGroup = items.Length == 0 ? string.Empty : $"  <ItemGroup>\n{items}  </ItemGroup>\n";
         return $"""
