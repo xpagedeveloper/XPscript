@@ -284,6 +284,8 @@ public sealed class BoundExpressionEmitter
         });
         var functionName = call.Function.Name.EndsWith("$", StringComparison.Ordinal) ? call.Function.Name.TrimEnd('$') : call.Function.Name;
         if (functionName.Equals("JsonParse", StringComparison.OrdinalIgnoreCase)) functionName = "XPScriptNativeJson.Parse";
+        if (call.Target is null && functionName.Equals("CDate", StringComparison.OrdinalIgnoreCase))
+            return $"Program.CDate({string.Join(", ", arguments)})";
         if (call.Target is null && functionName.ToUpperInvariant() is "CSTR" or "CINT" or "CLNG" or "CDBL" or "CBOOL" or "CBYTE" or "CCUR" or "CSNG" or "CVAR" or "CDATE" or "LEN" or "LENB" or "TRIM" or "UCASE" or "LCASE" or "ENVIRON" or "ISARRAY" or "ISDATE" or "ISNUMERIC")
         {
             functionName = "XPScriptRuntime." + (functionName.ToUpperInvariant() switch

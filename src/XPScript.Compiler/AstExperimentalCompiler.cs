@@ -869,7 +869,9 @@ internal static class Program
         else if (result.All(item => item is IConvertible && item is not DateTime && item is not XpDate))
             result = result.OrderBy(item => Convert.ToDouble(item, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
         else
-            System.Array.Sort(result, Comparer<object?>.Create((left, right) => left is IComparable comparable ? comparable.CompareTo(right) : 0));
+            System.Array.Sort(result, Comparer<object?>.Create((left, right) =>
+                left is XpDate leftDate && right is XpDate rightDate ? leftDate.CompareTo(rightDate) :
+                left is IComparable comparable ? comparable.CompareTo(right) : 0));
         if (value.GetType().IsArray) {
             var typed = System.Array.CreateInstance(value.GetType().GetElementType()!, result.Length);
             result.CopyTo(typed, 0); return typed;
@@ -878,7 +880,7 @@ internal static class Program
     }
     public static string Join(object? value, object? separator = null) => value is System.Collections.IEnumerable items ? string.Join(separator is null ? " " : CStr(separator), items.Cast<object?>().Where(item => item is not null).Select(CStr)) : string.Empty;
     public static string Implode(object? value, object? separator = null) => Join(value, separator);
-    public static object CDate(object value) => XPScriptRuntime.CDate(value);
+    public static object CDate(object value) => new XpDate(XPScriptRuntime.CDate(value));
     public static object Base64Decode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.FromBase64String(CStr(values[0]));
     public static object Base64Encode(params object?[] values) => values.Length == 0 ? string.Empty : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(CStr(values[0])));
     public static byte CByte(object value) => XPScriptRuntime.CByte(value);
