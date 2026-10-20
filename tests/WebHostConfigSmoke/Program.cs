@@ -229,6 +229,12 @@ End Class
 Sub CreateSchemaUser([FromBody] payload As TypedSchemaUserPayload)
     Response.OK(payload)
 End Sub
+
+[Anonymous]
+[Post:/api/schema-users/fallback]
+Sub CreateSchemaUserFallback([FromBody] payload As TypedSchemaUserPayload)
+    Response.OK(payload)
+End Sub
 """);
 
     var port = GetFreePort();

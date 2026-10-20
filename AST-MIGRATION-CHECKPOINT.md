@@ -56,3 +56,7 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - OpenAPI focused regressions are green: request-body assignment, client model arrays/enums, referenced server/client model names, composed request-body assignment, C# keyword handling, and regeneration-collision checks all passed. The OpenAPI regeneration run emitted only `NU1900` restore warnings.
 - The complete `tests/OpenApiGeneratorSmoke/OpenApiGeneratorSmoke.csproj` run is green. Its permanent regression now verifies that the 672-schema Fortnox fixture is rejected by the 300-class import limit, while a bounded valid Fortnox-shaped specification covers import skeleton generation; all server/client generation, security, dialect, compile and preservation markers passed.
 
+
+- WebHostConfigSmoke API-doc regression fixed: fixture now includes explicit [JsonSchema] and typed fallback endpoints; WebHostConfigSmoke green.
+- WebIisPackageProbe green, including missing-main.xps rejection.
+- Graphify query/update attempted; graphify binary still fails with uv trampoline canonicalize error.
