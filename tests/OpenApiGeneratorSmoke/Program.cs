@@ -512,7 +512,39 @@ var fortnoxSpecification = string.Concat(
         .OrderBy(path => path, StringComparer.Ordinal)
         .Select(File.ReadAllText));
 
-var importSkeleton = new XpsOpenApiImporter().Import(fortnoxSpecification, """
+try
+{
+    _ = new XpsOpenApiImporter().Import(fortnoxSpecification, "", "fortnoxapi.json");
+    throw new Exception("Fortnox OpenAPI import should reject specifications over the 300-class limit.");
+}
+catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("at most 300 classes/schemas", StringComparison.Ordinal))
+{
+    Console.WriteLine("OPENAPI-IMPORT-CLASS-LIMIT=OK");
+}
+
+var fortnoxImportSpecification = """
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Fortnox import limit regression", "version": "1.0" },
+  "paths": {
+    "/currency": {
+      "get": {
+        "operationId": "CurrencyController_doIndex",
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/fortnox_CurrencyListItem_Wrap" } } } } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "fortnox_CurrencyListItem_Wrap": {
+        "type": "object",
+        "properties": { "Currencies": { "type": "array", "items": { "type": "string" } } }
+      }
+    }
+  }
+}
+""";
+var importSkeleton = new XpsOpenApiImporter().Import(fortnoxImportSpecification, """
 ' Existing handwritten XPscript source must survive the import.
 Sub ExistingProcedure()
     Print "existing"
