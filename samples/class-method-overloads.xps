@@ -5,55 +5,55 @@ Class NamedItem
 End Class
 
 Class Formatter
-    Public Function FormatValue(value As Integer) As String
+    Public Function FormatValue(ByVal value As Integer) As String
         FormatValue = "INTEGER=" & CStr(value)
     End Function
 
-    Public Function FormatValue(value As String) As String
+    Public Function FormatValue(ByVal value As String) As String
         FormatValue = "STRING=" & value
     End Function
 
-    Public Function FormatValue(value As Date) As String
+    Public Function FormatValue(ByVal value As Date) As String
         FormatValue = "DATE=" & CStr(Year(value))
     End Function
 
-    Public Function NumericValue(value As Integer) As String
+    Public Function NumericValue(ByVal value As Integer) As String
         NumericValue = "NUMERIC=INTEGER"
     End Function
 
-    Public Function NumericValue(value As Double) As String
+    Public Function NumericValue(ByVal value As Double) As String
         NumericValue = "NUMERIC=DOUBLE"
     End Function
 
-    Public Function Describe(value As Integer) As String
+    Public Function Describe(ByVal value As Integer) As String
         Describe = "DESCRIBE=ONE"
     End Function
 
-    Public Function Describe(value As Integer, Optional suffix As String = "!") As String
+    Public Function Describe(ByVal value As Integer, Optional ByVal suffix As String = "!") As String
         Describe = "DESCRIBE=TWO" & suffix
     End Function
 
-    Public Function Pick(value As NamedItem) As String
+    Public Function Pick(ByVal value As NamedItem) As String
         Pick = "PICK=TYPED"
     End Function
 
-    Public Function Pick(value As Object) As String
+    Public Function Pick(ByVal value As Object) As String
         Pick = "PICK=OBJECT"
     End Function
 
-    Public Function Shape(value As Integer) As String
+    Public Function Shape(ByVal value As Integer) As String
         Shape = "SHAPE=SCALAR:" & CStr(value)
     End Function
 
-    Public Function Shape(value() As Integer) As String
+    Public Function Shape(ByVal value() As Integer) As String
         Shape = "SHAPE=ARRAY:" & CStr(LBound(value)) & ":" & CStr(UBound(value))
     End Function
 
-    Public Sub SetValue(value As Integer)
+    Public Sub SetValue(ByVal value As Integer)
         Print "SUB=ONE:" & CStr(value)
     End Sub
 
-    Public Sub SetValue(value As Integer, label As String)
+    Public Sub SetValue(ByVal value As Integer, ByVal label As String)
         Print "SUB=TWO:" & label & ":" & CStr(value)
     End Sub
 

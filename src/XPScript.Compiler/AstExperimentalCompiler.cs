@@ -901,7 +901,7 @@ internal static class Program
     public static object Weekday(object? value, object? firstDay = null) => XPScriptRuntime.Weekday(ToDateTime(value), firstDay is null ? 1 : Convert.ToInt32(firstDay));
     public static object MonthName(object? month, object? abbreviate = null) => XPScriptRuntime.MonthName(Convert.ToInt32(month), abbreviate is not null && Convert.ToBoolean(abbreviate));
     public static object WeekdayName(object? weekday, object? abbreviate = null) => XPScriptRuntime.WeekdayName(Convert.ToInt32(weekday), abbreviate is not null && Convert.ToBoolean(abbreviate));
-    public static object Day(object value) => Convert.ToDateTime(value).Day;
+    public static object Day(object value) => ToDateTime(value).Day;
     public static object FromBase64(object value) => Base64Decode(value);
     public static object InstrB(params object?[] values) => InStr(1L, values.Length > 1 ? values[0] : null, values.Length > 1 ? values[1] : null);
     public static object IsArray(object value) => XPScriptRuntime.IsArray(value);
@@ -919,7 +919,7 @@ internal static class Program
     }
     public static object MidB(object value, object start, object? count = null) => Mid(value, start, count);
     public static object MidBP(object value, object start, object? count = null) => Mid(value, start, count);
-    public static object Month(object value) => Convert.ToDateTime(value).Month;
+    public static object Month(object value) => ToDateTime(value).Month;
     public static object Hour(object? value) => XPScriptRuntime.Hour(ToDateTime(value));
     public static object Minute(object? value) => XPScriptRuntime.Minute(ToDateTime(value));
     public static object Second(object? value) => XPScriptRuntime.Second(ToDateTime(value));
@@ -995,7 +995,7 @@ internal static class Program
     public static object CVDate(object value) => Convert.ToDateTime(value);
     public static string UChr(object value) => char.ConvertFromUtf32(Convert.ToInt32(value));
     public static long Uni(object value) => char.ConvertToUtf32((value?.ToString() ?? "\0"), 0);
-    public static long Year(object value) => Convert.ToDateTime(value).Year;
+    public static long Year(object value) => ToDateTime(value).Year;
     public static bool IsList(object? value) => value is System.Collections.IDictionary;
     public static bool IsUnknown(object? value) => value is null;
     public static bool IsNumeric(object? value) => XPScriptRuntime.IsNumeric(value);
@@ -1299,9 +1299,17 @@ internal static class Program
         // Only a trailing Optional suffix can be omitted by a shorter call.
         // Explicit empty argument slots require separate call-syntax lowering.
         for (var count = parameters.Count - 1; count >= 0 && parameters[count].IsOptional; count--)
+        {
+            var shortenedTypes = parameters.Take(count).Select(ResolveParameterType).ToArray();
+            var shortenedModes = parameters.Take(count).Select(p => p.IsByRef).ToArray();
+            if (symbols.LookupAll(name).OfType<FunctionSymbol>().Any(existing =>
+                existing.ParameterTypes.SequenceEqual(shortenedTypes.Select(type => type.RuntimeType)) &&
+                existing.ByRefParameters is not null && existing.ByRefParameters.SequenceEqual(shortenedModes)))
+                continue;
             symbols.Declare(new FunctionSymbol(name, returnType,
-                parameters.Take(count).Select(p => ResolveParameterType(p).RuntimeType).ToArray(),
-                null, parameters.Take(count).Select(ResolveParameterType).ToArray(), parameters.Take(count).Select(p => p.IsByRef).ToArray()) { IsOptionalForwarding = true });
+                shortenedTypes.Select(type => type.RuntimeType).ToArray(), null, shortenedTypes, shortenedModes)
+                { IsOptionalForwarding = true });
+        }
     }
 
     private static bool SameClassMethodSignature(SubDeclarationSyntax left, SubDeclarationSyntax right) =>

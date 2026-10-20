@@ -510,9 +510,43 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 candidates = explicitCandidates;
         }
         if (candidates.Length > 1)
+        {
+            var best = candidates.Where(candidate => candidates.All(other => ReferenceEquals(candidate, other) ||
+                IsBetterOverload(candidate, other, arguments))).ToArray();
+            if (best.Length == 1)
+                candidates = best;
+        }
+        if (candidates.Length > 1)
             return Error(syntax, CompilerDiagnosticCodes.AmbiguousOverload, $"Call to function '{name}' is ambiguous.");
 
         return new BoundCallExpression(target, candidates[0], ConvertArguments(candidates[0], arguments));
+    }
+
+    private bool IsBetterOverload(FunctionSymbol left, FunctionSymbol right, IReadOnlyList<BoundExpression> arguments)
+    {
+        var better = false;
+        for (var i = 0; i < arguments.Count; i++)
+        {
+            var leftType = left.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(left.ParameterTypes[i]);
+            var rightType = right.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(right.ParameterTypes[i]);
+            var leftConversion = _symbols.ClassifyConversion(arguments[i].SemanticType, leftType);
+            var rightConversion = _symbols.ClassifyConversion(arguments[i].SemanticType, rightType);
+            if (leftConversion.IsIdentity != rightConversion.IsIdentity)
+            {
+                if (!leftConversion.IsIdentity)
+                    return false;
+                better = true;
+                continue;
+            }
+
+            var leftToRight = _symbols.ClassifyConversion(leftType, rightType).IsImplicit;
+            var rightToLeft = _symbols.ClassifyConversion(rightType, leftType).IsImplicit;
+            if (rightToLeft && !leftToRight)
+                return false;
+            if (leftToRight && !rightToLeft)
+                better = true;
+        }
+        return better;
     }
 
     private BoundExpression[] ConvertArguments(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)

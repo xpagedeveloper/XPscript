@@ -22,6 +22,7 @@ internal static class AstClassMethodSupport
     private static bool SupportedNativeClassMethodType(string? name) =>
         string.Equals(name, "Object", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(name, "Variant", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(name, "Date", StringComparison.OrdinalIgnoreCase) ||
         AstImageSupport.IsImage(name) || AstXmlSupport.IsXml(name) || AstCsvSupport.IsCsv(name) ||
         AstSpreadsheetSupport.IsSpreadsheet(name) || AstHttpSupport.IsHttp(name) ||
         new[] { "XPDBSQLite", "XPDbMySql", "XPDbMsSql", "XPDbSupabase", "XPSupabaseDB" }
@@ -333,6 +334,16 @@ internal static class AstClassMethodSupport
             {
                 for (var count = parameters.Length - 1; count >= 0 && syntaxParameters[count].IsOptional; count--)
                 {
+                    if (declaration.Members.Any(other => !ReferenceEquals(other, member) &&
+                        other is FunctionDeclarationSyntax otherFunction && function is not null &&
+                        otherFunction.Identifier.Text.Equals(function.Identifier.Text, StringComparison.OrdinalIgnoreCase) &&
+                        SameParameterSignature(otherFunction.Parameters, syntaxParameters.Take(count))))
+                        continue;
+                    if (declaration.Members.Any(other => !ReferenceEquals(other, member) &&
+                        other is SubDeclarationSyntax otherSub && sub is not null &&
+                        otherSub.Identifier.Text.Equals(sub.Identifier.Text, StringComparison.OrdinalIgnoreCase) &&
+                        SameParameterSignature(otherSub.Parameters, syntaxParameters.Take(count))))
+                        continue;
                     var forward = OptionalCallLowering.Forward(emittedName, returnType, parameters, defaults, count,
                         semanticReturnType: semanticResult);
                     var forwardBody = new BoundMethodEmitter().Emit(emittedName, returnType, forward.Parameters, forward.Statements,
@@ -397,5 +408,13 @@ internal static class AstClassMethodSupport
             output.Append("}\n");
         }
         return output.ToString();
+    }
+
+    private static bool SameParameterSignature(IReadOnlyList<ParameterSyntax> left, IEnumerable<ParameterSyntax> right)
+    {
+        var values = right.ToArray();
+        return left.Count == values.Length && left.Zip(values, (a, b) =>
+            a.IsByRef == b.IsByRef && a.IsArray == b.IsArray && a.IsList == b.IsList &&
+            string.Equals(a.Type?.Identifier.Text, b.Type?.Identifier.Text, StringComparison.OrdinalIgnoreCase)).All(match => match);
     }
 }
