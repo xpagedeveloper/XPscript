@@ -1,0 +1,9 @@
+Option Explicit
+
+Sub Main()
+    Dim first As String
+    first = Dir("tests/ast-compile-probe/file-*.xps")
+    If Len(first) = 0 Then Error 9854, "Dir did not find a matching file"
+    If Len(Dir()) = 0 Then Error 9855, "Dir did not continue enumeration"
+    Print "DIR_AST_OK"
+End Sub

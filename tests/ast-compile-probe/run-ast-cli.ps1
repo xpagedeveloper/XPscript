@@ -247,6 +247,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST FileDateTime compilation failed.' }
 $fileDateTimeResult = dotnet (Join-Path $fileDateTimeOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($fileDateTimeResult -join "`n") -ne 'FILE_DATETIME_OK') { throw 'AST FileDateTime regression failed.' }
 Write-Host 'AST_FILE_DATETIME_OK'
+$dirOutput = Join-Path $output 'dir-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'dir-next.xps') -o $dirOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Dir compilation failed.' }
+$dirResult = dotnet (Join-Path $dirOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($dirResult -join "`n") -ne 'DIR_AST_OK') { throw 'AST Dir regression failed.' }
+Write-Host 'AST_DIR_OK'
 
 $inputBoxOutput = Join-Path $output 'inputbox-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inputbox-next.xps') -o $inputBoxOutput

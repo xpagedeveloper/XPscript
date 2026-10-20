@@ -268,6 +268,9 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("TypeName", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FileLen", typeof(long), [typeof(string)]));
         symbols.Declare(new FunctionSymbol("FileDateTime", typeof(DateTime), [typeof(string)], XpTypeSymbol.FromClr(typeof(DateTime)), [XpTypeSymbol.FromClr(typeof(string))]));
+        symbols.Declare(new FunctionSymbol("Dir", typeof(string), [], XpTypeSymbol.FromClr(typeof(string)), []));
+        for (var dirArgumentCount = 1; dirArgumentCount <= 3; dirArgumentCount++)
+            symbols.Declare(new FunctionSymbol("Dir", typeof(string), Enumerable.Repeat(typeof(object), dirArgumentCount).ToArray(), XpTypeSymbol.FromClr(typeof(string)), Enumerable.Repeat(XpTypeSymbol.Variant, dirArgumentCount).ToArray()));
         foreach (var fileFunction in new[] { "ReadFile", "ReadLines", "ReadBytes", "FileHash", "Files", "Directories", "CopyFile", "MoveFile", "IsFile", "IsDir", "FileEquals", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "FileInfo", "MkDir", "RmDir" })
             for (var parameterCount = 1; parameterCount <= 4; parameterCount++)
                 symbols.Declare(new FunctionSymbol(fileFunction, typeof(object), Enumerable.Repeat(typeof(object), parameterCount).ToArray(), XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, parameterCount).ToArray()));
@@ -684,6 +687,28 @@ internal static class Program
     public static string TypeName(object? value) => XPScriptNullRuntime.TypeName(value);
     public static long FileLen(string path) => new System.IO.FileInfo(RequireExistingFilePath(path)).Length;
     public static DateTime FileDateTime(string path) => System.IO.File.GetLastWriteTime(RequireExistingFilePath(path));
+    private static System.Collections.Generic.IEnumerator<string>? __xpsDirEnumerator;
+    public static string Dir(params object?[] args)
+    {
+        if (args.Length > 0 && args[0] is not null)
+        {
+            var raw = CStr(args[0]);
+            var directory = System.IO.Path.GetDirectoryName(raw);
+            if (string.IsNullOrEmpty(directory)) directory = System.Environment.CurrentDirectory;
+            var mask = System.IO.Path.GetFileName(raw);
+            if (string.IsNullOrEmpty(mask)) mask = "*";
+            __xpsDirEnumerator?.Dispose();
+            __xpsDirEnumerator = System.IO.Directory.EnumerateFileSystemEntries(directory, mask)
+                .Select(System.IO.Path.GetFileName).Where(value => value is not null).Cast<string>().GetEnumerator();
+        }
+        if (__xpsDirEnumerator is null || !__xpsDirEnumerator.MoveNext())
+        {
+            __xpsDirEnumerator?.Dispose();
+            __xpsDirEnumerator = null;
+            return string.Empty;
+        }
+        return __xpsDirEnumerator.Current;
+    }
     public static object ReadFile(params object?[] a) => XPScriptTextFileRuntime.ReadFile(a[0], a.Length > 1 ? a[1] : null);
     public static object ReadLines(params object?[] a) => System.IO.File.ReadAllLines(RequireExistingFilePath(a[0]));
     public static object ReadBytes(params object?[] a) => System.IO.File.ReadAllBytes(RequireExistingFilePath(a[0]));
