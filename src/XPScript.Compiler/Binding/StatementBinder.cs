@@ -132,6 +132,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     private BoundStatement? BindDim(DimStatementSyntax syntax)
     {
         var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text, syntax.IsArray, syntax.ArrayLength, syntax.IsList, syntax.ArrayRank);
+        if (syntax.IsArray && (syntax.ArrayLength is not null || syntax.ArrayBounds.Count > 0 || syntax.ArrayLowerBound != 0 || syntax.ArrayRank > 1))
+            type = typeof(Array);
         var userConstructor = !syntax.IsArray && !syntax.IsList
             ? AstClassConstructorSupport.Find(_symbols, syntax.TypeNameToken?.Text ?? "") : null;
         if (userConstructor is not null) semanticType = userConstructor.SemanticReturnType!;

@@ -475,9 +475,12 @@ public static class AstExperimentalCompiler
             var procedureParameters = procedureSub?.Parameters ?? procedureFunction!.Parameters;
             ValidateOptionalDeclarations(procedureParameters, sourcePath, fullSource);
             var scope = symbols.CreateChildScope();
-            var parameters = procedureParameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
-                ResolveParameterType(parameter).RuntimeType, parameter.IsByRef,
-                ResolveParameterType(parameter))).ToArray();
+            var parameters = procedureParameters.Select(parameter =>
+            {
+                var semanticType = ResolveParameterType(parameter);
+                var runtimeType = parameter.IsArray ? typeof(Array) : semanticType.RuntimeType;
+                return new ParameterSymbol(parameter.Identifier.Text, runtimeType, parameter.IsByRef, semanticType);
+            }).ToArray();
             foreach (var parameter in parameters) scope.Declare(parameter);
             var returnType = procedureFunction is null ? typeof(void) : ResolveRuntimeType(procedureFunction.ReturnType?.Identifier.Text);
             var result = procedureFunction is null ? null : new LocalSymbol(resultName, returnType, ResolveValueType(procedureFunction.ReturnType));
@@ -1335,9 +1338,19 @@ internal static class Program
         return parameter.IsArray ? XpTypeSymbol.ArrayOf(element, parameter.ArrayRank) : element;
     }
 
-    private static XpTypeSymbol ResolveValueType(TypeSyntax? type) => type is null || type.Identifier.Text.Equals("Variant", StringComparison.OrdinalIgnoreCase)
-        ? XpTypeSymbol.Variant : BoundExpressionEmitter.RuntimeObjectType(type.Identifier.Text) is not null
-            ? XpTypeSymbol.User(type.Identifier.Text) : XpTypeSymbol.FromClr(ResolveRuntimeType(type.Identifier.Text));
+    private static XpTypeSymbol ResolveValueType(TypeSyntax? type)
+    {
+        if (type is null || type.Identifier.Text.Equals("Variant", StringComparison.OrdinalIgnoreCase))
+            return XpTypeSymbol.Variant;
+
+        var name = type.Identifier.Text.Trim().ToUpperInvariant();
+        if (name is "BYTE" or "BOOLEAN" or "STRING" or "INTEGER" or "LONG" or "SINGLE" or "DOUBLE" or "CURRENCY")
+            return XpTypeSymbol.FromClr(ResolveRuntimeType(name));
+
+        return BoundExpressionEmitter.RuntimeObjectType(type.Identifier.Text) is not null
+            ? XpTypeSymbol.User(type.Identifier.Text)
+            : XpTypeSymbol.FromClr(ResolveRuntimeType(type.Identifier.Text));
+    }
 
     internal static void ValidateOptionalDeclarations(IReadOnlyList<ParameterSyntax> parameters, string sourcePath, string source)
     {

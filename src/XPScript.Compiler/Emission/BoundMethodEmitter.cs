@@ -66,7 +66,9 @@ public sealed class BoundMethodEmitter
     {
         var mode = parameter.IsByRef ? "ref " : string.Empty;
         var type = parameter.SemanticType?.IsList == true ? $"LSList<{CSharpType(parameter.SemanticType.ElementType!)}>" : CSharpType(parameter.Type);
-        type = parameter.SemanticType is { } semantic ? CSharpType(semantic) : type;
+        type = parameter.Type == typeof(Array) && parameter.SemanticType?.IsArray == true
+            ? "System.Array"
+            : parameter.SemanticType is { } semantic ? CSharpType(semantic) : type;
         return mode + type + " " + parameter.Name;
     }
 
@@ -74,6 +76,10 @@ public sealed class BoundMethodEmitter
     {
         if (local.SemanticType?.IsReferenceCell == true) return CSharpType(local.SemanticType);
         if (local.IsDynamicArray) return "System.Array";
+        if (local.Type == typeof(Array)) return "System.Array";
+        if (local.Type.IsArray) return "System.Array";
+        if (local.SemanticType?.IsArray == true) return "System.Array";
+        if (local.ArrayLength is not null || local.ArrayBounds.Count > 0 || local.ArrayLowerBound != 0 || local.ArrayRank > 1) return "System.Array";
         if (local.SemanticType is { } collection && (collection.IsArray || collection.IsList)) return CSharpType(collection);
         if (BoundExpressionEmitter.RuntimeObjectType(local.SemanticType?.Name ?? "") is { } native) return native;
         return local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
@@ -95,6 +101,7 @@ public sealed class BoundMethodEmitter
         "SINGLE" or "DOUBLE" or "CURRENCY" => "double",
         "BOOLEAN" => "bool",
         "STRING" => "string",
+        "VARIANT" => "object",
         _ => CSharpNativeType(type)
     };
 
@@ -103,7 +110,7 @@ public sealed class BoundMethodEmitter
         : type.IsList
         ? $"LSList<{CSharpType(type.ElementType!)}>"
         : type.IsArray
-        ? "System.Array"
+        ? CSharpType(type.RuntimeType)
         : BoundExpressionEmitter.RuntimeObjectType(type.Name) ??
           (type.RuntimeType == typeof(object) && !type.IsVariant && !type.IsObject && !type.IsNothing && !type.IsNull && !type.IsEmpty
               ? "Xp" + type.Name : CSharpType(type.RuntimeType));

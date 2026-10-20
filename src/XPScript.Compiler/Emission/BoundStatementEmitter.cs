@@ -25,6 +25,8 @@ public sealed class BoundStatementEmitter
                          .Where(item => item.Initializer is null && item.Local.StaticStorageName is null))
             {
                 var type = CSharpType(declaration.Local.Type);
+                if (declaration.Local.Type.IsArray || declaration.Local.Type == typeof(Array))
+                    type = "System.Array";
                 type = BoundMethodEmitter.SemanticStorageType(declaration.Local, type);
                 output.Write($"{type} {declaration.Local.Name} = default({type});", 0, declaration.Span);
             }
@@ -74,7 +76,15 @@ public sealed class BoundStatementEmitter
                     Line($"{_expressions.Emit(assignment.Target)} = (System.Array)({_expressions.Emit(value)});");
                     break;
                 }
-                if (assignment.Target is BoundIndexExpression { Expression.SemanticType.IsVariant: true } variantIndex && variantIndex.Indices.Count == 1)
+                if (assignment.Target is BoundIndexExpression { Expression: BoundNameExpression { Symbol: ParameterSymbol { Type.IsArray: true } } } typedParameterArray)
+                {
+                    Line($"LSArrayRuntime.Set({_expressions.Emit(typedParameterArray.Expression)}, {_expressions.Emit(assignment.Expression)}, {_expressions.EmitArrayIndexArguments(typedParameterArray)});");
+                    break;
+                }
+                if (assignment.Target is BoundIndexExpression { Expression.SemanticType.IsVariant: true } variantIndex &&
+                    !variantIndex.Expression.Type.IsArray && !variantIndex.Expression.SemanticType.IsArray &&
+                    variantIndex.Expression is not BoundNameExpression { Symbol: ParameterSymbol { Type.IsArray: true } } &&
+                    variantIndex.Indices.Count == 1)
                 {
                     Line($"LSArrayRuntime.SetIndex({_expressions.Emit(variantIndex.Expression)}, {_expressions.Emit(variantIndex.Index)}, {_expressions.Emit(assignment.Expression)});");
                     break;
@@ -244,7 +254,7 @@ public sealed class BoundStatementEmitter
                 }
                 break;
             case BoundVariableDeclarationStatement { Initializer: null } flatDeclaration when _flatControlFlow:
-                if (flatDeclaration.Local.IsDynamicArray || flatDeclaration.Local.SemanticType?.IsArray == true)
+                if (flatDeclaration.Local.IsDynamicArray || flatDeclaration.Local.Type.IsArray || flatDeclaration.Local.Type == typeof(Array) || flatDeclaration.Local.SemanticType?.IsArray == true)
                     Line($"{_expressions.Emit(new BoundNameExpression(flatDeclaration.Local))} = {BoundArrayAllocation.Emit(flatDeclaration.Local, flatDeclaration.EmptyArray, flatDeclaration.ArrayLength)};");
                 break;
             case BoundVariableDeclarationStatement { Local.SemanticType.IsList: true } list:
@@ -254,7 +264,11 @@ public sealed class BoundStatementEmitter
                 var type = CSharpType(declaration.Local.Type);
                 if (declaration.Local.IsDynamicArray)
                     type = "System.Array";
+                if (declaration.Local.Type.IsArray || declaration.Local.Type == typeof(Array))
+                    type = "System.Array";
                 type = BoundMethodEmitter.SemanticStorageType(declaration.Local, type);
+                if (declaration.Local.ArrayLength is not null || declaration.Local.ArrayBounds.Count > 0 || declaration.Local.ArrayLowerBound != 0 || declaration.Local.ArrayRank > 1)
+                    type = "System.Array";
                 if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAi";
                 else if (declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAi";
                 else if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAITool", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAiTool";
@@ -271,12 +285,14 @@ public sealed class BoundStatementEmitter
                 }
                 if (ImageScopeEnabled && AstImageSupport.IsImage(declaration.Local.SemanticType?.Name) && declaration.Local.StaticStorageName is null)
                     initializer = $"__imageScope.Own({initializer})";
-                if (declaration.Initializer is null && (declaration.Local.IsDynamicArray || declaration.Local.Type.IsArray))
+                if (declaration.Initializer is null && (declaration.Local.IsDynamicArray || declaration.Local.Type.IsArray || declaration.Local.Type == typeof(Array) || declaration.Local.SemanticType?.IsArray == true))
                     initializer = BoundArrayAllocation.Emit(declaration.Local, declaration.EmptyArray, declaration.ArrayLength);
                 if (declaration.Initializer is null && declaration.Local.SemanticType?.IsObject == true)
                     initializer = "null";
                 if (declaration.Initializer is null && declaration.Local.Type.IsValueType && initializer == "null")
                     initializer = $"default({type})";
+                if (initializer.Contains("LSArrayRuntime.CreateManaged<", StringComparison.Ordinal))
+                    type = "System.Array";
                 Line($"{type} {declaration.Local.Name} = {initializer};");
                 if (ImageScopeEnabled && AstImageSupport.IsImage(declaration.Local.SemanticType?.Name) && declaration.Local.StaticStorageName is null)
                     Line($"__imageScope.Observe(() => {declaration.Local.Name});");

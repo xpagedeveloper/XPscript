@@ -151,6 +151,7 @@ public sealed class BoundExpressionEmitter
         "SINGLE" or "DOUBLE" or "CURRENCY" => "double",
         "BOOLEAN" => "bool",
         "STRING" => "string",
+        "VARIANT" => "object",
         _ => RuntimeObjectTypeCore(name)
     };
 
