@@ -311,6 +311,10 @@ public static class XPScriptCompilerCommandLine
         string? runtimeIdentifier = null;
         var selfContained = false;
         var singleFile = true;
+        var restricted = false;
+        ApplicationSecurityMode? securityMode = null;
+        var sourceRoots = new List<string>();
+        var sourcePreprocessors = new List<string>();
         for (var i = 1; i < args.Length; i++)
         {
             if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
@@ -331,6 +335,19 @@ public static class XPScriptCompilerCommandLine
                 singleFile = ParseBooleanCompileOption("--singlefile", args[i]["--singlefile=".Length..]);
             else if (args[i] == "--singlefile" && i + 1 < args.Length)
                 singleFile = ParseBooleanCompileOption("--singlefile", args[++i]);
+            else if (args[i] == "--restricted")
+                restricted = true;
+            else if (args[i].StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
+                securityMode = ApplicationSecurityModeContext.Parse(args[i]["--security=".Length..]);
+            else if (args[i] == "--security" && i + 1 < args.Length)
+                securityMode = ApplicationSecurityModeContext.Parse(args[++i]);
+            else if (args[i] == "--source-root" && i + 1 < args.Length)
+            {
+                restricted = true;
+                sourceRoots.Add(Path.GetFullPath(args[++i]));
+            }
+            else if (args[i] == "--preprocessor" && i + 1 < args.Length)
+                sourcePreprocessors.Add(args[++i]);
             else if (args[i] == "--result-format" && i + 1 < args.Length)
                 resultFormat = args[++i].ToLowerInvariant();
             else
@@ -349,7 +366,8 @@ public static class XPScriptCompilerCommandLine
             if (runtimeIdentifier is not null && !CompilerDriver.SupportedRuntimes.Contains(runtimeIdentifier, StringComparer.OrdinalIgnoreCase))
                 throw new ArgumentException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
-            var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier).ConfigureAwait(false);
+            var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
+                securityMode ?? ApplicationSecurityMode.Off, restricted, sourceRoots, sourcePreprocessors).ConfigureAwait(false);
             var result = CompileResult.Ok(assemblyPath)
                 .WithOperation("ast-compile")
                 .WithContext(sourcePath, runtimeIdentifier);

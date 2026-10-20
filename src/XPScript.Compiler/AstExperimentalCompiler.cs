@@ -11,10 +11,18 @@ namespace XPScript.Compiler;
 public static class AstExperimentalCompiler
 {
     public static Task<string> CompileAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken = default)
-        => CompileAsync(sourcePath, outputDirectory, null, cancellationToken);
+        => CompileAsync(sourcePath, outputDirectory, null, cancellationToken: cancellationToken);
 
-    public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, string? runtimeIdentifier, CancellationToken cancellationToken = default)
+    public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, string? runtimeIdentifier,
+        ApplicationSecurityMode securityMode = ApplicationSecurityMode.Off, bool restricted = false,
+        IReadOnlyList<string>? sourceRoots = null, IReadOnlyList<string>? sourcePreprocessors = null,
+        CancellationToken cancellationToken = default)
     {
+        using var securityScope = ApplicationSecurityModeContext.Push(securityMode);
+        using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors ?? []);
+        using var includeScope = restricted
+            ? IncludeSecurityContext.Push(sourceRoots is { Count: > 0 } ? sourceRoots : [Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory])
+            : null;
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         // Expand Include directives before AST feature detection and parsing so the
         // AST compiler has the same multi-file source contract as the legacy path.

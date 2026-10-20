@@ -34,9 +34,9 @@ if ($xmlResult.compileResult.result -ne 'ok' -or $xmlResult.compileResult.operat
 }
 
 $aliasOutput = Join-Path $resultRoot 'singlefile-alias'
-$aliasOutputText = dotnet $compiler ast-compile $astSource -o $aliasOutput --singlefile=false --runtime=false | Out-String
+$aliasOutputText = dotnet $compiler ast-compile $astSource -o $aliasOutput --singlefile=false --runtime=false --security=strict --restricted --source-root $root --preprocessor identity | Out-String
 if ($LASTEXITCODE -ne 0 -or $aliasOutputText -notlike '*AST compilation succeeded*' -or -not (Test-Path (Join-Path $aliasOutput 'Generated.dll'))) {
-    throw "AST singlefile/runtime alias regression: $aliasOutputText"
+    throw "AST compile-option/security regression: $aliasOutputText"
 }
 
 Write-Host 'CLI_COMMAND_LINE_COMPATIBILITY_OK'
