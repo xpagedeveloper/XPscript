@@ -192,7 +192,7 @@ internal static class AstClassMethodSupport
                 throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Property Set requires an object/reference value type.", "XPS2001", "semantic");
             var hasUnsupportedObjectParameter = constructor is null && syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
-                .Any(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) &&
+                .Any(p => !p.IsArray && AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) &&
                     !SupportedNativeClassMethodType(p.Type?.Identifier.Text) &&
                     !classes.ContainsKey(p.Type?.Identifier.Text ?? ""));
             var hasUnsupportedObjectResult = function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) &&
@@ -281,7 +281,7 @@ internal static class AstClassMethodSupport
                 if (syntaxParameters[i].IsOptional && constructor is null)
                 {
                     var binder = new ExpressionBinder(defaultScope);
-                    var type = XpTypeSymbol.FromClr(parameters[i].Type);
+                    var type = parameters[i].SemanticType ?? XpTypeSymbol.FromClr(parameters[i].Type);
                     var value = syntaxParameters[i].DefaultValue is { } syntax ? binder.Bind(syntax)
                         : new BoundLiteralExpression(type.IsArray || type.IsList ? null : parameters[i].Type == typeof(string) ? "" : Activator.CreateInstance(parameters[i].Type), parameters[i].Type, type);
                     if (binder.Diagnostics.Count > 0)
