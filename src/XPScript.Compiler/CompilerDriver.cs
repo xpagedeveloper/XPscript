@@ -706,11 +706,17 @@ public sealed class CompilerDriver
             : string.Empty;
         var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
         var startupObject = isAndroid ? string.Empty : "    <StartupObject>Program</StartupObject>\n";
+        var androidAbi = runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase)
+            ? "arm64-v8a"
+            : runtimeIdentifier.Equals("android-x64", StringComparison.OrdinalIgnoreCase)
+                ? "x86_64"
+                : string.Empty;
         var androidProperties = isAndroid
             ? $"""
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
     <AndroidApplication>true</AndroidApplication>
     <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>
+    <AndroidSupportedAbis>{androidAbi}</AndroidSupportedAbis>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <ApplicationId>eu.xpscript.app</ApplicationId>
 """

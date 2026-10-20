@@ -304,10 +304,12 @@ internal static class RunCompiler
         var isAndroid = IsAndroidRuntime(runtimeIdentifier);
         var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
         var startupObject = isAndroid ? string.Empty : "    <StartupObject>Program</StartupObject>\n";
+        var androidAbi = runtimeIdentifier is "android-arm64" ? "arm64-v8a" : "x86_64";
         var androidProperties = isAndroid
             ? $"    <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>\n" +
               "    <AndroidApplication>true</AndroidApplication>\n" +
               $"    <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>\n" +
+              $"    <AndroidSupportedAbis>{androidAbi}</AndroidSupportedAbis>\n" +
               "    <AndroidPackageFormat>apk</AndroidPackageFormat>\n" +
               "    <ApplicationId>eu.xpscript.app</ApplicationId>\n"
             : string.Empty;
