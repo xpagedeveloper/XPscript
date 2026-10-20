@@ -206,8 +206,22 @@ internal static class LSArrayRuntime
     public static byte[]? ByteVector(object? value)
     {
         if (value is null) return null;
-        var array = RequireArray<byte>(value, 1)!;
-        return array is byte[] vector ? vector : array.Cast<byte>().ToArray();
+        if (value is IXPScriptArrayStorage storage)
+        {
+            if (storage.Rank != 1) throw new InvalidCastException("Byte vector requires a one-dimensional array.");
+            var bytes = new List<byte>();
+            for (var index = storage.LBound(); index <= storage.UBound(); index++)
+                bytes.Add(XPScriptRuntime.CByte(storage.Get(index)));
+            return bytes.ToArray();
+        }
+        if (value is not Array array || array.Rank != 1)
+            throw new InvalidCastException("Byte vector requires a one-dimensional array.");
+        if (array is byte[] vector) return vector;
+        var bytesFromArray = new byte[array.GetLength(0)];
+        var lower = array.GetLowerBound(0);
+        for (var offset = 0; offset < bytesFromArray.Length; offset++)
+            bytesFromArray[offset] = XPScriptRuntime.CByte(array.GetValue(lower + offset));
+        return bytesFromArray;
     }
 
     public static Array? RequireArray<T>(object? value, int rank)
