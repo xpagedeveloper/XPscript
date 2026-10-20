@@ -89,7 +89,16 @@ public sealed class BoundMethodEmitter
         : type == typeof(object) ? "object"
         : type.FullName?.Replace('+', '.') ?? type.Name;
 
-    internal static string CSharpType(XpTypeSymbol type) => type.IsReferenceCell
+    internal static string CSharpType(XpTypeSymbol type) => type.Name.ToUpperInvariant() switch
+    {
+        "BYTE" or "INTEGER" or "LONG" => "long",
+        "SINGLE" or "DOUBLE" or "CURRENCY" => "double",
+        "BOOLEAN" => "bool",
+        "STRING" => "string",
+        _ => CSharpNativeType(type)
+    };
+
+    private static string CSharpNativeType(XpTypeSymbol type) => type.IsReferenceCell
         ? $"System.Runtime.CompilerServices.StrongBox<{CSharpType(type.ElementType!)}>"
         : type.IsList
         ? $"LSList<{CSharpType(type.ElementType!)}>"

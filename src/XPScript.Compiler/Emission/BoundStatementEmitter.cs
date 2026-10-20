@@ -275,6 +275,8 @@ public sealed class BoundStatementEmitter
                     initializer = BoundArrayAllocation.Emit(declaration.Local, declaration.EmptyArray, declaration.ArrayLength);
                 if (declaration.Initializer is null && declaration.Local.SemanticType?.IsObject == true)
                     initializer = "null";
+                if (declaration.Initializer is null && declaration.Local.Type.IsValueType && initializer == "null")
+                    initializer = $"default({type})";
                 Line($"{type} {declaration.Local.Name} = {initializer};");
                 if (ImageScopeEnabled && AstImageSupport.IsImage(declaration.Local.SemanticType?.Name) && declaration.Local.StaticStorageName is null)
                     Line($"__imageScope.Observe(() => {declaration.Local.Name});");

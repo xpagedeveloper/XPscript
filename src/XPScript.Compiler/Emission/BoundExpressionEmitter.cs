@@ -145,7 +145,16 @@ public sealed class BoundExpressionEmitter
         _ => throw new NotSupportedException($"Emission is not implemented for {expression.Kind}.")
     };
 
-    internal static string? RuntimeObjectType(string name) => AstApplicationSupport.RuntimeType(name) ?? AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstNotesJsonSupport.RuntimeType(name) ?? AstSystemInventorySupport.RuntimeType(name) ?? AstSqliteSupport.RuntimeType(name) ?? AstMySqlSupport.RuntimeType(name) ?? AstMsSqlSupport.RuntimeType(name) ?? AstSupabaseSupport.RuntimeType(name) ?? AstAttachmentSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
+    internal static string? RuntimeObjectType(string name) => name.Trim().ToUpperInvariant() switch
+    {
+        "BYTE" or "INTEGER" or "LONG" => "long",
+        "SINGLE" or "DOUBLE" or "CURRENCY" => "double",
+        "BOOLEAN" => "bool",
+        "STRING" => "string",
+        _ => RuntimeObjectTypeCore(name)
+    };
+
+    private static string? RuntimeObjectTypeCore(string name) => AstApplicationSupport.RuntimeType(name) ?? AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstNotesJsonSupport.RuntimeType(name) ?? AstSystemInventorySupport.RuntimeType(name) ?? AstSqliteSupport.RuntimeType(name) ?? AstMySqlSupport.RuntimeType(name) ?? AstMsSqlSupport.RuntimeType(name) ?? AstSupabaseSupport.RuntimeType(name) ?? AstAttachmentSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
     {
         "XPIMAGE" => "XPImage",
         "XPJSONDOCUMENT" => "XPScriptJsonDocument",
